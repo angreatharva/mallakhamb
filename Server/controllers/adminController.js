@@ -10,7 +10,7 @@ const { convertToObjectId, isValidObjectId, createObjectIdError, validateAndConv
 const generateToken = (userId, userType) => {
   return jwt.sign(
     { userId, userType },
-    process.env.JWT_SECRET || 'fallback-secret',
+    process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
 };
