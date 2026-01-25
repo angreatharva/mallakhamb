@@ -19,14 +19,7 @@ const server = http.createServer(app);
 
 // Socket.IO setup with CORS
 const getCorsOrigins = () => {
-  const origins = [
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173',
-    config.clientUrl
-  ];
-  
-  console.log('🔗 Socket.IO CORS origins:', origins);
-  return origins;
+  return config.getAllowedOrigins();
 };
 
 const io = new Server(server, {
@@ -70,12 +63,9 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      config.clientUrl
-    ];
+    const allowedOrigins = config.getAllowedOrigins();
     
+    console.log('🔗 CORS allowed origins:', allowedOrigins);
     
     // Check if origin is allowed
     if (allowedOrigins.indexOf(origin) !== -1) {
