@@ -58,16 +58,28 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 // Simplified CORS configuration that works reliably
-const allowedOrigins = config.getAllowedOrigins();
-console.log('🔗 Server starting with allowed origins:', allowedOrigins);
-
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Get fresh allowed origins each time
+    const allowedOrigins = config.getAllowedOrigins();
+    console.log('🔍 CORS check - Origin:', origin, 'Allowed:', allowedOrigins);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is allowed
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS allowed for origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(null, false); // Don't throw error, just return false
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false // Let cors handle the preflight response
+  optionsSuccessStatus: 200
 };
 
 // Middleware
@@ -75,6 +87,7 @@ app.use(cors(corsOptions));
 
 // Additional CORS headers middleware to ensure headers are always set
 app.use((req, res, next) => {
+  const allowedOrigins = config.getAllowedOrigins();
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
