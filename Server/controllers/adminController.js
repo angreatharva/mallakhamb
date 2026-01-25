@@ -56,24 +56,37 @@ const registerAdmin = async (req, res) => {
 
 // Login admin
 const loginAdmin = async (req, res) => {
+  console.log('🔍 Admin login attempt:', { email: req.body.email, origin: req.headers.origin });
+  
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      console.log('❌ Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     // Find admin by email
+    console.log('🔍 Looking for admin with email:', email);
     const admin = await Admin.findOne({ email });
     if (!admin) {
+      console.log('❌ Admin not found for email:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
+    console.log('🔍 Checking password for admin:', admin.email);
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
+      console.log('❌ Password mismatch for admin:', admin.email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Generate token
+    console.log('✅ Generating token for admin:', admin.email);
     const token = generateToken(admin._id, 'admin');
 
+    console.log('✅ Admin login successful:', admin.email);
     res.json({
       message: 'Login successful',
       token,
@@ -85,7 +98,7 @@ const loginAdmin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('❌ Admin login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };

@@ -66,11 +66,24 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: false // Let cors handle the preflight response
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Additional CORS headers middleware to ensure headers are always set
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning');
+  next();
+});
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -112,6 +125,18 @@ app.get('/api/debug/env', (req, res) => {
     CLIENT_URL: process.env.CLIENT_URL,
     RENDER_FRONTEND_URL: process.env.RENDER_FRONTEND_URL,
     allowedOrigins: config.getAllowedOrigins(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test POST endpoint to check if CORS works for POST requests
+app.post('/api/debug/test-post', (req, res) => {
+  console.log('🔍 Test POST request received:', req.body);
+  console.log('🔍 Origin:', req.headers.origin);
+  res.json({
+    message: 'POST request successful',
+    body: req.body,
+    origin: req.headers.origin,
     timestamp: new Date().toISOString()
   });
 });
