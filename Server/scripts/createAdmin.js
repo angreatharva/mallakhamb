@@ -5,7 +5,7 @@ require('dotenv').config();
 const createAdmin = async () => {
     try {
         // Connect to database (using same DB as main app)
-        await mongoose.connect('mongodb://localhost:27017/BRMC');
+        await mongoose.connect('process.env.MONGODB_URI');
         console.log('Connected to database: BRMC');
 
         const name = 'Atharva Angre';
