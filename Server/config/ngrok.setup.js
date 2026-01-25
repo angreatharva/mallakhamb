@@ -3,6 +3,12 @@ const config = require('./server.config');
 
 const setupNgrok = async () => {
   try {
+    // Don't run ngrok in production
+    if (config.nodeEnv === 'production') {
+      console.log('🚀 Running in production - ngrok disabled');
+      return null;
+    }
+
     if (!config.ngrokEnabled) {
       console.log('Ngrok disabled by configuration');
       return null;

@@ -5,12 +5,18 @@ const getFrontendUrl = () => {
 
 // Get all allowed frontend URLs for CORS
 const getAllowedOrigins = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Production: only allow Render frontend
+    return ['https://mallakhamb-087p.onrender.com'];
+  }
+  
+  // Development: allow localhost and any configured URLs
   const origins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173'
   ];
   
-  // Add render frontend URL
+  // Add render frontend URL for testing
   if (process.env.RENDER_FRONTEND_URL) {
     origins.push(process.env.RENDER_FRONTEND_URL);
   }
