@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
 /**
@@ -221,6 +222,7 @@ export const ResponsiveLink = ({
   children, 
   className = '', 
   variant = 'default',
+  to,
   ...props 
 }) => {
   const getVariantClasses = () => {
@@ -235,6 +237,27 @@ export const ResponsiveLink = ({
         return 'text-blue-600 hover:text-blue-800';
     }
   };
+
+  // If 'to' prop is provided, use React Router Link, otherwise use regular anchor
+  if (to) {
+    return (
+      <Link 
+        to={to}
+        className={cn(
+          'text-sm md:text-base',
+          'min-h-[44px] md:min-h-0', // Touch target on mobile
+          'inline-flex items-center px-1 py-2 md:p-0', // Touch padding on mobile
+          'font-medium transition-colors duration-200',
+          'underline hover:no-underline',
+          getVariantClasses(),
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </Link>
+    );
+  }
 
   return (
     <a 

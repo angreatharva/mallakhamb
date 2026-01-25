@@ -85,12 +85,7 @@ const CoachRegister = () => {
             </ResponsiveFormField>
 
             <ResponsiveFormField
-              label={
-                <span className="flex items-center">
-                  <Mail className="inline h-4 w-4 mr-1" />
-                  Email Address
-                </span>
-              }
+              label="Email Address"
               error={errors.email?.message}
               required
             >

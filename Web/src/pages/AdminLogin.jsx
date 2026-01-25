@@ -117,6 +117,18 @@ const AdminLogin = () => {
             </ResponsiveButton>
           </ResponsiveForm>
 
+          <div className="mt-6 text-center space-y-2">
+            <ResponsiveText size="sm" className="text-gray-600">
+              <ResponsiveLink 
+                to="/forgot-password" 
+                variant="primary"
+                className="font-medium text-purple-600 hover:text-purple-500"
+              >
+                Forgot Password?
+              </ResponsiveLink>
+            </ResponsiveText>
+          </div>
+
           <div className="mt-4 text-center">
             <ResponsiveLink
               to="/"

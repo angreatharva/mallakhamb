@@ -71,45 +71,38 @@ const PlayerRegister = () => {
           </div>
 
           <ResponsiveForm onSubmit={handleSubmit(onSubmit)}>
-            <ResponsiveFormGrid columns={{ mobile: 1, tablet: 2, desktop: 2 }}>
-              <ResponsiveFormField
-                label="First Name"
-                error={errors.firstName?.message}
-                required
-              >
-                <ResponsiveInput
-                  {...register('firstName', {
-                    required: 'First name is required'
-                  })}
-                  type="text"
-                  placeholder="First name"
-                  error={!!errors.firstName}
-                />
-              </ResponsiveFormField>
-
-              <ResponsiveFormField
-                label="Last Name"
-                error={errors.lastName?.message}
-                required
-              >
-                <ResponsiveInput
-                  {...register('lastName', {
-                    required: 'Last name is required'
-                  })}
-                  type="text"
-                  placeholder="Last name"
-                  error={!!errors.lastName}
-                />
-              </ResponsiveFormField>
-            </ResponsiveFormGrid>
+            <ResponsiveFormField
+              label="First Name"
+              error={errors.firstName?.message}
+              required
+            >
+              <ResponsiveInput
+                {...register('firstName', {
+                  required: 'First name is required'
+                })}
+                type="text"
+                placeholder="Enter your first name"
+                error={!!errors.firstName}
+              />
+            </ResponsiveFormField>
 
             <ResponsiveFormField
-              label={
-                <span className="flex items-center">
-                  <Mail className="inline h-4 w-4 mr-1" />
-                  Email Address
-                </span>
-              }
+              label="Last Name"
+              error={errors.lastName?.message}
+              required
+            >
+              <ResponsiveInput
+                {...register('lastName', {
+                  required: 'Last name is required'
+                })}
+                type="text"
+                placeholder="Enter your last name"
+                error={!!errors.lastName}
+              />
+            </ResponsiveFormField>
+
+            <ResponsiveFormField
+              label="Email Address"
               error={errors.email?.message}
               required
             >
@@ -128,12 +121,7 @@ const PlayerRegister = () => {
             </ResponsiveFormField>
 
             <ResponsiveFormField
-              label={
-                <span className="flex items-center">
-                  <Calendar className="inline h-4 w-4 mr-1" />
-                  Date of Birth
-                </span>
-              }
+              label="Date of Birth"
               error={errors.dateOfBirth?.message}
               required
             >
@@ -142,6 +130,7 @@ const PlayerRegister = () => {
                   required: 'Date of birth is required'
                 })}
                 type="date"
+                placeholder="dd/mm/yyyy"
                 error={!!errors.dateOfBirth}
               />
             </ResponsiveFormField>
