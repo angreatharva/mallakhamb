@@ -5,12 +5,12 @@ require('dotenv').config();
 const createAdmin = async () => {
     try {
         // Connect to database (using same DB as main app)
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('Connected to database: sports-event-app');
+        await mongoose.connect('mongodb://localhost:27017/BRMC');
+        console.log('Connected to database: BRMC');
 
-        const name = '';
-        const email = '';
-        const password = '';
+        const name = 'Atharva Angre';
+        const email = 'angreatharva08@gmail.com';
+        const password = 'Atharva08';
 
         // Check if admin already exists
         const existingAdmin = await Admin.findOne({ email: email });

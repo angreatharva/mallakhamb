@@ -159,7 +159,7 @@ const getTeamDashboard = async (req, res) => {
     }
 
     const team = await Team.findById(coach.team._id)
-      .populate('players.player', 'firstName lastName aadharNumber dateOfBirth gender')
+      .populate('players.player', 'firstName lastName email dateOfBirth gender')
       .populate('coach', 'name email');
 
     res.json({ team });
@@ -185,11 +185,11 @@ const searchPlayers = async (req, res) => {
           $or: [
             { firstName: { $regex: query, $options: 'i' } },
             { lastName: { $regex: query, $options: 'i' } },
-            { aadharNumber: { $regex: query, $options: 'i' } }
+            { email: { $regex: query, $options: 'i' } }
           ]
         }
       ]
-    }).select('firstName lastName aadharNumber dateOfBirth gender');
+    }).select('firstName lastName email dateOfBirth gender');
 
     res.json({ players });
   } catch (error) {

@@ -14,19 +14,19 @@ const generateToken = (userId, userType) => {
 // Register a new player
 const registerPlayer = async (req, res) => {
   try {
-    const { firstName, lastName, aadharNumber, dateOfBirth, password, gender } = req.body;
+    const { firstName, lastName, email, dateOfBirth, password, gender } = req.body;
 
     // Check if player already exists
-    const existingPlayer = await Player.findOne({ aadharNumber });
+    const existingPlayer = await Player.findOne({ email });
     if (existingPlayer) {
-      return res.status(400).json({ message: 'Player with this Aadhar number already exists' });
+      return res.status(400).json({ message: 'Player with this email already exists' });
     }
 
     // Create new player
     const player = new Player({
       firstName,
       lastName,
-      aadharNumber,
+      email,
       dateOfBirth,
       password,
       gender
@@ -44,7 +44,7 @@ const registerPlayer = async (req, res) => {
         id: player._id,
         firstName: player.firstName,
         lastName: player.lastName,
-        aadharNumber: player.aadharNumber,
+        email: player.email,
         team: player.team
       }
     });
@@ -57,10 +57,10 @@ const registerPlayer = async (req, res) => {
 // Login player
 const loginPlayer = async (req, res) => {
   try {
-    const { aadharNumber, password } = req.body;
+    const { email, password } = req.body;
 
-    // Find player by Aadhar number
-    const player = await Player.findOne({ aadharNumber });
+    // Find player by email
+    const player = await Player.findOne({ email });
     if (!player) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -81,7 +81,7 @@ const loginPlayer = async (req, res) => {
         id: player._id,
         firstName: player.firstName,
         lastName: player.lastName,
-        aadharNumber: player.aadharNumber,
+        email: player.email,
         team: player.team,
         ageGroup: player.ageGroup
       }

@@ -22,7 +22,7 @@ const getTeamById = async (req, res) => {
 
     const team = await Team.findById(id)
       .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName aadharNumber dateOfBirth gender');
+      .populate('players.player', 'firstName lastName email dateOfBirth gender');
 
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });

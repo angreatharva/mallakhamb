@@ -126,7 +126,7 @@ const getDashboardStats = async (req, res) => {
       const teamPlayers = team.players || [];
       const boys = teamPlayers.filter(p => p.gender === 'Male').length;
       const girls = teamPlayers.filter(p => p.gender === 'Female').length;
-      
+
       totalParticipants += teamPlayers.length;
       totalBoys += boys;
       totalGirls += girls;
@@ -177,24 +177,24 @@ const getAllTeams = async (req, res) => {
     if (gender || ageGroup) {
       filteredTeams = teams.filter(team => {
         const teamPlayers = team.players || [];
-        
+
         // Filter by both gender and ageGroup if both are provided
         if (gender && ageGroup) {
           return teamPlayers.some(p => p.gender === gender && p.ageGroup === ageGroup);
         }
-        
+
         // Filter by gender only
         if (gender) {
           const genderCount = teamPlayers.filter(p => p.gender === gender).length;
           const otherGenderCount = teamPlayers.filter(p => p.gender !== gender).length;
           return genderCount > otherGenderCount;
         }
-        
+
         // Filter by ageGroup only
         if (ageGroup) {
           return teamPlayers.some(p => p.ageGroup === ageGroup);
         }
-        
+
         return true;
       });
     }
@@ -212,7 +212,7 @@ const getTeamDetails = async (req, res) => {
     const { teamId } = req.params;
 
     const team = await Team.findById(teamId)
-      .populate('players.player', 'firstName lastName gender dateOfBirth aadharNumber')
+      .populate('players.player', 'firstName lastName gender dateOfBirth email')
       .populate('coach', 'name email');
 
     if (!team) {
@@ -232,14 +232,14 @@ const getAllPlayers = async (req, res) => {
     const { teamId, ageGroup, gender } = req.query;
 
     let query = { isActive: true };
-    
+
     if (teamId) query.team = teamId;
     if (ageGroup) query.ageGroup = ageGroup;
     if (gender) query.gender = gender;
 
     const players = await Player.find(query)
       .populate('team', 'name')
-      .select('firstName lastName gender dateOfBirth aadharNumber ageGroup team');
+      .select('firstName lastName gender dateOfBirth email ageGroup team');
 
     res.json({ players });
   } catch (error) {
@@ -306,19 +306,14 @@ const getTeamScores = async (req, res) => {
       }
 
       const trimmedTeamId = teamId.trim();
-      
+
       // Validate ObjectId format before conversion
       if (!isValidObjectId(trimmedTeamId)) {
-        console.warn(`Invalid teamId format provided: ${trimmedTeamId} (length: ${trimmedTeamId.length})`);
         return res.status(400).json(createObjectIdError('teamId', trimmedTeamId));
       }
 
-      // Log conversion attempt
-      console.log(`Attempting to convert teamId to ObjectId: ${trimmedTeamId}`);
-      
       const teamObjectId = convertToObjectId(trimmedTeamId);
       if (!teamObjectId) {
-        console.error(`Failed to convert teamId to ObjectId: ${trimmedTeamId}`);
         return res.status(400).json({
           error: 'Conversion Failed',
           message: `Unable to convert teamId to valid ObjectId format: ${trimmedTeamId}`,
@@ -328,26 +323,20 @@ const getTeamScores = async (req, res) => {
         });
       }
 
-      console.log(`Successfully converted teamId to ObjectId: ${trimmedTeamId} -> ${teamObjectId}`);
       matchQuery.teamId = teamObjectId;
 
       // For specific team, return detailed scores instead of aggregated data
-      console.log(`Querying scores for specific team: ${trimmedTeamId} with query:`, matchQuery);
-      
       const teamScores = await Score.find(matchQuery)
         .populate('teamId', 'name')
         .sort({ createdAt: -1 });
 
       // Handle edge case where teamId is valid but no scores exist
       if (teamScores.length === 0) {
-        console.log(`No scores found for team: ${trimmedTeamId} with filters - ageGroup: ${ageGroup || 'any'}, gender: ${gender || 'any'}`);
-        
         // Check if the team exists at all to provide better error messaging
         const Team = require('../models/Team');
         const teamExists = await Team.findById(teamObjectId);
-        
+
         if (!teamExists) {
-          console.warn(`Team with ID ${trimmedTeamId} does not exist in database`);
           return res.status(404).json({
             error: 'Team Not Found',
             message: `No team found with ID: ${trimmedTeamId}`,
@@ -355,8 +344,8 @@ const getTeamScores = async (req, res) => {
             teamScores: []
           });
         }
-        
-        return res.json({ 
+
+        return res.json({
           teamScores: [],
           message: `No scores found for team "${teamExists.name}" with the specified filters`,
           teamId: trimmedTeamId,
@@ -485,7 +474,7 @@ const getTeamScores = async (req, res) => {
     }
 
     // Generic server error with request context
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal Server Error',
       message: 'An unexpected error occurred while retrieving team scores',
       timestamp: new Date().toISOString()
@@ -501,6 +490,13 @@ const getIndividualScores = async (req, res) => {
     let matchQuery = {};
     if (ageGroup) matchQuery.ageGroup = ageGroup;
     if (gender) matchQuery.gender = gender;
+
+    // First, let's check if we have any scores at all
+    const totalScores = await Score.countDocuments(matchQuery);
+
+    if (totalScores === 0) {
+      return res.json({ individualScores: [] });
+    }
 
     const individualScores = await Score.aggregate([
       { $match: matchQuery },
@@ -555,10 +551,11 @@ const getIndividualScores = async (req, res) => {
       }
     ]);
 
+    console.log('Individual scores result:', individualScores.length, 'players found');
     res.json({ individualScores });
   } catch (error) {
     console.error('Get individual scores error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -567,7 +564,7 @@ const getSubmittedTeams = async (req, res) => {
   try {
     const { ageGroup, gender } = req.query;
 
-    let query = { 
+    let query = {
       isSubmitted: true,
       paymentStatus: 'completed'
     };
@@ -583,7 +580,7 @@ const getSubmittedTeams = async (req, res) => {
     if (ageGroup || gender) {
       filteredTeams = teams.filter(team => {
         const teamPlayers = team.players || [];
-        
+
         if (ageGroup && gender) {
           return teamPlayers.some(p => p.ageGroup === ageGroup && p.gender === gender);
         } else if (ageGroup) {
@@ -591,7 +588,7 @@ const getSubmittedTeams = async (req, res) => {
         } else if (gender) {
           return teamPlayers.some(p => p.gender === gender);
         }
-        
+
         return true;
       });
     }
@@ -599,7 +596,7 @@ const getSubmittedTeams = async (req, res) => {
     // Format teams with age group summary
     const formattedTeams = filteredTeams.map(team => {
       const ageGroupSummary = {};
-      
+
       team.players.forEach(player => {
         const key = `${player.gender} ${player.ageGroup}`;
         ageGroupSummary[key] = (ageGroupSummary[key] || 0) + 1;
@@ -638,15 +635,15 @@ const saveJudges = async (req, res) => {
     // Check if judges already exist for this gender/age group combination
     const existingJudges = await Judge.find({ gender, ageGroup });
     if (existingJudges.length > 0) {
-      return res.status(400).json({ 
-        message: `Judges already exist for ${gender} ${ageGroup}. Use edit functionality to modify existing judges.` 
+      return res.status(400).json({
+        message: `Judges already exist for ${gender} ${ageGroup}. Use edit functionality to modify existing judges.`
       });
     }
 
     // Create all 5 judge records, handling empty ones properly
     const judgePromises = judges.map(judgeData => {
       const hasData = judgeData.name && judgeData.name.trim() && judgeData.password && judgeData.password.trim();
-      
+
       const judgeDoc = {
         gender,
         ageGroup,
@@ -716,11 +713,11 @@ const getJudges = async (req, res) => {
     // Create complete judge panel (existing + empty slots)
     const completeJudgePanel = judgeTypes.map(template => {
       const existingJudge = existingJudges.find(j => j.judgeNo === template.judgeNo);
-      
+
       if (existingJudge) {
         // Check if the existing judge is actually empty (inactive or no name)
         const isEmpty = !existingJudge.isActive || !existingJudge.name || !existingJudge.name.trim();
-        
+
         if (isEmpty) {
           // Return as empty slot but keep the _id for updating
           return {
@@ -783,16 +780,16 @@ const createSingleJudge = async (req, res) => {
 
     // Check if username is already taken (exclude current judge if updating existing empty slot)
     const normalizedUsername = username.toLowerCase().trim();
-    const usernameQuery = { 
+    const usernameQuery = {
       username: normalizedUsername,
       isActive: true // Only check active judges
     };
-    
+
     // If updating an existing judge, exclude it from the check
     if (existingJudge && existingJudge._id) {
       usernameQuery._id = { $ne: existingJudge._id };
     }
-    
+
     const existingUsername = await Judge.findOne(usernameQuery);
     if (existingUsername) {
       return res.status(400).json({ message: 'Username already exists' });
@@ -866,7 +863,7 @@ const updateJudge = async (req, res) => {
       _id: { $ne: judgeId },
       isActive: true // Only check active judges
     };
-    
+
     const existingUsernameJudge = await Judge.findOne(usernameQuery);
     if (existingUsernameJudge) {
       return res.status(400).json({ message: 'Username already exists' });
@@ -877,7 +874,7 @@ const updateJudge = async (req, res) => {
     judge.username = username.toLowerCase().trim();
     judge.password = password.trim(); // In production, this should be hashed
     judge.isActive = true; // Activate the judge when updated with valid data
-    
+
     await judge.save();
 
     res.json({
@@ -904,13 +901,13 @@ const determineIsLocked = (playerScores) => {
   const allPlayersScored = playerScores.every(playerScore => {
     // Check if player has at least one judge score
     const hasJudgeScores = Object.values(playerScore.judgeScores || {}).some(score => score > 0);
-    
+
     // Check if player has time value
     const hasTime = playerScore.time && playerScore.time.trim() !== '';
-    
+
     return hasJudgeScores && hasTime;
   });
-  
+
   return allPlayersScored && playerScores.length > 0;
 };
 
@@ -921,8 +918,8 @@ const saveScores = async (req, res) => {
 
     // Validate required fields
     if (!teamId || !gender || !ageGroup || !playerScores || !Array.isArray(playerScores)) {
-      return res.status(400).json({ 
-        message: 'Team ID, gender, age group, and player scores are required' 
+      return res.status(400).json({
+        message: 'Team ID, gender, age group, and player scores are required'
       });
     }
 
@@ -937,7 +934,7 @@ const saveScores = async (req, res) => {
 
     // Check if existing score is locked before allowing updates
     if (existingScore && existingScore.isLocked) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: 'Cannot update scores - this entry is locked',
         isLocked: true
       });
@@ -1047,8 +1044,8 @@ const saveIndividualScore = async (req, res) => {
 
     // Validate required fields
     if (!playerId || !judgeType || score === undefined || !teamId || !gender || !ageGroup) {
-      return res.status(400).json({ 
-        message: 'Player ID, judge type, score, team ID, gender, and age group are required' 
+      return res.status(400).json({
+        message: 'Player ID, judge type, score, team ID, gender, and age group are required'
       });
     }
 
@@ -1067,7 +1064,7 @@ const saveIndividualScore = async (req, res) => {
 
     // Find or create player score entry
     let playerScore = scoreRecord.playerScores.find(ps => ps.playerId.toString() === playerId);
-    
+
     if (!playerScore) {
       // Create new player score entry
       playerScore = {
@@ -1089,7 +1086,7 @@ const saveIndividualScore = async (req, res) => {
     }
 
     // Update the specific judge score
-    switch(judgeType) {
+    switch (judgeType) {
       case 'Senior Judge':
         playerScore.judgeScores.seniorJudge = parseFloat(score);
         break;
@@ -1111,7 +1108,7 @@ const saveIndividualScore = async (req, res) => {
     const judgeScores = Object.values(playerScore.judgeScores).filter(s => s > 0);
     if (judgeScores.length > 0) {
       let averageScore;
-      
+
       // If we have 3 or fewer scores, use all of them
       if (judgeScores.length <= 3) {
         averageScore = judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length;
@@ -1122,12 +1119,26 @@ const saveIndividualScore = async (req, res) => {
         const trimmedScores = sortedScores.slice(1, -1);
         averageScore = trimmedScores.reduce((sum, s) => sum + s, 0) / trimmedScores.length;
       }
-      
+
       playerScore.averageMarks = parseFloat(averageScore.toFixed(2));
       playerScore.finalScore = Math.max(0, playerScore.averageMarks - playerScore.deduction - playerScore.otherDeduction);
     }
 
     await scoreRecord.save();
+
+    // Emit real-time update via Socket.IO if available
+    const io = req.app.get('io');
+    if (io) {
+      const roomId = `scoring_${gender}_${ageGroup}`;
+      io.to(roomId).emit('score_updated', {
+        playerId,
+        playerName: playerName || 'Unknown Player',
+        judgeType,
+        score: parseFloat(score),
+        roomId
+      });
+      console.log('Individual score update broadcasted:', { playerId, judgeType, score });
+    }
 
     res.json({
       message: 'Score saved successfully',
@@ -1150,6 +1161,13 @@ const getTeamRankings = async (req, res) => {
     let matchQuery = {};
     if (ageGroup) matchQuery.ageGroup = ageGroup;
     if (gender) matchQuery.gender = gender;
+
+    // First, let's check if we have any scores at all
+    const totalScores = await Score.countDocuments(matchQuery);
+
+    if (totalScores === 0) {
+      return res.json({ teamRankings: [] });
+    }
 
     const teamRankings = await Score.aggregate([
       { $match: matchQuery },
@@ -1240,10 +1258,11 @@ const getTeamRankings = async (req, res) => {
       }
     ]);
 
+    console.log('Team rankings result:', teamRankings.length, 'teams found');
     res.json({ teamRankings });
   } catch (error) {
     console.error('Get team rankings error:', error);
-    res.status(500).json({ message: 'Server error while fetching team rankings' });
+    res.status(500).json({ message: 'Server error while fetching team rankings', error: error.message });
   }
 };
 

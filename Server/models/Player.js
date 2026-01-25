@@ -12,16 +12,17 @@ const playerSchema = new mongoose.Schema({
     required: [true, 'Last name is required'],
     trim: true
   },
-  aadharNumber: {
+  email: {
     type: String,
-    required: [true, 'Aadhar number is required'],
+    required: [true, 'Email is required'],
     unique: true,
+    lowercase: true,
     trim: true,
     validate: {
       validator: function(v) {
-        return /^\d{12}$/.test(v);
+        return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
       },
-      message: 'Aadhar number must be exactly 12 digits'
+      message: 'Please enter a valid email'
     }
   },
   dateOfBirth: {
@@ -51,6 +52,14 @@ const playerSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

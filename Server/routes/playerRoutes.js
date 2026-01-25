@@ -15,17 +15,10 @@ const router = express.Router();
 const registerValidation = [
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
-  body('aadharNumber')
-    .isLength({ min: 12, max: 12 })
-    .withMessage('Aadhar number must be exactly 12 digits')
-    .isNumeric()
-    .withMessage('Aadhar number must contain only digits')
-    .custom((value) => {
-      if (value.startsWith('0') || value.startsWith('1')) {
-        throw new Error('Aadhar number cannot start with 0 or 1');
-      }
-      return true;
-    }),
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email')
+    .normalizeEmail(),
   body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
   body('password')
     .isLength({ min: 6 })
@@ -36,17 +29,10 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-  body('aadharNumber')
-    .isLength({ min: 12, max: 12 })
-    .withMessage('Aadhar number must be exactly 12 digits')
-    .isNumeric()
-    .withMessage('Aadhar number must contain only digits')
-    .custom((value) => {
-      if (value.startsWith('0') || value.startsWith('1')) {
-        throw new Error('Aadhar number cannot start with 0 or 1');
-      }
-      return true;
-    }),
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email')
+    .normalizeEmail(),
   body('password').notEmpty().withMessage('Password is required')
 ];
 

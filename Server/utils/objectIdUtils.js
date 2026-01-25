@@ -7,32 +7,20 @@ const mongoose = require('mongoose');
  */
 const convertToObjectId = (id) => {
   try {
-    // Log conversion attempt
-    console.log(`ObjectId conversion attempt for: ${id} (type: ${typeof id})`);
-    
     // If already an ObjectId, return as is
     if (mongoose.Types.ObjectId.isValid(id) && typeof id === 'object') {
-      console.log(`ID is already a valid ObjectId: ${id}`);
       return id;
     }
     
     // If it's a valid string that can be converted to ObjectId
     if (isValidObjectId(id)) {
       const objectId = new mongoose.Types.ObjectId(id);
-      console.log(`Successfully converted string to ObjectId: ${id} -> ${objectId}`);
       return objectId;
     }
     
-    console.warn(`Failed to convert to ObjectId - invalid format: ${id}`);
     return null;
   } catch (error) {
-    console.error(`Error converting to ObjectId for value "${id}":`, {
-      message: error.message,
-      stack: error.stack,
-      inputValue: id,
-      inputType: typeof id,
-      timestamp: new Date().toISOString()
-    });
+    console.error(`Error converting to ObjectId for value "${id}":`, error.message);
     return null;
   }
 };
@@ -46,13 +34,11 @@ const isValidObjectId = (id) => {
   try {
     // Check if id exists and is not null/undefined
     if (!id) {
-      console.log(`ObjectId validation failed: ID is null/undefined`);
       return false;
     }
     
     // Check if it's already an ObjectId
     if (mongoose.Types.ObjectId.isValid(id) && typeof id === 'object') {
-      console.log(`ObjectId validation passed: ID is already a valid ObjectId`);
       return true;
     }
     
@@ -60,24 +46,12 @@ const isValidObjectId = (id) => {
     if (typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
       // Additional check to ensure it's a proper 24-character hex string
       const isValidHex = /^[0-9a-fA-F]{24}$/.test(id);
-      if (isValidHex) {
-        console.log(`ObjectId validation passed: String "${id}" is valid ObjectId format`);
-        return true;
-      } else {
-        console.warn(`ObjectId validation failed: String "${id}" is not a valid 24-character hex string`);
-        return false;
-      }
+      return isValidHex;
     }
     
-    console.warn(`ObjectId validation failed: Invalid type or format for "${id}" (type: ${typeof id})`);
     return false;
   } catch (error) {
-    console.error(`Error validating ObjectId for value "${id}":`, {
-      message: error.message,
-      inputValue: id,
-      inputType: typeof id,
-      timestamp: new Date().toISOString()
-    });
+    console.error(`Error validating ObjectId for value "${id}":`, error.message);
     return false;
   }
 };
@@ -104,9 +78,6 @@ const convertMultipleToObjectId = (ids) => {
  * @returns {Object} - Error object with message and details
  */
 const createObjectIdError = (fieldName, value) => {
-  // Log the error creation for debugging
-  console.error(`Creating ObjectId error for field "${fieldName}" with value "${value}"`);
-  
   return {
     error: 'Invalid ObjectId',
     message: `Invalid ${fieldName} format: ${value}`,
@@ -125,8 +96,6 @@ const createObjectIdError = (fieldName, value) => {
  * @returns {Object} - Result object with success status and either ObjectId or error
  */
 const validateAndConvertObjectId = (fieldName, value) => {
-  console.log(`Validating and converting ObjectId for field "${fieldName}": ${value}`);
-  
   // Handle null/undefined values
   if (!value) {
     const error = {
@@ -136,7 +105,6 @@ const validateAndConvertObjectId = (fieldName, value) => {
       field: fieldName,
       value: value
     };
-    console.warn(`Validation failed for ${fieldName}: value is null/undefined`);
     return error;
   }
 
@@ -150,7 +118,6 @@ const validateAndConvertObjectId = (fieldName, value) => {
       value: value,
       receivedType: typeof value
     };
-    console.warn(`Validation failed for ${fieldName}: invalid data type`);
     return error;
   }
 
@@ -160,7 +127,6 @@ const validateAndConvertObjectId = (fieldName, value) => {
       success: false,
       ...createObjectIdError(fieldName, value)
     };
-    console.warn(`Validation failed for ${fieldName}: invalid ObjectId format`);
     return error;
   }
 
@@ -174,11 +140,9 @@ const validateAndConvertObjectId = (fieldName, value) => {
       field: fieldName,
       value: value
     };
-    console.error(`Conversion failed for ${fieldName}: unable to create ObjectId`);
     return error;
   }
 
-  console.log(`Successfully validated and converted ${fieldName}: ${value} -> ${objectId}`);
   return {
     success: true,
     objectId: objectId,
