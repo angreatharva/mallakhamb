@@ -57,32 +57,27 @@ io.on('connection', (socket) => {
 // Make io available to routes
 app.set('io', io);
 
-// Dynamic CORS configuration
+// Simplified CORS configuration that works reliably
+const allowedOrigins = config.getAllowedOrigins();
+console.log('🔗 Server starting with allowed origins:', allowedOrigins);
+
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = config.getAllowedOrigins();
-    
-    console.log('🔗 CORS allowed origins:', allowedOrigins);
-    
-    // Check if origin is allowed
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked origin:', origin);
-      console.log('   Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning']
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
+  optionsSuccessStatus: 200
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.headers.origin || 'no-origin'}`);
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -97,6 +92,28 @@ app.use('/api/public', require('./routes/publicRoutes'));
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Sports Event API is running!', timestamp: new Date().toISOString() });
+});
+
+// Debug endpoint to test CORS
+app.get('/api/debug/cors', (req, res) => {
+  console.log('🔍 Debug CORS request from origin:', req.headers.origin);
+  res.json({ 
+    message: 'CORS test successful',
+    origin: req.headers.origin,
+    allowedOrigins: config.getAllowedOrigins(),
+    timestamp: new Date().toISOString() 
+  });
+});
+
+// Debug endpoint to check environment
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    CLIENT_URL: process.env.CLIENT_URL,
+    RENDER_FRONTEND_URL: process.env.RENDER_FRONTEND_URL,
+    allowedOrigins: config.getAllowedOrigins(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware
@@ -116,12 +133,15 @@ server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Socket.IO server running`);
   console.log(`Environment: ${config.nodeEnv}`);
+  console.log('🔗 CORS allowed origins:', config.getAllowedOrigins());
   
   // Setup ngrok tunnel
   const ngrokUrl = await setupNgrok();
   
   if (ngrokUrl) {
     console.log('✅ Ngrok tunnel established successfully');
+  } else {
+    console.log('🚀 Running without ngrok (production mode)');
   }
 });
 
