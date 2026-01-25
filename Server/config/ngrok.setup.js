@@ -1,13 +1,21 @@
-const ngrok = require('@ngrok/ngrok');
-const config = require('./server.config');
-
 const setupNgrok = async () => {
   try {
     // Don't run ngrok in production
-    if (config.nodeEnv === 'production') {
+    if (process.env.NODE_ENV === 'production') {
       console.log('🚀 Running in production - ngrok disabled');
       return null;
     }
+
+    // Try to require ngrok, but handle if it's not available
+    let ngrok;
+    try {
+      ngrok = require('@ngrok/ngrok');
+    } catch (err) {
+      console.log('⚠️ Ngrok module not available (production environment)');
+      return null;
+    }
+
+    const config = require('./server.config');
 
     if (!config.ngrokEnabled) {
       console.log('Ngrok disabled by configuration');
@@ -53,9 +61,9 @@ const setupNgrok = async () => {
     console.log('\n💡 Troubleshooting tips:');
     console.log('1. Verify your auth token from: https://dashboard.ngrok.com/get-started/your-authtoken');
     console.log('2. Check your internet connection');
-    console.log('3. Make sure port', config.port, 'is available\n');
+    console.log('3. Make sure port is available\n');
     
-    console.log('Server will continue running on http://localhost:' + config.port + '\n');
+    console.log('Server will continue running without ngrok\n');
     return null;
   }
 };

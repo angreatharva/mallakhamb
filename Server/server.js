@@ -173,13 +173,17 @@ server.listen(PORT, async () => {
   console.log(`Environment: ${config.nodeEnv}`);
   console.log('🔗 CORS allowed origins:', config.getAllowedOrigins());
   
-  // Setup ngrok tunnel
-  const ngrokUrl = await setupNgrok();
-  
-  if (ngrokUrl) {
-    console.log('✅ Ngrok tunnel established successfully');
-  } else {
-    console.log('🚀 Running without ngrok (production mode)');
+  // Setup ngrok tunnel only in development
+  try {
+    const ngrokUrl = await setupNgrok();
+    
+    if (ngrokUrl) {
+      console.log('✅ Ngrok tunnel established successfully');
+    } else {
+      console.log('🚀 Running without ngrok (production mode or disabled)');
+    }
+  } catch (error) {
+    console.log('⚠️ Ngrok setup failed, continuing without it:', error.message);
   }
 });
 
