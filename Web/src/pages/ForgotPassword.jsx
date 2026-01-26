@@ -28,14 +28,45 @@ const ForgotPassword = () => {
     setMessage('');
     setError('');
 
+    // Show immediate feedback to user
+    toast.loading('Sending reset email...', { id: 'forgot-password' });
+
     try {
-      await authAPI.forgotPassword(data.email);
+      console.log('🔐 Sending forgot password request for:', data.email);
+      
+      // Add timeout to handle slow Render cold starts
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout - server may be starting up')), 120000) // 2 minutes
+      );
+      
+      const requestPromise = authAPI.forgotPassword(data.email);
+      
+      const response = await Promise.race([requestPromise, timeoutPromise]);
+      
+      console.log('✅ Forgot password response received');
+      
       setMessage('If an account with that email exists, a password reset link has been sent.');
-      toast.success('Password reset email sent!');
+      toast.success('Password reset email sent! Check your inbox.', { id: 'forgot-password' });
+      
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'An error occurred. Please try again later.';
+      console.error('❌ Forgot password error:', err);
+      
+      let errorMessage = 'An error occurred. Please try again later.';
+      
+      if (err.message.includes('timeout')) {
+        errorMessage = 'The server is starting up. Please wait a moment and try again.';
+        toast.error('Server is starting up, please try again in a moment.', { id: 'forgot-password' });
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+        toast.error(errorMessage, { id: 'forgot-password' });
+      } else if (err.code === 'NETWORK_ERROR' || err.message.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+        toast.error(errorMessage, { id: 'forgot-password' });
+      } else {
+        toast.error(errorMessage, { id: 'forgot-password' });
+      }
+      
       setError(errorMessage);
-      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -84,9 +115,21 @@ const ForgotPassword = () => {
               variant="primary"
               loading={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              disabled={loading}
             >
-              {loading ? 'Sending...' : 'Send Reset Link'}
+              {loading ? 'Sending Reset Link...' : 'Send Reset Link'}
             </ResponsiveButton>
+            
+            {loading && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                  <p className="text-sm text-blue-800">
+                    Sending reset email... This may take a moment if the server is starting up.
+                  </p>
+                </div>
+              </div>
+            )}
           </ResponsiveForm>
 
           {message && (

@@ -154,6 +154,35 @@ app.post('/api/debug/test-post', (req, res) => {
   });
 });
 
+// Test email endpoint (only for debugging - remove in production)
+app.post('/api/debug/test-email', async (req, res) => {
+  const { sendEmail } = require('./utils/emailService');
+  
+  console.log('🔍 Test email request received');
+  
+  try {
+    const testEmail = req.body.email || 'test@example.com';
+    const result = await sendEmail(
+      testEmail,
+      'Test Email - Mallakhamb Competition',
+      '<h1>Test Email</h1><p>This is a test email from the Mallakhamb Competition system.</p>'
+    );
+    
+    res.json({
+      message: 'Email test completed',
+      success: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({
+      message: 'Email test failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
