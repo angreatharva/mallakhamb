@@ -156,22 +156,39 @@ app.post('/api/debug/test-post', (req, res) => {
 
 // Test email endpoint (only for debugging - remove in production)
 app.post('/api/debug/test-email', async (req, res) => {
-  const { sendEmail } = require('./utils/emailService');
+  const { sendEmail, testEmailConnectivity } = require('./utils/emailService');
   
   console.log('🔍 Test email request received');
   
   try {
     const testEmail = req.body.email || 'test@example.com';
+    
+    // First test connectivity
+    console.log('🧪 Testing email connectivity...');
+    const connectivityTest = await testEmailConnectivity();
+    
+    // Then try sending email
+    console.log('📧 Attempting to send test email...');
     const result = await sendEmail(
       testEmail,
       'Test Email - Mallakhamb Competition',
-      '<h1>Test Email</h1><p>This is a test email from the Mallakhamb Competition system.</p>'
+      `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #2563eb;">Test Email</h1>
+        <p>This is a test email from the Mallakhamb Competition system.</p>
+        <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+        <p><strong>Environment:</strong> ${process.env.NODE_ENV || 'development'}</p>
+        <p>If you received this email, the email service is working correctly!</p>
+      </div>
+      `
     );
     
     res.json({
       message: 'Email test completed',
-      success: result,
-      timestamp: new Date().toISOString()
+      connectivityTest: connectivityTest,
+      emailSent: result,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
     });
   } catch (error) {
     console.error('Test email error:', error);
