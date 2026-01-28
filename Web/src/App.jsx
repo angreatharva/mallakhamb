@@ -23,6 +23,7 @@ import AdminScoring from './pages/AdminScoring';
 import JudgeScoring from './pages/JudgeScoring';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PublicScores from './pages/PublicScores';
 
 // Create Auth Context
 const AuthContext = createContext();
@@ -166,19 +167,21 @@ function AppContent() {
     );
   }
 
-  // Check if current route is admin dashboard, teams, scoring, or home page
-  const isAdminDashboard = location.pathname.startsWith('/admin/dashboard') || location.pathname.startsWith('/admin/teams') || location.pathname.startsWith('/admin/scoring');
+  // Check if current route is admin route, home page, or public scores
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const isHomePage = location.pathname === '/';
+  const isPublicScores = location.pathname === '/scores';
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
       <div className="min-h-screen bg-gray-50">
-        {/* Only show main navbar if not on admin dashboard or home page */}
-        {!isAdminDashboard && !isHomePage && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
+        {/* Only show main navbar if not on admin routes, home page, or public scores */}
+        {!isAdminRoute && !isHomePage && !isPublicScores && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/scores" element={<PublicScores />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 

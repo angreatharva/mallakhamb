@@ -377,7 +377,17 @@ const Scores = () => {
                     ) : (
                       <ResponsiveTeamTable
                         teams={getFilteredData()}
-                        onTeamClick={fetchTeamDetails}
+                        onTeamClick={(teamId) => {
+                          const team = submittedTeams.find(t => t._id === teamId);
+                          if (team) {
+                            if (teamScoreStatus[teamId]?.hasScores) {
+                              toast.info('Continuing existing scoring session...');
+                            }
+                            navigate('/admin/scoring', {
+                              state: { selectedTeam: team, selectedGender, selectedAgeGroup }
+                            });
+                          }
+                        }}
                         searchTerm={searchTerm}
                         renderMobileCard={(team, index) => (
                           <div key={team._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">

@@ -230,35 +230,12 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Combined Navigation */}
+      {/* Single Combined Navigation */}
       <nav className="bg-white shadow-lg border-b">
         <ResponsiveContainer maxWidth="desktop" padding="responsive">
-          {/* Top row - Site branding and user info */}
-          <div className="flex justify-between items-center h-14 md:h-16 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Trophy className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
-              <ResponsiveHeading level={1} className="text-gray-900">MallakhambIndia</ResponsiveHeading>
-            </div>
-
-            {/* User info and logout */}
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <ResponsiveText size="sm" className="text-gray-600 hidden sm:block">Welcome, Admin</ResponsiveText>
-              <button
-                onClick={() => {
-                  // Handle logout
-                  localStorage.removeItem('admin_token');
-                  localStorage.removeItem('admin_user');
-                  navigate('/admin/login');
-                }}
-                className="px-2 py-1 md:px-3 md:py-1 bg-red-600 text-white rounded hover:bg-red-700 min-h-[44px] md:min-h-0"
-              >
-                <ResponsiveText size="xs" className="text-white">Logout</ResponsiveText>
-              </button>
-            </div>
-          </div>
-
-          {/* Bottom row - Admin dashboard and tabs */}
+          {/* Single row with everything */}
           <div className="flex justify-between items-center h-14 md:h-16">
+            {/* Left side - Admin Dashboard and tabs */}
             <div className="flex items-center space-x-4 md:space-x-8">
               <div className="flex items-center space-x-2">
                 <Shield className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
@@ -316,15 +293,31 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
-            {isMobile && (
+            {/* Right side - User info and logout */}
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <ResponsiveText size="sm" className="text-gray-600 hidden sm:block">Welcome, Admin</ResponsiveText>
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-gray-600 hover:text-gray-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                onClick={() => {
+                  // Handle logout
+                  localStorage.removeItem('admin_token');
+                  localStorage.removeItem('admin_user');
+                  navigate('/admin/login');
+                }}
+                className="px-2 py-1 md:px-3 md:py-1 bg-red-600 text-white rounded hover:bg-red-700 min-h-[44px] md:min-h-0"
               >
-                <Menu className="h-6 w-6" />
+                <ResponsiveText size="xs" className="text-white">Logout</ResponsiveText>
               </button>
-            )}
+              
+              {/* Mobile Menu Button */}
+              {isMobile && (
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 text-gray-600 hover:text-gray-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Mobile Navigation Menu */}

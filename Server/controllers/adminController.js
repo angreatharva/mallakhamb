@@ -1279,6 +1279,94 @@ const getTeamRankings = async (req, res) => {
   }
 };
 
+// Get public teams (for score viewing)
+const getPublicTeams = async (req, res) => {
+  try {
+    const teams = await Team.find({ isSubmitted: true })
+      .populate('coach', 'name email')
+      .populate('players.player', 'firstName lastName gender dateOfBirth')
+      .select('name coach players')
+      .sort({ name: 1 });
+
+    res.json({
+      success: true,
+      teams
+    });
+  } catch (error) {
+    console.error('Error fetching public teams:', error);
+    res.status(500).json({ message: 'Server error fetching teams' });
+  }
+};
+
+// Get public scores (for score viewing)
+const getPublicScores = async (req, res) => {
+  try {
+    const { teamId, gender, ageGroup } = req.query;
+
+    if (!teamId || !gender || !ageGroup) {
+      return res.status(400).json({ 
+        message: 'Team ID, gender, and age group are required' 
+      });
+    }
+
+    // Validate teamId
+    if (!isValidObjectId(teamId)) {
+      return res.status(400).json({ message: 'Invalid team ID format' });
+    }
+
+    const teamObjectId = convertToObjectId(teamId);
+
+    // Find scores for the specific team, gender, and age group
+    const scores = await Score.find({
+      teamId: teamObjectId,
+      gender,
+      ageGroup,
+      isLocked: true // Only show locked (finalized) scores
+    })
+    .populate('teamId', 'name')
+    .sort({ createdAt: -1 });
+
+    if (!scores || scores.length === 0) {
+      return res.json({
+        success: true,
+        scores: [],
+        message: 'No scores found for this team and category'
+      });
+    }
+
+    // Format the response
+    const formattedScores = scores.map(score => ({
+      _id: score._id,
+      teamName: score.teamId.name,
+      gender: score.gender,
+      ageGroup: score.ageGroup,
+      playerScores: score.playerScores.map(player => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        time: player.time,
+        judgeScores: player.judgeScores,
+        averageMarks: player.averageMarks,
+        deduction: player.deduction,
+        otherDeduction: player.otherDeduction,
+        finalScore: player.finalScore
+      })),
+      timeKeeper: score.timeKeeper,
+      scorer: score.scorer,
+      remarks: score.remarks,
+      createdAt: score.createdAt,
+      updatedAt: score.updatedAt
+    }));
+
+    res.json({
+      success: true,
+      scores: formattedScores
+    });
+  } catch (error) {
+    console.error('Error fetching public scores:', error);
+    res.status(500).json({ message: 'Server error fetching scores' });
+  }
+};
+
 module.exports = {
   registerAdmin,
   loginAdmin,
@@ -1298,5 +1386,7 @@ module.exports = {
   saveScores,
   unlockScores,
   saveIndividualScore,
-  getTeamRankings
+  getTeamRankings,
+  getPublicTeams,
+  getPublicScores
 };

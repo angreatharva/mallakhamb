@@ -139,4 +139,10 @@ export const judgeAPI = {
   saveScore: (data) => publicApi.post('/public/save-score', data),
 };
 
+// Public API for viewing scores (no authentication required)
+export const publicAPI = {
+  getTeams: () => publicApi.get('/public/teams'),
+  getScores: (params) => publicApi.get('/public/scores', { params }),
+};
+
 export default api;

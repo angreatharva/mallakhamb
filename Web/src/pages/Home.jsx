@@ -231,6 +231,19 @@ const Home = () => {
               </Link>
             </div>
 
+            {/* View Scores Button */}
+            <div className="mt-8 flex justify-center">
+              <Link
+                to="/scores"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full font-bold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-blue-500/30 flex items-center justify-center gap-3 border-2 border-blue-400/50 min-h-[48px] backdrop-blur-sm"
+              >
+                <Trophy className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
+                <span className="text-sm md:text-base font-bold tracking-wide">
+                  VIEW SCORES
+                </span>
+              </Link>
+            </div>
+
             {/* Additional Info */}
             <div className="mt-12 text-center">
               <ResponsiveText className="text-gray-200 drop-shadow-md text-sm md:text-base">

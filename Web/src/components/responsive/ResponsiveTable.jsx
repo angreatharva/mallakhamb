@@ -440,7 +440,7 @@ export const ResponsiveTeamTable = ({
     <div
       key={team._id}
       className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-purple-300"
-      onClick={() => onTeamClick && onTeamClick(team)}
+      onClick={() => onTeamClick && onTeamClick(team._id)}
     >
       <div className="space-y-3">
         <div>
@@ -489,7 +489,7 @@ export const ResponsiveTeamTable = ({
           <div
             key={team._id}
             className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer hover:border-purple-300 bg-white"
-            onClick={() => onTeamClick && onTeamClick(team)}
+            onClick={() => onTeamClick && onTeamClick(team._id)}
           >
             <div className="flex justify-between items-start">
               <div className="flex-1">
