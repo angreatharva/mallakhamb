@@ -14,6 +14,7 @@ const getCurrentUserTypeFromURL = () => {
   const path = window.location.pathname;
   if (path.startsWith('/player')) return 'player';
   if (path.startsWith('/coach')) return 'coach';
+  if (path.startsWith('/superadmin')) return 'superadmin';
   if (path.startsWith('/admin')) return 'admin';
   return null;
 };
@@ -103,27 +104,44 @@ const publicApi = axios.create({
   headers: apiConfig.getHeaders(),
 });
 
-// Admin API
-export const adminAPI = {
-  register: (data) => api.post('/admin/register', data),
-  login: (data) => api.post('/admin/login', data),
-  getProfile: () => api.get('/admin/profile'),
-  getDashboard: () => api.get('/admin/dashboard'),
-  getAllTeams: (params) => api.get('/admin/teams', { params }),
-  getTeamDetails: (teamId) => api.get(`/admin/teams/${teamId}`),
-  getAllPlayers: (params) => api.get('/admin/players', { params }),
-  addScore: (data) => api.post('/admin/scores', data),
-  getTeamScores: (params) => api.get('/admin/scores/teams', { params }),
-  getIndividualScores: (params) => api.get('/admin/scores/individual', { params }),
-  getTeamRankings: (params) => api.get('/admin/scores/team-rankings', { params }),
-  getSubmittedTeams: (params) => api.get('/admin/submitted-teams', { params }),
-  saveJudges: (data) => api.post('/admin/judges', data),
-  getJudges: (params) => api.get('/admin/judges', { params }),
-  updateJudge: (judgeId, data) => api.put(`/admin/judges/${judgeId}`, data),
-  createSingleJudge: (data) => api.post('/admin/judges/single', data),
-  saveScores: (data) => api.post('/admin/scores/save', data),
-  updateScores: (scoreId, data) => api.put(`/admin/scores/${scoreId}`, data),
-  unlockScores: (scoreId) => api.put(`/admin/scores/${scoreId}/unlock`),
+// Factory function to create admin API with configurable base path
+const createAdminAPI = (basePath = '/admin') => ({
+  register: (data) => api.post(`${basePath}/register`, data),
+  login: (data) => api.post(`${basePath}/login`, data),
+  getProfile: () => api.get(`${basePath}/profile`),
+  getDashboard: () => api.get(`${basePath}/dashboard`),
+  getAllTeams: (params) => api.get(`${basePath}/teams`, { params }),
+  getTeamDetails: (teamId) => api.get(`${basePath}/teams/${teamId}`),
+  getAllPlayers: (params) => api.get(`${basePath}/players`, { params }),
+  addScore: (data) => api.post(`${basePath}/scores`, data),
+  getTeamScores: (params) => api.get(`${basePath}/scores/teams`, { params }),
+  getIndividualScores: (params) => api.get(`${basePath}/scores/individual`, { params }),
+  getTeamRankings: (params) => api.get(`${basePath}/scores/team-rankings`, { params }),
+  getSubmittedTeams: (params) => api.get(`${basePath}/submitted-teams`, { params }),
+  saveJudges: (data) => api.post(`${basePath}/judges`, data),
+  getJudges: (params) => api.get(`${basePath}/judges`, { params }),
+  updateJudge: (judgeId, data) => api.put(`${basePath}/judges/${judgeId}`, data),
+  createSingleJudge: (data) => api.post(`${basePath}/judges/single`, data),
+  saveScores: (data) => api.post(`${basePath}/scores/save`, data),
+  unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),
+});
+
+// Admin API with base path /admin (relative to baseURL which already includes /api)
+export const adminAPI = createAdminAPI('/admin');
+
+// Super Admin API with base path /superadmin (relative to baseURL which already includes /api)
+export const superAdminAPI = {
+  ...createAdminAPI('/superadmin'),
+  // Super Admin specific endpoints
+  getSystemStats: () => api.get('/superadmin/system-stats'),
+  getAllAdmins: () => api.get('/superadmin/admins'),
+  createAdmin: (data) => api.post('/superadmin/admins', data),
+  updateAdmin: (adminId, data) => api.put(`/superadmin/admins/${adminId}`, data),
+  deleteAdmin: (adminId) => api.delete(`/superadmin/admins/${adminId}`),
+  getAllCoaches: () => api.get('/superadmin/coaches'),
+  updateCoachStatus: (coachId, data) => api.put(`/superadmin/coaches/${coachId}/status`, data),
+  deleteTeam: (teamId) => api.delete(`/superadmin/teams/${teamId}`),
+  deleteJudge: (judgeId) => api.delete(`/superadmin/judges/${judgeId}`)
 };
 
 // Auth API

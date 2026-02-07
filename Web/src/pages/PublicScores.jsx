@@ -149,31 +149,32 @@ const PublicScores = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <ResponsiveContainer maxWidth="full" padding="responsive">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">Back to Home</span>
-              </Link>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <div className="flex items-center space-x-2">
-                <ResponsiveHeading level={1} className="text-gray-900">
-                  View Scores
-                </ResponsiveHeading>
-              </div>
-            </div>
-          </div>
-        </ResponsiveContainer>
+      {/* Fixed Header / Navbar */}
+<div className="fixed top-0 left-0 w-full bg-white shadow-sm border-b z-50">
+  <ResponsiveContainer maxWidth="full" padding="responsive">
+    <div className="flex items-center justify-between py-4">
+      <div className="flex items-center space-x-4">
+        <Link
+          to="/"
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="font-medium">Back to Home</span>
+        </Link>
+
+        <div className="h-6 w-px bg-gray-300"></div>
+
+        <ResponsiveHeading level={1} className="text-gray-900">
+          View Scores
+        </ResponsiveHeading>
       </div>
+    </div>
+  </ResponsiveContainer>
+</div>
+
 
       {/* Main Content */}
-      <ResponsiveContainer maxWidth="full" padding="responsive" className="py-8">
+      <ResponsiveContainer maxWidth="full" padding="responsive" className="pt-28 pb-8">
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
           <div className="mb-8">
             <ResponsiveHeading level={2} className="text-gray-900 mb-2">

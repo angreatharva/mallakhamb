@@ -3,13 +3,21 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Clock, Users, Save, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
+import { useRouteContext } from '../contexts/RouteContext';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 
-const ScoringPage = () => {
+const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Get route context from hook or use prop
+  const contextValue = useRouteContext();
+  const routePrefix = routePrefixProp || contextValue.routePrefix;
+  
+  // Select the appropriate API service based on route context
+  const apiService = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const { selectedTeam, selectedGender, selectedAgeGroup } = location.state || {};
 
   const [socket, setSocket] = useState(null);
@@ -152,7 +160,7 @@ const ScoringPage = () => {
   // Fetch judges and players data
   useEffect(() => {
     if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
-      navigate('/admin');
+      navigate(routePrefix);
       return;
     }
 
@@ -164,7 +172,7 @@ const ScoringPage = () => {
       setLoading(true);
 
       // Fetch judges for the selected age group and gender
-      const judgesResponse = await adminAPI.getJudges({
+      const judgesResponse = await apiService.getJudges({
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value
       });
@@ -193,7 +201,7 @@ const ScoringPage = () => {
 
       // Also try to get all players for this category from all teams to support cross-team scoring
       try {
-        const allTeamsResponse = await adminAPI.getSubmittedTeams({
+        const allTeamsResponse = await apiService.getSubmittedTeams({
           gender: selectedGender.value,
           ageGroup: selectedAgeGroup.value
         });
@@ -270,7 +278,7 @@ const ScoringPage = () => {
   const loadExistingScores = async (teamId, gender, ageGroup, initialScores) => {
     try {
       // Try to load existing scores from the database
-      const response = await adminAPI.getTeamScores({
+      const response = await apiService.getTeamScores({
         teamId,
         gender,
         ageGroup
@@ -433,7 +441,7 @@ const ScoringPage = () => {
         }))
       };
 
-      await adminAPI.saveScores(scoringData);
+      await apiService.saveScores(scoringData);
 
       // Show success message
       toast.success('🎉 Thank you for scoring! All scores have been saved successfully.', {
@@ -451,7 +459,7 @@ const ScoringPage = () => {
 
       // Redirect to scores tab after a short delay
       setTimeout(() => {
-        navigate('/admin/dashboard/scores');
+        navigate(`${routePrefix}/dashboard/scores`);
       }, 2000);
 
     } catch (error) {
@@ -477,7 +485,7 @@ const ScoringPage = () => {
         <div className="text-center">
           <p className="text-gray-600">Invalid scoring session. Please go back and select a team.</p>
           <button
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate(routePrefix)}
             className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
             Back to Admin Dashboard
@@ -495,7 +503,7 @@ const ScoringPage = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate(routePrefix)}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-5 w-5" />

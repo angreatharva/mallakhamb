@@ -113,6 +113,7 @@ app.use('/api/players', require('./routes/playerRoutes'));
 app.use('/api/coaches', require('./routes/coachRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/superadmin', require('./routes/superAdminRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 
 // Health check endpoint

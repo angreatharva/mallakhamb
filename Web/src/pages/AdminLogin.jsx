@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
 import { useAuth } from '../App';
+import { useRouteContext } from '../contexts/RouteContext';
 import { 
   ResponsiveForm, 
   ResponsiveFormField, 
@@ -18,18 +19,27 @@ import {
   ResponsiveLink 
 } from '../components/responsive/ResponsiveTypography';
 
-const AdminLogin = () => {
+const AdminLogin = ({ routePrefix: routePrefixProp }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
+  
+  // Get route context from hook or use prop
+  const contextValue = useRouteContext();
+  const routePrefix = routePrefixProp || contextValue.routePrefix;
+  const storagePrefix = contextValue.storagePrefix;
+  
+  // Determine which API to use based on route context
+  const apiService = storagePrefix === 'superadmin' ? superAdminAPI : adminAPI;
+  const expectedUserType = storagePrefix === 'superadmin' ? 'superadmin' : 'admin';
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && userType === 'admin') {
-      navigate('/admin/dashboard');
+    if (user && userType === expectedUserType) {
+      navigate(`${routePrefix}/dashboard`);
     }
-  }, [user, userType, navigate]);
+  }, [user, userType, expectedUserType, navigate, routePrefix]);
 
   const {
     register,
@@ -40,16 +50,16 @@ const AdminLogin = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const response = await adminAPI.login(data);
+      const response = await apiService.login(data);
       const { token, admin } = response.data;
       
-      // Use the auth context login function
-      login(admin, token, 'admin');
+      // Use the auth context login function with appropriate user type
+      login(admin, token, expectedUserType);
       
       toast.success('Login successful!');
       
-      // Navigate using React Router instead of forcing page reload
-      navigate('/admin/dashboard');
+      // Navigate using React Router to the appropriate dashboard
+      navigate(`${routePrefix}/dashboard`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
@@ -67,8 +77,12 @@ const AdminLogin = () => {
                 <Shield className="h-8 w-8 text-purple-600" />
               </div>
             </div>
-            <ResponsiveHeading level={2} className="text-gray-900">Admin Login</ResponsiveHeading>
-            <ResponsiveText className="text-gray-600 mt-2">Sign in to admin dashboard</ResponsiveText>
+            <ResponsiveHeading level={2} className="text-gray-900">
+              {routePrefix === '/superadmin' ? 'Super Admin Login' : 'Admin Login'}
+            </ResponsiveHeading>
+            <ResponsiveText className="text-gray-600 mt-2">
+              Sign in to {routePrefix === '/superadmin' ? 'super admin' : 'admin'} dashboard
+            </ResponsiveText>
           </div>
 
           <ResponsiveForm onSubmit={handleSubmit(onSubmit)}>

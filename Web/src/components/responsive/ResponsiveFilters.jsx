@@ -25,6 +25,7 @@ export const ResponsiveFilters = ({
   searchPlaceholder = 'Search...',
   className = '',
   showClearButton = true,
+  showSearchBar = true,
   ...props
 }) => {
   const { isMobile } = useResponsive();
@@ -36,26 +37,28 @@ export const ResponsiveFilters = ({
       <ResponsiveContainer className={`mobile-filters ${className}`} {...props}>
         <div className="space-y-4">
           {/* Search Bar */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+          {showSearchBar && (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-base bg-white text-gray-900 h-12"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-base bg-white text-gray-900 h-12"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => onSearchChange('')}
-                className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
-              >
-                <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
-          </div>
+          )}
 
           {/* Collapsible Filters */}
           {filters.length > 0 && (
@@ -123,33 +126,35 @@ export const ResponsiveFilters = ({
     <ResponsiveContainer className={`desktop-filters ${className}`} {...props}>
       <div className="space-y-4">
         {/* Search and Filters Row */}
-        <div className={`grid gap-4 ${filters.length === 2 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4'}`}>
+        <div className={`grid gap-4 ${!showSearchBar ? (filters.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2') : (filters.length === 2 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4')}`}>
           {/* Search */}
-          <div className="flex flex-col">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search
-            </label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
-                <Search className="h-4 w-4 text-gray-400" />
+          {showSearchBar && (
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900 text-sm"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center z-10"
+                  >
+                    <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  </button>
+                )}
               </div>
-              <input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900 text-sm"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center z-10"
-                >
-                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                </button>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Filter Dropdowns */}
           {filters.map((filter, index) => (
@@ -174,7 +179,7 @@ export const ResponsiveFilters = ({
 
         {/* Clear Filters Button */}
         {showClearButton && (filters.some(f => f.value) || searchTerm) && (
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-2.5">
             <button
               onClick={onClearFilters}
               className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
@@ -262,13 +267,14 @@ export const ResponsiveTeamFilters = ({
 
   return (
     <ResponsiveFilters
-      searchTerm={searchTerm}
-      onSearchChange={onSearchChange}
+      searchTerm=""
+      onSearchChange={() => {}}
       filters={filters}
       onFilterChange={handleFilterChange}
       onClearFilters={onClearFilters}
       searchPlaceholder="Search teams by name or coach..."
       className={`team-filters ${className}`}
+      showSearchBar={false}
       {...props}
     />
   );
@@ -380,13 +386,14 @@ export const ResponsiveScoreFilters = ({
 
   return (
     <ResponsiveFilters
-      searchTerm={searchTerm}
-      onSearchChange={onSearchChange}
+      searchTerm=""
+      onSearchChange={() => {}}
       filters={filters}
       onFilterChange={handleFilterChange}
       onClearFilters={onClearFilters}
       searchPlaceholder={getSearchPlaceholder()}
       className={`score-filters ${className}`}
+      showSearchBar={false}
       {...props}
     />
   );

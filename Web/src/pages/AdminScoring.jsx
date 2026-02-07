@@ -3,14 +3,19 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
+import { useRouteContext } from '../contexts/RouteContext';
 
 const AdminScoring = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { routePrefix, storagePrefix } = useRouteContext();
     const { selectedTeam, selectedGender, selectedAgeGroup } = location.state || {};
+
+    // Select appropriate API based on route context
+    const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
 
     const [socket, setSocket] = useState(null);
     const [judges, setJudges] = useState([]);
@@ -149,7 +154,7 @@ const AdminScoring = () => {
     // Fetch data on component mount
     useEffect(() => {
         if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
-            navigate('/admin/dashboard/scores');
+            navigate(`${routePrefix}/dashboard/scores`);
             return;
         }
 
@@ -177,7 +182,7 @@ const AdminScoring = () => {
 
                 for (const test of tests) {
                     try {
-                        const response = await adminAPI.getTeamScores(test.params);
+                        const response = await api.getTeamScores(test.params);
                         console.log(`${test.name}:`, response.data);
 
                         if (response.data?.scores?.length > 0) {
@@ -219,7 +224,7 @@ const AdminScoring = () => {
             });
 
             // Fetch judges for the selected age group and gender
-            const judgesResponse = await adminAPI.getJudges({
+            const judgesResponse = await api.getJudges({
                 gender: selectedGender.value,
                 ageGroup: selectedAgeGroup.value
             });
@@ -287,7 +292,7 @@ const AdminScoring = () => {
             // Fetch scores from API with specific filters
             let allResponse;
             try {
-                allResponse = await adminAPI.getTeamScores({
+                allResponse = await api.getTeamScores({
                     teamId: teamId,
                     gender: gender,
                     ageGroup: ageGroup
@@ -566,7 +571,7 @@ const AdminScoring = () => {
             };
 
             // Use saveScores for both create and update (backend handles both cases)
-            const response = await adminAPI.saveScores(scoringData);
+            const response = await api.saveScores(scoringData);
 
             // Update local lock state after successful save
             setIsLocked(shouldLock);
@@ -607,7 +612,7 @@ const AdminScoring = () => {
         }
 
         try {
-            await adminAPI.unlockScores(existingScoreId);
+            await api.unlockScores(existingScoreId);
             setIsLocked(false);
             toast.success('Scores unlocked for editing');
         } catch (error) {
@@ -633,7 +638,7 @@ const AdminScoring = () => {
                 <div className="text-center">
                     <p className="text-gray-600">Invalid scoring session. Please go back and select a team.</p>
                     <button
-                        onClick={() => navigate('/admin/dashboard/scores')}
+                        onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
                         className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                         Back to Scores
@@ -651,7 +656,7 @@ const AdminScoring = () => {
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center space-x-4">
                             <button
-                                onClick={() => navigate('/admin/dashboard/scores')}
+                                onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
                                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -660,7 +665,7 @@ const AdminScoring = () => {
                             <div className="h-6 border-l border-gray-300"></div>
                             <h1 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
                                 <Trophy className="h-6 w-6 text-purple-600" />
-                                <span>Admin Scoring</span>
+                                <span>{routePrefix === '/superadmin' ? 'Super Admin Scoring' : 'Admin Scoring'}</span>
                                 {isLocked && <Lock className="h-5 w-5 text-red-500" />}
                             </h1>
                         </div>

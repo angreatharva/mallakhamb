@@ -7,13 +7,19 @@ import {
   Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
+import { useRouteContext } from '../contexts/RouteContext';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveTeamFilters } from '../components/responsive/ResponsiveFilters';
 
 const Teams = () => {
+  // Get route context for path-aware behavior
+  const { routePrefix, storagePrefix } = useRouteContext();
+  
+  // Select appropriate API based on route context
+  const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   
   // State management
   const [teams, setTeams] = useState([]);
@@ -83,7 +89,7 @@ const Teams = () => {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value
       };
-      const response = await adminAPI.getAllTeams(params);
+      const response = await api.getAllTeams(params);
       setTeams(response.data.teams);
       toast.success(`Loaded ${response.data.teams.length} teams`);
     } catch (error) {
@@ -96,7 +102,7 @@ const Teams = () => {
 
   const fetchTeamDetails = async (teamId) => {
     try {
-      const response = await adminAPI.getTeamDetails(teamId);
+      const response = await api.getTeamDetails(teamId);
       setSelectedTeam(response.data.team);
     } catch (error) {
       toast.error('Failed to load team details');
@@ -162,7 +168,7 @@ const Teams = () => {
             </div>
           ) : teams.length > 0 ? (
             <div>
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="mt-2.5 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-800">
                   <strong>Showing teams for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
                 </p>

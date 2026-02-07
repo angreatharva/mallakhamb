@@ -19,7 +19,7 @@ const authMiddleware = async (req, res, next) => {
       user = await Player.findById(decoded.userId).select('-password');
     } else if (decoded.userType === 'coach') {
       user = await Coach.findById(decoded.userId).select('-password');
-    } else if (decoded.userType === 'admin') {
+    } else if (decoded.userType === 'admin' || decoded.userType === 'superadmin') {
       user = await Admin.findById(decoded.userId).select('-password');
     }
 
@@ -54,9 +54,23 @@ const playerAuth = (req, res, next) => {
 
 // Middleware to check if user is an admin
 const adminAuth = (req, res, next) => {
-  if (req.userType !== 'admin') {
+  if (req.userType !== 'admin' && req.userType !== 'superadmin') {
     return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
   }
+  next();
+};
+
+// Middleware to check if user is a super admin
+const superAdminAuth = (req, res, next) => {
+  if (req.userType !== 'superadmin') {
+    return res.status(403).json({ message: 'Access denied. Super Admin privileges required.' });
+  }
+  
+  // Also check the role in the user object
+  if (req.user.role !== 'super_admin') {
+    return res.status(403).json({ message: 'Access denied. Super Admin privileges required.' });
+  }
+  
   next();
 };
 
@@ -64,5 +78,6 @@ module.exports = {
   authMiddleware,
   coachAuth,
   playerAuth,
-  adminAuth
+  adminAuth,
+  superAdminAuth
 };

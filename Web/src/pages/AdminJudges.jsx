@@ -8,7 +8,8 @@ import {
   X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
+import { useRouteContext } from '../contexts/RouteContext';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveForm, ResponsiveFormField, ResponsiveInput, ResponsiveButton } from '../components/responsive/ResponsiveForm';
@@ -16,6 +17,11 @@ import { ResponsiveTable } from '../components/responsive/ResponsiveTable';
 import { useResponsive } from '../hooks/useResponsive';
 
 const Judges = () => {
+  // Get route context for path-aware behavior
+  const { routePrefix, storagePrefix } = useRouteContext();
+  
+  // Select appropriate API based on route context
+  const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   // State management
   const [judges, setJudges] = useState([]);
   const [judgeFormData, setJudgeFormData] = useState([
@@ -95,7 +101,7 @@ const Judges = () => {
         gender: gender.value,
         ageGroup: ageGroup.value
       };
-      const response = await adminAPI.getJudges(params);
+      const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
       const actualJudges = response.data.judges.filter(judge =>
         judge._id &&
@@ -179,7 +185,7 @@ const Judges = () => {
       if (selectedGender) params.gender = selectedGender.value;
       if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
 
-      const response = await adminAPI.getJudges(params);
+      const response = await api.getJudges(params);
       setJudges(response.data.judges);
     } catch (error) {
       toast.error('Failed to load judges');
@@ -192,7 +198,7 @@ const Judges = () => {
     setLoadingJudges(true);
     try {
       const params = { gender, ageGroup };
-      const response = await adminAPI.getJudges(params);
+      const response = await api.getJudges(params);
       setJudges(response.data.judges);
     } catch (error) {
       toast.error('Failed to load judges');
@@ -248,7 +254,7 @@ const Judges = () => {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value
       };
-      const response = await adminAPI.getJudges(params);
+      const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
       const actualJudges = response.data.judges.filter(judge =>
         judge._id &&
@@ -298,7 +304,7 @@ const Judges = () => {
         judges: cleanedJudges
       };
 
-      const response = await adminAPI.saveJudges(judgesData);
+      const response = await api.saveJudges(judgesData);
       toast.success(`Judge panel created! ${response.data.filledSlots} judges added, ${response.data.emptySlots} slots available for editing.`);
 
       // Reset form
@@ -351,7 +357,7 @@ const Judges = () => {
 
       if (editingJudge._id && !editingJudge.isEmpty) {
         // Update existing judge
-        await adminAPI.updateJudge(editingJudge._id, updatedData);
+        await api.updateJudge(editingJudge._id, updatedData);
         toast.success('Judge updated successfully!');
       } else {
         // Create new judge for empty slot
@@ -362,7 +368,7 @@ const Judges = () => {
           judgeType: editingJudge.judgeType,
           ...updatedData
         };
-        await adminAPI.createSingleJudge(newJudgeData);
+        await api.createSingleJudge(newJudgeData);
         toast.success('Judge added successfully!');
       }
 

@@ -1,16 +1,38 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
 import { useResponsive } from '../hooks/useResponsive';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
   const { isMobile, isTablet } = useResponsive();
+  const location = useLocation();
+
+  // Detect route context from current URL path
+  const detectRouteContext = () => {
+    const path = location.pathname;
+    if (path.startsWith('/superadmin')) {
+      return { storagePrefix: 'superadmin', loginPath: '/superadmin/login' };
+    }
+    if (path.startsWith('/admin')) {
+      return { storagePrefix: 'admin', loginPath: '/admin/login' };
+    }
+    if (path.startsWith('/coach')) {
+      return { storagePrefix: 'coach', loginPath: '/coach/login' };
+    }
+    if (path.startsWith('/player')) {
+      return { storagePrefix: 'player', loginPath: '/player/login' };
+    }
+    // Default fallback
+    return { storagePrefix: requiredUserType || 'admin', loginPath: '/' };
+  };
+
+  const { storagePrefix, loginPath } = detectRouteContext();
 
   // Show loading spinner while auth is being determined
   if (user === null && userType === null) {
-    // Check if there's stored auth data for this user type
-    const token = localStorage.getItem(`${requiredUserType}_token`);
-    const userData = localStorage.getItem(`${requiredUserType}_user`);
+    // Check if there's stored auth data for this user type using detected storage prefix
+    const token = localStorage.getItem(`${storagePrefix}_token`);
+    const userData = localStorage.getItem(`${storagePrefix}_user`);
     
     if (token && userData) {
       // Auth data exists but context hasn't loaded yet, show responsive loading
@@ -29,12 +51,14 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
     }
   }
 
+  // If not authenticated, redirect to the correct login page based on route context
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
+  // If user type doesn't match required type, redirect to correct login page
   if (requiredUserType && userType !== requiredUserType) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   // Wrap children in responsive container to preserve layouts

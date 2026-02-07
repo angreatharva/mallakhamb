@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import RouteContext from './contexts/RouteContext';
 
 // Pages
 import Home from './pages/Home';
@@ -17,7 +18,8 @@ import CoachDashboard from './pages/CoachDashboard';
 import CoachPayment from './pages/CoachPayment';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import Teams from './pages/Teams';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import AdminTeams from './pages/AdminTeams';
 import ScoringPage from './pages/ScoringPage';
 import AdminScoring from './pages/AdminScoring';
 import JudgeScoring from './pages/JudgeScoring';
@@ -26,7 +28,7 @@ import ResetPassword from './pages/ResetPassword';
 import PublicScores from './pages/PublicScores';
 
 // Create Auth Context
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -48,6 +50,7 @@ function AppContent() {
     const path = location.pathname;
     if (path.startsWith('/player')) return 'player';
     if (path.startsWith('/coach')) return 'coach';
+    if (path.startsWith('/superadmin')) return 'superadmin';
     if (path.startsWith('/admin')) return 'admin';
     return null;
   };
@@ -124,7 +127,7 @@ function AppContent() {
 
   // Additional check for admin routes
   useEffect(() => {
-    if (location.pathname.startsWith('/admin') && !user && !loading) {
+    if ((location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin')) && !user && !loading) {
       loadAuthData();
     }
   }, [location.pathname, user, loading]);
@@ -168,7 +171,7 @@ function AppContent() {
   }
 
   // Check if current route is admin route, home page, or public scores
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
 
@@ -264,7 +267,7 @@ function AppContent() {
             path="/admin/teams"
             element={
               <ProtectedRoute requiredUserType="admin">
-                <Teams />
+                <AdminTeams />
               </ProtectedRoute>
             }
           />
@@ -279,6 +282,49 @@ function AppContent() {
 
           {/* Judge Scoring Route - Public for testing */}
           <Route path="/judge" element={<JudgeScoring />} />
+
+          {/* Super Admin Routes */}
+          <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />
+          <Route 
+            path="/superadmin/login" 
+            element={
+              <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                <AdminLogin />
+              </RouteContext.Provider>
+            } 
+          />
+
+          {/* Protected Super Admin Routes */}
+          <Route
+            path="/superadmin/dashboard"
+            element={
+              <ProtectedRoute requiredUserType="superadmin">
+                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                  <SuperAdminDashboard />
+                </RouteContext.Provider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/dashboard/:tab"
+            element={
+              <ProtectedRoute requiredUserType="superadmin">
+                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                  <SuperAdminDashboard />
+                </RouteContext.Provider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/scoring"
+            element={
+              <ProtectedRoute requiredUserType="superadmin">
+                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                  <AdminScoring />
+                </RouteContext.Provider>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

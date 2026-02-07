@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Filter, Users, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../services/api';
+import { adminAPI, superAdminAPI } from '../services/api';
+import { useRouteContext } from '../contexts/RouteContext';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../components/responsive/ResponsiveRankings';
@@ -11,6 +12,12 @@ import { ResponsiveScoreFilters } from '../components/responsive/ResponsiveFilte
 
 const Scores = () => {
   const navigate = useNavigate();
+  
+  // Get route context for path-aware behavior
+  const { routePrefix, storagePrefix } = useRouteContext();
+  
+  // Select appropriate API based on route context
+  const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
 
   // State management
   const [scores, setScores] = useState([]);
@@ -87,7 +94,7 @@ const Scores = () => {
   // API Functions
   const fetchTeamDetails = async (teamId) => {
     try {
-      const response = await adminAPI.getTeamDetails(teamId);
+      const response = await api.getTeamDetails(teamId);
       setSelectedTeam(response.data.team);
     } catch (error) {
       toast.error('Failed to load team details');
@@ -107,7 +114,7 @@ const Scores = () => {
         ageGroup: selectedAgeGroup.value
       };
 
-      const response = await adminAPI.getSubmittedTeams(params);
+      const response = await api.getSubmittedTeams(params);
       setSubmittedTeams(response.data.teams);
 
       // Check score status for each team
@@ -124,7 +131,7 @@ const Scores = () => {
 
     for (const team of teams) {
       try {
-        const response = await adminAPI.getTeamScores({
+        const response = await api.getTeamScores({
           teamId: team._id,
           gender: selectedGender?.value,
           ageGroup: selectedAgeGroup?.value
@@ -168,7 +175,7 @@ const Scores = () => {
         ageGroup: selectedAgeGroup.value
       };
 
-      const response = await adminAPI.getTeamScores(params);
+      const response = await api.getTeamScores(params);
       setScores(response.data.teamScores);
     } catch (error) {
       toast.error('Failed to load team scores');
@@ -190,7 +197,7 @@ const Scores = () => {
       };
 
       console.log('Fetching individual scores with params:', params);
-      const response = await adminAPI.getIndividualScores(params);
+      const response = await api.getIndividualScores(params);
       console.log('Individual scores response:', response.data);
       
       setScores(response.data.individualScores || []);
@@ -220,7 +227,7 @@ const Scores = () => {
       };
 
       console.log('Fetching team rankings with params:', params);
-      const response = await adminAPI.getTeamRankings(params);
+      const response = await api.getTeamRankings(params);
       console.log('Team rankings response:', response.data);
       
       setScores(response.data.teamRankings || []);
@@ -383,7 +390,7 @@ const Scores = () => {
                             if (teamScoreStatus[teamId]?.hasScores) {
                               toast.info('Continuing existing scoring session...');
                             }
-                            navigate('/admin/scoring', {
+                            navigate(`${routePrefix}/scoring`, {
                               state: { selectedTeam: team, selectedGender, selectedAgeGroup }
                             });
                           }
@@ -430,7 +437,7 @@ const Scores = () => {
                                   {teamScoreStatus[team._id]?.isLocked ? (
                                     <button
                                       onClick={() => {
-                                        navigate('/admin/scoring', {
+                                        navigate(`${routePrefix}/scoring`, {
                                           state: { selectedTeam: team, selectedGender, selectedAgeGroup }
                                         });
                                       }}
@@ -445,7 +452,7 @@ const Scores = () => {
                                         if (teamScoreStatus[team._id]?.hasScores) {
                                           toast.info('Continuing existing scoring session...');
                                         }
-                                        navigate('/admin/scoring', {
+                                        navigate(`${routePrefix}/scoring`, {
                                           state: { selectedTeam: team, selectedGender, selectedAgeGroup }
                                         });
                                       }}
