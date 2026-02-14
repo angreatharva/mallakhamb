@@ -3,17 +3,10 @@ const Team = require('../models/Team');
 const Player = require('../models/Player');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
-const jwt = require('jsonwebtoken');
+const Competition = require('../models/Competition');
+const { generateToken } = require('../utils/tokenUtils');
 const { convertToObjectId, isValidObjectId, createObjectIdError, validateAndConvertObjectId } = require('../utils/objectIdUtils');
-
-// Generate JWT token
-const generateToken = (userId, userType) => {
-  return jwt.sign(
-    { userId, userType },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-};
+const { logFailedLogin, logSuccessfulLogin } = require('../middleware/securityLogger');
 
 // Register a new admin
 const registerAdmin = async (req, res) => {
@@ -71,6 +64,7 @@ const loginAdmin = async (req, res) => {
     const admin = await Admin.findOne({ email });
     if (!admin) {
       console.log('❌ Admin not found for email:', email);
+      logFailedLogin(email, 'admin', 'Admin not found', req);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -79,6 +73,7 @@ const loginAdmin = async (req, res) => {
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
       console.log('❌ Password mismatch for admin:', admin.email);
+      logFailedLogin(email, 'admin', 'Invalid password', req);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -87,6 +82,7 @@ const loginAdmin = async (req, res) => {
     const token = generateToken(admin._id, 'admin');
 
     console.log('✅ Admin login successful:', admin.email);
+    logSuccessfulLogin(admin._id, 'admin', req);
     res.json({
       message: 'Login successful',
       token,
@@ -122,10 +118,19 @@ const getAdminProfile = async (req, res) => {
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
   try {
-    // Get all teams with populated players
-    const teams = await Team.find({ isActive: true })
+    // Build query with competition filter
+    let query = { isActive: true };
+    
+    // Add competition filter from req.competitionId
+    if (req.competitionId) {
+      query.competition = req.competitionId;
+    }
+
+    // Get teams for the current competition with populated players
+    const teams = await Team.find(query)
       .populate('players.player', 'firstName lastName gender dateOfBirth')
-      .populate('coach', 'name email');
+      .populate('coach', 'name email')
+      .populate('competition', 'name level place');
 
     // Calculate statistics
     const totalTeams = teams.length;
@@ -155,7 +160,8 @@ const getDashboardStats = async (req, res) => {
         totalPlayers: teamPlayers.length,
         boys,
         girls,
-        description: team.description
+        description: team.description,
+        competition: team.competition
       };
     });
 
@@ -179,16 +185,44 @@ const getDashboardStats = async (req, res) => {
 // Get all teams
 const getAllTeams = async (req, res) => {
   try {
-    const { gender, ageGroup } = req.query;
+    const { gender, ageGroup, search, submissionStatus, paymentStatus } = req.query;
 
-    const teams = await Team.find({ isActive: true })
+    // Build query with competition filter
+    let query = { isActive: true };
+    
+    // Add competition filter from req.competitionId
+    if (req.competitionId) {
+      query.competition = req.competitionId;
+    }
+
+    // Filter by submission status
+    if (submissionStatus !== undefined) {
+      query.isSubmitted = submissionStatus === 'true' || submissionStatus === true;
+    }
+
+    // Filter by payment status
+    if (paymentStatus) {
+      query.paymentStatus = paymentStatus;
+    }
+
+    const teams = await Team.find(query)
       .populate('players.player', 'firstName lastName gender dateOfBirth')
       .populate('coach', 'name email');
 
     let filteredTeams = teams;
 
+    // Apply search functionality: filter by team name or coach name
+    if (search && search.trim()) {
+      const searchLower = search.trim().toLowerCase();
+      filteredTeams = filteredTeams.filter(team => {
+        const teamNameMatch = team.name && team.name.toLowerCase().includes(searchLower);
+        const coachNameMatch = team.coach && team.coach.name && team.coach.name.toLowerCase().includes(searchLower);
+        return teamNameMatch || coachNameMatch;
+      });
+    }
+
     if (gender || ageGroup) {
-      filteredTeams = teams.filter(team => {
+      filteredTeams = filteredTeams.filter(team => {
         const teamPlayers = team.players || [];
 
         // Filter by both gender and ageGroup if both are provided
@@ -224,12 +258,22 @@ const getTeamDetails = async (req, res) => {
   try {
     const { teamId } = req.params;
 
-    const team = await Team.findById(teamId)
+    // Build query with competition validation
+    let query = { _id: teamId };
+    
+    // Validate team belongs to current competition
+    if (req.competitionId) {
+      query.competition = req.competitionId;
+    }
+
+    const team = await Team.findOne(query)
       .populate('players.player', 'firstName lastName gender dateOfBirth email')
       .populate('coach', 'name email');
 
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({ 
+        message: 'Team not found or does not belong to the current competition' 
+      });
     }
 
     res.json({ team });
@@ -242,7 +286,7 @@ const getTeamDetails = async (req, res) => {
 // Get all players
 const getAllPlayers = async (req, res) => {
   try {
-    const { teamId, ageGroup, gender } = req.query;
+    const { teamId, ageGroup, gender, search } = req.query;
 
     let query = { isActive: true };
 
@@ -250,9 +294,30 @@ const getAllPlayers = async (req, res) => {
     if (ageGroup) query.ageGroup = ageGroup;
     if (gender) query.gender = gender;
 
-    const players = await Player.find(query)
-      .populate('team', 'name')
+    // Get players and populate team with competition info
+    let players = await Player.find(query)
+      .populate({
+        path: 'team',
+        select: 'name competition',
+        match: req.competitionId ? { competition: req.competitionId } : {}
+      })
       .select('firstName lastName gender dateOfBirth email ageGroup team');
+
+    // Filter out players whose teams don't match the competition context
+    // (team will be null if it doesn't match the competition filter)
+    players = players.filter(player => player.team !== null);
+
+    // Apply search functionality: by player name, team, age group, gender
+    if (search && search.trim()) {
+      const searchLower = search.trim().toLowerCase();
+      players = players.filter(player => {
+        const firstNameMatch = player.firstName && player.firstName.toLowerCase().includes(searchLower);
+        const lastNameMatch = player.lastName && player.lastName.toLowerCase().includes(searchLower);
+        const fullNameMatch = `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchLower);
+        const teamNameMatch = player.team && player.team.name && player.team.name.toLowerCase().includes(searchLower);
+        return firstNameMatch || lastNameMatch || fullNameMatch || teamNameMatch;
+      });
+    }
 
     res.json({ players });
   } catch (error) {
@@ -265,6 +330,34 @@ const getAllPlayers = async (req, res) => {
 const addScore = async (req, res) => {
   try {
     const { playerId, teamId, ageGroup, gender, score, event, description } = req.body;
+
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Check if competition is completed
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    
+    if (competition.status === 'completed') {
+      return res.status(403).json({ 
+        message: 'Cannot add scores for a completed competition' 
+      });
+    }
+
+    // Verify team exists and belongs to the current competition
+    const team = await Team.findOne({ 
+      _id: teamId,
+      competition: req.competitionId 
+    });
+    if (!team) {
+      return res.status(404).json({ 
+        message: 'Team not found or does not belong to the current competition' 
+      });
+    }
 
     // Verify player exists and belongs to the team
     const player = await Player.findOne({ _id: playerId, team: teamId });
@@ -281,7 +374,8 @@ const addScore = async (req, res) => {
       score,
       event,
       description,
-      addedBy: req.user._id
+      addedBy: req.user._id,
+      competition: req.competitionId // Associate with current competition
     });
 
     await newScore.save();
@@ -304,6 +398,11 @@ const getTeamScores = async (req, res) => {
     let matchQuery = {};
     if (ageGroup) matchQuery.ageGroup = ageGroup;
     if (gender) matchQuery.gender = gender;
+
+    // Filter by current competition
+    if (req.competitionId) {
+      matchQuery.competition = convertToObjectId(req.competitionId);
+    }
 
     // Handle teamId parameter for specific team retrieval
     if (teamId) {
@@ -504,6 +603,11 @@ const getIndividualScores = async (req, res) => {
     if (ageGroup) matchQuery.ageGroup = ageGroup;
     if (gender) matchQuery.gender = gender;
 
+    // Filter by current competition
+    if (req.competitionId) {
+      matchQuery.competition = convertToObjectId(req.competitionId);
+    }
+
     // First, let's check if we have any scores at all
     const totalScores = await Score.countDocuments(matchQuery);
 
@@ -582,6 +686,11 @@ const getSubmittedTeams = async (req, res) => {
       paymentStatus: 'completed'
     };
 
+    // Filter by current competition
+    if (req.competitionId) {
+      query.competition = req.competitionId;
+    }
+
     const teams = await Team.find(query)
       .populate('players.player', 'firstName lastName gender dateOfBirth')
       .populate('coach', 'name email')
@@ -643,13 +752,20 @@ const saveJudges = async (req, res) => {
       return res.status(400).json({ message: 'Invalid judge data provided' });
     }
 
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
 
-
-    // Check if judges already exist for this gender/age group combination
-    const existingJudges = await Judge.find({ gender, ageGroup });
+    // Check if judges already exist for this gender/age group/competition combination
+    const existingJudges = await Judge.find({ 
+      gender, 
+      ageGroup,
+      competition: req.competitionId 
+    });
     if (existingJudges.length > 0) {
       return res.status(400).json({
-        message: `Judges already exist for ${gender} ${ageGroup}. Use edit functionality to modify existing judges.`
+        message: `Judges already exist for ${gender} ${ageGroup} in this competition. Use edit functionality to modify existing judges.`
       });
     }
 
@@ -664,7 +780,8 @@ const saveJudges = async (req, res) => {
         judgeType: judgeData.judgeType,
         name: hasData ? judgeData.name.trim() : '',
         password: hasData ? judgeData.password.trim() : '',
-        isActive: Boolean(hasData) // Explicitly convert to boolean
+        isActive: Boolean(hasData),
+        competition: req.competitionId // Associate with current competition
       };
 
       // Only set username if there's data to avoid unique constraint issues
@@ -699,14 +816,31 @@ const saveJudges = async (req, res) => {
 // Get judges
 const getJudges = async (req, res) => {
   try {
-    const { gender, ageGroup } = req.query;
+    const { gender, ageGroup, judgeType } = req.query;
 
     if (!gender || !ageGroup) {
       return res.status(400).json({ message: 'Gender and age group are required' });
     }
 
-    // Get existing judges for this gender/age group
-    const existingJudges = await Judge.find({ gender, ageGroup })
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Build query with competition filter
+    let query = { 
+      gender, 
+      ageGroup,
+      competition: req.competitionId 
+    };
+
+    // Add filtering by judge type if provided
+    if (judgeType) {
+      query.judgeType = judgeType;
+    }
+
+    // Get existing judges for this gender/age group/competition
+    const existingJudges = await Judge.find(query)
       .sort({ judgeNo: 1 });
 
     // If no judges exist at all, return empty array to allow creation
@@ -785,17 +919,28 @@ const createSingleJudge = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if judge already exists for this position
-    const existingJudge = await Judge.findOne({ gender, ageGroup, judgeNo });
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Check if judge already exists for this position in current competition
+    const existingJudge = await Judge.findOne({ 
+      gender, 
+      ageGroup, 
+      judgeNo,
+      competition: req.competitionId 
+    });
     if (existingJudge && existingJudge.name && existingJudge.name.trim()) {
       return res.status(400).json({ message: 'Judge already exists for this position' });
     }
 
-    // Check if username is already taken (exclude current judge if updating existing empty slot)
+    // Check if username is already taken in current competition (exclude current judge if updating existing empty slot)
     const normalizedUsername = username.toLowerCase().trim();
     const usernameQuery = {
       username: normalizedUsername,
-      isActive: true // Only check active judges
+      isActive: true,
+      competition: req.competitionId // Only check within current competition
     };
 
     // If updating an existing judge, exclude it from the check
@@ -805,7 +950,7 @@ const createSingleJudge = async (req, res) => {
 
     const existingUsername = await Judge.findOne(usernameQuery);
     if (existingUsername) {
-      return res.status(400).json({ message: 'Username already exists' });
+      return res.status(400).json({ message: 'Username already exists in this competition' });
     }
 
     let judge;
@@ -826,7 +971,8 @@ const createSingleJudge = async (req, res) => {
         name: name.trim(),
         username: username.toLowerCase().trim(),
         password: password.trim(),
-        isActive: true
+        isActive: true,
+        competition: req.competitionId // Associate with current competition
       });
       await judge.save();
     }
@@ -863,23 +1009,34 @@ const updateJudge = async (req, res) => {
       return res.status(400).json({ message: 'Name, username, and password are required' });
     }
 
-    // Check if judge exists
-    const judge = await Judge.findById(judgeId);
-    if (!judge) {
-      return res.status(404).json({ message: 'Judge not found' });
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    // Check if username is already taken by another judge
+    // Check if judge exists and belongs to current competition
+    const judge = await Judge.findOne({ 
+      _id: judgeId,
+      competition: req.competitionId 
+    });
+    if (!judge) {
+      return res.status(404).json({ 
+        message: 'Judge not found or does not belong to the current competition' 
+      });
+    }
+
+    // Check if username is already taken by another judge in current competition
     const normalizedUsername = username.toLowerCase().trim();
     const usernameQuery = {
       username: normalizedUsername,
       _id: { $ne: judgeId },
-      isActive: true // Only check active judges
+      isActive: true,
+      competition: req.competitionId // Only check within current competition
     };
 
     const existingUsernameJudge = await Judge.findOne(usernameQuery);
     if (existingUsernameJudge) {
-      return res.status(400).json({ message: 'Username already exists' });
+      return res.status(400).json({ message: 'Username already exists in this competition' });
     }
 
     // Update judge
@@ -936,14 +1093,41 @@ const saveScores = async (req, res) => {
       });
     }
 
-    // Check if team exists
-    const team = await Team.findById(teamId);
-    if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    // Check if scores already exist for this team, gender, and age group
-    let existingScore = await Score.findOne({ teamId, gender, ageGroup });
+    // Check if competition is completed
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    
+    if (competition.status === 'completed') {
+      return res.status(403).json({ 
+        message: 'Cannot add or update scores for a completed competition' 
+      });
+    }
+
+    // Check if team exists and belongs to current competition
+    const team = await Team.findOne({ 
+      _id: teamId,
+      competition: req.competitionId 
+    });
+    if (!team) {
+      return res.status(404).json({ 
+        message: 'Team not found or does not belong to the current competition' 
+      });
+    }
+
+    // Check if scores already exist for this team, gender, age group, and competition
+    let existingScore = await Score.findOne({ 
+      teamId, 
+      gender, 
+      ageGroup,
+      competition: req.competitionId 
+    });
 
     // Check if existing score is locked before allowing updates
     if (existingScore && existingScore.isLocked) {
@@ -983,7 +1167,8 @@ const saveScores = async (req, res) => {
         scorer: scorer || '',
         remarks: remarks || '',
         playerScores,
-        isLocked: shouldBeLocked
+        isLocked: shouldBeLocked,
+        competition: req.competitionId // Associate with current competition
       });
 
       await newScore.save();

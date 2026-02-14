@@ -23,8 +23,8 @@ const CoachCreateTeam = () => {
     setLoading(true);
     try {
       await coachAPI.createTeam(data);
-      toast.success('Team created successfully!');
-      navigate('/coach/dashboard');
+      toast.success('Team created successfully! Now register it for a competition.');
+      navigate('/coach/select-competition');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create team');
     } finally {
@@ -99,17 +99,6 @@ const CoachCreateTeam = () => {
                 {loading ? 'Creating Team...' : 'Create Team'}
               </ResponsiveButton>
             </ResponsiveForm>
-
-            {/* Skip Option */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => navigate('/coach/dashboard')}
-                className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors min-h-[44px] px-2"
-              >
-                Skip for now
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
-            </div>
           </div>
         </div>
       </ResponsiveContainer>

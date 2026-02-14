@@ -3,6 +3,8 @@ import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playerAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
+import { CompetitionProvider } from '../contexts/CompetitionContext';
+import CompetitionDisplay from '../components/CompetitionDisplay';
 import { ResponsiveContainer, ResponsiveCardGrid } from '../components/responsive';
 import { useResponsive } from '../hooks/useResponsive';
 
@@ -147,6 +149,11 @@ const PlayerDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
+        {/* Competition Display */}
+        <CompetitionProvider userType="player">
+          <CompetitionDisplay className="mb-6 md:mb-8" />
+        </CompetitionProvider>
+
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6 md:mb-8">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">

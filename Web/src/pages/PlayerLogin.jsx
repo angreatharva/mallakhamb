@@ -5,6 +5,8 @@ import { ArrowLeft, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playerAPI } from '../services/api';
 import { useAuth } from '../App';
+import { CompetitionProvider } from '../contexts/CompetitionContext';
+import CompetitionSelectionScreen from '../components/CompetitionSelectionScreen';
 import { 
   ResponsiveForm, 
   ResponsiveFormField, 
@@ -22,19 +24,20 @@ import {
 const PlayerLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && userType === 'player') {
+    if (user && userType === 'player' && !showCompetitionSelection) {
       if (!user.team) {
         navigate('/player/select-team');
       } else {
         navigate('/player/dashboard');
       }
     }
-  }, [user, userType, navigate]);
+  }, [user, userType, navigate, showCompetitionSelection]);
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -49,17 +52,28 @@ const PlayerLogin = () => {
 
       toast.success('Login successful!');
 
-      if (!player.team) {
-        navigate('/player/select-team');
-      } else {
-        navigate('/player/dashboard');
-      }
+      // Show competition selection screen
+      setShowCompetitionSelection(true);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
+
+  // If competition selection is needed, show the selection screen
+  if (showCompetitionSelection) {
+    return (
+      <CompetitionProvider userType="player">
+        <CompetitionSelectionScreen 
+          userType="player"
+          onCompetitionSelected={() => {
+            // Navigation is handled by CompetitionSelectionScreen
+          }}
+        />
+      </CompetitionProvider>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

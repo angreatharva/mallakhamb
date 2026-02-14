@@ -1,8 +1,17 @@
 const Player = require('../models/Player');
 const Coach = require('../models/Coach');
-const { generateResetToken, hashToken } = require('../utils/tokenUtils');
+const Admin = require('../models/Admin');
+const Team = require('../models/Team');
+const Competition = require('../models/Competition');
+const { generateResetToken, hashToken, generateToken } = require('../utils/tokenUtils');
 const { sendEmail } = require('../utils/emailService');
 const config = require('../config/server.config');
+const { 
+  logFailedLogin, 
+  logSuccessfulLogin, 
+  logCompetitionSelection 
+} = require('../middleware/securityLogger');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 /**
@@ -244,4 +253,233 @@ async function resetPassword(req, res) {
 module.exports = {
   forgotPassword,
   resetPassword
+};
+
+/**
+ * Set Competition Context
+ * Validates user access to competition and issues new JWT with competition context
+ * 
+ * @route POST /api/auth/set-competition
+ * @access Protected (requires authentication)
+ */
+async function setCompetition(req, res) {
+  try {
+    const { competitionId } = req.body;
+    const userId = req.user._id;
+    const userType = req.userType;
+
+    // Validate competition ID is provided
+    if (!competitionId) {
+      return res.status(400).json({
+        message: 'Competition ID is required'
+      });
+    }
+
+    // Validate competition ID format
+    if (!mongoose.Types.ObjectId.isValid(competitionId)) {
+      return res.status(400).json({
+        error: 'Invalid Competition ID',
+        message: 'Competition ID must be a valid ObjectId',
+        value: competitionId
+      });
+    }
+
+    // Verify competition exists and is not deleted
+    const competition = await Competition.findById(competitionId);
+    if (!competition) {
+      return res.status(404).json({
+        error: 'Competition Not Found',
+        message: 'The specified competition does not exist or has been deleted',
+        competitionId
+      });
+    }
+
+    // Check if competition is marked as deleted (soft delete)
+    if (competition.isDeleted) {
+      return res.status(403).json({
+        error: 'Competition Deleted',
+        message: 'This competition has been deleted and is no longer accessible',
+        competitionId
+      });
+    }
+
+    // Validate user has access to this competition
+    // Super admins have access to all competitions
+    if (userType === 'superadmin' || req.user.role === 'super_admin') {
+      // Super admin can access any competition
+    } else if (userType === 'admin') {
+      // Regular admins must be assigned to the competition
+      if (!req.user.hasAccessToCompetition(competitionId)) {
+        return res.status(403).json({
+          error: 'Access Denied',
+          message: 'You do not have access to this competition',
+          competitionId
+        });
+      }
+    } else if (userType === 'coach') {
+      // Coaches can select any competition
+      // They can have multiple teams across different competitions
+      // Just validate that the competition exists (already done above)
+      // The coach will either:
+      // 1. Already have a team for this competition (can access dashboard)
+      // 2. Need to create a new team for this competition (dashboard will show "no team" message)
+      
+      // No automatic team mapping needed here - coaches manage their teams explicitly
+      // through the team creation and registration flow
+    } else if (userType === 'player') {
+      // Players can select any competition (they will join teams for it)
+      // No validation needed here
+    } else if (userType === 'judge') {
+      // Judges must be assigned to the competition
+      // This will be validated when judge model is updated
+      // For now, allow any competition
+    }
+
+    // Generate new JWT token with competition context
+    const token = generateToken(userId, userType, competitionId);
+
+    // Log competition selection
+    logCompetitionSelection(userId, userType, competitionId, req);
+
+    return res.status(200).json({
+      message: 'Competition context set successfully',
+      token,
+      competition: {
+        id: competition._id,
+        name: competition.name,
+        level: competition.level,
+        place: competition.place,
+        status: competition.status,
+        startDate: competition.startDate,
+        endDate: competition.endDate
+      }
+    });
+  } catch (error) {
+    console.error('Set competition error:', error);
+    return res.status(500).json({
+      message: 'An error occurred while setting competition context'
+    });
+  }
+}
+
+/**
+ * Get Assigned Competitions
+ * Returns list of competitions assigned to the current user
+ * 
+ * @route GET /api/auth/competitions/assigned
+ * @access Protected (requires authentication)
+ */
+async function getAssignedCompetitions(req, res) {
+  try {
+    const userId = req.user._id;
+    const userType = req.userType;
+
+    let competitions = [];
+
+    if (userType === 'superadmin' || req.user.role === 'super_admin') {
+      // Super admins can access all competitions
+      competitions = await Competition.find({})
+        .select('name level place status startDate endDate description')
+        .sort({ startDate: -1 });
+    } else if (userType === 'admin') {
+      // Regular admins see only their assigned competitions
+      await req.user.populate('competitions');
+      competitions = req.user.competitions.map(comp => ({
+        _id: comp._id,
+        name: comp.name,
+        level: comp.level,
+        place: comp.place,
+        status: comp.status,
+        startDate: comp.startDate,
+        endDate: comp.endDate,
+        description: comp.description
+      }));
+    } else if (userType === 'coach') {
+      // Coaches: show only competitions where this coach has at least one team registered
+      const CompetitionTeam = require('../models/CompetitionTeam');
+      
+      const coachRegistrations = await CompetitionTeam.find({
+        coach: userId
+      }).select('competition');
+
+      const competitionIds = [
+        ...new Set(
+          coachRegistrations
+            .map((reg) => reg.competition)
+            .filter((id) => !!id)
+            .map((id) => id.toString())
+        ),
+      ];
+
+      if (competitionIds.length > 0) {
+        competitions = await Competition.find({
+          _id: { $in: competitionIds },
+        })
+          .select('name level place status startDate endDate description')
+          .sort({ startDate: -1 });
+      } else {
+        competitions = [];
+      }
+    } else if (userType === 'player') {
+      // Players can see all competitions (they can join teams for any)
+      competitions = await Competition.find({})
+        .select('name level place status startDate endDate description')
+        .sort({ startDate: -1 });
+    } else if (userType === 'judge') {
+      // Judges see competitions they are assigned to
+      // This will be implemented when judge model is updated with competition reference
+      // For now, return all competitions
+      competitions = await Competition.find({})
+        .select('name level place status startDate endDate description')
+        .sort({ startDate: -1 });
+    }
+
+    return res.status(200).json({
+      competitions,
+      count: competitions.length
+    });
+  } catch (error) {
+    console.error('Get assigned competitions error:', error);
+    return res.status(500).json({
+      message: 'An error occurred while fetching competitions'
+    });
+  }
+}
+
+/**
+ * Logout Controller
+ * Clears competition context and provides logout confirmation
+ * Note: JWT tokens are stateless, so actual token invalidation happens client-side
+ * 
+ * @route POST /api/auth/logout
+ * @access Protected (requires authentication)
+ */
+async function logout(req, res) {
+  try {
+    const userId = req.user._id;
+    const userType = req.userType;
+
+    console.log(`🚪 User logout: ${userId} (${userType})`);
+
+    // For admins, we could optionally clear any cached data here
+    // The main logout action is removing the token on the client side
+
+    return res.status(200).json({
+      message: 'Logout successful',
+      notice: 'Please select a competition again on your next login'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({
+      message: 'An error occurred during logout'
+    });
+  }
+}
+
+module.exports = {
+  forgotPassword,
+  resetPassword,
+  setCompetition,
+  getAssignedCompetitions,
+  logout
 };

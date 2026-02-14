@@ -21,6 +21,7 @@ const {
   getTeamRankings
 } = require('../controllers/adminController');
 const { authMiddleware, adminAuth } = require('../middleware/authMiddleware');
+const { validateCompetitionContext } = require('../middleware/competitionContextMiddleware');
 
 // Validation error handler
 const handleValidationErrors = (req, res, next) => {
@@ -128,26 +129,30 @@ router.post('/login', loginValidation, handleValidationErrors, loginAdmin);
 
 // Protected routes
 router.get('/profile', authMiddleware, adminAuth, getAdminProfile);
-router.get('/dashboard', authMiddleware, adminAuth, getDashboardStats);
-router.get('/teams', authMiddleware, adminAuth, getAllTeams);
-router.get('/teams/:teamId', authMiddleware, adminAuth, getTeamDetails);
-router.get('/players', authMiddleware, adminAuth, getAllPlayers);
+router.get('/dashboard', authMiddleware, adminAuth, validateCompetitionContext, getDashboardStats);
 
-// Score routes
-router.post('/scores', authMiddleware, adminAuth, addScoreValidation, addScore);
-router.post('/scores/save', authMiddleware, adminAuth, saveScores);
-router.put('/scores/:scoreId/unlock', authMiddleware, adminAuth, unlockScores);
-router.get('/scores/teams', authMiddleware, adminAuth, getTeamScores);
-router.get('/scores/individual', authMiddleware, adminAuth, getIndividualScores);
-router.get('/scores/team-rankings', authMiddleware, adminAuth, getTeamRankings);
+// Team routes - require competition context
+router.get('/teams', authMiddleware, adminAuth, validateCompetitionContext, getAllTeams);
+router.get('/teams/:teamId', authMiddleware, adminAuth, validateCompetitionContext, getTeamDetails);
 
-// Submitted teams route
-router.get('/submitted-teams', authMiddleware, adminAuth, getSubmittedTeams);
+// Player routes - require competition context
+router.get('/players', authMiddleware, adminAuth, validateCompetitionContext, getAllPlayers);
 
-// Judge routes
-router.post('/judges', authMiddleware, adminAuth, saveJudgesValidation, handleValidationErrors, saveJudges);
-router.post('/judges/single', authMiddleware, adminAuth, createSingleJudgeValidation, handleValidationErrors, createSingleJudge);
-router.get('/judges', authMiddleware, adminAuth, getJudges);
-router.put('/judges/:judgeId', authMiddleware, adminAuth, updateJudgeValidation, handleValidationErrors, updateJudge);
+// Score routes - require competition context
+router.post('/scores', authMiddleware, adminAuth, validateCompetitionContext, addScoreValidation, addScore);
+router.post('/scores/save', authMiddleware, adminAuth, validateCompetitionContext, saveScores);
+router.put('/scores/:scoreId/unlock', authMiddleware, adminAuth, validateCompetitionContext, unlockScores);
+router.get('/scores/teams', authMiddleware, adminAuth, validateCompetitionContext, getTeamScores);
+router.get('/scores/individual', authMiddleware, adminAuth, validateCompetitionContext, getIndividualScores);
+router.get('/scores/team-rankings', authMiddleware, adminAuth, validateCompetitionContext, getTeamRankings);
+
+// Submitted teams route - require competition context
+router.get('/submitted-teams', authMiddleware, adminAuth, validateCompetitionContext, getSubmittedTeams);
+
+// Judge routes - require competition context
+router.post('/judges', authMiddleware, adminAuth, validateCompetitionContext, saveJudgesValidation, handleValidationErrors, saveJudges);
+router.post('/judges/single', authMiddleware, adminAuth, validateCompetitionContext, createSingleJudgeValidation, handleValidationErrors, createSingleJudge);
+router.get('/judges', authMiddleware, adminAuth, validateCompetitionContext, getJudges);
+router.put('/judges/:judgeId', authMiddleware, adminAuth, validateCompetitionContext, updateJudgeValidation, handleValidationErrors, updateJudge);
 
 module.exports = router;

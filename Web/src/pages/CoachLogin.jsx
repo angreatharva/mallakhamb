@@ -27,11 +27,21 @@ const CoachLogin = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && userType === 'coach') {
-      if (!user.team) {
-        navigate('/coach/create-team');
-      } else {
-        navigate('/coach/dashboard');
-      }
+      // Check status and redirect accordingly
+      coachAPI.getStatus()
+        .then(response => {
+          const { step } = response.data;
+          if (step === 'create-team') {
+            navigate('/coach/create-team');
+          } else {
+            // After login, always go through competition selection
+            navigate('/coach/select-competition');
+          }
+        })
+        .catch(() => {
+          // On error, still send coach to competition selection
+          navigate('/coach/select-competition');
+        });
     }
   }, [user, userType, navigate]);
 
@@ -52,10 +62,20 @@ const CoachLogin = () => {
       
       toast.success('Login successful!');
       
-      if (!coach.team) {
-        navigate('/coach/create-team');
-      } else {
-        navigate('/coach/dashboard');
+      // Check coach status to determine where to redirect
+      try {
+        const statusResponse = await coachAPI.getStatus();
+        const { step } = statusResponse.data;
+
+        if (step === 'create-team') {
+          navigate('/coach/create-team');
+        } else {
+          // For any other step, always go via competition selection
+          navigate('/coach/select-competition');
+        }
+      } catch (statusError) {
+        // If status check fails, default to competition selection
+        navigate('/coach/select-competition');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');

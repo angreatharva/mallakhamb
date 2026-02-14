@@ -1,5 +1,6 @@
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig.js';
+import { jwtDecode } from 'jwt-decode';
 
 console.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
@@ -19,7 +20,20 @@ const getCurrentUserTypeFromURL = () => {
   return null;
 };
 
-// Request interceptor to add auth token
+// Helper function to extract competition ID from JWT token
+const getCompetitionIdFromToken = (token) => {
+  if (!token) return null;
+  
+  try {
+    const decoded = jwtDecode(token);
+    return decoded.currentCompetition || null;
+  } catch (error) {
+    console.error('Failed to decode token:', error);
+    return null;
+  }
+};
+
+// Request interceptor to add auth token and competition context
 api.interceptors.request.use(
   (config) => {
     const currentType = getCurrentUserTypeFromURL();
@@ -36,6 +50,12 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // Add competition context header for competition-specific endpoints
+      const competitionId = getCompetitionIdFromToken(token);
+      if (competitionId) {
+        config.headers['x-competition-id'] = competitionId;
+      }
     }
     return config;
   },
@@ -62,6 +82,26 @@ api.interceptors.response.use(
       localStorage.removeItem('userType');
 
       window.location.href = '/';
+    } else if (error.response?.status === 403) {
+      // Handle competition context errors
+      const errorMessage = error.response?.data?.message || '';
+      
+      if (errorMessage.includes('competition') || errorMessage.includes('Competition')) {
+        // Redirect to competition selection if competition context is invalid
+        const currentType = getCurrentUserTypeFromURL();
+        
+        if (currentType) {
+          // Clear the current token to force re-selection
+          const token = localStorage.getItem(`${currentType}_token`);
+          if (token) {
+            // Keep the token but user will need to select competition again
+            console.warn('Competition context invalid, redirecting to login for re-selection');
+          }
+          
+          // Redirect to login page which will show competition selection
+          window.location.href = `/${currentType}/login`;
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -72,7 +112,8 @@ export const playerAPI = {
   register: (data) => api.post('/players/register', data),
   login: (data) => api.post('/players/login', data),
   getProfile: () => api.get('/players/profile'),
-  updateTeam: (data) => api.put('/players/team', data),
+  // Join a team in the current competition
+  updateTeam: (data) => api.post('/players/team/join', data),
   getTeams: () => api.get('/players/teams'),
 };
 
@@ -81,7 +122,12 @@ export const coachAPI = {
   register: (data) => api.post('/coaches/register', data),
   login: (data) => api.post('/coaches/login', data),
   getProfile: () => api.get('/coaches/profile'),
+  getStatus: () => api.get('/coaches/status'),
   createTeam: (data) => api.post('/coaches/team', data),
+  getTeams: () => api.get('/coaches/teams'),
+  getOpenCompetitions: () => api.get('/coaches/competitions/open'),
+  selectCompetition: (data) => api.post('/coaches/select-competition', data),
+  registerTeamForCompetition: (teamId, competitionId) => api.post(`/coaches/team/${teamId}/register-competition`, { competitionId }),
   getDashboard: () => api.get('/coaches/dashboard'),
   searchPlayers: (query) => api.get(`/coaches/search-players?query=${query}`),
   addPlayerToAgeGroup: (data) => api.post('/coaches/add-player', data),
@@ -141,13 +187,23 @@ export const superAdminAPI = {
   getAllCoaches: () => api.get('/superadmin/coaches'),
   updateCoachStatus: (coachId, data) => api.put(`/superadmin/coaches/${coachId}/status`, data),
   deleteTeam: (teamId) => api.delete(`/superadmin/teams/${teamId}`),
-  deleteJudge: (judgeId) => api.delete(`/superadmin/judges/${judgeId}`)
+  deleteJudge: (judgeId) => api.delete(`/superadmin/judges/${judgeId}`),
+  // Competition management endpoints
+  createCompetition: (data) => api.post('/superadmin/competitions', data),
+  getAllCompetitions: (params) => api.get('/superadmin/competitions', { params }),
+  getCompetitionById: (id) => api.get(`/superadmin/competitions/${id}`),
+  updateCompetition: (id, data) => api.put(`/superadmin/competitions/${id}`, data),
+  deleteCompetition: (id) => api.delete(`/superadmin/competitions/${id}`),
+  assignAdminToCompetition: (id, data) => api.post(`/superadmin/competitions/${id}/admins`, data),
+  removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`)
 };
 
 // Auth API
 export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
+  getAssignedCompetitions: () => api.get('/auth/competitions/assigned'),
+  setCompetition: (competitionId) => api.post('/auth/set-competition', { competitionId }),
 };
 
 // Public Judge API (no authentication required)

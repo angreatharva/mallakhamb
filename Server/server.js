@@ -10,6 +10,8 @@ dotenv.config();
 const connectDB = require('./config/db');
 const setupNgrok = require('./config/ngrok.setup');
 const config = require('./config/server.config');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { logUnauthorizedAccess } = require('./middleware/securityLogger');
 
 // Connect to database
 connectDB();
@@ -78,7 +80,8 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
+  // Include custom headers used by the frontend (like competition context)
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'x-competition-id'],
   optionsSuccessStatus: 200
 };
 
@@ -94,7 +97,8 @@ app.use((req, res, next) => {
   }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning');
+  // Mirror the CORS config above, including custom headers
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning,x-competition-id');
   next();
 });
 
@@ -107,6 +111,9 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Security logging middleware - must be before routes
+app.use(logUnauthorizedAccess);
+
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/players', require('./routes/playerRoutes'));
@@ -114,6 +121,7 @@ app.use('/api/coaches', require('./routes/coachRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/superadmin', require('./routes/superAdminRoutes'));
+app.use('/api/judge', require('./routes/judgeRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 
 // Health check endpoint
@@ -201,38 +209,36 @@ app.post('/api/debug/test-email', async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ message: 'Internal server error' });
-});
+// 404 handler - must be after all routes
+app.use(notFoundHandler);
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+// Error handling middleware - must be last
+app.use(errorHandler);
 
 const PORT = config.port;
 
-server.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Socket.IO server running`);
-  console.log(`Environment: ${config.nodeEnv}`);
-  console.log('🔗 CORS allowed origins:', config.getAllowedOrigins());
-  
-  // Setup ngrok tunnel only in development
-  try {
-    const ngrokUrl = await setupNgrok();
+// Only start server if not being required for testing
+if (require.main === module) {
+  server.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Socket.IO server running`);
+    console.log(`Environment: ${config.nodeEnv}`);
+    console.log('🔗 CORS allowed origins:', config.getAllowedOrigins());
     
-    if (ngrokUrl) {
-      console.log('✅ Ngrok tunnel established successfully');
-    } else {
+    // Setup ngrok tunnel only in development
+    try {
+      const ngrokUrl = await setupNgrok();
+      
+      if (ngrokUrl) {
+        console.log('✅ Ngrok tunnel established successfully');
+      } else {
       console.log('🚀 Running without ngrok (production mode or disabled)');
     }
   } catch (error) {
     console.log('⚠️ Ngrok setup failed, continuing without it:', error.message);
   }
-});
+  });
+}
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
@@ -244,3 +250,6 @@ process.on('SIGTERM', async () => {
   console.log('\nShutting down gracefully...');
   process.exit(0);
 });
+
+// Export app for testing
+module.exports = app;

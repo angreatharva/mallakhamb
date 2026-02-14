@@ -8,8 +8,10 @@ import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveForm, ResponsiveFormField, ResponsiveButton } from '../components/responsive/ResponsiveForm';
 import { useResponsive } from '../hooks/useResponsive';
+import { CompetitionProvider, useCompetition } from '../contexts/CompetitionContext';
+import CompetitionSelectionScreen from '../components/CompetitionSelectionScreen';
 
-const PlayerSelectTeam = () => {
+const PlayerSelectTeamContent = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(true);
@@ -26,9 +28,13 @@ const PlayerSelectTeam = () => {
 
   const selectedTeam = watch('team');
 
+  const { currentCompetition, isLoading: competitionLoading } = useCompetition();
+
   useEffect(() => {
-    fetchTeams();
-  }, []);
+    if (currentCompetition) {
+      fetchTeams();
+    }
+  }, [currentCompetition]);
 
   const fetchTeams = async () => {
     try {
@@ -57,6 +63,11 @@ const PlayerSelectTeam = () => {
       setLoading(false);
     }
   };
+
+  // While loading competitions or before a competition is selected, show competition selection
+  if (competitionLoading || !currentCompetition) {
+    return <CompetitionSelectionScreen userType="player" />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -126,6 +137,14 @@ const PlayerSelectTeam = () => {
         </div>
       </ResponsiveContainer>
     </div>
+  );
+};
+
+const PlayerSelectTeam = () => {
+  return (
+    <CompetitionProvider userType="player">
+      <PlayerSelectTeamContent />
+    </CompetitionProvider>
   );
 };
 

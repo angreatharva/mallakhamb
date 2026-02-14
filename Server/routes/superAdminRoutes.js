@@ -27,7 +27,15 @@ const {
   getAllCoaches,
   updateCoachStatus,
   deleteTeam,
-  deleteJudge
+  deleteJudge,
+  // Competition management
+  createCompetition,
+  getAllCompetitions,
+  getCompetitionById,
+  updateCompetition,
+  deleteCompetition,
+  assignAdminToCompetition,
+  removeAdminFromCompetition
 } = require('../controllers/superAdminController');
 const { authMiddleware, superAdminAuth } = require('../middleware/authMiddleware');
 
@@ -104,6 +112,73 @@ const updateJudgeValidation = [
     .withMessage('Judge password is required')
 ];
 
+const createCompetitionValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Competition name is required'),
+  body('level')
+    .isIn(['state', 'national', 'international'])
+    .withMessage('Level must be state, national, or international'),
+  body('place')
+    .trim()
+    .notEmpty()
+    .withMessage('Competition place is required'),
+  body('startDate')
+    .isISO8601()
+    .withMessage('Valid start date is required'),
+  body('endDate')
+    .isISO8601()
+    .withMessage('Valid end date is required')
+    .custom((endDate, { req }) => {
+      if (new Date(endDate) < new Date(req.body.startDate)) {
+        throw new Error('End date cannot be before start date');
+      }
+      return true;
+    }),
+  body('admins')
+    .isArray({ min: 1 })
+    .withMessage('At least one admin must be assigned'),
+  body('admins.*')
+    .isMongoId()
+    .withMessage('Each admin ID must be valid')
+];
+
+const updateCompetitionValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Competition name cannot be empty'),
+  body('level')
+    .optional()
+    .isIn(['state', 'national', 'international'])
+    .withMessage('Level must be state, national, or international'),
+  body('place')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Competition place cannot be empty'),
+  body('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid start date is required'),
+  body('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid end date is required'),
+  body('status')
+    .optional()
+    .isIn(['upcoming', 'ongoing', 'completed'])
+    .withMessage('Status must be upcoming, ongoing, or completed')
+];
+
+const assignAdminValidation = [
+  body('adminId')
+    .isMongoId()
+    .withMessage('Valid admin ID is required')
+];
+
 const createSingleJudgeValidation = [
   body('gender')
     .isIn(['Male', 'Female'])
@@ -172,5 +247,14 @@ router.post('/judges/single', authMiddleware, superAdminAuth, createSingleJudgeV
 router.get('/judges', authMiddleware, superAdminAuth, getJudges);
 router.put('/judges/:judgeId', authMiddleware, superAdminAuth, updateJudgeValidation, handleValidationErrors, updateJudge);
 router.delete('/judges/:judgeId', authMiddleware, superAdminAuth, deleteJudge);
+
+// Competition management routes (Super Admin only)
+router.post('/competitions', authMiddleware, superAdminAuth, createCompetitionValidation, handleValidationErrors, createCompetition);
+router.get('/competitions', authMiddleware, superAdminAuth, getAllCompetitions);
+router.get('/competitions/:id', authMiddleware, superAdminAuth, getCompetitionById);
+router.put('/competitions/:id', authMiddleware, superAdminAuth, updateCompetitionValidation, handleValidationErrors, updateCompetition);
+router.delete('/competitions/:id', authMiddleware, superAdminAuth, deleteCompetition);
+router.post('/competitions/:id/admins', authMiddleware, superAdminAuth, assignAdminValidation, handleValidationErrors, assignAdminToCompetition);
+router.delete('/competitions/:id/admins/:adminId', authMiddleware, superAdminAuth, removeAdminFromCompetition);
 
 module.exports = router;

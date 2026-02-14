@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useAuth } from '../App';
 import { useRouteContext } from '../contexts/RouteContext';
+import { CompetitionProvider } from '../contexts/CompetitionContext';
+import CompetitionSelectionScreen from '../components/CompetitionSelectionScreen';
 import { 
   ResponsiveForm, 
   ResponsiveFormField, 
@@ -22,6 +24,7 @@ import {
 const AdminLogin = ({ routePrefix: routePrefixProp }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
   
@@ -36,10 +39,10 @@ const AdminLogin = ({ routePrefix: routePrefixProp }) => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && userType === expectedUserType) {
+    if (user && userType === expectedUserType && !showCompetitionSelection) {
       navigate(`${routePrefix}/dashboard`);
     }
-  }, [user, userType, expectedUserType, navigate, routePrefix]);
+  }, [user, userType, expectedUserType, navigate, routePrefix, showCompetitionSelection]);
 
   const {
     register,
@@ -58,14 +61,33 @@ const AdminLogin = ({ routePrefix: routePrefixProp }) => {
       
       toast.success('Login successful!');
       
-      // Navigate using React Router to the appropriate dashboard
-      navigate(`${routePrefix}/dashboard`);
+      // Super admins don't need competition selection - go directly to dashboard
+      if (expectedUserType === 'superadmin') {
+        navigate(`${routePrefix}/dashboard`);
+      } else {
+        // Show competition selection screen for regular admins
+        setShowCompetitionSelection(true);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
+
+  // If competition selection is needed, show the selection screen
+  if (showCompetitionSelection) {
+    return (
+      <CompetitionProvider userType={expectedUserType}>
+        <CompetitionSelectionScreen 
+          userType={expectedUserType}
+          onCompetitionSelected={() => {
+            // Navigation is handled by CompetitionSelectionScreen
+          }}
+        />
+      </CompetitionProvider>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

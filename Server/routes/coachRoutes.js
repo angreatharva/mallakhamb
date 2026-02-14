@@ -4,14 +4,21 @@ const {
   registerCoach,
   loginCoach,
   getCoachProfile,
+  getCoachStatus,
   createTeam,
+  getCoachTeams,
+  getOpenCompetitions,
+  registerTeamForCompetition,
+  selectCompetitionForTeam,
   getTeamDashboard,
   searchPlayers,
   addPlayerToAgeGroup,
   removePlayerFromAgeGroup,
-  submitTeam
+  submitTeam,
+  getTeamStatus
 } = require('../controllers/coachController');
 const { authMiddleware, coachAuth } = require('../middleware/authMiddleware');
+const { validateCompetitionContext } = require('../middleware/competitionContextMiddleware');
 
 const router = express.Router();
 
@@ -50,11 +57,23 @@ router.post('/login', loginValidation, loginCoach);
 
 // Protected routes
 router.get('/profile', authMiddleware, coachAuth, getCoachProfile);
+router.get('/status', authMiddleware, coachAuth, getCoachStatus);
+
+// Team management routes (no competition context needed)
 router.post('/team', authMiddleware, coachAuth, createTeamValidation, createTeam);
-router.get('/dashboard', authMiddleware, coachAuth, getTeamDashboard);
-router.get('/search-players', authMiddleware, coachAuth, searchPlayers);
-router.post('/add-player', authMiddleware, coachAuth, addPlayerValidation, addPlayerToAgeGroup);
-router.delete('/remove-player/:playerId', authMiddleware, coachAuth, removePlayerFromAgeGroup);
-router.post('/submit-team', authMiddleware, coachAuth, submitTeam);
+router.get('/teams', authMiddleware, coachAuth, getCoachTeams);
+
+// Competition routes
+router.get('/competitions/open', authMiddleware, coachAuth, getOpenCompetitions);
+router.post('/select-competition', authMiddleware, coachAuth, selectCompetitionForTeam);
+router.post('/team/:teamId/register-competition', authMiddleware, coachAuth, registerTeamForCompetition);
+
+// Competition-specific routes (require competition context)
+router.get('/competition/team-status', authMiddleware, coachAuth, validateCompetitionContext, getTeamStatus);
+router.get('/dashboard', authMiddleware, coachAuth, validateCompetitionContext, getTeamDashboard);
+router.get('/search-players', authMiddleware, coachAuth, validateCompetitionContext, searchPlayers);
+router.post('/add-player', authMiddleware, coachAuth, validateCompetitionContext, addPlayerValidation, addPlayerToAgeGroup);
+router.delete('/remove-player/:playerId', authMiddleware, coachAuth, validateCompetitionContext, removePlayerFromAgeGroup);
+router.post('/submit-team', authMiddleware, coachAuth, validateCompetitionContext, submitTeam);
 
 module.exports = router;

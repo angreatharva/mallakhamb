@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteContext from './contexts/RouteContext';
+import { CompetitionProvider } from './contexts/CompetitionContext';
 
 // Pages
 import Home from './pages/Home';
@@ -14,6 +15,7 @@ import PlayerDashboard from './pages/PlayerDashboard';
 import CoachLogin from './pages/CoachLogin';
 import CoachRegister from './pages/CoachRegister';
 import CoachCreateTeam from './pages/CoachCreateTeam';
+import CoachSelectCompetition from './pages/CoachSelectCompetition';
 import CoachDashboard from './pages/CoachDashboard';
 import CoachPayment from './pages/CoachPayment';
 import AdminLogin from './pages/AdminLogin';
@@ -141,9 +143,32 @@ function AppContent() {
     setUserType(type);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const currentType = getCurrentUserTypeFromURL();
     
+    try {
+      // Call backend logout endpoint if token exists
+      const token = currentType 
+        ? localStorage.getItem(`${currentType}_token`)
+        : localStorage.getItem('token');
+      
+      if (token) {
+        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch(err => {
+          // Ignore errors from logout endpoint - still clear local data
+          console.log('Logout endpoint error (ignored):', err);
+        });
+      }
+    } catch (error) {
+      console.log('Logout error (ignored):', error);
+    }
+    
+    // Clear local storage regardless of backend response
     if (currentType) {
       // Remove type-specific data
       localStorage.removeItem(`${currentType}_token`);
@@ -177,9 +202,10 @@ function AppContent() {
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
-      <div className="min-h-screen bg-gray-50">
-        {/* Only show main navbar if not on admin routes, home page, or public scores */}
-        {!isAdminRoute && !isHomePage && !isPublicScores && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
+      <CompetitionProvider userType={userType}>
+        <div className="min-h-screen bg-gray-50">
+          {/* Only show main navbar if not on admin routes, home page, or public scores */}
+          {!isAdminRoute && !isHomePage && !isPublicScores && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
         <Routes>
           {/* Public Routes */}
@@ -222,6 +248,14 @@ function AppContent() {
             element={
               <ProtectedRoute requiredUserType="coach">
                 <CoachCreateTeam />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coach/select-competition"
+            element={
+              <ProtectedRoute requiredUserType="coach">
+                <CoachSelectCompetition />
               </ProtectedRoute>
             }
           />
@@ -355,6 +389,7 @@ function AppContent() {
           }}
         />
       </div>
+      </CompetitionProvider>
     </AuthContext.Provider>
   );
 }

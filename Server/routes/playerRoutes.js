@@ -4,10 +4,12 @@ const {
   registerPlayer,
   loginPlayer,
   getPlayerProfile,
-  updatePlayerTeam,
-  getTeams
+  getPlayerTeam,
+  joinTeam,
+  getAvailableTeams
 } = require('../controllers/playerController');
 const { authMiddleware, playerAuth } = require('../middleware/authMiddleware');
+const { validateCompetitionContext } = require('../middleware/competitionContextMiddleware');
 
 const router = express.Router();
 
@@ -39,10 +41,13 @@ const loginValidation = [
 // Public routes
 router.post('/register', registerValidation, registerPlayer);
 router.post('/login', loginValidation, loginPlayer);
-router.get('/teams', getTeams);
 
-// Protected routes
+// Protected routes (require authentication only)
 router.get('/profile', authMiddleware, playerAuth, getPlayerProfile);
-router.put('/team', authMiddleware, playerAuth, updatePlayerTeam);
+
+// Protected routes (require authentication and competition context)
+router.get('/teams', authMiddleware, playerAuth, validateCompetitionContext, getAvailableTeams);
+router.get('/team', authMiddleware, playerAuth, validateCompetitionContext, getPlayerTeam);
+router.post('/team/join', authMiddleware, playerAuth, validateCompetitionContext, joinTeam);
 
 module.exports = router;

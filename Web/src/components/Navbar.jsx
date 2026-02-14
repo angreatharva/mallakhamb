@@ -2,13 +2,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, User, Trophy, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useResponsive } from '../hooks/useResponsive';
+import { useCompetition } from '../contexts/CompetitionContext';
+import CompetitionSelector from './CompetitionSelector';
 
 const Navbar = ({ user, userType, onLogout }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isMobile, isTablet, isDesktop } = useResponsive();
+  const { clearCompetitionContext } = useCompetition();
 
   const handleLogout = () => {
+    // Clear competition context
+    if (clearCompetitionContext) {
+      clearCompetitionContext();
+    }
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userType');
@@ -78,6 +86,8 @@ const Navbar = ({ user, userType, onLogout }) => {
           <div className="hidden lg:flex items-center space-x-2">
             {user ? (
               <>
+                {/* Competition Selector */}
+                {userType && <CompetitionSelector />}
                 <div className="flex items-center space-x-2 px-3 py-2">
                   <User className="h-5 w-5 text-gray-500" />
                   <span className="text-sm text-gray-700">
@@ -112,6 +122,12 @@ const Navbar = ({ user, userType, onLogout }) => {
                   className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors touch-target rounded-lg px-3 py-2"
                 >
                   Admin Login
+                </Link>
+                <Link
+                  to="/superadmin/login"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors touch-target rounded-lg px-3 py-2"
+                >
+                  Super Admin Login
                 </Link>
               </div>
             )}

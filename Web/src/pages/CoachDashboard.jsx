@@ -3,6 +3,8 @@ import { Trophy, Users, UserPlus, Search, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
+import { CompetitionProvider } from '../contexts/CompetitionContext';
+import CompetitionDisplay from '../components/CompetitionDisplay';
 import { ResponsiveContainer, ResponsiveCardGrid, ResponsiveFormGrid } from '../components/responsive';
 import { 
   ResponsiveHeading, 
@@ -245,12 +247,28 @@ const CoachDashboard = () => {
 
   if (!team) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <ResponsiveHeading level={2} className="text-gray-900 mb-2">No Team Found</ResponsiveHeading>
-          <ResponsiveText className="text-gray-600">You need to create a team first.</ResponsiveText>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
+          {/* Competition Display */}
+          <CompetitionProvider userType="coach">
+            <CompetitionDisplay className="mb-6 md:mb-8" />
+          </CompetitionProvider>
+
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 text-center">
+            <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <ResponsiveHeading level={2} className="text-gray-900 mb-2">No Team Registered</ResponsiveHeading>
+            <ResponsiveText className="text-gray-600 mb-6">
+              You don't have a team registered for this competition yet. Please select a team to register.
+            </ResponsiveText>
+            <button
+              onClick={() => window.location.href = '/coach/select-competition'}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
+            >
+              <Trophy className="h-5 w-5" />
+              <span>Select Team for Competition</span>
+            </button>
+          </div>
+        </ResponsiveContainer>
       </div>
     );
   }
@@ -260,6 +278,11 @@ const CoachDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
+        {/* Competition Display */}
+        <CompetitionProvider userType="coach">
+          <CompetitionDisplay className="mb-6 md:mb-8" />
+        </CompetitionProvider>
+
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6 md:mb-8">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">

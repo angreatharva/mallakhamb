@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 /**
  * Generate a cryptographically secure random token
@@ -20,7 +21,33 @@ function hashToken(token) {
     .digest('hex');
 }
 
+/**
+ * Generate JWT token with optional competition context
+ * @param {string} userId - User's ID
+ * @param {string} userType - Type of user (admin, coach, player, judge, superadmin)
+ * @param {string} [currentCompetition] - Optional competition ID for competition context
+ * @returns {string} JWT token
+ */
+function generateToken(userId, userType, currentCompetition = null) {
+  const payload = {
+    userId,
+    userType
+  };
+
+  // Add competition context if provided
+  if (currentCompetition) {
+    payload.currentCompetition = currentCompetition;
+  }
+
+  return jwt.sign(
+    payload,
+    process.env.JWT_SECRET || 'fallback-secret',
+    { expiresIn: '7d' }
+  );
+}
+
 module.exports = {
   generateResetToken,
-  hashToken
+  hashToken,
+  generateToken
 };

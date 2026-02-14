@@ -8,7 +8,9 @@
     "server": "nodemon server.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-superadmin": "node scripts/createSuperAdmin.js",
-    "test-env": "node scripts/test-env.js"
+    "test-env": "node scripts/test-env.js",
+    "test": "jest --runInBand --detectOpenHandles",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "sports",
@@ -33,6 +35,16 @@
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.7.0",
-    "nodemon": "^3.0.2"
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "testTimeout": 30000
   }
 }

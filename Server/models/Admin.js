@@ -33,7 +33,11 @@ const adminSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  competitions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Competition'
+  }]
 }, {
   timestamps: true
 });
@@ -54,6 +58,20 @@ adminSchema.pre('save', async function(next) {
 // Compare password method
 adminSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Check if admin has access to a specific competition
+adminSchema.methods.hasAccessToCompetition = function(competitionId) {
+  if (this.role === 'super_admin') {
+    return true; // Super admins have access to all competitions
+  }
+  return this.competitions.some(comp => comp.toString() === competitionId.toString());
+};
+
+// Get all assigned competitions
+adminSchema.methods.getAssignedCompetitions = async function() {
+  await this.populate('competitions');
+  return this.competitions;
 };
 
 module.exports = mongoose.model('Admin', adminSchema);

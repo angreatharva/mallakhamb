@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const Player = require('../models/Player');
 const Coach = require('../models/Coach');
 const Admin = require('../models/Admin');
+const { isTokenInvalidated } = require('../utils/tokenInvalidation');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -27,8 +28,24 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'Token is not valid' });
     }
 
+    // For admins, check if token has been invalidated due to assignment changes
+    if (decoded.userType === 'admin' && decoded.iat) {
+      if (isTokenInvalidated(decoded.userId, decoded.iat)) {
+        return res.status(401).json({ 
+          message: 'Token is no longer valid. Your competition assignments have changed. Please log in again.',
+          code: 'TOKEN_INVALIDATED_ASSIGNMENT_CHANGE'
+        });
+      }
+    }
+
     req.user = user;
     req.userType = decoded.userType;
+    
+    // Attach competition context from token if present
+    if (decoded.currentCompetition) {
+      req.user.currentCompetition = decoded.currentCompetition;
+    }
+    
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

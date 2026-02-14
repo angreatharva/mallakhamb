@@ -68,6 +68,11 @@ const playerScoreSchema = new mongoose.Schema({
 });
 
 const scoreSchema = new mongoose.Schema({
+  competition: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Competition',
+    required: [true, 'Competition is required']
+  },
   teamId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
@@ -118,7 +123,7 @@ scoreSchema.pre('save', function(next) {
 });
 
 // Create indexes for better query performance
-scoreSchema.index({ teamId: 1, gender: 1, ageGroup: 1 });
+scoreSchema.index({ teamId: 1, gender: 1, ageGroup: 1, competition: 1 });
 scoreSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Score', scoreSchema);

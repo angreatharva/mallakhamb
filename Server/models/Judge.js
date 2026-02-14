@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const judgeSchema = new mongoose.Schema({
+  competition: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Competition',
+    required: [true, 'Competition is required']
+  },
   gender: {
     type: String,
     enum: ['Male', 'Female'],
@@ -46,12 +51,12 @@ const judgeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index to ensure unique judge assignments per gender/age group
-judgeSchema.index({ gender: 1, ageGroup: 1, judgeNo: 1 }, { unique: true });
-judgeSchema.index({ gender: 1, ageGroup: 1, judgeType: 1 }, { unique: true });
+// Compound index to ensure unique judge assignments per gender/age group/competition
+judgeSchema.index({ gender: 1, ageGroup: 1, judgeNo: 1, competition: 1 }, { unique: true });
+judgeSchema.index({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
 
-// Unique index for username, but only for non-empty usernames
-judgeSchema.index({ username: 1 }, { 
+// Unique index for username per competition, but only for non-empty usernames
+judgeSchema.index({ username: 1, competition: 1 }, { 
   unique: true, 
   sparse: true,
   partialFilterExpression: { username: { $ne: '' } }

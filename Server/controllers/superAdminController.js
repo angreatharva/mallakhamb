@@ -4,20 +4,19 @@ const Player = require('../models/Player');
 const Coach = require('../models/Coach');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
-const jwt = require('jsonwebtoken');
+const Competition = require('../models/Competition');
+const { generateToken } = require('../utils/tokenUtils');
+const { recordAdminAssignmentChange } = require('../utils/tokenInvalidation');
+const { 
+  logAdminAssignmentChange, 
+  logCompetitionDeletion,
+  logFailedLogin,
+  logSuccessfulLogin
+} = require('../middleware/securityLogger');
 const bcrypt = require('bcryptjs');
 
 // Import all admin controller functions
 const adminController = require('./adminController');
-
-// Generate JWT token
-const generateToken = (userId, userType) => {
-  return jwt.sign(
-    { userId, userType },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-};
 
 // Super Admin Login
 const loginSuperAdmin = async (req, res) => {
@@ -34,12 +33,14 @@ const loginSuperAdmin = async (req, res) => {
     const admin = await Admin.findOne({ email, role: 'super_admin' });
     if (!admin) {
       console.log('❌ Super Admin not found for email:', email);
+      logFailedLogin(email, 'superadmin', 'Invalid credentials or not super admin', req);
       return res.status(400).json({ message: 'Invalid credentials or insufficient permissions' });
     }
 
     // Check password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
+      logFailedLogin(email, 'superadmin', 'Invalid password', req);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -47,6 +48,7 @@ const loginSuperAdmin = async (req, res) => {
     const token = generateToken(admin._id, 'superadmin');
 
     console.log('✅ Super Admin login successful:', admin.email);
+    logSuccessfulLogin(admin._id, 'superadmin', req);
     res.json({
       message: 'Login successful',
       token,
@@ -340,6 +342,434 @@ const deleteJudge = async (req, res) => {
   }
 };
 
+// ============================================
+// COMPETITION MANAGEMENT METHODS
+// ============================================
+
+// Create Competition
+const createCompetition = async (req, res) => {
+  try {
+    const { name, level, place, startDate, endDate, description, status, admins } = req.body;
+
+    // Validate required fields
+    if (!name || !level || !place || !startDate || !endDate) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: name, level, place, startDate, and endDate are required' 
+      });
+    }
+
+    // Validate at least one admin is assigned
+    if (!admins || !Array.isArray(admins) || admins.length === 0) {
+      return res.status(400).json({ 
+        message: 'At least one admin must be assigned to the competition' 
+      });
+    }
+
+    // Validate all admins exist
+    const adminDocs = await Admin.find({ _id: { $in: admins } });
+    if (adminDocs.length !== admins.length) {
+      return res.status(400).json({ 
+        message: 'One or more admin IDs are invalid' 
+      });
+    }
+
+    // Create competition
+    const competition = new Competition({
+      name,
+      level,
+      place,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      description,
+      admins,
+      createdBy: req.user._id
+    });
+
+    // Set initial status based on start date
+    competition.setInitialStatus();
+
+    await competition.save();
+
+    // Update each admin's competitions array
+    await Admin.updateMany(
+      { _id: { $in: admins } },
+      { $addToSet: { competitions: competition._id } }
+    );
+
+    // Populate admin details for response
+    await competition.populate('admins', 'name email');
+
+    res.status(201).json({
+      message: 'Competition created successfully',
+      competition
+    });
+  } catch (error) {
+    console.error('Create competition error:', error);
+    
+    // Handle duplicate name error
+    if (error.code === 11000) {
+      return res.status(409).json({ 
+        message: 'A competition with this name already exists' 
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: messages 
+      });
+    }
+    
+    res.status(500).json({ message: 'Server error during competition creation' });
+  }
+};
+
+// Get All Competitions with search/filter
+const getAllCompetitions = async (req, res) => {
+  try {
+    const { search, level, place, startDate, endDate, status } = req.query;
+
+    // Build query
+    const query = {};
+
+    // Search by name (case-insensitive, partial match)
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    // Filter by level
+    if (level) {
+      query.level = level;
+    }
+
+    // Filter by place (case-insensitive, partial match)
+    if (place) {
+      query.place = { $regex: place, $options: 'i' };
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      query.startDate = {};
+      if (startDate) {
+        query.startDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.startDate.$lte = new Date(endDate);
+      }
+    }
+
+    // Filter by status
+    if (status) {
+      query.status = status;
+    }
+
+    // Execute query with admin details
+    const competitions = await Competition.find(query)
+      .populate('admins', 'name email isActive')
+      .populate('createdBy', 'name email')
+      .sort({ startDate: -1 });
+
+    res.json({
+      success: true,
+      competitions,
+      total: competitions.length
+    });
+  } catch (error) {
+    console.error('Get all competitions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get Competition by ID
+const getCompetitionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const competition = await Competition.findById(id)
+      .populate('admins', 'name email isActive')
+      .populate('createdBy', 'name email');
+
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Get related entity counts
+    const [teamCount, judgeCount, scoreCount] = await Promise.all([
+      Team.countDocuments({ competition: id }),
+      Judge.countDocuments({ competition: id }),
+      Score.countDocuments({ competition: id })
+    ]);
+
+    res.json({
+      success: true,
+      competition,
+      stats: {
+        teams: teamCount,
+        judges: judgeCount,
+        scores: scoreCount
+      }
+    });
+  } catch (error) {
+    console.error('Get competition by ID error:', error);
+    
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid competition ID format' });
+    }
+    
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update Competition
+const updateCompetition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, level, place, startDate, endDate, description, status } = req.body;
+
+    const competition = await Competition.findById(id);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Update fields if provided
+    if (name !== undefined) competition.name = name;
+    if (level !== undefined) competition.level = level;
+    if (place !== undefined) competition.place = place;
+    if (startDate !== undefined) competition.startDate = new Date(startDate);
+    if (endDate !== undefined) competition.endDate = new Date(endDate);
+    if (description !== undefined) competition.description = description;
+    
+    // Handle status update with validation
+    if (status !== undefined) {
+      try {
+        await competition.updateCompetitionStatus(status);
+      } catch (statusError) {
+        return res.status(400).json({ 
+          message: statusError.message 
+        });
+      }
+    } else {
+      await competition.save();
+    }
+
+    // Populate admin details for response
+    await competition.populate('admins', 'name email');
+
+    res.json({
+      message: 'Competition updated successfully',
+      competition
+    });
+  } catch (error) {
+    console.error('Update competition error:', error);
+    
+    // Handle duplicate name error
+    if (error.code === 11000) {
+      return res.status(409).json({ 
+        message: 'A competition with this name already exists' 
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: messages 
+      });
+    }
+    
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid competition ID format' });
+    }
+    
+    res.status(500).json({ message: 'Server error during competition update' });
+  }
+};
+
+// Delete Competition
+const deleteCompetition = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const competition = await Competition.findById(id);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Check for related entities
+    const [teamCount, judgeCount, scoreCount] = await Promise.all([
+      Team.countDocuments({ competition: id }),
+      Judge.countDocuments({ competition: id }),
+      Score.countDocuments({ competition: id })
+    ]);
+
+    const hasRelatedData = teamCount > 0 || judgeCount > 0 || scoreCount > 0;
+
+    if (hasRelatedData) {
+      // Log attempted deletion with related data
+      logCompetitionDeletion(id, competition.name, req.user._id, true);
+      return res.status(409).json({ 
+        message: 'Cannot delete competition with related data',
+        relatedData: {
+          teams: teamCount,
+          judges: judgeCount,
+          scores: scoreCount
+        }
+      });
+    }
+
+    // Remove competition from all admins
+    await Admin.updateMany(
+      { competitions: id },
+      { $pull: { competitions: id } }
+    );
+
+    // Log successful deletion
+    logCompetitionDeletion(id, competition.name, req.user._id, false);
+
+    // Delete competition
+    await Competition.findByIdAndDelete(id);
+
+    res.json({
+      message: 'Competition deleted successfully',
+      competitionId: id
+    });
+  } catch (error) {
+    console.error('Delete competition error:', error);
+    
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid competition ID format' });
+    }
+    
+    res.status(500).json({ message: 'Server error during competition deletion' });
+  }
+};
+
+// Assign Admin to Competition
+const assignAdminToCompetition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.body;
+
+    if (!adminId) {
+      return res.status(400).json({ message: 'Admin ID is required' });
+    }
+
+    // Validate competition exists
+    const competition = await Competition.findById(id);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Validate admin exists
+    const admin = await Admin.findById(adminId);
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Check if admin is already assigned
+    if (competition.admins.some(a => a.toString() === adminId)) {
+      return res.status(400).json({ message: 'Admin is already assigned to this competition' });
+    }
+
+    // Add admin to competition
+    await competition.addAdmin(adminId);
+
+    // Add competition to admin's competitions array
+    if (!admin.competitions.some(c => c.toString() === id)) {
+      admin.competitions.push(id);
+      await admin.save();
+    }
+
+    // Record assignment change to invalidate existing tokens
+    recordAdminAssignmentChange(adminId);
+
+    // Log the admin assignment change
+    logAdminAssignmentChange(adminId, id, 'ASSIGNED', req.user._id);
+
+    // Populate admin details for response
+    await competition.populate('admins', 'name email');
+
+    res.json({
+      message: 'Admin assigned to competition successfully',
+      competition,
+      notice: 'Admin will need to re-authenticate to access this competition'
+    });
+  } catch (error) {
+    console.error('Assign admin to competition error:', error);
+    
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid ID format' });
+    }
+    
+    res.status(500).json({ message: 'Server error during admin assignment' });
+  }
+};
+
+// Remove Admin from Competition
+const removeAdminFromCompetition = async (req, res) => {
+  try {
+    const { id, adminId } = req.params;
+
+    // Validate competition exists
+    const competition = await Competition.findById(id);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Check if admin is assigned
+    if (!competition.admins.some(a => a.toString() === adminId)) {
+      return res.status(400).json({ message: 'Admin is not assigned to this competition' });
+    }
+
+    // Prevent removing the last admin
+    if (competition.admins.length === 1) {
+      return res.status(400).json({ 
+        message: 'Cannot remove the last admin from competition. At least one admin must be assigned.' 
+      });
+    }
+
+    // Remove admin from competition
+    await competition.removeAdmin(adminId);
+
+    // Remove competition from admin's competitions array
+    await Admin.findByIdAndUpdate(
+      adminId,
+      { $pull: { competitions: id } }
+    );
+
+    // Record assignment change to invalidate existing tokens
+    recordAdminAssignmentChange(adminId);
+
+    // Log the admin assignment removal
+    logAdminAssignmentChange(adminId, id, 'REMOVED', req.user._id);
+
+    // Populate admin details for response
+    await competition.populate('admins', 'name email');
+
+    res.json({
+      message: 'Admin removed from competition successfully',
+      competition,
+      notice: 'Admin tokens for this competition have been invalidated'
+    });
+  } catch (error) {
+    console.error('Remove admin from competition error:', error);
+    
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid ID format' });
+    }
+    
+    res.status(500).json({ message: 'Server error during admin removal' });
+  }
+};
+
 // Export all functions including inherited admin functions
 module.exports = {
   // Super Admin specific functions
@@ -353,6 +783,15 @@ module.exports = {
   updateCoachStatus,
   deleteTeam,
   deleteJudge,
+  
+  // Competition management functions
+  createCompetition,
+  getAllCompetitions,
+  getCompetitionById,
+  updateCompetition,
+  deleteCompetition,
+  assignAdminToCompetition,
+  removeAdminFromCompetition,
   
   // Inherited admin functions
   ...adminController

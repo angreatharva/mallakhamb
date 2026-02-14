@@ -20,6 +20,8 @@ import {
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
+import { CompetitionProvider } from '../contexts/CompetitionContext';
+import CompetitionDisplay from '../components/CompetitionDisplay';
 import { ResponsiveContainer, ResponsiveDashboardGrid } from '../components/responsive';
 import { 
   ResponsiveHeading, 
@@ -133,6 +135,11 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const renderDashboardTab = () => (
     <ResponsiveContainer maxWidth="desktop" padding="responsive">
       <div className="space-y-6 md:space-y-8">
+        {/* Competition Display */}
+        <CompetitionProvider userType={storagePrefix}>
+          <CompetitionDisplay />
+        </CompetitionProvider>
+
         {/* Stats Cards - Responsive Grid */}
         <ResponsiveDashboardGrid className="gap-4 md:gap-6">
           <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">

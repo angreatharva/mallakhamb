@@ -22,11 +22,7 @@ const CoachRegister = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && userType === 'coach') {
-      if (!user.team) {
-        navigate('/coach/create-team');
-      } else {
-        navigate('/coach/dashboard');
-      }
+      navigate('/coach/create-team');
     }
   }, [user, userType, navigate]);
 
@@ -45,7 +41,9 @@ const CoachRegister = () => {
       // Use the auth context login function
       login(coach, token, 'coach');
       
-      toast.success('Registration successful!');
+      toast.success('Registration successful! Please create your team.');
+      
+      // Redirect to create team page
       navigate('/coach/create-team');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Registration failed');
