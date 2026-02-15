@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const {
   registerPlayer,
   loginPlayer,
@@ -38,16 +38,31 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password is required')
 ];
 
+const joinTeamValidation = [
+  body('teamId').isMongoId().withMessage('Valid team ID is required'),
+  body('competitionId').isMongoId().withMessage('Valid competition ID is required')
+];
+
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+  }
+  next();
+};
+
 // Public routes
-router.post('/register', registerValidation, registerPlayer);
-router.post('/login', loginValidation, loginPlayer);
+router.post('/register', registerValidation, handleValidationErrors, registerPlayer);
+router.post('/login', loginValidation, handleValidationErrors, loginPlayer);
 
 // Protected routes (require authentication only)
 router.get('/profile', authMiddleware, playerAuth, getPlayerProfile);
 
-// Protected routes (require authentication and competition context)
-router.get('/teams', authMiddleware, playerAuth, validateCompetitionContext, getAvailableTeams);
+// GET /teams: no competition required - returns all joinable teams (from open competitions)
+router.get('/teams', authMiddleware, playerAuth, getAvailableTeams);
+// GET /team: needs competition context (set after join or via set-competition)
 router.get('/team', authMiddleware, playerAuth, validateCompetitionContext, getPlayerTeam);
-router.post('/team/join', authMiddleware, playerAuth, validateCompetitionContext, joinTeam);
+// POST /team/join: body has teamId + competitionId; no competition context required
+router.post('/team/join', authMiddleware, playerAuth, joinTeamValidation, handleValidationErrors, joinTeam);
 
 module.exports = router;

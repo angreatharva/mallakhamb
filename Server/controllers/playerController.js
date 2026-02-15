@@ -1,5 +1,7 @@
 const Player = require('../models/Player');
 const Team = require('../models/Team');
+const Competition = require('../models/Competition');
+const CompetitionTeam = require('../models/CompetitionTeam');
 const { generateToken } = require('../utils/tokenUtils');
 
 // Register a new player
@@ -105,24 +107,35 @@ const getPlayerProfile = async (req, res) => {
 const getPlayerTeam = async (req, res) => {
   try {
     const player = await Player.findById(req.user._id)
-      .populate({
-        path: 'team',
-        match: { competition: req.competitionId },
-        populate: {
-          path: 'coach',
-          select: 'firstName lastName email'
-        }
-      })
+      .populate('team', 'name description')
       .select('-password');
 
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // If player has a team but it doesn't match the current competition, return null
-    const team = player.team && player.team.competition?.toString() === req.competitionId.toString() 
-      ? player.team 
-      : null;
+    let team = null;
+    
+    // If player has a team, check if it's registered in the current competition
+    if (player.team) {
+      const competitionTeam = await CompetitionTeam.findOne({
+        team: player.team._id,
+        competition: req.competitionId,
+        isActive: true
+      }).populate({
+        path: 'coach',
+        select: 'firstName lastName email'
+      });
+      
+      if (competitionTeam) {
+        team = {
+          _id: player.team._id,
+          name: player.team.name,
+          description: player.team.description,
+          coach: competitionTeam.coach
+        };
+      }
+    }
 
     res.json({ 
       player: {
@@ -141,36 +154,45 @@ const getPlayerTeam = async (req, res) => {
   }
 };
 
-// Join a team (validate team belongs to current competition)
+// Join a team (teamId + competitionId in body; returns new token with competition set)
 const joinTeam = async (req, res) => {
   try {
-    const { teamId } = req.body;
+    const { teamId, competitionId } = req.body;
+
+    if (!teamId || !competitionId) {
+      return res.status(400).json({
+        message: 'Both teamId and competitionId are required'
+      });
+    }
 
     const player = await Player.findById(req.user._id);
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Check if team exists and belongs to current competition
-    const team = await Team.findOne({ 
-      _id: teamId,
-      competition: req.competitionId 
-    });
-    
-    if (!team) {
-      return res.status(404).json({ 
-        message: 'Team not found in the current competition' 
+    const competitionTeam = await CompetitionTeam.findOne({
+      team: teamId,
+      competition: competitionId,
+      isActive: true
+    }).populate('team');
+
+    if (!competitionTeam || !competitionTeam.team || !competitionTeam.team.isActive) {
+      return res.status(404).json({
+        message: 'Team not found or not registered for this competition'
       });
     }
 
     player.team = teamId;
     await player.save();
 
-    res.json({ 
-      message: 'Successfully joined team', 
+    const token = generateToken(player._id, 'player', competitionId);
+
+    res.json({
+      message: 'Successfully joined team',
+      token,
       team: {
-        id: team._id,
-        name: team.name
+        id: competitionTeam.team._id,
+        name: competitionTeam.team.name
       }
     });
   } catch (error) {
@@ -179,17 +201,76 @@ const joinTeam = async (req, res) => {
   }
 };
 
-// Get all teams for player selection (filtered by current competition)
+// Get all teams available for player to join (no competition required)
+// Returns teams from all open competitions so player can pick team first, then we set competition on join
 const getAvailableTeams = async (req, res) => {
   try {
-    // Filter teams by current competition context
-    const teams = await Team.find({ 
-      isActive: true,
-      competition: req.competitionId 
+    const competitionId = req.competitionId || req.query.competitionId;
+
+    if (competitionId) {
+      // Optional: filter by one competition (e.g. when competition was already selected)
+      const competitionTeams = await CompetitionTeam.find({
+        competition: competitionId,
+        isActive: true
+      })
+        .populate({
+          path: 'team',
+          match: { isActive: true },
+          select: 'name description'
+        })
+        .populate('coach', 'firstName lastName')
+        .populate('competition', 'name level place')
+        .select('team coach competition');
+
+      const teams = competitionTeams
+        .filter(ct => ct.team)
+        .map(ct => ({
+          _id: ct.team._id,
+          name: ct.team.name,
+          description: ct.team.description,
+          coach: ct.coach,
+          competitionId: ct.competition?._id,
+          competitionName: ct.competition?.name
+        }));
+
+      return res.json({ teams });
+    }
+
+    // No competition selected: return all joinable teams from open (upcoming/ongoing) competitions
+    const openCompetitions = await Competition.find({
+      status: { $in: ['upcoming', 'ongoing'] },
+      isDeleted: false
+    }).select('_id name');
+
+    const openIds = openCompetitions.map(c => c._id);
+    if (openIds.length === 0) {
+      return res.json({ teams: [] });
+    }
+
+    const competitionTeams = await CompetitionTeam.find({
+      competition: { $in: openIds },
+      isActive: true
     })
-    .populate('coach', 'firstName lastName')
-    .select('name coach description');
-    
+      .populate({
+        path: 'team',
+        match: { isActive: true },
+        select: 'name description'
+      })
+      .populate('coach', 'firstName lastName')
+      .populate('competition', 'name level place')
+      .select('team coach competition');
+
+    const teams = competitionTeams
+      .filter(ct => ct.team && ct.competition)
+      .map(ct => ({
+        _id: ct.team._id,
+        name: ct.team.name,
+        description: ct.team.description,
+        coach: ct.coach,
+        competitionId: ct.competition._id,
+        competitionName: ct.competition.name
+      }));
+
     res.json({ teams });
   } catch (error) {
     console.error('Get available teams error:', error);

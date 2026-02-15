@@ -1,5 +1,6 @@
 const Admin = require('../models/Admin');
 const Team = require('../models/Team');
+const CompetitionTeam = require('../models/CompetitionTeam');
 const Player = require('../models/Player');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
@@ -115,53 +116,50 @@ const getAdminProfile = async (req, res) => {
   }
 };
 
-// Get dashboard statistics
+// Get dashboard statistics (competition-scoped: uses CompetitionTeam for current competition)
 const getDashboardStats = async (req, res) => {
   try {
-    // Build query with competition filter
-    let query = { isActive: true };
-    
-    // Add competition filter from req.competitionId
-    if (req.competitionId) {
-      query.competition = req.competitionId;
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    // Get teams for the current competition with populated players
-    const teams = await Team.find(query)
-      .populate('players.player', 'firstName lastName gender dateOfBirth')
+    const competitionTeams = await CompetitionTeam.find({
+      competition: req.competitionId,
+      isActive: true
+    })
+      .populate('team', 'name description')
       .populate('coach', 'name email')
+      .populate('players.player', 'firstName lastName gender dateOfBirth')
       .populate('competition', 'name level place');
 
-    // Calculate statistics
-    const totalTeams = teams.length;
+    let totalTeams = 0;
     let totalParticipants = 0;
     let totalBoys = 0;
     let totalGirls = 0;
     let boysTeams = 0;
     let girlsTeams = 0;
 
-    const teamStats = teams.map(team => {
-      const teamPlayers = team.players || [];
+    const teamStats = competitionTeams.map(ct => {
+      const teamPlayers = ct.players || [];
       const boys = teamPlayers.filter(p => p.gender === 'Male').length;
       const girls = teamPlayers.filter(p => p.gender === 'Female').length;
 
       totalParticipants += teamPlayers.length;
       totalBoys += boys;
       totalGirls += girls;
-
-      // Determine if team is primarily boys or girls
       if (boys > girls) boysTeams++;
       else if (girls > boys) girlsTeams++;
+      totalTeams += 1;
 
       return {
-        id: team._id,
-        name: team.name,
-        coach: team.coach?.name || 'No coach',
+        id: ct.team?._id,
+        name: ct.team?.name || 'Unknown',
+        coach: ct.coach?.name || 'No coach',
         totalPlayers: teamPlayers.length,
         boys,
         girls,
-        description: team.description,
-        competition: team.competition
+        description: ct.team?.description,
+        competition: ct.competition
       };
     });
 
@@ -182,99 +180,108 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// Get all teams
+// Get all teams (competition-scoped: uses CompetitionTeam for current competition)
 const getAllTeams = async (req, res) => {
   try {
-    const { gender, ageGroup, search, submissionStatus, paymentStatus } = req.query;
-
-    // Build query with competition filter
-    let query = { isActive: true };
-    
-    // Add competition filter from req.competitionId
-    if (req.competitionId) {
-      query.competition = req.competitionId;
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    // Filter by submission status
+    const { gender, ageGroup, search, submissionStatus, paymentStatus } = req.query;
+
+    let query = { competition: req.competitionId, isActive: true };
+
     if (submissionStatus !== undefined) {
       query.isSubmitted = submissionStatus === 'true' || submissionStatus === true;
     }
-
-    // Filter by payment status
     if (paymentStatus) {
       query.paymentStatus = paymentStatus;
     }
 
-    const teams = await Team.find(query)
-      .populate('players.player', 'firstName lastName gender dateOfBirth')
-      .populate('coach', 'name email');
+    let competitionTeams = await CompetitionTeam.find(query)
+      .populate('team', 'name description')
+      .populate('coach', 'name email')
+      .populate('players.player', 'firstName lastName gender dateOfBirth');
 
-    let filteredTeams = teams;
+    let filteredTeams = competitionTeams;
 
-    // Apply search functionality: filter by team name or coach name
     if (search && search.trim()) {
       const searchLower = search.trim().toLowerCase();
-      filteredTeams = filteredTeams.filter(team => {
-        const teamNameMatch = team.name && team.name.toLowerCase().includes(searchLower);
-        const coachNameMatch = team.coach && team.coach.name && team.coach.name.toLowerCase().includes(searchLower);
+      filteredTeams = filteredTeams.filter(ct => {
+        const teamNameMatch = ct.team?.name?.toLowerCase().includes(searchLower);
+        const coachNameMatch = ct.coach?.name?.toLowerCase().includes(searchLower);
         return teamNameMatch || coachNameMatch;
       });
     }
 
     if (gender || ageGroup) {
-      filteredTeams = filteredTeams.filter(team => {
-        const teamPlayers = team.players || [];
-
-        // Filter by both gender and ageGroup if both are provided
+      filteredTeams = filteredTeams.filter(ct => {
+        const teamPlayers = ct.players || [];
         if (gender && ageGroup) {
           return teamPlayers.some(p => p.gender === gender && p.ageGroup === ageGroup);
         }
-
-        // Filter by gender only
         if (gender) {
           const genderCount = teamPlayers.filter(p => p.gender === gender).length;
-          const otherGenderCount = teamPlayers.filter(p => p.gender !== gender).length;
-          return genderCount > otherGenderCount;
+          const otherCount = teamPlayers.filter(p => p.gender !== gender).length;
+          return genderCount > otherCount;
         }
-
-        // Filter by ageGroup only
-        if (ageGroup) {
-          return teamPlayers.some(p => p.ageGroup === ageGroup);
-        }
-
+        if (ageGroup) return teamPlayers.some(p => p.ageGroup === ageGroup);
         return true;
       });
     }
 
-    res.json({ teams: filteredTeams });
+    const teams = filteredTeams.map(ct => ({
+      _id: ct.team?._id,
+      name: ct.team?.name,
+      description: ct.team?.description,
+      coach: ct.coach,
+      players: ct.players,
+      competition: ct.competition,
+      isSubmitted: ct.isSubmitted,
+      paymentStatus: ct.paymentStatus,
+      submittedAt: ct.submittedAt
+    }));
+
+    res.json({ teams });
   } catch (error) {
     console.error('Get all teams error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Get team details
+// Get team details (competition-scoped: team + competition from CompetitionTeam)
 const getTeamDetails = async (req, res) => {
   try {
     const { teamId } = req.params;
-
-    // Build query with competition validation
-    let query = { _id: teamId };
-    
-    // Validate team belongs to current competition
-    if (req.competitionId) {
-      query.competition = req.competitionId;
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    const team = await Team.findOne(query)
-      .populate('players.player', 'firstName lastName gender dateOfBirth email')
-      .populate('coach', 'name email');
+    const competitionTeam = await CompetitionTeam.findOne({
+      team: teamId,
+      competition: req.competitionId,
+      isActive: true
+    })
+      .populate('team', 'name description')
+      .populate('coach', 'name email')
+      .populate('players.player', 'firstName lastName gender dateOfBirth email');
 
-    if (!team) {
-      return res.status(404).json({ 
-        message: 'Team not found or does not belong to the current competition' 
+    if (!competitionTeam || !competitionTeam.team) {
+      return res.status(404).json({
+        message: 'Team not found or does not belong to the current competition'
       });
     }
+
+    const team = {
+      _id: competitionTeam.team._id,
+      name: competitionTeam.team.name,
+      description: competitionTeam.team.description,
+      coach: competitionTeam.coach,
+      players: competitionTeam.players,
+      isSubmitted: competitionTeam.isSubmitted,
+      paymentStatus: competitionTeam.paymentStatus,
+      submittedAt: competitionTeam.submittedAt
+    };
 
     res.json({ team });
   } catch (error) {
@@ -348,18 +355,17 @@ const addScore = async (req, res) => {
       });
     }
 
-    // Verify team exists and belongs to the current competition
-    const team = await Team.findOne({ 
-      _id: teamId,
-      competition: req.competitionId 
+    const competitionTeam = await CompetitionTeam.findOne({
+      team: teamId,
+      competition: req.competitionId,
+      isActive: true
     });
-    if (!team) {
-      return res.status(404).json({ 
-        message: 'Team not found or does not belong to the current competition' 
+    if (!competitionTeam) {
+      return res.status(404).json({
+        message: 'Team not found or does not belong to the current competition'
       });
     }
 
-    // Verify player exists and belongs to the team
     const player = await Player.findOne({ _id: playerId, team: teamId });
     if (!player) {
       return res.status(404).json({ message: 'Player not found in the specified team' });
@@ -679,58 +685,50 @@ const getIndividualScores = async (req, res) => {
 // Get submitted teams
 const getSubmittedTeams = async (req, res) => {
   try {
-    const { ageGroup, gender } = req.query;
-
-    let query = {
-      isSubmitted: true,
-      paymentStatus: 'completed'
-    };
-
-    // Filter by current competition
-    if (req.competitionId) {
-      query.competition = req.competitionId;
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    const teams = await Team.find(query)
+    const { ageGroup, gender } = req.query;
+
+    const competitionTeams = await CompetitionTeam.find({
+      competition: req.competitionId,
+      isSubmitted: true,
+      paymentStatus: 'completed',
+      isActive: true
+    })
       .populate('players.player', 'firstName lastName gender dateOfBirth')
       .populate('coach', 'name email')
+      .populate('team', 'name description')
       .sort({ submittedAt: -1 });
 
-    // Filter teams based on age group and gender if provided
-    let filteredTeams = teams;
+    let filteredTeams = competitionTeams;
 
     if (ageGroup || gender) {
-      filteredTeams = teams.filter(team => {
-        const teamPlayers = team.players || [];
-
+      filteredTeams = competitionTeams.filter(ct => {
+        const teamPlayers = ct.players || [];
         if (ageGroup && gender) {
           return teamPlayers.some(p => p.ageGroup === ageGroup && p.gender === gender);
-        } else if (ageGroup) {
-          return teamPlayers.some(p => p.ageGroup === ageGroup);
-        } else if (gender) {
-          return teamPlayers.some(p => p.gender === gender);
         }
-
+        if (ageGroup) return teamPlayers.some(p => p.ageGroup === ageGroup);
+        if (gender) return teamPlayers.some(p => p.gender === gender);
         return true;
       });
     }
 
-    // Format teams with age group summary
-    const formattedTeams = filteredTeams.map(team => {
+    const formattedTeams = filteredTeams.map(ct => {
       const ageGroupSummary = {};
-
-      team.players.forEach(player => {
-        const key = `${player.gender} ${player.ageGroup}`;
+      (ct.players || []).forEach(p => {
+        const key = `${p.gender} ${p.ageGroup}`;
         ageGroupSummary[key] = (ageGroupSummary[key] || 0) + 1;
       });
-
       return {
-        _id: team._id,
-        name: team.name,
-        coach: team.coach,
-        players: team.players,
-        submittedAt: team.submittedAt,
-        paymentAmount: team.paymentAmount,
+        _id: ct.team?._id,
+        name: ct.team?.name,
+        coach: ct.coach,
+        players: ct.players,
+        submittedAt: ct.submittedAt,
+        paymentAmount: ct.paymentAmount,
         ageGroupSummary
       };
     });
@@ -1110,14 +1108,14 @@ const saveScores = async (req, res) => {
       });
     }
 
-    // Check if team exists and belongs to current competition
-    const team = await Team.findOne({ 
-      _id: teamId,
-      competition: req.competitionId 
-    });
-    if (!team) {
-      return res.status(404).json({ 
-        message: 'Team not found or does not belong to the current competition' 
+    const competitionTeam = await CompetitionTeam.findOne({
+      team: teamId,
+      competition: req.competitionId,
+      isActive: true
+    }).populate('team', 'name');
+    if (!competitionTeam || !competitionTeam.team) {
+      return res.status(404).json({
+        message: 'Team not found or does not belong to the current competition'
       });
     }
 
@@ -1181,13 +1179,12 @@ const saveScores = async (req, res) => {
       });
     }
 
-    // Emit real-time update via Socket.IO if available
     const io = req.app.get('io');
     if (io) {
       const roomId = `scoring_${gender}_${ageGroup}`;
       io.to(roomId).emit('scores_saved_notification', {
         teamId,
-        teamName: team.name,
+        teamName: competitionTeam.team?.name,
         gender,
         ageGroup,
         playersScored: playerScores.length

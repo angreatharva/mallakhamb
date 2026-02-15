@@ -7,19 +7,16 @@ import { playerAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveForm, ResponsiveFormField, ResponsiveButton } from '../components/responsive/ResponsiveForm';
-import { useResponsive } from '../hooks/useResponsive';
-import { CompetitionProvider, useCompetition } from '../contexts/CompetitionContext';
-import CompetitionSelectionScreen from '../components/CompetitionSelectionScreen';
+import { useAuth } from '../App';
 
 const PlayerSelectTeamContent = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(true);
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useResponsive();
+  const { login } = useAuth();
 
   const {
-    register,
     handleSubmit,
     formState: { errors },
     setValue,
@@ -28,20 +25,20 @@ const PlayerSelectTeamContent = () => {
 
   const selectedTeam = watch('team');
 
-  const { currentCompetition, isLoading: competitionLoading } = useCompetition();
-
   useEffect(() => {
-    if (currentCompetition) {
-      fetchTeams();
-    }
-  }, [currentCompetition]);
+    fetchTeams();
+  }, []);
 
   const fetchTeams = async () => {
     try {
+      setTeamsLoading(true);
       const response = await playerAPI.getTeams();
-      const teamOptions = response.data.teams.map(team => ({
+      const teamOptions = (response.data.teams || []).map((team) => ({
         value: team._id,
-        label: team.name
+        competitionId: team.competitionId,
+        label: team.competitionName
+          ? `${team.name} — ${team.competitionName}`
+          : team.name
       }));
       setTeams(teamOptions);
     } catch (error) {
@@ -52,9 +49,24 @@ const PlayerSelectTeamContent = () => {
   };
 
   const onSubmit = async (data) => {
+    const option = data.team && typeof data.team === 'object' ? data.team : teams.find((t) => t.value === data.team);
+    const teamId = option?.value ?? data.team;
+    const competitionId = option?.competitionId;
+    if (!teamId || !competitionId) {
+      toast.error('Please select a team');
+      return;
+    }
     setLoading(true);
     try {
-      await playerAPI.updateTeam({ teamId: data.team.value });
+      const response = await playerAPI.updateTeam({ teamId, competitionId });
+      const { token } = response.data;
+      if (token) {
+        localStorage.setItem('player_token', token);
+        const userData = localStorage.getItem('player_user');
+        if (userData) {
+          login(JSON.parse(userData), token, 'player');
+        }
+      }
       toast.success('Team selected successfully!');
       navigate('/player/dashboard');
     } catch (error) {
@@ -64,20 +76,14 @@ const PlayerSelectTeamContent = () => {
     }
   };
 
-  // While loading competitions or before a competition is selected, show competition selection
-  if (competitionLoading || !currentCompetition) {
-    return <CompetitionSelectionScreen userType="player" />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <ResponsiveContainer 
-        maxWidth="tablet" 
+      <ResponsiveContainer
+        maxWidth="tablet"
         className="flex items-center justify-center py-8 md:py-12"
       >
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            {/* Header Section */}
             <div className="text-center mb-6 md:mb-8">
               <div className="flex justify-center mb-4">
                 <div className="bg-blue-100 p-3 rounded-full">
@@ -85,10 +91,17 @@ const PlayerSelectTeamContent = () => {
                 </div>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Select Your Team</h2>
-              <p className="text-gray-600 mt-2 text-sm md:text-base">Choose the team you want to join</p>
+              <p className="text-gray-600 mt-2 text-sm md:text-base">
+                Choose the team you want to join. Teams are shown with their competition.
+              </p>
             </div>
 
-            {/* Form Section */}
+            {teams.length === 0 && !teamsLoading && (
+              <div className="text-center py-6 text-gray-600">
+                No teams available to join right now. Competitions may not have opened registration yet.
+              </div>
+            )}
+
             <ResponsiveForm onSubmit={handleSubmit(onSubmit)}>
               <ResponsiveFormField
                 label={
@@ -97,7 +110,7 @@ const PlayerSelectTeamContent = () => {
                     Team
                   </span>
                 }
-                error={errors.team && "Please select a team"}
+                error={errors.team && 'Please select a team'}
                 required
               >
                 <div className="relative">
@@ -105,7 +118,7 @@ const PlayerSelectTeamContent = () => {
                     options={teams}
                     value={selectedTeam}
                     onChange={(option) => setValue('team', option)}
-                    placeholder="Select a team"
+                    placeholder={teamsLoading ? 'Loading teams...' : 'Select a team'}
                     loading={teamsLoading}
                     className="w-full"
                   />
@@ -114,7 +127,7 @@ const PlayerSelectTeamContent = () => {
 
               <ResponsiveButton
                 type="submit"
-                disabled={loading || !selectedTeam}
+                disabled={loading || !selectedTeam || teams.length === 0}
                 loading={loading}
                 variant="primary"
                 className="w-full"
@@ -123,7 +136,6 @@ const PlayerSelectTeamContent = () => {
               </ResponsiveButton>
             </ResponsiveForm>
 
-            {/* Skip Option */}
             <div className="mt-6 text-center">
               <button
                 onClick={() => navigate('/player/dashboard')}
@@ -140,12 +152,6 @@ const PlayerSelectTeamContent = () => {
   );
 };
 
-const PlayerSelectTeam = () => {
-  return (
-    <CompetitionProvider userType="player">
-      <PlayerSelectTeamContent />
-    </CompetitionProvider>
-  );
-};
+const PlayerSelectTeam = () => <PlayerSelectTeamContent />;
 
 export default PlayerSelectTeam;

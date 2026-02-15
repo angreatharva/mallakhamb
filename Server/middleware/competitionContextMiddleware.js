@@ -15,6 +15,15 @@ const { logCompetitionContextFailure } = require('./securityLogger');
  */
 const validateCompetitionContext = async (req, res, next) => {
   try {
+    // Player GET /teams must work without competition (list all joinable teams)
+    const isPlayerGetTeams =
+      req.userType === 'player' &&
+      req.method === 'GET' &&
+      (req.path === 'teams' || req.originalUrl?.includes('/players/teams'));
+    if (isPlayerGetTeams) {
+      return next();
+    }
+
     // Extract competition ID from JWT token (preferred) or x-competition-id header (fallback)
     let competitionId = req.user?.currentCompetition || req.headers['x-competition-id'];
 
