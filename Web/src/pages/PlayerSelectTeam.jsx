@@ -36,9 +36,7 @@ const PlayerSelectTeamContent = () => {
       const teamOptions = (response.data.teams || []).map((team) => ({
         value: team._id,
         competitionId: team.competitionId,
-        label: team.competitionName
-          ? `${team.name} — ${team.competitionName}`
-          : team.name
+        label: team.name
       }));
       setTeams(teamOptions);
     } catch (error) {
@@ -92,7 +90,7 @@ const PlayerSelectTeamContent = () => {
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Select Your Team</h2>
               <p className="text-gray-600 mt-2 text-sm md:text-base">
-                Choose the team you want to join. Teams are shown with their competition.
+                Choose the team you want to join.
               </p>
             </div>
 

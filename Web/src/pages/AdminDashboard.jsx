@@ -22,6 +22,7 @@ import { adminAPI, superAdminAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
 import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
+import CompetitionSelector from '../components/CompetitionSelector';
 import { ResponsiveContainer, ResponsiveDashboardGrid } from '../components/responsive';
 import { 
   ResponsiveHeading, 
@@ -141,7 +142,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
         </CompetitionProvider>
 
         {/* Stats Cards - Responsive Grid */}
-        <ResponsiveDashboardGrid className="gap-4 md:gap-6">
+        <ResponsiveDashboardGrid className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
             <div className="flex items-center">
               <div className="bg-purple-100 p-2 md:p-3 rounded-full">
@@ -311,8 +312,13 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
               )}
             </div>
 
-            {/* Right side - User info and logout */}
+            {/* Right side - Competition Selector, User info and logout */}
             <div className="flex items-center space-x-2 md:space-x-4">
+              {/* Competition Selector for Admin */}
+              <CompetitionProvider userType={storagePrefix}>
+                <CompetitionSelector userType={storagePrefix} />
+              </CompetitionProvider>
+              
               <ResponsiveText size="sm" className="text-gray-600 hidden sm:block">Welcome, Admin</ResponsiveText>
               <button
                 onClick={() => {

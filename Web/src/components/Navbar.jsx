@@ -87,7 +87,7 @@ const Navbar = ({ user, userType, onLogout }) => {
             {user ? (
               <>
                 {/* Competition Selector */}
-                {userType && <CompetitionSelector />}
+                {userType && <CompetitionSelector userType={userType} />}
                 <div className="flex items-center space-x-2 px-3 py-2">
                   <User className="h-5 w-5 text-gray-500" />
                   <span className="text-sm text-gray-700">

@@ -5,6 +5,7 @@ const Coach = require('../models/Coach');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
 const Competition = require('../models/Competition');
+const CompetitionTeam = require('../models/CompetitionTeam');
 const { generateToken } = require('../utils/tokenUtils');
 const { recordAdminAssignmentChange } = require('../utils/tokenInvalidation');
 const { 
@@ -770,6 +771,119 @@ const removeAdminFromCompetition = async (req, res) => {
   }
 };
 
+// Get Super Admin Dashboard Stats
+// System stats are always aggregated across all competitions
+// Competition stats can be filtered by competitionId query parameter
+const getSuperAdminDashboard = async (req, res) => {
+  try {
+    const competitionId = req.query.competitionId;
+
+    // If competitionId is provided, get competition-specific stats (same as admin dashboard)
+    if (competitionId) {
+      const competition = await Competition.findById(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: 'Competition not found' });
+      }
+
+      // Get teams with completed payment for this competition
+      const competitionTeams = await CompetitionTeam.find({
+        competition: competitionId,
+        isActive: true,
+        paymentStatus: 'completed'
+      })
+        .populate('team', 'name description')
+        .populate('coach', 'name email')
+        .populate('players.player', 'firstName lastName gender dateOfBirth')
+        .populate('competition', 'name level place');
+
+      let totalTeams = 0;
+      let totalParticipants = 0;
+      let totalBoys = 0;
+      let totalGirls = 0;
+      let boysTeams = 0;
+      let girlsTeams = 0;
+
+      competitionTeams.forEach(ct => {
+        const teamPlayers = ct.players || [];
+        const boys = teamPlayers.filter(p => p.gender === 'Male').length;
+        const girls = teamPlayers.filter(p => p.gender === 'Female').length;
+
+        totalParticipants += teamPlayers.length;
+        totalBoys += boys;
+        totalGirls += girls;
+        if (boys > girls) boysTeams++;
+        else if (girls > boys) girlsTeams++;
+        totalTeams += 1;
+      });
+
+      return res.json({
+        competitionStats: {
+          totalTeams,
+          totalParticipants,
+          totalBoys,
+          totalGirls,
+          boysTeams,
+          girlsTeams
+        },
+        selectedCompetition: {
+          id: competition._id,
+          name: competition.name,
+          level: competition.level,
+          place: competition.place
+        }
+      });
+    }
+
+    // No competition selected - get aggregated stats across all competitions
+    const allCompetitionTeams = await CompetitionTeam.find({
+      isActive: true,
+      paymentStatus: 'completed'
+    })
+      .populate('players.player', 'gender');
+
+    let totalTeams = 0;
+    let totalParticipants = 0;
+    let totalBoys = 0;
+    let totalGirls = 0;
+    let boysTeams = 0;
+    let girlsTeams = 0;
+
+    allCompetitionTeams.forEach(ct => {
+      const teamPlayers = ct.players || [];
+      const boys = teamPlayers.filter(p => p.gender === 'Male').length;
+      const girls = teamPlayers.filter(p => p.gender === 'Female').length;
+
+      totalParticipants += teamPlayers.length;
+      totalBoys += boys;
+      totalGirls += girls;
+      if (boys > girls) boysTeams++;
+      else if (girls > boys) girlsTeams++;
+      totalTeams += 1;
+    });
+
+    const [totalCompetitions, activeCompetitions] = await Promise.all([
+      Competition.countDocuments({ isDeleted: false }),
+      Competition.countDocuments({ status: { $in: ['upcoming', 'ongoing'] }, isDeleted: false })
+    ]);
+
+    res.json({
+      competitionStats: {
+        totalTeams,
+        totalParticipants,
+        totalBoys,
+        totalGirls,
+        boysTeams,
+        girlsTeams,
+        totalCompetitions,
+        activeCompetitions
+      }
+    });
+  } catch (error) {
+    console.error('Get super admin dashboard error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Export all functions including inherited admin functions
 module.exports = {
   // Super Admin specific functions
@@ -779,6 +893,7 @@ module.exports = {
   updateAdmin,
   deleteAdmin,
   getSystemStats,
+  getSuperAdminDashboard,
   getAllCoaches,
   updateCoachStatus,
   deleteTeam,

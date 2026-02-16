@@ -4,6 +4,7 @@ const {
   loginSuperAdmin,
   getAdminProfile,
   getDashboardStats,
+  getSuperAdminDashboard,
   getAllTeams,
   getTeamDetails,
   addScore,
@@ -211,7 +212,7 @@ router.post('/login', loginValidation, handleValidationErrors, loginSuperAdmin);
 
 // Protected routes - Super Admin only
 router.get('/profile', authMiddleware, superAdminAuth, getAdminProfile);
-router.get('/dashboard', authMiddleware, superAdminAuth, getDashboardStats);
+router.get('/dashboard', authMiddleware, superAdminAuth, getSuperAdminDashboard);
 router.get('/system-stats', authMiddleware, superAdminAuth, getSystemStats);
 
 // Admin management routes (Super Admin only)

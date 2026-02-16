@@ -178,6 +178,8 @@ export const adminAPI = createAdminAPI('/admin');
 // Super Admin API with base path /superadmin (relative to baseURL which already includes /api)
 export const superAdminAPI = {
   ...createAdminAPI('/superadmin'),
+  // Override getDashboard to support query params
+  getDashboard: (params) => api.get('/superadmin/dashboard', { params }),
   // Super Admin specific endpoints
   getSystemStats: () => api.get('/superadmin/system-stats'),
   getAllAdmins: () => api.get('/superadmin/admins'),

@@ -123,9 +123,11 @@ const getDashboardStats = async (req, res) => {
       return res.status(400).json({ message: 'Competition context is required' });
     }
 
+    // Only count teams that have completed payment
     const competitionTeams = await CompetitionTeam.find({
       competition: req.competitionId,
-      isActive: true
+      isActive: true,
+      paymentStatus: 'completed'
     })
       .populate('team', 'name description')
       .populate('coach', 'name email')

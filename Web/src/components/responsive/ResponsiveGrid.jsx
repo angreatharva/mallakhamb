@@ -239,7 +239,7 @@ export const ResponsiveDashboardGrid = ({ children, className = '', ...props }) 
   const dashboardColumns = {
     mobile: '1fr',
     tablet: 'repeat(2, 1fr)',
-    desktop: 'repeat(4, 1fr)'
+    desktop: 'repeat(3, 1fr)'
   };
   
   const dashboardGap = {

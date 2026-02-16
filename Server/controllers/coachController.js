@@ -489,8 +489,19 @@ const searchPlayers = async (req, res) => {
       return res.json({ players: [] });
     }
 
-    // Search all players by name or email (not just those from coach's team)
+    // Find the coach's team for the current competition
+    const competitionTeam = await CompetitionTeam.findOne({ 
+      coach: req.user._id,
+      competition: req.competitionId 
+    }).populate('team');
+
+    if (!competitionTeam) {
+      return res.json({ players: [] });
+    }
+
+    // Search only players registered for the same team as the coach's current team
     const players = await Player.find({
+      team: competitionTeam.team._id,
       $or: [
         { firstName: { $regex: query, $options: 'i' } },
         { lastName: { $regex: query, $options: 'i' } },

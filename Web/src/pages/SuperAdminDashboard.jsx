@@ -33,27 +33,40 @@ const SuperAdminDashboard = () => {
 
   // Get active tab from URL, default to 'overview'
   const activeTab = tab || 'overview';
-  const [stats, setStats] = useState(null);
   const [systemStats, setSystemStats] = useState(null);
+  const [competitionStats, setCompetitionStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'overview') {
+      fetchCompetitions();
       fetchDashboardData();
     }
-  }, [activeTab]);
+  }, [activeTab, selectedCompetition]);
+
+  const fetchCompetitions = async () => {
+    try {
+      const response = await superAdminAPI.getAllCompetitions();
+      setCompetitions(response.data.competitions || []);
+    } catch (error) {
+      console.error('Failed to load competitions:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      const params = selectedCompetition ? { competitionId: selectedCompetition } : {};
       const [dashboardResponse, systemResponse] = await Promise.all([
-        superAdminAPI.getDashboard(),
+        superAdminAPI.getDashboard(params),
         superAdminAPI.getSystemStats()
       ]);
       
-      setStats(dashboardResponse.data.stats);
       setSystemStats(systemResponse.data);
+      setCompetitionStats(dashboardResponse.data.competitionStats);
     } catch (error) {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please login again.');
@@ -81,10 +94,10 @@ const SuperAdminDashboard = () => {
 
   const renderOverviewTab = () => (
     <div className="space-y-6">
-      {/* System Overview */}
+      {/* System Overview - Always shows ALL competitions combined */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <ResponsiveHeading level={3} className="text-gray-900 mb-6">
-          System Overview
+          System Overview (All Competitions Combined)
         </ResponsiveHeading>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -121,8 +134,8 @@ const SuperAdminDashboard = () => {
             textColor="text-orange-700"
           />
           <StatCard
-            title="Total Scores"
-            value={systemStats?.stats?.content?.totalScores || 0}
+            title="Total Competitions"
+            value={systemStats?.stats?.content?.totalCompetitions || 0}
             icon={Target}
             bgColor="bg-gradient-to-br from-pink-50 to-pink-100"
             iconColor="bg-pink-600"
@@ -139,30 +152,67 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Competition Stats */}
+      {/* Competition Statistics - Filtered by selected competition */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <ResponsiveHeading level={3} className="text-gray-900 mb-6">
-          Competition Statistics
-        </ResponsiveHeading>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <ResponsiveHeading level={3} className="text-gray-900">
+            Competition Statistics
+          </ResponsiveHeading>
+          <div className="w-full md:w-64">
+            <select
+              value={selectedCompetition || ''}
+              onChange={(e) => setSelectedCompetition(e.target.value || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="">All Competitions</option>
+              {competitions.map((comp) => (
+                <option key={comp._id} value={comp._id}>
+                  {comp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl shadow-md p-6 border-2 border-purple-200 hover:border-purple-400 transition-colors">
             <p className="text-sm text-gray-600 mb-2">Total Teams</p>
-            <p className="text-3xl font-bold text-purple-600">{stats?.totalTeams || 0}</p>
+            <p className="text-3xl font-bold text-purple-600">{competitionStats?.totalTeams || 0}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6 border-2 border-green-200 hover:border-green-400 transition-colors">
             <p className="text-sm text-gray-600 mb-2">Total Participants</p>
-            <p className="text-3xl font-bold text-green-600">{stats?.totalParticipants || 0}</p>
+            <p className="text-3xl font-bold text-green-600">{competitionStats?.totalParticipants || 0}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-md p-6 border-2 border-indigo-200 hover:border-indigo-400 transition-colors">
+            <p className="text-sm text-gray-600 mb-2">Boys Teams</p>
+            <p className="text-3xl font-bold text-indigo-600">{competitionStats?.boysTeams || 0}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-md p-6 border-2 border-rose-200 hover:border-rose-400 transition-colors">
+            <p className="text-sm text-gray-600 mb-2">Girls Teams</p>
+            <p className="text-3xl font-bold text-rose-600">{competitionStats?.girlsTeams || 0}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6 border-2 border-blue-200 hover:border-blue-400 transition-colors">
-            <p className="text-sm text-gray-600 mb-2">Boys Teams</p>
-            <p className="text-3xl font-bold text-blue-600">{stats?.boysTeams || 0}</p>
+            <p className="text-sm text-gray-600 mb-2">Total Boys</p>
+            <p className="text-3xl font-bold text-blue-600">{competitionStats?.totalBoys || 0}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6 border-2 border-pink-200 hover:border-pink-400 transition-colors">
-            <p className="text-sm text-gray-600 mb-2">Girls Teams</p>
-            <p className="text-3xl font-bold text-pink-600">{stats?.girlsTeams || 0}</p>
+            <p className="text-sm text-gray-600 mb-2">Total Girls</p>
+            <p className="text-3xl font-bold text-pink-600">{competitionStats?.totalGirls || 0}</p>
           </div>
         </div>
+
+        {!selectedCompetition && (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-md p-6 border-2 border-indigo-200">
+              <p className="text-sm text-indigo-700 mb-2">Total Competitions</p>
+              <p className="text-3xl font-bold text-indigo-600">{competitionStats?.totalCompetitions || 0}</p>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-md p-6 border-2 border-emerald-200">
+              <p className="text-sm text-emerald-700 mb-2">Active Competitions</p>
+              <p className="text-3xl font-bold text-emerald-600">{competitionStats?.activeCompetitions || 0}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

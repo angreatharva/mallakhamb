@@ -24,6 +24,15 @@ const validateCompetitionContext = async (req, res, next) => {
       return next();
     }
 
+    // Super Admin dashboard can work without competition context
+    const isSuperAdminDashboard =
+      (req.userType === 'superadmin' || req.user?.role === 'super_admin') &&
+      req.method === 'GET' &&
+      (req.path === '/dashboard' || req.originalUrl?.includes('/superadmin/dashboard'));
+    if (isSuperAdminDashboard) {
+      return next();
+    }
+
     // Extract competition ID from JWT token (preferred) or x-competition-id header (fallback)
     let competitionId = req.user?.currentCompetition || req.headers['x-competition-id'];
 

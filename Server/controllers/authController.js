@@ -421,10 +421,39 @@ async function getAssignedCompetitions(req, res) {
         competitions = [];
       }
     } else if (userType === 'player') {
-      // Players can see all competitions (they can join teams for any)
-      competitions = await Competition.find({})
-        .select('name level place status startDate endDate description')
-        .sort({ startDate: -1 });
+      // Players: show only competitions where they are registered in a team
+      const Player = require('../models/Player');
+      const CompetitionTeam = require('../models/CompetitionTeam');
+      
+      const player = await Player.findById(userId).select('team');
+      
+      if (player && player.team) {
+        // Find all competition teams that include this player
+        const competitionTeams = await CompetitionTeam.find({
+          'players.player': userId
+        }).select('competition');
+
+        const competitionIds = [
+          ...new Set(
+            competitionTeams
+              .map((ct) => ct.competition)
+              .filter((id) => !!id)
+              .map((id) => id.toString())
+          ),
+        ];
+
+        if (competitionIds.length > 0) {
+          competitions = await Competition.find({
+            _id: { $in: competitionIds },
+          })
+            .select('name level place status startDate endDate description')
+            .sort({ startDate: -1 });
+        } else {
+          competitions = [];
+        }
+      } else {
+        competitions = [];
+      }
     } else if (userType === 'judge') {
       // Judges see competitions they are assigned to
       // This will be implemented when judge model is updated with competition reference

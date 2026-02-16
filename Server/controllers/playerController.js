@@ -202,7 +202,7 @@ const joinTeam = async (req, res) => {
 };
 
 // Get all teams available for player to join (no competition required)
-// Returns teams from all open competitions so player can pick team first, then we set competition on join
+// Returns distinct teams from all open competitions
 const getAvailableTeams = async (req, res) => {
   try {
     const competitionId = req.competitionId || req.query.competitionId;
@@ -236,42 +236,53 @@ const getAvailableTeams = async (req, res) => {
       return res.json({ teams });
     }
 
-    // No competition selected: return all joinable teams from open (upcoming/ongoing) competitions
+    // No competition selected: return distinct teams from open competitions
     const openCompetitions = await Competition.find({
       status: { $in: ['upcoming', 'ongoing'] },
       isDeleted: false
-    }).select('_id name');
+    }).select('_id');
 
     const openIds = openCompetitions.map(c => c._id);
     if (openIds.length === 0) {
       return res.json({ teams: [] });
     }
 
+    // Get distinct team IDs from CompetitionTeam
     const competitionTeams = await CompetitionTeam.find({
       competition: { $in: openIds },
       isActive: true
+    }).distinct('team');
+
+    // Fetch the actual team documents
+    const teams = await Team.find({
+      _id: { $in: competitionTeams },
+      isActive: true
     })
-      .populate({
-        path: 'team',
-        match: { isActive: true },
-        select: 'name description'
-      })
       .populate('coach', 'firstName lastName')
-      .populate('competition', 'name level place')
-      .select('team coach competition');
+      .select('name description coach')
+      .lean();
 
-    const teams = competitionTeams
-      .filter(ct => ct.team && ct.competition)
-      .map(ct => ({
-        _id: ct.team._id,
-        name: ct.team.name,
-        description: ct.team.description,
-        coach: ct.coach,
-        competitionId: ct.competition._id,
-        competitionName: ct.competition.name
-      }));
+    // For each team, get one competition it's registered in
+    const teamsWithCompetition = await Promise.all(
+      teams.map(async (team) => {
+        const ct = await CompetitionTeam.findOne({
+          team: team._id,
+          competition: { $in: openIds },
+          isActive: true
+        }).populate('competition', 'name');
+        
+        return {
+          _id: team._id,
+          name: team.name,
+          description: team.description,
+          coach: team.coach,
+          competitionId: ct?.competition?._id,
+          competitionName: ct?.competition?.name
+        };
+      })
+    );
 
-    res.json({ teams });
+    res.json({ teams: teamsWithCompetition });
   } catch (error) {
     console.error('Get available teams error:', error);
     res.status(500).json({ message: 'Server error' });
