@@ -29,6 +29,7 @@ const AdminScoring = () => {
     const [existingScoreId, setExistingScoreId] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -235,6 +236,13 @@ const AdminScoring = () => {
 
             setJudges(activeJudges);
             console.log('Loaded judges:', activeJudges);
+
+            // Check if age group is started
+            const summaryResponse = await api.getAllJudgesSummary();
+            const ageGroupInfo = summaryResponse.data.summary.find(
+                item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
+            );
+            setAgeGroupStarted(ageGroupInfo?.isStarted || false);
 
             // Get players from the selected team for this age group
             const teamPlayers = selectedTeam.players
@@ -606,6 +614,10 @@ const AdminScoring = () => {
     };
 
     const handleUnlockScores = async () => {
+        if (ageGroupStarted) {
+            toast.error('Cannot unlock scores. This age group has already been started.');
+            return;
+        }
         if (!existingScoreId) {
             toast.error('No existing score record found');
             return;
@@ -704,16 +716,22 @@ const AdminScoring = () => {
                                 <AlertCircle className="h-5 w-5 text-red-600" />
                                 <div>
                                     <p className="text-red-800 font-medium">This scoring session is locked</p>
-                                    <p className="text-red-600 text-sm">Scores have been saved and cannot be modified. You can view the results below.</p>
+                                    <p className="text-red-600 text-sm">
+                                        {ageGroupStarted 
+                                            ? 'This age group has been started. Scores cannot be modified.' 
+                                            : 'Scores have been saved and cannot be modified. You can view the results below.'}
+                                    </p>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleUnlockScores}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm flex items-center space-x-1"
-                            >
-                                <Lock className="h-4 w-4" />
-                                <span>Unlock</span>
-                            </button>
+                            {!ageGroupStarted && (
+                                <button
+                                    onClick={handleUnlockScores}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm flex items-center space-x-1"
+                                >
+                                    <Lock className="h-4 w-4" />
+                                    <span>Unlock</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}

@@ -18,7 +18,10 @@ const {
   updateJudge,
   saveScores,
   unlockScores,
-  getTeamRankings
+  getTeamRankings,
+  getAllJudgesSummary,
+  startAgeGroup,
+  deleteJudge
 } = require('../controllers/adminController');
 const { authMiddleware, adminAuth } = require('../middleware/authMiddleware');
 const { validateCompetitionContext } = require('../middleware/competitionContextMiddleware');
@@ -153,6 +156,11 @@ router.get('/submitted-teams', authMiddleware, adminAuth, validateCompetitionCon
 router.post('/judges', authMiddleware, adminAuth, validateCompetitionContext, saveJudgesValidation, handleValidationErrors, saveJudges);
 router.post('/judges/single', authMiddleware, adminAuth, validateCompetitionContext, createSingleJudgeValidation, handleValidationErrors, createSingleJudge);
 router.get('/judges', authMiddleware, adminAuth, validateCompetitionContext, getJudges);
+router.get('/judges/summary', authMiddleware, adminAuth, validateCompetitionContext, getAllJudgesSummary);
 router.put('/judges/:judgeId', authMiddleware, adminAuth, validateCompetitionContext, updateJudgeValidation, handleValidationErrors, updateJudge);
+router.delete('/judges/:judgeId', authMiddleware, adminAuth, validateCompetitionContext, deleteJudge);
+
+// Competition management routes
+router.post('/competition/age-group/start', authMiddleware, adminAuth, validateCompetitionContext, startAgeGroup);
 
 module.exports = router;

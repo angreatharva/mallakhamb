@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X } from 'lucide-react';
+import { Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../services/api';
 import { ResponsiveContainer } from '../components/responsive';
@@ -17,6 +17,21 @@ const SuperAdminManagement = () => {
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [showAdminManagementModal, setShowAdminManagementModal] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  
+  // Add Player state
+  const [teams, setTeams] = useState([]);
+  const [playerFormData, setPlayerFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: 'Male',
+    teamId: '',
+    competitionId: '',
+    paymentStatus: 'pending'
+  });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -28,12 +43,36 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '',
     level: 'state',
+    competitionTypes: ['competition_1'],
     place: '',
+    year: new Date().getFullYear(),
     startDate: '',
     endDate: '',
     description: '',
-    admins: []
+    admins: [],
+    ageGroups: []
   });
+
+  // Default age groups list
+  const defaultAgeGroups = [
+    'Under8',
+    'Under10',
+    'Under12',
+    'Under14',
+    'Under16',
+    'Under18',
+    'Above18'
+  ];
+
+  const ageGroupLabels = {
+    'Under8': 'Under 8',
+    'Under10': 'Under 10',
+    'Under12': 'Under 12',
+    'Under14': 'Under 14',
+    'Under16': 'Under 16',
+    'Under18': 'Under 18',
+    'Above18': 'Above 18'
+  };
 
   useEffect(() => {
     fetchData();
@@ -55,6 +94,13 @@ const SuperAdminManagement = () => {
         ]);
         setCompetitions(competitionsResponse.data.competitions);
         setAdmins(adminsResponse.data.admins);
+      } else if (activeSection === 'addPlayer') {
+        const [competitionsResponse, teamsResponse] = await Promise.all([
+          superAdminAPI.getAllCompetitions(),
+          superAdminAPI.getAllTeams()
+        ]);
+        setCompetitions(competitionsResponse.data.competitions);
+        setTeams(teamsResponse.data.teams || []);
       }
     } catch (error) {
       toast.error('Failed to load data');
@@ -124,6 +170,16 @@ const SuperAdminManagement = () => {
       return;
     }
 
+    if (competitionFormData.ageGroups.length === 0) {
+      toast.error('At least one age group must be selected');
+      return;
+    }
+
+    if (competitionFormData.competitionTypes.length === 0) {
+      toast.error('At least one competition type must be selected');
+      return;
+    }
+
     try {
       await superAdminAPI.createCompetition(competitionFormData);
       toast.success('Competition created successfully');
@@ -137,14 +193,22 @@ const SuperAdminManagement = () => {
 
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
+
+    if (competitionFormData.competitionTypes.length === 0) {
+      toast.error('At least one competition type must be selected');
+      return;
+    }
+
     try {
       const updateData = {
         name: competitionFormData.name,
         level: competitionFormData.level,
+        competitionTypes: competitionFormData.competitionTypes,
         place: competitionFormData.place,
         startDate: competitionFormData.startDate,
         endDate: competitionFormData.endDate,
-        description: competitionFormData.description
+        description: competitionFormData.description,
+        ageGroups: competitionFormData.ageGroups
       };
       
       await superAdminAPI.updateCompetition(editingCompetition._id, updateData);
@@ -198,22 +262,62 @@ const SuperAdminManagement = () => {
     }
   };
 
+  const handleAddPlayer = async (e) => {
+    e.preventDefault();
+    
+    if (!playerFormData.competitionId) {
+      toast.error('Please select a competition');
+      return;
+    }
+    
+    if (!playerFormData.teamId) {
+      toast.error('Please select a team');
+      return;
+    }
+
+    try {
+      await superAdminAPI.addPlayerToTeam({
+        ...playerFormData,
+        team: playerFormData.teamId,
+        competition: playerFormData.competitionId
+      });
+      toast.success('Player added successfully');
+      setPlayerFormData({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        dateOfBirth: '',
+        gender: 'Male',
+        teamId: '',
+        competitionId: '',
+        paymentStatus: 'pending'
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add player');
+    }
+  };
+
   const openCompetitionModal = (competition = null) => {
     if (competition) {
       setEditingCompetition(competition);
       setCompetitionFormData({
         name: competition.name,
         level: competition.level,
+        competitionTypes: competition.competitionTypes || [],
         place: competition.place,
+        year: competition.year || new Date().getFullYear(),
         startDate: competition.startDate.split('T')[0],
         endDate: competition.endDate.split('T')[0],
         description: competition.description || '',
-        admins: competition.admins.map(a => a._id)
+        admins: competition.admins.map(a => a._id),
+        ageGroups: competition.ageGroups || []
       });
     } else {
       setEditingCompetition(null);
       resetCompetitionForm();
     }
+    setAdminSearchQuery('');
     setShowCompetitionModal(true);
   };
 
@@ -226,11 +330,14 @@ const SuperAdminManagement = () => {
     setCompetitionFormData({
       name: '',
       level: 'state',
+      competitionTypes: ['competition_1'],
       place: '',
+      year: new Date().getFullYear(),
       startDate: '',
       endDate: '',
       description: '',
-      admins: []
+      admins: [],
+      ageGroups: []
     });
   };
 
@@ -242,6 +349,69 @@ const SuperAdminManagement = () => {
         : [...prev.admins, adminId]
     }));
   };
+
+  const toggleAgeGroup = (ageGroup, gender) => {
+    setCompetitionFormData(prev => {
+      const ageGroups = [...prev.ageGroups];
+      const index = ageGroups.findIndex(
+        ag => ag.ageGroup === ageGroup && ag.gender === gender
+      );
+      
+      if (index >= 0) {
+        // Remove if exists
+        ageGroups.splice(index, 1);
+      } else {
+        // Add if doesn't exist
+        ageGroups.push({ ageGroup, gender });
+      }
+      
+      return {
+        ...prev,
+        ageGroups
+      };
+    });
+  };
+
+  const isAgeGroupSelected = (ageGroup, gender) => {
+    return competitionFormData.ageGroups.some(
+      ag => ag.ageGroup === ageGroup && ag.gender === gender
+    );
+  };
+
+  const toggleCompetitionType = (type) => {
+    setCompetitionFormData(prev => {
+      const types = [...prev.competitionTypes];
+      const index = types.indexOf(type);
+      
+      if (index >= 0) {
+        // Remove if exists
+        types.splice(index, 1);
+      } else {
+        // Add if doesn't exist
+        types.push(type);
+      }
+      
+      return {
+        ...prev,
+        competitionTypes: types
+      };
+    });
+  };
+
+  const isCompetitionTypeSelected = (type) => {
+    return competitionFormData.competitionTypes.includes(type);
+  };
+
+  const filteredAdmins = admins
+    .filter(admin => admin.role !== 'super_admin')
+    .filter(admin => {
+      if (!adminSearchQuery) return true;
+      const query = adminSearchQuery.toLowerCase();
+      return (
+        admin.name.toLowerCase().includes(query) ||
+        admin.email.toLowerCase().includes(query)
+      );
+    });
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
@@ -299,6 +469,19 @@ const SuperAdminManagement = () => {
                 <span>Coaches</span>
               </div>
             </button>
+            <button
+              onClick={() => setActiveSection('addPlayer')}
+              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
+                activeSection === 'addPlayer'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <UserPlus className="h-5 w-5" />
+                <span>Add Player</span>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -328,6 +511,7 @@ const SuperAdminManagement = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Place</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
@@ -340,6 +524,21 @@ const SuperAdminManagement = () => {
                     {competitions.map((competition) => (
                       <tr key={competition._id}>
                         <td className="px-6 py-4 whitespace-nowrap font-medium">{competition.name}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {competition.competitionTypes && competition.competitionTypes.length > 0 ? (
+                              competition.competitionTypes.map((type) => (
+                                <span key={type} className="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 whitespace-nowrap">
+                                  {type === 'competition_1' && 'Type I'}
+                                  {type === 'competition_2' && 'Type II'}
+                                  {type === 'competition_3' && 'Type III'}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">N/A</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
                             {competition.level}
@@ -551,6 +750,171 @@ const SuperAdminManagement = () => {
           </div>
         )}
 
+        {/* Add Player Section */}
+        {activeSection === 'addPlayer' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <ResponsiveHeading level={3} className="text-gray-900 mb-6">
+              Add Player to Team
+            </ResponsiveHeading>
+
+            <form onSubmit={handleAddPlayer} className="max-w-2xl space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Player Name *</label>
+                  <input
+                    type="text"
+                    value={playerFormData.name}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={playerFormData.email}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <input
+                    type="password"
+                    value={playerFormData.password}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={playerFormData.phone}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                  <input
+                    type="date"
+                    value={playerFormData.dateOfBirth}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                  <select
+                    value={playerFormData.gender}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, gender: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Competition *</label>
+                  <select
+                    value={playerFormData.competitionId}
+                    onChange={(e) => {
+                      setPlayerFormData({ ...playerFormData, competitionId: e.target.value, teamId: '' });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  >
+                    <option value="">Select Competition</option>
+                    {competitions.map((comp) => (
+                      <option key={comp._id} value={comp._id}>
+                        {comp.name} {comp.year ? `(${comp.year})` : ''} - {comp.level} - {comp.place}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Team *</label>
+                  <select
+                    value={playerFormData.teamId}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, teamId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                    disabled={!playerFormData.competitionId}
+                  >
+                    <option value="">Select Team</option>
+                    {teams
+                      .filter(team => team.competition?._id === playerFormData.competitionId || team.competitionId === playerFormData.competitionId)
+                      .map((team) => (
+                        <option key={team._id} value={team._id}>
+                          {team.name}
+                        </option>
+                      ))}
+                  </select>
+                  {!playerFormData.competitionId && (
+                    <p className="text-xs text-gray-500 mt-1">Select a competition first</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status *</label>
+                  <select
+                    value={playerFormData.paymentStatus}
+                    onChange={(e) => setPlayerFormData({ ...playerFormData, paymentStatus: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlayerFormData({
+                      name: '',
+                      email: '',
+                      password: '',
+                      phone: '',
+                      dateOfBirth: '',
+                      gender: 'Male',
+                      teamId: '',
+                      competitionId: '',
+                      paymentStatus: 'pending'
+                    });
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+                >
+                  Reset
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                >
+                  Add Player
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Add/Edit Admin Modal */}
         {(showAddAdminModal || editingAdmin) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -647,13 +1011,29 @@ const SuperAdminManagement = () => {
 
         {/* Create/Edit Competition Modal */}
         {showCompetitionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 my-8">
-              <ResponsiveHeading level={3} className="text-gray-900 mb-4">
-                {editingCompetition ? 'Edit Competition' : 'Create New Competition'}
-              </ResponsiveHeading>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-xl">
+              {/* Modal Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
+                <ResponsiveHeading level={3} className="text-gray-900">
+                  {editingCompetition ? 'Edit Competition' : 'Create New Competition'}
+                </ResponsiveHeading>
+              </div>
               
-              <form onSubmit={editingCompetition ? handleUpdateCompetition : handleCreateCompetition} className="space-y-4">
+              {/* Scrollable Content */}
+              <form 
+                id="competition-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (editingCompetition) {
+                    handleUpdateCompetition(e);
+                  } else {
+                    handleCreateCompetition(e);
+                  }
+                }}
+                className="flex-1 overflow-y-auto"
+              >
+              <div className="px-6 py-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Competition Name *</label>
@@ -692,6 +1072,20 @@ const SuperAdminManagement = () => {
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+                    <select
+                      value={competitionFormData.year}
+                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, year: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    >
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                     <input
                       type="date"
@@ -714,6 +1108,51 @@ const SuperAdminManagement = () => {
                   </div>
                 </div>
 
+                {/* Competition Types Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Competition Type * (Select at least one)
+                  </label>
+                  <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3">
+                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={isCompetitionTypeSelected('competition_1')}
+                        onChange={() => toggleCompetitionType('competition_1')}
+                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-gray-900 block">Competition I</span>
+                        <span className="text-xs text-gray-600">Team Championship & Qualifier</span>
+                      </div>
+                    </label>
+                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={isCompetitionTypeSelected('competition_2')}
+                        onChange={() => toggleCompetitionType('competition_2')}
+                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-gray-900 block">Competition II</span>
+                        <span className="text-xs text-gray-600">All Round Individual Final</span>
+                      </div>
+                    </label>
+                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={isCompetitionTypeSelected('competition_3')}
+                        onChange={() => toggleCompetitionType('competition_3')}
+                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-gray-900 block">Competition III</span>
+                        <span className="text-xs text-gray-600">Apparatus Championship</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
@@ -724,37 +1163,90 @@ const SuperAdminManagement = () => {
                   />
                 </div>
 
+                {/* Age Groups Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Age Groups * (Select at least one)
+                  </label>
+                  <div className="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-gray-50">
+                    <div className="space-y-3">
+                      {defaultAgeGroups.map((ageGroup) => (
+                        <div key={ageGroup} className="bg-white rounded-lg p-3 border border-gray-200">
+                          <div className="font-medium text-gray-800 mb-2 text-sm">{ageGroupLabels[ageGroup]}</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="flex items-center space-x-2 p-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={isAgeGroupSelected(ageGroup, 'Male')}
+                                onChange={() => toggleAgeGroup(ageGroup, 'Male')}
+                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                              />
+                              <span className="text-sm text-gray-700 font-medium">Male</span>
+                            </label>
+                            <label className="flex items-center space-x-2 p-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={isAgeGroupSelected(ageGroup, 'Female')}
+                                onChange={() => toggleAgeGroup(ageGroup, 'Female')}
+                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                              />
+                              <span className="text-sm text-gray-700 font-medium">Female</span>
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                </div>
+
                 {!editingCompetition && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Assign Admins * (Select at least one)
                     </label>
-                    <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                      {admins.filter(admin => admin.role !== 'super_admin').map((admin) => (
-                        <label key={admin._id} className="flex items-center space-x-2 py-2 hover:bg-gray-50 cursor-pointer">
+                    
+                    {/* Search Bar */}
+                    <div className="relative mb-3">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search admins by name or email..."
+                        value={adminSearchQuery}
+                        onChange={(e) => setAdminSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                    </div>
+
+                    <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50">
+                      {filteredAdmins.map((admin) => (
+                        <label key={admin._id} className="flex items-center space-x-2 py-2 px-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={competitionFormData.admins.includes(admin._id)}
                             onChange={() => toggleAdminSelection(admin._id)}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
                           />
                           <span className="text-sm text-gray-700">{admin.name} ({admin.email})</span>
                         </label>
                       ))}
+                      {filteredAdmins.length === 0 && adminSearchQuery && (
+                        <p className="text-sm text-gray-500 p-2">No admins found matching "{adminSearchQuery}"</p>
+                      )}
                       {admins.filter(admin => admin.role !== 'super_admin').length === 0 && (
-                        <p className="text-sm text-gray-500">No admins available. Create an admin first.</p>
+                        <p className="text-sm text-gray-500 p-2">No admins available. Create an admin first.</p>
                       )}
                     </div>
                   </div>
                 )}
+              </div>
+              </form>
 
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                  >
-                    {editingCompetition ? 'Update Competition' : 'Create Competition'}
-                  </button>
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-xl">
+                <div className="flex space-x-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -762,12 +1254,19 @@ const SuperAdminManagement = () => {
                       setEditingCompetition(null);
                       resetCompetitionForm();
                     }}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
                   >
                     Cancel
                   </button>
+                  <button
+                    type="submit"
+                    form="competition-form"
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                  >
+                    {editingCompetition ? 'Update Competition' : 'Create Competition'}
+                  </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         )}

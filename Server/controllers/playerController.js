@@ -115,6 +115,8 @@ const getPlayerTeam = async (req, res) => {
     }
 
     let team = null;
+    let ageGroup = null;
+    let teamStatus = 'Not assigned';
     
     // If player has a team, check if it's registered in the current competition
     if (player.team) {
@@ -134,6 +136,20 @@ const getPlayerTeam = async (req, res) => {
           description: player.team.description,
           coach: competitionTeam.coach
         };
+
+        // Find player's age group in this competition
+        const playerEntry = competitionTeam.players.find(
+          p => p.player && p.player.toString() === player._id.toString()
+        );
+        
+        if (playerEntry) {
+          ageGroup = playerEntry.ageGroup;
+          teamStatus = competitionTeam.isSubmitted ? 'Submitted' : 'Active';
+        } else {
+          teamStatus = 'Not assigned to age group';
+        }
+      } else {
+        teamStatus = 'Team not registered in competition';
       }
     }
 
@@ -143,10 +159,11 @@ const getPlayerTeam = async (req, res) => {
         firstName: player.firstName,
         lastName: player.lastName,
         email: player.email,
-        ageGroup: player.ageGroup,
+        ageGroup: ageGroup || null,
         gender: player.gender
       },
-      team 
+      team,
+      teamStatus
     });
   } catch (error) {
     console.error('Get player team error:', error);

@@ -14,8 +14,10 @@ const {
   getSubmittedTeams,
   saveJudges,
   getJudges,
+  getAllJudgesSummary,
   createSingleJudge,
   updateJudge,
+  startAgeGroup,
   saveScores,
   unlockScores,
   getTeamRankings,
@@ -29,6 +31,7 @@ const {
   updateCoachStatus,
   deleteTeam,
   deleteJudge,
+  getAllTeamsForSuperAdmin,
   // Competition management
   createCompetition,
   getAllCompetitions,
@@ -125,6 +128,9 @@ const createCompetitionValidation = [
     .trim()
     .notEmpty()
     .withMessage('Competition place is required'),
+  body('year')
+    .isInt({ min: 2000, max: 2100 })
+    .withMessage('Competition year is required and must be between 2000 and 2100'),
   body('startDate')
     .isISO8601()
     .withMessage('Valid start date is required'),
@@ -142,7 +148,16 @@ const createCompetitionValidation = [
     .withMessage('At least one admin must be assigned'),
   body('admins.*')
     .isMongoId()
-    .withMessage('Each admin ID must be valid')
+    .withMessage('Each admin ID must be valid'),
+  body('ageGroups')
+    .isArray({ min: 1 })
+    .withMessage('At least one age group must be selected'),
+  body('ageGroups.*.gender')
+    .isIn(['Male', 'Female'])
+    .withMessage('Gender must be Male or Female'),
+  body('ageGroups.*.ageGroup')
+    .isIn(['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'])
+    .withMessage('Valid age group is required')
 ];
 
 const updateCompetitionValidation = [
@@ -160,6 +175,10 @@ const updateCompetitionValidation = [
     .trim()
     .notEmpty()
     .withMessage('Competition place cannot be empty'),
+  body('year')
+    .optional()
+    .isInt({ min: 2000, max: 2100 })
+    .withMessage('Year must be between 2000 and 2100'),
   body('startDate')
     .optional()
     .isISO8601()
@@ -171,7 +190,19 @@ const updateCompetitionValidation = [
   body('status')
     .optional()
     .isIn(['upcoming', 'ongoing', 'completed'])
-    .withMessage('Status must be upcoming, ongoing, or completed')
+    .withMessage('Status must be upcoming, ongoing, or completed'),
+  body('ageGroups')
+    .optional()
+    .isArray()
+    .withMessage('ageGroups must be an array'),
+  body('ageGroups.*.gender')
+    .optional()
+    .isIn(['Male', 'Female'])
+    .withMessage('Gender must be Male or Female'),
+  body('ageGroups.*.ageGroup')
+    .optional()
+    .isIn(['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'])
+    .withMessage('Valid age group is required')
 ];
 
 const assignAdminValidation = [
@@ -226,7 +257,7 @@ router.get('/coaches', authMiddleware, superAdminAuth, getAllCoaches);
 router.put('/coaches/:coachId/status', authMiddleware, superAdminAuth, updateCoachStatus);
 
 // Team routes
-router.get('/teams', authMiddleware, superAdminAuth, getAllTeams);
+router.get('/teams', authMiddleware, superAdminAuth, getAllTeamsForSuperAdmin);
 router.get('/teams/:teamId', authMiddleware, superAdminAuth, getTeamDetails);
 router.delete('/teams/:teamId', authMiddleware, superAdminAuth, deleteTeam);
 router.get('/players', authMiddleware, superAdminAuth, getAllPlayers);
@@ -246,8 +277,12 @@ router.get('/submitted-teams', authMiddleware, superAdminAuth, getSubmittedTeams
 router.post('/judges', authMiddleware, superAdminAuth, saveJudgesValidation, handleValidationErrors, saveJudges);
 router.post('/judges/single', authMiddleware, superAdminAuth, createSingleJudgeValidation, handleValidationErrors, createSingleJudge);
 router.get('/judges', authMiddleware, superAdminAuth, getJudges);
+router.get('/judges/summary', authMiddleware, superAdminAuth, getAllJudgesSummary);
 router.put('/judges/:judgeId', authMiddleware, superAdminAuth, updateJudgeValidation, handleValidationErrors, updateJudge);
 router.delete('/judges/:judgeId', authMiddleware, superAdminAuth, deleteJudge);
+
+// Competition management routes
+router.post('/competition/age-group/start', authMiddleware, superAdminAuth, startAgeGroup);
 
 // Competition management routes (Super Admin only)
 router.post('/competitions', authMiddleware, superAdminAuth, createCompetitionValidation, handleValidationErrors, createCompetition);
@@ -257,5 +292,74 @@ router.put('/competitions/:id', authMiddleware, superAdminAuth, updateCompetitio
 router.delete('/competitions/:id', authMiddleware, superAdminAuth, deleteCompetition);
 router.post('/competitions/:id/admins', authMiddleware, superAdminAuth, assignAdminValidation, handleValidationErrors, assignAdminToCompetition);
 router.delete('/competitions/:id/admins/:adminId', authMiddleware, superAdminAuth, removeAdminFromCompetition);
+
+// Player management routes (Super Admin only)
+const addPlayerValidation = [
+  body('name').trim().notEmpty().withMessage('Player name is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
+  body('gender').isIn(['Male', 'Female']).withMessage('Gender must be Male or Female'),
+  body('team').isMongoId().withMessage('Valid team ID is required'),
+  body('competition').isMongoId().withMessage('Valid competition ID is required'),
+  body('paymentStatus').isIn(['pending', 'completed', 'failed']).withMessage('Valid payment status is required')
+];
+
+router.post('/players/add', authMiddleware, superAdminAuth, addPlayerValidation, handleValidationErrors, async (req, res) => {
+  try {
+    const Player = require('../models/Player');
+    const Team = require('../models/Team');
+    const bcrypt = require('bcryptjs');
+
+    const { name, email, password, phone, dateOfBirth, gender, team: teamId, competition: competitionId, paymentStatus } = req.body;
+
+    // Check if player already exists
+    const existingPlayer = await Player.findOne({ email });
+    if (existingPlayer) {
+      return res.status(400).json({ message: 'Player with this email already exists' });
+    }
+
+    // Verify team exists and belongs to the competition
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    if (team.competitionId.toString() !== competitionId) {
+      return res.status(400).json({ message: 'Team does not belong to the selected competition' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create player
+    const player = new Player({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+      dateOfBirth,
+      gender,
+      team: teamId,
+      paymentStatus,
+      isActive: true
+    });
+
+    await player.save();
+
+    res.status(201).json({
+      message: 'Player added successfully',
+      player: {
+        id: player._id,
+        name: player.name,
+        email: player.email,
+        team: teamId
+      }
+    });
+  } catch (error) {
+    console.error('Add player error:', error);
+    res.status(500).json({ message: 'Failed to add player', error: error.message });
+  }
+});
 
 module.exports = router;

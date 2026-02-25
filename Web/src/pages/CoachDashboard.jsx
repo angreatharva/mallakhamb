@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trophy, Users, UserPlus, Search, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '../services/api';
+import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
@@ -30,26 +31,27 @@ const CoachDashboard = () => {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
 
-  const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10', minAge: 0, maxAge: 9 },
-    { value: 'U12', label: 'Under 12', minAge: 0, maxAge: 11 },
-    { value: 'U14', label: 'Under 14', minAge: 0, maxAge: 13 },
-    { value: 'U18', label: 'Under 18', minAge: 0, maxAge: 17 },
-    { value: 'Above18', label: 'Above 18', minAge: 18, maxAge: 100 }
-  ];
-
-  const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10', minAge: 0, maxAge: 9 },
-    { value: 'U12', label: 'Under 12', minAge: 0, maxAge: 11 },
-    { value: 'U14', label: 'Under 14', minAge: 0, maxAge: 13 },
-    { value: 'U16', label: 'Under 16', minAge: 0, maxAge: 15 },
-    { value: 'Above16', label: 'Above 16', minAge: 16, maxAge: 100 }
-  ];
-
   const genders = [
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' }
   ];
+
+  // Age group age limits mapping
+  const ageGroupLimits = {
+    'U8': { minAge: 0, maxAge: 7 },
+    'U10': { minAge: 0, maxAge: 9 },
+    'U12': { minAge: 0, maxAge: 11 },
+    'U14': { minAge: 0, maxAge: 13 },
+    'U16': { minAge: 0, maxAge: 15 },
+    'U18': { minAge: 0, maxAge: 17 },
+    'Above16': { minAge: 16, maxAge: 100 },
+    'Above18': { minAge: 18, maxAge: 100 }
+  };
+
+  // Get filtered age groups from competition
+  const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
+  const maleAgeGroupValues = useAgeGroupValues('Male');
+  const femaleAgeGroupValues = useAgeGroupValues('Female');
 
   useEffect(() => {
     fetchTeamDashboard();
@@ -71,10 +73,15 @@ const CoachDashboard = () => {
 
   // Get available age groups based on gender and player's age
   const getAvailableAgeGroups = (gender, playerAge) => {
-    const ageGroups = gender === 'Male' ? boysAgeGroups : girlsAgeGroups;
+    // Use competition-filtered age groups
+    const ageGroups = competitionAgeGroups.map(ag => ({
+      ...ag,
+      ...ageGroupLimits[ag.value]
+    }));
 
     // Filter age groups where player can participate (current age or higher categories)
     return ageGroups.filter(group => {
+      if (!group.minAge && !group.maxAge) return true; // If limits not found, include it
       // Player can play in their age group or higher, but not lower
       if (group.value.startsWith('Above')) {
         return playerAge >= group.minAge;
@@ -208,6 +215,7 @@ const CoachDashboard = () => {
 
   const getAgeGroupDisplay = (ageGroup) => {
     const ageGroupMap = {
+      'U8': 'Under 8',
       'U10': 'Under 10',
       'U12': 'Under 12',
       'U14': 'Under 14',
@@ -377,7 +385,7 @@ const CoachDashboard = () => {
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
             <ResponsiveHeading level={2} className="text-gray-900 mb-4 md:mb-6">Boys Age Groups</ResponsiveHeading>
             <div className="space-y-4">
-              {['U10', 'U12', 'U14', 'U18', 'Above18'].map(ageGroup => {
+              {maleAgeGroupValues.map(ageGroup => {
                 const key = `Male_${ageGroup}`;
                 const players = playersByAgeGroup[key] || [];
 
@@ -423,7 +431,7 @@ const CoachDashboard = () => {
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
             <ResponsiveHeading level={2} className="text-gray-900 mb-4 md:mb-6">Girls Age Groups</ResponsiveHeading>
             <div className="space-y-4">
-              {['U10', 'U12', 'U14', 'U16', 'Above16'].map(ageGroup => {
+              {femaleAgeGroupValues.map(ageGroup => {
                 const key = `Female_${ageGroup}`;
                 const players = playersByAgeGroup[key] || [];
 
@@ -510,7 +518,7 @@ const CoachDashboard = () => {
                     <div>
                       <h5 className="font-medium text-blue-600 mb-3">Boys Age Groups</h5>
                       <div className="space-y-3">
-                        {['U10', 'U12', 'U14', 'U18', 'Above18'].map(ageGroup => {
+                        {maleAgeGroupValues.map(ageGroup => {
                           const key = `Male_${ageGroup}`;
                           const players = playersByAgeGroup[key] || [];
 
@@ -541,7 +549,7 @@ const CoachDashboard = () => {
                     <div>
                       <h5 className="font-medium text-pink-600 mb-3">Girls Age Groups</h5>
                       <div className="space-y-3">
-                        {['U10', 'U12', 'U14', 'U16', 'Above16'].map(ageGroup => {
+                        {femaleAgeGroupValues.map(ageGroup => {
                           const key = `Female_${ageGroup}`;
                           const players = playersByAgeGroup[key] || [];
 
@@ -691,13 +699,13 @@ const CoachDashboard = () => {
                           Age Group <span className="text-red-500">*</span>
                         </label>
                         <Dropdown
-                          options={selectedGender ? getAvailableAgeGroups(selectedGender.value, selectedPlayerData.age) : []}
+                          options={selectedGender ? competitionAgeGroups : []}
                           value={selectedAgeGroup}
                           onChange={setSelectedAgeGroup}
                           placeholder="Select age group"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Player age: {selectedPlayerData.age} years. Can play in equal or higher categories.
+                          Player age: {selectedPlayerData.age} years. Age eligibility is validated when you add the player.
                         </p>
                       </div>
                     </div>

@@ -300,6 +300,40 @@ const updateCoachStatus = async (req, res) => {
   }
 };
 
+// Get all teams (Super Admin only - no competition context required)
+const getAllTeamsForSuperAdmin = async (req, res) => {
+  try {
+    // Get all competition teams (team registrations in competitions)
+    const competitionTeams = await CompetitionTeam.find()
+      .populate('team', 'name description')
+      .populate('coach', 'name email')
+      .populate('competition', 'name year level place')
+      .sort({ createdAt: -1 });
+
+    // Transform to include team details at top level for easier frontend use
+    const teams = competitionTeams.map(ct => ({
+      _id: ct.team._id,
+      name: ct.team.name,
+      description: ct.team.description,
+      coach: ct.coach,
+      competition: ct.competition,
+      competitionId: ct.competition._id,
+      competitionTeamId: ct._id,
+      isSubmitted: ct.isSubmitted,
+      paymentStatus: ct.paymentStatus
+    }));
+
+    res.json({
+      success: true,
+      teams,
+      total: teams.length
+    });
+  } catch (error) {
+    console.error('Get all teams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Delete team (Super Admin only)
 const deleteTeam = async (req, res) => {
   try {
@@ -350,12 +384,40 @@ const deleteJudge = async (req, res) => {
 // Create Competition
 const createCompetition = async (req, res) => {
   try {
-    const { name, level, place, startDate, endDate, description, status, admins } = req.body;
+    const { name, level, place, year, startDate, endDate, description, status, admins, ageGroups, competitionTypes } = req.body;
 
     // Validate required fields
-    if (!name || !level || !place || !startDate || !endDate) {
+    if (!name || !level || !place || !year || !startDate || !endDate) {
       return res.status(400).json({ 
-        message: 'Missing required fields: name, level, place, startDate, and endDate are required' 
+        message: 'Missing required fields: name, level, place, year, startDate, and endDate are required' 
+      });
+    }
+
+    // Validate competition types (required and must be array with at least one item)
+    if (!competitionTypes || !Array.isArray(competitionTypes) || competitionTypes.length === 0) {
+      return res.status(400).json({ 
+        message: 'At least one competition type must be selected' 
+      });
+    }
+
+    // Validate competition types values
+    const validTypes = ['competition_1', 'competition_2', 'competition_3'];
+    for (const type of competitionTypes) {
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ 
+          message: `Invalid competition type: ${type}. Must be one of: ${validTypes.join(', ')}` 
+        });
+      }
+    }
+
+    // Remove duplicates
+    const uniqueCompetitionTypes = [...new Set(competitionTypes)];
+
+    // Check if competition with same name, year, and place already exists
+    const existingCompetition = await Competition.findOne({ name, year, place });
+    if (existingCompetition) {
+      return res.status(400).json({ 
+        message: `A competition with the name "${name}" already exists for the year ${year} in ${place}. Please use a different name, year, or place.` 
       });
     }
 
@@ -374,15 +436,41 @@ const createCompetition = async (req, res) => {
       });
     }
 
+    // Validate age groups (required)
+    if (!ageGroups || !Array.isArray(ageGroups) || ageGroups.length === 0) {
+      return res.status(400).json({ 
+        message: 'At least one age group must be selected' 
+      });
+    }
+
+    const validAgeGroups = ['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
+    const validGenders = ['Male', 'Female'];
+    
+    for (const ag of ageGroups) {
+      if (!validGenders.includes(ag.gender)) {
+        return res.status(400).json({ 
+          message: `Invalid gender: ${ag.gender}. Must be Male or Female` 
+        });
+      }
+      if (!validAgeGroups.includes(ag.ageGroup)) {
+        return res.status(400).json({ 
+          message: `Invalid age group: ${ag.ageGroup}. Must be one of: ${validAgeGroups.join(', ')}` 
+        });
+      }
+    }
+
     // Create competition
     const competition = new Competition({
       name,
       level,
       place,
+      year,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       description,
+      competitionTypes: uniqueCompetitionTypes,
       admins,
+      ageGroups,
       createdBy: req.user._id
     });
 
@@ -528,20 +616,72 @@ const getCompetitionById = async (req, res) => {
 const updateCompetition = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, level, place, startDate, endDate, description, status } = req.body;
+    const { name, level, place, year, startDate, endDate, description, status, ageGroups, competitionTypes } = req.body;
 
     const competition = await Competition.findById(id);
     if (!competition) {
       return res.status(404).json({ message: 'Competition not found' });
     }
 
+    // Validate competition types if provided
+    if (competitionTypes !== undefined) {
+      if (!Array.isArray(competitionTypes)) {
+        return res.status(400).json({ 
+          message: 'competitionTypes must be an array' 
+        });
+      }
+      
+      if (competitionTypes.length === 0) {
+        return res.status(400).json({ 
+          message: 'At least one competition type must be selected' 
+        });
+      }
+
+      const validTypes = ['competition_1', 'competition_2', 'competition_3'];
+      for (const type of competitionTypes) {
+        if (!validTypes.includes(type)) {
+          return res.status(400).json({ 
+            message: `Invalid competition type: ${type}. Must be one of: ${validTypes.join(', ')}` 
+          });
+        }
+      }
+    }
+
+    // Validate age groups if provided
+    if (ageGroups !== undefined) {
+      if (!Array.isArray(ageGroups)) {
+        return res.status(400).json({ 
+          message: 'ageGroups must be an array' 
+        });
+      }
+      
+      const validAgeGroups = ['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
+      const validGenders = ['Male', 'Female'];
+      
+      for (const ag of ageGroups) {
+        if (!validGenders.includes(ag.gender)) {
+          return res.status(400).json({ 
+            message: `Invalid gender: ${ag.gender}. Must be Male or Female` 
+          });
+        }
+        if (!validAgeGroups.includes(ag.ageGroup)) {
+          return res.status(400).json({ 
+            message: `Invalid age group: ${ag.ageGroup}. Must be one of: ${validAgeGroups.join(', ')}` 
+          });
+        }
+      }
+    }
+
     // Update fields if provided
     if (name !== undefined) competition.name = name;
     if (level !== undefined) competition.level = level;
     if (place !== undefined) competition.place = place;
+    if (year !== undefined) competition.year = year;
     if (startDate !== undefined) competition.startDate = new Date(startDate);
     if (endDate !== undefined) competition.endDate = new Date(endDate);
     if (description !== undefined) competition.description = description;
+    if (ageGroups !== undefined) competition.ageGroups = ageGroups;
+    if (competitionTypes !== undefined) competition.competitionTypes = [...new Set(competitionTypes)];
     
     // Handle status update with validation
     if (status !== undefined) {
@@ -896,6 +1036,7 @@ module.exports = {
   getSuperAdminDashboard,
   getAllCoaches,
   updateCoachStatus,
+  getAllTeamsForSuperAdmin,
   deleteTeam,
   deleteJudge,
   

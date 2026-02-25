@@ -74,8 +74,22 @@ const PlayerDashboard = () => {
   const fetchPlayerProfile = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await playerAPI.getProfile();
-      setPlayer(response.data.player);
+      // Try to get team info with competition context first
+      try {
+        const teamResponse = await playerAPI.getTeam();
+        setPlayer({
+          ...teamResponse.data.player,
+          team: teamResponse.data.team,
+          teamStatus: teamResponse.data.teamStatus
+        });
+      } catch (teamError) {
+        // Fallback to profile if team endpoint fails (no competition context)
+        const response = await playerAPI.getProfile();
+        setPlayer({
+          ...response.data.player,
+          teamStatus: 'Not assigned'
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch player profile:', error);
     } finally {
@@ -299,8 +313,14 @@ const PlayerDashboard = () => {
                 </div>
                 <div className="flex flex-col md:flex-row md:justify-between py-2">
                   <span className="font-medium text-gray-600 mb-1 md:mb-0">Status:</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
-                    Active
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${
+                    player.teamStatus === 'Submitted' 
+                      ? 'bg-green-100 text-green-800'
+                      : player.teamStatus === 'Active'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {player.teamStatus || 'Not assigned'}
                   </span>
                 </div>
               </div>

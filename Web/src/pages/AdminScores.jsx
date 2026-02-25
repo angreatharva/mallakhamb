@@ -4,6 +4,7 @@ import { Trophy, Filter, Users, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
+import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../components/responsive/ResponsiveRankings';
@@ -25,6 +26,7 @@ const Scores = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamScoreStatus, setTeamScoreStatus] = useState({});
   const [loading, setLoading] = useState(false);
+  const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
   // Filters
   const [selectedGender, setSelectedGender] = useState(null);
@@ -40,33 +42,14 @@ const Scores = () => {
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
-  ];
-
-  const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
-  ];
-
   const scoreTypes = [
     { value: 'add', label: 'Add Score' },
     { value: 'individual', label: 'Individual Rankings' },
     { value: 'rankings', label: 'Team Rankings' }
   ];
 
-  // Get available age groups based on selected gender
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
-  };
+  // Get filtered age groups from competition
+  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
   // Reset age group when gender changes
   useEffect(() => {
@@ -119,6 +102,13 @@ const Scores = () => {
 
       // Check score status for each team
       await checkTeamScoreStatus(response.data.teams);
+
+      // Check if age group is started
+      const summaryResponse = await api.getAllJudgesSummary();
+      const ageGroupInfo = summaryResponse.data.summary.find(
+        item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
+      );
+      setAgeGroupStarted(ageGroupInfo?.isStarted || false);
     } catch (error) {
       toast.error('Failed to load submitted teams');
     } finally {
@@ -303,6 +293,7 @@ const Scores = () => {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onClearFilters={handleClearFilters}
+          ageGroups={availableAgeGroups}
         />
 
         {/* Score Content - Only show after filters are applied */}
@@ -435,6 +426,18 @@ const Scores = () => {
                                     View Details
                                   </button>
                                   {teamScoreStatus[team._id]?.isLocked ? (
+                                    <button
+                                      onClick={() => {
+                                        navigate(`${routePrefix}/scoring`, {
+                                          state: { selectedTeam: team, selectedGender, selectedAgeGroup }
+                                        });
+                                      }}
+                                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center space-x-1"
+                                    >
+                                      <span>👁️</span>
+                                      <span>View Scores</span>
+                                    </button>
+                                  ) : ageGroupStarted ? (
                                     <button
                                       onClick={() => {
                                         navigate(`${routePrefix}/scoring`, {

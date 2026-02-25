@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Trophy,
   ShieldHalf,
   Mars,
   Users,
@@ -36,6 +35,9 @@ import { useRouteContext } from '../contexts/RouteContext';
 import AdminTeams from './AdminTeams';
 import AdminScores from './AdminScores';
 import AdminJudges from './AdminJudges';
+import { useCompetition } from '../contexts/CompetitionContext';
+import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
+import { Play, CheckCircle, XCircle } from 'lucide-react';
 
 const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const navigate = useNavigate();
@@ -55,6 +57,11 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [judgesSummary, setJudgesSummary] = useState([]);
+  const [loadingJudgesSummary, setLoadingJudgesSummary] = useState(false);
+  const [startingAgeGroups, setStartingAgeGroups] = useState({}); // Track which age groups are being started
+  
+  const { currentCompetition } = useCompetition();
 
   // Filters
   const [selectedGender, setSelectedGender] = useState(null);
@@ -67,26 +74,15 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
-  ];
-
-  const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
-  ];
+  // Get filtered age groups from competition
+  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
+  const maleAgeGroupValues = useAgeGroupValues('Male');
+  const femaleAgeGroupValues = useAgeGroupValues('Female');
 
   // Get available age groups based on selected gender
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
+    return availableAgeGroups;
   };
 
 
@@ -96,6 +92,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   useEffect(() => {
     if (activeTab === 'dashboard') {
       fetchDashboardStats();
+      fetchJudgesSummary();
     } else if (activeTab === 'teams') {
       // Teams component will handle its own data loading
     } else if (activeTab === 'scores') {
@@ -104,6 +101,46 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
       // Judges component will handle its own data loading
     }
   }, [activeTab]);
+
+  const fetchJudgesSummary = async () => {
+    setLoadingJudgesSummary(true);
+    try {
+      const response = await api.getAllJudgesSummary();
+      setJudgesSummary(response.data.summary || []);
+    } catch (error) {
+      console.error('Failed to fetch judges summary:', error);
+      // Don't show error toast, just log it
+    } finally {
+      setLoadingJudgesSummary(false);
+    }
+  };
+
+  const handleStartAgeGroup = async (gender, ageGroup) => {
+    const ageGroupLabel = ageGroup === 'U10' ? 'Under 10' :
+                          ageGroup === 'U12' ? 'Under 12' :
+                          ageGroup === 'U14' ? 'Under 14' :
+                          ageGroup === 'U16' ? 'Under 16' :
+                          ageGroup === 'U18' ? 'Under 18' :
+                          ageGroup === 'Above18' ? 'Above 18' :
+                          ageGroup === 'Above16' ? 'Above 16' : ageGroup;
+
+    if (!window.confirm(`Are you sure you want to start the ${gender} ${ageGroupLabel} age group? Once started, judges for this age group cannot be modified.`)) {
+      return;
+    }
+
+    const key = `${gender}_${ageGroup}`;
+    setStartingAgeGroups(prev => ({ ...prev, [key]: true }));
+
+    try {
+      await api.startAgeGroup({ gender, ageGroup });
+      toast.success(`${gender} ${ageGroupLabel} age group started successfully! Judges can no longer be modified for this age group.`);
+      fetchJudgesSummary();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to start age group');
+    } finally {
+      setStartingAgeGroups(prev => ({ ...prev, [key]: false }));
+    }
+  };
 
 
 
@@ -227,6 +264,156 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
             </div>
           </div>
         </ResponsiveDashboardGrid>
+
+        {/* Judges Summary and Start Age Group Section */}
+        {currentCompetition && (
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
+            <div className="mb-4">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                Judges Assignment Status
+              </h3>
+              <p className="text-sm text-gray-600">
+                Review judge assignments for each age group. Each age group needs at least 3 judges to start. Once started, judges for that age group cannot be modified.
+              </p>
+            </div>
+
+            {loadingJudgesSummary ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading judges summary...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Boys Age Groups */}
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <Mars className="h-4 w-4 mr-2 text-blue-600" />
+                    Boys Age Groups
+                  </h4>
+                  <div className="space-y-2">
+                    {judgesSummary
+                      .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
+                      .map((item, index) => {
+                        const ageGroupLabel = item.ageGroup === 'U8' ? 'Under 8' :
+                                             item.ageGroup === 'U10' ? 'Under 10' :
+                                             item.ageGroup === 'U12' ? 'Under 12' :
+                                             item.ageGroup === 'U14' ? 'Under 14' :
+                                             item.ageGroup === 'U18' ? 'Under 18' :
+                                             item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
+                        const judgeNames = item.judges.map(j => j.name).filter(name => name).join(', ') || 'No judges assigned';
+                        const key = `${item.gender}_${item.ageGroup}`;
+                        const isStarting = startingAgeGroups[key] || false;
+                        
+                        return (
+                          <div
+                            key={`male-${item.ageGroup}`}
+                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                              item.isStarted
+                                ? 'bg-blue-50 border-blue-300'
+                                : item.hasMinimumJudges
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-red-50 border-red-200'
+                            }`}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium text-gray-900">{ageGroupLabel}</span>
+                                {item.isStarted ? (
+                                  <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
+                                ) : item.hasMinimumJudges ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Judges: <span className="font-medium">{judgeNames}</span>
+                              </p>
+                            </div>
+                            {!item.isStarted && (
+                              <button
+                                onClick={() => handleStartAgeGroup(item.gender, item.ageGroup)}
+                                disabled={isStarting || !item.hasMinimumJudges || loadingJudgesSummary}
+                                className="ml-4 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-h-[44px] text-sm"
+                              >
+                                <Play className="h-4 w-4" />
+                                <span>{isStarting ? 'Starting...' : 'Start'}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Girls Age Groups */}
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <Venus className="h-4 w-4 mr-2 text-pink-600" />
+                    Girls Age Groups
+                  </h4>
+                  <div className="space-y-2">
+                    {judgesSummary
+                      .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
+                      .map((item, index) => {
+                        const ageGroupLabel = item.ageGroup === 'U8' ? 'Under 8' :
+                                             item.ageGroup === 'U10' ? 'Under 10' :
+                                             item.ageGroup === 'U12' ? 'Under 12' :
+                                             item.ageGroup === 'U14' ? 'Under 14' :
+                                             item.ageGroup === 'U16' ? 'Under 16' :
+                                             item.ageGroup === 'U18' ? 'Under 18' :
+                                             item.ageGroup === 'Above16' ? 'Above 16' :
+                                             item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
+                        const judgeNames = item.judges.map(j => j.name).filter(name => name).join(', ') || 'No judges assigned';
+                        const key = `${item.gender}_${item.ageGroup}`;
+                        const isStarting = startingAgeGroups[key] || false;
+                        
+                        return (
+                          <div
+                            key={`female-${item.ageGroup}`}
+                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                              item.isStarted
+                                ? 'bg-blue-50 border-blue-300'
+                                : item.hasMinimumJudges
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-red-50 border-red-200'
+                            }`}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium text-gray-900">{ageGroupLabel}</span>
+                                {item.isStarted ? (
+                                  <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
+                                ) : item.hasMinimumJudges ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Judges: <span className="font-medium">{judgeNames}</span>
+                              </p>
+                            </div>
+                            {!item.isStarted && (
+                              <button
+                                onClick={() => handleStartAgeGroup(item.gender, item.ageGroup)}
+                                disabled={isStarting || !item.hasMinimumJudges || loadingJudgesSummary}
+                                className="ml-4 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-h-[44px] text-sm"
+                              >
+                                <Play className="h-4 w-4" />
+                                <span>{isStarting ? 'Starting...' : 'Start'}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </ResponsiveContainer>
   );

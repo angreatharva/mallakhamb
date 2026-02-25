@@ -112,6 +112,7 @@ export const playerAPI = {
   register: (data) => api.post('/players/register', data),
   login: (data) => api.post('/players/login', data),
   getProfile: () => api.get('/players/profile'),
+  getTeam: () => api.get('/players/team'),
   // Join a team in the current competition
   updateTeam: (data) => api.post('/players/team/join', data),
   getTeams: () => api.get('/players/teams'),
@@ -166,8 +167,11 @@ const createAdminAPI = (basePath = '/admin') => ({
   getSubmittedTeams: (params) => api.get(`${basePath}/submitted-teams`, { params }),
   saveJudges: (data) => api.post(`${basePath}/judges`, data),
   getJudges: (params) => api.get(`${basePath}/judges`, { params }),
+  getAllJudgesSummary: () => api.get(`${basePath}/judges/summary`),
   updateJudge: (judgeId, data) => api.put(`${basePath}/judges/${judgeId}`, data),
   createSingleJudge: (data) => api.post(`${basePath}/judges/single`, data),
+  deleteJudge: (judgeId) => api.delete(`${basePath}/judges/${judgeId}`),
+  startAgeGroup: (data) => api.post(`${basePath}/competition/age-group/start`, data),
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),
   unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),
 });
@@ -197,7 +201,10 @@ export const superAdminAPI = {
   updateCompetition: (id, data) => api.put(`/superadmin/competitions/${id}`, data),
   deleteCompetition: (id) => api.delete(`/superadmin/competitions/${id}`),
   assignAdminToCompetition: (id, data) => api.post(`/superadmin/competitions/${id}/admins`, data),
-  removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`)
+  removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`),
+  // Team and Player management
+  getAllTeams: () => api.get('/superadmin/teams'),
+  addPlayerToTeam: (data) => api.post('/superadmin/players/add', data)
 };
 
 // Auth API

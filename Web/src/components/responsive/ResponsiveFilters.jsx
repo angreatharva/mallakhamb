@@ -204,6 +204,7 @@ export const ResponsiveTeamFilters = ({
   searchTerm,
   onSearchChange,
   onClearFilters,
+  ageGroups, // Accept filtered age groups as prop
   className = '',
   ...props
 }) => {
@@ -212,7 +213,8 @@ export const ResponsiveTeamFilters = ({
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
+  // Fallback age groups if not provided
+  const defaultBoysAgeGroups = [
     { value: 'U10', label: 'Under 10' },
     { value: 'U12', label: 'Under 12' },
     { value: 'U14', label: 'Under 14' },
@@ -220,7 +222,7 @@ export const ResponsiveTeamFilters = ({
     { value: 'Above18', label: 'Above 18' }
   ];
 
-  const girlsAgeGroups = [
+  const defaultGirlsAgeGroups = [
     { value: 'U10', label: 'Under 10' },
     { value: 'U12', label: 'Under 12' },
     { value: 'U14', label: 'Under 14' },
@@ -230,7 +232,11 @@ export const ResponsiveTeamFilters = ({
 
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
+    // Use provided age groups if available, otherwise fallback to defaults
+    if (ageGroups && ageGroups.length > 0) {
+      return ageGroups;
+    }
+    return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
   };
 
   const filters = [
@@ -293,6 +299,7 @@ export const ResponsiveScoreFilters = ({
   searchTerm,
   onSearchChange,
   onClearFilters,
+  ageGroups, // Accept filtered age groups as prop
   className = '',
   ...props
 }) => {
@@ -307,7 +314,8 @@ export const ResponsiveScoreFilters = ({
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
+  // Fallback age groups if not provided
+  const defaultBoysAgeGroups = [
     { value: 'U10', label: 'Under 10' },
     { value: 'U12', label: 'Under 12' },
     { value: 'U14', label: 'Under 14' },
@@ -315,7 +323,7 @@ export const ResponsiveScoreFilters = ({
     { value: 'Above18', label: 'Above 18' }
   ];
 
-  const girlsAgeGroups = [
+  const defaultGirlsAgeGroups = [
     { value: 'U10', label: 'Under 10' },
     { value: 'U12', label: 'Under 12' },
     { value: 'U14', label: 'Under 14' },
@@ -325,7 +333,11 @@ export const ResponsiveScoreFilters = ({
 
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
+    // Use provided age groups if available, otherwise fallback to defaults
+    if (ageGroups && ageGroups.length > 0) {
+      return ageGroups;
+    }
+    return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
   };
 
   const getSearchPlaceholder = () => {

@@ -745,16 +745,41 @@ const getSubmittedTeams = async (req, res) => {
 // Save judges
 const saveJudges = async (req, res) => {
   try {
-    const { gender, ageGroup, judges } = req.body;
+    const { gender, ageGroup, judges, competitionTypes } = req.body;
 
     // Validate required fields
     if (!gender || !ageGroup || !judges || judges.length !== 5) {
       return res.status(400).json({ message: 'Invalid judge data provided' });
     }
 
+    // Validate competition types
+    if (!competitionTypes || !Array.isArray(competitionTypes) || competitionTypes.length === 0) {
+      return res.status(400).json({ message: 'At least one competition type must be selected' });
+    }
+
+    const validTypes = ['competition_1', 'competition_2', 'competition_3'];
+    for (const type of competitionTypes) {
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ 
+          message: `Invalid competition type: ${type}. Must be one of: ${validTypes.join(', ')}` 
+        });
+      }
+    }
+
     // Validate competition context is present
     if (!req.competitionId) {
       return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Check competition status - prevent judge modifications if competition is started
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    if (competition.status === 'ongoing' || competition.status === 'completed') {
+      return res.status(403).json({ 
+        message: `Cannot modify judges. Competition is already ${competition.status}. Judges can only be modified before the competition starts.` 
+      });
     }
 
     // Check if judges already exist for this gender/age group/competition combination
@@ -769,6 +794,17 @@ const saveJudges = async (req, res) => {
       });
     }
 
+    // Validate at least 3 judges and max 5 have name and password
+    const validJudgesCount = judges.filter(j => j.name && j.name.trim() && j.password && j.password.trim()).length;
+    if (validJudgesCount < 3) {
+      return res.status(400).json({
+        message: 'At least 3 judges are required (maximum 5 allowed)'
+      });
+    }
+
+    // Remove duplicates from competition types
+    const uniqueCompetitionTypes = [...new Set(competitionTypes)];
+
     // Create all 5 judge records, handling empty ones properly
     const judgePromises = judges.map(judgeData => {
       const hasData = judgeData.name && judgeData.name.trim() && judgeData.password && judgeData.password.trim();
@@ -778,6 +814,7 @@ const saveJudges = async (req, res) => {
         ageGroup,
         judgeNo: judgeData.judgeNo,
         judgeType: judgeData.judgeType,
+        competitionTypes: uniqueCompetitionTypes,
         name: hasData ? judgeData.name.trim() : '',
         password: hasData ? judgeData.password.trim() : '',
         isActive: Boolean(hasData),
@@ -794,8 +831,6 @@ const saveJudges = async (req, res) => {
     });
 
     await Promise.all(judgePromises);
-
-    const validJudgesCount = judges.filter(j => j.name && j.password).length;
 
     res.status(201).json({
       message: 'Judge panel created successfully',
@@ -924,6 +959,23 @@ const createSingleJudge = async (req, res) => {
       return res.status(400).json({ message: 'Competition context is required' });
     }
 
+    // Check if this specific age group is started - prevent judge modifications
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    
+    // Check if this specific age group has been started
+    const ageGroupStarted = competition.startedAgeGroups?.some(
+      ag => ag.gender === gender && ag.ageGroup === ageGroup
+    );
+    
+    if (ageGroupStarted) {
+      return res.status(403).json({ 
+        message: `Cannot modify judges. The ${gender} ${ageGroup} age group has already been started. Judges can only be modified before the age group starts.` 
+      });
+    }
+
     // Check if judge already exists for this position in current competition
     const existingJudge = await Judge.findOne({ 
       gender, 
@@ -1014,16 +1066,36 @@ const updateJudge = async (req, res) => {
       return res.status(400).json({ message: 'Competition context is required' });
     }
 
-    // Check if judge exists and belongs to current competition
+    // Check if this specific age group is started - prevent judge modifications
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    
+    // Get the judge to find its gender and age group
     const judge = await Judge.findOne({ 
       _id: judgeId,
       competition: req.competitionId 
     });
+    
     if (!judge) {
       return res.status(404).json({ 
         message: 'Judge not found or does not belong to the current competition' 
       });
     }
+    
+    // Check if this specific age group has been started
+    const ageGroupStarted = competition.startedAgeGroups?.some(
+      ag => ag.gender === judge.gender && ag.ageGroup === judge.ageGroup
+    );
+    
+    if (ageGroupStarted) {
+      return res.status(403).json({ 
+        message: `Cannot modify judges. The ${judge.gender} ${judge.ageGroup} age group has already been started. Judges can only be modified before the age group starts.` 
+      });
+    }
+
+    // Judge already fetched above for age group check
 
     // Check if username is already taken by another judge in current competition
     const normalizedUsername = username.toLowerCase().trim();
@@ -1482,6 +1554,218 @@ const getPublicTeams = async (req, res) => {
   }
 };
 
+// Map competition age group format to legacy format used by Judge/Score models
+const COMPETITION_TO_LEGACY_AGE_GROUP = {
+  Under8: 'U8',
+  Under10: 'U10',
+  Under12: 'U12',
+  Under14: 'U14',
+  Under16: 'U16',
+  Under18: 'U18',
+  Above18: 'Above18'
+};
+
+// Get all judges summary grouped by age group and gender
+const getAllJudgesSummary = async (req, res) => {
+  try {
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Get competition to check started age groups and assigned age groups
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Get all judges for this competition
+    const allJudges = await Judge.find({ competition: req.competitionId });
+
+    // Use competition's ageGroups - only show age groups assigned by super admin
+    const ageGroupOrder = ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
+    let ageGroupsByGender = { Male: [], Female: [] };
+    if (competition.ageGroups && competition.ageGroups.length > 0) {
+      competition.ageGroups.forEach(ag => {
+        const legacyAgeGroup = COMPETITION_TO_LEGACY_AGE_GROUP[ag.ageGroup] || ag.ageGroup;
+        if (!ageGroupsByGender[ag.gender].includes(legacyAgeGroup)) {
+          ageGroupsByGender[ag.gender].push(legacyAgeGroup);
+        }
+      });
+      // Sort for consistent display order
+      ageGroupsByGender.Male.sort((a, b) => ageGroupOrder.indexOf(a) - ageGroupOrder.indexOf(b));
+      ageGroupsByGender.Female.sort((a, b) => ageGroupOrder.indexOf(a) - ageGroupOrder.indexOf(b));
+    } else {
+      // Fallback to default if competition has no age groups set
+      ageGroupsByGender = {
+        Male: ['U10', 'U12', 'U14', 'U18', 'Above18'],
+        Female: ['U10', 'U12', 'U14', 'U16', 'Above16']
+      };
+    }
+
+    // Group judges by gender and age group
+    const summary = [];
+
+    ['Male', 'Female'].forEach(gender => {
+      const ageGroups = ageGroupsByGender[gender] || [];
+      
+      ageGroups.forEach(ageGroup => {
+        const judgesForGroup = allJudges.filter(
+          j => j.gender === gender && j.ageGroup === ageGroup && j.isActive && j.name && j.name.trim()
+        );
+        
+        // Check if this age group has been started
+        const isStarted = competition.startedAgeGroups?.some(
+          ag => ag.gender === gender && ag.ageGroup === ageGroup
+        ) || false;
+        
+        summary.push({
+          gender,
+          ageGroup,
+          judgeCount: judgesForGroup.length,
+          hasMinimumJudges: judgesForGroup.length >= 3,
+          isStarted,
+          judges: judgesForGroup.map(j => ({
+            _id: j._id,
+            judgeNo: j.judgeNo,
+            judgeType: j.judgeType,
+            name: j.name
+          }))
+        });
+      });
+    });
+
+    res.json({ summary });
+  } catch (error) {
+    console.error('Get all judges summary error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Start a specific age group
+const startAgeGroup = async (req, res) => {
+  try {
+    const { gender, ageGroup } = req.body;
+
+    // Validate required fields
+    if (!gender || !ageGroup) {
+      return res.status(400).json({ message: 'Gender and age group are required' });
+    }
+
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Check if this age group is already started
+    const alreadyStarted = competition.startedAgeGroups?.some(
+      ag => ag.gender === gender && ag.ageGroup === ageGroup
+    );
+
+    if (alreadyStarted) {
+      return res.status(400).json({ 
+        message: `The ${gender} ${ageGroup} age group has already been started.` 
+      });
+    }
+
+    // Verify this age group has minimum 3 judges
+    const judgesForGroup = await Judge.find({ 
+      competition: req.competitionId,
+      gender,
+      ageGroup,
+      isActive: true
+    }).where('name').ne('').where('name').ne(null);
+
+    const validJudges = judgesForGroup.filter(j => j.name && j.name.trim());
+
+    if (validJudges.length < 3) {
+      return res.status(400).json({ 
+        message: `Cannot start ${gender} ${ageGroup} age group. Minimum 3 judges required (currently ${validJudges.length}).` 
+      });
+    }
+
+    // Add this age group to startedAgeGroups
+    if (!competition.startedAgeGroups) {
+      competition.startedAgeGroups = [];
+    }
+    
+    competition.startedAgeGroups.push({
+      gender,
+      ageGroup,
+      startedAt: new Date()
+    });
+
+    await competition.save();
+
+    res.json({
+      message: `${gender} ${ageGroup} age group started successfully`,
+      ageGroup: {
+        gender,
+        ageGroup,
+        startedAt: competition.startedAgeGroups[competition.startedAgeGroups.length - 1].startedAt
+      }
+    });
+  } catch (error) {
+    console.error('Start age group error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Delete judge
+const deleteJudge = async (req, res) => {
+  try {
+    const { judgeId } = req.params;
+
+    // Validate competition context is present
+    if (!req.competitionId) {
+      return res.status(400).json({ message: 'Competition context is required' });
+    }
+
+    // Get the judge to check its age group
+    const judge = await Judge.findOne({ 
+      _id: judgeId,
+      competition: req.competitionId 
+    });
+
+    if (!judge) {
+      return res.status(404).json({ message: 'Judge not found or does not belong to the current competition' });
+    }
+
+    // Check if this specific age group is started - prevent judge deletion
+    const competition = await Competition.findById(req.competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+    
+    // Check if this specific age group has been started
+    const ageGroupStarted = competition.startedAgeGroups?.some(
+      ag => ag.gender === judge.gender && ag.ageGroup === judge.ageGroup
+    );
+    
+    if (ageGroupStarted) {
+      return res.status(403).json({ 
+        message: `Cannot delete judges. The ${judge.gender} ${judge.ageGroup} age group has already been started. Judges can only be deleted before the age group starts.` 
+      });
+    }
+
+    // Delete the judge
+    await Judge.findByIdAndDelete(judgeId);
+
+    res.json({
+      message: 'Judge deleted successfully',
+      judgeId
+    });
+  } catch (error) {
+    console.error('Delete judge error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get public scores (for score viewing)
 const getPublicScores = async (req, res) => {
   try {
@@ -1572,5 +1856,8 @@ module.exports = {
   saveIndividualScore,
   getTeamRankings,
   getPublicTeams,
-  getPublicScores
+  getPublicScores,
+  getAllJudgesSummary,
+  startAgeGroup,
+  deleteJudge
 };

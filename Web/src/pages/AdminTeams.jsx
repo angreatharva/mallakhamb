@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
+import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
@@ -39,27 +40,8 @@ const Teams = () => {
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
-  ];
-
-  const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
-  ];
-
-  // Get available age groups based on selected gender
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
-  };
+  // Get filtered age groups from competition
+  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
   // Reset age group when gender changes
   useEffect(() => {
@@ -145,6 +127,7 @@ const Teams = () => {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onClearFilters={handleClearFilters}
+            ageGroups={availableAgeGroups}
           />
 
           {/* Teams Display */}

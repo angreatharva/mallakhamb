@@ -5,11 +5,14 @@ import {
   UserPlus,
   Save,
   Edit,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
+import { useCompetition } from '../contexts/CompetitionContext';
+import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveForm, ResponsiveFormField, ResponsiveInput, ResponsiveButton } from '../components/responsive/ResponsiveForm';
@@ -20,8 +23,32 @@ const Judges = () => {
   // Get route context for path-aware behavior
   const { routePrefix, storagePrefix } = useRouteContext();
   
+  // Get competition context
+  const { currentCompetition } = useCompetition();
+  
   // Select appropriate API based on route context
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
+  
+  // Determine if user is super admin
+  const isSuperAdmin = routePrefix === '/superadmin';
+  
+  // Get available competition types based on user role and competition
+  const getAvailableCompetitionTypes = () => {
+    if (isSuperAdmin) {
+      // Super admin sees all competition types
+      return ['competition_1', 'competition_2', 'competition_3'];
+    }
+    
+    // Admin sees only competition types assigned to the current competition
+    if (currentCompetition && currentCompetition.competitionTypes) {
+      return currentCompetition.competitionTypes;
+    }
+    
+    // Default to empty if no competition or no types
+    return [];
+  };
+
+  const availableCompetitionTypes = getAvailableCompetitionTypes();
   // State management
   const [judges, setJudges] = useState([]);
   const [judgeFormData, setJudgeFormData] = useState([
@@ -37,13 +64,27 @@ const Judges = () => {
   // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
+  const [selectedCompetitionTypes, setSelectedCompetitionTypes] = useState([]);
   const [judgeType, setJudgeType] = useState('add'); // 'add', 'list'
   const [judgesExistForSelection, setJudgesExistForSelection] = useState(false);
   const [checkingExistingJudges, setCheckingExistingJudges] = useState(false);
   const [loadingJudges, setLoadingJudges] = useState(false);
+  const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
   // Responsive hook
   const { isMobile, isTablet } = useResponsive();
+
+  // Set default competition types when available types change
+  useEffect(() => {
+    if (availableCompetitionTypes.length > 0 && selectedCompetitionTypes.length === 0) {
+      // Default to competition_1 if available, otherwise first available type
+      if (availableCompetitionTypes.includes('competition_1')) {
+        setSelectedCompetitionTypes(['competition_1']);
+      } else {
+        setSelectedCompetitionTypes([availableCompetitionTypes[0]]);
+      }
+    }
+  }, [availableCompetitionTypes]);
 
   // Filter options
   const genders = [
@@ -51,31 +92,18 @@ const Judges = () => {
     { value: 'Female', label: 'Female' }
   ];
 
-  const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
-  ];
-
-  const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
-  ];
-
   const judgeTypes = [
     { value: 'add', label: 'Add Judge' },
     { value: 'list', label: 'Judge List' }
   ];
 
+  // Get filtered age groups from competition
+  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
+
   // Get available age groups based on selected gender
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? boysAgeGroups : girlsAgeGroups;
+    return availableAgeGroups;
   };
 
   // Reset age group when gender changes
@@ -200,6 +228,13 @@ const Judges = () => {
       const params = { gender, ageGroup };
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
+      
+      // Check if age group is started
+      const summaryResponse = await api.getAllJudgesSummary();
+      const ageGroupInfo = summaryResponse.data.summary.find(
+        item => item.gender === gender && item.ageGroup === ageGroup
+      );
+      setAgeGroupStarted(ageGroupInfo?.isStarted || false);
     } catch (error) {
       toast.error('Failed to load judges');
     } finally {
@@ -274,6 +309,11 @@ const Judges = () => {
       return;
     }
 
+    if (selectedCompetitionTypes.length === 0) {
+      toast.error('Please select at least one competition type');
+      return;
+    }
+
     // Check if judges already exist
     const judgesExist = await checkExistingJudges();
     if (judgesExist) {
@@ -281,10 +321,10 @@ const Judges = () => {
       return;
     }
 
-    // Validate at least one judge has name and password
+    // Validate at least 3 judges and max 5 have name and password
     const validJudges = judgeFormData.filter(judge => judge.name.trim() && judge.password.trim());
-    if (validJudges.length === 0) {
-      toast.error('Please fill in at least one judge with name and password');
+    if (validJudges.length < 3) {
+      toast.error('Please fill in at least 3 judges with name and password (maximum 5 allowed)');
       return;
     }
 
@@ -301,6 +341,7 @@ const Judges = () => {
       const judgesData = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
+        competitionTypes: selectedCompetitionTypes,
         judges: cleanedJudges
       };
 
@@ -328,6 +369,10 @@ const Judges = () => {
   };
 
   const handleEditJudge = (judge) => {
+    if (ageGroupStarted) {
+      toast.error('Cannot edit judges. This age group has already been started.');
+      return;
+    }
     setEditingJudge(judge);
     const initialUsername = judge.username || (judge.name ? generateUsername(judge.name, judge.judgeType) : '');
     setEditFormData({
@@ -335,6 +380,30 @@ const Judges = () => {
       username: initialUsername,
       password: judge.password || ''
     });
+  };
+
+  const handleDeleteJudge = async (judge) => {
+    if (!judge._id || !judge.name) {
+      toast.error('Cannot delete an empty judge slot');
+      return;
+    }
+
+    if (ageGroupStarted) {
+      toast.error('Cannot delete judges. This age group has already been started.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete judge "${judge.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await api.deleteJudge(judge._id);
+      toast.success('Judge deleted successfully');
+      fetchJudges();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete judge');
+    }
   };
 
   const handleUpdateJudge = async () => {
@@ -456,6 +525,98 @@ const Judges = () => {
           </div>
         </div>
 
+        {/* Competition Type Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Competition Type <span className="text-red-500">*</span> (Select at least one)
+          </label>
+          {availableCompetitionTypes.length === 0 ? (
+            <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50">
+              <p className="text-sm text-yellow-800">
+                {isSuperAdmin 
+                  ? 'No competition types available. Please check competition configuration.'
+                  : 'No competition types assigned to this competition. Please contact the super admin.'}
+              </p>
+            </div>
+          ) : (
+            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {availableCompetitionTypes.includes('competition_1') && (
+                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedCompetitionTypes.includes('competition_1')}
+                      onChange={() => {
+                        setSelectedCompetitionTypes(prev => {
+                          if (prev.includes('competition_1')) {
+                            return prev.filter(t => t !== 'competition_1');
+                          } else {
+                            return [...prev, 'competition_1'];
+                          }
+                        });
+                      }}
+                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-900 block">Competition I</span>
+                      <span className="text-xs text-gray-600">Team Championship</span>
+                    </div>
+                  </label>
+                )}
+                {availableCompetitionTypes.includes('competition_2') && (
+                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedCompetitionTypes.includes('competition_2')}
+                      onChange={() => {
+                        setSelectedCompetitionTypes(prev => {
+                          if (prev.includes('competition_2')) {
+                            return prev.filter(t => t !== 'competition_2');
+                          } else {
+                            return [...prev, 'competition_2'];
+                          }
+                        });
+                      }}
+                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-900 block">Competition II</span>
+                      <span className="text-xs text-gray-600">All Round Individual</span>
+                    </div>
+                  </label>
+                )}
+                {availableCompetitionTypes.includes('competition_3') && (
+                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedCompetitionTypes.includes('competition_3')}
+                      onChange={() => {
+                        setSelectedCompetitionTypes(prev => {
+                          if (prev.includes('competition_3')) {
+                            return prev.filter(t => t !== 'competition_3');
+                          } else {
+                            return [...prev, 'competition_3'];
+                          }
+                        });
+                      }}
+                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-900 block">Competition III</span>
+                      <span className="text-xs text-gray-600">Apparatus Championship</span>
+                    </div>
+                  </label>
+                )}
+              </div>
+              {!isSuperAdmin && (
+                <p className="text-xs text-blue-600 mt-3">
+                  Showing competition types assigned to this competition by super admin
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {judgeType === 'list' && (selectedGender || selectedAgeGroup) && (
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 space-y-2 md:space-y-0">
             <div className="text-sm text-gray-600">
@@ -518,7 +679,7 @@ const Judges = () => {
                     <strong>Adding judges for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
                   </p>
                   <div className="text-xs text-blue-600 space-y-1">
-                    <p>• All 5 judge slots will be created (minimum 1 judge required, maximum 5 judges allowed)</p>
+                    <p>• All 5 judge slots will be created (minimum 3 judges required, maximum 5 judges allowed)</p>
                     <p>• Empty slots can be filled later using the "Judge List" feature</p>
                     <p>• Usernames are auto-generated but can be edited</p>
                   </div>
@@ -751,17 +912,33 @@ const Judges = () => {
                                 Available
                               </span>
                             )}
-                            <button
-                              onClick={() => handleEditJudge(judge)}
-                              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] ${
-                                judge.name
-                                  ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                                  : 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                              }`}
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEditJudge(judge)}
+                                disabled={ageGroupStarted}
+                                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] ${
+                                  ageGroupStarted
+                                    ? 'text-gray-400 cursor-not-allowed bg-gray-100'
+                                    : judge.name
+                                    ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                                    : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                }`}
+                                title={ageGroupStarted ? 'Age group has been started. Cannot edit judges.' : ''}
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
+                              </button>
+                              {judge.name && !ageGroupStarted && (
+                                <button
+                                  onClick={() => handleDeleteJudge(judge)}
+                                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] text-red-600 hover:text-red-800 hover:bg-red-50"
+                                  title="Delete judge"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -825,16 +1002,33 @@ const Judges = () => {
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <button
-                                onClick={() => handleEditJudge(judge)}
-                                className={`flex items-center space-x-1 ${judge.name
-                                  ? 'text-blue-600 hover:text-blue-800'
-                                  : 'text-green-600 hover:text-green-800'
+                              <div className="flex items-center space-x-3">
+                                <button
+                                  onClick={() => handleEditJudge(judge)}
+                                  disabled={ageGroupStarted}
+                                  className={`flex items-center space-x-1 ${
+                                    ageGroupStarted
+                                      ? 'text-gray-400 cursor-not-allowed'
+                                      : judge.name
+                                      ? 'text-blue-600 hover:text-blue-800'
+                                      : 'text-green-600 hover:text-green-800'
                                   }`}
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
-                              </button>
+                                  title={ageGroupStarted ? 'Age group has been started. Cannot edit judges.' : ''}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
+                                </button>
+                                {judge.name && !ageGroupStarted && (
+                                  <button
+                                    onClick={() => handleDeleteJudge(judge)}
+                                    className="flex items-center space-x-1 text-red-600 hover:text-red-800"
+                                    title="Delete judge"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Delete</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

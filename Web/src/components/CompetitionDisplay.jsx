@@ -29,7 +29,7 @@ const CompetitionDisplay = ({ className = '' }) => {
           <div className="flex items-center space-x-2 mb-2">
             <TrophyIcon className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              {currentCompetition.name}
+              {currentCompetition.name} {currentCompetition.year ? `(${currentCompetition.year})` : ''}
             </h3>
           </div>
           

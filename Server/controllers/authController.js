@@ -379,7 +379,7 @@ async function getAssignedCompetitions(req, res) {
     if (userType === 'superadmin' || req.user.role === 'super_admin') {
       // Super admins can access all competitions
       competitions = await Competition.find({})
-        .select('name level place status startDate endDate description')
+        .select('name level place status startDate endDate description ageGroups')
         .sort({ startDate: -1 });
     } else if (userType === 'admin') {
       // Regular admins see only their assigned competitions
@@ -392,7 +392,8 @@ async function getAssignedCompetitions(req, res) {
         status: comp.status,
         startDate: comp.startDate,
         endDate: comp.endDate,
-        description: comp.description
+        description: comp.description,
+        ageGroups: comp.ageGroups || []
       }));
     } else if (userType === 'coach') {
       // Coaches: show only competitions where this coach has at least one team registered
@@ -415,7 +416,7 @@ async function getAssignedCompetitions(req, res) {
         competitions = await Competition.find({
           _id: { $in: competitionIds },
         })
-          .select('name level place status startDate endDate description')
+          .select('name level place status startDate endDate description ageGroups')
           .sort({ startDate: -1 });
       } else {
         competitions = [];
@@ -446,7 +447,7 @@ async function getAssignedCompetitions(req, res) {
           competitions = await Competition.find({
             _id: { $in: competitionIds },
           })
-            .select('name level place status startDate endDate description')
+            .select('name level place status startDate endDate description ageGroups')
             .sort({ startDate: -1 });
         } else {
           competitions = [];
@@ -459,7 +460,7 @@ async function getAssignedCompetitions(req, res) {
       // This will be implemented when judge model is updated with competition reference
       // For now, return all competitions
       competitions = await Competition.find({})
-        .select('name level place status startDate endDate description')
+        .select('name level place status startDate endDate description ageGroups')
         .sort({ startDate: -1 });
     }
 

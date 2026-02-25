@@ -6,6 +6,11 @@ const judgeSchema = new mongoose.Schema({
     ref: 'Competition',
     required: [true, 'Competition is required']
   },
+  competitionTypes: [{
+    type: String,
+    enum: ['competition_1', 'competition_2', 'competition_3'],
+    required: true
+  }],
   gender: {
     type: String,
     enum: ['Male', 'Female'],
@@ -54,6 +59,7 @@ const judgeSchema = new mongoose.Schema({
 // Compound index to ensure unique judge assignments per gender/age group/competition
 judgeSchema.index({ gender: 1, ageGroup: 1, judgeNo: 1, competition: 1 }, { unique: true });
 judgeSchema.index({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
+judgeSchema.index({ competitionTypes: 1 });
 
 // Unique index for username per competition, but only for non-empty usernames
 judgeSchema.index({ username: 1, competition: 1 }, { 

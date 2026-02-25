@@ -14,6 +14,7 @@ const CoachSelectCompetition = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,6 +95,19 @@ const CoachSelectCompetition = () => {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  // Filter competitions based on search query
+  const filteredCompetitions = competitions.filter((competition) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      competition.name?.toLowerCase().includes(query) ||
+      competition.place?.toLowerCase().includes(query) ||
+      competition.level?.toLowerCase().includes(query) ||
+      competition.status?.toLowerCase().includes(query) ||
+      competition.description?.toLowerCase().includes(query)
+    );
+  });
 
   if (loading) {
     return (
@@ -226,8 +240,72 @@ const CoachSelectCompetition = () => {
           {/* Competition Selection */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Step 2: Select Competition</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {competitions.map((competition) => (
+            
+            {/* Search Bar */}
+            {competitions.length > 3 && (
+              <div className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search competitions by name, place, level, or status..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* No Results or Competition Grid */}
+            {filteredCompetitions.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="mt-4 text-gray-600">No competitions found matching "{searchQuery}"</p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="mt-2 text-green-600 hover:text-green-700"
+                >
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredCompetitions.map((competition) => (
               <button
                 key={competition.id}
                 onClick={() => setSelectedCompetition(competition.id)}
@@ -239,9 +317,11 @@ const CoachSelectCompetition = () => {
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                    {competition.name}
-                  </h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                      {competition.name} {competition.year || ''}
+                    </h3>
+                  </div>
                   {selectedCompetition === competition.id && (
                     <svg
                       className="w-6 h-6 text-green-600 flex-shrink-0 ml-2"
@@ -294,6 +374,7 @@ const CoachSelectCompetition = () => {
               </button>
             ))}
           </div>
+            )}
           </div>
 
           <div className="flex justify-center">
