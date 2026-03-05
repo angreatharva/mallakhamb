@@ -1,9 +1,10 @@
 const express = require('express');
-const { getJudges, getSubmittedTeams, saveIndividualScore, getPublicScores, getPublicTeams } = require('../controllers/adminController');
+const { getJudges, getSubmittedTeams, saveIndividualScore, getPublicScores, getPublicTeams, getPublicCompetitions } = require('../controllers/adminController');
 
 const router = express.Router();
 
 // Public routes for judges (no authentication required)
+router.get('/competitions', getPublicCompetitions);
 router.get('/judges', getJudges);
 router.get('/submitted-teams', getSubmittedTeams);
 router.post('/save-score', saveIndividualScore);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { Trophy, Calendar, MapPin, ArrowRight, User, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '../services/api';
 import apiConfig from '../utils/apiConfig.js';
@@ -17,7 +17,19 @@ const CoachSelectCompetition = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
+  // Get logged in user info
+  const [user, setUser] = useState(null);
+
   useEffect(() => {
+    // Load user data from localStorage
+    const userData = localStorage.getItem('coach_user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+      }
+    }
     fetchData();
   }, []);
 
@@ -75,8 +87,8 @@ const CoachSelectCompetition = () => {
 
       toast.success('Team registered for competition successfully!');
 
-      // Navigate to dashboard
-      navigate('/coach/dashboard');
+      // Redirect to dashboard with full page reload to refresh competition context
+      window.location.href = '/coach/dashboard';
     } catch (error) {
       console.error('Competition selection error:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to register team');
@@ -162,6 +174,39 @@ const CoachSelectCompetition = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+      {/* Simple Header with User Info and Logout */}
+      <div className="bg-white shadow-md border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <Trophy className="h-8 w-8 text-green-600" />
+              <span className="text-xl font-bold text-gray-900">MallakhambIndia</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              {user && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
+                  <User className="h-5 w-5 text-gray-500" />
+                  <span className="text-sm text-gray-700">
+                    {user.name || user.firstName || 'Coach'}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  localStorage.removeItem('coach_token');
+                  localStorage.removeItem('coach_user');
+                  navigate('/coach/login');
+                }}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-8 md:py-12">
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
           <div className="text-center mb-8">

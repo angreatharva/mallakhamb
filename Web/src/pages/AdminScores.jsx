@@ -24,13 +24,13 @@ const Scores = () => {
   const [scores, setScores] = useState([]);
   const [submittedTeams, setSubmittedTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [teamScoreStatus, setTeamScoreStatus] = useState({});
   const [loading, setLoading] = useState(false);
   const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
   // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
+  const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
   const [scoreType, setScoreType] = useState('add'); // 'add', 'team', 'individual'
 
   // Search
@@ -48,6 +48,12 @@ const Scores = () => {
     { value: 'rankings', label: 'Team Rankings' }
   ];
 
+  const competitionTypes = [
+    { value: 'competition_1', label: 'Competition I - Team Championship' },
+    { value: 'competition_2', label: 'Competition II - All Round Individual' },
+    { value: 'competition_3', label: 'Competition III - Apparatus Championship' }
+  ];
+
   // Get filtered age groups from competition
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
@@ -60,7 +66,7 @@ const Scores = () => {
 
   // Auto-load data when both filters are selected
   useEffect(() => {
-    if (selectedGender && selectedAgeGroup) {
+    if (selectedGender && selectedAgeGroup && selectedCompetitionType) {
       if (scoreType === 'add') {
         fetchSubmittedTeams();
       } else if (scoreType === 'individual') {
@@ -72,21 +78,11 @@ const Scores = () => {
       setSubmittedTeams([]);
       setScores([]);
     }
-  }, [selectedGender, selectedAgeGroup, scoreType]);
+  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, scoreType]);
 
   // API Functions
-  const fetchTeamDetails = async (teamId) => {
-    try {
-      const response = await api.getTeamDetails(teamId);
-      setSelectedTeam(response.data.team);
-    } catch (error) {
-      toast.error('Failed to load team details');
-      console.error('Error fetching team details:', error);
-    }
-  };
-
   const fetchSubmittedTeams = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
+    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) {
       return;
     }
 
@@ -94,63 +90,26 @@ const Scores = () => {
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        competitionType: selectedCompetitionType.value
       };
 
       const response = await api.getSubmittedTeams(params);
       setSubmittedTeams(response.data.teams);
 
-      // Check score status for each team
-      await checkTeamScoreStatus(response.data.teams);
-
-      // Check if age group is started
+      // Check if this specific competition type is started
       const summaryResponse = await api.getAllJudgesSummary();
       const ageGroupInfo = summaryResponse.data.summary.find(
         item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
       );
-      setAgeGroupStarted(ageGroupInfo?.isStarted || false);
+      
+      const compTypeStarted = ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false;
+      setAgeGroupStarted(compTypeStarted);
     } catch (error) {
       toast.error('Failed to load submitted teams');
     } finally {
       setLoading(false);
     }
-  };
-
-  const checkTeamScoreStatus = async (teams) => {
-    const scoreStatus = {};
-
-    for (const team of teams) {
-      try {
-        const response = await api.getTeamScores({
-          teamId: team._id,
-          gender: selectedGender?.value,
-          ageGroup: selectedAgeGroup?.value
-        });
-
-        if (response.data?.scores?.length > 0) {
-          const score = response.data.scores[0];
-          scoreStatus[team._id] = {
-            hasScores: true,
-            isLocked: score.isLocked,
-            scoreId: score._id,
-            lastUpdated: score.updatedAt || score.createdAt
-          };
-        } else {
-          scoreStatus[team._id] = {
-            hasScores: false,
-            isLocked: false
-          };
-        }
-      } catch (error) {
-        console.log(`No scores found for team ${team._id}`);
-        scoreStatus[team._id] = {
-          hasScores: false,
-          isLocked: false
-        };
-      }
-    }
-
-    setTeamScoreStatus(scoreStatus);
   };
 
   const fetchTeamScores = async () => {
@@ -237,6 +196,7 @@ const Scores = () => {
   const handleClearFilters = () => {
     setSelectedGender(null);
     setSelectedAgeGroup(null);
+    setSelectedCompetitionType(null);
     setSubmittedTeams([]);
     setScores([]);
     setSearchTerm('');
@@ -290,23 +250,26 @@ const Scores = () => {
           onGenderChange={setSelectedGender}
           selectedAgeGroup={selectedAgeGroup}
           onAgeGroupChange={setSelectedAgeGroup}
+          selectedCompetitionType={selectedCompetitionType}
+          onCompetitionTypeChange={setSelectedCompetitionType}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onClearFilters={handleClearFilters}
           ageGroups={availableAgeGroups}
+          competitionTypes={competitionTypes}
         />
 
         {/* Score Content - Only show after filters are applied */}
-        {!selectedGender || !selectedAgeGroup ? (
+        {!selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
           <div className="text-center py-5">
             <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-500 mb-2">Select Filters to View Scores</h3>
             <p className="text-gray-400 mb-6">
-              Please select both gender and age group filters above to view scores.
+              Please select gender, age group, and competition type filters above to view scores.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-blue-800">
-                <strong>Required:</strong> Gender and Age Group filters must be selected. Data will load automatically.
+                <strong>Required:</strong> Gender, Age Group, and Competition Type filters must be selected. Data will load automatically.
               </p>
             </div>
           </div>
@@ -324,7 +287,7 @@ const Scores = () => {
                   <>
                     <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm text-green-800">
-                        <strong>Showing teams for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
+                        <strong>Showing teams for:</strong> {selectedGender.label} - {selectedAgeGroup.label} - {selectedCompetitionType.label}
                       </p>
                       <p className="text-xs text-green-600 mt-1">
                         Found {submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''} matching your criteria
@@ -378,11 +341,13 @@ const Scores = () => {
                         onTeamClick={(teamId) => {
                           const team = submittedTeams.find(t => t._id === teamId);
                           if (team) {
-                            if (teamScoreStatus[teamId]?.hasScores) {
-                              toast.info('Continuing existing scoring session...');
-                            }
                             navigate(`${routePrefix}/scoring`, {
-                              state: { selectedTeam: team, selectedGender, selectedAgeGroup }
+                              state: { 
+                                selectedTeam: team, 
+                                selectedGender, 
+                                selectedAgeGroup,
+                                selectedCompetitionType
+                              }
                             });
                           }
                         }}
@@ -391,9 +356,8 @@ const Scores = () => {
                           <div key={team._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                             <div className="space-y-3">
                               <div>
-                                <h4 className="font-semibold text-lg">{team.name}</h4>
-                                <p className="text-sm text-gray-600">Coach: {team.coach?.name || 'Unknown'}</p>
-                                <p className="text-sm text-gray-600">Email: {team.coach?.email || 'N/A'}</p>
+                                <h4 className="font-bold text-lg text-gray-900">Team: {team.name}</h4>
+                                <p className="text-sm text-gray-600 mt-1"><strong>Coach:</strong> {team.coach?.name || 'Unknown'}</p>
                                 <p className="text-sm text-gray-500 mt-1">
                                   Submitted: {new Date(team.submittedAt).toLocaleDateString()}
                                 </p>
@@ -407,74 +371,23 @@ const Scores = () => {
                               <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
                                   <span className="text-sm text-green-600 font-medium">✓ Payment Completed</span>
-                                  {teamScoreStatus[team._id]?.hasScores && (
-                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                      teamScoreStatus[team._id]?.isLocked
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {teamScoreStatus[team._id]?.isLocked ? '🔒 Scores Locked' : '📝 Scores In Progress'}
-                                    </span>
-                                  )}
                                 </div>
                                 
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => fetchTeamDetails(team._id)}
-                                    className="flex-1 text-sm text-blue-600 hover:text-blue-800 py-2 px-3 border border-blue-200 rounded"
-                                  >
-                                    View Details
-                                  </button>
-                                  {teamScoreStatus[team._id]?.isLocked ? (
-                                    <button
-                                      onClick={() => {
-                                        navigate(`${routePrefix}/scoring`, {
-                                          state: { selectedTeam: team, selectedGender, selectedAgeGroup }
-                                        });
-                                      }}
-                                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center space-x-1"
-                                    >
-                                      <span>👁️</span>
-                                      <span>View Scores</span>
-                                    </button>
-                                  ) : ageGroupStarted ? (
-                                    <button
-                                      onClick={() => {
-                                        navigate(`${routePrefix}/scoring`, {
-                                          state: { selectedTeam: team, selectedGender, selectedAgeGroup }
-                                        });
-                                      }}
-                                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center space-x-1"
-                                    >
-                                      <span>👁️</span>
-                                      <span>View Scores</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        if (teamScoreStatus[team._id]?.hasScores) {
-                                          toast.info('Continuing existing scoring session...');
-                                        }
-                                        navigate(`${routePrefix}/scoring`, {
-                                          state: { selectedTeam: team, selectedGender, selectedAgeGroup }
-                                        });
-                                      }}
-                                      className={`flex-1 px-3 py-2 text-white text-sm rounded hover:opacity-90 ${
-                                        teamScoreStatus[team._id]?.hasScores ? 'bg-orange-600' : 'bg-green-600'
-                                      }`}
-                                    >
-                                      {teamScoreStatus[team._id]?.hasScores ? 'Continue Scoring' : 'Add Scores'}
-                                    </button>
-                                  )}
-                                </div>
-                                
-                                {teamScoreStatus[team._id]?.hasScores && teamScoreStatus[team._id]?.lastUpdated && (
-                                  <div className="mt-2">
-                                    <p className="text-xs text-gray-500">
-                                      Last updated: {new Date(teamScoreStatus[team._id].lastUpdated).toLocaleString()}
-                                    </p>
-                                  </div>
-                                )}
+                                <button
+                                  onClick={() => {
+                                    navigate(`${routePrefix}/scoring`, {
+                                      state: { 
+                                        selectedTeam: team, 
+                                        selectedGender, 
+                                        selectedAgeGroup,
+                                        selectedCompetitionType
+                                      }
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 flex items-center justify-center space-x-1"
+                                >
+                                  <span>View Details →</span>
+                                </button>
                               </div>
                             </div>
                           </div>

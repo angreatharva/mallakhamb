@@ -35,9 +35,11 @@ import { useRouteContext } from '../contexts/RouteContext';
 import AdminTeams from './AdminTeams';
 import AdminScores from './AdminScores';
 import AdminJudges from './AdminJudges';
+import AdminTransactions from './AdminTransactions';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
 import { Play, CheckCircle, XCircle } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const navigate = useNavigate();
@@ -59,7 +61,13 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [judgesSummary, setJudgesSummary] = useState([]);
   const [loadingJudgesSummary, setLoadingJudgesSummary] = useState(false);
-  const [startingAgeGroups, setStartingAgeGroups] = useState({}); // Track which age groups are being started
+  const [startingCompTypes, setStartingCompTypes] = useState({}); // Track which competition types are being started
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
   
   const { currentCompetition } = useCompetition();
 
@@ -115,7 +123,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
     }
   };
 
-  const handleStartAgeGroup = async (gender, ageGroup) => {
+  const handleStartCompetitionType = async (gender, ageGroup, competitionType) => {
     const ageGroupLabel = ageGroup === 'U10' ? 'Under 10' :
                           ageGroup === 'U12' ? 'Under 12' :
                           ageGroup === 'U14' ? 'Under 14' :
@@ -124,22 +132,30 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                           ageGroup === 'Above18' ? 'Above 18' :
                           ageGroup === 'Above16' ? 'Above 16' : ageGroup;
 
-    if (!window.confirm(`Are you sure you want to start the ${gender} ${ageGroupLabel} age group? Once started, judges for this age group cannot be modified.`)) {
-      return;
-    }
+    const compTypeLabel = competitionType === 'competition_1' ? 'Competition I' :
+                         competitionType === 'competition_2' ? 'Competition II' :
+                         competitionType === 'competition_3' ? 'Competition III' : competitionType;
 
-    const key = `${gender}_${ageGroup}`;
-    setStartingAgeGroups(prev => ({ ...prev, [key]: true }));
+    // Show custom confirmation dialog
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Start Competition Type',
+      message: `Are you sure you want to start ${compTypeLabel} for ${gender} ${ageGroupLabel}?\n\nOnce started, judges for this competition type cannot be modified.`,
+      onConfirm: async () => {
+        const key = `${gender}_${ageGroup}_${competitionType}`;
+        setStartingCompTypes(prev => ({ ...prev, [key]: true }));
 
-    try {
-      await api.startAgeGroup({ gender, ageGroup });
-      toast.success(`${gender} ${ageGroupLabel} age group started successfully! Judges can no longer be modified for this age group.`);
-      fetchJudgesSummary();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to start age group');
-    } finally {
-      setStartingAgeGroups(prev => ({ ...prev, [key]: false }));
-    }
+        try {
+          await api.startAgeGroup({ gender, ageGroup, competitionType });
+          toast.success(`${compTypeLabel} for ${gender} ${ageGroupLabel} started successfully! Judges can no longer be modified for this competition type.`);
+          fetchJudgesSummary();
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Failed to start competition type');
+        } finally {
+          setStartingCompTypes(prev => ({ ...prev, [key]: false }));
+        }
+      }
+    });
   };
 
 
@@ -273,7 +289,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                 Judges Assignment Status
               </h3>
               <p className="text-sm text-gray-600">
-                Review judge assignments for each age group. Each age group needs at least 3 judges to start. Once started, judges for that age group cannot be modified.
+                Review judge assignments for each age group and competition type. Each competition type needs at least 3 judges to start. Once started, judges for that age group cannot be modified.
               </p>
             </div>
 
@@ -290,7 +306,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                     <Mars className="h-4 w-4 mr-2 text-blue-600" />
                     Boys Age Groups
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {judgesSummary
                       .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
                       .map((item, index) => {
@@ -300,46 +316,71 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                                              item.ageGroup === 'U14' ? 'Under 14' :
                                              item.ageGroup === 'U18' ? 'Under 18' :
                                              item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
-                        const judgeNames = item.judges.map(j => j.name).filter(name => name).join(', ') || 'No judges assigned';
-                        const key = `${item.gender}_${item.ageGroup}`;
-                        const isStarting = startingAgeGroups[key] || false;
                         
                         return (
                           <div
                             key={`male-${item.ageGroup}`}
-                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                              item.isStarted
-                                ? 'bg-blue-50 border-blue-300'
-                                : item.hasMinimumJudges
-                                ? 'bg-green-50 border-green-200'
-                                : 'bg-red-50 border-red-200'
-                            }`}
+                            className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50"
                           >
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium text-gray-900">{ageGroupLabel}</span>
-                                {item.isStarted ? (
-                                  <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
-                                ) : item.hasMinimumJudges ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-red-600" />
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Judges: <span className="font-medium">{judgeNames}</span>
-                              </p>
+                            <div className="mb-2">
+                              <span className="font-semibold text-gray-900">{ageGroupLabel}</span>
                             </div>
-                            {!item.isStarted && (
-                              <button
-                                onClick={() => handleStartAgeGroup(item.gender, item.ageGroup)}
-                                disabled={isStarting || !item.hasMinimumJudges || loadingJudgesSummary}
-                                className="ml-4 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-h-[44px] text-sm"
-                              >
-                                <Play className="h-4 w-4" />
-                                <span>{isStarting ? 'Starting...' : 'Start'}</span>
-                              </button>
-                            )}
+                            
+                            {/* Competition Types */}
+                            <div className="ml-4 space-y-2">
+                              {item.competitionTypes && Object.entries(item.competitionTypes)
+                                .sort(([a], [b]) => {
+                                  const order = { 'competition_1': 1, 'competition_2': 2, 'competition_3': 3 };
+                                  return order[a] - order[b];
+                                })
+                                .map(([compType, data]) => {
+                                const compTypeLabel = compType === 'competition_1' ? 'Competition I' :
+                                                     compType === 'competition_2' ? 'Competition II' :
+                                                     compType === 'competition_3' ? 'Competition III' : compType;
+                                const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
+                                const key = `${item.gender}_${item.ageGroup}_${compType}`;
+                                const isStarting = startingCompTypes[key] || false;
+                                
+                                return (
+                                  <div
+                                    key={`${item.gender}-${item.ageGroup}-${compType}`}
+                                    className={`p-3 rounded border-2 ${
+                                      data.isStarted
+                                        ? 'bg-blue-50 border-blue-300'
+                                        : data.hasMinimumJudges
+                                        ? 'bg-green-50 border-green-300'
+                                        : 'bg-red-50 border-red-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-semibold text-gray-900">{compTypeLabel}</span>
+                                        {data.isStarted ? (
+                                          <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
+                                        ) : data.hasMinimumJudges ? (
+                                          <CheckCircle className="h-4 w-4 text-green-600" />
+                                        ) : (
+                                          <XCircle className="h-4 w-4 text-red-600" />
+                                        )}
+                                      </div>
+                                      {!data.isStarted && (
+                                        <button
+                                          onClick={() => handleStartCompetitionType(item.gender, item.ageGroup, compType)}
+                                          disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
+                                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 min-h-[36px] text-xs"
+                                        >
+                                          <Play className="h-3 w-3" />
+                                          <span>{isStarting ? 'Starting...' : 'Start'}</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-600">
+                                      Judges ({data.judges?.length || 0}): <span className="font-medium">{judgeNames}</span>
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}
@@ -352,7 +393,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                     <Venus className="h-4 w-4 mr-2 text-pink-600" />
                     Girls Age Groups
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {judgesSummary
                       .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
                       .map((item, index) => {
@@ -364,46 +405,71 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                                              item.ageGroup === 'U18' ? 'Under 18' :
                                              item.ageGroup === 'Above16' ? 'Above 16' :
                                              item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
-                        const judgeNames = item.judges.map(j => j.name).filter(name => name).join(', ') || 'No judges assigned';
-                        const key = `${item.gender}_${item.ageGroup}`;
-                        const isStarting = startingAgeGroups[key] || false;
                         
                         return (
                           <div
                             key={`female-${item.ageGroup}`}
-                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                              item.isStarted
-                                ? 'bg-blue-50 border-blue-300'
-                                : item.hasMinimumJudges
-                                ? 'bg-green-50 border-green-200'
-                                : 'bg-red-50 border-red-200'
-                            }`}
+                            className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50"
                           >
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium text-gray-900">{ageGroupLabel}</span>
-                                {item.isStarted ? (
-                                  <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
-                                ) : item.hasMinimumJudges ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-red-600" />
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Judges: <span className="font-medium">{judgeNames}</span>
-                              </p>
+                            <div className="mb-2">
+                              <span className="font-semibold text-gray-900">{ageGroupLabel}</span>
                             </div>
-                            {!item.isStarted && (
-                              <button
-                                onClick={() => handleStartAgeGroup(item.gender, item.ageGroup)}
-                                disabled={isStarting || !item.hasMinimumJudges || loadingJudgesSummary}
-                                className="ml-4 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-h-[44px] text-sm"
-                              >
-                                <Play className="h-4 w-4" />
-                                <span>{isStarting ? 'Starting...' : 'Start'}</span>
-                              </button>
-                            )}
+                            
+                            {/* Competition Types */}
+                            <div className="ml-4 space-y-2">
+                              {item.competitionTypes && Object.entries(item.competitionTypes)
+                                .sort(([a], [b]) => {
+                                  const order = { 'competition_1': 1, 'competition_2': 2, 'competition_3': 3 };
+                                  return order[a] - order[b];
+                                })
+                                .map(([compType, data]) => {
+                                const compTypeLabel = compType === 'competition_1' ? 'Competition I' :
+                                                     compType === 'competition_2' ? 'Competition II' :
+                                                     compType === 'competition_3' ? 'Competition III' : compType;
+                                const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
+                                const key = `${item.gender}_${item.ageGroup}_${compType}`;
+                                const isStarting = startingCompTypes[key] || false;
+                                
+                                return (
+                                  <div
+                                    key={`${item.gender}-${item.ageGroup}-${compType}`}
+                                    className={`p-3 rounded border-2 ${
+                                      data.isStarted
+                                        ? 'bg-blue-50 border-blue-300'
+                                        : data.hasMinimumJudges
+                                        ? 'bg-green-50 border-green-300'
+                                        : 'bg-red-50 border-red-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-semibold text-gray-900">{compTypeLabel}</span>
+                                        {data.isStarted ? (
+                                          <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
+                                        ) : data.hasMinimumJudges ? (
+                                          <CheckCircle className="h-4 w-4 text-green-600" />
+                                        ) : (
+                                          <XCircle className="h-4 w-4 text-red-600" />
+                                        )}
+                                      </div>
+                                      {!data.isStarted && (
+                                        <button
+                                          onClick={() => handleStartCompetitionType(item.gender, item.ageGroup, compType)}
+                                          disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
+                                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 min-h-[36px] text-xs"
+                                        >
+                                          <Play className="h-3 w-3" />
+                                          <span>{isStarting ? 'Starting...' : 'Start'}</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-600">
+                                      Judges ({data.judges?.length || 0}): <span className="font-medium">{judgeNames}</span>
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}
@@ -434,6 +500,18 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="Start"
+        cancelText="Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+      />
+
       {/* Single Combined Navigation */}
       <nav className="bg-white shadow-lg border-b">
         <ResponsiveContainer maxWidth="desktop" padding="responsive">
@@ -493,6 +571,24 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                   >
                     <ResponsiveNavText className={activeTab === 'judges' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}>
                       Judges
+                    </ResponsiveNavText>
+                  </button>
+                  <button
+                    onClick={() => navigate(`${routePrefix}/dashboard/transactions`)}
+                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${
+                      activeTab === 'transactions'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <ResponsiveNavText
+                      className={
+                        activeTab === 'transactions'
+                          ? 'text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }
+                    >
+                      Transactions
                     </ResponsiveNavText>
                   </button>
                 </div>
@@ -583,6 +679,19 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                 >
                   Judges
                 </button>
+                <button
+                  onClick={() => {
+                    navigate(`${routePrefix}/dashboard/transactions`);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${
+                    activeTab === 'transactions'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Transactions
+                </button>
               </div>
             </div>
           )}
@@ -595,6 +704,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
         {activeTab === 'teams' && <AdminTeams routePrefix={routePrefix} storagePrefix={storagePrefix} />}
         {activeTab === 'scores' && <AdminScores routePrefix={routePrefix} storagePrefix={storagePrefix} />}
         {activeTab === 'judges' && <AdminJudges routePrefix={routePrefix} storagePrefix={storagePrefix} />}
+        {activeTab === 'transactions' && <AdminTransactions />}
       </ResponsiveContainer>
     </div>
   );

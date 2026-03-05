@@ -21,7 +21,8 @@ const {
   getTeamRankings,
   getAllJudgesSummary,
   startAgeGroup,
-  deleteJudge
+  deleteJudge,
+  getTransactions
 } = require('../controllers/adminController');
 const { authMiddleware, adminAuth } = require('../middleware/authMiddleware');
 const { validateCompetitionContext } = require('../middleware/competitionContextMiddleware');
@@ -140,6 +141,9 @@ router.get('/teams/:teamId', authMiddleware, adminAuth, validateCompetitionConte
 
 // Player routes - require competition context
 router.get('/players', authMiddleware, adminAuth, validateCompetitionContext, getAllPlayers);
+
+// Transaction routes - require competition context
+router.get('/transactions', authMiddleware, adminAuth, validateCompetitionContext, getTransactions);
 
 // Score routes - require competition context
 router.post('/scores', authMiddleware, adminAuth, validateCompetitionContext, addScoreValidation, addScore);

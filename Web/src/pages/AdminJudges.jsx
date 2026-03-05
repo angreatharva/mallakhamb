@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Filter,
@@ -64,7 +64,7 @@ const Judges = () => {
   // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
-  const [selectedCompetitionTypes, setSelectedCompetitionTypes] = useState([]);
+  const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
   const [judgeType, setJudgeType] = useState('add'); // 'add', 'list'
   const [judgesExistForSelection, setJudgesExistForSelection] = useState(false);
   const [checkingExistingJudges, setCheckingExistingJudges] = useState(false);
@@ -74,15 +74,20 @@ const Judges = () => {
   // Responsive hook
   const { isMobile, isTablet } = useResponsive();
 
-  // Set default competition types when available types change
+  // Set default competition type when available types change
   useEffect(() => {
-    if (availableCompetitionTypes.length > 0 && selectedCompetitionTypes.length === 0) {
+    if (availableCompetitionTypes.length > 0 && !selectedCompetitionType) {
       // Default to competition_1 if available, otherwise first available type
-      if (availableCompetitionTypes.includes('competition_1')) {
-        setSelectedCompetitionTypes(['competition_1']);
-      } else {
-        setSelectedCompetitionTypes([availableCompetitionTypes[0]]);
-      }
+      const defaultType = availableCompetitionTypes.includes('competition_1') 
+        ? 'competition_1' 
+        : availableCompetitionTypes[0];
+      
+      setSelectedCompetitionType({
+        value: defaultType,
+        label: defaultType === 'competition_1' ? 'Competition I - Team Championship' :
+               defaultType === 'competition_2' ? 'Competition II - All Round Individual' :
+               'Competition III - Apparatus Championship'
+      });
     }
   }, [availableCompetitionTypes]);
 
@@ -100,11 +105,21 @@ const Judges = () => {
   // Get filtered age groups from competition
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
-  // Get available age groups based on selected gender
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    return availableAgeGroups;
+  // Get competition type options in fixed order
+  const getCompetitionTypeOptions = () => {
+    const orderedTypes = ['competition_1', 'competition_2', 'competition_3'];
+    return orderedTypes
+      .filter(type => availableCompetitionTypes.includes(type))
+      .map(type => ({
+        value: type,
+        label: type === 'competition_1' ? 'Competition I - Team Championship' :
+               type === 'competition_2' ? 'Competition II - All Round Individual' :
+               'Competition III - Apparatus Championship'
+      }));
   };
+
+  const competitionTypeOptions = getCompetitionTypeOptions();
+
 
   // Reset age group when gender changes
   useEffect(() => {
@@ -122,12 +137,13 @@ const Judges = () => {
 
   // Check for existing judges when age group is selected
   const checkForExistingJudges = async (gender, ageGroup) => {
-    if (!gender || !ageGroup) return false;
+    if (!gender || !ageGroup || !selectedCompetitionType) return false;
 
     try {
       const params = {
         gender: gender.value,
-        ageGroup: ageGroup.value
+        ageGroup: ageGroup.value,
+        competitionTypes: selectedCompetitionType.value
       };
       const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
@@ -205,13 +221,26 @@ const Judges = () => {
     }
   }, [judgeType]);
 
+  // Reload judges when competition types change in list mode
+  useEffect(() => {
+    if (judgeType === 'list' && selectedGender && selectedAgeGroup && selectedCompetitionType) {
+      fetchJudges();
+    }
+  }, [selectedCompetitionType, judgeType, selectedGender, selectedAgeGroup]);
+
   // API Functions
-  const fetchJudges = async () => {
+  const fetchJudges = useCallback(async () => {
+    if (!selectedCompetitionType) {
+      toast.error('Please select a competition type');
+      return;
+    }
+    
     setLoadingJudges(true);
     try {
       const params = {};
       if (selectedGender) params.gender = selectedGender.value;
       if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
+      if (selectedCompetitionType) params.competitionTypes = selectedCompetitionType.value;
 
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
@@ -220,12 +249,21 @@ const Judges = () => {
     } finally {
       setLoadingJudges(false);
     }
-  };
+  }, [selectedCompetitionType, selectedGender, selectedAgeGroup, api]);
 
   const fetchJudgesWithParams = async (gender, ageGroup) => {
+    if (!selectedCompetitionType) {
+      toast.error('Please select a competition type');
+      return;
+    }
+    
     setLoadingJudges(true);
     try {
-      const params = { gender, ageGroup };
+      const params = { 
+        gender, 
+        ageGroup,
+        competitionTypes: selectedCompetitionType.value
+      };
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
       
@@ -282,12 +320,13 @@ const Judges = () => {
   };
 
   const checkExistingJudges = async () => {
-    if (!selectedGender || !selectedAgeGroup) return false;
+    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return false;
 
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        competitionTypes: selectedCompetitionType.value
       };
       const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
@@ -309,8 +348,8 @@ const Judges = () => {
       return;
     }
 
-    if (selectedCompetitionTypes.length === 0) {
-      toast.error('Please select at least one competition type');
+    if (!selectedCompetitionType) {
+      toast.error('Please select a competition type');
       return;
     }
 
@@ -341,7 +380,7 @@ const Judges = () => {
       const judgesData = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
-        competitionTypes: selectedCompetitionTypes,
+        competitionTypes: [selectedCompetitionType.value],
         judges: cleanedJudges
       };
 
@@ -390,6 +429,15 @@ const Judges = () => {
 
     if (ageGroupStarted) {
       toast.error('Cannot delete judges. This age group has already been started.');
+      return;
+    }
+
+    // Count active judges (judges with names)
+    const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
+    
+    // Prevent deletion if only 3 judges remain (minimum requirement)
+    if (activeJudgesCount <= 3) {
+      toast.error('Cannot delete judge. Minimum 3 judges required (1 Senior Judge + 2 Judges).');
       return;
     }
 
@@ -500,7 +548,7 @@ const Judges = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
             <Dropdown
-              options={getAvailableAgeGroups()}
+              options={availableAgeGroups}
               value={selectedAgeGroup}
               onChange={handleAgeGroupChange}
               placeholder={selectedGender ? "Select age group" : "Select gender first"}
@@ -509,12 +557,9 @@ const Judges = () => {
             {!selectedGender && (
               <p className="text-xs text-gray-500 mt-1">Please select gender first to see available age groups</p>
             )}
-            {selectedGender && !checkingExistingJudges && (
+            {selectedGender && !checkingExistingJudges && availableAgeGroups.length > 0 && (
               <p className="text-xs text-blue-600 mt-1">
-                {selectedGender.value === 'Male'
-                  ? 'Available: U10, U12, U14, U18, Above 18'
-                  : 'Available: U10, U12, U14, U16, Above 16'
-                }
+                Available: {availableAgeGroups.map(ag => ag.label).join(', ')}
               </p>
             )}
             {checkingExistingJudges && (
@@ -528,7 +573,7 @@ const Judges = () => {
         {/* Competition Type Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Competition Type <span className="text-red-500">*</span> (Select at least one)
+            Competition Type <span className="text-red-500">*</span>
           </label>
           {availableCompetitionTypes.length === 0 ? (
             <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50">
@@ -539,81 +584,17 @@ const Judges = () => {
               </p>
             </div>
           ) : (
-            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {availableCompetitionTypes.includes('competition_1') && (
-                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={selectedCompetitionTypes.includes('competition_1')}
-                      onChange={() => {
-                        setSelectedCompetitionTypes(prev => {
-                          if (prev.includes('competition_1')) {
-                            return prev.filter(t => t !== 'competition_1');
-                          } else {
-                            return [...prev, 'competition_1'];
-                          }
-                        });
-                      }}
-                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-semibold text-gray-900 block">Competition I</span>
-                      <span className="text-xs text-gray-600">Team Championship</span>
-                    </div>
-                  </label>
-                )}
-                {availableCompetitionTypes.includes('competition_2') && (
-                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={selectedCompetitionTypes.includes('competition_2')}
-                      onChange={() => {
-                        setSelectedCompetitionTypes(prev => {
-                          if (prev.includes('competition_2')) {
-                            return prev.filter(t => t !== 'competition_2');
-                          } else {
-                            return [...prev, 'competition_2'];
-                          }
-                        });
-                      }}
-                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-semibold text-gray-900 block">Competition II</span>
-                      <span className="text-xs text-gray-600">All Round Individual</span>
-                    </div>
-                  </label>
-                )}
-                {availableCompetitionTypes.includes('competition_3') && (
-                  <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={selectedCompetitionTypes.includes('competition_3')}
-                      onChange={() => {
-                        setSelectedCompetitionTypes(prev => {
-                          if (prev.includes('competition_3')) {
-                            return prev.filter(t => t !== 'competition_3');
-                          } else {
-                            return [...prev, 'competition_3'];
-                          }
-                        });
-                      }}
-                      className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-semibold text-gray-900 block">Competition III</span>
-                      <span className="text-xs text-gray-600">Apparatus Championship</span>
-                    </div>
-                  </label>
-                )}
-              </div>
-              {!isSuperAdmin && (
-                <p className="text-xs text-blue-600 mt-3">
-                  Showing competition types assigned to this competition by super admin
-                </p>
-              )}
-            </div>
+            <Dropdown
+              options={competitionTypeOptions}
+              value={selectedCompetitionType}
+              onChange={setSelectedCompetitionType}
+              placeholder="Select competition type"
+            />
+          )}
+          {!isSuperAdmin && availableCompetitionTypes.length > 0 && (
+            <p className="text-xs text-blue-600 mt-2">
+              Showing competition types assigned to this competition by super admin
+            </p>
           )}
         </div>
 
@@ -677,6 +658,9 @@ const Judges = () => {
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800 mb-2">
                     <strong>Adding judges for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
+                  </p>
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Competition Type:</strong> {selectedCompetitionType?.label || 'Not selected'}
                   </p>
                   <div className="text-xs text-blue-600 space-y-1">
                     <p>• All 5 judge slots will be created (minimum 3 judges required, maximum 5 judges allowed)</p>
@@ -873,6 +857,9 @@ const Judges = () => {
                   <p className="text-sm text-green-800">
                     <strong>Judge Panel for:</strong> {selectedGender?.label} - {selectedAgeGroup?.label}
                   </p>
+                  <p className="text-sm text-green-800">
+                    <strong>Competition Type:</strong> {selectedCompetitionType?.label || 'Not selected'}
+                  </p>
                   <p className="text-xs text-green-600 mt-1">
                     Showing all 5 judge slots. Empty slots can be filled by clicking "Add" button.
                   </p>
@@ -928,16 +915,25 @@ const Judges = () => {
                                 <Edit className="h-4 w-4" />
                                 <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
                               </button>
-                              {judge.name && !ageGroupStarted && (
-                                <button
-                                  onClick={() => handleDeleteJudge(judge)}
-                                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] text-red-600 hover:text-red-800 hover:bg-red-50"
-                                  title="Delete judge"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span>Delete</span>
-                                </button>
-                              )}
+                              {judge.name && !ageGroupStarted && (() => {
+                                const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
+                                const canDelete = activeJudgesCount > 3;
+                                return (
+                                  <button
+                                    onClick={() => handleDeleteJudge(judge)}
+                                    disabled={!canDelete}
+                                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] ${
+                                      canDelete
+                                        ? 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                                        : 'text-gray-400 cursor-not-allowed bg-gray-100'
+                                    }`}
+                                    title={canDelete ? 'Delete judge' : 'Cannot delete. Minimum 3 judges required.'}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Delete</span>
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1018,16 +1014,25 @@ const Judges = () => {
                                   <Edit className="h-4 w-4" />
                                   <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
                                 </button>
-                                {judge.name && !ageGroupStarted && (
-                                  <button
-                                    onClick={() => handleDeleteJudge(judge)}
-                                    className="flex items-center space-x-1 text-red-600 hover:text-red-800"
-                                    title="Delete judge"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>Delete</span>
-                                  </button>
-                                )}
+                                {judge.name && !ageGroupStarted && (() => {
+                                  const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
+                                  const canDelete = activeJudgesCount > 3;
+                                  return (
+                                    <button
+                                      onClick={() => handleDeleteJudge(judge)}
+                                      disabled={!canDelete}
+                                      className={`flex items-center space-x-1 ${
+                                        canDelete
+                                          ? 'text-red-600 hover:text-red-800'
+                                          : 'text-gray-400 cursor-not-allowed'
+                                      }`}
+                                      title={canDelete ? 'Delete judge' : 'Cannot delete. Minimum 3 judges required.'}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      <span>Delete</span>
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </td>
                           </tr>
@@ -1040,10 +1045,10 @@ const Judges = () => {
             ) : (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                {!selectedGender || !selectedAgeGroup ? (
+                {!selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
                   <>
-                    <p className="text-gray-500">Select gender and age group to view judges.</p>
-                    <p className="text-gray-400 text-sm mt-2">Judges will be loaded automatically when both filters are selected.</p>
+                    <p className="text-gray-500">Select gender, age group, and competition type to view judges.</p>
+                    <p className="text-gray-400 text-sm mt-2">Judges will be loaded automatically when all filters are selected.</p>
                   </>
                 ) : (
                   <>

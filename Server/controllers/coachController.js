@@ -4,6 +4,7 @@ const Player = require('../models/Player');
 const Competition = require('../models/Competition');
 const CompetitionTeam = require('../models/CompetitionTeam');
 const { generateToken } = require('../utils/tokenUtils');
+const Transaction = require('../models/Transaction');
 
 // Register a new coach
 const registerCoach = async (req, res) => {
@@ -602,26 +603,59 @@ const submitTeam = async (req, res) => {
     const perPlayerAmount = 100; // Per player fee
     const totalAmount = baseAmount + (competitionTeam.players.length * perPlayerAmount);
 
-    // Update competition team submission status
-    competitionTeam.isSubmitted = true;
-    competitionTeam.submittedAt = new Date();
-    competitionTeam.paymentStatus = 'completed'; // Simulating successful payment
-    competitionTeam.paymentAmount = totalAmount;
+    // Use mongoose session for atomic transaction
+    const mongoose = require('mongoose');
+    const session = await mongoose.startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // Update competition team submission status
+        competitionTeam.isSubmitted = true;
+        competitionTeam.submittedAt = new Date();
+        competitionTeam.paymentStatus = 'completed'; // Simulated successful payment
+        competitionTeam.paymentAmount = totalAmount;
 
-    await competitionTeam.save();
+        await competitionTeam.save({ session });
 
-    res.json({ 
-      message: 'Team submitted successfully',
-      submissionDetails: {
-        teamName: competitionTeam.team.name,
-        playerCount: competitionTeam.players.length,
-        paymentAmount: totalAmount,
-        submittedAt: competitionTeam.submittedAt
-      }
-    });
+        // Record transaction for this competition-specific payment
+        await Transaction.create([{
+          competition: competitionTeam.competition,
+          competitionTeam: competitionTeam._id,
+          team: competitionTeam.team?._id || competitionTeam.team,
+          coach: competitionTeam.coach,
+          source: 'coach',
+          type: 'team_submission',
+          amount: totalAmount,
+          paymentStatus: competitionTeam.paymentStatus,
+          description: `Team "${competitionTeam.team?.name || 'Unknown'}" submitted for competition`,
+          metadata: {
+            playerCount: competitionTeam.players.length,
+          },
+        }], { session });
+      });
+
+      await session.endSession();
+
+      res.json({ 
+        message: 'Team submitted successfully',
+        submissionDetails: {
+          teamName: competitionTeam.team.name,
+          playerCount: competitionTeam.players.length,
+          paymentAmount: totalAmount,
+          submittedAt: competitionTeam.submittedAt
+        }
+      });
+    } catch (txError) {
+      await session.endSession();
+      console.error('Submit team - transaction failed:', txError);
+      throw new Error('Failed to complete team submission and payment recording. Please try again.');
+    }
   } catch (error) {
     console.error('Submit team error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: error.message || 'Server error',
+      details: 'Team submission and payment recording must complete together'
+    });
   }
 };
 

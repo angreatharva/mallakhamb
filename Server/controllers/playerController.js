@@ -52,8 +52,8 @@ const loginPlayer = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find player by email
-    const player = await Player.findOne({ email });
+    // Find player by email and populate team to get competition
+    const player = await Player.findOne({ email }).populate('team', 'competition');
     if (!player) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -64,8 +64,14 @@ const loginPlayer = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = generateToken(player._id, 'player');
+    // Get competition context from player's team
+    let competitionId = null;
+    if (player.team && player.team.competition) {
+      competitionId = player.team.competition.toString();
+    }
+
+    // Generate token with competition context if available
+    const token = generateToken(player._id, 'player', competitionId);
 
     res.json({
       message: 'Login successful',
@@ -75,7 +81,7 @@ const loginPlayer = async (req, res) => {
         firstName: player.firstName,
         lastName: player.lastName,
         email: player.email,
-        team: player.team,
+        team: player.team?._id || player.team,
         ageGroup: player.ageGroup
       }
     });

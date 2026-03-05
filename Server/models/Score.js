@@ -12,7 +12,9 @@ const playerScoreSchema = new mongoose.Schema({
   },
   time: {
     type: String,
-    default: ''
+    default: '',
+    // Time in format "MM:SS" or seconds - used for time deductions and 3-judge tie-breaker
+    // Required context: Must be present when time deductions are applied or for 3-judge tie-breaker
   },
   judgeScores: {
     seniorJudge: {
@@ -46,24 +48,67 @@ const playerScoreSchema = new mongoose.Schema({
       max: 10
     }
   },
+  executionAverage: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+    max: 10,
+    // Calculated from execution judges (J1-J4) after removing highest/lowest
+  },
+  baseScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 10,
+    // Required when baseScoreApplied is true
+    required: function() {
+      return this.baseScoreApplied === true;
+    }
+  },
+  baseScoreApplied: {
+    type: Boolean,
+    default: false,
+    required: true,
+    // Indicates whether base score was used due to tolerance exceeded
+  },
+  toleranceUsed: {
+    type: Number,
+    default: 0,
+    // The tolerance value that was applied for this score calculation
+  },
   averageMarks: {
     type: Number,
-    default: 0
+    default: 0,
+    // Either executionAverage or baseScore depending on baseScoreApplied
   },
   deduction: {
     type: Number,
     default: 0,
-    min: 0
+    min: 0,
+    // Time deduction for exceeding 90 seconds
   },
   otherDeduction: {
     type: Number,
     default: 0,
-    min: 0
+    min: 0,
+    // Other deductions (attire, behavior, etc.)
   },
   finalScore: {
     type: Number,
     default: 0,
-    min: 0
+    min: 0,
+    // Final score = averageMarks - deduction - otherDeduction
+  },
+  tieBreakRank: {
+    type: Number,
+    default: null,
+    // Rank after tie-breaker resolution (optional - only for tied players)
+  },
+  tieBreakNotes: {
+    type: String,
+    default: '',
+    // Notes explaining how tie was resolved (optional)
   }
 });
 
@@ -87,6 +132,12 @@ const scoreSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18']
+  },
+  competitionType: {
+    type: String,
+    required: true,
+    enum: ['Competition I', 'Competition II', 'Competition III'],
+    default: 'Competition I'
   },
   timeKeeper: {
     type: String,

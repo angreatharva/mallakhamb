@@ -296,10 +296,13 @@ export const ResponsiveScoreFilters = ({
   onGenderChange,
   selectedAgeGroup,
   onAgeGroupChange,
+  selectedCompetitionType,
+  onCompetitionTypeChange,
   searchTerm,
   onSearchChange,
   onClearFilters,
   ageGroups, // Accept filtered age groups as prop
+  competitionTypes, // Accept competition types as prop
   className = '',
   ...props
 }) => {
@@ -375,7 +378,7 @@ export const ResponsiveScoreFilters = ({
     {
       key: 'ageGroup',
       label: 'Age Group Filter',
-      required: false,
+      required: true,
       options: getAvailableAgeGroups(),
       value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
@@ -383,6 +386,16 @@ export const ResponsiveScoreFilters = ({
       helpText: selectedGender ? 
         `Available: ${getAvailableAgeGroups().map(ag => ag.label).join(', ')}` : 
         'Please select gender first to see available age groups'
+    },
+    {
+      key: 'competitionType',
+      label: 'Competition Type',
+      required: true,
+      options: competitionTypes || [],
+      value: selectedCompetitionType,
+      placeholder: 'Select competition type',
+      disabled: false,
+      helpText: 'Select the competition type for scoring'
     }
   ];
 
@@ -393,6 +406,8 @@ export const ResponsiveScoreFilters = ({
       onGenderChange(value);
     } else if (key === 'ageGroup') {
       onAgeGroupChange(value);
+    } else if (key === 'competitionType') {
+      onCompetitionTypeChange(value);
     }
   };
 

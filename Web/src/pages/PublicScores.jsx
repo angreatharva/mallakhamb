@@ -354,15 +354,42 @@ const PublicScores = () => {
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {scoreEntry.playerScores
-                                  .sort((a, b) => b.finalScore - a.finalScore)
-                                  .map((player, playerIndex) => (
-                                  <tr key={player.playerId} className="">
+                                  .sort((a, b) => {
+                                    // Sort by final score descending
+                                    if (b.finalScore !== a.finalScore) {
+                                      return b.finalScore - a.finalScore;
+                                    }
+                                    // If tied, sort by base score if applied
+                                    if (a.baseScoreApplied && b.baseScoreApplied && a.baseScore !== b.baseScore) {
+                                      return b.baseScore - a.baseScore;
+                                    }
+                                    // Then by execution average
+                                    if (a.executionAverage !== b.executionAverage) {
+                                      return b.executionAverage - a.executionAverage;
+                                    }
+                                    return 0;
+                                  })
+                                  .map((player, playerIndex, sortedArray) => {
+                                    // Determine if this player is tied with previous using same criteria as sort
+                                    const isTied = playerIndex > 0 && 
+                                      sortedArray[playerIndex - 1].finalScore === player.finalScore &&
+                                      sortedArray[playerIndex - 1].baseScore === player.baseScore &&
+                                      sortedArray[playerIndex - 1].executionAverage === player.executionAverage;
+                                    
+                                    return (
+                                  <tr key={player.playerId} className={isTied ? 'bg-yellow-50' : ''}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
-                                        <div>
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-sm font-bold text-gray-500">#{playerIndex + 1}</span>
                                           <div className="text-sm font-medium text-gray-900">
                                             {player.playerName}
                                           </div>
+                                          {isTied && (
+                                            <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full font-medium">
+                                              Tied
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                     </td>
@@ -379,7 +406,19 @@ const PublicScores = () => {
                                       </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                      {player.averageMarks.toFixed(2)}
+                                      <div className="space-y-1">
+                                        <div>{player.averageMarks.toFixed(2)}</div>
+                                        {player.baseScoreApplied && (
+                                          <div className="text-xs text-purple-600 font-semibold">
+                                            Base Score Applied
+                                          </div>
+                                        )}
+                                        {player.executionAverage > 0 && (
+                                          <div className="text-xs text-gray-500">
+                                            Exec Avg: {player.executionAverage.toFixed(2)}
+                                          </div>
+                                        )}
+                                      </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                       <div className="space-y-1">
@@ -393,7 +432,7 @@ const PublicScores = () => {
                                       </div>
                                     </td>
                                   </tr>
-                                ))}
+                                )})}
                               </tbody>
                             </table>
                           </div>

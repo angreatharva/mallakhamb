@@ -179,30 +179,36 @@ export const ResponsiveScoringTable = ({
       {/* Judge Scores */}
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-gray-700">Judge Scores:</h4>
-        {[
-          { field: 'seniorJudge', label: 'Senior Judge' },
-          { field: 'judge1', label: 'Judge 1' },
-          { field: 'judge2', label: 'Judge 2' },
-          { field: 'judge3', label: 'Judge 3' },
-          { field: 'judge4', label: 'Judge 4' }
-        ].map(({ field, label }) => (
-          <div key={field} className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">{label}:</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="10"
-              value={scores[player.id]?.[field] || ''}
-              onChange={(e) => onScoreChange(player.id, field, e.target.value)}
-              disabled={isLocked}
-              className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-                isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
-              placeholder="0.0"
-            />
-          </div>
-        ))}
+        {judges.map((judge) => {
+          // Map judge type to field name
+          const fieldMap = {
+            'Senior Judge': 'seniorJudge',
+            'Judge 1': 'judge1',
+            'Judge 2': 'judge2',
+            'Judge 3': 'judge3',
+            'Judge 4': 'judge4'
+          };
+          const field = fieldMap[judge.judgeType] || 'seniorJudge';
+          
+          return (
+            <div key={judge._id} className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">{judge.judgeType}:</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="10"
+                value={scores[player.id]?.[field] || ''}
+                onChange={(e) => onScoreChange(player.id, field, e.target.value)}
+                disabled={isLocked}
+                className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
+                  isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
+                placeholder="0.0"
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Calculated Scores */}
@@ -309,21 +315,11 @@ export const ResponsiveScoringTable = ({
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Time
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Senior Judge
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Judge 1
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Judge 2
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Judge 3
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Judge 4
-              </th>
+              {judges.map((judge) => (
+                <th key={judge._id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {judge.judgeType}
+                </th>
+              ))}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Average Marks
               </th>
@@ -339,35 +335,68 @@ export const ResponsiveScoringTable = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {players.map((player) => (
-              <tr key={player.id} className="hover:bg-gray-50">
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="font-medium text-gray-900">{player.name}</div>
-                  {player.teamName && (
-                    <div className="text-xs text-gray-500">{player.teamName}</div>
-                  )}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <input
-                    type="text"
-                    value={scores[player.id]?.time || ''}
-                    onChange={(e) => onScoreChange(player.id, 'time', e.target.value)}
-                    disabled={isLocked}
-                    className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                    placeholder="00:00"
-                  />
-                </td>
-                {['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'].map((judgeField) => (
-                  <td key={judgeField} className="px-4 py-4 whitespace-nowrap">
+            {players.map((player) => {
+              // Map judge type to field name
+              const fieldMap = {
+                'Senior Judge': 'seniorJudge',
+                'Judge 1': 'judge1',
+                'Judge 2': 'judge2',
+                'Judge 3': 'judge3',
+                'Judge 4': 'judge4'
+              };
+              
+              return (
+                <tr key={player.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{player.name}</div>
+                    {player.teamName && (
+                      <div className="text-xs text-gray-500">{player.teamName}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <input
+                      type="text"
+                      value={scores[player.id]?.time || ''}
+                      onChange={(e) => onScoreChange(player.id, 'time', e.target.value)}
+                      disabled={isLocked}
+                      className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                      }`}
+                      placeholder="00:00"
+                    />
+                  </td>
+                  {judges.map((judge) => {
+                    const field = fieldMap[judge.judgeType] || 'seniorJudge';
+                    return (
+                      <td key={judge._id} className="px-4 py-4 whitespace-nowrap">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="10"
+                          value={scores[player.id]?.[field] || ''}
+                          onChange={(e) => onScoreChange(player.id, field, e.target.value)}
+                          disabled={isLocked}
+                          className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                          }`}
+                          placeholder="0.0"
+                        />
+                      </td>
+                    );
+                  })}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="w-20 px-2 py-1 bg-blue-100 rounded text-center font-medium text-blue-800">
+                      {calculateAverageMarks(scores[player.id] || {})}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <input
                       type="number"
                       step="0.1"
                       min="0"
-                      max="10"
-                      value={scores[player.id]?.[judgeField] || ''}
-                      onChange={(e) => onScoreChange(player.id, judgeField, e.target.value)}
+                      value={scores[player.id]?.deduction || ''}
+                      onChange={(e) => onScoreChange(player.id, 'deduction', e.target.value)}
                       disabled={isLocked}
                       className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                         isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
@@ -375,47 +404,28 @@ export const ResponsiveScoringTable = ({
                       placeholder="0.0"
                     />
                   </td>
-                ))}
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="w-20 px-2 py-1 bg-blue-100 rounded text-center font-medium text-blue-800">
-                    {calculateAverageMarks(scores[player.id] || {})}
-                  </div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={scores[player.id]?.deduction || ''}
-                    onChange={(e) => onScoreChange(player.id, 'deduction', e.target.value)}
-                    disabled={isLocked}
-                    className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                    placeholder="0.0"
-                  />
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={scores[player.id]?.otherDeduction || ''}
-                    onChange={(e) => onScoreChange(player.id, 'otherDeduction', e.target.value)}
-                    disabled={isLocked}
-                    className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                    placeholder="0.0"
-                  />
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="w-20 px-2 py-1 bg-green-100 rounded text-center font-bold text-green-800">
-                    {calculateFinalScore(scores[player.id] || {})}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={scores[player.id]?.otherDeduction || ''}
+                      onChange={(e) => onScoreChange(player.id, 'otherDeduction', e.target.value)}
+                      disabled={isLocked}
+                      className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                      }`}
+                      placeholder="0.0"
+                    />
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="w-20 px-2 py-1 bg-green-100 rounded text-center font-bold text-green-800">
+                      {calculateFinalScore(scores[player.id] || {})}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -444,13 +454,13 @@ export const ResponsiveTeamTable = ({
     >
       <div className="space-y-3">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
-          <p className="text-sm text-gray-600">
-            Coach: {team.coach?.name || 'No coach assigned'}
+          <h3 className="text-lg font-bold text-gray-900">Team: {team.name}</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}
           </p>
           {team.coach?.email && (
             <p className="text-sm text-gray-600">
-              Email: {team.coach.email}
+              <strong>Email:</strong> {team.coach.email}
             </p>
           )}
         </div>
@@ -493,7 +503,7 @@ export const ResponsiveTeamTable = ({
           >
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{team.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Team: {team.name}</h3>
                 <div className="space-y-1">
                   <p className="text-sm text-gray-600">
                     <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}

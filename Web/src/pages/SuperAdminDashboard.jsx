@@ -23,6 +23,7 @@ import AdminTeams from './AdminTeams';
 import AdminScores from './AdminScores';
 import AdminJudges from './AdminJudges';
 import SuperAdminManagement from './SuperAdminManagement';
+import AdminTransactions from './AdminTransactions';
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
@@ -308,6 +309,18 @@ const SuperAdminDashboard = () => {
                       Judges
                     </ResponsiveNavText>
                   </button>
+                  <button
+                    onClick={() => navigate(`${routePrefix}/dashboard/transactions`)}
+                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium ${
+                      activeTab === 'transactions'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <ResponsiveNavText className={activeTab === 'transactions' ? 'text-white' : ''}>
+                      Transactions
+                    </ResponsiveNavText>
+                  </button>
                 </div>
               )}
             </div>
@@ -406,6 +419,19 @@ const SuperAdminDashboard = () => {
                 >
                   Judges
                 </button>
+                <button
+                  onClick={() => {
+                    navigate(`${routePrefix}/dashboard/transactions`);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${
+                    activeTab === 'transactions'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Transactions
+                </button>
               </div>
             </div>
           )}
@@ -419,6 +445,7 @@ const SuperAdminDashboard = () => {
         {activeTab === 'teams' && <AdminTeams routePrefix={routePrefix} storagePrefix={storagePrefix} />}
         {activeTab === 'scores' && <AdminScores routePrefix={routePrefix} storagePrefix={storagePrefix} />}
         {activeTab === 'judges' && <AdminJudges routePrefix={routePrefix} storagePrefix={storagePrefix} />}
+        {activeTab === 'transactions' && <AdminTransactions />}
       </ResponsiveContainer>
     </div>
   );

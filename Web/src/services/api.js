@@ -174,6 +174,7 @@ const createAdminAPI = (basePath = '/admin') => ({
   startAgeGroup: (data) => api.post(`${basePath}/competition/age-group/start`, data),
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),
   unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),
+  getTransactions: (params) => api.get(`${basePath}/transactions`, { params }),
 });
 
 // Admin API with base path /admin (relative to baseURL which already includes /api)
@@ -217,6 +218,7 @@ export const authAPI = {
 
 // Public Judge API (no authentication required)
 export const judgeAPI = {
+  getCompetitions: () => publicApi.get('/public/competitions'),
   getJudges: (params) => publicApi.get('/public/judges', { params }),
   getSubmittedTeams: (params) => publicApi.get('/public/submitted-teams', { params }),
   saveScore: (data) => publicApi.post('/public/save-score', data),

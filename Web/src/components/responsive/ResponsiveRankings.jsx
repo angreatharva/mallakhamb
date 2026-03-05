@@ -26,12 +26,13 @@ export const ResponsiveIndividualRankings = ({
   const renderPlayerCard = (player, index) => {
     const isTopThree = index < 3;
     const medals = ['🥇', '🥈', '🥉'];
+    const isTied = player.tieBreakNotes && player.tieBreakNotes.length > 0;
     
     return (
       <div
         key={player.playerId}
         className={`border rounded-lg p-4 ${
-          isTopThree ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'
+          isTopThree ? 'border-yellow-300 bg-yellow-50' : isTied ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-white'
         } hover:shadow-md transition-shadow`}
       >
         <div className="space-y-3">
@@ -44,11 +45,19 @@ export const ResponsiveIndividualRankings = ({
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="text-lg font-bold text-gray-900">
-                    #{searchTerm ? player.originalRank : index + 1}
+                    #{searchTerm ? player.originalRank : (player.rank || index + 1)}
                   </span>
                   <h3 className="font-semibold text-gray-900">{player.playerName}</h3>
+                  {isTied && (
+                    <span className="text-xs px-2 py-1 bg-orange-200 text-orange-800 rounded-full font-medium">
+                      Tied
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600">{player.teamName}</p>
+                {isTied && (
+                  <p className="text-xs text-orange-600 mt-1">{player.tieBreakNotes}</p>
+                )}
               </div>
             </div>
             <div className="text-right">
@@ -66,6 +75,9 @@ export const ResponsiveIndividualRankings = ({
                 {player.averageMarks?.toFixed(2) || '0.00'}
               </p>
               <p className="text-xs text-gray-500">Average</p>
+              {player.baseScoreApplied && (
+                <p className="text-xs text-purple-600 font-semibold mt-1">Base Score</p>
+              )}
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-gray-900">
@@ -75,22 +87,54 @@ export const ResponsiveIndividualRankings = ({
             </div>
           </div>
 
+          {/* Additional Score Info */}
+          {(player.executionAverage > 0 || player.baseScoreApplied) && (
+            <div className="pt-2 border-t border-gray-100 text-xs space-y-1">
+              {player.executionAverage > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Execution Avg:</span>
+                  <span className="font-medium">{player.executionAverage.toFixed(2)}</span>
+                </div>
+              )}
+              {player.baseScoreApplied && player.baseScore > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-purple-600">Base Score:</span>
+                  <span className="font-medium text-purple-600">{player.baseScore.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Judge Scores (collapsed by default on mobile) */}
           <details className="pt-2 border-t border-gray-100">
             <summary className="text-sm font-medium text-gray-600 cursor-pointer">
               Judge Scores
             </summary>
             <div className="mt-2 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Senior Judge:</span>
-                <span>{player.seniorJudgeScore?.toFixed(2) || '0.00'}</span>
-              </div>
-              {player.judgeScores && Object.entries(player.judgeScores).map(([judge, score]) => (
-                <div key={judge} className="flex justify-between text-sm">
-                  <span>{judge}:</span>
-                  <span>{score?.toFixed(2) || '0.00'}</span>
-                </div>
-              ))}
+              {player.judgeScores && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>Senior Judge:</span>
+                    <span>{player.judgeScores.seniorJudge?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Judge 1:</span>
+                    <span>{player.judgeScores.judge1?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Judge 2:</span>
+                    <span>{player.judgeScores.judge2?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Judge 3:</span>
+                    <span>{player.judgeScores.judge3?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Judge 4:</span>
+                    <span>{player.judgeScores.judge4?.toFixed(2) || '0.00'}</span>
+                  </div>
+                </>
+              )}
             </div>
           </details>
         </div>
@@ -139,10 +183,12 @@ export const ResponsiveIndividualRankings = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {players.map((player, index) => (
-              <tr key={player.playerId} className={index < 3 ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
+            {players.map((player, index) => {
+              const isTied = player.tieBreakNotes && player.tieBreakNotes.length > 0;
+              return (
+              <tr key={player.playerId} className={index < 3 ? 'bg-yellow-50' : isTied ? 'bg-orange-50' : 'hover:bg-gray-50'}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
+                  <div className="flex items-center space-x-2">
                     {searchTerm ? (
                       <span className="text-sm font-medium text-gray-900">#{player.originalRank}</span>
                     ) : (
@@ -150,13 +196,21 @@ export const ResponsiveIndividualRankings = ({
                         {index === 0 && <span className="text-2xl mr-2">🥇</span>}
                         {index === 1 && <span className="text-2xl mr-2">🥈</span>}
                         {index === 2 && <span className="text-2xl mr-2">🥉</span>}
-                        <span className="text-sm font-medium text-gray-900">#{index + 1}</span>
+                        <span className="text-sm font-medium text-gray-900">#{player.rank || index + 1}</span>
                       </>
+                    )}
+                    {isTied && (
+                      <span className="text-xs px-2 py-1 bg-orange-200 text-orange-800 rounded-full font-medium">
+                        Tied
+                      </span>
                     )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{player.playerName}</div>
+                  {isTied && (
+                    <div className="text-xs text-orange-600 mt-1">{player.tieBreakNotes}</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{player.teamName}</div>
@@ -165,13 +219,25 @@ export const ResponsiveIndividualRankings = ({
                   <div className="text-sm text-gray-900">{player.time || 'N/A'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-blue-600">
-                    {player.averageMarks?.toFixed(2) || '0.00'}
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-blue-600">
+                      {player.averageMarks?.toFixed(2) || '0.00'}
+                    </div>
+                    {player.baseScoreApplied && (
+                      <div className="text-xs text-purple-600 font-semibold">
+                        Base Score Applied
+                      </div>
+                    )}
+                    {player.executionAverage > 0 && (
+                      <div className="text-xs text-gray-500">
+                        Exec Avg: {player.executionAverage.toFixed(2)}
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {player.seniorJudgeScore?.toFixed(2) || '0.00'}
+                    {player.judgeScores?.seniorJudge?.toFixed(2) || '0.00'}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -180,7 +246,7 @@ export const ResponsiveIndividualRankings = ({
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

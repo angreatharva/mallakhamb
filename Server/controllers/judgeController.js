@@ -427,25 +427,23 @@ const saveIndividualScore = async (req, res) => {
         break;
     }
 
-    // Recalculate average and final score using trimmed mean (remove highest and lowest)
-    const judgeScores = Object.values(playerScore.judgeScores).filter(s => s > 0);
-    if (judgeScores.length > 0) {
-      let averageScore;
-
-      // If we have 3 or fewer scores, use all of them
-      if (judgeScores.length <= 3) {
-        averageScore = judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length;
-      } else {
-        // If we have 4 or more scores, remove highest and lowest
-        const sortedScores = [...judgeScores].sort((a, b) => a - b);
-        // Remove the lowest (first) and highest (last) scores
-        const trimmedScores = sortedScores.slice(1, -1);
-        averageScore = trimmedScores.reduce((sum, s) => sum + s, 0) / trimmedScores.length;
-      }
-
-      playerScore.averageMarks = parseFloat(averageScore.toFixed(2));
-      playerScore.finalScore = Math.max(0, playerScore.averageMarks - playerScore.deduction - playerScore.otherDeduction);
-    }
+    // Recalculate using new scoring logic with base score and tolerance
+    const scoringUtils = require('../utils/scoringUtils');
+    const calculationResult = scoringUtils.calculateScore(playerScore.judgeScores);
+    
+    // Update player score with calculation results
+    playerScore.executionAverage = calculationResult.executionAverage;
+    playerScore.baseScore = calculationResult.baseScore;
+    playerScore.baseScoreApplied = calculationResult.baseScoreApplied;
+    playerScore.toleranceUsed = calculationResult.toleranceUsed;
+    playerScore.averageMarks = calculationResult.averageMarks;
+    
+    // Calculate final score with deductions
+    playerScore.finalScore = scoringUtils.calculateFinalScore(
+      playerScore.averageMarks,
+      playerScore.deduction,
+      playerScore.otherDeduction
+    );
 
     await scoreRecord.save();
 

@@ -39,7 +39,8 @@ const {
   updateCompetition,
   deleteCompetition,
   assignAdminToCompetition,
-  removeAdminFromCompetition
+  removeAdminFromCompetition,
+  getTransactions
 } = require('../controllers/superAdminController');
 const { authMiddleware, superAdminAuth } = require('../middleware/authMiddleware');
 
@@ -262,6 +263,9 @@ router.get('/teams/:teamId', authMiddleware, superAdminAuth, getTeamDetails);
 router.delete('/teams/:teamId', authMiddleware, superAdminAuth, deleteTeam);
 router.get('/players', authMiddleware, superAdminAuth, getAllPlayers);
 
+// Transaction routes (Super Admin only - always competition-specific via query)
+router.get('/transactions', authMiddleware, superAdminAuth, getTransactions);
+
 // Score routes
 router.post('/scores', authMiddleware, superAdminAuth, addScoreValidation, addScore);
 router.post('/scores/save', authMiddleware, superAdminAuth, saveScores);
@@ -309,7 +313,8 @@ router.post('/players/add', authMiddleware, superAdminAuth, addPlayerValidation,
   try {
     const Player = require('../models/Player');
     const Team = require('../models/Team');
-    const bcrypt = require('bcryptjs');
+    const Transaction = require('../models/Transaction');
+    const Competition = require('../models/Competition');
 
     const { name, email, password, phone, dateOfBirth, gender, team: teamId, competition: competitionId, paymentStatus } = req.body;
 
@@ -319,46 +324,98 @@ router.post('/players/add', authMiddleware, superAdminAuth, addPlayerValidation,
       return res.status(400).json({ message: 'Player with this email already exists' });
     }
 
-    // Verify team exists and belongs to the competition
+    // Verify team exists
     const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    if (team.competitionId.toString() !== competitionId) {
-      return res.status(400).json({ message: 'Team does not belong to the selected competition' });
+    // Verify competition exists
+    const competition = await Competition.findById(competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Ensure the team belongs to the specified competition
+    if (!team.competition || team.competition.toString() !== competitionId.toString()) {
+      return res.status(400).json({
+        message: 'Team does not belong to the specified competition'
+      });
+    }
 
-    // Create player
-    const player = new Player({
-      name,
-      email,
-      password: hashedPassword,
-      phone,
-      dateOfBirth,
-      gender,
-      team: teamId,
-      paymentStatus,
-      isActive: true
-    });
+    // Split full name into first and last name to match Player schema
+    const trimmedName = name.trim();
+    const [firstNamePart, ...restParts] = trimmedName.split(' ');
+    const firstName = firstNamePart || trimmedName;
+    const lastName = restParts.length ? restParts.join(' ') : '';
 
-    await player.save();
+    // Use mongoose session for atomic transaction
+    const mongoose = require('mongoose');
+    const session = await mongoose.startSession();
 
-    res.status(201).json({
-      message: 'Player added successfully',
-      player: {
-        id: player._id,
-        name: player.name,
-        email: player.email,
-        team: teamId
-      }
-    });
+    try {
+      let player;
+      await session.withTransaction(async () => {
+        // Create player (password hashing handled by Player pre-save hook)
+        player = new Player({
+          firstName,
+          lastName,
+          email,
+          password,
+          phone,
+          dateOfBirth,
+          gender,
+          team: teamId,
+          isActive: true
+        });
+
+        await player.save({ session });
+
+        // Record a competition-specific transaction for this player addition
+        await Transaction.create([{
+          competition: competitionId,
+          team: teamId,
+          admin: req.user._id,
+          player: player._id,
+          source: 'superadmin',
+          type: 'player_add',
+          amount: 0,
+          paymentStatus,
+          description: `Player "${firstName} ${lastName}" added to team`,
+        }], { session });
+      });
+
+      await session.endSession();
+
+      res.status(201).json({
+        message: 'Player added successfully',
+        player: {
+          id: player._id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          email: player.email,
+          team: teamId
+        }
+      });
+    } catch (txError) {
+      await session.endSession();
+      console.error('Add player - transaction failed:', txError);
+      console.error('Stack trace:', txError.stack);
+      throw new Error('Failed to complete player creation and transaction recording. Please try again.');
+    }
   } catch (error) {
     console.error('Add player error:', error);
-    res.status(500).json({ message: 'Failed to add player', error: error.message });
+    console.error('Error stack:', error.stack);
+    
+    // Generate correlation ID for tracing
+    const errorId = require('crypto').randomBytes(8).toString('hex');
+    console.error(`Error ID: ${errorId}`);
+    
+    res.status(500).json({ 
+      message: 'Failed to add player',
+      errorId: errorId
+      // Do not send error.message or details to client for security
+    });
   }
 });
 

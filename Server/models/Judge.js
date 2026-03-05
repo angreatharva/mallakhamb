@@ -48,6 +48,11 @@ const judgeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  mustResetPassword: {
+    type: Boolean,
+    default: false,
+    // Flag to enforce password change at first login (set when temporary password is generated)
+  },
   isActive: {
     type: Boolean,
     default: false // Default to false, will be set to true when judge has data

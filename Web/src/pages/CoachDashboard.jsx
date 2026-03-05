@@ -79,17 +79,48 @@ const CoachDashboard = () => {
       ...ageGroupLimits[ag.value]
     }));
 
-    // Filter age groups where player can participate (current age or higher categories)
-    return ageGroups.filter(group => {
-      if (!group.minAge && !group.maxAge) return true; // If limits not found, include it
-      // Player can play in their age group or higher, but not lower
-      if (group.value.startsWith('Above')) {
-        return playerAge >= group.minAge;
-      } else {
-        // For "Under" categories, player can play if they're eligible for that category or higher
-        return playerAge <= group.maxAge;
+    // Sort age groups by their max age (for Under categories) or min age (for Above categories)
+    const sortedGroups = [...ageGroups].sort((a, b) => {
+      if (a.value.startsWith('U') && b.value.startsWith('U')) {
+        return a.maxAge - b.maxAge;
       }
+      if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
+        return a.minAge - b.minAge;
+      }
+      // Under categories come before Above categories
+      if (a.value.startsWith('U')) return -1;
+      if (b.value.startsWith('U')) return 1;
+      return 0;
     });
+
+    // Find the minimum age group the player qualifies for
+    let qualifiesFromIndex = -1;
+    
+    for (let i = 0; i < sortedGroups.length; i++) {
+      const group = sortedGroups[i];
+      
+      if (group.value.startsWith('U')) {
+        // For "Under" categories, player qualifies if their age is <= maxAge
+        if (playerAge <= group.maxAge) {
+          qualifiesFromIndex = i;
+          break;
+        }
+      } else if (group.value.startsWith('Above')) {
+        // For "Above" categories, player can always play up
+        // They qualify for this category and all higher ones
+        qualifiesFromIndex = i;
+        break;
+      }
+    }
+
+    // If player qualifies for any category, return that category and all higher ones
+    if (qualifiesFromIndex >= 0) {
+      return sortedGroups.slice(qualifiesFromIndex);
+    }
+
+    // If no qualification found (shouldn't happen), return all available groups
+    // This allows players to play up in any category
+    return sortedGroups;
   };
 
   // Reset age group when gender changes
@@ -160,21 +191,19 @@ const CoachDashboard = () => {
       return;
     }
 
-    // Validate age eligibility
+    // Validate age eligibility - players can play UP but not DOWN
     const playerAge = selectedPlayerData.age;
     const ageGroup = selectedAgeGroup;
 
-    if (ageGroup.value.startsWith('Above')) {
-      if (playerAge < ageGroup.minAge) {
-        toast.error(`Player is ${playerAge} years old and cannot play in ${ageGroup.label} category (minimum age: ${ageGroup.minAge})`);
-        return;
-      }
-    } else {
+    // For "Under" categories, check if player is too old (can't play down)
+    if (ageGroup.value.startsWith('U')) {
       if (playerAge > ageGroup.maxAge) {
         toast.error(`Player is ${playerAge} years old and cannot play in ${ageGroup.label} category (maximum age: ${ageGroup.maxAge})`);
         return;
       }
     }
+    // For "Above" categories, allow all players to play up (no minimum age restriction)
+    // Players of any age can play in higher age categories
 
     try {
       await coachAPI.addPlayerToAgeGroup({
@@ -699,13 +728,13 @@ const CoachDashboard = () => {
                           Age Group <span className="text-red-500">*</span>
                         </label>
                         <Dropdown
-                          options={selectedGender ? competitionAgeGroups : []}
+                          options={selectedGender && selectedPlayerData ? getAvailableAgeGroups(selectedGender.value, selectedPlayerData.age) : []}
                           value={selectedAgeGroup}
                           onChange={setSelectedAgeGroup}
                           placeholder="Select age group"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Player age: {selectedPlayerData.age} years. Age eligibility is validated when you add the player.
+                          Player age: {selectedPlayerData.age} years. Showing eligible age groups (player's category and all higher categories).
                         </p>
                       </div>
                     </div>

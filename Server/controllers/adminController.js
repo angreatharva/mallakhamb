@@ -1,15 +1,19 @@
 const Admin = require('../models/Admin');
 const Team = require('../models/Team');
-const CompetitionTeam = require('../models/CompetitionTeam');
 const Player = require('../models/Player');
+const Coach = require('../models/Coach');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
 const Competition = require('../models/Competition');
+const CompetitionTeam = require('../models/CompetitionTeam');
+const Transaction = require('../models/Transaction');
 const { generateToken } = require('../utils/tokenUtils');
-const { convertToObjectId, isValidObjectId, createObjectIdError, validateAndConvertObjectId } = require('../utils/objectIdUtils');
-const { logFailedLogin, logSuccessfulLogin } = require('../middleware/securityLogger');
+const scoringUtils = require('../utils/scoringUtils');
+const bcrypt = require('bcryptjs');
 
-// Register a new admin
+/**
+ * Admin Registration
+ */
 const registerAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -24,7 +28,8 @@ const registerAdmin = async (req, res) => {
     const admin = new Admin({
       name,
       email,
-      password
+      password,
+      role: 'admin'
     });
 
     await admin.save();
@@ -48,42 +53,32 @@ const registerAdmin = async (req, res) => {
   }
 };
 
-// Login admin
+/**
+ * Admin Login
+ */
 const loginAdmin = async (req, res) => {
-  console.log('🔍 Admin login attempt:', { email: req.body.email, origin: req.headers.origin });
-  
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log('❌ Missing email or password');
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
     // Find admin by email
-    console.log('🔍 Looking for admin with email:', email);
-    const admin = await Admin.findOne({ email });
+    const admin = await Admin.findOne({ email, role: 'admin' });
     if (!admin) {
-      console.log('❌ Admin not found for email:', email);
-      logFailedLogin(email, 'admin', 'Admin not found', req);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
-    console.log('🔍 Checking password for admin:', admin.email);
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
-      console.log('❌ Password mismatch for admin:', admin.email);
-      logFailedLogin(email, 'admin', 'Invalid password', req);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Generate token
-    console.log('✅ Generating token for admin:', admin.email);
     const token = generateToken(admin._id, 'admin');
 
-    console.log('✅ Admin login successful:', admin.email);
-    logSuccessfulLogin(admin._id, 'admin', req);
     res.json({
       message: 'Login successful',
       token,
@@ -95,16 +90,17 @@ const loginAdmin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Admin login error:', error);
+    console.error('Admin login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
 
-// Get admin profile
+/**
+ * Get Admin Profile
+ */
 const getAdminProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.user._id).select('-password');
-
     if (!admin) {
       return res.status(404).json({ message: 'Admin not found' });
     }
@@ -116,65 +112,25 @@ const getAdminProfile = async (req, res) => {
   }
 };
 
-// Get dashboard statistics (competition-scoped: uses CompetitionTeam for current competition)
+/**
+ * Get Dashboard Stats
+ */
 const getDashboardStats = async (req, res) => {
   try {
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
+    const competitionId = req.competitionId;
 
-    // Only count teams that have completed payment
-    const competitionTeams = await CompetitionTeam.find({
-      competition: req.competitionId,
-      isActive: true,
-      paymentStatus: 'completed'
-    })
-      .populate('team', 'name description')
-      .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName gender dateOfBirth')
-      .populate('competition', 'name level place');
-
-    let totalTeams = 0;
-    let totalParticipants = 0;
-    let totalBoys = 0;
-    let totalGirls = 0;
-    let boysTeams = 0;
-    let girlsTeams = 0;
-
-    const teamStats = competitionTeams.map(ct => {
-      const teamPlayers = ct.players || [];
-      const boys = teamPlayers.filter(p => p.gender === 'Male').length;
-      const girls = teamPlayers.filter(p => p.gender === 'Female').length;
-
-      totalParticipants += teamPlayers.length;
-      totalBoys += boys;
-      totalGirls += girls;
-      if (boys > girls) boysTeams++;
-      else if (girls > boys) girlsTeams++;
-      totalTeams += 1;
-
-      return {
-        id: ct.team?._id,
-        name: ct.team?.name || 'Unknown',
-        coach: ct.coach?.name || 'No coach',
-        totalPlayers: teamPlayers.length,
-        boys,
-        girls,
-        description: ct.team?.description,
-        competition: ct.competition
-      };
-    });
+    const [totalTeams, totalPlayers, totalJudges] = await Promise.all([
+      CompetitionTeam.countDocuments({ competition: competitionId }),
+      Player.countDocuments({ competition: competitionId }),
+      Judge.countDocuments({ competition: competitionId, isActive: true })
+    ]);
 
     res.json({
       stats: {
         totalTeams,
-        totalParticipants,
-        totalBoys,
-        totalGirls,
-        boysTeams,
-        girlsTeams
-      },
-      teams: teamStats
+        totalPlayers,
+        totalJudges
+      }
     });
   } catch (error) {
     console.error('Get dashboard stats error:', error);
@@ -182,67 +138,17 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// Get all teams (competition-scoped: uses CompetitionTeam for current competition)
+/**
+ * Get All Teams
+ */
 const getAllTeams = async (req, res) => {
   try {
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
+    const competitionId = req.competitionId;
 
-    const { gender, ageGroup, search, submissionStatus, paymentStatus } = req.query;
-
-    let query = { competition: req.competitionId, isActive: true };
-
-    if (submissionStatus !== undefined) {
-      query.isSubmitted = submissionStatus === 'true' || submissionStatus === true;
-    }
-    if (paymentStatus) {
-      query.paymentStatus = paymentStatus;
-    }
-
-    let competitionTeams = await CompetitionTeam.find(query)
-      .populate('team', 'name description')
+    const teams = await CompetitionTeam.find({ competition: competitionId })
       .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName gender dateOfBirth');
-
-    let filteredTeams = competitionTeams;
-
-    if (search && search.trim()) {
-      const searchLower = search.trim().toLowerCase();
-      filteredTeams = filteredTeams.filter(ct => {
-        const teamNameMatch = ct.team?.name?.toLowerCase().includes(searchLower);
-        const coachNameMatch = ct.coach?.name?.toLowerCase().includes(searchLower);
-        return teamNameMatch || coachNameMatch;
-      });
-    }
-
-    if (gender || ageGroup) {
-      filteredTeams = filteredTeams.filter(ct => {
-        const teamPlayers = ct.players || [];
-        if (gender && ageGroup) {
-          return teamPlayers.some(p => p.gender === gender && p.ageGroup === ageGroup);
-        }
-        if (gender) {
-          const genderCount = teamPlayers.filter(p => p.gender === gender).length;
-          const otherCount = teamPlayers.filter(p => p.gender !== gender).length;
-          return genderCount > otherCount;
-        }
-        if (ageGroup) return teamPlayers.some(p => p.ageGroup === ageGroup);
-        return true;
-      });
-    }
-
-    const teams = filteredTeams.map(ct => ({
-      _id: ct.team?._id,
-      name: ct.team?.name,
-      description: ct.team?.description,
-      coach: ct.coach,
-      players: ct.players,
-      competition: ct.competition,
-      isSubmitted: ct.isSubmitted,
-      paymentStatus: ct.paymentStatus,
-      submittedAt: ct.submittedAt
-    }));
+      .populate('players.player', 'firstName lastName gender')
+      .sort({ createdAt: -1 });
 
     res.json({ teams });
   } catch (error) {
@@ -251,39 +157,24 @@ const getAllTeams = async (req, res) => {
   }
 };
 
-// Get team details (competition-scoped: team + competition from CompetitionTeam)
+/**
+ * Get Team Details
+ */
 const getTeamDetails = async (req, res) => {
   try {
     const { teamId } = req.params;
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
+    const competitionId = req.competitionId;
 
-    const competitionTeam = await CompetitionTeam.findOne({
-      team: teamId,
-      competition: req.competitionId,
-      isActive: true
+    const team = await CompetitionTeam.findOne({
+      _id: teamId,
+      competition: competitionId
     })
-      .populate('team', 'name description')
-      .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName gender dateOfBirth email');
+      .populate('coach', 'name email phone')
+      .populate('players.player', 'firstName lastName gender dateOfBirth');
 
-    if (!competitionTeam || !competitionTeam.team) {
-      return res.status(404).json({
-        message: 'Team not found or does not belong to the current competition'
-      });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
     }
-
-    const team = {
-      _id: competitionTeam.team._id,
-      name: competitionTeam.team.name,
-      description: competitionTeam.team.description,
-      coach: competitionTeam.coach,
-      players: competitionTeam.players,
-      isSubmitted: competitionTeam.isSubmitted,
-      paymentStatus: competitionTeam.paymentStatus,
-      submittedAt: competitionTeam.submittedAt
-    };
 
     res.json({ team });
   } catch (error) {
@@ -292,41 +183,371 @@ const getTeamDetails = async (req, res) => {
   }
 };
 
-// Get all players
-const getAllPlayers = async (req, res) => {
+/**
+ * Get Submitted Teams
+ */
+const getSubmittedTeams = async (req, res) => {
   try {
-    const { teamId, ageGroup, gender, search } = req.query;
+    const { gender, ageGroup, competitionType } = req.query;
+    let competitionId = req.competitionId;
 
-    let query = { isActive: true };
+    // For public routes without competition ID, try to find an active competition
+    if (!competitionId) {
+      const Competition = require('../models/Competition');
+      const activeCompetition = await Competition.findOne({ 
+        status: { $in: ['upcoming', 'ongoing'] },
+        isDeleted: false 
+      }).sort({ startDate: -1 });
+      
+      if (activeCompetition) {
+        competitionId = activeCompetition._id;
+      } else {
+        return res.status(400).json({ 
+          message: 'No active competition found. Please contact the administrator.' 
+        });
+      }
+    }
 
-    if (teamId) query.team = teamId;
-    if (ageGroup) query.ageGroup = ageGroup;
-    if (gender) query.gender = gender;
-
-    // Get players and populate team with competition info
-    let players = await Player.find(query)
+    const teams = await CompetitionTeam.find({
+      competition: competitionId,
+      isSubmitted: true
+    })
+      .populate('team', 'name description')
+      .populate('coach', 'name email')
       .populate({
-        path: 'team',
-        select: 'name competition',
-        match: req.competitionId ? { competition: req.competitionId } : {}
+        path: 'players.player',
+        select: 'firstName lastName gender'
       })
-      .select('firstName lastName gender dateOfBirth email ageGroup team');
+      .sort({ submittedAt: -1 });
 
-    // Filter out players whose teams don't match the competition context
-    // (team will be null if it doesn't match the competition filter)
-    players = players.filter(player => player.team !== null);
+    // Filter teams that have players matching the gender and age group
+    const filteredTeams = teams.map(team => {
+      const matchingPlayers = team.players.filter(p =>
+        p.player.gender === gender && p.ageGroup === ageGroup
+      );
 
-    // Apply search functionality: by player name, team, age group, gender
-    if (search && search.trim()) {
-      const searchLower = search.trim().toLowerCase();
-      players = players.filter(player => {
-        const firstNameMatch = player.firstName && player.firstName.toLowerCase().includes(searchLower);
-        const lastNameMatch = player.lastName && player.lastName.toLowerCase().includes(searchLower);
-        const fullNameMatch = `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchLower);
-        const teamNameMatch = player.team && player.team.name && player.team.name.toLowerCase().includes(searchLower);
-        return firstNameMatch || lastNameMatch || fullNameMatch || teamNameMatch;
+      return {
+        ...team.toObject(),
+        name: team.team?.name || 'Unnamed Team',
+        description: team.team?.description,
+        players: matchingPlayers.map(p => ({
+          player: p.player,
+          ageGroup: p.ageGroup,
+          gender: p.gender
+        })),
+        playerCount: matchingPlayers.length
+      };
+    }).filter(team => team.playerCount > 0);
+
+    res.json({ teams: filteredTeams });
+  } catch (error) {
+    console.error('Get submitted teams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Add Score (Legacy - kept for compatibility)
+ */
+const addScore = async (req, res) => {
+  try {
+    const scoreData = req.body;
+    scoreData.competition = req.competitionId;
+
+    const score = new Score(scoreData);
+    await score.save();
+
+    res.status(201).json({
+      message: 'Score added successfully',
+      score
+    });
+  } catch (error) {
+    console.error('Add score error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Save Scores with new calculation logic
+ */
+const saveScores = async (req, res) => {
+  try {
+    const {
+      teamId,
+      teamName,
+      coachName,
+      coachEmail,
+      gender,
+      ageGroup,
+      competitionType = 'Competition I', // Default to Competition I
+      timeKeeper,
+      scorer,
+      remarks,
+      isLocked,
+      playerScores,
+      judgeDetails
+    } = req.body;
+
+    const competitionId = req.competitionId;
+
+    console.log('💾 Saving scores:', {
+      teamId,
+      gender,
+      ageGroup,
+      competitionType,
+      playerCount: playerScores?.length,
+      isLocked
+    });
+
+    // Validate required fields
+    if (!teamId || !gender || !ageGroup || !playerScores) {
+      return res.status(400).json({
+        message: 'Missing required fields: teamId, gender, ageGroup, playerScores'
       });
     }
+
+    // Process each player score with new calculation logic
+    const processedPlayerScores = playerScores.map(player => {
+      // Calculate score using new logic
+      const calculationResult = scoringUtils.calculateScore(player.judgeScores);
+      
+      // Calculate final score with deductions
+      const finalScore = scoringUtils.calculateFinalScore(
+        calculationResult.averageMarks,
+        player.deduction || 0,
+        player.otherDeduction || 0
+      );
+
+      return {
+        playerId: player.playerId,
+        playerName: player.playerName,
+        time: player.time || '',
+        judgeScores: player.judgeScores,
+        executionAverage: calculationResult.executionAverage,
+        baseScore: calculationResult.baseScore,
+        baseScoreApplied: calculationResult.baseScoreApplied,
+        toleranceUsed: calculationResult.toleranceUsed,
+        averageMarks: calculationResult.averageMarks,
+        deduction: player.deduction || 0,
+        otherDeduction: player.otherDeduction || 0,
+        finalScore: finalScore
+      };
+    });
+
+    // Find existing score or create new one
+    let scoreRecord = await Score.findOne({
+      teamId,
+      gender,
+      ageGroup,
+      competition: competitionId
+    });
+
+    if (scoreRecord) {
+      // Update existing score
+      scoreRecord.competitionType = competitionType;
+      scoreRecord.timeKeeper = timeKeeper || '';
+      scoreRecord.scorer = scorer || '';
+      scoreRecord.remarks = remarks || '';
+      scoreRecord.isLocked = isLocked;
+      scoreRecord.playerScores = processedPlayerScores;
+      scoreRecord.updatedAt = Date.now();
+    } else {
+      // Create new score
+      scoreRecord = new Score({
+        competition: competitionId,
+        teamId,
+        gender,
+        ageGroup,
+        competitionType,
+        timeKeeper: timeKeeper || '',
+        scorer: scorer || '',
+        remarks: remarks || '',
+        isLocked,
+        playerScores: processedPlayerScores
+      });
+    }
+
+    await scoreRecord.save();
+
+    console.log('✅ Scores saved successfully:', scoreRecord._id);
+
+    res.json({
+      message: 'Scores saved successfully',
+      scoreId: scoreRecord._id,
+      isLocked: scoreRecord.isLocked,
+      playerScores: scoreRecord.playerScores
+    });
+  } catch (error) {
+    console.error('❌ Save scores error:', error);
+    res.status(500).json({
+      message: 'Server error while saving scores',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Unlock Scores
+ */
+const unlockScores = async (req, res) => {
+  try {
+    const { scoreId } = req.params;
+    const competitionId = req.competitionId;
+
+    const score = await Score.findOne({
+      _id: scoreId,
+      competition: competitionId
+    });
+
+    if (!score) {
+      return res.status(404).json({ message: 'Score not found' });
+    }
+
+    score.isLocked = false;
+    score.updatedAt = Date.now();
+    await score.save();
+
+    res.json({
+      message: 'Scores unlocked successfully',
+      score
+    });
+  } catch (error) {
+    console.error('Unlock scores error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get Team Scores
+ */
+const getTeamScores = async (req, res) => {
+  try {
+    const { teamId, gender, ageGroup } = req.query;
+    const competitionId = req.competitionId;
+
+    const query = { competition: competitionId };
+    if (teamId) query.teamId = teamId;
+    if (gender) query.gender = gender;
+    if (ageGroup) query.ageGroup = ageGroup;
+
+    const scores = await Score.find(query)
+      .populate('teamId', 'name')
+      .sort({ updatedAt: -1 });
+
+    res.json({ scores });
+  } catch (error) {
+    console.error('Get team scores error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get Individual Scores with Tie-Breaker
+ */
+const getIndividualScores = async (req, res) => {
+  try {
+    const { gender, ageGroup } = req.query;
+    const competitionId = req.competitionId;
+
+    if (!gender || !ageGroup) {
+      return res.status(400).json({ message: 'Gender and age group are required' });
+    }
+
+    const scores = await Score.find({
+      competition: competitionId,
+      gender,
+      ageGroup,
+      isLocked: true
+    });
+
+    // Flatten player scores
+    const allPlayers = [];
+    scores.forEach(scoreEntry => {
+      scoreEntry.playerScores.forEach(player => {
+        allPlayers.push({
+          ...player.toObject(),
+          teamName: scoreEntry.teamId?.name || 'Unknown Team',
+          teamId: scoreEntry.teamId?._id || null,
+          competitionType: scoreEntry.competitionType
+        });
+      });
+    });
+
+    // Apply tie-breaker logic
+    const competitionType = scores[0]?.competitionType || 'Competition II';
+    const rankedPlayers = scoringUtils.applyTieBreaker(allPlayers, competitionType);
+
+    res.json({ individualScores: rankedPlayers });
+  } catch (error) {
+    console.error('Get individual scores error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get Team Rankings
+ */
+const getTeamRankings = async (req, res) => {
+  try {
+    const { gender, ageGroup } = req.query;
+    const competitionId = req.competitionId;
+
+    if (!gender || !ageGroup) {
+      return res.status(400).json({ message: 'Gender and age group are required' });
+    }
+
+    const scores = await Score.find({
+      competition: competitionId,
+      gender,
+      ageGroup,
+      isLocked: true
+    }).populate('teamId', 'name');
+
+    // Calculate team rankings (top 5 players per team)
+    const teamRankings = scores.map(scoreEntry => {
+      const sortedPlayers = [...scoreEntry.playerScores]
+        .sort((a, b) => b.finalScore - a.finalScore)
+        .slice(0, 5); // Top 5 players
+
+      const totalScore = sortedPlayers.reduce((sum, p) => sum + p.finalScore, 0);
+      const averageScore = sortedPlayers.length > 0 ? totalScore / sortedPlayers.length : 0;
+
+      return {
+        teamId: scoreEntry.teamId._id,
+        teamName: scoreEntry.teamId.name,
+        totalScore: parseFloat(totalScore.toFixed(2)),
+        averageScore: parseFloat(averageScore.toFixed(2)),
+        playerCount: sortedPlayers.length,
+        topPlayers: sortedPlayers.map(p => ({
+          playerName: p.playerName,
+          finalScore: p.finalScore
+        }))
+      };
+    }).sort((a, b) => b.totalScore - a.totalScore);
+
+    // Add ranks (no tie-breaker for team rankings)
+    const rankedTeams = teamRankings.map((team, index) => ({
+      ...team,
+      rank: index + 1
+    }));
+
+    res.json({ teamRankings: rankedTeams });
+  } catch (error) {
+    console.error('Get team rankings error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get All Players
+ */
+const getAllPlayers = async (req, res) => {
+  try {
+    const competitionId = req.competitionId;
+
+    const players = await Player.find({ competition: competitionId })
+      .populate('coach', 'name email')
+      .sort({ createdAt: -1 });
 
     res.json({ players });
   } catch (error) {
@@ -335,801 +556,439 @@ const getAllPlayers = async (req, res) => {
   }
 };
 
-// Add score
-const addScore = async (req, res) => {
-  try {
-    const { playerId, teamId, ageGroup, gender, score, event, description } = req.body;
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Check if competition is completed
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-    
-    if (competition.status === 'completed') {
-      return res.status(403).json({ 
-        message: 'Cannot add scores for a completed competition' 
-      });
-    }
-
-    const competitionTeam = await CompetitionTeam.findOne({
-      team: teamId,
-      competition: req.competitionId,
-      isActive: true
-    });
-    if (!competitionTeam) {
-      return res.status(404).json({
-        message: 'Team not found or does not belong to the current competition'
-      });
-    }
-
-    const player = await Player.findOne({ _id: playerId, team: teamId });
-    if (!player) {
-      return res.status(404).json({ message: 'Player not found in the specified team' });
-    }
-
-    // Create new score
-    const newScore = new Score({
-      player: playerId,
-      team: teamId,
-      ageGroup,
-      gender,
-      score,
-      event,
-      description,
-      addedBy: req.user._id,
-      competition: req.competitionId // Associate with current competition
-    });
-
-    await newScore.save();
-
-    res.status(201).json({
-      message: 'Score added successfully',
-      score: newScore
-    });
-  } catch (error) {
-    console.error('Add score error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Get team scores
-const getTeamScores = async (req, res) => {
-  try {
-    const { ageGroup, gender, teamId } = req.query;
-
-    let matchQuery = {};
-    if (ageGroup) matchQuery.ageGroup = ageGroup;
-    if (gender) matchQuery.gender = gender;
-
-    // Filter by current competition
-    if (req.competitionId) {
-      matchQuery.competition = convertToObjectId(req.competitionId);
-    }
-
-    // Handle teamId parameter for specific team retrieval
-    if (teamId) {
-      // Enhanced validation for teamId parameter format
-      if (!teamId || typeof teamId !== 'string' || teamId.trim() === '') {
-        console.warn(`Empty or invalid teamId parameter provided: ${teamId}`);
-        return res.status(400).json({
-          error: 'Invalid Request',
-          message: 'teamId parameter cannot be empty',
-          field: 'teamId',
-          value: teamId
-        });
-      }
-
-      const trimmedTeamId = teamId.trim();
-
-      // Validate ObjectId format before conversion
-      if (!isValidObjectId(trimmedTeamId)) {
-        return res.status(400).json(createObjectIdError('teamId', trimmedTeamId));
-      }
-
-      const teamObjectId = convertToObjectId(trimmedTeamId);
-      if (!teamObjectId) {
-        return res.status(400).json({
-          error: 'Conversion Failed',
-          message: `Unable to convert teamId to valid ObjectId format: ${trimmedTeamId}`,
-          field: 'teamId',
-          value: trimmedTeamId,
-          expectedFormat: '24-character hexadecimal string'
-        });
-      }
-
-      matchQuery.teamId = teamObjectId;
-
-      // For specific team, return detailed scores instead of aggregated data
-      const teamScores = await Score.find(matchQuery)
-        .populate('teamId', 'name')
-        .sort({ createdAt: -1 });
-
-      // Handle edge case where teamId is valid but no scores exist
-      if (teamScores.length === 0) {
-        // Check if the team exists at all to provide better error messaging
-        const Team = require('../models/Team');
-        const teamExists = await Team.findById(teamObjectId);
-
-        if (!teamExists) {
-          return res.status(404).json({
-            error: 'Team Not Found',
-            message: `No team found with ID: ${trimmedTeamId}`,
-            teamId: trimmedTeamId,
-            teamScores: []
-          });
-        }
-
-        return res.json({
-          teamScores: [],
-          message: `No scores found for team "${teamExists.name}" with the specified filters`,
-          teamId: trimmedTeamId,
-          teamName: teamExists.name,
-          filters: {
-            ageGroup: ageGroup || null,
-            gender: gender || null
-          }
-        });
-      }
-
-      console.log(`Found ${teamScores.length} score record(s) for team: ${trimmedTeamId}`);
-
-      // Format the response for specific team scores
-      const formattedScores = teamScores.map(score => ({
-        _id: score._id,
-        teamId: score.teamId._id,
-        teamName: score.teamId.name,
-        gender: score.gender,
-        ageGroup: score.ageGroup,
-        timeKeeper: score.timeKeeper,
-        scorer: score.scorer,
-        remarks: score.remarks,
-        isLocked: score.isLocked,
-        playerScores: score.playerScores,
-        createdAt: score.createdAt,
-        updatedAt: score.updatedAt
-      }));
-
-      return res.json({ teamScores: formattedScores });
-    }
-
-    // Original aggregation behavior when teamId is not provided (backward compatibility)
-    const teamScores = await Score.aggregate([
-      { $match: matchQuery },
-      { $unwind: '$playerScores' },
-      {
-        $lookup: {
-          from: 'teams',
-          localField: 'teamId',
-          foreignField: '_id',
-          as: 'team'
-        }
-      },
-      {
-        $unwind: '$team'
-      },
-      {
-        $addFields: {
-          // Flatten all player scores from all score documents for this team
-          allPlayerScores: {
-            $reduce: {
-              input: '$playerScores',
-              initialValue: [],
-              in: { $concatArrays: ['$$value', '$$this'] }
-            }
-          }
-        }
-      },
-      {
-        $addFields: {
-          totalScore: {
-            $sum: '$allPlayerScores.finalScore'
-          },
-          playerCount: {
-            $size: '$allPlayerScores'
-          }
-        }
-      },
-      {
-        $project: {
-          teamName: '$team.name',
-          totalScore: 1,
-          playerCount: 1,
-          scoreCount: 1,
-          isLocked: 1,
-          averageScore: {
-            $cond: {
-              if: { $gt: ['$playerCount', 0] },
-              then: { $divide: ['$totalScore', '$playerCount'] },
-              else: 0
-            }
-          }
-        }
-      },
-      { $sort: { totalScore: -1 } }
-    ]);
-
-    res.json({ teamScores });
-  } catch (error) {
-    // Enhanced error logging with more context
-    console.error('Get team scores error:', {
-      message: error.message,
-      stack: error.stack,
-      query: req.query,
-      timestamp: new Date().toISOString()
-    });
-
-    // Handle specific MongoDB errors
-    if (error.name === 'CastError') {
-      console.error('MongoDB CastError in getTeamScores:', error.message);
-      return res.status(400).json({
-        error: 'Database Query Error',
-        message: 'Invalid data format in query parameters',
-        details: error.message
-      });
-    }
-
-    // Handle MongoDB connection errors
-    if (error.name === 'MongoNetworkError' || error.name === 'MongoTimeoutError') {
-      console.error('MongoDB connection error in getTeamScores:', error.message);
-      return res.status(503).json({
-        error: 'Database Connection Error',
-        message: 'Unable to connect to database. Please try again later.'
-      });
-    }
-
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      console.error('MongoDB validation error in getTeamScores:', error.message);
-      return res.status(400).json({
-        error: 'Data Validation Error',
-        message: 'Invalid data provided',
-        details: error.message
-      });
-    }
-
-    // Generic server error with request context
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'An unexpected error occurred while retrieving team scores',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// Get individual scores
-const getIndividualScores = async (req, res) => {
-  try {
-    const { ageGroup, gender } = req.query;
-
-    let matchQuery = {};
-    if (ageGroup) matchQuery.ageGroup = ageGroup;
-    if (gender) matchQuery.gender = gender;
-
-    // Filter by current competition
-    if (req.competitionId) {
-      matchQuery.competition = convertToObjectId(req.competitionId);
-    }
-
-    // First, let's check if we have any scores at all
-    const totalScores = await Score.countDocuments(matchQuery);
-
-    if (totalScores === 0) {
-      return res.json({ individualScores: [] });
-    }
-
-    const individualScores = await Score.aggregate([
-      { $match: matchQuery },
-      { $unwind: '$playerScores' },
-      {
-        $lookup: {
-          from: 'teams',
-          localField: 'teamId',
-          foreignField: '_id',
-          as: 'teamInfo'
-        }
-      },
-      { $unwind: '$teamInfo' },
-      {
-        $project: {
-          playerId: '$playerScores.playerId',
-          playerName: '$playerScores.playerName',
-          teamName: '$teamInfo.name',
-          averageMarks: '$playerScores.averageMarks',
-          seniorJudgeScore: '$playerScores.judgeScores.seniorJudge',
-          time: '$playerScores.time',
-          finalScore: '$playerScores.finalScore',
-          ageGroup: 1,
-          gender: 1,
-          // Convert time to numeric value for sorting (assuming format like "1:30" or "90")
-          timeNumeric: {
-            $cond: {
-              if: { $regexMatch: { input: '$playerScores.time', regex: /^\d+:\d+$/ } },
-              then: {
-                $add: [
-                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ['$playerScores.time', ':'] }, 0] } }, 60] },
-                  { $toInt: { $arrayElemAt: [{ $split: ['$playerScores.time', ':'] }, 1] } }
-                ]
-              },
-              else: {
-                $cond: {
-                  if: { $regexMatch: { input: '$playerScores.time', regex: /^\d+$/ } },
-                  then: { $toInt: '$playerScores.time' },
-                  else: 999999 // Large number for invalid/empty times to sort them last
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        $sort: {
-          averageMarks: -1,           // 1st priority: Highest average marks first
-          seniorJudgeScore: -1,       // 2nd priority: If tie, highest senior judge score
-          timeNumeric: 1              // 3rd priority: If still tie, lowest time (fastest)
-        }
-      }
-    ]);
-
-    console.log('Individual scores result:', individualScores.length, 'players found');
-    res.json({ individualScores });
-  } catch (error) {
-    console.error('Get individual scores error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-// Get submitted teams
-const getSubmittedTeams = async (req, res) => {
-  try {
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    const { ageGroup, gender } = req.query;
-
-    const competitionTeams = await CompetitionTeam.find({
-      competition: req.competitionId,
-      isSubmitted: true,
-      paymentStatus: 'completed',
-      isActive: true
-    })
-      .populate('players.player', 'firstName lastName gender dateOfBirth')
-      .populate('coach', 'name email')
-      .populate('team', 'name description')
-      .sort({ submittedAt: -1 });
-
-    let filteredTeams = competitionTeams;
-
-    if (ageGroup || gender) {
-      filteredTeams = competitionTeams.filter(ct => {
-        const teamPlayers = ct.players || [];
-        if (ageGroup && gender) {
-          return teamPlayers.some(p => p.ageGroup === ageGroup && p.gender === gender);
-        }
-        if (ageGroup) return teamPlayers.some(p => p.ageGroup === ageGroup);
-        if (gender) return teamPlayers.some(p => p.gender === gender);
-        return true;
-      });
-    }
-
-    const formattedTeams = filteredTeams.map(ct => {
-      const ageGroupSummary = {};
-      (ct.players || []).forEach(p => {
-        const key = `${p.gender} ${p.ageGroup}`;
-        ageGroupSummary[key] = (ageGroupSummary[key] || 0) + 1;
-      });
-      return {
-        _id: ct.team?._id,
-        name: ct.team?.name,
-        coach: ct.coach,
-        players: ct.players,
-        submittedAt: ct.submittedAt,
-        paymentAmount: ct.paymentAmount,
-        ageGroupSummary
-      };
-    });
-
-    res.json({ teams: formattedTeams });
-  } catch (error) {
-    console.error('Get submitted teams error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Save judges
+/**
+ * Save Judges
+ */
 const saveJudges = async (req, res) => {
   try {
-    const { gender, ageGroup, judges, competitionTypes } = req.body;
+    const { judges, gender, ageGroup, competitionTypes } = req.body;
+    const competitionId = req.competitionId;
 
     // Validate required fields
-    if (!gender || !ageGroup || !judges || judges.length !== 5) {
-      return res.status(400).json({ message: 'Invalid judge data provided' });
+    if (!judges || !Array.isArray(judges) || judges.length === 0) {
+      return res.status(400).json({ 
+        message: 'Judges array is required and must not be empty',
+        details: 'judges must be an array with at least one judge'
+      });
     }
 
-    // Validate competition types
+    if (!gender || !ageGroup) {
+      return res.status(400).json({ 
+        message: 'Gender and age group are required',
+        details: 'Both gender and ageGroup fields must be provided'
+      });
+    }
+
     if (!competitionTypes || !Array.isArray(competitionTypes) || competitionTypes.length === 0) {
-      return res.status(400).json({ message: 'At least one competition type must be selected' });
+      return res.status(400).json({ 
+        message: 'Competition types are required',
+        details: 'At least one competition type must be selected'
+      });
     }
 
-    const validTypes = ['competition_1', 'competition_2', 'competition_3'];
-    for (const type of competitionTypes) {
-      if (!validTypes.includes(type)) {
+    if (!competitionId) {
+      return res.status(400).json({ 
+        message: 'Competition context is required',
+        details: 'competitionId must be present in request'
+      });
+    }
+
+    // Check if any of the competition types have been started
+    const Competition = require('../models/Competition');
+    const competition = await Competition.findById(competitionId);
+    
+    if (competition) {
+      const hasStartedCompType = competitionTypes.some(compType => 
+        competition.startedAgeGroups.some(
+          started => started.gender === gender && 
+                     started.ageGroup === ageGroup && 
+                     started.competitionType === compType
+        )
+      );
+
+      if (hasStartedCompType) {
         return res.status(400).json({ 
-          message: `Invalid competition type: ${type}. Must be one of: ${validTypes.join(', ')}` 
+          message: 'Cannot save judges. One or more selected competition types for this age group have already started.' 
         });
       }
     }
 
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
+    // Filter out empty judges (judges with no name, username, or password)
+    const validJudges = judges.filter(judge => 
+      judge.name && judge.name.trim() !== '' && 
+      judge.username && judge.username.trim() !== ''
+    );
 
-    // Check competition status - prevent judge modifications if competition is started
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-    if (competition.status === 'ongoing' || competition.status === 'completed') {
-      return res.status(403).json({ 
-        message: `Cannot modify judges. Competition is already ${competition.status}. Judges can only be modified before the competition starts.` 
-      });
-    }
-
-    // Check if judges already exist for this gender/age group/competition combination
-    const existingJudges = await Judge.find({ 
-      gender, 
-      ageGroup,
-      competition: req.competitionId 
-    });
-    if (existingJudges.length > 0) {
+    // Validate judge count (minimum 3, maximum 5)
+    if (validJudges.length < 3) {
       return res.status(400).json({
-        message: `Judges already exist for ${gender} ${ageGroup} in this competition. Use edit functionality to modify existing judges.`
+        message: 'Insufficient judges',
+        details: 'At least 3 judges are required (1 Senior Judge + 2 Judges)'
       });
     }
 
-    // Validate at least 3 judges and max 5 have name and password
-    const validJudgesCount = judges.filter(j => j.name && j.name.trim() && j.password && j.password.trim()).length;
-    if (validJudgesCount < 3) {
+    if (validJudges.length > 5) {
       return res.status(400).json({
-        message: 'At least 3 judges are required (maximum 5 allowed)'
+        message: 'Too many judges',
+        details: 'Maximum 5 judges allowed (1 Senior Judge + 4 Judges)'
       });
     }
 
-    // Remove duplicates from competition types
-    const uniqueCompetitionTypes = [...new Set(competitionTypes)];
+    // Validate each valid judge has required fields
+    for (let i = 0; i < validJudges.length; i++) {
+      const judge = validJudges[i];
+      if (!judge.judgeType) {
+        return res.status(400).json({
+          message: `Invalid judge data`,
+          details: 'Each judge must have judgeType'
+        });
+      }
+    }
 
-    // Create all 5 judge records, handling empty ones properly
-    const judgePromises = judges.map(judgeData => {
-      const hasData = judgeData.name && judgeData.name.trim() && judgeData.password && judgeData.password.trim();
+    // Use MongoDB session for atomic operations to prevent TOCTOU race
+    const session = await Judge.startSession();
+    session.startTransaction();
 
-      const judgeDoc = {
+    try {
+      // Check if judges already exist for this exact combination (within transaction)
+      const existingJudgesCheck = await Judge.findOne({
+        competition: competitionId,
         gender,
         ageGroup,
-        judgeNo: judgeData.judgeNo,
-        judgeType: judgeData.judgeType,
-        competitionTypes: uniqueCompetitionTypes,
-        name: hasData ? judgeData.name.trim() : '',
-        password: hasData ? judgeData.password.trim() : '',
-        isActive: Boolean(hasData),
-        competition: req.competitionId // Associate with current competition
-      };
+        competitionTypes: { $in: competitionTypes }
+      }).session(session);
 
-      // Only set username if there's data to avoid unique constraint issues
-      if (hasData && judgeData.username && judgeData.username.trim()) {
-        judgeDoc.username = judgeData.username.trim();
+      if (existingJudgesCheck) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          message: 'Judges already exist for this combination',
+          details: `Judge panel already exists for ${gender} - ${ageGroup} with the selected competition type(s). Please use Judge List to edit existing judges.`
+        });
       }
 
-      const judge = new Judge(judgeDoc);
-      return judge.save();
-    });
+      const createdJudges = [];
+      const updatedJudges = [];
+      const errors = [];
 
-    await Promise.all(judgePromises);
+      // Process each valid judge
+      for (const judgeData of validJudges) {
+        try {
+          // Check if judge already exists with same username for this competition (within transaction)
+          const existingJudge = await Judge.findOne({
+            competition: competitionId,
+            username: judgeData.username,
+            gender,
+            ageGroup,
+            competitionTypes: { $in: competitionTypes }
+          }).session(session);
 
-    res.status(201).json({
-      message: 'Judge panel created successfully',
-      totalSlots: 5,
-      filledSlots: validJudgesCount,
-      emptySlots: 5 - validJudgesCount
-    });
+          if (existingJudge) {
+            // Update existing judge
+            existingJudge.name = judgeData.name;
+            existingJudge.judgeType = judgeData.judgeType;
+            existingJudge.judgeNo = judgeData.judgeNo || existingJudge.judgeNo;
+            existingJudge.isActive = judgeData.isActive !== undefined ? judgeData.isActive : true;
+            
+            if (judgeData.password) {
+              existingJudge.password = judgeData.password;
+            }
+
+            await existingJudge.save({ session });
+            updatedJudges.push(existingJudge);
+          } else {
+            // Create new judge with secure temporary password
+            const crypto = require('crypto');
+            
+            // Generate cryptographically secure temporary password if not provided
+            let temporaryPassword = judgeData.password;
+            let mustResetPassword = false;
+            
+            if (!temporaryPassword) {
+              // Generate secure random password: 16 bytes = 32 hex characters
+              temporaryPassword = crypto.randomBytes(16).toString('hex');
+              mustResetPassword = true;
+            }
+            
+            const newJudge = new Judge({
+              competition: competitionId,
+              name: judgeData.name,
+              username: judgeData.username,
+              password: temporaryPassword, // Will be hashed by Judge model pre-save hook
+              judgeType: judgeData.judgeType,
+              judgeNo: judgeData.judgeNo,
+              gender,
+              ageGroup,
+              competitionTypes: competitionTypes,
+              isActive: judgeData.isActive !== undefined ? judgeData.isActive : true,
+              mustResetPassword: mustResetPassword // Flag to enforce password change at first login
+            });
+
+            await newJudge.save({ session });
+            createdJudges.push(newJudge);
+          }
+        } catch (judgeError) {
+          console.error(`Error processing judge ${judgeData.username}:`, judgeError);
+          errors.push({
+            username: judgeData.username,
+            error: judgeError.message
+          });
+        }
+      }
+
+      // Calculate filled and empty slots based on final state
+      // Get all existing judges for this combination (within transaction)
+      const existingJudges = await Judge.find({
+        competition: competitionId,
+        gender,
+        ageGroup,
+        competitionTypes: { $in: competitionTypes }
+      }).session(session);
+
+      // Build set of final valid judges (existing + created, excluding failed)
+      const failedUsernames = new Set(errors.map(e => e.username));
+      const finalValidJudges = existingJudges.filter(j => !failedUsernames.has(j.username));
+      
+      const filledSlots = finalValidJudges.length;
+      const emptySlots = Math.max(0, 5 - filledSlots); // Maximum 5 judges allowed
+
+      // Commit transaction
+      await session.commitTransaction();
+
+      // Return response with counts and any errors
+      res.json({
+        message: 'Judges processed successfully',
+        created: createdJudges.length,
+        updated: updatedJudges.length,
+        filledSlots: filledSlots,
+        emptySlots: emptySlots,
+        errors: errors.length > 0 ? errors : undefined,
+        judges: [...createdJudges, ...updatedJudges].map(j => ({
+          id: j._id,
+          name: j.name,
+          username: j.username,
+          judgeType: j.judgeType,
+          judgeNo: j.judgeNo,
+          isActive: j.isActive,
+          competitionTypes: j.competitionTypes
+        }))
+      });
+    } catch (transactionError) {
+      await session.abortTransaction();
+      throw transactionError;
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     console.error('Save judges error:', error);
-    if (error.code === 11000) {
-      res.status(400).json({ message: 'Duplicate judge assignment or username already exists' });
-    } else {
-      res.status(500).json({ message: 'Server error' });
-    }
+    res.status(500).json({ 
+      message: 'Server error while saving judges',
+      error: error.message
+    });
   }
 };
 
-// Get judges
+/**
+ * Get Judges
+ */
 const getJudges = async (req, res) => {
   try {
-    const { gender, ageGroup, judgeType } = req.query;
+    const { gender, ageGroup, competitionType, competitionTypes, competition } = req.query;
+    let competitionId = req.competitionId || competition;
 
-    if (!gender || !ageGroup) {
-      return res.status(400).json({ message: 'Gender and age group are required' });
+    // Debug logging only in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('=== GET JUDGES DEBUG ===');
+      console.log('Query params:', { gender, ageGroup, competitionType, competitionTypes, competition });
+      console.log('req.competitionId:', req.competitionId);
+      console.log('Is public route:', !req.competitionId);
     }
 
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Build query with competition filter
-    let query = { 
-      gender, 
-      ageGroup,
-      competition: req.competitionId 
-    };
-
-    // Add filtering by judge type if provided
-    if (judgeType) {
-      query.judgeType = judgeType;
-    }
-
-    // Get existing judges for this gender/age group/competition
-    const existingJudges = await Judge.find(query)
-      .sort({ judgeNo: 1 });
-
-    // If no judges exist at all, return empty array to allow creation
-    if (existingJudges.length === 0) {
-      return res.json({ judges: [] });
-    }
-
-    // Define the complete judge structure
-    const judgeTypes = [
-      { judgeNo: 1, judgeType: 'Senior Judge' },
-      { judgeNo: 2, judgeType: 'Judge 1' },
-      { judgeNo: 3, judgeType: 'Judge 2' },
-      { judgeNo: 4, judgeType: 'Judge 3' },
-      { judgeNo: 5, judgeType: 'Judge 4' }
-    ];
-
-    // Create complete judge panel (existing + empty slots)
-    const completeJudgePanel = judgeTypes.map(template => {
-      const existingJudge = existingJudges.find(j => j.judgeNo === template.judgeNo);
-
-      if (existingJudge) {
-        // Check if the existing judge is actually empty (inactive or no name)
-        const isEmpty = !existingJudge.isActive || !existingJudge.name || !existingJudge.name.trim();
-
-        if (isEmpty) {
-          // Return as empty slot but keep the _id for updating
-          return {
-            _id: existingJudge._id,
-            gender,
-            ageGroup,
-            judgeNo: template.judgeNo,
-            judgeType: template.judgeType,
-            name: '',
-            username: '',
-            password: '',
-            isActive: false,
-            createdAt: existingJudge.createdAt,
-            isEmpty: true // Flag to indicate this is an empty slot
-          };
-        } else {
-          // Return the active judge as-is
-          return existingJudge;
-        }
-      } else {
-        // Return a placeholder for empty slots
-        return {
-          _id: null,
-          gender,
-          ageGroup,
-          judgeNo: template.judgeNo,
-          judgeType: template.judgeType,
-          name: '',
-          username: '',
-          password: '',
-          isActive: false,
-          createdAt: null,
-          isEmpty: true // Flag to indicate this is an empty slot
-        };
+    // For public routes without competition ID, try to find an active competition
+    if (!competitionId) {
+      const Competition = require('../models/Competition');
+      const activeCompetition = await Competition.findOne({ 
+        status: { $in: ['upcoming', 'ongoing'] },
+        isDeleted: false 
+      }).sort({ startDate: -1 });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Active competition found:', activeCompetition ? activeCompetition._id : 'NONE');
       }
+      
+      if (activeCompetition) {
+        competitionId = activeCompetition._id;
+      } else {
+        return res.status(400).json({ 
+          message: 'No active competition found. Please contact the administrator.' 
+        });
+      }
+    }
+
+    // Base query for fetching judges
+    const query = { competition: competitionId };
+    if (gender) query.gender = gender;
+    if (ageGroup) query.ageGroup = ageGroup;
+    
+    // Filter by competition type (single) or competition types (multiple)
+    // Use $in operator since competitionTypes is an array in the Judge model
+    if (competitionType) {
+      query.competitionTypes = { $in: [competitionType] };
+    } else if (competitionTypes) {
+      const typesArray = Array.isArray(competitionTypes) 
+        ? competitionTypes 
+        : competitionTypes.split(',');
+      query.competitionTypes = { $in: typesArray };
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Judge query:', JSON.stringify(query, null, 2));
+    }
+
+    // For admin routes (where competition context middleware sets req.competitionId),
+    // only include active judges. For public routes, include all judges so that
+    // older records without isActive flag set are still visible.
+    if (req.competitionId) {
+      query.isActive = true;
+    }
+
+    const judges = await Judge.find(query).sort({ judgeNo: 1 });
+    console.log('Judges found:', judges.length);
+    judges.forEach(j => {
+      console.log(`  - ${j.name} (${j.judgeType}) - competitionTypes: ${j.competitionTypes.join(', ')}`);
     });
 
-    res.json({ judges: completeJudgePanel });
+    // DEBUG: Check if there are ANY judges for this gender/ageGroup/competitionType regardless of competition
+    const allJudgesDebug = await Judge.find({
+      gender: gender,
+      ageGroup: ageGroup,
+      competitionTypes: { $in: [competitionType] }
+    });
+    console.log('DEBUG: Total judges matching gender/age/type (any competition):', allJudgesDebug.length);
+    allJudgesDebug.forEach(j => {
+      console.log(`  - ${j.name} (${j.judgeType}) - competition: ${j.competition}`);
+    });
+
+    // For public routes (judge scoring), only return actual judges with data
+    // Check if this is a public route by seeing if req.competitionId exists
+    if (!req.competitionId) {
+      // Filter out judges without names (empty judges)
+      const activeJudges = judges.filter(j => j.name && j.name.trim() !== '');
+      console.log('Active judges (filtered):', activeJudges.length);
+      console.log('=== END DEBUG ===');
+      return res.json({ judges: activeJudges });
+    }
+
+    // For admin routes, create all 5 judge slots (1-5)
+    const judgeTypes = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+    const allJudgeSlots = [];
+
+    for (let i = 1; i <= 5; i++) {
+      const existingJudge = judges.find(j => j.judgeNo === i);
+      
+      if (existingJudge) {
+        // Judge exists, return the actual judge data
+        allJudgeSlots.push({
+          _id: existingJudge._id,
+          judgeNo: existingJudge.judgeNo,
+          judgeType: existingJudge.judgeType,
+          name: existingJudge.name,
+          username: existingJudge.username,
+          gender: existingJudge.gender,
+          ageGroup: existingJudge.ageGroup,
+          competitionTypes: existingJudge.competitionTypes,
+          isActive: existingJudge.isActive,
+          isEmpty: false
+        });
+      } else {
+        // Judge doesn't exist, create empty slot placeholder
+        allJudgeSlots.push({
+          judgeNo: i,
+          judgeType: judgeTypes[i - 1],
+          name: '',
+          username: '',
+          gender: gender || '',
+          ageGroup: ageGroup || '',
+          competitionTypes: competitionType ? [competitionType] : (competitionTypes ? (Array.isArray(competitionTypes) ? competitionTypes : competitionTypes.split(',')) : []),
+          isEmpty: true
+        });
+      }
+    }
+
+    console.log('=== END DEBUG ===');
+    res.json({ judges: allJudgeSlots });
   } catch (error) {
     console.error('Get judges error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Create single judge
+/**
+ * Create Single Judge
+ */
 const createSingleJudge = async (req, res) => {
   try {
-    const { gender, ageGroup, judgeNo, judgeType, name, username, password } = req.body;
+    const judgeData = req.body;
+    judgeData.competition = req.competitionId;
 
-    // Validate required fields
-    if (!gender || !ageGroup || !judgeNo || !judgeType || !name || !username || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Check if this specific age group is started - prevent judge modifications
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-    
-    // Check if this specific age group has been started
-    const ageGroupStarted = competition.startedAgeGroups?.some(
-      ag => ag.gender === gender && ag.ageGroup === ageGroup
-    );
-    
-    if (ageGroupStarted) {
-      return res.status(403).json({ 
-        message: `Cannot modify judges. The ${gender} ${ageGroup} age group has already been started. Judges can only be modified before the age group starts.` 
-      });
-    }
-
-    // Check if judge already exists for this position in current competition
-    const existingJudge = await Judge.findOne({ 
-      gender, 
-      ageGroup, 
-      judgeNo,
-      competition: req.competitionId 
-    });
-    if (existingJudge && existingJudge.name && existingJudge.name.trim()) {
-      return res.status(400).json({ message: 'Judge already exists for this position' });
-    }
-
-    // Check if username is already taken in current competition (exclude current judge if updating existing empty slot)
-    const normalizedUsername = username.toLowerCase().trim();
-    const usernameQuery = {
-      username: normalizedUsername,
-      isActive: true,
-      competition: req.competitionId // Only check within current competition
-    };
-
-    // If updating an existing judge, exclude it from the check
-    if (existingJudge && existingJudge._id) {
-      usernameQuery._id = { $ne: existingJudge._id };
-    }
-
-    const existingUsername = await Judge.findOne(usernameQuery);
-    if (existingUsername) {
-      return res.status(400).json({ message: 'Username already exists in this competition' });
-    }
-
-    let judge;
-    if (existingJudge) {
-      // Update existing empty judge
-      existingJudge.name = name.trim();
-      existingJudge.username = username.toLowerCase().trim();
-      existingJudge.password = password.trim();
-      existingJudge.isActive = true;
-      judge = await existingJudge.save();
-    } else {
-      // Create new judge
-      judge = new Judge({
-        gender,
-        ageGroup,
-        judgeNo,
-        judgeType,
-        name: name.trim(),
-        username: username.toLowerCase().trim(),
-        password: password.trim(),
-        isActive: true,
-        competition: req.competitionId // Associate with current competition
-      });
-      await judge.save();
-    }
+    const judge = new Judge(judgeData);
+    await judge.save();
 
     res.status(201).json({
       message: 'Judge created successfully',
-      judge: {
-        _id: judge._id,
-        name: judge.name,
-        username: judge.username,
-        judgeType: judge.judgeType,
-        gender: judge.gender,
-        ageGroup: judge.ageGroup
-      }
+      judge
     });
   } catch (error) {
-    console.error('Create single judge error:', error);
-    if (error.code === 11000) {
-      res.status(400).json({ message: 'Duplicate judge assignment or username already exists' });
-    } else {
-      res.status(500).json({ message: 'Server error' });
-    }
+    console.error('Create judge error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Update judge
+/**
+ * Update Judge
+ */
 const updateJudge = async (req, res) => {
   try {
     const { judgeId } = req.params;
-    const { name, username, password } = req.body;
+    const updateData = req.body;
+    const competitionId = req.competitionId;
 
-    // Validate required fields
-    if (!name || !username || !password) {
-      return res.status(400).json({ message: 'Name, username, and password are required' });
-    }
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Check if this specific age group is started - prevent judge modifications
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-    
-    // Get the judge to find its gender and age group
-    const judge = await Judge.findOne({ 
-      _id: judgeId,
-      competition: req.competitionId 
-    });
+    // First, get the judge to check their current assignment
+    const judge = await Judge.findOne({ _id: judgeId, competition: competitionId });
     
     if (!judge) {
-      return res.status(404).json({ 
-        message: 'Judge not found or does not belong to the current competition' 
-      });
+      return res.status(404).json({ message: 'Judge not found' });
     }
+
+    // Check if any of the judge's competition types have been started
+    const Competition = require('../models/Competition');
+    const competition = await Competition.findById(competitionId);
     
-    // Check if this specific age group has been started
-    const ageGroupStarted = competition.startedAgeGroups?.some(
-      ag => ag.gender === judge.gender && ag.ageGroup === judge.ageGroup
+    if (competition) {
+      const hasStartedCompType = judge.competitionTypes.some(compType => 
+        competition.startedAgeGroups.some(
+          started => started.gender === judge.gender && 
+                     started.ageGroup === judge.ageGroup && 
+                     started.competitionType === compType
+        )
+      );
+
+      if (hasStartedCompType) {
+        return res.status(400).json({ 
+          message: 'Cannot modify judge. One or more competition types for this age group have already started.' 
+        });
+      }
+    }
+
+    // Update the judge
+    const updatedJudge = await Judge.findOneAndUpdate(
+      { _id: judgeId, competition: competitionId },
+      updateData,
+      { new: true }
     );
-    
-    if (ageGroupStarted) {
-      return res.status(403).json({ 
-        message: `Cannot modify judges. The ${judge.gender} ${judge.ageGroup} age group has already been started. Judges can only be modified before the age group starts.` 
-      });
-    }
-
-    // Judge already fetched above for age group check
-
-    // Check if username is already taken by another judge in current competition
-    const normalizedUsername = username.toLowerCase().trim();
-    const usernameQuery = {
-      username: normalizedUsername,
-      _id: { $ne: judgeId },
-      isActive: true,
-      competition: req.competitionId // Only check within current competition
-    };
-
-    const existingUsernameJudge = await Judge.findOne(usernameQuery);
-    if (existingUsernameJudge) {
-      return res.status(400).json({ message: 'Username already exists in this competition' });
-    }
-
-    // Update judge
-    judge.name = name.trim();
-    judge.username = username.toLowerCase().trim();
-    judge.password = password.trim(); // In production, this should be hashed
-    judge.isActive = true; // Activate the judge when updated with valid data
-
-    await judge.save();
 
     res.json({
       message: 'Judge updated successfully',
-      judge: {
-        _id: judge._id,
-        name: judge.name,
-        username: judge.username,
-        judgeType: judge.judgeType,
-        gender: judge.gender,
-        ageGroup: judge.ageGroup,
-        isActive: judge.isActive
-      }
+      judge: updatedJudge
     });
   } catch (error) {
     console.error('Update judge error:', error);
@@ -1137,176 +996,197 @@ const updateJudge = async (req, res) => {
   }
 };
 
-// Helper function to determine if scores should be locked based on completeness
-const determineIsLocked = (playerScores) => {
-  // Check if all players have complete scores
-  const allPlayersScored = playerScores.every(playerScore => {
-    // Check if player has at least one judge score
-    const hasJudgeScores = Object.values(playerScore.judgeScores || {}).some(score => score > 0);
+/**
+ * Delete Judge
+ */
+const deleteJudge = async (req, res) => {
+  try {
+    const { judgeId } = req.params;
+    const competitionId = req.competitionId;
 
-    // Check if player has time value
-    const hasTime = playerScore.time && playerScore.time.trim() !== '';
+    // First, get the judge to check their current assignment
+    const judge = await Judge.findOne({ _id: judgeId, competition: competitionId });
 
-    return hasJudgeScores && hasTime;
-  });
+    if (!judge) {
+      return res.status(404).json({ message: 'Judge not found' });
+    }
 
-  return allPlayersScored && playerScores.length > 0;
+    // Check if any of the judge's competition types have been started
+    const Competition = require('../models/Competition');
+    const competition = await Competition.findById(competitionId);
+    
+    if (competition) {
+      const hasStartedCompType = judge.competitionTypes.some(compType => 
+        competition.startedAgeGroups.some(
+          started => started.gender === judge.gender && 
+                     started.ageGroup === judge.ageGroup && 
+                     started.competitionType === compType
+        )
+      );
+
+      if (hasStartedCompType) {
+        return res.status(400).json({ 
+          message: 'Cannot delete judge. One or more competition types for this age group have already started.' 
+        });
+      }
+    }
+
+    // Delete the judge
+    await Judge.findOneAndDelete({ _id: judgeId, competition: competitionId });
+
+    res.json({ message: 'Judge deleted successfully' });
+  } catch (error) {
+    console.error('Delete judge error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
-// Save scores for a team's players
-const saveScores = async (req, res) => {
+/**
+ * Get All Judges Summary
+ */
+const getAllJudgesSummary = async (req, res) => {
   try {
-    const { teamId, gender, ageGroup, timeKeeper, scorer, remarks, playerScores, isLocked } = req.body;
+    const competitionId = req.competitionId;
 
-    // Validate required fields
-    if (!teamId || !gender || !ageGroup || !playerScores || !Array.isArray(playerScores)) {
-      return res.status(400).json({
-        message: 'Team ID, gender, age group, and player scores are required'
-      });
-    }
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Check if competition is completed
-    const competition = await Competition.findById(req.competitionId);
+    const competition = await Competition.findById(competitionId);
     if (!competition) {
       return res.status(404).json({ message: 'Competition not found' });
     }
-    
-    if (competition.status === 'completed') {
-      return res.status(403).json({ 
-        message: 'Cannot add or update scores for a completed competition' 
-      });
-    }
 
-    const competitionTeam = await CompetitionTeam.findOne({
-      team: teamId,
-      competition: req.competitionId,
-      isActive: true
-    }).populate('team', 'name');
-    if (!competitionTeam || !competitionTeam.team) {
-      return res.status(404).json({
-        message: 'Team not found or does not belong to the current competition'
-      });
-    }
+    // Get all judges for this competition
+    const Judge = require('../models/Judge');
+    const judges = await Judge.find({ competition: competitionId });
 
-    // Check if scores already exist for this team, gender, age group, and competition
-    let existingScore = await Score.findOne({ 
-      teamId, 
-      gender, 
-      ageGroup,
-      competition: req.competitionId 
+    const summary = competition.ageGroups.map(ag => {
+      // Get judges for this age group
+      const ageGroupJudges = judges.filter(
+        j => j.gender === ag.gender && j.ageGroup === ag.ageGroup
+      );
+
+      // Group judges by competition type
+      const competitionTypeGroups = {};
+      competition.competitionTypes.forEach(compType => {
+        const compTypeJudges = ageGroupJudges.filter(j => 
+          j.competitionTypes.includes(compType)
+        );
+        
+        // Check if this specific competition type is started
+        const isStarted = competition.startedAgeGroups.some(
+          started => started.gender === ag.gender && 
+                     started.ageGroup === ag.ageGroup && 
+                     started.competitionType === compType
+        );
+        
+        competitionTypeGroups[compType] = {
+          judges: compTypeJudges.map(j => ({
+            name: j.name || 'Not assigned',
+            judgeType: j.judgeType
+          })),
+          hasMinimumJudges: compTypeJudges.length >= 3,
+          isStarted
+        };
+      });
+
+      return {
+        gender: ag.gender,
+        ageGroup: ag.ageGroup,
+        competitionTypes: competitionTypeGroups
+      };
     });
 
-    // Check if existing score is locked before allowing updates
-    if (existingScore && existingScore.isLocked) {
-      return res.status(403).json({
-        message: 'Cannot update scores - this entry is locked',
-        isLocked: true
-      });
-    }
-
-    // Determine lock state based on score completeness
-    const shouldBeLocked = determineIsLocked(playerScores);
-
-    if (existingScore) {
-      // Update existing scores
-      existingScore.timeKeeper = timeKeeper || '';
-      existingScore.scorer = scorer || '';
-      existingScore.remarks = remarks || '';
-      existingScore.playerScores = playerScores;
-      existingScore.isLocked = shouldBeLocked;
-      existingScore.updatedAt = new Date();
-
-      await existingScore.save();
-
-      res.json({
-        message: 'Scores updated successfully',
-        scoreId: existingScore._id,
-        playersScored: playerScores.length,
-        isLocked: existingScore.isLocked
-      });
-    } else {
-      // Create new score record
-      const newScore = new Score({
-        teamId,
-        gender,
-        ageGroup,
-        timeKeeper: timeKeeper || '',
-        scorer: scorer || '',
-        remarks: remarks || '',
-        playerScores,
-        isLocked: shouldBeLocked,
-        competition: req.competitionId // Associate with current competition
-      });
-
-      await newScore.save();
-
-      res.status(201).json({
-        message: 'Scores saved successfully',
-        scoreId: newScore._id,
-        playersScored: playerScores.length,
-        isLocked: newScore.isLocked
-      });
-    }
-
-    const io = req.app.get('io');
-    if (io) {
-      const roomId = `scoring_${gender}_${ageGroup}`;
-      io.to(roomId).emit('scores_saved_notification', {
-        teamId,
-        teamName: competitionTeam.team?.name,
-        gender,
-        ageGroup,
-        playersScored: playerScores.length
-      });
-    }
-
+    res.json({ summary });
   } catch (error) {
-    console.error('Save scores error:', error);
-    res.status(500).json({ message: 'Server error while saving scores' });
+    console.error('Get judges summary error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Unlock scores for editing
-const unlockScores = async (req, res) => {
+/**
+ * Start Age Group
+ */
+const startAgeGroup = async (req, res) => {
   try {
-    const { scoreId } = req.params;
+    const { gender, ageGroup, competitionType } = req.body;
+    const competitionId = req.competitionId;
 
-    // Validate scoreId
-    if (!scoreId) {
-      return res.status(400).json({ message: 'Score ID is required' });
+    if (!competitionType) {
+      return res.status(400).json({ message: 'Competition type is required' });
     }
 
-    // Find the score document
-    const score = await Score.findById(scoreId);
-
-    if (!score) {
-      return res.status(404).json({ message: 'Score record not found' });
+    const competition = await Competition.findById(competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
     }
 
-    // Update the lock state to false
-    score.isLocked = false;
-    score.updatedAt = new Date();
+    // Check if already started
+    const alreadyStarted = competition.startedAgeGroups.some(
+      started => started.gender === gender && 
+                 started.ageGroup === ageGroup && 
+                 started.competitionType === competitionType
+    );
 
-    await score.save();
+    if (alreadyStarted) {
+      return res.status(400).json({ message: 'Competition type for this age group already started' });
+    }
 
-    res.json({
-      message: 'Scores unlocked successfully',
-      scoreId: score._id,
-      isLocked: score.isLocked
+    // Verify this competition type exists in the competition
+    if (!competition.competitionTypes.includes(competitionType)) {
+      return res.status(400).json({ message: 'Invalid competition type for this competition' });
+    }
+
+    // Check if minimum judges are assigned for this specific competition type
+    const Judge = require('../models/Judge');
+    const judges = await Judge.find({
+      competition: competitionId,
+      gender,
+      ageGroup,
+      competitionTypes: competitionType
     });
 
+    if (judges.length < 3) {
+      return res.status(400).json({ 
+        message: 'At least 3 judges must be assigned to this competition type before starting' 
+      });
+    }
+
+    competition.startedAgeGroups.push({
+      gender,
+      ageGroup,
+      competitionType,
+      startedAt: new Date()
+    });
+
+    await competition.save();
+
+    res.json({ message: 'Competition type started successfully' });
   } catch (error) {
-    console.error('Unlock scores error:', error);
-    res.status(500).json({ message: 'Server error while unlocking scores' });
+    console.error('Start age group error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Save individual score from judge
+/**
+ * Get Transactions
+ */
+const getTransactions = async (req, res) => {
+  try {
+    const competitionId = req.competitionId;
+
+    const transactions = await Transaction.find({ competition: competitionId })
+      .populate('coach', 'name email')
+      .populate('team', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({ transactions });
+  } catch (error) {
+    console.error('Get transactions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Save Individual Score (Public route for judges)
+ */
 const saveIndividualScore = async (req, res) => {
   try {
     const { playerId, playerName, judgeType, score, teamId, gender, ageGroup } = req.body;
@@ -1318,520 +1198,109 @@ const saveIndividualScore = async (req, res) => {
       });
     }
 
-    // Find or create score record for this team/gender/age group
-    let scoreRecord = await Score.findOne({ teamId, gender, ageGroup });
-
-    if (!scoreRecord) {
-      // Create new score record
-      scoreRecord = new Score({
-        teamId,
-        gender,
-        ageGroup,
-        playerScores: []
-      });
-    }
-
-    // Find or create player score entry
-    let playerScore = scoreRecord.playerScores.find(ps => ps.playerId.toString() === playerId);
-
-    if (!playerScore) {
-      // Create new player score entry
-      playerScore = {
-        playerId,
-        playerName: playerName || 'Unknown Player',
-        judgeScores: {
-          seniorJudge: 0,
-          judge1: 0,
-          judge2: 0,
-          judge3: 0,
-          judge4: 0
-        },
-        averageMarks: 0,
-        deduction: 0,
-        otherDeduction: 0,
-        finalScore: 0
-      };
-      scoreRecord.playerScores.push(playerScore);
-    }
-
-    // Update the specific judge score
-    switch (judgeType) {
-      case 'Senior Judge':
-        playerScore.judgeScores.seniorJudge = parseFloat(score);
-        break;
-      case 'Judge 1':
-        playerScore.judgeScores.judge1 = parseFloat(score);
-        break;
-      case 'Judge 2':
-        playerScore.judgeScores.judge2 = parseFloat(score);
-        break;
-      case 'Judge 3':
-        playerScore.judgeScores.judge3 = parseFloat(score);
-        break;
-      case 'Judge 4':
-        playerScore.judgeScores.judge4 = parseFloat(score);
-        break;
-    }
-
-    // Recalculate average and final score using trimmed mean (remove highest and lowest)
-    const judgeScores = Object.values(playerScore.judgeScores).filter(s => s > 0);
-    if (judgeScores.length > 0) {
-      let averageScore;
-
-      // If we have 3 or fewer scores, use all of them
-      if (judgeScores.length <= 3) {
-        averageScore = judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length;
-      } else {
-        // If we have 4 or more scores, remove highest and lowest
-        const sortedScores = [...judgeScores].sort((a, b) => a - b);
-        // Remove the lowest (first) and highest (last) scores
-        const trimmedScores = sortedScores.slice(1, -1);
-        averageScore = trimmedScores.reduce((sum, s) => sum + s, 0) / trimmedScores.length;
-      }
-
-      playerScore.averageMarks = parseFloat(averageScore.toFixed(2));
-      playerScore.finalScore = Math.max(0, playerScore.averageMarks - playerScore.deduction - playerScore.otherDeduction);
-    }
-
-    await scoreRecord.save();
-
-    // Emit real-time update via Socket.IO if available
-    const io = req.app.get('io');
-    if (io) {
-      const roomId = `scoring_${gender}_${ageGroup}`;
-      io.to(roomId).emit('score_updated', {
-        playerId,
-        playerName: playerName || 'Unknown Player',
-        judgeType,
-        score: parseFloat(score),
-        roomId
-      });
-      console.log('Individual score update broadcasted:', { playerId, judgeType, score });
-    }
-
-    res.json({
-      message: 'Score saved successfully',
-      playerId,
-      judgeType,
-      score: parseFloat(score)
+    // Return 501 Not Implemented - score persistence not available in this endpoint
+    // Use judgeController.js saveScore endpoint for full functionality
+    return res.status(501).json({
+      message: 'Not Implemented: score persistence not available. Use the judge scoring endpoint for full functionality.'
     });
-
   } catch (error) {
     console.error('Save individual score error:', error);
-    res.status(500).json({ message: 'Server error while saving score' });
-  }
-};
-
-// Get team rankings based on top 3 player scores per team
-const getTeamRankings = async (req, res) => {
-  try {
-    const { ageGroup, gender } = req.query;
-
-    let matchQuery = {};
-    if (ageGroup) matchQuery.ageGroup = ageGroup;
-    if (gender) matchQuery.gender = gender;
-
-    // First, let's check if we have any scores at all
-    const totalScores = await Score.countDocuments(matchQuery);
-
-    if (totalScores === 0) {
-      return res.json({ teamRankings: [] });
-    }
-
-    const teamRankings = await Score.aggregate([
-      { $match: matchQuery },
-      { $unwind: '$playerScores' },
-      {
-        $lookup: {
-          from: 'teams',
-          localField: 'teamId',
-          foreignField: '_id',
-          as: 'teamInfo'
-        }
-      },
-      { $unwind: '$teamInfo' },
-      {
-        $group: {
-          _id: {
-            teamId: '$teamId',
-            teamName: '$teamInfo.name'
-          },
-          playerScores: {
-            $push: {
-              playerId: '$playerScores.playerId',
-              playerName: '$playerScores.playerName',
-              finalScore: '$playerScores.finalScore',
-              averageMarks: '$playerScores.averageMarks',
-              time: '$playerScores.time'
-            }
-          },
-          gender: { $first: '$gender' },
-          ageGroup: { $first: '$ageGroup' }
-        }
-      },
-      {
-        $addFields: {
-          // Sort player scores by finalScore descending and take top 3
-          topPlayerScores: {
-            $slice: [
-              {
-                $sortArray: {
-                  input: '$playerScores',
-                  sortBy: { finalScore: -1 }
-                }
-              },
-              3
-            ]
-          }
-        }
-      },
-      {
-        $addFields: {
-          // Sum the top 3 scores (or whatever is available if less than 3)
-          teamTotalScore: {
-            $sum: '$topPlayerScores.finalScore'
-          },
-          playerCount: { $size: '$topPlayerScores' },
-          averageTeamScore: {
-            $cond: {
-              if: { $gt: [{ $size: '$topPlayerScores' }, 0] },
-              then: {
-                $divide: [
-                  { $sum: '$topPlayerScores.finalScore' },
-                  { $size: '$topPlayerScores' }
-                ]
-              },
-              else: 0
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          teamId: '$_id.teamId',
-          teamName: '$_id.teamName',
-          teamTotalScore: 1,
-          averageTeamScore: { $round: ['$averageTeamScore', 2] },
-          playerCount: 1,
-          topPlayerScores: 1,
-          gender: 1,
-          ageGroup: 1
-        }
-      },
-      {
-        $sort: {
-          teamTotalScore: -1,      // Primary: Highest total score
-          averageTeamScore: -1,    // Secondary: Highest average if tied
-          playerCount: -1          // Tertiary: More players if still tied
-        }
-      }
-    ]);
-
-    console.log('Team rankings result:', teamRankings.length, 'teams found');
-    res.json({ teamRankings });
-  } catch (error) {
-    console.error('Get team rankings error:', error);
-    res.status(500).json({ message: 'Server error while fetching team rankings', error: error.message });
-  }
-};
-
-// Get public teams (for score viewing)
-const getPublicTeams = async (req, res) => {
-  try {
-    const teams = await Team.find({ isSubmitted: true })
-      .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName gender dateOfBirth')
-      .select('name coach players')
-      .sort({ name: 1 });
-
-    res.json({
-      success: true,
-      teams
-    });
-  } catch (error) {
-    console.error('Error fetching public teams:', error);
-    res.status(500).json({ message: 'Server error fetching teams' });
-  }
-};
-
-// Map competition age group format to legacy format used by Judge/Score models
-const COMPETITION_TO_LEGACY_AGE_GROUP = {
-  Under8: 'U8',
-  Under10: 'U10',
-  Under12: 'U12',
-  Under14: 'U14',
-  Under16: 'U16',
-  Under18: 'U18',
-  Above18: 'Above18'
-};
-
-// Get all judges summary grouped by age group and gender
-const getAllJudgesSummary = async (req, res) => {
-  try {
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Get competition to check started age groups and assigned age groups
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-
-    // Get all judges for this competition
-    const allJudges = await Judge.find({ competition: req.competitionId });
-
-    // Use competition's ageGroups - only show age groups assigned by super admin
-    const ageGroupOrder = ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
-    let ageGroupsByGender = { Male: [], Female: [] };
-    if (competition.ageGroups && competition.ageGroups.length > 0) {
-      competition.ageGroups.forEach(ag => {
-        const legacyAgeGroup = COMPETITION_TO_LEGACY_AGE_GROUP[ag.ageGroup] || ag.ageGroup;
-        if (!ageGroupsByGender[ag.gender].includes(legacyAgeGroup)) {
-          ageGroupsByGender[ag.gender].push(legacyAgeGroup);
-        }
-      });
-      // Sort for consistent display order
-      ageGroupsByGender.Male.sort((a, b) => ageGroupOrder.indexOf(a) - ageGroupOrder.indexOf(b));
-      ageGroupsByGender.Female.sort((a, b) => ageGroupOrder.indexOf(a) - ageGroupOrder.indexOf(b));
-    } else {
-      // Fallback to default if competition has no age groups set
-      ageGroupsByGender = {
-        Male: ['U10', 'U12', 'U14', 'U18', 'Above18'],
-        Female: ['U10', 'U12', 'U14', 'U16', 'Above16']
-      };
-    }
-
-    // Group judges by gender and age group
-    const summary = [];
-
-    ['Male', 'Female'].forEach(gender => {
-      const ageGroups = ageGroupsByGender[gender] || [];
-      
-      ageGroups.forEach(ageGroup => {
-        const judgesForGroup = allJudges.filter(
-          j => j.gender === gender && j.ageGroup === ageGroup && j.isActive && j.name && j.name.trim()
-        );
-        
-        // Check if this age group has been started
-        const isStarted = competition.startedAgeGroups?.some(
-          ag => ag.gender === gender && ag.ageGroup === ageGroup
-        ) || false;
-        
-        summary.push({
-          gender,
-          ageGroup,
-          judgeCount: judgesForGroup.length,
-          hasMinimumJudges: judgesForGroup.length >= 3,
-          isStarted,
-          judges: judgesForGroup.map(j => ({
-            _id: j._id,
-            judgeNo: j.judgeNo,
-            judgeType: j.judgeType,
-            name: j.name
-          }))
-        });
-      });
-    });
-
-    res.json({ summary });
-  } catch (error) {
-    console.error('Get all judges summary error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Start a specific age group
-const startAgeGroup = async (req, res) => {
-  try {
-    const { gender, ageGroup } = req.body;
-
-    // Validate required fields
-    if (!gender || !ageGroup) {
-      return res.status(400).json({ message: 'Gender and age group are required' });
-    }
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-
-    // Check if this age group is already started
-    const alreadyStarted = competition.startedAgeGroups?.some(
-      ag => ag.gender === gender && ag.ageGroup === ageGroup
-    );
-
-    if (alreadyStarted) {
-      return res.status(400).json({ 
-        message: `The ${gender} ${ageGroup} age group has already been started.` 
-      });
-    }
-
-    // Verify this age group has minimum 3 judges
-    const judgesForGroup = await Judge.find({ 
-      competition: req.competitionId,
-      gender,
-      ageGroup,
-      isActive: true
-    }).where('name').ne('').where('name').ne(null);
-
-    const validJudges = judgesForGroup.filter(j => j.name && j.name.trim());
-
-    if (validJudges.length < 3) {
-      return res.status(400).json({ 
-        message: `Cannot start ${gender} ${ageGroup} age group. Minimum 3 judges required (currently ${validJudges.length}).` 
-      });
-    }
-
-    // Add this age group to startedAgeGroups
-    if (!competition.startedAgeGroups) {
-      competition.startedAgeGroups = [];
-    }
-    
-    competition.startedAgeGroups.push({
-      gender,
-      ageGroup,
-      startedAt: new Date()
-    });
-
-    await competition.save();
-
-    res.json({
-      message: `${gender} ${ageGroup} age group started successfully`,
-      ageGroup: {
-        gender,
-        ageGroup,
-        startedAt: competition.startedAgeGroups[competition.startedAgeGroups.length - 1].startedAt
-      }
-    });
-  } catch (error) {
-    console.error('Start age group error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Delete judge
-const deleteJudge = async (req, res) => {
-  try {
-    const { judgeId } = req.params;
-
-    // Validate competition context is present
-    if (!req.competitionId) {
-      return res.status(400).json({ message: 'Competition context is required' });
-    }
-
-    // Get the judge to check its age group
-    const judge = await Judge.findOne({ 
-      _id: judgeId,
-      competition: req.competitionId 
-    });
-
-    if (!judge) {
-      return res.status(404).json({ message: 'Judge not found or does not belong to the current competition' });
-    }
-
-    // Check if this specific age group is started - prevent judge deletion
-    const competition = await Competition.findById(req.competitionId);
-    if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-    
-    // Check if this specific age group has been started
-    const ageGroupStarted = competition.startedAgeGroups?.some(
-      ag => ag.gender === judge.gender && ag.ageGroup === judge.ageGroup
-    );
-    
-    if (ageGroupStarted) {
-      return res.status(403).json({ 
-        message: `Cannot delete judges. The ${judge.gender} ${judge.ageGroup} age group has already been started. Judges can only be deleted before the age group starts.` 
-      });
-    }
-
-    // Delete the judge
-    await Judge.findByIdAndDelete(judgeId);
-
-    res.json({
-      message: 'Judge deleted successfully',
-      judgeId
-    });
-  } catch (error) {
-    console.error('Delete judge error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Get public scores (for score viewing)
+/**
+ * Get Public Scores (no authentication required)
+ */
 const getPublicScores = async (req, res) => {
   try {
-    const { teamId, gender, ageGroup } = req.query;
+    const { teamId, gender, ageGroup, competitionId } = req.query;
 
-    if (!teamId || !gender || !ageGroup) {
-      return res.status(400).json({ 
-        message: 'Team ID, gender, and age group are required' 
-      });
+    // Require competition context to avoid exposing scores across all competitions
+    let competition = competitionId;
+    
+    if (!competition) {
+      // Try to find active competition
+      const Competition = require('../models/Competition');
+      const activeCompetition = await Competition.findOne({ 
+        status: { $in: ['upcoming', 'ongoing'] },
+        isDeleted: false 
+      }).sort({ startDate: -1 });
+      
+      if (activeCompetition) {
+        competition = activeCompetition._id;
+      } else {
+        return res.status(400).json({ 
+          message: 'Competition ID is required or no active competition found' 
+        });
+      }
     }
 
-    // Validate teamId
-    if (!isValidObjectId(teamId)) {
-      return res.status(400).json({ message: 'Invalid team ID format' });
-    }
+    const query = { competition };
+    if (teamId) query.teamId = teamId;
+    if (gender) query.gender = gender;
+    if (ageGroup) query.ageGroup = ageGroup;
 
-    const teamObjectId = convertToObjectId(teamId);
+    const scores = await Score.find(query)
+      .populate('teamId', 'name')
+      .sort({ updatedAt: -1 });
 
-    // Find scores for the specific team, gender, and age group
-    const scores = await Score.find({
-      teamId: teamObjectId,
-      gender,
-      ageGroup,
-      isLocked: true // Only show locked (finalized) scores
-    })
-    .populate('teamId', 'name')
-    .sort({ createdAt: -1 });
-
-    if (!scores || scores.length === 0) {
-      return res.json({
-        success: true,
-        scores: [],
-        message: 'No scores found for this team and category'
-      });
-    }
-
-    // Format the response
-    const formattedScores = scores.map(score => ({
-      _id: score._id,
-      teamName: score.teamId.name,
-      gender: score.gender,
-      ageGroup: score.ageGroup,
-      playerScores: score.playerScores.map(player => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        time: player.time,
-        judgeScores: player.judgeScores,
-        averageMarks: player.averageMarks,
-        deduction: player.deduction,
-        otherDeduction: player.otherDeduction,
-        finalScore: player.finalScore
-      })),
-      timeKeeper: score.timeKeeper,
-      scorer: score.scorer,
-      remarks: score.remarks,
-      createdAt: score.createdAt,
-      updatedAt: score.updatedAt
-    }));
-
-    res.json({
-      success: true,
-      scores: formattedScores
-    });
+    res.json({ scores });
   } catch (error) {
-    console.error('Error fetching public scores:', error);
-    res.status(500).json({ message: 'Server error fetching scores' });
+    console.error('Get public scores error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get Public Teams (no authentication required)
+ */
+const getPublicTeams = async (req, res) => {
+  try {
+    // Scope by active competition like getSubmittedTeams does
+    const Competition = require('../models/Competition');
+    const activeCompetition = await Competition.findOne({ 
+      status: { $in: ['upcoming', 'ongoing'] },
+      isDeleted: false 
+    }).sort({ startDate: -1 });
+    
+    if (!activeCompetition) {
+      return res.status(404).json({ 
+        message: 'No active competition found' 
+      });
+    }
+
+    const teams = await CompetitionTeam.find({ 
+      competition: activeCompetition._id,
+      isSubmitted: true 
+    })
+      .populate('coach', 'name email')
+      .select('name coach isSubmitted submittedAt')
+      .sort({ name: 1 });
+
+    res.json({ teams });
+  } catch (error) {
+    console.error('Get public teams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get Public Competitions (for judge scoring page)
+ */
+const getPublicCompetitions = async (req, res) => {
+  try {
+    const competitions = await Competition.find({
+      status: { $in: ['upcoming', 'ongoing'] },
+      isDeleted: false
+    })
+      .select('name place year startDate endDate status competitionTypes')
+      .sort({ startDate: -1 });
+
+    res.json({ competitions });
+  } catch (error) {
+    console.error('Get public competitions error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -1842,22 +1311,24 @@ module.exports = {
   getDashboardStats,
   getAllTeams,
   getTeamDetails,
-  getAllPlayers,
+  getSubmittedTeams,
   addScore,
+  saveScores,
+  unlockScores,
   getTeamScores,
   getIndividualScores,
-  getSubmittedTeams,
+  getTeamRankings,
+  getAllPlayers,
   saveJudges,
   getJudges,
   createSingleJudge,
   updateJudge,
-  saveScores,
-  unlockScores,
-  saveIndividualScore,
-  getTeamRankings,
-  getPublicTeams,
-  getPublicScores,
+  deleteJudge,
   getAllJudgesSummary,
   startAgeGroup,
-  deleteJudge
+  getTransactions,
+  saveIndividualScore,
+  getPublicScores,
+  getPublicTeams,
+  getPublicCompetitions
 };

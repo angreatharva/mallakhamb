@@ -12,7 +12,7 @@ const AdminScoring = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { routePrefix, storagePrefix } = useRouteContext();
-    const { selectedTeam, selectedGender, selectedAgeGroup } = location.state || {};
+    const { selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType } = location.state || {};
 
     // Select appropriate API based on route context
     const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
@@ -30,6 +30,7 @@ const AdminScoring = () => {
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [ageGroupStarted, setAgeGroupStarted] = useState(false);
+    const [competitionType, setCompetitionType] = useState('Competition I');
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -160,7 +161,7 @@ const AdminScoring = () => {
         }
 
         fetchScoringData();
-    }, [selectedTeam, selectedGender, selectedAgeGroup]);
+    }, [selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
 
     // Debug API calls - Remove in production
     useEffect(() => {
@@ -221,17 +222,25 @@ const AdminScoring = () => {
                 team: selectedTeam.name,
                 teamId: selectedTeam._id,
                 gender: selectedGender.value,
-                ageGroup: selectedAgeGroup.value
+                ageGroup: selectedAgeGroup.value,
+                competitionType: selectedCompetitionType?.value
             });
 
-            // Fetch judges for the selected age group and gender
-            const judgesResponse = await api.getJudges({
+            // Fetch judges for the selected age group, gender, and competition type
+            const judgesParams = {
                 gender: selectedGender.value,
                 ageGroup: selectedAgeGroup.value
-            });
+            };
+            
+            // Add competitionTypes parameter if available
+            if (selectedCompetitionType?.value) {
+                judgesParams.competitionTypes = selectedCompetitionType.value;
+            }
+
+            const judgesResponse = await api.getJudges(judgesParams);
 
             const activeJudges = judgesResponse.data.judges
-                .filter(judge => judge.name && judge.name.trim() !== '')
+                .filter(judge => !judge.isEmpty && judge.name && judge.name.trim() !== '')
                 .sort((a, b) => a.judgeNo - b.judgeNo);
 
             setJudges(activeJudges);
@@ -242,7 +251,18 @@ const AdminScoring = () => {
             const ageGroupInfo = summaryResponse.data.summary.find(
                 item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
             );
-            setAgeGroupStarted(ageGroupInfo?.isStarted || false);
+            
+            // Check if the specific competition type is started
+            const compTypeStarted = selectedCompetitionType?.value 
+                ? ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false
+                : ageGroupInfo?.isStarted || false;
+            
+            setAgeGroupStarted(compTypeStarted);
+
+            // Set competition type from the passed value
+            if (selectedCompetitionType?.label) {
+                setCompetitionType(selectedCompetitionType.label);
+            }
 
             // Get players from the selected team for this age group
             const teamPlayers = selectedTeam.players
@@ -364,6 +384,7 @@ const AdminScoring = () => {
             if (existingScore.timeKeeper) setTimeKeeper(existingScore.timeKeeper);
             if (existingScore.scorer) setScorer(existingScore.scorer);
             if (existingScore.remarks) setRemarks(existingScore.remarks);
+            if (existingScore.competitionType) setCompetitionType(existingScore.competitionType);
 
             // Track unmatched players for warnings
             const unmatchedPlayers = [];
@@ -455,29 +476,84 @@ const AdminScoring = () => {
     };
 
     const calculateAverageMarks = (playerScores) => {
-        const judgeScores = [
-            parseFloat(playerScores.seniorJudge) || 0,
+        // Get execution scores (exclude senior judge initially)
+        const executionScores = [
             parseFloat(playerScores.judge1) || 0,
             parseFloat(playerScores.judge2) || 0,
             parseFloat(playerScores.judge3) || 0,
             parseFloat(playerScores.judge4) || 0
         ].filter(score => score > 0);
 
-        if (judgeScores.length === 0) return 0;
+        if (executionScores.length === 0) return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0 };
 
-        // If we have 3 or fewer scores, use all of them
-        if (judgeScores.length <= 3) {
-            return (judgeScores.reduce((sum, score) => sum + score, 0) / judgeScores.length).toFixed(2);
+        // Calculate execution average
+        let executionAverage = 0;
+        if (executionScores.length <= 2) {
+            // Use all scores
+            executionAverage = executionScores.reduce((sum, score) => sum + score, 0) / executionScores.length;
+        } else if (executionScores.length === 3) {
+            // Use middle score
+            const sorted = [...executionScores].sort((a, b) => a - b);
+            executionAverage = sorted[1];
+        } else {
+            // 4 or more: remove highest and lowest, average middle two
+            const sorted = [...executionScores].sort((a, b) => a - b);
+            const trimmed = sorted.slice(1, -1);
+            executionAverage = trimmed.reduce((sum, score) => sum + score, 0) / trimmed.length;
         }
 
-        // If we have 4 or more scores, remove highest and lowest
-        const sortedScores = [...judgeScores].sort((a, b) => a - b);
-        const trimmedScores = sortedScores.slice(1, -1);
-        return (trimmedScores.reduce((sum, score) => sum + score, 0) / trimmedScores.length).toFixed(2);
+        const seniorJudge = parseFloat(playerScores.seniorJudge) || 0;
+
+        // If no senior judge score, use execution average only
+        if (seniorJudge === 0) {
+            return {
+                average: parseFloat(executionAverage.toFixed(2)),
+                baseScoreApplied: false,
+                executionAvg: parseFloat(executionAverage.toFixed(2)),
+                baseScore: 0,
+                tolerance: getTolerance(executionAverage)
+            };
+        }
+
+        // Get tolerance based on execution average
+        const tolerance = getTolerance(executionAverage);
+        const difference = Math.abs(executionAverage - seniorJudge);
+
+        // Check if within tolerance
+        if (difference <= tolerance) {
+            // Use execution average
+            return {
+                average: parseFloat(executionAverage.toFixed(2)),
+                baseScoreApplied: false,
+                executionAvg: parseFloat(executionAverage.toFixed(2)),
+                baseScore: 0,
+                tolerance
+            };
+        } else {
+            // Calculate base score
+            const baseScore = (executionAverage + seniorJudge) / 2;
+            return {
+                average: parseFloat(baseScore.toFixed(2)),
+                baseScoreApplied: true,
+                executionAvg: parseFloat(executionAverage.toFixed(2)),
+                baseScore: parseFloat(baseScore.toFixed(2)),
+                tolerance
+            };
+        }
+    };
+
+    const getTolerance = (score) => {
+        if (score >= 9.00) return 0.10;
+        if (score >= 8.00) return 0.20;
+        if (score >= 7.00) return 0.30;
+        if (score >= 6.00) return 0.40;
+        if (score >= 5.00) return 0.50;
+        return 1.00;
     };
 
     const calculateFinalScore = (playerScores) => {
-        const average = parseFloat(calculateAverageMarks(playerScores));
+        const result = calculateAverageMarks(playerScores);
+        const average = result.average;
         const deduction = parseFloat(playerScores.deduction) || 0;
         const otherDeduction = parseFloat(playerScores.otherDeduction) || 0;
         return Math.max(0, average - deduction - otherDeduction).toFixed(2);
@@ -550,26 +626,34 @@ const AdminScoring = () => {
                 coachEmail: selectedTeam.coach?.email,
                 gender: selectedGender.value,
                 ageGroup: selectedAgeGroup.value,
+                competitionType,
                 timeKeeper,
                 scorer,
                 remarks,
                 isLocked: shouldLock,
-                playerScores: players.map(player => ({
-                    playerId: player.id,
-                    playerName: player.name,
-                    time: scores[player.id].time,
-                    judgeScores: {
-                        seniorJudge: parseFloat(scores[player.id].seniorJudge) || 0,
-                        judge1: parseFloat(scores[player.id].judge1) || 0,
-                        judge2: parseFloat(scores[player.id].judge2) || 0,
-                        judge3: parseFloat(scores[player.id].judge3) || 0,
-                        judge4: parseFloat(scores[player.id].judge4) || 0
-                    },
-                    averageMarks: parseFloat(calculateAverageMarks(scores[player.id])),
-                    deduction: parseFloat(scores[player.id].deduction) || 0,
-                    otherDeduction: parseFloat(scores[player.id].otherDeduction) || 0,
-                    finalScore: parseFloat(calculateFinalScore(scores[player.id]))
-                })),
+                playerScores: players.map(player => {
+                    const result = calculateAverageMarks(scores[player.id]);
+                    return {
+                        playerId: player.id,
+                        playerName: player.name,
+                        time: scores[player.id].time,
+                        judgeScores: {
+                            seniorJudge: parseFloat(scores[player.id].seniorJudge) || 0,
+                            judge1: parseFloat(scores[player.id].judge1) || 0,
+                            judge2: parseFloat(scores[player.id].judge2) || 0,
+                            judge3: parseFloat(scores[player.id].judge3) || 0,
+                            judge4: parseFloat(scores[player.id].judge4) || 0
+                        },
+                        executionAverage: result.executionAvg,
+                        baseScore: result.baseScore,
+                        baseScoreApplied: result.baseScoreApplied,
+                        toleranceUsed: result.tolerance,
+                        averageMarks: result.average,
+                        deduction: parseFloat(scores[player.id].deduction) || 0,
+                        otherDeduction: parseFloat(scores[player.id].otherDeduction) || 0,
+                        finalScore: parseFloat(calculateFinalScore(scores[player.id]))
+                    };
+                }),
                 judgeDetails: judges.map(judge => ({
                     judgeId: judge._id,
                     judgeName: judge.name,
@@ -695,7 +779,7 @@ const AdminScoring = () => {
                             )}
 
                             <a
-                                href="/judge"
+                                href={`/judge?gender=${selectedGender.value}&ageGroup=${selectedAgeGroup.value}&competitionType=${selectedCompetitionType?.value || ''}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
@@ -743,8 +827,11 @@ const AdminScoring = () => {
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
                                 {selectedGender.label} - {selectedAgeGroup.label} Scoring
                             </h2>
-                            <p className="text-gray-600">Team: {selectedTeam.name}</p>
-                            <p className="text-gray-600">Coach: {selectedTeam.coach?.name}</p>
+                            <p className="text-gray-600"><strong>Team:</strong> {selectedTeam.name}</p>
+                            <p className="text-gray-600"><strong>Coach:</strong> {selectedTeam.coach?.name}</p>
+                            {selectedCompetitionType && (
+                                <p className="text-gray-600"><strong>Competition:</strong> {selectedCompetitionType.label}</p>
+                            )}
                             {lastUpdated && (
                                 <p className="text-gray-500 text-sm mt-2">
                                     Last updated: {lastUpdated.toLocaleString()}
@@ -754,6 +841,21 @@ const AdminScoring = () => {
                         <div className="text-right">
                             <p className="text-sm text-gray-500">Players in this category</p>
                             <p className="text-2xl font-bold text-purple-600">{players.length}</p>
+                        </div>
+                    </div>
+
+                    {/* Competition Type Selection - Removed as it's already selected */}
+                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                            Competition Type
+                        </label>
+                        <div className="p-3 bg-white rounded-lg border-2 border-purple-600">
+                            <div className="text-base font-semibold text-purple-900">{competitionType}</div>
+                            <div className="text-xs mt-1 text-gray-600">
+                                {competitionType === 'Competition I' && 'Team: A=4, B=6, C=1'}
+                                {competitionType === 'Competition II' && 'Individual: A=1, B=6, C=2'}
+                                {competitionType === 'Competition III' && 'Apparatus: A=1, B=6, C=2'}
+                            </div>
                         </div>
                     </div>
 
@@ -795,13 +897,18 @@ const AdminScoring = () => {
 
                         {/* Scoring System Info */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <h4 className="font-medium text-blue-900 mb-2">Scoring System</h4>
+                            <h4 className="font-medium text-blue-900 mb-2">Scoring System (Mallakhamb Code of Points)</h4>
                             <p className="text-sm text-blue-800">
-                                <strong>Average Calculation:</strong> When 4+ judges score, the highest and lowest scores are excluded.
-                                With 3 or fewer scores, all scores are used.
+                                <strong>Execution Average:</strong> Calculated from execution judges (J1-J4). With 4 judges, highest and lowest are excluded.
                             </p>
                             <p className="text-sm text-blue-800 mt-1">
-                                <strong>Final Score:</strong> Average Marks - Deduction - Other Deduction
+                                <strong>Base Score Logic:</strong> If difference between Execution Average and Senior Judge exceeds tolerance, Base Score = (Execution Avg + Senior Judge) / 2
+                            </p>
+                            <p className="text-sm text-blue-800 mt-1">
+                                <strong>Tolerance:</strong> 9.0-10.0: ±0.10 | 8.0-8.99: ±0.20 | 7.0-7.99: ±0.30 | 6.0-6.99: ±0.40 | 5.0-5.99: ±0.50 | Below 5.0: ±1.00
+                            </p>
+                            <p className="text-sm text-blue-800 mt-1">
+                                <strong>Final Score:</strong> Average Marks (or Base Score if applied) - Time Deduction - Other Deduction
                             </p>
                         </div>
 

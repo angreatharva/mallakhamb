@@ -195,17 +195,18 @@ function AppContent() {
     );
   }
 
-  // Check if current route is admin route, home page, or public scores
+  // Check if current route is admin route, home page, public scores, or competition selection pages
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
+  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition' || location.pathname === '/player/select-team';
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
       <CompetitionProvider userType={userType}>
         <div className="min-h-screen bg-gray-50">
-          {/* Only show main navbar if not on admin routes, home page, or public scores */}
-          {!isAdminRoute && !isHomePage && !isPublicScores && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
+          {/* Only show main navbar if not on admin routes, home page, public scores, or competition selection pages */}
+          {!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
         <Routes>
           {/* Public Routes */}

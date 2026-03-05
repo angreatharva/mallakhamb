@@ -97,6 +97,11 @@ const competitionSchema = new mongoose.Schema({
       enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'],
       required: true
     },
+    competitionType: {
+      type: String,
+      enum: ['competition_1', 'competition_2', 'competition_3'],
+      required: true
+    },
     startedAt: {
       type: Date,
       default: Date.now
@@ -113,7 +118,7 @@ competitionSchema.index({ year: 1 });
 competitionSchema.index({ admins: 1 });
 competitionSchema.index({ competitionTypes: 1 });
 competitionSchema.index({ 'ageGroups.gender': 1, 'ageGroups.ageGroup': 1 });
-competitionSchema.index({ 'startedAgeGroups.gender': 1, 'startedAgeGroups.ageGroup': 1 });
+competitionSchema.index({ 'startedAgeGroups.gender': 1, 'startedAgeGroups.ageGroup': 1, 'startedAgeGroups.competitionType': 1 });
 
 // Method to add admin to competition
 competitionSchema.methods.addAdmin = function(adminId) {

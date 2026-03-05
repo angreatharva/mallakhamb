@@ -66,7 +66,8 @@ const PlayerSelectTeamContent = () => {
         }
       }
       toast.success('Team selected successfully!');
-      navigate('/player/dashboard');
+      // Use full page redirect to ensure CompetitionContext reloads
+      window.location.href = '/player/dashboard';
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to select team');
     } finally {
@@ -118,6 +119,7 @@ const PlayerSelectTeamContent = () => {
                     onChange={(option) => setValue('team', option)}
                     placeholder={teamsLoading ? 'Loading teams...' : 'Select a team'}
                     loading={teamsLoading}
+                    searchable={true}
                     className="w-full"
                   />
                 </div>
