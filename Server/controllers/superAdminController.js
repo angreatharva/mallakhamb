@@ -5,7 +5,6 @@ const Coach = require('../models/Coach');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
 const Competition = require('../models/Competition');
-const CompetitionTeam = require('../models/CompetitionTeam');
 const { generateToken } = require('../utils/tokenUtils');
 const { recordAdminAssignmentChange } = require('../utils/tokenInvalidation');
 const { 
@@ -303,25 +302,42 @@ const updateCoachStatus = async (req, res) => {
 // Get all teams (Super Admin only - no competition context required)
 const getAllTeamsForSuperAdmin = async (req, res) => {
   try {
-    // Get all competition teams (team registrations in competitions)
-    const competitionTeams = await CompetitionTeam.find()
-      .populate('team', 'name description')
-      .populate('coach', 'name email')
-      .populate('competition', 'name year level place')
+    // Get all competitions with their registered teams
+    const competitions = await Competition.find()
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.coach', 'name email')
+      .select('name year level place registeredTeams')
       .sort({ createdAt: -1 });
 
-    // Transform to include team details at top level for easier frontend use
-    const teams = competitionTeams.map(ct => ({
-      _id: ct.team._id,
-      name: ct.team.name,
-      description: ct.team.description,
-      coach: ct.coach,
-      competition: ct.competition,
-      competitionId: ct.competition._id,
-      competitionTeamId: ct._id,
-      isSubmitted: ct.isSubmitted,
-      paymentStatus: ct.paymentStatus
-    }));
+    // Flatten all registered teams from all competitions
+    const teams = [];
+    competitions.forEach(comp => {
+      comp.registeredTeams.forEach(rt => {
+        // Skip entries with missing team reference
+        if (!rt.team || !rt.team._id) {
+          console.warn(`Skipping registered team with missing team reference in competition ${comp._id}, registeredTeam ${rt._id}`);
+          return;
+        }
+        
+        teams.push({
+          _id: rt.team._id,
+          name: rt.team.name,
+          description: rt.team.description,
+          coach: rt.coach,
+          competition: {
+            _id: comp._id,
+            name: comp.name,
+            year: comp.year,
+            level: comp.level,
+            place: comp.place
+          },
+          competitionId: comp._id,
+          competitionTeamId: rt._id,
+          isSubmitted: rt.isSubmitted,
+          paymentStatus: rt.paymentStatus
+        });
+      });
+    });
 
     res.json({
       success: true,
@@ -920,21 +936,19 @@ const getSuperAdminDashboard = async (req, res) => {
 
     // If competitionId is provided, get competition-specific stats (same as admin dashboard)
     if (competitionId) {
-      const competition = await Competition.findById(competitionId);
+      const competition = await Competition.findById(competitionId)
+        .populate('registeredTeams.team', 'name description')
+        .populate('registeredTeams.coach', 'name email')
+        .populate('registeredTeams.players.player', 'firstName lastName gender dateOfBirth');
+
       if (!competition) {
         return res.status(404).json({ message: 'Competition not found' });
       }
 
       // Get teams with completed payment for this competition
-      const competitionTeams = await CompetitionTeam.find({
-        competition: competitionId,
-        isActive: true,
-        paymentStatus: 'completed'
-      })
-        .populate('team', 'name description')
-        .populate('coach', 'name email')
-        .populate('players.player', 'firstName lastName gender dateOfBirth')
-        .populate('competition', 'name level place');
+      const completedTeams = competition.registeredTeams.filter(
+        rt => rt.isActive && rt.paymentStatus === 'completed'
+      );
 
       let totalTeams = 0;
       let totalParticipants = 0;
@@ -943,8 +957,8 @@ const getSuperAdminDashboard = async (req, res) => {
       let boysTeams = 0;
       let girlsTeams = 0;
 
-      competitionTeams.forEach(ct => {
-        const teamPlayers = ct.players || [];
+      completedTeams.forEach(rt => {
+        const teamPlayers = rt.players || [];
         const boys = teamPlayers.filter(p => p.gender === 'Male').length;
         const girls = teamPlayers.filter(p => p.gender === 'Female').length;
 
@@ -975,11 +989,11 @@ const getSuperAdminDashboard = async (req, res) => {
     }
 
     // No competition selected - get aggregated stats across all competitions
-    const allCompetitionTeams = await CompetitionTeam.find({
-      isActive: true,
-      paymentStatus: 'completed'
+    const allCompetitions = await Competition.find({
+      isActive: true
     })
-      .populate('players.player', 'gender');
+      .populate('registeredTeams.players.player', 'gender')
+      .select('registeredTeams');
 
     let totalTeams = 0;
     let totalParticipants = 0;
@@ -988,17 +1002,23 @@ const getSuperAdminDashboard = async (req, res) => {
     let boysTeams = 0;
     let girlsTeams = 0;
 
-    allCompetitionTeams.forEach(ct => {
-      const teamPlayers = ct.players || [];
-      const boys = teamPlayers.filter(p => p.gender === 'Male').length;
-      const girls = teamPlayers.filter(p => p.gender === 'Female').length;
+    allCompetitions.forEach(comp => {
+      const completedTeams = comp.registeredTeams.filter(
+        rt => rt.isActive && rt.paymentStatus === 'completed'
+      );
 
-      totalParticipants += teamPlayers.length;
-      totalBoys += boys;
-      totalGirls += girls;
-      if (boys > girls) boysTeams++;
-      else if (girls > boys) girlsTeams++;
-      totalTeams += 1;
+      completedTeams.forEach(rt => {
+        const teamPlayers = rt.players || [];
+        const boys = teamPlayers.filter(p => p.player?.gender === 'Male').length;
+        const girls = teamPlayers.filter(p => p.player?.gender === 'Female').length;
+
+        totalParticipants += teamPlayers.length;
+        totalBoys += boys;
+        totalGirls += girls;
+        if (boys > girls) boysTeams++;
+        else if (girls > boys) girlsTeams++;
+        totalTeams += 1;
+      });
     });
 
     const [totalCompetitions, activeCompetitions] = await Promise.all([

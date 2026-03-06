@@ -14,10 +14,6 @@ const transactionSchema = new mongoose.Schema(
       ref: 'Competition',
       required: [true, 'Competition reference is required'],
     },
-    competitionTeam: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'CompetitionTeam',
-    },
     team: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team',

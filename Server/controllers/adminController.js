@@ -5,7 +5,6 @@ const Coach = require('../models/Coach');
 const Score = require('../models/Score');
 const Judge = require('../models/Judge');
 const Competition = require('../models/Competition');
-const CompetitionTeam = require('../models/CompetitionTeam');
 const Transaction = require('../models/Transaction');
 const { generateToken } = require('../utils/tokenUtils');
 const scoringUtils = require('../utils/scoringUtils');
@@ -119,11 +118,14 @@ const getDashboardStats = async (req, res) => {
   try {
     const competitionId = req.competitionId;
 
-    const [totalTeams, totalPlayers, totalJudges] = await Promise.all([
-      CompetitionTeam.countDocuments({ competition: competitionId }),
-      Player.countDocuments({ competition: competitionId }),
-      Judge.countDocuments({ competition: competitionId, isActive: true })
-    ]);
+    const competition = await Competition.findById(competitionId);
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const totalTeams = competition.registeredTeams.length;
+    const totalPlayers = await Player.countDocuments({ competition: competitionId });
+    const totalJudges = await Judge.countDocuments({ competition: competitionId, isActive: true });
 
     res.json({
       stats: {
@@ -145,10 +147,28 @@ const getAllTeams = async (req, res) => {
   try {
     const competitionId = req.competitionId;
 
-    const teams = await CompetitionTeam.find({ competition: competitionId })
-      .populate('coach', 'name email')
-      .populate('players.player', 'firstName lastName gender')
-      .sort({ createdAt: -1 });
+    const competition = await Competition.findById(competitionId)
+      .populate('registeredTeams.coach', 'name email')
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.players.player', 'firstName lastName gender');
+
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Transform to match expected format
+    const teams = competition.registeredTeams.map(rt => ({
+      _id: rt._id,
+      team: rt.team,
+      coach: rt.coach,
+      players: rt.players,
+      isSubmitted: rt.isSubmitted,
+      submittedAt: rt.submittedAt,
+      paymentStatus: rt.paymentStatus,
+      paymentAmount: rt.paymentAmount,
+      isActive: rt.isActive,
+      createdAt: rt.createdAt || competition.createdAt
+    })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({ teams });
   } catch (error) {
@@ -165,13 +185,16 @@ const getTeamDetails = async (req, res) => {
     const { teamId } = req.params;
     const competitionId = req.competitionId;
 
-    const team = await CompetitionTeam.findOne({
-      _id: teamId,
-      competition: competitionId
-    })
-      .populate('coach', 'name email phone')
-      .populate('players.player', 'firstName lastName gender dateOfBirth');
+    const competition = await Competition.findById(competitionId)
+      .populate('registeredTeams.coach', 'name email phone')
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.players.player', 'firstName lastName gender dateOfBirth');
 
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const team = competition.registeredTeams.id(teamId);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
@@ -193,7 +216,6 @@ const getSubmittedTeams = async (req, res) => {
 
     // For public routes without competition ID, try to find an active competition
     if (!competitionId) {
-      const Competition = require('../models/Competition');
       const activeCompetition = await Competition.findOne({ 
         status: { $in: ['upcoming', 'ongoing'] },
         isDeleted: false 
@@ -208,36 +230,41 @@ const getSubmittedTeams = async (req, res) => {
       }
     }
 
-    const teams = await CompetitionTeam.find({
-      competition: competitionId,
-      isSubmitted: true
-    })
-      .populate('team', 'name description')
-      .populate('coach', 'name email')
-      .populate({
-        path: 'players.player',
-        select: 'firstName lastName gender'
-      })
-      .sort({ submittedAt: -1 });
+    const competition = await Competition.findById(competitionId)
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.coach', 'name email')
+      .populate('registeredTeams.players.player', 'firstName lastName gender');
+
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Filter submitted teams
+    const submittedTeams = competition.registeredTeams.filter(rt => rt.isSubmitted);
 
     // Filter teams that have players matching the gender and age group
-    const filteredTeams = teams.map(team => {
-      const matchingPlayers = team.players.filter(p =>
+    const filteredTeams = submittedTeams.map(rt => {
+      const matchingPlayers = rt.players.filter(p =>
         p.player.gender === gender && p.ageGroup === ageGroup
       );
 
       return {
-        ...team.toObject(),
-        name: team.team?.name || 'Unnamed Team',
-        description: team.team?.description,
+        _id: rt._id,
+        name: rt.team?.name || 'Unnamed Team',
+        description: rt.team?.description,
+        coach: rt.coach,
+        team: rt.team,
         players: matchingPlayers.map(p => ({
           player: p.player,
           ageGroup: p.ageGroup,
           gender: p.gender
         })),
-        playerCount: matchingPlayers.length
+        playerCount: matchingPlayers.length,
+        isSubmitted: rt.isSubmitted,
+        submittedAt: rt.submittedAt
       };
-    }).filter(team => team.playerCount > 0);
+    }).filter(team => team.playerCount > 0)
+      .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
     res.json({ teams: filteredTeams });
   } catch (error) {
@@ -930,12 +957,17 @@ const createSingleJudge = async (req, res) => {
     const judgeData = req.body;
     judgeData.competition = req.competitionId;
 
+    // Password will be hashed by the pre-save hook in Judge model
     const judge = new Judge(judgeData);
     await judge.save();
 
+    // Remove password from response
+    const judgeResponse = judge.toObject();
+    delete judgeResponse.password;
+
     res.status(201).json({
       message: 'Judge created successfully',
-      judge
+      judge: judgeResponse
     });
   } catch (error) {
     console.error('Create judge error:', error);
@@ -979,16 +1011,24 @@ const updateJudge = async (req, res) => {
       }
     }
 
-    // Update the judge
-    const updatedJudge = await Judge.findOneAndUpdate(
-      { _id: judgeId, competition: competitionId },
-      updateData,
-      { new: true }
-    );
+    // Update judge fields with whitelist to prevent mass-assignment
+    const allowedFields = ['name', 'username', 'judgeType', 'judgeNo', 'gender', 'ageGroup', 'competitionTypes', 'isActive', 'password', 'mustResetPassword'];
+    allowedFields.forEach(field => {
+      if (updateData.hasOwnProperty(field)) {
+        judge[field] = updateData[field];
+      }
+    });
+
+    // Save will trigger pre-save hook to hash password if it was modified
+    await judge.save();
+
+    // Remove password from response
+    const judgeResponse = judge.toObject();
+    delete judgeResponse.password;
 
     res.json({
       message: 'Judge updated successfully',
-      judge: updatedJudge
+      judge: judgeResponse
     });
   } catch (error) {
     console.error('Update judge error:', error);
@@ -1189,7 +1229,7 @@ const getTransactions = async (req, res) => {
  */
 const saveIndividualScore = async (req, res) => {
   try {
-    const { playerId, playerName, judgeType, score, teamId, gender, ageGroup } = req.body;
+    const { playerId, playerName, judgeType, score, teamId, gender, ageGroup, competitionType, breakdown } = req.body;
 
     // Validate required fields
     if (!playerId || !judgeType || score === undefined || !teamId || !gender || !ageGroup) {
@@ -1198,11 +1238,188 @@ const saveIndividualScore = async (req, res) => {
       });
     }
 
-    // Return 501 Not Implemented - score persistence not available in this endpoint
-    // Use judgeController.js saveScore endpoint for full functionality
-    return res.status(501).json({
-      message: 'Not Implemented: score persistence not available. Use the judge scoring endpoint for full functionality.'
+    console.log('🔍 Saving score:', { playerId, judgeType, score, teamId, gender, ageGroup, competitionType });
+
+    // Convert competition type format from "competition_1" to "Competition I"
+    const competitionTypeMap = {
+      'competition_1': 'Competition I',
+      'competition_2': 'Competition II',
+      'competition_3': 'Competition III'
+    };
+    
+    // Validate competition type
+    if (competitionType && !competitionTypeMap[competitionType]) {
+      console.warn(`Invalid competitionType received: ${competitionType}. Valid types: ${Object.keys(competitionTypeMap).join(', ')}`);
+      return res.status(400).json({ 
+        message: `Invalid competition type: ${competitionType}. Must be one of: ${Object.keys(competitionTypeMap).join(', ')}` 
+      });
+    }
+    
+    const formattedCompetitionType = competitionTypeMap[competitionType] || 'Competition I';
+
+    // Get competition ID - either from request context (authenticated) or find active competition
+    let competitionId = req.competitionId;
+    
+    if (!competitionId) {
+      // Try to find the competition that has this registered team
+      const competition = await Competition.findOne({
+        'registeredTeams._id': teamId,
+        isDeleted: false
+      }).select('_id');
+      
+      if (!competition) {
+        return res.status(404).json({ message: 'Competition not found for this team' });
+      }
+      
+      competitionId = competition._id;
+    }
+
+    console.log('✅ Using competition:', competitionId);
+
+    // Find or create score record for this team/gender/age group/competition
+    let scoreRecord = await Score.findOne({ 
+      teamId, 
+      gender, 
+      ageGroup,
+      competition: competitionId,
+      competitionType: formattedCompetitionType
     });
+
+    if (!scoreRecord) {
+      // Create new score record
+      scoreRecord = new Score({
+        teamId,
+        gender,
+        ageGroup,
+        competition: competitionId,
+        competitionType: formattedCompetitionType,
+        playerScores: []
+      });
+    }
+
+    // Validate playerId
+    if (!playerId || playerId === '') {
+      return res.status(400).json({ message: 'Player ID is required and cannot be empty' });
+    }
+
+    // Find or create player score entry with safe comparison
+    let playerScore = scoreRecord.playerScores.find(ps => 
+      ps.playerId && String(ps.playerId) === String(playerId)
+    );
+
+    if (!playerScore) {
+      // Create new player score entry
+      playerScore = {
+        playerId,
+        playerName: playerName || 'Unknown Player',
+        judgeScores: {
+          seniorJudge: 0,
+          judge1: 0,
+          judge2: 0,
+          judge3: 0,
+          judge4: 0
+        },
+        scoreBreakdown: breakdown || {
+          difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
+          combination: {
+            fullApparatusUtilization: true,
+            rightLeftExecution: true,
+            forwardBackwardFlexibility: true,
+            minimumElementCount: true,
+            total: 1.60
+          },
+          execution: 0,
+          originality: 0
+        },
+        averageMarks: 0,
+        deduction: 0,
+        otherDeduction: 0,
+        finalScore: 0
+      };
+      scoreRecord.playerScores.push(playerScore);
+    } else {
+      // Update breakdown if provided
+      if (breakdown) {
+        playerScore.scoreBreakdown = breakdown;
+      }
+    }
+
+    // Update the specific judge score
+    switch (judgeType) {
+      case 'Senior Judge':
+        playerScore.judgeScores.seniorJudge = parseFloat(score);
+        break;
+      case 'Judge 1':
+        playerScore.judgeScores.judge1 = parseFloat(score);
+        break;
+      case 'Judge 2':
+        playerScore.judgeScores.judge2 = parseFloat(score);
+        break;
+      case 'Judge 3':
+        playerScore.judgeScores.judge3 = parseFloat(score);
+        break;
+      case 'Judge 4':
+        playerScore.judgeScores.judge4 = parseFloat(score);
+        break;
+      default:
+        console.warn(`Invalid judgeType received: ${judgeType} with score ${score}`);
+        return res.status(400).json({ 
+          message: `Invalid judge type: ${judgeType}. Must be one of: Senior Judge, Judge 1, Judge 2, Judge 3, Judge 4` 
+        });
+    }
+
+    // Recalculate using scoring logic
+    const scoringUtils = require('../utils/scoringUtils');
+    const calculationResult = scoringUtils.calculateScore(playerScore.judgeScores);
+    
+    // Update player score with calculation results
+    playerScore.executionAverage = calculationResult.executionAverage;
+    playerScore.baseScore = calculationResult.baseScore;
+    playerScore.baseScoreApplied = calculationResult.baseScoreApplied;
+    playerScore.toleranceUsed = calculationResult.toleranceUsed;
+    playerScore.averageMarks = calculationResult.averageMarks;
+    
+    // Calculate final score with deductions
+    playerScore.finalScore = scoringUtils.calculateFinalScore(
+      playerScore.averageMarks,
+      playerScore.deduction,
+      playerScore.otherDeduction
+    );
+
+    await scoreRecord.save();
+
+    console.log('✅ Score saved successfully:', { playerId, judgeType, score });
+
+    // Emit real-time update via Socket.IO if available
+    const io = req.app.get('io');
+    if (io) {
+      const roomId = `scoring_${gender}_${ageGroup}_${competitionType || 'competition_1'}`;
+      io.to(roomId).emit('score_updated', {
+        playerId,
+        playerName: playerName || 'Unknown Player',
+        judgeType,
+        score: parseFloat(score),
+        breakdown,
+        roomId,
+        competitionId: competitionId,
+        teamId,
+        gender,
+        ageGroup,
+        competitionType: formattedCompetitionType
+      });
+      console.log('📡 Score update broadcasted to room:', roomId);
+    }
+
+    res.json({
+      message: 'Score saved successfully',
+      playerId,
+      judgeType,
+      score: parseFloat(score),
+      averageMarks: playerScore.averageMarks,
+      finalScore: playerScore.finalScore,
+      breakdown: playerScore.scoreBreakdown
+    });
+
   } catch (error) {
     console.error('Save individual score error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1258,11 +1475,13 @@ const getPublicScores = async (req, res) => {
 const getPublicTeams = async (req, res) => {
   try {
     // Scope by active competition like getSubmittedTeams does
-    const Competition = require('../models/Competition');
     const activeCompetition = await Competition.findOne({ 
       status: { $in: ['upcoming', 'ongoing'] },
       isDeleted: false 
-    }).sort({ startDate: -1 });
+    })
+      .populate('registeredTeams.coach', 'name email')
+      .populate('registeredTeams.team', 'name')
+      .sort({ startDate: -1 });
     
     if (!activeCompetition) {
       return res.status(404).json({ 
@@ -1270,13 +1489,16 @@ const getPublicTeams = async (req, res) => {
       });
     }
 
-    const teams = await CompetitionTeam.find({ 
-      competition: activeCompetition._id,
-      isSubmitted: true 
-    })
-      .populate('coach', 'name email')
-      .select('name coach isSubmitted submittedAt')
-      .sort({ name: 1 });
+    const teams = activeCompetition.registeredTeams
+      .filter(rt => rt.isSubmitted)
+      .map(rt => ({
+        _id: rt._id,
+        name: rt.team?.name || 'Unnamed Team',
+        coach: rt.coach,
+        isSubmitted: rt.isSubmitted,
+        submittedAt: rt.submittedAt
+      }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     res.json({ teams });
   } catch (error) {

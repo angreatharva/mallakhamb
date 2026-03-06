@@ -62,9 +62,51 @@ const competitionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'
   }],
-  teams: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'CompetitionTeam'
+  // Embedded teams array - replaces CompetitionTeam model
+  registeredTeams: [{
+    team: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      required: true
+    },
+    coach: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true
+    },
+    players: [{
+      player: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      },
+      ageGroup: {
+        type: String,
+        enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16']
+      },
+      gender: {
+        type: String,
+        enum: ['Male', 'Female']
+      }
+    }],
+    isSubmitted: {
+      type: Boolean,
+      default: false
+    },
+    submittedAt: {
+      type: Date
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending'
+    },
+    paymentAmount: {
+      type: Number
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
   }],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -210,6 +252,64 @@ competitionSchema.statics.getCompetitionTypeLabels = function() {
     'competition_2': 'Competition II - All Round Individual Final',
     'competition_3': 'Competition III - Apparatus Championship'
   };
+};
+
+// Method to find a registered team
+competitionSchema.methods.findRegisteredTeam = function(teamId) {
+  return this.registeredTeams.find(rt => rt.team.toString() === teamId.toString());
+};
+
+// Method to find a registered team by ID
+competitionSchema.methods.findRegisteredTeamById = function(registeredTeamId) {
+  return this.registeredTeams.id(registeredTeamId);
+};
+
+// Method to register a team
+competitionSchema.methods.registerTeam = function(teamId, coachId) {
+  const existing = this.findRegisteredTeam(teamId);
+  if (existing) {
+    return existing;
+  }
+  
+  this.registeredTeams.push({
+    team: teamId,
+    coach: coachId,
+    players: [],
+    isSubmitted: false,
+    paymentStatus: 'pending',
+    isActive: true
+  });
+  
+  return this.registeredTeams[this.registeredTeams.length - 1];
+};
+
+// Method to add player to registered team
+competitionSchema.methods.addPlayerToTeam = function(teamId, playerId, ageGroup, gender) {
+  const registeredTeam = this.findRegisteredTeam(teamId);
+  if (!registeredTeam) {
+    throw new Error('Team not registered for this competition');
+  }
+  
+  const existingPlayer = registeredTeam.players.find(p => p.player && p.player.toString() === playerId.toString());
+  if (existingPlayer) {
+    existingPlayer.ageGroup = ageGroup;
+    existingPlayer.gender = gender;
+  } else {
+    registeredTeam.players.push({ player: playerId, ageGroup, gender });
+  }
+  
+  return registeredTeam;
+};
+
+// Method to remove player from registered team
+competitionSchema.methods.removePlayerFromTeam = function(teamId, playerId) {
+  const registeredTeam = this.findRegisteredTeam(teamId);
+  if (!registeredTeam) {
+    throw new Error('Team not registered for this competition');
+  }
+  
+  registeredTeam.players = registeredTeam.players.filter(p => !p.player || p.player.toString() !== playerId.toString());
+  return registeredTeam;
 };
 
 module.exports = mongoose.model('Competition', competitionSchema);

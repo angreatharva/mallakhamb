@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 
 /**
  * Judge Login
- * Authenticates judge and returns JWT without competition context
+ * Authenticates judge and returns JWT with competition context
  * 
  * @route POST /api/judge/login
  * @access Public
@@ -26,7 +26,7 @@ const loginJudge = async (req, res) => {
     const judge = await Judge.findOne({ 
       username: username.toLowerCase(),
       isActive: true 
-    });
+    }).populate('competition', 'name level place status');
     
     if (!judge) {
       console.log('❌ Judge not found for username:', username);
@@ -42,10 +42,9 @@ const loginJudge = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token WITHOUT competition context
-    // Judge will select competition after login
+    // Generate token WITH competition context
     console.log('✅ Generating token for judge:', judge.username);
-    const token = generateToken(judge._id, 'judge');
+    const token = generateToken(judge._id, 'judge', judge.competition._id);
 
     console.log('✅ Judge login successful:', judge.username);
     res.json({
@@ -57,7 +56,15 @@ const loginJudge = async (req, res) => {
         username: judge.username,
         judgeType: judge.judgeType,
         gender: judge.gender,
-        ageGroup: judge.ageGroup
+        ageGroup: judge.ageGroup,
+        competitionTypes: judge.competitionTypes,
+        competition: {
+          id: judge.competition._id,
+          name: judge.competition.name,
+          level: judge.competition.level,
+          place: judge.competition.place,
+          status: judge.competition.status
+        }
       }
     });
   } catch (error) {

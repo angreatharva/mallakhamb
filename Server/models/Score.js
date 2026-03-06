@@ -48,6 +48,24 @@ const playerScoreSchema = new mongoose.Schema({
       max: 10
     }
   },
+  // Detailed score breakdown
+  scoreBreakdown: {
+    difficulty: {
+      aClass: { type: Number, default: 0 },
+      bClass: { type: Number, default: 0 },
+      cClass: { type: Number, default: 0 },
+      total: { type: Number, default: 0 }
+    },
+    combination: {
+      fullApparatusUtilization: { type: Boolean, default: true },
+      rightLeftExecution: { type: Boolean, default: true },
+      forwardBackwardFlexibility: { type: Boolean, default: true },
+      minimumElementCount: { type: Boolean, default: true },
+      total: { type: Number, default: 1.60 }
+    },
+    execution: { type: Number, default: 0 },
+    originality: { type: Number, default: 0 }
+  },
   executionAverage: {
     type: Number,
     required: true,

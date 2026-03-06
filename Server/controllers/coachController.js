@@ -2,7 +2,6 @@ const Coach = require('../models/Coach');
 const Team = require('../models/Team');
 const Player = require('../models/Player');
 const Competition = require('../models/Competition');
-const CompetitionTeam = require('../models/CompetitionTeam');
 const { generateToken } = require('../utils/tokenUtils');
 const Transaction = require('../models/Transaction');
 
@@ -200,27 +199,48 @@ const getCoachTeams = async (req, res) => {
     const teams = await Team.find({ coach: req.user._id })
       .select('name description isActive');
 
-    // Get competition registrations for each team
-    const teamsWithCompetitions = await Promise.all(
-      teams.map(async (team) => {
-        const registrations = await CompetitionTeam.find({ team: team._id })
-          .populate('competition', 'name level place startDate endDate status')
-          .select('competition isSubmitted paymentStatus players');
+    // Get competition registrations for each team from Competition.registeredTeams
+    const competitions = await Competition.find({
+      'registeredTeams.coach': req.user._id
+    })
+      .select('name level place startDate endDate status registeredTeams')
+      .populate('registeredTeams.team', 'name');
+
+    // Build teams with their competition registrations
+    const teamsWithCompetitions = teams.map(team => {
+      const teamRegistrations = [];
+      
+      competitions.forEach(comp => {
+        const registration = comp.registeredTeams.find(
+          rt => rt.team && rt.team._id.toString() === team._id.toString()
+        );
         
-        return {
-          id: team._id,
-          name: team.name,
-          description: team.description,
-          isActive: team.isActive,
-          competitions: registrations.map(reg => ({
-            competition: reg.competition,
-            isSubmitted: reg.isSubmitted,
-            paymentStatus: reg.paymentStatus,
-            playerCount: reg.players.length
-          }))
-        };
-      })
-    );
+        if (registration) {
+          teamRegistrations.push({
+            competition: {
+              _id: comp._id,
+              name: comp.name,
+              level: comp.level,
+              place: comp.place,
+              startDate: comp.startDate,
+              endDate: comp.endDate,
+              status: comp.status
+            },
+            isSubmitted: registration.isSubmitted,
+            paymentStatus: registration.paymentStatus,
+            playerCount: registration.players.length
+          });
+        }
+      });
+
+      return {
+        id: team._id,
+        name: team.name,
+        description: team.description,
+        isActive: team.isActive,
+        competitions: teamRegistrations
+      };
+    });
 
     res.json({ teams: teamsWithCompetitions });
   } catch (error) {
@@ -273,31 +293,6 @@ const registerTeamForCompetition = async (req, res) => {
       return res.status(404).json({ message: 'Team not found or does not belong to you' });
     }
 
-    // Check if team is already registered for this specific competition using CompetitionTeam
-    const existingRegistration = await CompetitionTeam.findOne({
-      team: teamId,
-      competition: competitionId
-    });
-
-    if (existingRegistration) {
-      // Team is already registered for this competition - just return success
-      // This allows the flow to continue to dashboard
-      await existingRegistration.populate([
-        { path: 'team', select: 'name description' },
-        { path: 'competition', select: 'name level place startDate endDate status' }
-      ]);
-
-      return res.json({
-        message: 'Team is already registered for this competition',
-        competitionTeam: {
-          id: existingRegistration._id,
-          team: existingRegistration.team,
-          competition: existingRegistration.competition,
-          players: existingRegistration.players
-        }
-      });
-    }
-
     // Validate competition exists and is open
     const competition = await Competition.findById(competitionId);
     if (!competition) {
@@ -314,39 +309,64 @@ const registerTeamForCompetition = async (req, res) => {
       });
     }
 
-    // Create competition team registration
-    const competitionTeam = new CompetitionTeam({
-      team: teamId,
-      competition: competitionId,
-      coach: req.user._id,
-      players: [], // Empty initially, coach will add players later
-      isSubmitted: false,
-      paymentStatus: 'pending'
-    });
+    // Check if team is already registered for this competition
+    const existingRegistration = competition.findRegisteredTeam(teamId);
 
-    await competitionTeam.save();
+    if (existingRegistration) {
+      // Team is already registered - populate and return
+      await competition.populate([
+        { path: 'registeredTeams.team', select: 'name description' },
+        { path: 'registeredTeams.coach', select: 'name email' }
+      ]);
 
-    // Add to competition's teams array if not already there
-    if (!competition.teams) {
-      competition.teams = [];
+      const populatedTeam = competition.findRegisteredTeam(teamId);
+
+      return res.json({
+        message: 'Team is already registered for this competition',
+        competitionTeam: {
+          id: populatedTeam._id,
+          team: populatedTeam.team,
+          competition: {
+            _id: competition._id,
+            name: competition.name,
+            level: competition.level,
+            place: competition.place,
+            startDate: competition.startDate,
+            endDate: competition.endDate,
+            status: competition.status
+          },
+          players: populatedTeam.players
+        }
+      });
     }
-    if (!competition.teams.includes(competitionTeam._id)) {
-      competition.teams.push(competitionTeam._id);
-      await competition.save();
-    }
 
-    await competitionTeam.populate([
-      { path: 'team', select: 'name description' },
-      { path: 'competition', select: 'name level place startDate endDate status' }
+    // Register team for competition
+    const registeredTeam = competition.registerTeam(teamId, req.user._id);
+    await competition.save();
+
+    // Populate for response
+    await competition.populate([
+      { path: 'registeredTeams.team', select: 'name description' },
+      { path: 'registeredTeams.coach', select: 'name email' }
     ]);
+
+    const populatedTeam = competition.findRegisteredTeam(teamId);
 
     res.json({
       message: 'Team registered for competition successfully. You can now add players.',
       competitionTeam: {
-        id: competitionTeam._id,
-        team: competitionTeam.team,
-        competition: competitionTeam.competition,
-        players: competitionTeam.players
+        id: populatedTeam._id,
+        team: populatedTeam.team,
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          level: competition.level,
+          place: competition.place,
+          startDate: competition.startDate,
+          endDate: competition.endDate,
+          status: competition.status
+        },
+        players: populatedTeam.players
       }
     });
   } catch (error) {
@@ -440,17 +460,22 @@ const selectCompetitionForTeam = async (req, res) => {
 // Get team dashboard
 const getTeamDashboard = async (req, res) => {
   try {
-    // Find competition team registration for current competition
-    const competitionTeam = await CompetitionTeam.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    })
-      .populate('players.player', 'firstName lastName email dateOfBirth gender')
-      .populate('coach', 'name email')
-      .populate('team', 'name description')
-      .populate('competition', 'name level place startDate endDate status');
+    // Find competition and the coach's registered team
+    const competition = await Competition.findById(req.competitionId)
+      .populate('registeredTeams.coach', 'name email')
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.players.player', 'firstName lastName email dateOfBirth gender');
 
-    if (!competitionTeam) {
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    // Find the coach's team registration in this competition
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach._id.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
       // Return empty state instead of 404 to allow coaches to register teams
       return res.status(200).json({ 
         team: null,
@@ -458,21 +483,37 @@ const getTeamDashboard = async (req, res) => {
       });
     }
 
+    // Check if team reference exists
+    if (!registeredTeam.team) {
+      return res.status(200).json({ 
+        team: null,
+        message: 'Team data is missing. Please contact support.'
+      });
+    }
+
     // Format response to match frontend expectations
     res.json({ 
       team: {
-        _id: competitionTeam.team._id,
-        name: competitionTeam.team.name,
-        description: competitionTeam.team.description,
-        competition: competitionTeam.competition,
-        coach: competitionTeam.coach,
-        isActive: competitionTeam.isActive,
-        isSubmitted: competitionTeam.isSubmitted,
-        paymentStatus: competitionTeam.paymentStatus,
-        players: competitionTeam.players,
-        createdAt: competitionTeam.createdAt,
-        updatedAt: competitionTeam.updatedAt,
-        __v: competitionTeam.__v
+        _id: registeredTeam.team._id,
+        name: registeredTeam.team.name,
+        description: registeredTeam.team.description || '',
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          level: competition.level,
+          place: competition.place,
+          startDate: competition.startDate,
+          endDate: competition.endDate,
+          status: competition.status
+        },
+        coach: registeredTeam.coach,
+        isActive: registeredTeam.isActive,
+        isSubmitted: registeredTeam.isSubmitted,
+        paymentStatus: registeredTeam.paymentStatus,
+        players: registeredTeam.players,
+        createdAt: registeredTeam.createdAt || competition.createdAt,
+        updatedAt: registeredTeam.updatedAt || competition.updatedAt,
+        __v: 0
       }
     });
   } catch (error) {
@@ -490,19 +531,25 @@ const searchPlayers = async (req, res) => {
       return res.json({ players: [] });
     }
 
-    // Find the coach's team for the current competition
-    const competitionTeam = await CompetitionTeam.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    }).populate('team');
+    // Find the coach's registered team for the current competition
+    const competition = await Competition.findById(req.competitionId)
+      .populate('registeredTeams.team');
 
-    if (!competitionTeam) {
+    if (!competition) {
       return res.json({ players: [] });
     }
 
-    // Search only players registered for the same team as the coach's current team
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam || !registeredTeam.team) {
+      return res.json({ players: [] });
+    }
+
+    // Search only players registered for the same team
     const players = await Player.find({
-      team: competitionTeam.team._id,
+      team: registeredTeam.team._id,
       $or: [
         { firstName: { $regex: query, $options: 'i' } },
         { lastName: { $regex: query, $options: 'i' } },
@@ -524,13 +571,18 @@ const addPlayerToAgeGroup = async (req, res) => {
   try {
     const { playerId, ageGroup, gender } = req.body;
 
-    // Find competition team for current competition
-    const competitionTeam = await CompetitionTeam.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    });
+    // Find competition and coach's registered team
+    const competition = await Competition.findById(req.competitionId);
     
-    if (!competitionTeam) {
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
       return res.status(404).json({ message: 'Team not registered for this competition' });
     }
 
@@ -540,8 +592,9 @@ const addPlayerToAgeGroup = async (req, res) => {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Add player to competition team with age group
-    await competitionTeam.addPlayer(playerId, ageGroup, gender);
+    // Add player to team using Competition method
+    competition.addPlayerToTeam(registeredTeam.team, playerId, ageGroup, gender);
+    await competition.save();
 
     res.json({ message: 'Player added to team successfully' });
   } catch (error) {
@@ -555,18 +608,24 @@ const removePlayerFromAgeGroup = async (req, res) => {
   try {
     const { playerId } = req.params;
 
-    // Find competition team for current competition
-    const competitionTeam = await CompetitionTeam.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    });
+    // Find competition and coach's registered team
+    const competition = await Competition.findById(req.competitionId);
     
-    if (!competitionTeam) {
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
       return res.status(404).json({ message: 'Team not registered for this competition' });
     }
 
-    // Remove player from competition team
-    await competitionTeam.removePlayer(playerId);
+    // Remove player from team using Competition method
+    competition.removePlayerFromTeam(registeredTeam.team, playerId);
+    await competition.save();
 
     res.json({ message: 'Player removed from team successfully' });
   } catch (error) {
@@ -578,30 +637,36 @@ const removePlayerFromAgeGroup = async (req, res) => {
 // Submit team for competition
 const submitTeam = async (req, res) => {
   try {
-    // Find competition team for current competition
-    const competitionTeam = await CompetitionTeam.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    }).populate('team', 'name');
+    // Find competition and coach's registered team
+    const competition = await Competition.findById(req.competitionId)
+      .populate('registeredTeams.team', 'name');
     
-    if (!competitionTeam) {
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
       return res.status(404).json({ message: 'Team not registered for this competition' });
     }
 
     // Check if team has players
-    if (!competitionTeam.players || competitionTeam.players.length === 0) {
+    if (!registeredTeam.players || registeredTeam.players.length === 0) {
       return res.status(400).json({ message: 'Cannot submit team without players' });
     }
 
     // Check if team is already submitted
-    if (competitionTeam.isSubmitted) {
+    if (registeredTeam.isSubmitted) {
       return res.status(400).json({ message: 'Team has already been submitted' });
     }
 
     // Calculate payment amount
     const baseAmount = 500; // Base registration fee
     const perPlayerAmount = 100; // Per player fee
-    const totalAmount = baseAmount + (competitionTeam.players.length * perPlayerAmount);
+    const totalAmount = baseAmount + (registeredTeam.players.length * perPlayerAmount);
 
     // Use mongoose session for atomic transaction
     const mongoose = require('mongoose');
@@ -609,27 +674,30 @@ const submitTeam = async (req, res) => {
     
     try {
       await session.withTransaction(async () => {
-        // Update competition team submission status
-        competitionTeam.isSubmitted = true;
-        competitionTeam.submittedAt = new Date();
-        competitionTeam.paymentStatus = 'completed'; // Simulated successful payment
-        competitionTeam.paymentAmount = totalAmount;
+        // Update team submission status
+        registeredTeam.isSubmitted = true;
+        registeredTeam.submittedAt = new Date();
+        registeredTeam.paymentStatus = 'completed'; // Simulated successful payment
+        registeredTeam.paymentAmount = totalAmount;
 
-        await competitionTeam.save({ session });
+        await competition.save({ session });
+
+        // Derive safe teamId for transaction
+        const teamId = registeredTeam.team?._id || registeredTeam.team;
+        const teamName = registeredTeam.team?.name || 'Unknown';
 
         // Record transaction for this competition-specific payment
         await Transaction.create([{
-          competition: competitionTeam.competition,
-          competitionTeam: competitionTeam._id,
-          team: competitionTeam.team?._id || competitionTeam.team,
-          coach: competitionTeam.coach,
+          competition: competition._id,
+          team: teamId,
+          coach: registeredTeam.coach,
           source: 'coach',
           type: 'team_submission',
           amount: totalAmount,
-          paymentStatus: competitionTeam.paymentStatus,
-          description: `Team "${competitionTeam.team?.name || 'Unknown'}" submitted for competition`,
+          paymentStatus: registeredTeam.paymentStatus,
+          description: `Team "${teamName}" submitted for competition`,
           metadata: {
-            playerCount: competitionTeam.players.length,
+            playerCount: registeredTeam.players.length,
           },
         }], { session });
       });
@@ -639,10 +707,10 @@ const submitTeam = async (req, res) => {
       res.json({ 
         message: 'Team submitted successfully',
         submissionDetails: {
-          teamName: competitionTeam.team.name,
-          playerCount: competitionTeam.players.length,
+          teamName: registeredTeam.team.name,
+          playerCount: registeredTeam.players.length,
           paymentAmount: totalAmount,
-          submittedAt: competitionTeam.submittedAt
+          submittedAt: registeredTeam.submittedAt
         }
       });
     } catch (txError) {
@@ -662,15 +730,23 @@ const submitTeam = async (req, res) => {
 // Get team status for current competition
 const getTeamStatus = async (req, res) => {
   try {
-    // Check if coach has a team for the current competition
-    const team = await Team.findOne({ 
-      coach: req.user._id,
-      competition: req.competitionId 
-    })
-      .populate('competition', 'name level place startDate endDate status')
-      .populate('players.player', 'firstName lastName email');
+    // Find competition and check if coach has a registered team
+    const competition = await Competition.findById(req.competitionId)
+      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.players.player', 'firstName lastName email');
 
-    if (!team) {
+    if (!competition) {
+      return res.json({ 
+        hasTeam: false, 
+        team: null 
+      });
+    }
+
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
       return res.json({ 
         hasTeam: false, 
         team: null 
@@ -680,13 +756,21 @@ const getTeamStatus = async (req, res) => {
     res.json({ 
       hasTeam: true, 
       team: {
-        id: team._id,
-        name: team.name,
-        description: team.description,
-        isSubmitted: team.isSubmitted,
-        paymentStatus: team.paymentStatus,
-        playerCount: team.players.length,
-        competition: team.competition
+        id: registeredTeam.team?._id || null,
+        name: registeredTeam.team?.name || '',
+        description: registeredTeam.team?.description || '',
+        isSubmitted: registeredTeam.isSubmitted,
+        paymentStatus: registeredTeam.paymentStatus,
+        playerCount: registeredTeam.players.length,
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          level: competition.level,
+          place: competition.place,
+          startDate: competition.startDate,
+          endDate: competition.endDate,
+          status: competition.status
+        }
       }
     });
   } catch (error) {

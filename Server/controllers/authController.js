@@ -398,64 +398,18 @@ async function getAssignedCompetitions(req, res) {
       }));
     } else if (userType === 'coach') {
       // Coaches: show only competitions where this coach has at least one team registered
-      const CompetitionTeam = require('../models/CompetitionTeam');
-      
-      const coachRegistrations = await CompetitionTeam.find({
-        coach: userId
-      }).select('competition');
-
-      const competitionIds = [
-        ...new Set(
-          coachRegistrations
-            .map((reg) => reg.competition)
-            .filter((id) => !!id)
-            .map((id) => id.toString())
-        ),
-      ];
-
-      if (competitionIds.length > 0) {
-        competitions = await Competition.find({
-          _id: { $in: competitionIds },
-        })
-          .select('name level place status startDate endDate description ageGroups competitionTypes')
-          .sort({ startDate: -1 });
-      } else {
-        competitions = [];
-      }
+      competitions = await Competition.find({
+        'registeredTeams.coach': userId
+      })
+        .select('name level place status startDate endDate description ageGroups competitionTypes')
+        .sort({ startDate: -1 });
     } else if (userType === 'player') {
       // Players: show only competitions where they are registered in a team
-      const Player = require('../models/Player');
-      const CompetitionTeam = require('../models/CompetitionTeam');
-      
-      const player = await Player.findById(userId).select('team');
-      
-      if (player && player.team) {
-        // Find all competition teams that include this player
-        const competitionTeams = await CompetitionTeam.find({
-          'players.player': userId
-        }).select('competition');
-
-        const competitionIds = [
-          ...new Set(
-            competitionTeams
-              .map((ct) => ct.competition)
-              .filter((id) => !!id)
-              .map((id) => id.toString())
-          ),
-        ];
-
-        if (competitionIds.length > 0) {
-          competitions = await Competition.find({
-            _id: { $in: competitionIds },
-          })
-            .select('name level place status startDate endDate description ageGroups competitionTypes')
-            .sort({ startDate: -1 });
-        } else {
-          competitions = [];
-        }
-      } else {
-        competitions = [];
-      }
+      competitions = await Competition.find({
+        'registeredTeams.players.player': userId
+      })
+        .select('name level place status startDate endDate description ageGroups competitionTypes')
+        .sort({ startDate: -1 });
     } else if (userType === 'judge') {
       // Judges see competitions they are assigned to
       // This will be implemented when judge model is updated with competition reference

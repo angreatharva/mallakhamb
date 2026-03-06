@@ -4,43 +4,99 @@
  */
 
 /**
- * Calculate score from judge scores
- * @param {Array} judgeScores - Array of judge score objects
- * @returns {Object} - Calculation result with averageMarks and other details
+ * Calculate score from judge scores using base score and tolerance system
+ * @param {Object} judgeScores - Object with seniorJudge, judge1, judge2, judge3, judge4
+ * @returns {Object} - Calculation result with averageMarks, baseScore, tolerance, etc.
  */
 const calculateScore = (judgeScores) => {
-  if (!judgeScores || judgeScores.length === 0) {
+  if (!judgeScores) {
     return {
-      averageMarks: 0,
-      totalMarks: 0,
-      judgeCount: 0,
-      scores: []
+      executionAverage: 0,
+      baseScore: 0,
+      baseScoreApplied: false,
+      toleranceUsed: 0,
+      averageMarks: 0
     };
   }
 
-  // Extract marks from judge scores
-  const marks = judgeScores.map(js => js.marks || 0);
+  // Extract execution judge scores (judge1-4)
+  const executionScores = [
+    judgeScores.judge1 || 0,
+    judgeScores.judge2 || 0,
+    judgeScores.judge3 || 0,
+    judgeScores.judge4 || 0
+  ].filter(score => score > 0); // Only include scores that have been entered
+
+  // Need at least 2 execution judges for calculation
+  if (executionScores.length < 2) {
+    return {
+      executionAverage: 0,
+      baseScore: 0,
+      baseScoreApplied: false,
+      toleranceUsed: 0,
+      averageMarks: 0
+    };
+  }
+
+  // Sort scores and remove highest and lowest
+  const sortedScores = [...executionScores].sort((a, b) => a - b);
   
-  // Calculate total and average
-  const totalMarks = marks.reduce((sum, mark) => sum + mark, 0);
-  const averageMarks = marks.length > 0 ? totalMarks / marks.length : 0;
+  let middleScores;
+  if (sortedScores.length === 4) {
+    // Remove highest and lowest, keep middle 2
+    middleScores = sortedScores.slice(1, 3);
+  } else if (sortedScores.length === 3) {
+    // Remove highest, keep lowest 2
+    middleScores = sortedScores.slice(0, 2);
+  } else {
+    // Only 2 scores, use both
+    middleScores = sortedScores;
+  }
+
+  // Calculate execution average from middle scores
+  const executionAverage = middleScores.reduce((sum, score) => sum + score, 0) / middleScores.length;
+
+  // Get senior judge score
+  const seniorJudgeScore = judgeScores.seniorJudge || 0;
+
+  // Determine tolerance based on execution average
+  let tolerance;
+  if (executionAverage >= 9.00) tolerance = 0.10;
+  else if (executionAverage >= 8.00) tolerance = 0.20;
+  else if (executionAverage >= 7.00) tolerance = 0.30;
+  else if (executionAverage >= 6.00) tolerance = 0.40;
+  else if (executionAverage >= 5.00) tolerance = 0.50;
+  else tolerance = 1.00;
+
+  // Check if difference exceeds tolerance
+  const difference = Math.abs(executionAverage - seniorJudgeScore);
+  let baseScoreApplied = false;
+  let averageMarks = executionAverage;
+
+  if (seniorJudgeScore > 0 && difference > tolerance) {
+    // Apply base score
+    baseScoreApplied = true;
+    averageMarks = (executionAverage + seniorJudgeScore) / 2;
+  }
 
   return {
-    averageMarks: parseFloat(averageMarks.toFixed(2)),
-    totalMarks: parseFloat(totalMarks.toFixed(2)),
-    judgeCount: marks.length,
-    scores: marks
+    executionAverage: parseFloat(executionAverage.toFixed(2)),
+    baseScore: baseScoreApplied ? parseFloat(averageMarks.toFixed(2)) : 0,
+    baseScoreApplied,
+    toleranceUsed: tolerance,
+    averageMarks: parseFloat(averageMarks.toFixed(2))
   };
 };
 
 /**
  * Calculate final score with deductions
  * @param {Number} averageMarks - Average marks from judges
- * @param {Number} deduction - Deduction amount
- * @returns {Number} - Final score after deduction
+ * @param {Number} deduction - Time deduction amount
+ * @param {Number} otherDeduction - Other deduction amount
+ * @returns {Number} - Final score after deductions
  */
-const calculateFinalScore = (averageMarks, deduction = 0) => {
-  const finalScore = averageMarks - deduction;
+const calculateFinalScore = (averageMarks, deduction = 0, otherDeduction = 0) => {
+  const finalScore = averageMarks - deduction - otherDeduction;
   return parseFloat(Math.max(0, finalScore).toFixed(2)); // Ensure non-negative
 };
 

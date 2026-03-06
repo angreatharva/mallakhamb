@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const judgeSchema = new mongoose.Schema({
   competition: {
@@ -71,6 +72,36 @@ judgeSchema.index({ username: 1, competition: 1 }, {
   unique: true, 
   sparse: true,
   partialFilterExpression: { username: { $ne: '' } }
+});
+
+// Pre-save hook to hash password
+judgeSchema.pre('save', async function(next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  // Don't hash if password is empty
+  if (!this.password || this.password === '') {
+    return next();
+  }
+
+  // Skip hashing if password is already hashed (bcrypt format check)
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$') || this.password.startsWith('$2y$')) {
+    if (this.password.length >= 59 && this.password.length <= 60) {
+      // Already hashed, skip
+      return next();
+    }
+  }
+
+  try {
+    // Generate salt and hash password
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = mongoose.model('Judge', judgeSchema);

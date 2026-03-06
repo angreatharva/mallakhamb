@@ -25,6 +25,8 @@ import AdminTeams from './pages/AdminTeams';
 import ScoringPage from './pages/ScoringPage';
 import AdminScoring from './pages/AdminScoring';
 import JudgeScoring from './pages/JudgeScoring';
+import JudgeLogin from './pages/JudgeLogin';
+import JudgeScoringNew from './pages/JudgeScoringNew';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PublicScores from './pages/PublicScores';
@@ -52,6 +54,7 @@ function AppContent() {
     const path = location.pathname;
     if (path.startsWith('/player')) return 'player';
     if (path.startsWith('/coach')) return 'coach';
+    if (path.startsWith('/judge')) return 'judge';
     if (path.startsWith('/superadmin')) return 'superadmin';
     if (path.startsWith('/admin')) return 'admin';
     return null;
@@ -315,8 +318,25 @@ function AppContent() {
             }
           />
 
-          {/* Judge Scoring Route - Public for testing */}
-          <Route path="/judge" element={<JudgeScoring />} />
+          {/* Judge Routes */}
+          <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
+          <Route path="/judge/login" element={<JudgeLogin />} />
+          <Route 
+            path="/judge/scoring" 
+            element={
+              <ProtectedRoute requiredUserType="judge">
+                <JudgeScoringNew />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/judge/scoring-old" 
+            element={
+              <ProtectedRoute requiredUserType="judge">
+                <JudgeScoring />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Super Admin Routes */}
           <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />

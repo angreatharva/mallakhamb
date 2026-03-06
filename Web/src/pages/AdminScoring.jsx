@@ -42,11 +42,17 @@ const AdminScoring = () => {
         newSocket.on('connect', () => {
             console.log('Connected to server');
             setIsConnected(true);
-            // Join scoring room for this age group and gender
-            if (selectedGender?.value && selectedAgeGroup?.value) {
-                const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}`;
+            // Join scoring room for this age group, gender, and competition type
+            if (selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
+                const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
                 newSocket.emit('join_scoring_room', roomId);
                 console.log('Joined room:', roomId);
+            } else {
+                console.warn('Cannot join scoring room: missing required filter values', {
+                    gender: selectedGender?.value,
+                    ageGroup: selectedAgeGroup?.value,
+                    competitionType: selectedCompetitionType?.value
+                });
             }
         });
 
@@ -63,7 +69,7 @@ const AdminScoring = () => {
         return () => {
             newSocket.disconnect();
         };
-    }, [selectedGender, selectedAgeGroup]);
+    }, [selectedGender, selectedAgeGroup, selectedCompetitionType]);
 
     // Set up score update listener
     useEffect(() => {
@@ -683,11 +689,19 @@ const AdminScoring = () => {
             }
 
             // Emit save event via socket
-            if (socket) {
+            if (socket && selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
+                const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
                 socket.emit('scores_saved', {
                     teamId: selectedTeam._id,
-                    roomId: `scoring_${selectedGender?.value}_${selectedAgeGroup?.value}`,
+                    roomId,
                     isLocked: shouldLock
+                });
+            } else {
+                console.warn('Cannot emit scores_saved: missing required filter values', {
+                    socketConnected: !!socket,
+                    gender: selectedGender?.value,
+                    ageGroup: selectedAgeGroup?.value,
+                    competitionType: selectedCompetitionType?.value
                 });
             }
 
@@ -777,15 +791,6 @@ const AdminScoring = () => {
                                     <span>{isConnected ? 'Live Updates Active' : 'Disconnected'}</span>
                                 </div>
                             )}
-
-                            <a
-                                href={`/judge?gender=${selectedGender.value}&ageGroup=${selectedAgeGroup.value}&competitionType=${selectedCompetitionType?.value || ''}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                            >
-                                Open Judge Panel
-                            </a>
                         </div>
                     </div>
                 </div>
