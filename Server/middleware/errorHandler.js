@@ -160,10 +160,8 @@ const errorHandler = (err, req, res, next) => {
     timestamp: new Date().toISOString()
   };
 
-  // Only include stack trace in development
-  if (process.env.NODE_ENV === 'development' && err.stack) {
-    response.stack = err.stack;
-  }
+  // Never send stack traces to client, even in development
+  // Stack traces are logged server-side only (see console.error above)
 
   res.status(statusCode).json(response);
 };

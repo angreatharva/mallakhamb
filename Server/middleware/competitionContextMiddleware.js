@@ -143,6 +143,30 @@ const validateCompetitionContext = async (req, res, next) => {
       }
     }
 
+    // For coaches, verify they have a team registered in this competition
+    else if (req.userType === 'coach') {
+      const hasAccess = await Competition.exists({
+        _id: competitionId,
+        'registeredTeams.coach': req.user._id,
+        'registeredTeams.isActive': true
+      });
+      
+      if (!hasAccess) {
+        logCompetitionContextFailure(
+          req.user._id,
+          req.userType,
+          competitionId,
+          'Coach not registered in competition',
+          req
+        );
+        return res.status(403).json({
+          error: 'Access Denied',
+          message: 'You do not have a team registered in this competition',
+          competitionId
+        });
+      }
+    }
+
     // For coaches, players, and judges, additional validation will be done at the controller level
     // based on their team/judge assignments to the competition
 

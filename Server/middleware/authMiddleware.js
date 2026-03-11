@@ -12,7 +12,11 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('FATAL: JWT_SECRET environment variable is not set');
+    }
+    const decoded = jwt.verify(token, jwtSecret);
     
     // Check if user exists and is active
     let user = null;

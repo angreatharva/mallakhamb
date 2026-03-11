@@ -8,6 +8,16 @@ const registerPlayer = async (req, res) => {
   try {
     const { firstName, lastName, email, dateOfBirth, password, gender } = req.body;
 
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
     // Check if player already exists
     const existingPlayer = await Player.findOne({ email });
     if (existingPlayer) {

@@ -8,6 +8,7 @@ import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../components/responsive/ResponsiveRankings';
+import { logger } from '../utils/logger';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveScoreFilters } from '../components/responsive/ResponsiveFilters';
 
@@ -145,9 +146,9 @@ const Scores = () => {
         ageGroup: selectedAgeGroup.value
       };
 
-      console.log('Fetching individual scores with params:', params);
+      logger.log('Fetching individual scores with params:', params);
       const response = await api.getIndividualScores(params);
-      console.log('Individual scores response:', response.data);
+      logger.log('Individual scores response:', response.data);
       
       setScores(response.data.individualScores || []);
       
@@ -175,9 +176,9 @@ const Scores = () => {
         ageGroup: selectedAgeGroup.value
       };
 
-      console.log('Fetching team rankings with params:', params);
+      logger.log('Fetching team rankings with params:', params);
       const response = await api.getTeamRankings(params);
-      console.log('Team rankings response:', response.data);
+      logger.log('Team rankings response:', response.data);
       
       setScores(response.data.teamRankings || []);
       

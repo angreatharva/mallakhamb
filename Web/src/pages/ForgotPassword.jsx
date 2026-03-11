@@ -5,6 +5,7 @@ import { ArrowLeft, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
 import { validateEmailFormat } from '../utils/validation';
+import { logger } from '../utils/logger';
 import { 
   ResponsiveForm, 
   ResponsiveFormField, 
@@ -32,7 +33,7 @@ const ForgotPassword = () => {
     toast.loading('Sending reset email...', { id: 'forgot-password' });
 
     try {
-      console.log('🔐 Sending forgot password request for:', data.email);
+      logger.log('🔐 Sending forgot password request for:', data.email);
       
       // Add timeout to handle slow Render cold starts
       const timeoutPromise = new Promise((_, reject) => 
@@ -43,13 +44,13 @@ const ForgotPassword = () => {
       
       const response = await Promise.race([requestPromise, timeoutPromise]);
       
-      console.log('✅ Forgot password response received');
+      logger.log('✅ Forgot password response received');
       
       setMessage('If an account with that email exists, a password reset link has been sent.');
       toast.success('Password reset email sent! Check your inbox.', { id: 'forgot-password' });
       
     } catch (err) {
-      console.error('❌ Forgot password error:', err);
+      logger.error('❌ Forgot password error:', err);
       
       let errorMessage = 'An error occurred. Please try again later.';
       

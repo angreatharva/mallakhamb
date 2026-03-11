@@ -5,6 +5,7 @@ import { Scale, Users, User, Trophy, LogOut, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig';
+import { logger } from '../utils/logger';
 
 const JudgeScoringNew = () => {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ const JudgeScoringNew = () => {
         setSelectedCompetitionType(judge.competitionTypes[0]);
       }
     } catch (error) {
-      console.error('Failed to parse judge data:', error);
+      logger.error('Failed to parse judge data:', error);
       localStorage.removeItem('judge_user');
       toast.error('Invalid session data. Please login again.');
       navigate('/judge/login');
@@ -87,7 +88,7 @@ const JudgeScoringNew = () => {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to server');
+      logger.log('Connected to server');
       
       // Join room if competition type is selected
       if (judgeInfo && selectedCompetitionType) {
@@ -95,7 +96,7 @@ const JudgeScoringNew = () => {
         if (joinedRoomRef.current !== roomId) {
           newSocket.emit('join_scoring_room', roomId);
           joinedRoomRef.current = roomId;
-          console.log('Joined room:', roomId);
+          logger.log('Joined room:', roomId);
         }
       }
     });
@@ -103,11 +104,11 @@ const JudgeScoringNew = () => {
     newSocket.on('disconnect', () => {
       setIsConnected(false);
       joinedRoomRef.current = null;
-      console.log('Disconnected from server');
+      logger.log('Disconnected from server');
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      logger.error('Connection error:', error);
       toast.error('Failed to connect to server');
     });
 
@@ -127,7 +128,7 @@ const JudgeScoringNew = () => {
     if (joinedRoomRef.current !== roomId) {
       socket.emit('join_scoring_room', roomId);
       joinedRoomRef.current = roomId;
-      console.log('Joined room:', roomId);
+      logger.log('Joined room:', roomId);
     }
   }, [socket, judgeInfo, selectedCompetitionType]);
 
@@ -163,7 +164,7 @@ const JudgeScoringNew = () => {
       setSelectedPlayer(null);
       setPlayers([]);
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
       toast.error('Failed to load teams');
       setTeams([]);
     } finally {
@@ -339,7 +340,7 @@ const JudgeScoringNew = () => {
       resetScores();
       
     } catch (error) {
-      console.error('Failed to save score:', error);
+      logger.error('Failed to save score:', error);
       toast.error('Failed to save score. Please try again.');
     }
   };

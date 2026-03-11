@@ -7,14 +7,22 @@ const { Server } = require('socket.io');
 // Load environment variables FIRST
 dotenv.config();
 
+// Validate environment variables before proceeding
+const { validateEnvironment } = require('./utils/validateEnv');
+validateEnvironment();
+
 const connectDB = require('./config/db');
 const setupNgrok = require('./config/ngrok.setup');
 const config = require('./config/server.config');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { logUnauthorizedAccess } = require('./middleware/securityLogger');
+const { startCleanupJobs } = require('./utils/cleanupJobs');
 
 // Connect to database
 connectDB();
+
+// Start cleanup jobs
+startCleanupJobs();
 
 const app = express();
 const server = http.createServer(app);
@@ -108,11 +116,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Security logging middleware - must be before routes
 app.use(logUnauthorizedAccess);
+
+// Health check routes (before other routes for quick access)
+app.use('/api', require('./routes/healthRoutes'));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -124,8 +135,8 @@ app.use('/api/superadmin', require('./routes/superAdminRoutes'));
 app.use('/api/judge', require('./routes/judgeRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
+// Legacy health check endpoint (kept for backward compatibility)
+app.get('/api/health-legacy', (req, res) => {
   res.json({ message: 'Sports Event API is running!', timestamp: new Date().toISOString() });
 });
 

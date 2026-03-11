@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig.js';
-import { jwtDecode } from 'jwt-decode';
+import { getTokenData } from '../utils/tokenUtils.js';
+import { secureStorage } from '../utils/secureStorage.js';
 
 const CompetitionContext = createContext();
 
@@ -22,7 +23,7 @@ export const CompetitionProvider = ({ children, userType }) => {
   // Helper to get token for current user type
   const getToken = useCallback(() => {
     if (!userType) return null;
-    return localStorage.getItem(`${userType}_token`);
+    return secureStorage.getItem(`${userType}_token`);
   }, [userType]);
 
   // Helper to extract competition from token
@@ -30,13 +31,8 @@ export const CompetitionProvider = ({ children, userType }) => {
     const token = getToken();
     if (!token) return null;
     
-    try {
-      const decoded = jwtDecode(token);
-      return decoded.currentCompetition || null;
-    } catch (error) {
-      console.error('Failed to decode token:', error);
-      return null;
-    }
+    const decoded = getTokenData(token);
+    return decoded?.currentCompetition || null;
   }, [getToken]);
 
   // Fetch assigned competitions for the user
@@ -97,6 +93,11 @@ export const CompetitionProvider = ({ children, userType }) => {
       throw new Error('Authentication token not found');
     }
 
+    // Prevent multiple simultaneous switches
+    if (isLoading) {
+      throw new Error('Competition switch already in progress');
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -112,9 +113,9 @@ export const CompetitionProvider = ({ children, userType }) => {
         }
       );
 
-      // Update token in localStorage
+      // Update token in secure storage
       const newToken = response.data.token;
-      localStorage.setItem(`${userType}_token`, newToken);
+      secureStorage.setItem(`${userType}_token`, newToken);
 
       // Update current competition
       const competition = assignedCompetitions.find((c) => c._id === competitionId);
@@ -122,7 +123,8 @@ export const CompetitionProvider = ({ children, userType }) => {
         setCurrentCompetition(competition);
       }
 
-      // Refresh the page to reload all data with new competition context
+      // Small delay for state update before reload
+      await new Promise(resolve => setTimeout(resolve, 100));
       window.location.reload();
     } catch (err) {
       console.error('Failed to switch competition:', err);
@@ -131,7 +133,7 @@ export const CompetitionProvider = ({ children, userType }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [userType, getToken, assignedCompetitions]);
+  }, [userType, getToken, assignedCompetitions, isLoading]);
 
   // Clear competition context (for logout)
   const clearCompetitionContext = useCallback(() => {
@@ -142,12 +144,65 @@ export const CompetitionProvider = ({ children, userType }) => {
 
   // Load competitions on mount and when userType changes
   useEffect(() => {
-    if (userType) {
-      fetchAssignedCompetitions();
-    } else {
-      setIsLoading(false);
-    }
-  }, [userType, fetchAssignedCompetitions]);
+    let isMounted = true;
+    
+    const loadCompetitions = async () => {
+      if (!userType) {
+        setIsLoading(false);
+        return;
+      }
+
+      const token = getToken();
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await axios.get(
+          `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...apiConfig.getHeaders(),
+            },
+          }
+        );
+
+        if (isMounted) {
+          setAssignedCompetitions(response.data.competitions || []);
+
+          const competitionId = getCompetitionFromToken();
+          if (competitionId) {
+            const competition = response.data.competitions.find(
+              (c) => c._id === competitionId
+            );
+            if (competition) {
+              setCurrentCompetition(competition);
+            }
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to fetch assigned competitions:', err);
+          setError(err.response?.data?.message || 'Failed to load competitions');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadCompetitions();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [userType, getToken, getCompetitionFromToken]);
 
   const value = {
     currentCompetition,

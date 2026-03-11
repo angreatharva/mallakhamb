@@ -10,6 +10,16 @@ const registerCoach = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
     // Check if coach already exists
     const existingCoach = await Coach.findOne({ email });
     if (existingCoach) {

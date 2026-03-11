@@ -88,6 +88,16 @@ const createAdmin = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -138,7 +148,18 @@ const updateAdmin = async (req, res) => {
     // Update fields
     if (name) admin.name = name;
     if (email) admin.email = email;
-    if (role) admin.role = role;
+    
+    // Prevent role escalation - only super admin can change roles
+    if (role && role !== admin.role) {
+      // Additional check: prevent self-escalation
+      if (admin._id.toString() === req.user._id.toString()) {
+        return res.status(403).json({ 
+          message: 'Cannot change your own role' 
+        });
+      }
+      admin.role = role;
+    }
+    
     if (typeof isActive !== 'undefined') admin.isActive = isActive;
 
     await admin.save();
@@ -534,7 +555,15 @@ const createCompetition = async (req, res) => {
 // Get All Competitions with search/filter
 const getAllCompetitions = async (req, res) => {
   try {
-    const { search, level, place, startDate, endDate, status } = req.query;
+    const { sanitizeQueryParam } = require('../utils/sanitization');
+    
+    // Sanitize query parameters to prevent NoSQL injection
+    const search = sanitizeQueryParam(req.query.search);
+    const level = sanitizeQueryParam(req.query.level);
+    const place = sanitizeQueryParam(req.query.place);
+    const startDate = sanitizeQueryParam(req.query.startDate);
+    const endDate = sanitizeQueryParam(req.query.endDate);
+    const status = sanitizeQueryParam(req.query.status);
 
     // Build query
     const query = {};

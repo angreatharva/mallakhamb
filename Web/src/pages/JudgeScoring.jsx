@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { Send, User, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { judgeAPI } from '../services/api';
+import { logger } from '../utils/logger';
 
 const JudgeScoring = () => {
   const [searchParams] = useSearchParams();
@@ -83,16 +84,16 @@ const JudgeScoring = () => {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to server');
+      logger.log('Connected to server');
     });
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
-      console.log('Disconnected from server');
+      logger.log('Disconnected from server');
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      logger.error('Connection error:', error);
       toast.error('Failed to connect to server');
     });
 
@@ -120,7 +121,7 @@ const JudgeScoring = () => {
     if (socket && socket.connected && competition && gender && ageGroup && competitionType) {
       const roomId = `scoring_${competition}_${gender}_${ageGroup}_${competitionType}`;
       socket.emit('join_scoring_room', roomId);
-      console.log('Joined room:', roomId);
+      logger.log('Joined room:', roomId);
     }
   }, [socket, selectedCompetition, selectedGender, selectedAgeGroup, selectedCompetitionType, hasPreselectedFilters, urlGender, urlAgeGroup, urlCompetitionType]);
 
@@ -128,7 +129,7 @@ const JudgeScoring = () => {
   useEffect(() => {
     if (hasPreselectedFilters || (selectedCompetition && selectedGender && selectedAgeGroup && selectedCompetitionType)) {
       fetchJudges().catch(error => {
-        console.error('Error in fetchJudges useEffect:', error);
+        logger.error('Error in fetchJudges useEffect:', error);
       });
     }
   }, [selectedCompetition, selectedGender, selectedAgeGroup, selectedCompetitionType, hasPreselectedFilters]);
@@ -137,7 +138,7 @@ const JudgeScoring = () => {
   useEffect(() => {
     if (hasPreselectedFilters || (selectedCompetition && selectedGender && selectedAgeGroup && selectedCompetitionType)) {
       fetchTeams().catch(error => {
-        console.error('Error in fetchTeams useEffect:', error);
+        logger.error('Error in fetchTeams useEffect:', error);
       });
     }
   }, [selectedCompetition, selectedGender, selectedAgeGroup, selectedCompetitionType, hasPreselectedFilters]);
@@ -155,7 +156,7 @@ const JudgeScoring = () => {
       const response = await judgeAPI.getCompetitions();
       setCompetitions(response.data.competitions || []);
     } catch (error) {
-      console.error('Error fetching competitions:', error);
+      logger.error('Error fetching competitions:', error);
       toast.error('Failed to load competitions');
       setCompetitions([]);
     } finally {
@@ -189,7 +190,7 @@ const JudgeScoring = () => {
       // Reset judge selection
       setSelectedJudge('');
     } catch (error) {
-      console.error('Error fetching judges:', error);
+      logger.error('Error fetching judges:', error);
       setJudges([]);
       // Reset judge selection
       setSelectedJudge('');
@@ -221,7 +222,7 @@ const JudgeScoring = () => {
       setSelectedPlayer('');
       setPlayers([]);
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
       setTeams([]);
       // Reset team and player selection
       setSelectedTeam('');
@@ -255,7 +256,7 @@ const JudgeScoring = () => {
         setSelectedPlayer('');
       }
     } catch (error) {
-      console.error('Error processing players:', error);
+      logger.error('Error processing players:', error);
       toast.error('Failed to load players');
       setPlayers([]);
     }
@@ -317,7 +318,7 @@ const JudgeScoring = () => {
           roomId: `scoring_${competition}_${gender}_${ageGroup}_${competitionType}`
         };
 
-        console.log('Sending score update:', updateData);
+        logger.log('Sending score update:', updateData);
         socket.emit('score_update', updateData);
       }
 
@@ -328,7 +329,7 @@ const JudgeScoring = () => {
 
       setScore('');
     } catch (error) {
-      console.error('Failed to save score to database:', error);
+      logger.error('Failed to save score to database:', error);
       toast.error('Failed to save score. Please try again.');
     }
   };

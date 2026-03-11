@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
 import { useResponsive } from '../hooks/useResponsive';
+import { secureStorage } from '../utils/secureStorage';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
@@ -31,8 +32,8 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   // Show loading spinner while auth is being determined
   if (user === null && userType === null) {
     // Check if there's stored auth data for this user type using detected storage prefix
-    const token = localStorage.getItem(`${storagePrefix}_token`);
-    const userData = localStorage.getItem(`${storagePrefix}_user`);
+    const token = secureStorage.getItem(`${storagePrefix}_token`);
+    const userData = secureStorage.getItem(`${storagePrefix}_user`);
     
     if (token && userData) {
       // Auth data exists but context hasn't loaded yet, show responsive loading

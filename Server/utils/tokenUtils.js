@@ -39,9 +39,14 @@ function generateToken(userId, userType, currentCompetition = null) {
     payload.currentCompetition = currentCompetition;
   }
 
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is not set');
+  }
+
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET || 'fallback-secret',
+    jwtSecret,
     { expiresIn: '7d' }
   );
 }

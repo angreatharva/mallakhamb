@@ -197,6 +197,16 @@ async function resetPassword(req, res) {
       });
     }
 
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
     // Hash the provided token with SHA-256
     const hashedToken = hashToken(token);
 

@@ -17,6 +17,16 @@ const registerAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -211,7 +221,13 @@ const getTeamDetails = async (req, res) => {
  */
 const getSubmittedTeams = async (req, res) => {
   try {
-    const { gender, ageGroup, competitionType } = req.query;
+    const { sanitizeQueryParam } = require('../utils/sanitization');
+    
+    // Sanitize query parameters to prevent NoSQL injection
+    const gender = sanitizeQueryParam(req.query.gender);
+    const ageGroup = sanitizeQueryParam(req.query.ageGroup);
+    const competitionType = sanitizeQueryParam(req.query.competitionType);
+    
     let competitionId = req.competitionId;
 
     // For public routes without competition ID, try to find an active competition
@@ -906,15 +922,21 @@ const getJudges = async (req, res) => {
     }
 
     // For admin routes, create all 5 judge slots (1-5)
-    const judgeTypes = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-    const allJudgeSlots = [];
-
-    for (let i = 1; i <= 5; i++) {
-      const existingJudge = judges.find(j => j.judgeNo === i);
+    // Use cached template for better performance
+    const JUDGE_SLOTS_TEMPLATE = [
+      { judgeNo: 1, judgeType: 'Senior Judge', isEmpty: true },
+      { judgeNo: 2, judgeType: 'Judge 1', isEmpty: true },
+      { judgeNo: 3, judgeType: 'Judge 2', isEmpty: true },
+      { judgeNo: 4, judgeType: 'Judge 3', isEmpty: true },
+      { judgeNo: 5, judgeType: 'Judge 4', isEmpty: true }
+    ];
+    
+    const allJudgeSlots = JUDGE_SLOTS_TEMPLATE.map(slot => {
+      const existingJudge = judges.find(j => j.judgeNo === slot.judgeNo);
       
       if (existingJudge) {
         // Judge exists, return the actual judge data
-        allJudgeSlots.push({
+        return {
           _id: existingJudge._id,
           judgeNo: existingJudge.judgeNo,
           judgeType: existingJudge.judgeType,
@@ -925,21 +947,21 @@ const getJudges = async (req, res) => {
           competitionTypes: existingJudge.competitionTypes,
           isActive: existingJudge.isActive,
           isEmpty: false
-        });
+        };
       } else {
         // Judge doesn't exist, create empty slot placeholder
-        allJudgeSlots.push({
-          judgeNo: i,
-          judgeType: judgeTypes[i - 1],
+        return {
+          judgeNo: slot.judgeNo,
+          judgeType: slot.judgeType,
           name: '',
           username: '',
           gender: gender || '',
           ageGroup: ageGroup || '',
           competitionTypes: competitionType ? [competitionType] : (competitionTypes ? (Array.isArray(competitionTypes) ? competitionTypes : competitionTypes.split(',')) : []),
           isEmpty: true
-        });
+        };
       }
-    }
+    });
 
     console.log('=== END DEBUG ===');
     res.json({ judges: allJudgeSlots });
@@ -1238,6 +1260,16 @@ const saveIndividualScore = async (req, res) => {
       });
     }
 
+    // Validate score range
+    const { validateScore } = require('../utils/scoreValidation');
+    try {
+      const validatedScore = validateScore(score);
+      // Use validatedScore instead of raw score
+      req.body.score = validatedScore;
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
     console.log('🔍 Saving score:', { playerId, judgeType, score, teamId, gender, ageGroup, competitionType });
 
     // Convert competition type format from "competition_1" to "Competition I"
@@ -1431,7 +1463,8 @@ const saveIndividualScore = async (req, res) => {
  */
 const getPublicScores = async (req, res) => {
   try {
-    const { teamId, gender, ageGroup, competitionId } = req.query;
+    const { teamId, gender, ageGroup, competitionId, page, limit } = req.query;
+    const { paginate, getPaginationMeta } = require('../utils/pagination');
 
     // Require competition context to avoid exposing scores across all competitions
     let competition = competitionId;
@@ -1458,11 +1491,18 @@ const getPublicScores = async (req, res) => {
     if (gender) query.gender = gender;
     if (ageGroup) query.ageGroup = ageGroup;
 
-    const scores = await Score.find(query)
+    // Get total count for pagination
+    const total = await Score.countDocuments(query);
+
+    // Apply pagination
+    const scoresQuery = Score.find(query)
       .populate('teamId', 'name')
       .sort({ updatedAt: -1 });
+    
+    const scores = await paginate(scoresQuery, page, limit);
+    const pagination = getPaginationMeta(total, page, limit);
 
-    res.json({ scores });
+    res.json({ scores, pagination });
   } catch (error) {
     console.error('Get public scores error:', error);
     res.status(500).json({ message: 'Server error' });

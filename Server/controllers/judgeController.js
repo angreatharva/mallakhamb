@@ -316,6 +316,16 @@ const saveIndividualScore = async (req, res) => {
       });
     }
 
+    // Validate score range
+    const { validateScore } = require('../utils/scoreValidation');
+    try {
+      const validatedScore = validateScore(score);
+      // Use validatedScore instead of raw score
+      req.body.score = validatedScore;
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
     // Get judge details
     const judge = await Judge.findById(judgeId);
     if (!judge) {

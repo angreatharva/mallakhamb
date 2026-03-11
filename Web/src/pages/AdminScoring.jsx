@@ -7,6 +7,7 @@ import { adminAPI, superAdminAPI } from '../services/api';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { useRouteContext } from '../contexts/RouteContext';
+import { logger } from '../utils/logger';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -40,15 +41,15 @@ const AdminScoring = () => {
         setSocket(newSocket);
 
         newSocket.on('connect', () => {
-            console.log('Connected to server');
+            logger.log('Connected to server');
             setIsConnected(true);
             // Join scoring room for this age group, gender, and competition type
             if (selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
                 const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
                 newSocket.emit('join_scoring_room', roomId);
-                console.log('Joined room:', roomId);
+                logger.log('Joined room:', roomId);
             } else {
-                console.warn('Cannot join scoring room: missing required filter values', {
+                logger.warn('Cannot join scoring room: missing required filter values', {
                     gender: selectedGender?.value,
                     ageGroup: selectedAgeGroup?.value,
                     competitionType: selectedCompetitionType?.value
@@ -57,12 +58,12 @@ const AdminScoring = () => {
         });
 
         newSocket.on('disconnect', () => {
-            console.log('Disconnected from server');
+            logger.log('Disconnected from server');
             setIsConnected(false);
         });
 
         newSocket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
+            logger.error('Connection error:', error);
             setIsConnected(false);
         });
 
@@ -76,7 +77,7 @@ const AdminScoring = () => {
         if (!socket) return;
 
         const handleScoreUpdate = (data) => {
-            console.log('Received real-time score update:', data);
+            logger.log('Received real-time score update:', data);
 
             // Don't update if scores are locked
             if (isLocked) {
@@ -88,7 +89,7 @@ const AdminScoring = () => {
             const playerExists = players.some(p => p.id === data.playerId);
 
             if (!playerExists) {
-                console.warn('Player not found in current players list:', data.playerId);
+                logger.warn('Player not found in current players list:', data.playerId);
                 return;
             }
 
@@ -134,7 +135,7 @@ const AdminScoring = () => {
 
         // Listen for scores saved notifications
         const handleScoresSaved = (data) => {
-            console.log('Received scores saved notification:', data);
+            logger.log('Received scores saved notification:', data);
             
             // If this is for the current team/category, refresh the data
             if (data.teamId === selectedTeam._id && 
@@ -175,10 +176,10 @@ const AdminScoring = () => {
             if (!selectedTeam || !selectedGender || !selectedAgeGroup) return;
 
             try {
-                console.log('=== DEBUG API CALLS ===');
-                console.log('Team:', selectedTeam.name, 'ID:', selectedTeam._id);
-                console.log('Gender:', selectedGender.value);
-                console.log('Age Group:', selectedAgeGroup.value);
+                logger.log('=== DEBUG API CALLS ===');
+                logger.log('Team:', selectedTeam.name, 'ID:', selectedTeam._id);
+                logger.log('Gender:', selectedGender.value);
+                logger.log('Age Group:', selectedAgeGroup.value);
 
                 // Test all possible API calls
                 const tests = [
@@ -191,12 +192,12 @@ const AdminScoring = () => {
                 for (const test of tests) {
                     try {
                         const response = await api.getTeamScores(test.params);
-                        console.log(`${test.name}:`, response.data);
+                        logger.log(`${test.name}:`, response.data);
 
                         if (response.data?.scores?.length > 0) {
-                            console.log(`${test.name} - Found ${response.data.scores.length} scores`);
+                            logger.log(`${test.name} - Found ${response.data.scores.length} scores`);
                             response.data.scores.forEach((score, index) => {
-                                console.log(`  Score ${index + 1}:`, {
+                                logger.log(`  Score ${index + 1}:`, {
                                     id: score._id,
                                     teamId: score.teamId,
                                     gender: score.gender,
@@ -207,12 +208,12 @@ const AdminScoring = () => {
                             });
                         }
                     } catch (error) {
-                        console.log(`${test.name} - Error:`, error.message);
+                        logger.log(`${test.name} - Error:`, error.message);
                     }
                 }
-                console.log('=== END DEBUG ===');
+                logger.log('=== END DEBUG ===');
             } catch (error) {
-                console.error('Debug API calls failed:', error);
+                logger.error('Debug API calls failed:', error);
             }
         };
 
@@ -224,7 +225,7 @@ const AdminScoring = () => {
     const fetchScoringData = async () => {
         try {
             setLoading(true);
-            console.log('Fetching scoring data for:', {
+            logger.log('Fetching scoring data for:', {
                 team: selectedTeam.name,
                 teamId: selectedTeam._id,
                 gender: selectedGender.value,
@@ -250,7 +251,7 @@ const AdminScoring = () => {
                 .sort((a, b) => a.judgeNo - b.judgeNo);
 
             setJudges(activeJudges);
-            console.log('Loaded judges:', activeJudges);
+            logger.log('Loaded judges:', activeJudges);
 
             // Check if age group is started
             const summaryResponse = await api.getAllJudgesSummary();
@@ -286,7 +287,7 @@ const AdminScoring = () => {
                 }));
 
             setPlayers(teamPlayers);
-            console.log('Loaded players:', teamPlayers);
+            logger.log('Loaded players:', teamPlayers);
 
             // Initialize scores object
             const initialScores = {};
@@ -304,13 +305,13 @@ const AdminScoring = () => {
             });
 
             setScores(initialScores);
-            console.log('Initialized scores:', initialScores);
+            logger.log('Initialized scores:', initialScores);
 
             // Try to load existing scores from database
             await loadExistingScores(selectedTeam._id, selectedGender.value, selectedAgeGroup.value, initialScores, teamPlayers);
 
         } catch (error) {
-            console.error('Error fetching scoring data:', error);
+            logger.error('Error fetching scoring data:', error);
             toast.error('Failed to load scoring data');
         } finally {
             setLoading(false);
@@ -319,9 +320,9 @@ const AdminScoring = () => {
 
     const loadExistingScores = async (teamId, gender, ageGroup, initialScores, currentPlayers) => {
         try {
-            console.log('🔍 LOADING EXISTING SCORES');
-            console.log('Target:', { teamId, gender, ageGroup });
-            console.log('Current players:', currentPlayers.map(p => ({ id: p.id, name: p.name })));
+            logger.log('🔍 LOADING EXISTING SCORES');
+            logger.log('Target:', { teamId, gender, ageGroup });
+            logger.log('Current players:', currentPlayers.map(p => ({ id: p.id, name: p.name })));
 
             // Fetch scores from API with specific filters
             let allResponse;
@@ -331,9 +332,9 @@ const AdminScoring = () => {
                     gender: gender,
                     ageGroup: ageGroup
                 });
-                console.log('📊 Raw API response:', allResponse.data);
+                logger.log('📊 Raw API response:', allResponse.data);
             } catch (apiError) {
-                console.error('❌ API call failed:', apiError);
+                logger.error('❌ API call failed:', apiError);
                 toast.error('API call failed - starting fresh session');
                 setScores(initialScores);
                 return;
@@ -341,7 +342,7 @@ const AdminScoring = () => {
 
             // Validate response structure
             if (!allResponse || !allResponse.data) {
-                console.error('❌ Invalid API response structure:', allResponse);
+                logger.error('❌ Invalid API response structure:', allResponse);
                 toast.error('Invalid data format - starting fresh session');
                 setScores(initialScores);
                 return;
@@ -355,11 +356,11 @@ const AdminScoring = () => {
                 matchingScores = allResponse.data.teamScores;
             }
 
-            console.log(`📋 Matching scores found: ${matchingScores.length}`);
+            logger.log(`📋 Matching scores found: ${matchingScores.length}`);
 
             // No scores found scenario
             if (matchingScores.length === 0) {
-                console.log('ℹ️ No scores found for this team/category');
+                logger.log('ℹ️ No scores found for this team/category');
                 toast.info('Starting fresh session');
                 setScores(initialScores);
                 return;
@@ -367,11 +368,11 @@ const AdminScoring = () => {
 
             // Use the most recent score (first one)
             const existingScore = matchingScores[0];
-            console.log('🎯 Using existing score:', existingScore);
+            logger.log('🎯 Using existing score:', existingScore);
 
             // Validate score data structure
             if (!existingScore.playerScores || !Array.isArray(existingScore.playerScores)) {
-                console.error('❌ Invalid score data format - missing or invalid playerScores:', existingScore);
+                logger.error('❌ Invalid score data format - missing or invalid playerScores:', existingScore);
                 toast.error('Invalid data format - starting fresh session');
                 setScores(initialScores);
                 return;
@@ -384,7 +385,7 @@ const AdminScoring = () => {
             setIsLocked(lockState);
             setExistingScoreId(existingScore._id);
 
-            console.log(`🔒 Lock state: ${lockState ? 'LOCKED' : 'UNLOCKED'}`);
+            logger.log(`🔒 Lock state: ${lockState ? 'LOCKED' : 'UNLOCKED'}`);
 
             // Load team details
             if (existingScore.timeKeeper) setTimeKeeper(existingScore.timeKeeper);
@@ -397,20 +398,20 @@ const AdminScoring = () => {
 
             // Map database scores to UI state with improved player matching
             existingScore.playerScores.forEach(playerScore => {
-                console.log('👤 Processing player:', playerScore.playerName, playerScore.playerId);
+                logger.log('👤 Processing player:', playerScore.playerName, playerScore.playerId);
 
                 let targetPlayerId = null;
 
                 // Step 1: Try to match by playerId first (primary matching)
                 if (playerScore.playerId && existingScores[playerScore.playerId]) {
                     targetPlayerId = playerScore.playerId;
-                    console.log(`✅ Matched by playerId: ${playerScore.playerName} (${targetPlayerId})`);
+                    logger.log(`✅ Matched by playerId: ${playerScore.playerName} (${targetPlayerId})`);
                 } else {
                     // Step 2: Fallback to matching by playerName
                     const matchingPlayer = currentPlayers.find(p => p.name === playerScore.playerName);
                     if (matchingPlayer) {
                         targetPlayerId = matchingPlayer.id;
-                        console.log(`🔄 Matched by name: ${playerScore.playerName} (${playerScore.playerId} → ${targetPlayerId})`);
+                        logger.log(`🔄 Matched by name: ${playerScore.playerName} (${playerScore.playerId} → ${targetPlayerId})`);
                     }
                 }
 
@@ -426,25 +427,25 @@ const AdminScoring = () => {
                         deduction: playerScore.deduction?.toString() || '',
                         otherDeduction: playerScore.otherDeduction?.toString() || ''
                     };
-                    console.log(`✅ Loaded scores for ${playerScore.playerName}:`, existingScores[targetPlayerId]);
+                    logger.log(`✅ Loaded scores for ${playerScore.playerName}:`, existingScores[targetPlayerId]);
                 } else {
                     // Track unmatched players
                     unmatchedPlayers.push(playerScore.playerName);
-                    console.warn(`⚠️ Could not match player ${playerScore.playerName} (${playerScore.playerId})`);
+                    logger.warn(`⚠️ Could not match player ${playerScore.playerName} (${playerScore.playerId})`);
                 }
             });
 
             // Log warnings for unmatched players
             if (unmatchedPlayers.length > 0) {
-                console.warn('⚠️ Unmatched players:', unmatchedPlayers);
-                console.warn('Available players:', currentPlayers.map(p => `${p.name} (${p.id})`));
+                logger.warn('⚠️ Unmatched players:', unmatchedPlayers);
+                logger.warn('Available players:', currentPlayers.map(p => `${p.name} (${p.id})`));
                 toast.warning(`Player matching failed for: ${unmatchedPlayers.join(', ')}`);
             }
 
             setScores(existingScores);
             setLastUpdated(new Date(existingScore.updatedAt || existingScore.createdAt));
 
-            console.log('🎉 FINAL LOADED STATE:', existingScores);
+            logger.log('🎉 FINAL LOADED STATE:', existingScores);
 
             // Display appropriate user feedback based on lock state
             if (lockState) {
@@ -455,8 +456,8 @@ const AdminScoring = () => {
 
         } catch (error) {
             // Comprehensive error handling with detailed logging
-            console.error('❌ Error loading existing scores:', error);
-            console.error('Error details:', {
+            logger.error('❌ Error loading existing scores:', error);
+            logger.error('Error details:', {
                 message: error.message,
                 stack: error.stack,
                 name: error.name
@@ -697,7 +698,7 @@ const AdminScoring = () => {
                     isLocked: shouldLock
                 });
             } else {
-                console.warn('Cannot emit scores_saved: missing required filter values', {
+                logger.warn('Cannot emit scores_saved: missing required filter values', {
                     socketConnected: !!socket,
                     gender: selectedGender?.value,
                     ageGroup: selectedAgeGroup?.value,
@@ -706,7 +707,7 @@ const AdminScoring = () => {
             }
 
         } catch (error) {
-            console.error('Error saving scores:', error);
+            logger.error('Error saving scores:', error);
             toast.error('Failed to save scores');
         }
     };
@@ -726,7 +727,7 @@ const AdminScoring = () => {
             setIsLocked(false);
             toast.success('Scores unlocked for editing');
         } catch (error) {
-            console.error('Error unlocking scores:', error);
+            logger.error('Error unlocking scores:', error);
             toast.error('Failed to unlock scores');
         }
     };

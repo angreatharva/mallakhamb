@@ -7,6 +7,7 @@ import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
+import { logger } from '../utils/logger';
 
 const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   const location = useLocation();
@@ -37,12 +38,12 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('Connected to server');
+      logger.log('Connected to server');
       // Join scoring room for this age group and gender
       if (selectedGender?.value && selectedAgeGroup?.value) {
         const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}`;
         newSocket.emit('join_scoring_room', roomId);
-        console.log('Joined room:', roomId);
+        logger.log('Joined room:', roomId);
       }
     });
 
@@ -56,17 +57,17 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
     if (!socket) return;
 
     const handleScoreUpdate = (data) => {
-      console.log('Received score update:', data);
+      logger.log('Received score update:', data);
 
       // Check if player exists in current players list
       const playerExists = players.some(p => p.id === data.playerId);
-      console.log('Player exists in current list:', playerExists);
-      console.log('Looking for player ID:', data.playerId);
-      console.log('Available player IDs:', players.map(p => ({ id: p.id, name: p.name })));
+      logger.log('Player exists in current list:', playerExists);
+      logger.log('Looking for player ID:', data.playerId);
+      logger.log('Available player IDs:', players.map(p => ({ id: p.id, name: p.name })));
 
       if (!playerExists) {
-        console.warn('Player not found in current players list:', data.playerId);
-        console.warn('Available players:', players);
+        logger.warn('Player not found in current players list:', data.playerId);
+        logger.warn('Available players:', players);
 
         // Try to add the player dynamically if we can
         const newPlayer = {
@@ -119,7 +120,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
           fieldName = 'seniorJudge';
       }
 
-      console.log('Updating field:', fieldName, 'for player:', data.playerId, 'with score:', data.score);
+      logger.log('Updating field:', fieldName, 'for player:', data.playerId, 'with score:', data.score);
 
       setScores(prevScores => {
         const newScores = {
@@ -129,7 +130,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
             [fieldName]: data.score.toString()
           }
         };
-        console.log('New scores state:', newScores);
+        logger.log('New scores state:', newScores);
         return newScores;
       });
 
@@ -153,7 +154,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
     if (socket && socket.connected && selectedGender?.value && selectedAgeGroup?.value) {
       const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}`;
       socket.emit('join_scoring_room', roomId);
-      console.log('Joined scoring room:', roomId);
+      logger.log('Joined scoring room:', roomId);
     }
   }, [socket, selectedGender, selectedAgeGroup]);
 
@@ -225,7 +226,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
             });
         });
 
-        console.log('All players in category:', allPlayers);
+        logger.log('All players in category:', allPlayers);
         setPlayers(allPlayers);
 
         // Initialize scores for all players
@@ -235,7 +236,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
         // Try to load existing scores from database for all teams
         loadExistingScores(null, selectedGender.value, selectedAgeGroup.value, allPlayersScores);
       } catch (error) {
-        console.log('Could not load all players, using team players only:', error);
+        logger.log('Could not load all players, using team players only:', error);
         setPlayers(teamPlayers);
 
         // Try to load existing scores from database for selected team
@@ -264,11 +265,11 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
       const initialScores = initializeScores(teamPlayers);
       setScores(initialScores);
 
-      console.log('Initialized players:', teamPlayers);
-      console.log('Initialized scores:', initialScores);
+      logger.log('Initialized players:', teamPlayers);
+      logger.log('Initialized scores:', initialScores);
 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
       toast.error('Failed to load judges and players data');
     } finally {
       setLoading(false);
@@ -306,10 +307,10 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
         });
 
         setScores(existingScores);
-        console.log('Loaded existing scores:', existingScores);
+        logger.log('Loaded existing scores:', existingScores);
       }
     } catch (error) {
-      console.log('No existing scores found or error loading:', error);
+      logger.log('No existing scores found or error loading:', error);
       // This is fine, we'll start with empty scores
     }
   };
@@ -368,7 +369,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   };
 
   const handleScoreChange = (playerId, field, value) => {
-    console.log('Score change:', { playerId, field, value });
+    logger.log('Score change:', { playerId, field, value });
 
     setScores(prevScores => ({
       ...prevScores,
@@ -463,7 +464,7 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
       }, 2000);
 
     } catch (error) {
-      console.error('Error saving scores:', error);
+      logger.error('Error saving scores:', error);
       toast.error('Failed to save scores');
     }
   };

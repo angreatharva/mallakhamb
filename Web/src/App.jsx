@@ -1,35 +1,47 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteContext from './contexts/RouteContext';
 import { CompetitionProvider } from './contexts/CompetitionContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import { secureStorage } from './utils/secureStorage';
 
-// Pages
-import Home from './pages/Home';
-import PlayerLogin from './pages/PlayerLogin';
-import PlayerRegister from './pages/PlayerRegister';
-import PlayerSelectTeam from './pages/PlayerSelectTeam';
-import PlayerDashboard from './pages/PlayerDashboard';
-import CoachLogin from './pages/CoachLogin';
-import CoachRegister from './pages/CoachRegister';
-import CoachCreateTeam from './pages/CoachCreateTeam';
-import CoachSelectCompetition from './pages/CoachSelectCompetition';
-import CoachDashboard from './pages/CoachDashboard';
-import CoachPayment from './pages/CoachPayment';
-import AdminLogin from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import AdminTeams from './pages/AdminTeams';
-import ScoringPage from './pages/ScoringPage';
-import AdminScoring from './pages/AdminScoring';
-import JudgeScoring from './pages/JudgeScoring';
-import JudgeLogin from './pages/JudgeLogin';
-import JudgeScoringNew from './pages/JudgeScoringNew';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import PublicScores from './pages/PublicScores';
+// Lazy load all pages for better performance
+const Home = lazy(() => import('./pages/Home'));
+const PlayerLogin = lazy(() => import('./pages/PlayerLogin'));
+const PlayerRegister = lazy(() => import('./pages/PlayerRegister'));
+const PlayerSelectTeam = lazy(() => import('./pages/PlayerSelectTeam'));
+const PlayerDashboard = lazy(() => import('./pages/PlayerDashboard'));
+const CoachLogin = lazy(() => import('./pages/CoachLogin'));
+const CoachRegister = lazy(() => import('./pages/CoachRegister'));
+const CoachCreateTeam = lazy(() => import('./pages/CoachCreateTeam'));
+const CoachSelectCompetition = lazy(() => import('./pages/CoachSelectCompetition'));
+const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
+const CoachPayment = lazy(() => import('./pages/CoachPayment'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const AdminTeams = lazy(() => import('./pages/AdminTeams'));
+const ScoringPage = lazy(() => import('./pages/ScoringPage'));
+const AdminScoring = lazy(() => import('./pages/AdminScoring'));
+const JudgeScoring = lazy(() => import('./pages/JudgeScoring'));
+const JudgeLogin = lazy(() => import('./pages/JudgeLogin'));
+const JudgeScoringNew = lazy(() => import('./pages/JudgeScoringNew'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const PublicScores = lazy(() => import('./pages/PublicScores'));
+
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      <p className="mt-4 text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 
 // Create Auth Context
 export const AuthContext = createContext();
@@ -65,8 +77,8 @@ function AppContent() {
     const currentType = getCurrentUserTypeFromURL();
 
     if (currentType) {
-      const token = localStorage.getItem(`${currentType}_token`);
-      const userData = localStorage.getItem(`${currentType}_user`);
+      const token = secureStorage.getItem(`${currentType}_token`);
+      const userData = secureStorage.getItem(`${currentType}_user`);
 
       if (token && userData) {
         try {
@@ -80,16 +92,16 @@ function AppContent() {
       }
     }
 
-    // Fallback: check for legacy single-user storage
+    // Fallback: check for legacy single-user storage and migrate
     const legacyToken = localStorage.getItem('token');
     const legacyUserData = localStorage.getItem('user');
     const legacyType = localStorage.getItem('userType');
 
     if (legacyToken && legacyUserData && legacyType) {
       try {
-        // Migrate to new storage format
-        localStorage.setItem(`${legacyType}_token`, legacyToken);
-        localStorage.setItem(`${legacyType}_user`, legacyUserData);
+        // Migrate to new secure storage format
+        secureStorage.setItem(`${legacyType}_token`, legacyToken);
+        secureStorage.setItem(`${legacyType}_user`, legacyUserData);
 
         // Remove legacy storage
         localStorage.removeItem('token');
@@ -138,9 +150,9 @@ function AppContent() {
   }, [location.pathname, user, loading]);
 
   const login = (userData, token, type) => {
-    // Store with type-specific keys
-    localStorage.setItem(`${type}_token`, token);
-    localStorage.setItem(`${type}_user`, JSON.stringify(userData));
+    // Store with type-specific keys using secure storage
+    secureStorage.setItem(`${type}_token`, token);
+    secureStorage.setItem(`${type}_user`, JSON.stringify(userData));
     
     setUser(userData);
     setUserType(type);
@@ -152,8 +164,8 @@ function AppContent() {
     try {
       // Call backend logout endpoint if token exists
       const token = currentType 
-        ? localStorage.getItem(`${currentType}_token`)
-        : localStorage.getItem('token');
+        ? secureStorage.getItem(`${currentType}_token`)
+        : secureStorage.getItem('token');
       
       if (token) {
         await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/logout`, {
@@ -162,23 +174,24 @@ function AppContent() {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
-        }).catch(err => {
+        }).catch(() => {
           // Ignore errors from logout endpoint - still clear local data
-          console.log('Logout endpoint error (ignored):', err);
         });
       }
     } catch (error) {
-      console.log('Logout error (ignored):', error);
+      // Ignore logout errors
     }
     
-    // Clear local storage regardless of backend response
+    // Clear secure storage regardless of backend response
     if (currentType) {
-      // Remove type-specific data
-      localStorage.removeItem(`${currentType}_token`);
-      localStorage.removeItem(`${currentType}_user`);
+      secureStorage.removeItem(`${currentType}_token`);
+      secureStorage.removeItem(`${currentType}_user`);
     }
     
     // Also clean up any legacy data
+    secureStorage.removeItem('token');
+    secureStorage.removeItem('user');
+    secureStorage.removeItem('userType');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userType');
@@ -188,14 +201,7 @@ function AppContent() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Check if current route is admin route, home page, public scores, or competition selection pages
@@ -211,179 +217,181 @@ function AppContent() {
           {/* Only show main navbar if not on admin routes, home page, public scores, or competition selection pages */}
           {!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/scores" element={<PublicScores />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/scores" element={<PublicScores />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-          {/* Player Routes */}
-          <Route path="/player" element={<Navigate to="/player/login" replace />} />
-          <Route path="/player/login" element={<PlayerLogin />} />
-          <Route path="/player/register" element={<PlayerRegister />} />
+            {/* Player Routes */}
+            <Route path="/player" element={<Navigate to="/player/login" replace />} />
+            <Route path="/player/login" element={<PlayerLogin />} />
+            <Route path="/player/register" element={<PlayerRegister />} />
 
-          {/* Protected Player Routes */}
-          <Route
-            path="/player/select-team"
-            element={
-              <ProtectedRoute requiredUserType="player">
-                <PlayerSelectTeam />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/player/dashboard"
-            element={
-              <ProtectedRoute requiredUserType="player">
-                <PlayerDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Player Routes */}
+            <Route
+              path="/player/select-team"
+              element={
+                <ProtectedRoute requiredUserType="player">
+                  <PlayerSelectTeam />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/player/dashboard"
+              element={
+                <ProtectedRoute requiredUserType="player">
+                  <PlayerDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Coach Routes */}
-          <Route path="/coach" element={<Navigate to="/coach/login" replace />} />
-          <Route path="/coach/login" element={<CoachLogin />} />
-          <Route path="/coach/register" element={<CoachRegister />} />
+            {/* Coach Routes */}
+            <Route path="/coach" element={<Navigate to="/coach/login" replace />} />
+            <Route path="/coach/login" element={<CoachLogin />} />
+            <Route path="/coach/register" element={<CoachRegister />} />
 
-          {/* Protected Coach Routes */}
-          <Route
-            path="/coach/create-team"
-            element={
-              <ProtectedRoute requiredUserType="coach">
-                <CoachCreateTeam />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/coach/select-competition"
-            element={
-              <ProtectedRoute requiredUserType="coach">
-                <CoachSelectCompetition />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/coach/dashboard"
-            element={
-              <ProtectedRoute requiredUserType="coach">
-                <CoachDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/coach/payment"
-            element={
-              <ProtectedRoute requiredUserType="coach">
-                <CoachPayment />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Coach Routes */}
+            <Route
+              path="/coach/create-team"
+              element={
+                <ProtectedRoute requiredUserType="coach">
+                  <CoachCreateTeam />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/coach/select-competition"
+              element={
+                <ProtectedRoute requiredUserType="coach">
+                  <CoachSelectCompetition />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/coach/dashboard"
+              element={
+                <ProtectedRoute requiredUserType="coach">
+                  <CoachDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/coach/payment"
+              element={
+                <ProtectedRoute requiredUserType="coach">
+                  <CoachPayment />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Protected Admin Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/dashboard/:tab"
-            element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/teams"
-            element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminTeams />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/scoring"
-            element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminScoring />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Judge Routes */}
-          <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
-          <Route path="/judge/login" element={<JudgeLogin />} />
-          <Route 
-            path="/judge/scoring" 
-            element={
-              <ProtectedRoute requiredUserType="judge">
-                <JudgeScoringNew />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/judge/scoring-old" 
-            element={
-              <ProtectedRoute requiredUserType="judge">
-                <JudgeScoring />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Super Admin Routes */}
-          <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />
-          <Route 
-            path="/superadmin/login" 
-            element={
-              <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
-                <AdminLogin />
-              </RouteContext.Provider>
-            } 
-          />
-
-          {/* Protected Super Admin Routes */}
-          <Route
-            path="/superadmin/dashboard"
-            element={
-              <ProtectedRoute requiredUserType="superadmin">
-                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
-                  <SuperAdminDashboard />
-                </RouteContext.Provider>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/superadmin/dashboard/:tab"
-            element={
-              <ProtectedRoute requiredUserType="superadmin">
-                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
-                  <SuperAdminDashboard />
-                </RouteContext.Provider>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/superadmin/scoring"
-            element={
-              <ProtectedRoute requiredUserType="superadmin">
-                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute requiredUserType="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard/:tab"
+              element={
+                <ProtectedRoute requiredUserType="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/teams"
+              element={
+                <ProtectedRoute requiredUserType="admin">
+                  <AdminTeams />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/scoring"
+              element={
+                <ProtectedRoute requiredUserType="admin">
                   <AdminScoring />
-                </RouteContext.Provider>
-              </ProtectedRoute>
-            }
-          />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Judge Routes */}
+            <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
+            <Route path="/judge/login" element={<JudgeLogin />} />
+            <Route 
+              path="/judge/scoring" 
+              element={
+                <ProtectedRoute requiredUserType="judge">
+                  <JudgeScoringNew />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/judge/scoring-old" 
+              element={
+                <ProtectedRoute requiredUserType="judge">
+                  <JudgeScoring />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Super Admin Routes */}
+            <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />
+            <Route 
+              path="/superadmin/login" 
+              element={
+                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                  <AdminLogin />
+                </RouteContext.Provider>
+              } 
+            />
+
+            {/* Protected Super Admin Routes */}
+            <Route
+              path="/superadmin/dashboard"
+              element={
+                <ProtectedRoute requiredUserType="superadmin">
+                  <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                    <SuperAdminDashboard />
+                  </RouteContext.Provider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/dashboard/:tab"
+              element={
+                <ProtectedRoute requiredUserType="superadmin">
+                  <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                    <SuperAdminDashboard />
+                  </RouteContext.Provider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/scoring"
+              element={
+                <ProtectedRoute requiredUserType="superadmin">
+                  <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                    <AdminScoring />
+                  </RouteContext.Provider>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
 
         <Toaster
           position="top-right"
@@ -418,9 +426,11 @@ function AppContent() {
 // Main App Component
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AppContent />
+      </Router>
+    </ErrorBoundary>
   );
 }
 

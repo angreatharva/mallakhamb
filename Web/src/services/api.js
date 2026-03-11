@@ -1,8 +1,11 @@
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig.js';
-import { jwtDecode } from 'jwt-decode';
+import { isTokenExpired, getTokenData, getCompetitionIdFromToken } from '../utils/tokenUtils.js';
+import { secureStorage } from '../utils/secureStorage.js';
+import { apiCache, clearCachePattern } from '../utils/apiCache.js';
+import { logger } from '../utils/logger.js';
 
-console.log('🏠 Using API URL:', apiConfig.getBaseUrl());
+logger.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
 // Create axios instance with base URL from environment
 const api = axios.create({
@@ -20,41 +23,62 @@ const getCurrentUserTypeFromURL = () => {
   return null;
 };
 
-// Helper function to extract competition ID from JWT token
-const getCompetitionIdFromToken = (token) => {
-  if (!token) return null;
-  
-  try {
-    const decoded = jwtDecode(token);
-    return decoded.currentCompetition || null;
-  } catch (error) {
-    console.error('Failed to decode token:', error);
-    return null;
+// Helper function to get token with secure storage
+const getToken = (userType) => {
+  if (userType) {
+    return secureStorage.getItem(`${userType}_token`);
   }
+  return secureStorage.getItem('token');
 };
 
-// Request interceptor to add auth token and competition context
+// Request interceptor to add auth token, validate expiry, and check cache
 api.interceptors.request.use(
   (config) => {
-    const currentType = getCurrentUserTypeFromURL();
-    let token = null;
-
-    if (currentType) {
-      token = localStorage.getItem(`${currentType}_token`);
+    // Check cache for GET requests
+    if (config.method === 'get' && !config.skipCache) {
+      const cached = apiCache.get(config.url, config.params);
+      if (cached) {
+        return Promise.reject({
+          config,
+          response: { data: cached },
+          cached: true
+        });
+      }
     }
 
-    // Fallback to legacy token if type-specific token not found
-    if (!token) {
-      token = localStorage.getItem('token');
+    const currentType = getCurrentUserTypeFromURL();
+    let token = getToken(currentType);
+
+    // Check token expiry before making request
+    if (token && isTokenExpired(token)) {
+      // Clear expired token
+      if (currentType) {
+        secureStorage.removeItem(`${currentType}_token`);
+        secureStorage.removeItem(`${currentType}_user`);
+      }
+      secureStorage.removeItem('token');
+      secureStorage.removeItem('user');
+      
+      // Redirect to login
+      window.location.href = '/';
+      return Promise.reject(new Error('Token expired'));
     }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       
-      // Add competition context header for competition-specific endpoints
+      // Add competition context header
       const competitionId = getCompetitionIdFromToken(token);
       if (competitionId) {
         config.headers['x-competition-id'] = competitionId;
+      }
+      
+      // Add CSRF token for non-GET requests
+      if (config.method !== 'get') {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (csrfToken) {
+          config.headers['X-CSRF-Token'] = csrfToken;
+        }
       }
     }
     return config;
@@ -64,22 +88,33 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors and cache responses
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Cache GET responses
+    if (response.config.method === 'get' && !response.config.skipCache) {
+      apiCache.set(response.config.url, response.config.params, response.data);
+    }
+    return response;
+  },
   (error) => {
+    // Handle cached responses
+    if (error.cached) {
+      return Promise.resolve(error.response);
+    }
+
     if (error.response?.status === 401) {
       const currentType = getCurrentUserTypeFromURL();
 
       if (currentType) {
-        localStorage.removeItem(`${currentType}_token`);
-        localStorage.removeItem(`${currentType}_user`);
+        secureStorage.removeItem(`${currentType}_token`);
+        secureStorage.removeItem(`${currentType}_user`);
       }
 
       // Also clean up legacy storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('userType');
+      secureStorage.removeItem('token');
+      secureStorage.removeItem('user');
+      secureStorage.removeItem('userType');
 
       window.location.href = '/';
     } else if (error.response?.status === 403) {
@@ -87,18 +122,14 @@ api.interceptors.response.use(
       const errorMessage = error.response?.data?.message || '';
       
       if (errorMessage.includes('competition') || errorMessage.includes('Competition')) {
-        // Redirect to competition selection if competition context is invalid
         const currentType = getCurrentUserTypeFromURL();
         
         if (currentType) {
-          // Clear the current token to force re-selection
-          const token = localStorage.getItem(`${currentType}_token`);
+          const token = getToken(currentType);
           if (token) {
-            // Keep the token but user will need to select competition again
-            console.warn('Competition context invalid, redirecting to login for re-selection');
+            logger.warn('Competition context invalid, redirecting to login for re-selection');
           }
           
-          // Redirect to login page which will show competition selection
           window.location.href = `/${currentType}/login`;
         }
       }
@@ -124,16 +155,31 @@ export const coachAPI = {
   login: (data) => api.post('/coaches/login', data),
   getProfile: () => api.get('/coaches/profile'),
   getStatus: () => api.get('/coaches/status'),
-  createTeam: (data) => api.post('/coaches/team', data),
+  createTeam: (data) => {
+    clearCachePattern('/coaches');
+    return api.post('/coaches/team', data);
+  },
   getTeams: () => api.get('/coaches/teams'),
   getOpenCompetitions: () => api.get('/coaches/competitions/open'),
   selectCompetition: (data) => api.post('/coaches/select-competition', data),
-  registerTeamForCompetition: (teamId, competitionId) => api.post(`/coaches/team/${teamId}/register-competition`, { competitionId }),
+  registerTeamForCompetition: (teamId, competitionId) => {
+    clearCachePattern('/coaches');
+    return api.post(`/coaches/team/${teamId}/register-competition`, { competitionId });
+  },
   getDashboard: () => api.get('/coaches/dashboard'),
   searchPlayers: (query) => api.get(`/coaches/search-players?query=${query}`),
-  addPlayerToAgeGroup: (data) => api.post('/coaches/add-player', data),
-  removePlayerFromAgeGroup: (playerId) => api.delete(`/coaches/remove-player/${playerId}`),
-  submitTeam: () => api.post('/coaches/submit-team'),
+  addPlayerToAgeGroup: (data) => {
+    clearCachePattern('/coaches/dashboard');
+    return api.post('/coaches/add-player', data);
+  },
+  removePlayerFromAgeGroup: (playerId) => {
+    clearCachePattern('/coaches/dashboard');
+    return api.delete(`/coaches/remove-player/${playerId}`);
+  },
+  submitTeam: () => {
+    clearCachePattern('/coaches');
+    return api.post('/coaches/submit-team');
+  },
 };
 
 // Team API

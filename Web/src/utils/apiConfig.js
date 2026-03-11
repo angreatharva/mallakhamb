@@ -1,9 +1,10 @@
 // API Configuration utility - uses VITE_API_URL from .env
+import { logger } from './logger.js';
 
 class ApiConfig {
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    console.log('🔗 API Base URL:', this.baseUrl);
+    logger.log('🔗 API Base URL:', this.baseUrl);
   }
 
   getBaseUrl() {
