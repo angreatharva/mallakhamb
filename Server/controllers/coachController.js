@@ -319,7 +319,14 @@ const registerTeamForCompetition = async (req, res) => {
         { path: 'registeredTeams.coach', select: 'name email' }
       ]);
 
-      const populatedTeam = competition.findRegisteredTeam(teamId);
+      // Find the registered team after population
+      const populatedTeam = competition.registeredTeams.find(rt => 
+        rt.team._id.toString() === teamId.toString()
+      );
+
+      if (!populatedTeam) {
+        return res.status(500).json({ message: 'Error retrieving registered team' });
+      }
 
       return res.json({
         message: 'Team is already registered for this competition',
@@ -350,7 +357,14 @@ const registerTeamForCompetition = async (req, res) => {
       { path: 'registeredTeams.coach', select: 'name email' }
     ]);
 
-    const populatedTeam = competition.findRegisteredTeam(teamId);
+    // Find the registered team after population
+    const populatedTeam = competition.registeredTeams.find(rt => 
+      rt.team._id.toString() === teamId.toString()
+    );
+
+    if (!populatedTeam) {
+      return res.status(500).json({ message: 'Error retrieving registered team' });
+    }
 
     res.json({
       message: 'Team registered for competition successfully. You can now add players.',

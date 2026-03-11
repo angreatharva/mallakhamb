@@ -237,7 +237,7 @@ const getAvailableTeams = async (req, res) => {
     if (competitionId) {
       // Optional: filter by one competition (e.g. when competition was already selected)
       const competition = await Competition.findById(competitionId)
-        .populate('registeredTeams.team', 'name description')
+        .populate('registeredTeams.team', 'name description isActive')
         .populate('registeredTeams.coach', 'firstName lastName');
 
       if (!competition) {
@@ -263,11 +263,14 @@ const getAvailableTeams = async (req, res) => {
       status: { $in: ['upcoming', 'ongoing'] },
       isDeleted: false
     })
-      .populate('registeredTeams.team', 'name description')
+      .populate('registeredTeams.team', 'name description isActive')
       .populate('registeredTeams.coach', 'firstName lastName')
-      .select('_id name registeredTeams');
+      .select('_id name registeredTeams status');
 
+    console.log('Found open competitions:', openCompetitions.length);
+    
     if (openCompetitions.length === 0) {
+      console.log('No open competitions found');
       return res.json({ teams: [] });
     }
 
@@ -275,11 +278,20 @@ const getAvailableTeams = async (req, res) => {
     const teamsMap = new Map();
     
     openCompetitions.forEach(comp => {
+      console.log(`Competition: ${comp.name}, Status: ${comp.status}, Registered Teams: ${comp.registeredTeams.length}`);
+      
       comp.registeredTeams
-        .filter(rt => rt.isActive && rt.team && rt.team.isActive)
+        .filter(rt => {
+          const isValid = rt.isActive && rt.team && rt.team.isActive;
+          if (!isValid) {
+            console.log(`Filtered out team - isActive: ${rt.isActive}, team exists: ${!!rt.team}, team.isActive: ${rt.team?.isActive}`);
+          }
+          return isValid;
+        })
         .forEach(rt => {
           const teamId = rt.team._id.toString();
           if (!teamsMap.has(teamId)) {
+            console.log(`Adding team: ${rt.team.name} (${teamId})`);
             teamsMap.set(teamId, {
               _id: rt.team._id,
               name: rt.team.name,
@@ -293,6 +305,7 @@ const getAvailableTeams = async (req, res) => {
     });
 
     const teams = Array.from(teamsMap.values());
+    console.log('Total unique teams available:', teams.length);
 
     res.json({ teams });
   } catch (error) {
