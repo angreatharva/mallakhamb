@@ -3,6 +3,12 @@
  * Prevents NoSQL injection attacks by sanitizing query parameters
  */
 
+// Valid enum values for validation
+const VALID_GENDERS = ['Male', 'Female'];
+const VALID_AGE_GROUPS = ['U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
+const VALID_COMPETITION_TYPES = ['Competition I', 'Competition II', 'Competition III'];
+const VALID_COMPETITION_STATUSES = ['upcoming', 'ongoing', 'completed'];
+
 /**
  * Sanitize a single query parameter
  * @param {*} param - The parameter to sanitize
@@ -13,6 +19,42 @@ const sanitizeQueryParam = (param) => {
     return null; // Reject non-string values
   }
   return param.trim();
+};
+
+/**
+ * Validate gender parameter against whitelist
+ * @param {string} gender - Gender value to validate
+ * @returns {boolean} - True if valid
+ */
+const isValidGender = (gender) => {
+  return VALID_GENDERS.includes(gender);
+};
+
+/**
+ * Validate age group parameter against whitelist
+ * @param {string} ageGroup - Age group value to validate
+ * @returns {boolean} - True if valid
+ */
+const isValidAgeGroup = (ageGroup) => {
+  return VALID_AGE_GROUPS.includes(ageGroup);
+};
+
+/**
+ * Validate competition type parameter against whitelist
+ * @param {string} competitionType - Competition type value to validate
+ * @returns {boolean} - True if valid
+ */
+const isValidCompetitionType = (competitionType) => {
+  return VALID_COMPETITION_TYPES.includes(competitionType);
+};
+
+/**
+ * Validate competition status parameter against whitelist
+ * @param {string} status - Status value to validate
+ * @returns {boolean} - True if valid
+ */
+const isValidCompetitionStatus = (status) => {
+  return VALID_COMPETITION_STATUSES.includes(status);
 };
 
 /**
@@ -34,4 +76,15 @@ const sanitizeMongoQuery = (query) => {
   return sanitized;
 };
 
-module.exports = { sanitizeQueryParam, sanitizeMongoQuery };
+module.exports = { 
+  sanitizeQueryParam, 
+  sanitizeMongoQuery,
+  isValidGender,
+  isValidAgeGroup,
+  isValidCompetitionType,
+  isValidCompetitionStatus,
+  VALID_GENDERS,
+  VALID_AGE_GROUPS,
+  VALID_COMPETITION_TYPES,
+  VALID_COMPETITION_STATUSES
+};

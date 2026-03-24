@@ -63,8 +63,8 @@ const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
 ];
 
 const loginValidation = [
@@ -301,7 +301,7 @@ router.delete('/competitions/:id/admins/:adminId', authMiddleware, superAdminAut
 const addPlayerValidation = [
   body('name').trim().notEmpty().withMessage('Player name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
   body('gender').isIn(['Male', 'Female']).withMessage('Gender must be Male or Female'),
   body('team').isMongoId().withMessage('Valid team ID is required'),

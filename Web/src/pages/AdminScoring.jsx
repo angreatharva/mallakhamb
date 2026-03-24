@@ -170,58 +170,6 @@ const AdminScoring = () => {
         fetchScoringData();
     }, [selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
 
-    // Debug API calls - Remove in production
-    useEffect(() => {
-        const debugAPI = async () => {
-            if (!selectedTeam || !selectedGender || !selectedAgeGroup) return;
-
-            try {
-                logger.log('=== DEBUG API CALLS ===');
-                logger.log('Team:', selectedTeam.name, 'ID:', selectedTeam._id);
-                logger.log('Gender:', selectedGender.value);
-                logger.log('Age Group:', selectedAgeGroup.value);
-
-                // Test all possible API calls
-                const tests = [
-                    { name: 'All Scores', params: {} },
-                    { name: 'Team Only', params: { teamId: selectedTeam._id } },
-                    { name: 'Team + Gender', params: { teamId: selectedTeam._id, gender: selectedGender.value } },
-                    { name: 'Full Filter', params: { teamId: selectedTeam._id, gender: selectedGender.value, ageGroup: selectedAgeGroup.value } }
-                ];
-
-                for (const test of tests) {
-                    try {
-                        const response = await api.getTeamScores(test.params);
-                        logger.log(`${test.name}:`, response.data);
-
-                        if (response.data?.scores?.length > 0) {
-                            logger.log(`${test.name} - Found ${response.data.scores.length} scores`);
-                            response.data.scores.forEach((score, index) => {
-                                logger.log(`  Score ${index + 1}:`, {
-                                    id: score._id,
-                                    teamId: score.teamId,
-                                    gender: score.gender,
-                                    ageGroup: score.ageGroup,
-                                    isLocked: score.isLocked,
-                                    playerCount: score.playerScores?.length || 0
-                                });
-                            });
-                        }
-                    } catch (error) {
-                        logger.log(`${test.name} - Error:`, error.message);
-                    }
-                }
-                logger.log('=== END DEBUG ===');
-            } catch (error) {
-                logger.error('Debug API calls failed:', error);
-            }
-        };
-
-        // Run debug after a short delay to ensure other data is loaded
-        const timer = setTimeout(debugAPI, 2000);
-        return () => clearTimeout(timer);
-    }, [selectedTeam, selectedGender, selectedAgeGroup]);
-
     const fetchScoringData = async () => {
         try {
             setLoading(true);

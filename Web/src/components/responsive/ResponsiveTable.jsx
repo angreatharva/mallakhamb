@@ -454,7 +454,7 @@ export const ResponsiveTeamTable = ({
     >
       <div className="space-y-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Team: {team.name}</h3>
+          <h3 className="text-lg font-bold text-gray-900">Team: {team.team?.name || team.name}</h3>
           <p className="text-sm text-gray-600 mt-1">
             <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}
           </p>
@@ -503,7 +503,7 @@ export const ResponsiveTeamTable = ({
           >
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Team: {team.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Team: {team.team?.name || team.name}</h3>
                 <div className="space-y-1">
                   <p className="text-sm text-gray-600">
                     <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}

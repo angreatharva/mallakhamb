@@ -38,6 +38,7 @@ import AdminJudges from './AdminJudges';
 import AdminTransactions from './AdminTransactions';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
+import { logger } from '../utils/logger';
 import { Play, CheckCircle, XCircle } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -116,7 +117,7 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
       const response = await api.getAllJudgesSummary();
       setJudgesSummary(response.data.summary || []);
     } catch (error) {
-      console.error('Failed to fetch judges summary:', error);
+      logger.error('Failed to fetch judges summary:', error);
       // Don't show error toast, just log it
     } finally {
       setLoadingJudgesSummary(false);

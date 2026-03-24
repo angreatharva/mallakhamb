@@ -83,6 +83,7 @@ export const ResponsiveInput = React.forwardRef(({
   type = 'text',
   className = '',
   error = false,
+  autoComplete,
   ...props 
 }, ref) => {
   const { isMobile } = useResponsive();
@@ -105,6 +106,7 @@ export const ResponsiveInput = React.forwardRef(({
       ref={ref}
       type={type}
       className={inputClasses}
+      autoComplete={autoComplete}
       {...props}
     />
   );
@@ -221,6 +223,7 @@ export const ResponsivePasswordInput = React.forwardRef(({
   onTogglePassword,
   className = '',
   error = false,
+  autoComplete = 'current-password',
   ...props 
 }, ref) => {
   const { isMobile } = useResponsive();
@@ -232,6 +235,7 @@ export const ResponsivePasswordInput = React.forwardRef(({
         type={showPassword ? 'text' : 'password'}
         className={`pr-12 ${className}`}
         error={error}
+        autoComplete={autoComplete}
         {...props}
       />
       <button

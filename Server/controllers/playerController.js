@@ -60,18 +60,39 @@ const registerPlayer = async (req, res) => {
 const loginPlayer = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
+
+    // Check if account is locked
+    const lockStatus = checkAccountLockout(email);
+    if (lockStatus.isLocked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
+        remainingTime: lockStatus.remainingTime
+      });
+    }
 
     // Find player by email and populate team to get competition
     const player = await Player.findOne({ email }).populate('team', 'competition');
     if (!player) {
+      recordFailedAttempt(email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await player.comparePassword(password);
     if (!isMatch) {
+      const failureStatus = recordFailedAttempt(email);
+      if (failureStatus.isLocked) {
+        return res.status(429).json({ 
+          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
+          remainingTime: failureStatus.remainingTime
+        });
+      }
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(email);
 
     // Get competition context from player's team
     let competitionId = null;

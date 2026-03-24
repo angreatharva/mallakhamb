@@ -15,10 +15,20 @@ const loginJudge = async (req, res) => {
   
   try {
     const { username, password } = req.body;
+    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
 
     if (!username || !password) {
       console.log('❌ Missing username or password');
       return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    // Check if account is locked
+    const lockStatus = checkAccountLockout(username);
+    if (lockStatus.isLocked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
+        remainingTime: lockStatus.remainingTime
+      });
     }
 
     // Find judge by username (case-insensitive)
@@ -30,6 +40,7 @@ const loginJudge = async (req, res) => {
     
     if (!judge) {
       console.log('❌ Judge not found for username:', username);
+      recordFailedAttempt(username);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -39,8 +50,18 @@ const loginJudge = async (req, res) => {
     
     if (!isMatch) {
       console.log('❌ Password mismatch for judge:', judge.username);
+      const failureStatus = recordFailedAttempt(username);
+      if (failureStatus.isLocked) {
+        return res.status(429).json({ 
+          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
+          remainingTime: failureStatus.remainingTime
+        });
+      }
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(username);
 
     // Generate token WITH competition context
     console.log('✅ Generating token for judge:', judge.username);
@@ -220,13 +241,6 @@ const setCompetition = async (req, res) => {
     });
   }
 };
-
-module.exports = {
-  loginJudge,
-  getAssignedCompetitions,
-  setCompetition
-};
-
 
 /**
  * Get Available Teams for Scoring

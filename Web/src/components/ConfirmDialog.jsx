@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { logger } from '../utils/logger';
 
 const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', cancelText = 'Cancel', confirmButtonClass = 'bg-green-600 hover:bg-green-700' }) => {
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
       onClose();
     } catch (err) {
       setError(err.message || 'An error occurred');
-      console.error('Confirm dialog error:', err);
+      logger.error('Confirm dialog error:', err);
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const Player = require('../models/Player');
 const Coach = require('../models/Coach');
 const Admin = require('../models/Admin');
-const { isTokenInvalidated } = require('../utils/tokenInvalidation');
+const { isTokenInvalidated, isTokenLoggedOut } = require('../utils/tokenInvalidation');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -17,6 +17,14 @@ const authMiddleware = async (req, res, next) => {
       throw new Error('FATAL: JWT_SECRET environment variable is not set');
     }
     const decoded = jwt.verify(token, jwtSecret);
+    
+    // Check if token was issued before user logged out
+    if (decoded.iat && isTokenLoggedOut(decoded.userId, decoded.iat)) {
+      return res.status(401).json({ 
+        message: 'Token is no longer valid. You have been logged out.',
+        code: 'TOKEN_INVALIDATED_LOGOUT'
+      });
+    }
     
     // Check if user exists and is active
     let user = null;

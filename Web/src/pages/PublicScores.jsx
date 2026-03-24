@@ -6,6 +6,7 @@ import { publicAPI } from '../services/api';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveHeading, ResponsiveText } from '../components/responsive/ResponsiveTypography';
+import { logger } from '../utils/logger';
 
 const PublicScores = () => {
   // State management
@@ -84,7 +85,7 @@ const PublicScores = () => {
       setTeams(response.data.teams || []);
     } catch (error) {
       toast.error('Failed to load teams');
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
     }
   };
 
@@ -109,7 +110,7 @@ const PublicScores = () => {
       }
     } catch (error) {
       toast.error('Failed to load scores');
-      console.error('Error fetching scores:', error);
+      logger.error('Error fetching scores:', error);
       setScores([]);
     } finally {
       setLoading(false);

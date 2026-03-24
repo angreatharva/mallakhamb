@@ -3,6 +3,7 @@ import axios from 'axios';
 import apiConfig from '../utils/apiConfig.js';
 import { getTokenData } from '../utils/tokenUtils.js';
 import { secureStorage } from '../utils/secureStorage.js';
+import { logger } from '../utils/logger.js';
 
 const CompetitionContext = createContext();
 
@@ -75,7 +76,7 @@ export const CompetitionProvider = ({ children, userType }) => {
         }
       }
     } catch (err) {
-      console.error('Failed to fetch assigned competitions:', err);
+      logger.error('Failed to fetch assigned competitions:', err);
       setError(err.response?.data?.message || 'Failed to load competitions');
     } finally {
       setIsLoading(false);
@@ -127,7 +128,7 @@ export const CompetitionProvider = ({ children, userType }) => {
       await new Promise(resolve => setTimeout(resolve, 100));
       window.location.reload();
     } catch (err) {
-      console.error('Failed to switch competition:', err);
+      logger.error('Failed to switch competition:', err);
       setError(err.response?.data?.message || 'Failed to switch competition');
       throw err;
     } finally {
@@ -187,7 +188,7 @@ export const CompetitionProvider = ({ children, userType }) => {
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Failed to fetch assigned competitions:', err);
+          logger.error('Failed to fetch assigned competitions:', err);
           setError(err.response?.data?.message || 'Failed to load competitions');
         }
       } finally {

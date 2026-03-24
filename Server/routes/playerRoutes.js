@@ -23,8 +23,8 @@ const registerValidation = [
     .normalizeEmail(),
   body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long'),
   body('gender')
     .isIn(['Male', 'Female'])
     .withMessage('Gender must be either Male or Female')

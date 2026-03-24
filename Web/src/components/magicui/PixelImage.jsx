@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { useResponsive } from "../../hooks/useResponsive";
+import { logger } from "../../utils/logger";
 
 export const PixelImage = ({
     src,
@@ -135,14 +136,14 @@ export const PixelImage = ({
                     ctx.drawImage(tempCanvas, 0, 0, scaledW, scaledH, 0, 0, w, h);
                 }
             } catch (error) {
-                console.error('Error rendering pixel image:', error);
+                logger.error('Error rendering pixel image:', error);
                 setHasError(true);
                 setIsLoaded(false);
             }
         };
 
         img.onerror = (error) => {
-            console.error('Error loading image:', error);
+            logger.error('Error loading image:', error);
             setIsLoaded(false);
             setHasError(true);
         };

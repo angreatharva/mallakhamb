@@ -24,15 +24,26 @@ const loginSuperAdmin = async (req, res) => {
   
   try {
     const { email, password } = req.body;
+    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    // Check if account is locked
+    const lockStatus = checkAccountLockout(email);
+    if (lockStatus.isLocked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
+        remainingTime: lockStatus.remainingTime
+      });
     }
 
     // Find admin by email and check if super_admin
     const admin = await Admin.findOne({ email, role: 'super_admin' });
     if (!admin) {
       console.log('❌ Super Admin not found for email:', email);
+      recordFailedAttempt(email);
       logFailedLogin(email, 'superadmin', 'Invalid credentials or not super admin', req);
       return res.status(400).json({ message: 'Invalid credentials or insufficient permissions' });
     }
@@ -40,9 +51,19 @@ const loginSuperAdmin = async (req, res) => {
     // Check password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
+      const failureStatus = recordFailedAttempt(email);
       logFailedLogin(email, 'superadmin', 'Invalid password', req);
+      if (failureStatus.isLocked) {
+        return res.status(429).json({ 
+          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
+          remainingTime: failureStatus.remainingTime
+        });
+      }
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(email);
 
     // Generate token with superadmin type
     const token = generateToken(admin._id, 'superadmin');
@@ -323,48 +344,43 @@ const updateCoachStatus = async (req, res) => {
 // Get all teams (Super Admin only - no competition context required)
 const getAllTeamsForSuperAdmin = async (req, res) => {
   try {
-    // Get all competitions with their registered teams
-    const competitions = await Competition.find()
+    const { competition, gender, ageGroup } = req.query;
+    const compQuery = {};
+    if (competition) compQuery._id = competition;
+
+    const competitions = await Competition.find(compQuery)
       .populate('registeredTeams.team', 'name description')
       .populate('registeredTeams.coach', 'name email')
+      .populate('registeredTeams.players.player', 'firstName lastName gender')
       .select('name year level place registeredTeams')
       .sort({ createdAt: -1 });
 
-    // Flatten all registered teams from all competitions
+    // Flatten and filter registered teams
     const teams = [];
     competitions.forEach(comp => {
       comp.registeredTeams.forEach(rt => {
-        // Skip entries with missing team reference
-        if (!rt.team || !rt.team._id) {
-          console.warn(`Skipping registered team with missing team reference in competition ${comp._id}, registeredTeam ${rt._id}`);
-          return;
-        }
-        
+        if (!rt.team || !rt.team._id) return;
+
+        // Apply gender/ageGroup filters if provided
+        if (gender && rt.gender && rt.gender !== gender) return;
+        if (ageGroup && rt.ageGroup && rt.ageGroup !== ageGroup) return;
+
         teams.push({
-          _id: rt.team._id,
-          name: rt.team.name,
-          description: rt.team.description,
+          _id: rt._id,
+          team: { _id: rt.team._id, name: rt.team.name, description: rt.team.description },
           coach: rt.coach,
-          competition: {
-            _id: comp._id,
-            name: comp.name,
-            year: comp.year,
-            level: comp.level,
-            place: comp.place
-          },
+          players: rt.players || [],
+          competition: { _id: comp._id, name: comp.name, year: comp.year, level: comp.level, place: comp.place },
           competitionId: comp._id,
-          competitionTeamId: rt._id,
           isSubmitted: rt.isSubmitted,
-          paymentStatus: rt.paymentStatus
+          paymentStatus: rt.paymentStatus,
+          isActive: rt.isActive,
+          createdAt: rt.createdAt || comp.createdAt
         });
       });
     });
 
-    res.json({
-      success: true,
-      teams,
-      total: teams.length
-    });
+    res.json({ success: true, teams, total: teams.length });
   } catch (error) {
     console.error('Get all teams error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1073,6 +1089,31 @@ const getSuperAdminDashboard = async (req, res) => {
   }
 };
 
+// Get Transactions (Super Admin - with optional competition filter)
+const getTransactions = async (req, res) => {
+  try {
+    const { competitionId } = req.query;
+    const Transaction = require('../models/Transaction');
+
+    // Build query
+    const query = {};
+    if (competitionId) {
+      query.competition = competitionId;
+    }
+
+    const transactions = await Transaction.find(query)
+      .populate('coach', 'name email')
+      .populate('team', 'name')
+      .populate('competition', 'name year place')
+      .sort({ createdAt: -1 });
+
+    res.json({ transactions });
+  } catch (error) {
+    console.error('Get transactions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Export all functions including inherited admin functions
 module.exports = {
   // Super Admin specific functions
@@ -1098,6 +1139,7 @@ module.exports = {
   assignAdminToCompetition,
   removeAdminFromCompetition,
   
-  // Inherited admin functions
-  ...adminController
+  // Inherited admin functions — super-admin handlers listed after the spread override
+  ...adminController,
+  getTransactions
 };

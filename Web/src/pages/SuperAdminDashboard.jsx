@@ -18,6 +18,7 @@ import {
   ResponsiveNavText 
 } from '../components/responsive/ResponsiveTypography';
 import { useResponsive } from '../hooks/useResponsive';
+import { logger } from '../utils/logger';
 import { useRouteContext } from '../contexts/RouteContext';
 import AdminTeams from './AdminTeams';
 import AdminScores from './AdminScores';
@@ -53,7 +54,7 @@ const SuperAdminDashboard = () => {
       const response = await superAdminAPI.getAllCompetitions();
       setCompetitions(response.data.competitions || []);
     } catch (error) {
-      console.error('Failed to load competitions:', error);
+      logger.error('Failed to load competitions:', error);
     }
   };
 

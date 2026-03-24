@@ -13,6 +13,7 @@ import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { useAgeGroups } from '../hooks/useAgeGroups';
+import { logger } from '../utils/logger';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveForm, ResponsiveFormField, ResponsiveInput, ResponsiveButton } from '../components/responsive/ResponsiveForm';
@@ -20,17 +21,15 @@ import { ResponsiveTable } from '../components/responsive/ResponsiveTable';
 import { useResponsive } from '../hooks/useResponsive';
 
 const Judges = () => {
-  // Get route context for path-aware behavior
   const { routePrefix, storagePrefix } = useRouteContext();
-  
-  // Get competition context
   const { currentCompetition } = useCompetition();
-  
-  // Select appropriate API based on route context
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
-  
-  // Determine if user is super admin
   const isSuperAdmin = routePrefix === '/superadmin';
+
+  // Competition selector state (superadmin only)
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [loadingCompetitions, setLoadingCompetitions] = useState(false);
   
   // Get available competition types based on user role and competition
   const getAvailableCompetitionTypes = () => {
@@ -73,6 +72,25 @@ const Judges = () => {
 
   // Responsive hook
   const { isMobile, isTablet } = useResponsive();
+
+  // Fetch competitions for superadmin
+  useEffect(() => {
+    if (isSuperAdmin) {
+      setLoadingCompetitions(true);
+      superAdminAPI.getAllCompetitions()
+        .then(res => setCompetitions(res.data.competitions || []))
+        .catch(() => toast.error('Failed to load competitions'))
+        .finally(() => setLoadingCompetitions(false));
+    }
+  }, [isSuperAdmin]);
+
+  // Reset filters when competition changes
+  useEffect(() => {
+    setSelectedGender(null);
+    setSelectedAgeGroup(null);
+    setJudges([]);
+    setJudgesExistForSelection(false);
+  }, [selectedCompetition]);
 
   // Set default competition type when available types change
   useEffect(() => {
@@ -138,12 +156,14 @@ const Judges = () => {
   // Check for existing judges when age group is selected
   const checkForExistingJudges = async (gender, ageGroup) => {
     if (!gender || !ageGroup || !selectedCompetitionType) return false;
+    if (isSuperAdmin && !selectedCompetition) return false;
 
     try {
       const params = {
         gender: gender.value,
         ageGroup: ageGroup.value,
-        competitionTypes: selectedCompetitionType.value
+        competitionTypes: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
       const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
@@ -155,7 +175,7 @@ const Judges = () => {
       );
       return actualJudges.length > 0;
     } catch (error) {
-      console.error('Error checking existing judges:', error);
+      logger.error('Error checking existing judges:', error);
       return false;
     }
   };
@@ -234,6 +254,7 @@ const Judges = () => {
       toast.error('Please select a competition type');
       return;
     }
+    if (isSuperAdmin && !selectedCompetition) return;
     
     setLoadingJudges(true);
     try {
@@ -241,6 +262,7 @@ const Judges = () => {
       if (selectedGender) params.gender = selectedGender.value;
       if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
       if (selectedCompetitionType) params.competitionTypes = selectedCompetitionType.value;
+      if (isSuperAdmin && selectedCompetition) params.competitionId = selectedCompetition.value;
 
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
@@ -249,20 +271,22 @@ const Judges = () => {
     } finally {
       setLoadingJudges(false);
     }
-  }, [selectedCompetitionType, selectedGender, selectedAgeGroup, api]);
+  }, [selectedCompetitionType, selectedGender, selectedAgeGroup, selectedCompetition, api]);
 
   const fetchJudgesWithParams = async (gender, ageGroup) => {
     if (!selectedCompetitionType) {
       toast.error('Please select a competition type');
       return;
     }
+    if (isSuperAdmin && !selectedCompetition) return;
     
     setLoadingJudges(true);
     try {
       const params = { 
         gender, 
         ageGroup,
-        competitionTypes: selectedCompetitionType.value
+        competitionTypes: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
@@ -321,12 +345,14 @@ const Judges = () => {
 
   const checkExistingJudges = async () => {
     if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return false;
+    if (isSuperAdmin && !selectedCompetition) return false;
 
     try {
       const params = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
-        competitionTypes: selectedCompetitionType.value
+        competitionTypes: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
       const response = await api.getJudges(params);
       // Check if there are any actual judges (not empty placeholders)
@@ -381,7 +407,8 @@ const Judges = () => {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionTypes: [selectedCompetitionType.value],
-        judges: cleanedJudges
+        judges: cleanedJudges,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
 
       const response = await api.saveJudges(judgesData);
@@ -396,7 +423,7 @@ const Judges = () => {
         { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' }
       ]);
     } catch (error) {
-      console.error('Save judges error:', error);
+      logger.error('Save judges error:', error);
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.data?.errors) {
@@ -496,7 +523,7 @@ const Judges = () => {
       setEditingJudge(null);
       setEditFormData({ name: '', username: '', password: '' });
     } catch (error) {
-      console.error('Update judge error:', error);
+      logger.error('Update judge error:', error);
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else {
@@ -510,10 +537,41 @@ const Judges = () => {
     setEditFormData({ name: '', username: '', password: '' });
   };
 
+  const competitionOptions = competitions.map(c => ({ value: c._id, label: c.name }));
+  const filtersReady = !isSuperAdmin || selectedCompetition;
+
   return (
     <ResponsiveContainer maxWidth="full" className="py-6">
       <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Judge Management</h2>
+
+        {/* Competition selector - superadmin only */}
+        {isSuperAdmin && (
+          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+            <label className="block text-sm font-semibold text-indigo-800 mb-2">
+              Competition <span className="text-red-500">*</span>
+            </label>
+            <Dropdown
+              options={competitionOptions}
+              value={selectedCompetition}
+              onChange={setSelectedCompetition}
+              placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select a competition first'}
+              disabled={loadingCompetitions}
+            />
+            {!selectedCompetition && (
+              <p className="text-xs text-indigo-600 mt-2">Select a competition to enable the filters below.</p>
+            )}
+          </div>
+        )}
+
+        {!filtersReady ? (
+          <div className="text-center py-10">
+            <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-500 mb-2">Select a Competition First</h3>
+            <p className="text-gray-400">Choose a competition above to start managing judges.</p>
+          </div>
+        ) : (
+        <div className={!filtersReady ? 'opacity-50 pointer-events-none' : ''}>
 
         {/* Judge Type Selection - Mobile-first responsive grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -1196,6 +1254,8 @@ const Judges = () => {
             </div>
           </div>
         )}
+      </div>
+        )} {/* end filtersReady */}
       </div>
     </ResponsiveContainer>
   );

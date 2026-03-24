@@ -23,7 +23,7 @@ const adminSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: 6
+    minlength: 8
   },
   role: {
     type: String,
@@ -47,7 +47,7 @@ adminSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -73,5 +73,8 @@ adminSchema.methods.getAssignedCompetitions = async function() {
   await this.populate('competitions');
   return this.competitions;
 };
+
+// Add index on email for faster login queries
+adminSchema.index({ email: 1 });
 
 module.exports = mongoose.model('Admin', adminSchema);

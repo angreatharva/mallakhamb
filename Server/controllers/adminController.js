@@ -68,22 +68,43 @@ const registerAdmin = async (req, res) => {
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    // Check if account is locked
+    const lockStatus = checkAccountLockout(email);
+    if (lockStatus.isLocked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
+        remainingTime: lockStatus.remainingTime
+      });
+    }
+
     // Find admin by email
     const admin = await Admin.findOne({ email, role: 'admin' });
     if (!admin) {
+      recordFailedAttempt(email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
+      const failureStatus = recordFailedAttempt(email);
+      if (failureStatus.isLocked) {
+        return res.status(429).json({ 
+          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
+          remainingTime: failureStatus.remainingTime
+        });
+      }
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(email);
 
     // Generate token
     const token = generateToken(admin._id, 'admin');
@@ -221,28 +242,33 @@ const getTeamDetails = async (req, res) => {
  */
 const getSubmittedTeams = async (req, res) => {
   try {
-    const { sanitizeQueryParam } = require('../utils/sanitization');
+    const { sanitizeQueryParam, isValidGender, isValidAgeGroup } = require('../utils/sanitization');
     
     // Sanitize query parameters to prevent NoSQL injection
     const gender = sanitizeQueryParam(req.query.gender);
     const ageGroup = sanitizeQueryParam(req.query.ageGroup);
     const competitionType = sanitizeQueryParam(req.query.competitionType);
     
-    let competitionId = req.competitionId;
+    // Validate against whitelist
+    if (gender && !isValidGender(gender)) {
+      return res.status(400).json({ message: 'Invalid gender parameter' });
+    }
+    
+    if (ageGroup && !isValidAgeGroup(ageGroup)) {
+      return res.status(400).json({ message: 'Invalid age group parameter' });
+    }
+    
+    let competitionId = req.competitionId || req.query.competition;
 
-    // For public routes without competition ID, try to find an active competition
     if (!competitionId) {
       const activeCompetition = await Competition.findOne({ 
         status: { $in: ['upcoming', 'ongoing'] },
         isDeleted: false 
       }).sort({ startDate: -1 });
-      
       if (activeCompetition) {
         competitionId = activeCompetition._id;
       } else {
-        return res.status(400).json({ 
-          message: 'No active competition found. Please contact the administrator.' 
-        });
+        return res.status(400).json({ message: 'No active competition found. Please contact the administrator.' });
       }
     }
 
@@ -466,7 +492,7 @@ const unlockScores = async (req, res) => {
 const getTeamScores = async (req, res) => {
   try {
     const { teamId, gender, ageGroup } = req.query;
-    const competitionId = req.competitionId;
+    const competitionId = req.competitionId || req.query.competition;
 
     const query = { competition: competitionId };
     if (teamId) query.teamId = teamId;
@@ -490,7 +516,7 @@ const getTeamScores = async (req, res) => {
 const getIndividualScores = async (req, res) => {
   try {
     const { gender, ageGroup } = req.query;
-    const competitionId = req.competitionId;
+    const competitionId = req.competitionId || req.query.competition;
 
     if (!gender || !ageGroup) {
       return res.status(400).json({ message: 'Gender and age group are required' });
@@ -533,7 +559,7 @@ const getIndividualScores = async (req, res) => {
 const getTeamRankings = async (req, res) => {
   try {
     const { gender, ageGroup } = req.query;
-    const competitionId = req.competitionId;
+    const competitionId = req.competitionId || req.query.competition;
 
     if (!gender || !ageGroup) {
       return res.status(400).json({ message: 'Gender and age group are required' });
@@ -835,7 +861,28 @@ const saveJudges = async (req, res) => {
  */
 const getJudges = async (req, res) => {
   try {
-    const { gender, ageGroup, competitionType, competitionTypes, competition } = req.query;
+    const { sanitizeQueryParam, isValidGender, isValidAgeGroup, isValidCompetitionType } = require('../utils/sanitization');
+    
+    // Sanitize and validate query parameters
+    const gender = sanitizeQueryParam(req.query.gender);
+    const ageGroup = sanitizeQueryParam(req.query.ageGroup);
+    const competitionType = sanitizeQueryParam(req.query.competitionType);
+    const competitionTypes = req.query.competitionTypes;
+    const competition = req.query.competition;
+    
+    // Validate against whitelist
+    if (gender && !isValidGender(gender)) {
+      return res.status(400).json({ message: 'Invalid gender parameter' });
+    }
+    
+    if (ageGroup && !isValidAgeGroup(ageGroup)) {
+      return res.status(400).json({ message: 'Invalid age group parameter' });
+    }
+    
+    if (competitionType && !isValidCompetitionType(competitionType)) {
+      return res.status(400).json({ message: 'Invalid competition type parameter' });
+    }
+    
     let competitionId = req.competitionId || competition;
 
     // Debug logging only in development
@@ -969,7 +1016,7 @@ const getJudges = async (req, res) => {
     console.error('Get judges error:', error);
     res.status(500).json({ message: 'Server error' });
   }
-};
+}
 
 /**
  * Create Single Judge

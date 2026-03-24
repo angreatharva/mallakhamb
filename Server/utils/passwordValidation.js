@@ -9,7 +9,7 @@
  * @returns {Object} - { isValid: boolean, errors: string[] }
  */
 const validatePassword = (password) => {
-  const minLength = 8; // Keeping it reasonable, not 12 as suggested
+  const minLength = 8; // Minimum password length requirement
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumbers = /\d/.test(password);

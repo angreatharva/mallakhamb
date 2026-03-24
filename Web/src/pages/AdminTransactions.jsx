@@ -5,6 +5,7 @@ import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { ResponsiveHeading, ResponsiveText } from '../components/responsive/ResponsiveTypography';
+import { logger } from '../utils/logger';
 
 const AdminTransactions = () => {
   const { routePrefix } = useRouteContext();
@@ -40,7 +41,7 @@ const AdminTransactions = () => {
       const response = await superAdminAPI.getAllCompetitions();
       setCompetitions(response.data.competitions || []);
     } catch (error) {
-      console.error('Failed to load competitions for transactions:', error);
+      logger.error('Failed to load competitions for transactions:', error);
       toast.error('Failed to load competitions');
     }
   };
@@ -55,7 +56,7 @@ const AdminTransactions = () => {
       const response = await api.getTransactions(params);
       setTransactions(response.data.transactions || []);
     } catch (error) {
-      console.error('Failed to load transactions:', error);
+      logger.error('Failed to load transactions:', error);
       const msg =
         error.response?.data?.message ||
         (isSuperAdmin ? 'Select a competition to view transactions' : 'Failed to load transactions');

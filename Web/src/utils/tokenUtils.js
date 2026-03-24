@@ -8,10 +8,10 @@ export const isTokenExpired = (token) => {
     const decoded = jwtDecode(token);
     if (!decoded.exp) return true;
     
-    // Check if token expires in next 5 minutes (buffer time)
+    // Check if token expires in next 30 seconds (buffer time)
     const expiryTime = decoded.exp * 1000;
     const currentTime = Date.now();
-    const bufferTime = 5 * 60 * 1000; // 5 minutes
+    const bufferTime = 30 * 1000; // 30 seconds
     
     return currentTime >= (expiryTime - bufferTime);
   } catch {

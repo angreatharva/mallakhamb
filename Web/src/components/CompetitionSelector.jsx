@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { ChevronDownIcon, CheckIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { logger } from '../utils/logger';
 
 const CompetitionSelector = ({ userType }) => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const CompetitionSelector = ({ userType }) => {
       await switchCompetition(competitionId);
       setIsOpen(false);
     } catch (error) {
-      console.error('Failed to switch competition:', error);
+      logger.error('Failed to switch competition:', error);
       setIsSwitching(false);
     }
   };

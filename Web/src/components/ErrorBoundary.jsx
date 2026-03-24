@@ -1,5 +1,6 @@
 // Error boundary component for graceful error handling
 import React from 'react';
+import { logger } from '../utils/logger';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -7,12 +8,12 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(_error) {
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    logger.error('Error caught by boundary:', error, errorInfo);
     this.setState({ error, errorInfo });
   }
 

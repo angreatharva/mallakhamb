@@ -58,18 +58,39 @@ const registerCoach = async (req, res) => {
 const loginCoach = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
+
+    // Check if account is locked
+    const lockStatus = checkAccountLockout(email);
+    if (lockStatus.isLocked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
+        remainingTime: lockStatus.remainingTime
+      });
+    }
 
     // Find coach by email
     const coach = await Coach.findOne({ email });
     if (!coach) {
+      recordFailedAttempt(email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await coach.comparePassword(password);
     if (!isMatch) {
+      const failureStatus = recordFailedAttempt(email);
+      if (failureStatus.isLocked) {
+        return res.status(429).json({ 
+          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
+          remainingTime: failureStatus.remainingTime
+        });
+      }
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(email);
 
     // Generate token
     const token = generateToken(coach._id, 'coach');

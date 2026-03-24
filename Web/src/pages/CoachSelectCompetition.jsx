@@ -4,8 +4,10 @@ import { Trophy, Calendar, MapPin, ArrowRight, User, LogOut } from 'lucide-react
 import toast from 'react-hot-toast';
 import { coachAPI } from '../services/api';
 import apiConfig from '../utils/apiConfig.js';
+import { secureStorage } from '../utils/secureStorage.js';
 import { ResponsiveContainer } from '../components/responsive';
 import { ResponsiveHeading, ResponsiveText } from '../components/responsive/ResponsiveTypography';
+import { logger } from '../utils/logger';
 
 const CoachSelectCompetition = () => {
   const [competitions, setCompetitions] = useState([]);
@@ -22,12 +24,12 @@ const CoachSelectCompetition = () => {
 
   useEffect(() => {
     // Load user data from localStorage
-    const userData = localStorage.getItem('coach_user');
+    const userData = secureStorage.getItem('coach_user');
     if (userData) {
       try {
         setUser(JSON.parse(userData));
       } catch (error) {
-        console.error('Failed to parse user data:', error);
+        logger.error('Failed to parse user data:', error);
       }
     }
     fetchData();
@@ -65,7 +67,7 @@ const CoachSelectCompetition = () => {
       await coachAPI.registerTeamForCompetition(selectedTeam, selectedCompetition);
 
       // Then set the competition context
-      const token = localStorage.getItem('coach_token');
+      const token = secureStorage.getItem('coach_token');
       const authResponse = await fetch(`${apiConfig.getBaseUrl()}/auth/set-competition`, {
         method: 'POST',
         headers: {
@@ -83,14 +85,14 @@ const CoachSelectCompetition = () => {
       const authData = await authResponse.json();
 
       // Update token with competition context
-      localStorage.setItem('coach_token', authData.token);
+      secureStorage.setItem('coach_token', authData.token);
 
       toast.success('Team registered for competition successfully!');
 
       // Redirect to dashboard with full page reload to refresh competition context
       window.location.href = '/coach/dashboard';
     } catch (error) {
-      console.error('Competition selection error:', error);
+      logger.error('Competition selection error:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to register team');
     } finally {
       setSubmitting(false);
@@ -193,8 +195,8 @@ const CoachSelectCompetition = () => {
               )}
               <button
                 onClick={() => {
-                  localStorage.removeItem('coach_token');
-                  localStorage.removeItem('coach_user');
+                  secureStorage.removeItem('coach_token');
+                  secureStorage.removeItem('coach_user');
                   navigate('/coach/login');
                 }}
                 className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"

@@ -209,6 +209,14 @@ async function resetPassword(req, res) {
 
     // Hash the provided token with SHA-256
     const hashedToken = hashToken(token);
+    
+    // Check if token has already been used
+    const { isTokenUsed, markTokenAsUsed } = require('../utils/passwordResetTracking');
+    if (isTokenUsed(hashedToken)) {
+      return res.status(400).json({
+        message: 'Password reset token has already been used. Please request a new password reset.'
+      });
+    }
 
     // Search for user with matching hashed token in Player collection first
     let user = await Player.findOne({
@@ -233,6 +241,9 @@ async function resetPassword(req, res) {
         message: 'Password reset token is invalid or has expired.'
       });
     }
+
+    // Mark token as used BEFORE saving to prevent race conditions
+    markTokenAsUsed(hashedToken);
 
     // Update user password (bcrypt hashing will be handled by pre-save hook)
     user.password = password;
@@ -259,11 +270,6 @@ async function resetPassword(req, res) {
     });
   }
 }
-
-module.exports = {
-  forgotPassword,
-  resetPassword
-};
 
 /**
  * Set Competition Context
@@ -453,11 +459,12 @@ async function logout(req, res) {
   try {
     const userId = req.user._id;
     const userType = req.userType;
+    const { recordLogout } = require('../utils/tokenInvalidation');
 
     console.log(`🚪 User logout: ${userId} (${userType})`);
 
-    // For admins, we could optionally clear any cached data here
-    // The main logout action is removing the token on the client side
+    // Record logout to invalidate current token
+    recordLogout(userId);
 
     return res.status(200).json({
       message: 'Logout successful',

@@ -22,8 +22,8 @@ const forgotPasswordValidation = [
 // Validation middleware for reset password
 const resetPasswordValidation = [
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
 ];
 
 // Public routes

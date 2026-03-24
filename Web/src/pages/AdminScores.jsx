@@ -14,30 +14,27 @@ import { ResponsiveScoreFilters } from '../components/responsive/ResponsiveFilte
 
 const Scores = () => {
   const navigate = useNavigate();
-  
-  // Get route context for path-aware behavior
   const { routePrefix, storagePrefix } = useRouteContext();
-  
-  // Select appropriate API based on route context
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
+  const isSuperAdmin = routePrefix === '/superadmin';
 
-  // State management
+  // Competition selector state (superadmin only)
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [loadingCompetitions, setLoadingCompetitions] = useState(false);
+
   const [scores, setScores] = useState([]);
   const [submittedTeams, setSubmittedTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
   const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
-  // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
-  const [scoreType, setScoreType] = useState('add'); // 'add', 'team', 'individual'
-
-  // Search
+  const [scoreType, setScoreType] = useState('add');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter options
   const genders = [
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' }
@@ -55,18 +52,36 @@ const Scores = () => {
     { value: 'competition_3', label: 'Competition III - Apparatus Championship' }
   ];
 
-  // Get filtered age groups from competition
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
-  // Reset age group when gender changes
+  // Fetch competitions for superadmin
   useEffect(() => {
-    if (selectedGender) {
-      setSelectedAgeGroup(null);
+    if (isSuperAdmin) {
+      setLoadingCompetitions(true);
+      superAdminAPI.getAllCompetitions()
+        .then(res => setCompetitions(res.data.competitions || []))
+        .catch(() => toast.error('Failed to load competitions'))
+        .finally(() => setLoadingCompetitions(false));
     }
+  }, [isSuperAdmin]);
+
+  // Reset filters when competition changes
+  useEffect(() => {
+    setSelectedGender(null);
+    setSelectedAgeGroup(null);
+    setSelectedCompetitionType(null);
+    setSubmittedTeams([]);
+    setScores([]);
+    setSearchTerm('');
+  }, [selectedCompetition]);
+
+  useEffect(() => {
+    if (selectedGender) setSelectedAgeGroup(null);
   }, [selectedGender]);
 
-  // Auto-load data when both filters are selected
+  // Auto-load data when filters are selected
   useEffect(() => {
+    if (isSuperAdmin && !selectedCompetition) return;
     if (selectedGender && selectedAgeGroup && selectedCompetitionType) {
       if (scoreType === 'add') {
         fetchSubmittedTeams();
@@ -79,20 +94,20 @@ const Scores = () => {
       setSubmittedTeams([]);
       setScores([]);
     }
-  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, scoreType]);
+  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, scoreType, selectedCompetition]);
 
   // API Functions
   const fetchSubmittedTeams = async () => {
-    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) {
-      return;
-    }
+    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
+    if (isSuperAdmin && !selectedCompetition) return;
 
     setLoading(true);
     try {
       const params = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
-        competitionType: selectedCompetitionType.value
+        competitionType: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
 
       const response = await api.getSubmittedTeams(params);
@@ -114,15 +129,15 @@ const Scores = () => {
   };
 
   const fetchTeamScores = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
-      return;
-    }
+    if (!selectedGender || !selectedAgeGroup) return;
+    if (isSuperAdmin && !selectedCompetition) return;
 
     setLoading(true);
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
 
       const response = await api.getTeamScores(params);
@@ -135,15 +150,15 @@ const Scores = () => {
   };
 
   const fetchIndividualScores = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
-      return;
-    }
+    if (!selectedGender || !selectedAgeGroup) return;
+    if (isSuperAdmin && !selectedCompetition) return;
 
     setLoading(true);
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
 
       logger.log('Fetching individual scores with params:', params);
@@ -156,7 +171,7 @@ const Scores = () => {
         toast.info('No individual scores found for this category');
       }
     } catch (error) {
-      console.error('Failed to load individual scores:', error);
+      logger.error('Failed to load individual scores:', error);
       toast.error('Failed to load individual scores');
       setScores([]);
     } finally {
@@ -165,15 +180,15 @@ const Scores = () => {
   };
 
   const fetchTeamRankings = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
-      return;
-    }
+    if (!selectedGender || !selectedAgeGroup) return;
+    if (isSuperAdmin && !selectedCompetition) return;
 
     setLoading(true);
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
 
       logger.log('Fetching team rankings with params:', params);
@@ -186,7 +201,7 @@ const Scores = () => {
         toast.info('No team rankings found for this category');
       }
     } catch (error) {
-      console.error('Failed to load team rankings:', error);
+      logger.error('Failed to load team rankings:', error);
       toast.error('Failed to load team rankings');
       setScores([]);
     } finally {
@@ -201,6 +216,7 @@ const Scores = () => {
     setSubmittedTeams([]);
     setScores([]);
     setSearchTerm('');
+    if (isSuperAdmin) setSelectedCompetition(null);
   };
 
   // Filter teams/scores based on search term
@@ -238,30 +254,60 @@ const Scores = () => {
     return filteredScores;
   };
 
+  const competitionOptions = competitions.map(c => ({ value: c._id, label: c.name }));
+  const filtersReady = !isSuperAdmin || selectedCompetition;
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl shadow-lg p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Scoring System</h2>
 
+        {/* Competition selector - superadmin only */}
+        {isSuperAdmin && (
+          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+            <label className="block text-sm font-semibold text-indigo-800 mb-2">
+              Competition <span className="text-red-500">*</span>
+            </label>
+            <Dropdown
+              options={competitionOptions}
+              value={selectedCompetition}
+              onChange={setSelectedCompetition}
+              placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select a competition first'}
+              disabled={loadingCompetitions}
+            />
+            {!selectedCompetition && (
+              <p className="text-xs text-indigo-600 mt-2">Select a competition to enable the filters below.</p>
+            )}
+          </div>
+        )}
+
         {/* Score Type Selection */}
-        <ResponsiveScoreFilters
-          scoreType={scoreType}
-          onScoreTypeChange={setScoreType}
-          selectedGender={selectedGender}
-          onGenderChange={setSelectedGender}
-          selectedAgeGroup={selectedAgeGroup}
-          onAgeGroupChange={setSelectedAgeGroup}
-          selectedCompetitionType={selectedCompetitionType}
-          onCompetitionTypeChange={setSelectedCompetitionType}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onClearFilters={handleClearFilters}
-          ageGroups={availableAgeGroups}
-          competitionTypes={competitionTypes}
-        />
+        <div className={!filtersReady ? 'opacity-50 pointer-events-none' : ''}>
+          <ResponsiveScoreFilters
+            scoreType={scoreType}
+            onScoreTypeChange={setScoreType}
+            selectedGender={selectedGender}
+            onGenderChange={setSelectedGender}
+            selectedAgeGroup={selectedAgeGroup}
+            onAgeGroupChange={setSelectedAgeGroup}
+            selectedCompetitionType={selectedCompetitionType}
+            onCompetitionTypeChange={setSelectedCompetitionType}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onClearFilters={handleClearFilters}
+            ageGroups={availableAgeGroups}
+            competitionTypes={competitionTypes}
+          />
+        </div>
 
         {/* Score Content - Only show after filters are applied */}
-        {!selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
+        {!filtersReady ? (
+          <div className="text-center py-10">
+            <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-500 mb-2">Select a Competition First</h3>
+            <p className="text-gray-400">Choose a competition above to start filtering scores.</p>
+          </div>
+        ) : !selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
           <div className="text-center py-5">
             <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-500 mb-2">Select Filters to View Scores</h3>

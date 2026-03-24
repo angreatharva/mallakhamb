@@ -1,6 +1,6 @@
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig.js';
-import { isTokenExpired, getTokenData, getCompetitionIdFromToken } from '../utils/tokenUtils.js';
+import { isTokenExpired, getCompetitionIdFromToken } from '../utils/tokenUtils.js';
 import { secureStorage } from '../utils/secureStorage.js';
 import { apiCache, clearCachePattern } from '../utils/apiCache.js';
 import { logger } from '../utils/logger.js';
@@ -71,14 +71,6 @@ api.interceptors.request.use(
       const competitionId = getCompetitionIdFromToken(token);
       if (competitionId) {
         config.headers['x-competition-id'] = competitionId;
-      }
-      
-      // Add CSRF token for non-GET requests
-      if (config.method !== 'get') {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (csrfToken) {
-          config.headers['X-CSRF-Token'] = csrfToken;
-        }
       }
     }
     return config;
@@ -250,7 +242,7 @@ export const superAdminAPI = {
   assignAdminToCompetition: (id, data) => api.post(`/superadmin/competitions/${id}/admins`, data),
   removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`),
   // Team and Player management
-  getAllTeams: () => api.get('/superadmin/teams'),
+  getAllTeams: (params) => api.get('/superadmin/teams', { params }),
   addPlayerToTeam: (data) => api.post('/superadmin/players/add', data)
 };
 

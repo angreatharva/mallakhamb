@@ -1,5 +1,6 @@
 // Simple encrypted storage wrapper for sensitive data
 import CryptoJS from 'crypto-js';
+import { logger } from './logger';
 
 // Use a combination of factors for encryption key
 const getEncryptionKey = () => {
@@ -14,8 +15,8 @@ export const secureStorage = {
       const encrypted = CryptoJS.AES.encrypt(value, getEncryptionKey()).toString();
       localStorage.setItem(key, encrypted);
     } catch (error) {
-      console.error('Failed to encrypt data:', error);
-      localStorage.setItem(key, value); // Fallback to plain storage
+      logger.error('Failed to encrypt data:', error);
+      // Do not fall back to plain storage - fail silently to avoid exposing sensitive data
     }
   },
   
@@ -28,8 +29,8 @@ export const secureStorage = {
       const value = decrypted.toString(CryptoJS.enc.Utf8);
       return value || null;
     } catch (error) {
-      console.error('Failed to decrypt data:', error);
-      return localStorage.getItem(key); // Fallback to plain storage
+      logger.error('Failed to decrypt data:', error);
+      return null; // Do not fall back to plain storage
     }
   },
   

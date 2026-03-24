@@ -8,11 +8,14 @@ const getAllowedOrigins = () => {
   console.log('🔍 Environment check:', {
     NODE_ENV: process.env.NODE_ENV,
     CLIENT_URL: process.env.CLIENT_URL,
-    RENDER_FRONTEND_URL: process.env.RENDER_FRONTEND_URL
+    PRODUCTION_URL: process.env.PRODUCTION_URL
   });
 
-  // Always include the Render frontend URL (hardcoded for reliability)
-  const origins = ['https://mallakhamb-087p.onrender.com'];
+  const origins = [];
+  
+  // Add production URL from environment (fallback to hardcoded for backward compatibility)
+  const productionUrl = process.env.PRODUCTION_URL || 'https://mallakhamb-087p.onrender.com';
+  origins.push(productionUrl);
   
   // In development or when not in production, also allow localhost
   if (process.env.NODE_ENV !== 'production') {

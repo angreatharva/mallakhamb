@@ -7,6 +7,8 @@ import RouteContext from './contexts/RouteContext';
 import { CompetitionProvider } from './contexts/CompetitionContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { secureStorage } from './utils/secureStorage';
+import { apiCache } from './utils/apiCache';
+import { logger } from './utils/logger';
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -87,7 +89,7 @@ function AppContent() {
           setUserType(currentType);
           return;
         } catch (error) {
-          console.error('Failed to parse user data:', error);
+          logger.error('Failed to parse user data:', error);
         }
       }
     }
@@ -114,7 +116,7 @@ function AppContent() {
           setUserType(legacyType);
         }
       } catch (error) {
-        console.error('Failed to parse legacy user data:', error);
+        logger.error('Failed to parse legacy user data:', error);
       }
     }
   };
@@ -182,19 +184,11 @@ function AppContent() {
       // Ignore logout errors
     }
     
-    // Clear secure storage regardless of backend response
-    if (currentType) {
-      secureStorage.removeItem(`${currentType}_token`);
-      secureStorage.removeItem(`${currentType}_user`);
-    }
-    
-    // Also clean up any legacy data
-    secureStorage.removeItem('token');
-    secureStorage.removeItem('user');
-    secureStorage.removeItem('userType');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
+    // Clear all storage
+    secureStorage.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    apiCache.clear();
     
     setUser(null);
     setUserType(null);
@@ -296,7 +290,9 @@ function AppContent() {
               path="/admin/dashboard"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <AdminDashboard />
+                  <CompetitionProvider userType="admin">
+                    <AdminDashboard />
+                  </CompetitionProvider>
                 </ProtectedRoute>
               }
             />
@@ -304,7 +300,9 @@ function AppContent() {
               path="/admin/dashboard/:tab"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <AdminDashboard />
+                  <CompetitionProvider userType="admin">
+                    <AdminDashboard />
+                  </CompetitionProvider>
                 </ProtectedRoute>
               }
             />

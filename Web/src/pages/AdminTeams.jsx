@@ -13,70 +13,83 @@ import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
 import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
+import { logger } from '../utils/logger';
 import { ResponsiveTeamFilters } from '../components/responsive/ResponsiveFilters';
 
 const Teams = () => {
-  // Get route context for path-aware behavior
   const { routePrefix, storagePrefix } = useRouteContext();
-  
-  // Select appropriate API based on route context
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
-  
-  // State management
+  const isSuperAdmin = routePrefix === '/superadmin';
+
+  // Competition selector state (superadmin only)
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [loadingCompetitions, setLoadingCompetitions] = useState(false);
+
   const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
-
-  // Search
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter options
   const genders = [
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' }
   ];
 
-  // Get filtered age groups from competition
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
-  // Reset age group when gender changes
+  // Fetch competitions for superadmin
   useEffect(() => {
-    if (selectedGender) {
-      setSelectedAgeGroup(null);
+    if (isSuperAdmin) {
+      setLoadingCompetitions(true);
+      superAdminAPI.getAllCompetitions()
+        .then(res => setCompetitions(res.data.competitions || []))
+        .catch(() => toast.error('Failed to load competitions'))
+        .finally(() => setLoadingCompetitions(false));
     }
+  }, [isSuperAdmin]);
+
+  // Reset filters when competition changes
+  useEffect(() => {
+    setSelectedGender(null);
+    setSelectedAgeGroup(null);
+    setTeams([]);
+    setSearchTerm('');
+  }, [selectedCompetition]);
+
+  useEffect(() => {
+    if (selectedGender) setSelectedAgeGroup(null);
   }, [selectedGender]);
 
-  // Auto-load teams when both filters are selected
   useEffect(() => {
+    if (isSuperAdmin && !selectedCompetition) return;
     if (selectedGender && selectedAgeGroup) {
       fetchTeams();
     } else {
       setTeams([]);
     }
-  }, [selectedGender, selectedAgeGroup]);
+  }, [selectedGender, selectedAgeGroup, selectedCompetition]);
 
-  // API Functions
   const fetchTeams = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
-      return;
-    }
+    if (!selectedGender || !selectedAgeGroup) return;
+    if (isSuperAdmin && !selectedCompetition) return;
 
     setLoading(true);
     try {
       const params = {
         gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
+        ageGroup: selectedAgeGroup.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
       };
       const response = await api.getAllTeams(params);
       setTeams(response.data.teams);
       toast.success(`Loaded ${response.data.teams.length} teams`);
     } catch (error) {
       toast.error('Failed to load teams');
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
     }
@@ -88,7 +101,6 @@ const Teams = () => {
       setSelectedTeam(response.data.team);
     } catch (error) {
       toast.error('Failed to load team details');
-      console.error('Error fetching team details:', error);
     }
   };
 
@@ -97,47 +109,71 @@ const Teams = () => {
     setSelectedAgeGroup(null);
     setTeams([]);
     setSearchTerm('');
+    if (isSuperAdmin) setSelectedCompetition(null);
   };
 
-  // Filter teams based on search term
   const filteredTeams = teams.filter(team => {
     if (!searchTerm) return true;
-    
     const searchLower = searchTerm.toLowerCase();
-    const teamName = team.name?.toLowerCase() || '';
+    const teamName = (team.team?.name || team.name)?.toLowerCase() || '';
     const coachName = team.coach?.name?.toLowerCase() || '';
-    
     return teamName.includes(searchLower) || coachName.includes(searchLower);
   });
+
+  const competitionOptions = competitions.map(c => ({ value: c._id, label: c.name }));
+  const filtersReady = !isSuperAdmin || selectedCompetition;
 
   return (
     <div className="space-y-6">
       <div className="max-w-7xl mx-auto">
-
-        {/* Main Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Teams Management</h2>
 
+          {/* Competition selector - superadmin only */}
+          {isSuperAdmin && (
+            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+              <label className="block text-sm font-semibold text-indigo-800 mb-2">
+                Competition <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                options={competitionOptions}
+                value={selectedCompetition}
+                onChange={setSelectedCompetition}
+                placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select a competition first'}
+                disabled={loadingCompetitions}
+              />
+              {!selectedCompetition && (
+                <p className="text-xs text-indigo-600 mt-2">Select a competition to enable the filters below.</p>
+              )}
+            </div>
+          )}
+
           {/* Filter Section */}
-          <ResponsiveTeamFilters
-            selectedGender={selectedGender}
-            onGenderChange={setSelectedGender}
-            selectedAgeGroup={selectedAgeGroup}
-            onAgeGroupChange={setSelectedAgeGroup}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onClearFilters={handleClearFilters}
-            ageGroups={availableAgeGroups}
-          />
+          <div className={!filtersReady ? 'opacity-50 pointer-events-none' : ''}>
+            <ResponsiveTeamFilters
+              selectedGender={selectedGender}
+              onGenderChange={setSelectedGender}
+              selectedAgeGroup={selectedAgeGroup}
+              onAgeGroupChange={setSelectedAgeGroup}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onClearFilters={handleClearFilters}
+              ageGroups={availableAgeGroups}
+            />
+          </div>
 
           {/* Teams Display */}
-          {!selectedGender || !selectedAgeGroup ? (
+          {!filtersReady ? (
+            <div className="text-center py-10">
+              <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-500 mb-2">Select a Competition First</h3>
+              <p className="text-gray-400">Choose a competition above to start filtering teams.</p>
+            </div>
+          ) : !selectedGender || !selectedAgeGroup ? (
             <div className="text-center py-5">
               <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-500 mb-2">Select Filters to View Teams</h3>
-              <p className="text-gray-400 mb-6">
-                Please select both gender and age group filters above to view teams.
-              </p>
+              <p className="text-gray-400 mb-6">Please select both gender and age group filters above to view teams.</p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
                 <p className="text-sm text-blue-800">
                   <strong>Required:</strong> Gender and Age Group filters must be selected. Teams will load automatically.
@@ -154,14 +190,14 @@ const Teams = () => {
               <div className="mt-2.5 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-800">
                   <strong>Showing teams for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
+                  {isSuperAdmin && selectedCompetition && ` — ${selectedCompetition.label}`}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  Found {teams.length} team{teams.length !== 1 ? 's' : ''} matching your criteria
+                  Found {teams.length} team{teams.length !== 1 ? 's' : ''}
                   {searchTerm && ` (${filteredTeams.length} after search)`}
                 </p>
               </div>
 
-              {/* Search Bar */}
               <div className="mb-6">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -175,10 +211,7 @@ const Teams = () => {
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white text-gray-900"
                   />
                   {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    >
+                    <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                       <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                     </button>
                   )}
@@ -189,20 +222,11 @@ const Teams = () => {
                 <div className="text-center py-8">
                   <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-500 mb-2">No teams found</h3>
-                  <p className="text-gray-400">No teams match your search term "{searchTerm}"</p>
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="mt-3 text-purple-600 hover:text-purple-800 font-medium"
-                  >
-                    Clear search
-                  </button>
+                  <p className="text-gray-400">No teams match "{searchTerm}"</p>
+                  <button onClick={() => setSearchTerm('')} className="mt-3 text-purple-600 hover:text-purple-800 font-medium">Clear search</button>
                 </div>
               ) : (
-                <ResponsiveTeamTable
-                  teams={filteredTeams}
-                  onTeamClick={fetchTeamDetails}
-                  searchTerm={searchTerm}
-                />
+                <ResponsiveTeamTable teams={filteredTeams} onTeamClick={fetchTeamDetails} searchTerm={searchTerm} />
               )}
             </div>
           ) : (
@@ -210,7 +234,6 @@ const Teams = () => {
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-500 mb-2">No Teams Found</h3>
               <p className="text-gray-500 mb-2">No teams found for the selected filters.</p>
-              <p className="text-gray-400 text-sm">Try different filter combinations or check if teams have been registered for this category.</p>
             </div>
           )}
         </div>
@@ -222,7 +245,7 @@ const Teams = () => {
               {/* Modal Header */}
               <div className="flex justify-between items-center p-6 border-b border-gray-200">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">{selectedTeam.name}</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{selectedTeam.team?.name || selectedTeam.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">Team Details</p>
                 </div>
                 <button

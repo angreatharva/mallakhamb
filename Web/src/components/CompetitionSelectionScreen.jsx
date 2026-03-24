@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
 import toast from 'react-hot-toast';
+import { logger } from '../utils/logger';
 
 const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       // Navigate to appropriate dashboard
       navigateToDashboard();
     } catch (error) {
-      console.error('Failed to auto-select competition:', error);
+      logger.error('Failed to auto-select competition:', error);
       toast.error('Failed to select competition');
       setIsSelecting(false);
     }
@@ -54,7 +55,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       // Navigate to appropriate dashboard
       navigateToDashboard();
     } catch (error) {
-      console.error('Failed to select competition:', error);
+      logger.error('Failed to select competition:', error);
       toast.error('Failed to select competition');
       setIsSelecting(false);
     }

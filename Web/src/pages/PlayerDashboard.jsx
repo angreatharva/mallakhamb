@@ -7,6 +7,7 @@ import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
 import { ResponsiveContainer, ResponsiveCardGrid } from '../components/responsive';
 import { useResponsive } from '../hooks/useResponsive';
+import { logger } from '../utils/logger';
 
 const PlayerDashboard = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -91,7 +92,7 @@ const PlayerDashboard = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch player profile:', error);
+      logger.error('Failed to fetch player profile:', error);
     } finally {
       setLoading(false);
     }

@@ -32,7 +32,7 @@ const playerSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: 6
+    minlength: 8
   },
   team: {
     type: mongoose.Schema.Types.ObjectId,
@@ -70,7 +70,7 @@ playerSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -96,5 +96,8 @@ playerSchema.methods.getAge = function() {
   
   return age;
 };
+
+// Add index on email for faster login queries
+playerSchema.index({ email: 1 });
 
 module.exports = mongoose.model('Player', playerSchema);

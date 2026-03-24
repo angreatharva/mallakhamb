@@ -21,7 +21,7 @@ const createAdmin = async () => {
 
         const name = 'Atharva Angre';
         const email = 'angreatharva02@gmail.com';
-        const password = 'Atharva02';
+        const password = 'Atharva@02';
 
         // Check if admin already exists
         const existingAdmin = await Admin.findOne({ email: email });

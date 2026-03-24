@@ -19,6 +19,7 @@ import {
   isDesktopBaseline,
   setResponsiveCSSProperties,
 } from '../utils/responsive.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Custom hook for responsive state management
@@ -180,11 +181,10 @@ export const useBreakpoint = (breakpoint) => {
   const breakpointValue = BREAKPOINTS[breakpoint];
   
   if (!breakpointValue) {
-    console.warn(`Unknown breakpoint: ${breakpoint}`);
-    return false;
+    logger.warn(`Unknown breakpoint: ${breakpoint}`);
   }
 
-  return useMediaQuery(`(min-width: ${breakpointValue}px)`);
+  return useMediaQuery(breakpointValue ? `(min-width: ${breakpointValue}px)` : '');
 };
 
 /**

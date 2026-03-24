@@ -4,6 +4,8 @@ import { Scale, Lock, User, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import apiConfig from '../utils/apiConfig';
+import { secureStorage } from '../utils/secureStorage';
+import { logger } from '../utils/logger';
 
 const JudgeLogin = () => {
   const navigate = useNavigate();
@@ -42,9 +44,9 @@ const JudgeLogin = () => {
         }
       );
 
-      // Store judge token and info
-      localStorage.setItem('judge_token', response.data.token);
-      localStorage.setItem('judge_user', JSON.stringify(response.data.judge));
+      // Store judge token and info using secure storage
+      secureStorage.setItem('judge_token', response.data.token);
+      secureStorage.setItem('judge_user', JSON.stringify(response.data.judge));
 
       toast.success(`Welcome ${response.data.judge.name}!`);
 
@@ -53,7 +55,7 @@ const JudgeLogin = () => {
       navigate('/judge/scoring');
 
     } catch (error) {
-      console.error('Judge login error:', error);
+      logger.error('Judge login error:', error);
       const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
       toast.error(errorMessage);
     } finally {
@@ -113,6 +115,7 @@ const JudgeLogin = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="current-password"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
                   placeholder="Enter your password"
                   required
