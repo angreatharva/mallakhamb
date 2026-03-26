@@ -122,27 +122,23 @@ io.on('connection', (socket) => {
 // Make io available to routes
 app.set('io', io);
 
+// Get allowed origins once at startup
+const allowedOrigins = config.getAllowedOrigins();
+
 // Simplified CORS configuration that works reliably
 const corsOptions = {
   origin: function (origin, callback) {
-    // Get fresh allowed origins each time
-    const allowedOrigins = config.getAllowedOrigins();
-    console.log('🔍 CORS check - Origin:', origin, 'Allowed:', allowedOrigins);
-    
     // In production, require origin header
     if (!origin) {
       if (process.env.NODE_ENV === 'production') {
-        console.log('❌ CORS blocked: No origin header in production');
         return callback(new Error('Origin header required'));
       }
       // Allow no-origin in development (for testing tools like Postman)
-      console.log('✅ CORS allowed: No origin (development mode)');
       return callback(null, true);
     }
     
     // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
-      console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
@@ -182,7 +178,6 @@ app.use(cors(corsOptions));
 
 // Additional CORS headers middleware to ensure headers are always set
 app.use((req, res, next) => {
-  const allowedOrigins = config.getAllowedOrigins();
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);

@@ -5,14 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js",
-    "create-admin": "node scripts/createAdmin.js",
-    "create-superadmin": "node scripts/createSuperAdmin.js",
-    "update-competition-index": "node scripts/updateCompetitionIndex.js",
-    "add-year-to-competitions": "node scripts/addYearToExistingCompetitions.js",
-    "test-env": "node scripts/test-env.js",
-    "test": "jest --runInBand --detectOpenHandles",
-    "test:watch": "jest --watch"
+    "server": "nodemon server.js"
   },
   "keywords": [
     "sports",
