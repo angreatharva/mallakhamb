@@ -19,7 +19,7 @@ const Dropdown = ({
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -44,22 +44,27 @@ const Dropdown = ({
       if (!isOpen) return;
 
       switch (event.key) {
-        case 'Escape':
+        case 'Escape': {
           setIsOpen(false);
           buttonRef.current?.focus();
           break;
-        case 'ArrowDown':
+        }
+        case 'ArrowDown': {
           event.preventDefault();
           // Focus first option or search input
           const firstOption = dropdownRef.current?.querySelector('[role="option"]');
           const searchInput = dropdownRef.current?.querySelector('input[type="text"]');
           (searchInput || firstOption)?.focus();
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           event.preventDefault();
           // Focus last option
           const options = dropdownRef.current?.querySelectorAll('[role="option"]');
           options?.[options.length - 1]?.focus();
+          break;
+        }
+        default:
           break;
       }
     };

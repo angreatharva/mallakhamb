@@ -8,7 +8,7 @@ import CompetitionSelector from './CompetitionSelector';
 const Navbar = ({ user, userType, onLogout }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isMobile, isTablet, isDesktop } = useResponsive();
+  const { isTablet, isDesktop } = useResponsive();
   const { clearCompetitionContext } = useCompetition();
 
   const handleLogout = () => {

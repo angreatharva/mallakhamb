@@ -5,7 +5,7 @@ import { secureStorage } from '../utils/secureStorage';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
   const location = useLocation();
 
   // Detect route context from current URL path

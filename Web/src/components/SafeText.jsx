@@ -9,17 +9,19 @@ import { sanitizeInput } from '../utils/sanitize';
  * @param {string} className - CSS classes to apply
  * @param {object} props - Additional props to pass to the element
  */
-const SafeText = ({ children, as: Component = 'span', className = '', ...props }) => {
+const SafeText = ({ children, as = 'span', className = '', ...props }) => {
+  const ElementType = as;
+  
   if (typeof children !== 'string') {
-    return <Component className={className} {...props}>{children}</Component>;
+    return <ElementType className={className} {...props}>{children}</ElementType>;
   }
   
   const sanitized = sanitizeInput(children);
   
   return (
-    <Component className={className} {...props}>
+    <ElementType className={className} {...props}>
       {sanitized}
-    </Component>
+    </ElementType>
   );
 };
 

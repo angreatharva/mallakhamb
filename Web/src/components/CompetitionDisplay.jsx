@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { CalendarIcon, MapPinIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import SafeText from './SafeText';
 
 const CompetitionDisplay = ({ className = '' }) => {
   const { currentCompetition, isLoading } = useCompetition();
@@ -29,14 +30,14 @@ const CompetitionDisplay = ({ className = '' }) => {
           <div className="flex items-center space-x-2 mb-2">
             <TrophyIcon className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              {currentCompetition.name} {currentCompetition.year ? `(${currentCompetition.year})` : ''}
+              <SafeText>{currentCompetition.name}</SafeText> {currentCompetition.year ? `(${currentCompetition.year})` : ''}
             </h3>
           </div>
           
           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
             <div className="flex items-center space-x-1">
               <MapPinIcon className="w-4 h-4" />
-              <span>{currentCompetition.place}</span>
+              <SafeText as="span">{currentCompetition.place}</SafeText>
             </div>
             
             <span>•</span>
@@ -68,9 +69,9 @@ const CompetitionDisplay = ({ className = '' }) => {
       </div>
       
       {currentCompetition.description && (
-        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+        <SafeText as="p" className="mt-2 text-sm text-gray-600 line-clamp-2">
           {currentCompetition.description}
-        </p>
+        </SafeText>
       )}
     </div>
   );

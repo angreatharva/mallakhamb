@@ -2,11 +2,23 @@
 import CryptoJS from 'crypto-js';
 import { logger } from './logger';
 
-// Use a combination of factors for encryption key
+// Generate a more robust encryption key
 const getEncryptionKey = () => {
   const envKey = import.meta.env.VITE_STORAGE_KEY || 'mallakhamb-india-2026';
-  const browserKey = navigator.userAgent.substring(0, 20);
-  return `${envKey}-${browserKey}`;
+  
+  // Use multiple browser fingerprinting factors for better entropy
+  const browserFingerprint = [
+    navigator.userAgent.substring(0, 30),
+    navigator.language || 'en',
+    screen.colorDepth || '24',
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset().toString()
+  ].join('|');
+  
+  // Hash the fingerprint for consistent length
+  const fingerprintHash = CryptoJS.SHA256(browserFingerprint).toString().substring(0, 32);
+  
+  return `${envKey}-${fingerprintHash}`;
 };
 
 export const secureStorage = {

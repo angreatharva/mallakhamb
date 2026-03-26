@@ -106,7 +106,7 @@ const populateDatabase = async () => {
     const superAdmin = await Admin.create({
       name: 'Super Admin',
       email: 'superadmin@gmail.com',
-      password: await hashPassword('Superadmin@2026'),
+      password: ('Superadmin@2026'),
       role: 'super_admin',
       isActive: true
     });
@@ -119,7 +119,7 @@ const populateDatabase = async () => {
       const admin = await Admin.create({
         name: adminNames[i],
         email: `${adminNames[i].toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-        password: await hashPassword(`${adminNames[i].split(' ')[0]}@2026`),
+        password: (`${adminNames[i].split(' ')[0]}@2026`),
         role: 'admin',
         isActive: true,
         competitions: []
@@ -133,7 +133,7 @@ const populateDatabase = async () => {
       const admin = await Admin.create({
         name: `Admin ${i + 1}`,
         email: `admin${i + 1}@mallakhamb.com`,
-        password: await hashPassword(`Admin${i + 1}@2026`),
+        password: (`Admin${i + 1}@2026`),
         role: 'admin',
         isActive: true,
         competitions: []
@@ -225,7 +225,7 @@ const populateDatabase = async () => {
       const coach = await Coach.create({
         name: coachName,
         email: `${coachName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-        password: await hashPassword(`${coachName.split(' ')[0]}@2026`),
+        password: (`${coachName.split(' ')[0]}@2026`),
         isActive: true
       });
       coaches.push(coach);
@@ -291,7 +291,7 @@ const populateDatabase = async () => {
           firstName: firstName,
           lastName: lastName,
           email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${playerCount}@gmail.com`,
-          password: await hashPassword(`${firstName}@2026`),
+          password: (`${firstName}@2026`),
           dateOfBirth: dateOfBirth,
           gender: gender,
           team: team._id,
@@ -395,7 +395,7 @@ const populateDatabase = async () => {
             competition: competition._id,
             name: judgeName,
             username: username,
-            password: await hashPassword('Judge@2026'),
+            password: ('Judge@2026'),
             judgeType: judgeType,
             judgeNo: judgeNo,
             gender: gender,
@@ -568,7 +568,7 @@ const populateDatabase = async () => {
     console.log('========================================\n');
     
     console.log('Super Admin:');
-    console.log('  Email: superadmin@mallakhamb.com');
+    console.log('  Email: superadmin@gmail.com');
     console.log('  Password: SuperAdmin@2026\n');
     
     console.log('Sample Admin:');
