@@ -5,17 +5,14 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: cd Server && npm install
-    startCommand: cd Server && node server.js
+    rootDir: Server
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: CLIENT_URL
-        value: https://mallakhamb-087p.onrender.com
-      - key: FRONTEND_URL
-        value: https://mallakhamb-087p.onrender.com
-      - key: PRODUCTION_URL
-        value: https://mallakhamb-087p.onrender.com
+      - key: PORT
+        value: 10000
       - key: NGROK_ENABLED
         value: false
       # Add these in Render Dashboard (sensitive):
@@ -23,38 +20,7 @@ services:
       # - JWT_SECRET
       # - EMAIL_USER
       # - EMAIL_PASS
+      # - CLIENT_URL (your frontend URL when deployed)
+      # - FRONTEND_URL (your frontend URL when deployed)
+      # - PRODUCTION_URL (your backend URL)
     healthCheckPath: /api/health
-
-  # Frontend Static Site
-  - type: web
-    name: mallakhamb-frontend
-    env: static
-    region: oregon
-    plan: free
-    buildCommand: cd Web && npm install && npm run build
-    staticPublishPath: ./Web/dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://mallakhamb.onrender.com/api
-      # Add in Render Dashboard (sensitive):
-      # - VITE_STORAGE_KEY
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-      - path: /*
-        name: Permissions-Policy
-        value: geolocation=(), microphone=(), camera=()
-      - path: /assets/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable

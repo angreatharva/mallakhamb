@@ -74,7 +74,4 @@ adminSchema.methods.getAssignedCompetitions = async function() {
   return this.competitions;
 };
 
-// Add index on email for faster login queries
-adminSchema.index({ email: 1 });
-
 module.exports = mongoose.model('Admin', adminSchema);

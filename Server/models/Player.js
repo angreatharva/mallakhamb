@@ -97,7 +97,4 @@ playerSchema.methods.getAge = function() {
   return age;
 };
 
-// Add index on email for faster login queries
-playerSchema.index({ email: 1 });
-
 module.exports = mongoose.model('Player', playerSchema);

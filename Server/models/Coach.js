@@ -64,7 +64,4 @@ coachSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Add index on email for faster login queries
-coachSchema.index({ email: 1 });
-
 module.exports = mongoose.model('Coach', coachSchema);
