@@ -28,8 +28,11 @@ export default defineConfig({
           'utils': ['axios', 'jwt-decode', 'crypto-js', 'dompurify']
         }
       }
-    }
+    },
+    // Copy _redirects file to dist folder for Render SPA routing
+    copyPublicDir: true
   },
+  publicDir: 'public',
   test: {
     globals: true,
     environment: 'jsdom',
