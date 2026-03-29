@@ -59,7 +59,7 @@ const addScoreValidation = [
   body('playerId').isMongoId().withMessage('Valid player ID is required'),
   body('teamId').isMongoId().withMessage('Valid team ID is required'),
   body('ageGroup')
-    .isIn(['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'])
+    .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
     .withMessage('Valid age group is required'),
   body('gender')
     .isIn(['Male', 'Female'])
@@ -77,7 +77,7 @@ const saveJudgesValidation = [
     .isIn(['Male', 'Female'])
     .withMessage('Gender must be either Male or Female'),
   body('ageGroup')
-    .isIn(['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'])
+    .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
     .withMessage('Valid age group is required'),
   body('judges')
     .isArray({ min: 5, max: 5 })
@@ -105,7 +105,7 @@ const createSingleJudgeValidation = [
     .isIn(['Male', 'Female'])
     .withMessage('Gender must be either Male or Female'),
   body('ageGroup')
-    .isIn(['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'])
+    .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
     .withMessage('Valid age group is required'),
   body('judgeNo')
     .isInt({ min: 1, max: 5 })

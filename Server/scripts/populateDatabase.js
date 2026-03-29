@@ -34,11 +34,11 @@ const calculateAgeGroup = (dateOfBirth) => {
   const birthDate = new Date(dateOfBirth);
   const age = today.getFullYear() - birthDate.getFullYear();
   
-  if (age < 10) return 'U10';
-  if (age < 12) return 'U12';
-  if (age < 14) return 'U14';
-  if (age < 16) return 'U16';
-  if (age < 18) return 'U18';
+  if (age < 10) return 'Under10';
+  if (age < 12) return 'Under12';
+  if (age < 14) return 'Under14';
+  if (age < 16) return 'Under16';
+  if (age < 18) return 'Under18';
   return 'Above18';
 };
 
@@ -147,7 +147,7 @@ const populateDatabase = async () => {
     console.log('Creating Competitions...');
     const competitions = [];
     const ageGroups = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
-    const ageGroupsStarted = ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18'];
+    const ageGroupsStarted = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
     const genders = ['Male', 'Female'];
     const competitionTypes = ['competition_1', 'competition_2', 'competition_3'];
     
@@ -276,11 +276,11 @@ const populateDatabase = async () => {
         const ageGroupIndex = Math.floor(Math.random() * 6);
         let birthYear;
         switch (ageGroupIndex) {
-          case 0: birthYear = 2016 + Math.floor(Math.random() * 2); break; // U10
-          case 1: birthYear = 2014 + Math.floor(Math.random() * 2); break; // U12
-          case 2: birthYear = 2012 + Math.floor(Math.random() * 2); break; // U14
-          case 3: birthYear = 2010 + Math.floor(Math.random() * 2); break; // U16
-          case 4: birthYear = 2008 + Math.floor(Math.random() * 2); break; // U18
+          case 0: birthYear = 2016 + Math.floor(Math.random() * 2); break; // Under10
+          case 1: birthYear = 2014 + Math.floor(Math.random() * 2); break; // Under12
+          case 2: birthYear = 2012 + Math.floor(Math.random() * 2); break; // Under14
+          case 3: birthYear = 2010 + Math.floor(Math.random() * 2); break; // Under16
+          case 4: birthYear = 2008 + Math.floor(Math.random() * 2); break; // Under18
           default: birthYear = 1995 + Math.floor(Math.random() * 10); break; // Above18
         }
         
@@ -382,8 +382,8 @@ const populateDatabase = async () => {
       for (const ageGroupData of competition.ageGroups) {
         const { gender, ageGroup } = ageGroupData;
         
-        // Convert "Under14" to "U14" format for judges
-        const judgeAgeGroup = ageGroup.replace('Under', 'U');
+        // Use the age group directly (already in correct format)
+        const judgeAgeGroup = ageGroup;
         
         // Create 5 judges for each combination
         for (let judgeNo = 1; judgeNo <= 5; judgeNo++) {
@@ -419,8 +419,8 @@ const populateDatabase = async () => {
       for (const ageGroupData of competition.ageGroups) {
         const { gender, ageGroup } = ageGroupData;
         
-        // Convert "Under14" to "U14" format for startedAgeGroups
-        const startedAgeGroup = ageGroup.replace('Under', 'U');
+        // Use the age group directly (already in correct format)
+        const startedAgeGroup = ageGroup;
         
         for (const competitionType of competition.competitionTypes) {
           await Competition.findByIdAndUpdate(competition._id, {

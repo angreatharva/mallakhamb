@@ -139,11 +139,11 @@ const PlayerDashboard = () => {
 
   const getAgeGroupDisplay = (ageGroup) => {
     const ageGroupMap = {
-      'U10': 'Under 10',
-      'U12': 'Under 12',
-      'U14': 'Under 14',
-      'U16': 'Under 16',
-      'U18': 'Under 18',
+      'Under10': 'Under 10',
+      'Under12': 'Under 12',
+      'Under14': 'Under 14',
+      'Under16': 'Under 16',
+      'Under18': 'Under 18',
       'Above18': 'Above 18',
       'Above16': 'Above 16'
     };

@@ -38,12 +38,11 @@ const CoachDashboard = () => {
 
   // Age group age limits mapping
   const ageGroupLimits = {
-    'U8': { minAge: 0, maxAge: 7 },
-    'U10': { minAge: 0, maxAge: 9 },
-    'U12': { minAge: 0, maxAge: 11 },
-    'U14': { minAge: 0, maxAge: 13 },
-    'U16': { minAge: 0, maxAge: 15 },
-    'U18': { minAge: 0, maxAge: 17 },
+    'Under10': { minAge: 0, maxAge: 9 },
+    'Under12': { minAge: 0, maxAge: 11 },
+    'Under14': { minAge: 0, maxAge: 13 },
+    'Under16': { minAge: 0, maxAge: 15 },
+    'Under18': { minAge: 0, maxAge: 17 },
     'Above16': { minAge: 16, maxAge: 100 },
     'Above18': { minAge: 18, maxAge: 100 }
   };
@@ -81,15 +80,15 @@ const CoachDashboard = () => {
 
     // Sort age groups by their max age (for Under categories) or min age (for Above categories)
     const sortedGroups = [...ageGroups].sort((a, b) => {
-      if (a.value.startsWith('U') && b.value.startsWith('U')) {
+      if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
         return a.maxAge - b.maxAge;
       }
       if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
         return a.minAge - b.minAge;
       }
       // Under categories come before Above categories
-      if (a.value.startsWith('U')) return -1;
-      if (b.value.startsWith('U')) return 1;
+      if (a.value.startsWith('Under')) return -1;
+      if (b.value.startsWith('Under')) return 1;
       return 0;
     });
 
@@ -99,7 +98,7 @@ const CoachDashboard = () => {
     for (let i = 0; i < sortedGroups.length; i++) {
       const group = sortedGroups[i];
       
-      if (group.value.startsWith('U')) {
+      if (group.value.startsWith('Under')) {
         // For "Under" categories, player qualifies if their age is <= maxAge
         if (playerAge <= group.maxAge) {
           qualifiesFromIndex = i;
@@ -196,7 +195,7 @@ const CoachDashboard = () => {
     const ageGroup = selectedAgeGroup;
 
     // For "Under" categories, check if player is too old (can't play down)
-    if (ageGroup.value.startsWith('U')) {
+    if (ageGroup.value.startsWith('Under')) {
       if (playerAge > ageGroup.maxAge) {
         toast.error(`Player is ${playerAge} years old and cannot play in ${ageGroup.label} category (maximum age: ${ageGroup.maxAge})`);
         return;
@@ -244,12 +243,11 @@ const CoachDashboard = () => {
 
   const getAgeGroupDisplay = (ageGroup) => {
     const ageGroupMap = {
-      'U8': 'Under 8',
-      'U10': 'Under 10',
-      'U12': 'Under 12',
-      'U14': 'Under 14',
-      'U16': 'Under 16',
-      'U18': 'Under 18',
+      'Under10': 'Under 10',
+      'Under12': 'Under 12',
+      'Under14': 'Under 14',
+      'Under16': 'Under 16',
+      'Under18': 'Under 18',
       'Above18': 'Above 18',
       'Above16': 'Above 16'
     };

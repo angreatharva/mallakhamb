@@ -53,25 +53,27 @@ const SuperAdminManagement = () => {
     ageGroups: []
   });
 
-  // Default age groups list
+  // Default age groups list - Gender specific
+  // Boys: Under 10, Under 12, Under 14, Under 18, Above 18
+  // Girls: Under 10, Under 12, Under 14, Under 16, Above 16
   const defaultAgeGroups = [
-    'Under8',
     'Under10',
     'Under12',
     'Under14',
     'Under16',
     'Under18',
+    'Above16',
     'Above18'
   ];
 
   const ageGroupLabels = {
-    'Under8': 'Under 8',
     'Under10': 'Under 10',
     'Under12': 'Under 12',
     'Under14': 'Under 14',
-    'Under16': 'Under 16',
-    'Under18': 'Under 18',
-    'Above18': 'Above 18'
+    'Under16': 'Under 16 (Girls only)',
+    'Under18': 'Under 18 (Boys only)',
+    'Above16': 'Above 16 (Girls only)',
+    'Above18': 'Above 18 (Boys only)'
   };
 
   useEffect(() => {
@@ -376,6 +378,17 @@ const SuperAdminManagement = () => {
     return competitionFormData.ageGroups.some(
       ag => ag.ageGroup === ageGroup && ag.gender === gender
     );
+  };
+
+  // Helper function to check if age group is valid for gender
+  const isAgeGroupValidForGender = (ageGroup, gender) => {
+    if (gender === 'Male') {
+      // Boys: Under 10, Under 12, Under 14, Under 18, Above 18
+      return ['Under10', 'Under12', 'Under14', 'Under18', 'Above18'].includes(ageGroup);
+    } else {
+      // Girls: Under 10, Under 12, Under 14, Under 16, Above 16
+      return ['Under10', 'Under12', 'Under14', 'Under16', 'Above16'].includes(ageGroup);
+    }
   };
 
   const toggleCompetitionType = (type) => {
@@ -1174,21 +1187,31 @@ const SuperAdminManagement = () => {
                         <div key={ageGroup} className="bg-white rounded-lg p-3 border border-gray-200">
                           <div className="font-medium text-gray-800 mb-2 text-sm">{ageGroupLabels[ageGroup]}</div>
                           <div className="grid grid-cols-2 gap-2">
-                            <label className="flex items-center space-x-2 p-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
+                            <label className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
+                              isAgeGroupValidForGender(ageGroup, 'Male') 
+                                ? 'hover:bg-purple-50 cursor-pointer' 
+                                : 'opacity-50 cursor-not-allowed bg-gray-100'
+                            }`}>
                               <input
                                 type="checkbox"
                                 checked={isAgeGroupSelected(ageGroup, 'Male')}
                                 onChange={() => toggleAgeGroup(ageGroup, 'Male')}
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                                disabled={!isAgeGroupValidForGender(ageGroup, 'Male')}
+                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 disabled:opacity-50"
                               />
                               <span className="text-sm text-gray-700 font-medium">Male</span>
                             </label>
-                            <label className="flex items-center space-x-2 p-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
+                            <label className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
+                              isAgeGroupValidForGender(ageGroup, 'Female') 
+                                ? 'hover:bg-purple-50 cursor-pointer' 
+                                : 'opacity-50 cursor-not-allowed bg-gray-100'
+                            }`}>
                               <input
                                 type="checkbox"
                                 checked={isAgeGroupSelected(ageGroup, 'Female')}
                                 onChange={() => toggleAgeGroup(ageGroup, 'Female')}
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                                disabled={!isAgeGroupValidForGender(ageGroup, 'Female')}
+                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 disabled:opacity-50"
                               />
                               <span className="text-sm text-gray-700 font-medium">Female</span>
                             </label>

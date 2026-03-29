@@ -29,18 +29,18 @@ const PublicScores = () => {
   ];
 
   const boysAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U18', label: 'Under 18' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under18', label: 'Under 18' },
     { value: 'Above18', label: 'Above 18' }
   ];
 
   const girlsAgeGroups = [
-    { value: 'U10', label: 'Under 10' },
-    { value: 'U12', label: 'Under 12' },
-    { value: 'U14', label: 'Under 14' },
-    { value: 'U16', label: 'Under 16' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under16', label: 'Under 16' },
     { value: 'Above16', label: 'Above 16' }
   ];
 

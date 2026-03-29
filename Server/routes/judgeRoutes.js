@@ -71,7 +71,7 @@ const saveScoreValidation = [
   body('ageGroup')
     .notEmpty()
     .withMessage('Age group is required')
-    .isIn(['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'])
+    .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
     .withMessage('Invalid age group')
 ];
 

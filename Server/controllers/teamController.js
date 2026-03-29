@@ -124,11 +124,11 @@ const getTeamStats = async (req, res) => {
         female: 0
       },
       byAgeGroup: {
-        U10: 0,
-        U12: 0,
-        U14: 0,
-        U16: 0,
-        U18: 0,
+        Under10: 0,
+        Under12: 0,
+        Under14: 0,
+        Under16: 0,
+        Under18: 0,
         Above18: 0,
         Above16: 0
       }

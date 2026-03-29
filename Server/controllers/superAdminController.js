@@ -499,7 +499,7 @@ const createCompetition = async (req, res) => {
       });
     }
 
-    const validAgeGroups = ['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
+    const validAgeGroups = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
     const validGenders = ['Male', 'Female'];
     
     for (const ag of ageGroups) {
@@ -719,7 +719,7 @@ const updateCompetition = async (req, res) => {
         });
       }
       
-      const validAgeGroups = ['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'];
+      const validAgeGroups = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
       const validGenders = ['Male', 'Female'];
       
       for (const ag of ageGroups) {

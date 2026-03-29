@@ -125,11 +125,11 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   };
 
   const handleStartCompetitionType = async (gender, ageGroup, competitionType) => {
-    const ageGroupLabel = ageGroup === 'U10' ? 'Under 10' :
-                          ageGroup === 'U12' ? 'Under 12' :
-                          ageGroup === 'U14' ? 'Under 14' :
-                          ageGroup === 'U16' ? 'Under 16' :
-                          ageGroup === 'U18' ? 'Under 18' :
+    const ageGroupLabel = ageGroup === 'Under10' ? 'Under 10' :
+                          ageGroup === 'Under12' ? 'Under 12' :
+                          ageGroup === 'Under14' ? 'Under 14' :
+                          ageGroup === 'Under16' ? 'Under 16' :
+                          ageGroup === 'Under18' ? 'Under 18' :
                           ageGroup === 'Above18' ? 'Above 18' :
                           ageGroup === 'Above16' ? 'Above 16' : ageGroup;
 
@@ -311,11 +311,10 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                     {judgesSummary
                       .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
                       .map((item, index) => {
-                        const ageGroupLabel = item.ageGroup === 'U8' ? 'Under 8' :
-                                             item.ageGroup === 'U10' ? 'Under 10' :
-                                             item.ageGroup === 'U12' ? 'Under 12' :
-                                             item.ageGroup === 'U14' ? 'Under 14' :
-                                             item.ageGroup === 'U18' ? 'Under 18' :
+                        const ageGroupLabel = item.ageGroup === 'Under10' ? 'Under 10' :
+                                             item.ageGroup === 'Under12' ? 'Under 12' :
+                                             item.ageGroup === 'Under14' ? 'Under 14' :
+                                             item.ageGroup === 'Under18' ? 'Under 18' :
                                              item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
                         
                         return (
@@ -398,12 +397,11 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
                     {judgesSummary
                       .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
                       .map((item, index) => {
-                        const ageGroupLabel = item.ageGroup === 'U8' ? 'Under 8' :
-                                             item.ageGroup === 'U10' ? 'Under 10' :
-                                             item.ageGroup === 'U12' ? 'Under 12' :
-                                             item.ageGroup === 'U14' ? 'Under 14' :
-                                             item.ageGroup === 'U16' ? 'Under 16' :
-                                             item.ageGroup === 'U18' ? 'Under 18' :
+                        const ageGroupLabel = item.ageGroup === 'Under10' ? 'Under 10' :
+                                             item.ageGroup === 'Under12' ? 'Under 12' :
+                                             item.ageGroup === 'Under14' ? 'Under 14' :
+                                             item.ageGroup === 'Under16' ? 'Under 16' :
+                                             item.ageGroup === 'Under18' ? 'Under 18' :
                                              item.ageGroup === 'Above16' ? 'Above 16' :
                                              item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
                         

@@ -44,7 +44,7 @@ const createTeamValidation = [
 const addPlayerValidation = [
   body('playerId').isMongoId().withMessage('Valid player ID is required'),
   body('ageGroup')
-    .isIn(['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'])
+    .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
     .withMessage('Valid age group is required'),
   body('gender')
     .isIn(['Male', 'Female'])
