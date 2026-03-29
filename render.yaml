@@ -26,14 +26,13 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
-      # Frontend URL - Update after deploying frontend
+      # Frontend URLs for CORS (where requests come from)
       - key: CLIENT_URL
         value: https://mallakhamb-web.onrender.com
       - key: FRONTEND_URL
         value: https://mallakhamb-web.onrender.com
-      # Backend URL - Update with your actual backend URL
       - key: PRODUCTION_URL
-        value: https://mallakhamb-server.onrender.com
+        value: https://mallakhamb-web.onrender.com
 
   # Frontend Static Site
   - type: web
