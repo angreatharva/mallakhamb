@@ -42,7 +42,7 @@ const SuperAdminManagement = () => {
 
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '',
-    level: 'state',
+    level: 'district',
     competitionTypes: ['competition_1'],
     place: '',
     year: new Date().getFullYear(),
@@ -331,7 +331,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => {
     setCompetitionFormData({
       name: '',
-      level: 'state',
+      level: 'district',
       competitionTypes: ['competition_1'],
       place: '',
       year: new Date().getFullYear(),
@@ -1067,6 +1067,7 @@ const SuperAdminManagement = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       required
                     >
+                      <option value="district">District</option>
                       <option value="state">State</option>
                       <option value="national">National</option>
                       <option value="international">International</option>
