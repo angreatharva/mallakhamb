@@ -29,7 +29,6 @@ services:
   - type: web
     name: mallakhamb-web
     env: static
-    plan: free
     rootDir: Web
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
