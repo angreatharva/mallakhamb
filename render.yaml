@@ -15,14 +15,25 @@ services:
         value: 10000
       - key: NGROK_ENABLED
         value: false
-      # Add these in Render Dashboard (sensitive):
-      # - MONGODB_URI
-      # - JWT_SECRET
-      # - EMAIL_USER
-      # - EMAIL_PASS
-      # - CLIENT_URL (set to your frontend URL after deploying frontend)
-      # - FRONTEND_URL (set to your frontend URL after deploying frontend)
-      # - PRODUCTION_URL (set to your backend URL: https://mallakhamb-api.onrender.com)
+      # Database - Add in Render Dashboard (sensitive)
+      - key: MONGODB_URI
+        sync: false
+      # JWT Secret - Add in Render Dashboard (sensitive, min 32 chars)
+      - key: JWT_SECRET
+        sync: false
+      # Email Configuration - Add in Render Dashboard (sensitive)
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      # Frontend URL - Update after deploying frontend
+      - key: CLIENT_URL
+        value: https://mallakhamb-web.onrender.com
+      - key: FRONTEND_URL
+        value: https://mallakhamb-web.onrender.com
+      # Backend URL - Update with your actual backend URL
+      - key: PRODUCTION_URL
+        value: https://mallakhamb-server.onrender.com
     healthCheckPath: /api/health
 
   # Frontend Static Site
