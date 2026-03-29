@@ -42,7 +42,9 @@ const CompetitionDisplay = ({ className = '' }) => {
             
             <span>•</span>
             
-            <span className="capitalize">{currentCompetition.level}</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200 capitalize">
+              {currentCompetition.level} Level
+            </span>
             
             {currentCompetition.startDate && currentCompetition.endDate && (
               <>

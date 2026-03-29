@@ -31,6 +31,10 @@ startCleanupJobs();
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy - Required for Render and other reverse proxies
+// This allows Express to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // Socket.IO setup with CORS and authentication
 const io = new Server(server, {
   cors: {
