@@ -34,7 +34,6 @@ services:
       # Backend URL - Update with your actual backend URL
       - key: PRODUCTION_URL
         value: https://mallakhamb-server.onrender.com
-    healthCheckPath: /api/health
 
   # Frontend Static Site
   - type: web
