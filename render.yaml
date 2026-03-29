@@ -1,7 +1,7 @@
 services:
   # Backend API Service
   - type: web
-    name: mallakhamb-api
+    name: mallakhamb-server
     env: node
     region: oregon
     plan: free
@@ -20,7 +20,42 @@ services:
       # - JWT_SECRET
       # - EMAIL_USER
       # - EMAIL_PASS
-      # - CLIENT_URL (your frontend URL when deployed)
-      # - FRONTEND_URL (your frontend URL when deployed)
-      # - PRODUCTION_URL (your backend URL)
+      # - CLIENT_URL (set to your frontend URL after deploying frontend)
+      # - FRONTEND_URL (set to your frontend URL after deploying frontend)
+      # - PRODUCTION_URL (set to your backend URL: https://mallakhamb-api.onrender.com)
     healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: mallakhamb-web
+    env: static
+    region: oregon
+    plan: free
+    rootDir: Web
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      # Set VITE_API_URL in Render Dashboard to your backend URL
+      # Example: https://mallakhamb-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: geolocation=(), microphone=(), camera=()
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
