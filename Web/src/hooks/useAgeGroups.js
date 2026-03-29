@@ -3,19 +3,21 @@ import { useCompetition } from '../contexts/CompetitionContext';
 
 // Age group mapping from competition format to display format
 const ageGroupMapping = {
-  'Under8': { value: 'U8', label: 'Under 8', legacy: 'U8' },
-  'Under10': { value: 'U10', label: 'Under 10', legacy: 'U10' },
-  'Under12': { value: 'U12', label: 'Under 12', legacy: 'U12' },
-  'Under14': { value: 'U14', label: 'Under 14', legacy: 'U14' },
-  'Under16': { value: 'U16', label: 'Under 16', legacy: 'U16' },
-  'Under18': { value: 'U18', label: 'Under 18', legacy: 'U18' },
-  'Above18': { value: 'Above18', label: 'Above 18', legacy: 'Above18' }
+  'Under10': { value: 'Under10', label: 'Under 10' },
+  'Under12': { value: 'Under12', label: 'Under 12' },
+  'Under14': { value: 'Under14', label: 'Under 14' },
+  'Under16': { value: 'Under16', label: 'Under 16' },
+  'Under18': { value: 'Under18', label: 'Under 18' },
+  'Above16': { value: 'Above16', label: 'Above 16' },
+  'Above18': { value: 'Above18', label: 'Above 18' }
 };
 
 /**
- * Hook to get filtered age groups based on competition settings
+ * Hook to get filtered age groups based on competition settings and gender
+ * Boys: Under 10, Under 12, Under 14, Under 18, Above 18
+ * Girls: Under 10, Under 12, Under 14, Under 16, Above 16
  * @param {string} gender - 'Male' or 'Female'
- * @returns {Array} Array of age group options filtered by competition
+ * @returns {Array} Array of age group options filtered by competition and gender
  */
 export const useAgeGroups = (gender) => {
   const { currentCompetition } = useCompetition();
@@ -25,17 +27,17 @@ export const useAgeGroups = (gender) => {
       // Fallback to default age groups if competition doesn't have age groups set
       return gender === 'Male' 
         ? [
-            { value: 'U10', label: 'Under 10' },
-            { value: 'U12', label: 'Under 12' },
-            { value: 'U14', label: 'Under 14' },
-            { value: 'U18', label: 'Under 18' },
+            { value: 'Under10', label: 'Under 10' },
+            { value: 'Under12', label: 'Under 12' },
+            { value: 'Under14', label: 'Under 14' },
+            { value: 'Under18', label: 'Under 18' },
             { value: 'Above18', label: 'Above 18' }
           ]
         : [
-            { value: 'U10', label: 'Under 10' },
-            { value: 'U12', label: 'Under 12' },
-            { value: 'U14', label: 'Under 14' },
-            { value: 'U16', label: 'Under 16' },
+            { value: 'Under10', label: 'Under 10' },
+            { value: 'Under12', label: 'Under 12' },
+            { value: 'Under14', label: 'Under 14' },
+            { value: 'Under16', label: 'Under 16' },
             { value: 'Above16', label: 'Above 16' }
           ];
     }
@@ -47,7 +49,7 @@ export const useAgeGroups = (gender) => {
         const mapping = ageGroupMapping[ag.ageGroup];
         if (mapping) {
           return {
-            value: mapping.legacy, // Use legacy format for compatibility
+            value: mapping.value,
             label: mapping.label
           };
         }
@@ -59,7 +61,7 @@ export const useAgeGroups = (gender) => {
       })
       .sort((a, b) => {
         // Sort by value to maintain consistent order
-        const order = ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
+        const order = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
         return order.indexOf(a.value) - order.indexOf(b.value);
       });
 
@@ -79,17 +81,17 @@ export const useAllAgeGroups = () => {
       // Fallback to default age groups if competition doesn't have age groups set
       return gender === 'Male' 
         ? [
-            { value: 'U10', label: 'Under 10' },
-            { value: 'U12', label: 'Under 12' },
-            { value: 'U14', label: 'Under 14' },
-            { value: 'U18', label: 'Under 18' },
+            { value: 'Under10', label: 'Under 10' },
+            { value: 'Under12', label: 'Under 12' },
+            { value: 'Under14', label: 'Under 14' },
+            { value: 'Under18', label: 'Under 18' },
             { value: 'Above18', label: 'Above 18' }
           ]
         : [
-            { value: 'U10', label: 'Under 10' },
-            { value: 'U12', label: 'Under 12' },
-            { value: 'U14', label: 'Under 14' },
-            { value: 'U16', label: 'Under 16' },
+            { value: 'Under10', label: 'Under 10' },
+            { value: 'Under12', label: 'Under 12' },
+            { value: 'Under14', label: 'Under 14' },
+            { value: 'Under16', label: 'Under 16' },
             { value: 'Above16', label: 'Above 16' }
           ];
     }
@@ -101,7 +103,7 @@ export const useAllAgeGroups = () => {
         const mapping = ageGroupMapping[ag.ageGroup];
         if (mapping) {
           return {
-            value: mapping.legacy, // Use legacy format for compatibility
+            value: mapping.value,
             label: mapping.label
           };
         }
@@ -113,7 +115,7 @@ export const useAllAgeGroups = () => {
       })
       .sort((a, b) => {
         // Sort by value to maintain consistent order
-        const order = ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
+        const order = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
         return order.indexOf(a.value) - order.indexOf(b.value);
       });
 
@@ -129,7 +131,7 @@ export const useAllAgeGroups = () => {
 };
 
 /**
- * Get array of age group values (e.g. ['U10', 'U12']) for a gender - useful for iterating/display
+ * Get array of age group values (e.g. ['Under10', 'Under12']) for a gender - useful for iterating/display
  * @param {string} gender - 'Male' or 'Female'
  * @returns {Array<string>} Array of age group value strings
  */

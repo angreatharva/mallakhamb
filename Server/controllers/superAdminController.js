@@ -235,6 +235,7 @@ const getSystemStats = async (req, res) => {
       totalCoaches,
       totalPlayers,
       totalTeams,
+      totalCompetitions,
       totalScores,
       totalJudges,
       activeAdmins,
@@ -245,6 +246,7 @@ const getSystemStats = async (req, res) => {
       Coach.countDocuments(),
       Player.countDocuments(),
       Team.countDocuments(),
+      Competition.countDocuments({ isDeleted: false }),
       Score.countDocuments(),
       Judge.countDocuments({ isActive: true }),
       Admin.countDocuments({ isActive: true }),
@@ -279,6 +281,7 @@ const getSystemStats = async (req, res) => {
         },
         content: {
           totalTeams,
+          totalCompetitions,
           totalScores,
           totalJudges
         }

@@ -10,8 +10,8 @@ const competitionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Competition level is required'],
     enum: {
-      values: ['state', 'national', 'international'],
-      message: 'Level must be state, national, or international'
+      values: ['district', 'state', 'national', 'international'],
+      message: 'Level must be district, state, national, or international'
     }
   },
   competitionTypes: [{
@@ -81,7 +81,7 @@ const competitionSchema = new mongoose.Schema({
       },
       ageGroup: {
         type: String,
-        enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16']
+        enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']
       },
       gender: {
         type: String,
@@ -124,7 +124,7 @@ const competitionSchema = new mongoose.Schema({
     },
     ageGroup: {
       type: String,
-      enum: ['Under8', 'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18'],
+      enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
       required: true
     }
   }],
@@ -136,7 +136,7 @@ const competitionSchema = new mongoose.Schema({
     },
     ageGroup: {
       type: String,
-      enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'],
+      enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
       required: true
     },
     competitionType: {

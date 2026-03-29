@@ -41,7 +41,7 @@ const playerSchema = new mongoose.Schema({
   },
   ageGroup: {
     type: String,
-    enum: ['U10', 'U12', 'U14', 'U16', 'U18', 'Above18', 'Above16'],
+    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
     default: null
   },
   gender: {

@@ -5,7 +5,7 @@
 
 // Valid enum values for validation
 const VALID_GENDERS = ['Male', 'Female'];
-const VALID_AGE_GROUPS = ['U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18'];
+const VALID_AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
 const VALID_COMPETITION_TYPES = ['Competition I', 'Competition II', 'Competition III'];
 const VALID_COMPETITION_STATUSES = ['upcoming', 'ongoing', 'completed'];
 
