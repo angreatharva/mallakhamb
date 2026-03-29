@@ -123,8 +123,8 @@ const createCompetitionValidation = [
     .notEmpty()
     .withMessage('Competition name is required'),
   body('level')
-    .isIn(['state', 'national', 'international'])
-    .withMessage('Level must be state, national, or international'),
+    .isIn(['district', 'state', 'national', 'international'])
+    .withMessage('Level must be district, state, national, or international'),
   body('place')
     .trim()
     .notEmpty()
@@ -169,8 +169,8 @@ const updateCompetitionValidation = [
     .withMessage('Competition name cannot be empty'),
   body('level')
     .optional()
-    .isIn(['state', 'national', 'international'])
-    .withMessage('Level must be state, national, or international'),
+    .isIn(['district', 'state', 'national', 'international'])
+    .withMessage('Level must be district, state, national, or international'),
   body('place')
     .optional()
     .trim()
