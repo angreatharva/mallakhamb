@@ -35,6 +35,8 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false
+      - key: VITE_STORAGE_KEY
+        sync: false
       # Set VITE_API_URL in Render Dashboard to your backend URL
       # Example: https://mallakhamb-server.onrender.com/api
     routes:
