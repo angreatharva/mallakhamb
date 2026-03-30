@@ -2,9 +2,9 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const mongoose = require('mongoose');
-const Admin = require('../models/Admin');
+const Coach = require('../models/Coach');
 
-const createAdmin = async () => {
+const createCoach = async () => {
     try {
         // Verify environment variable is loaded
         if (!process.env.MONGODB_URI) {
@@ -19,49 +19,49 @@ const createAdmin = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('✅ Connected to MongoDB');
 
-        const name = 'Admin';
-        const email = 'admin@gmail.com';
-        const password = 'Admin@2026';
+        const name = 'Test Coach';
+        const email = 'coach@gmail.com';
+        const password = 'Coach@2026';
 
-        // Check if admin already exists
-        const existingAdmin = await Admin.findOne({ email: email });
-        if (existingAdmin) {
-            console.log('⚠️  Admin user already exists!');
-            console.log('Admin Details:');
-            console.log(`- Name: ${existingAdmin.name}`);
+        // Check if coach already exists
+        const existingCoach = await Coach.findOne({ email: email });
+        if (existingCoach) {
+            console.log('⚠️  Coach user already exists!');
+            console.log('Coach Details:');
+            console.log(`- Name: ${existingCoach.name}`);
             console.log(`- Email: ${email}`);
-            console.log(`- Role: ${existingAdmin.role}`);
-            console.log(`- Active: ${existingAdmin.isActive}`);
+            console.log(`- Active: ${existingCoach.isActive}`);
+            console.log(`- Team: ${existingCoach.team || 'Not assigned'}`);
             await mongoose.disconnect();
             process.exit(0);
         }
 
-        // Create admin user
-        const admin = new Admin({
+        // Create coach user
+        const coach = new Coach({
             name: name,
             email: email,
             password: password,
-            role: 'admin'
+            isActive: true
         });
 
-        await admin.save();
-        console.log('✅ Admin user created successfully!');
-        console.log('Admin Credentials:');
+        await coach.save();
+        console.log('✅ Coach user created successfully!');
+        console.log('Coach Credentials:');
         console.log(`- Email: ${email}`);
         console.log(`- Password: ${password}`);
-        console.log(`- Role: admin`);
+        console.log(`- Name: ${name}`);
 
         await mongoose.disconnect();
         console.log('✅ Disconnected from MongoDB');
         process.exit(0);
     } catch (error) {
-        console.error('❌ Error creating admin:', error.message);
+        console.error('❌ Error creating coach:', error.message);
         if (error.code === 11000) {
-            console.log('⚠️  Admin with this email already exists!');
+            console.log('⚠️  Coach with this email already exists!');
         }
         await mongoose.disconnect();
         process.exit(1);
     }
 };
 
-createAdmin();
+createCoach();

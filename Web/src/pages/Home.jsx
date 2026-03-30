@@ -209,44 +209,66 @@ const Home = () => {
               The Ultimate Traditional Sports Competition Platform
             </ResponsiveHeading>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            {/* Action Buttons - Row 1: Player & Coach */}
+            <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center">
               <Link
                 to="/player/register"
-                className="group px-8 md:px-10 py-4 md:py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-orange-500/30 flex items-center justify-center gap-3 border-2 border-orange-400/50 min-h-[56px] backdrop-blur-sm"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-orange-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-orange-400/50 min-h-[48px] md:min-h-[52px] backdrop-blur-sm w-full sm:w-auto"
               >
-                <Users className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
-                <span className="text-base md:text-lg font-bold tracking-wide">
+                <Users className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-sm md:text-base font-bold tracking-wide">
                   PLAYER LOGIN / REGISTER
                 </span>
               </Link>
               <Link
                 to="/coach/login"
-                className="group px-8 md:px-10 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-green-500/30 flex items-center justify-center gap-3 border-2 border-green-400/50 min-h-[56px] backdrop-blur-sm"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-green-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-green-400/50 min-h-[48px] md:min-h-[52px] backdrop-blur-sm w-full sm:w-auto"
               >
-                <UserCheck className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
-                <span className="text-base md:text-lg font-bold tracking-wide">
+                <UserCheck className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-sm md:text-base font-bold tracking-wide">
                   TEAM COACH LOGIN / REGISTER
                 </span>
               </Link>
             </div>
 
-            {/* View Scores and Judge Login Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* Action Buttons - Row 2: Admin & Super Admin */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                to="/admin/login"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full font-bold hover:from-red-600 hover:to-red-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-red-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-red-400/50 min-h-[48px] backdrop-blur-sm w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-sm md:text-base font-bold tracking-wide">
+                  ADMIN LOGIN
+                </span>
+              </Link>
+              <Link
+                to="/superadmin/login"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-full font-bold hover:from-indigo-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-indigo-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-indigo-400/50 min-h-[48px] backdrop-blur-sm w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-sm md:text-base font-bold tracking-wide">
+                  SUPERADMIN LOGIN
+                </span>
+              </Link>
+            </div>
+
+            {/* Action Buttons - Row 3: View Scores & Judge Login */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 to="/scores"
-                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full font-bold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-blue-500/30 flex items-center justify-center gap-3 border-2 border-blue-400/50 min-h-[48px] backdrop-blur-sm"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full font-bold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-blue-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-blue-400/50 min-h-[48px] backdrop-blur-sm w-full sm:w-auto"
               >
-                <Trophy className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
+                <Trophy className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
                 <span className="text-sm md:text-base font-bold tracking-wide">
                   VIEW SCORES
                 </span>
               </Link>
               <Link
                 to="/judge/login"
-                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full font-bold hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-purple-500/30 flex items-center justify-center gap-3 border-2 border-purple-400/50 min-h-[48px] backdrop-blur-sm"
+                className="group px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full font-bold hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 md:gap-3 border-2 border-purple-400/50 min-h-[48px] backdrop-blur-sm w-full sm:w-auto"
               >
-                <UserCheck className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
+                <UserCheck className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
                 <span className="text-sm md:text-base font-bold tracking-wide">
                   JUDGE LOGIN
                 </span>
