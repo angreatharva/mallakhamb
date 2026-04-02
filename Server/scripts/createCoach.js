@@ -19,9 +19,9 @@ const createCoach = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('✅ Connected to MongoDB');
 
-        const name = 'Test Coach';
-        const email = 'coach@gmail.com';
-        const password = 'Coach@2026';
+        const name = 'Atharva Angre';
+        const email = 'atharvaangre02@gmail.com';
+        const password = 'Atharva@02';
 
         // Check if coach already exists
         const existingCoach = await Coach.findOne({ email: email });

@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "create-superadmin": "node scripts/createSuperAdmin.js",
+    "create-coach": "node scripts/createCoach.js",
+    "create-player": "node scripts/createPlayer.js",
+    "create-competition": "node scripts/createCompetition.js"
   },
   "keywords": [
     "sports",

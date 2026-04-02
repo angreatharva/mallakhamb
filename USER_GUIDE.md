@@ -72,11 +72,11 @@ The system is accessed through a web browser at:
 
 ### Login Pages
 Each user type has their own login page:
-- **Player:** `/player/login`
-- **Coach:** `/coach/login`
-- **Admin:** `/admin/login`
-- **Judge:** `/judge/login`
-- **Super Admin:** `/superadmin/login`
+- **Player:** `https://mallakhamb-web.onrender.com/player/login`
+- **Coach:** `https://mallakhamb-web.onrender.com/coach/login`
+- **Admin:** `https://mallakhamb-web.onrender.com/admin/login`
+- **Judge:** `https://mallakhamb-web.onrender.com/judge/login`
+- **Super Admin:** `https://mallakhamb-web.onrender.com/superadmin/login`
 
 ---
 

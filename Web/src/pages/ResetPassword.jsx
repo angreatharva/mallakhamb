@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Lock } from 'lucide-react';
@@ -19,6 +19,16 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { token } = useParams();
   const navigate = useNavigate();
+  const [resetToken, setResetToken] = useState('');
+
+  // Security: Remove token from URL immediately to prevent it from being logged in browser history
+  useEffect(() => {
+    if (token) {
+      setResetToken(token);
+      // Replace URL without token to prevent it from staying in browser history
+      window.history.replaceState(null, '', '/reset-password');
+    }
+  }, [token]);
 
   const {
     register,
@@ -30,14 +40,22 @@ const ResetPassword = () => {
   const password = watch('password');
 
   const onSubmit = async (data) => {
+    if (!resetToken) {
+      setError('Invalid reset link. Please request a new password reset.');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
     setError('');
 
     try {
-      await authAPI.resetPassword(token, data.password);
+      await authAPI.resetPassword(resetToken, data.password);
       setMessage('Password has been reset successfully.');
       toast.success('Password reset successful!');
+      
+      // Clear the token from memory
+      setResetToken('');
       
       // Redirect to login after 2 seconds
       setTimeout(() => {
