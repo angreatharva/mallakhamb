@@ -178,10 +178,10 @@ NGROK_AUTH_TOKEN=
 2. Generate app-specific password
 3. Use app password in EMAIL_PASS
 
-**SendGrid Alternative:**
-- Configure SendGrid API key
-- Update email service configuration
-- See `utils/sendgridService.js`
+**Resend Alternative (Recommended):**
+- Sign up at resend.com
+- Configure RESEND_API_KEY in .env
+- See `utils/resendService.js` and `EMAIL_README.md`
 
 ---
 
@@ -1359,9 +1359,10 @@ socket.on('error', (data) => {
 ## Email Service
 
 - Gmail SMTP via Nodemailer with multiple fallback configs (SSL 465, TLS 587, auto)
-- Requires Gmail App Password
+- Resend API for production (recommended - better deliverability)
+- Requires Gmail App Password or Resend API key
 - Used for: password reset links (15-minute expiry)
-- Known issue: SMTP ports may be blocked on some hosting providers (e.g., Render) — consider SendGrid fallback
+- Known issue: Gmail SMTP ports may be blocked on some hosting providers (e.g., Render) — use Resend for production
 
 ### Password Reset Flow
 

@@ -4,7 +4,14 @@ const Admin = require('../models/Admin');
 const Team = require('../models/Team');
 const Competition = require('../models/Competition');
 const { generateResetToken, hashToken, generateToken } = require('../utils/tokenUtils');
-const { sendEmail } = require('../utils/emailService');
+const { generateOTP, hashOTP, isValidOTPFormat } = require('../utils/otpUtils');
+const { 
+  isLockedOut, 
+  getLockoutTimeRemaining, 
+  recordFailedAttempt, 
+  resetAttempts 
+} = require('../utils/otpTracking');
+const { sendEmail } = require('../utils/unifiedEmailService');
 const config = require('../config/server.config');
 const { 
   logFailedLogin, 
@@ -15,15 +22,15 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 /**
- * Forgot Password Controller
- * Handles password reset token generation and email sending
+ * Forgot Password Controller (OTP-based)
+ * Generates and sends a 6-digit OTP via email
  * 
  * @route POST /api/auth/forgot-password
  * @access Public
  */
 async function forgotPassword(req, res) {
   const startTime = Date.now();
-  console.log('🔐 Forgot password request started');
+  console.log('🔐 Forgot password request started (OTP-based)');
   
   try {
     const { email } = req.body;
@@ -49,34 +56,29 @@ async function forgotPassword(req, res) {
 
     console.log('👤 User found:', user ? `Yes (${userType})` : 'No');
 
-    // If user exists, generate token and send email
+    // If user exists, generate OTP and send email
     if (user) {
-      console.log('🔑 Generating reset token...');
+      console.log('🔑 Generating OTP...');
       
-      // Generate secure random token (32 bytes = 64 character hex string)
-      const rawToken = generateResetToken();
+      // Generate 6-digit OTP
+      const otp = generateOTP();
+      // console.log('📱 OTP generated:', otp); // SECURITY: Removed for production
 
-      // Hash token with SHA-256 before storing
-      const hashedToken = hashToken(rawToken);
+      // Hash OTP with SHA-256 before storing
+      const hashedOTP = hashOTP(otp);
 
-      // Set token expiry to 15 minutes from current time
-      const expiryTime = new Date(Date.now() + 15 * 60 * 1000);
+      // Set OTP expiry to 10 minutes from current time
+      const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
 
-      // Store hashed token and expiry in user document
-      user.resetPasswordToken = hashedToken;
+      // Store hashed OTP and expiry in user document
+      user.resetPasswordToken = hashedOTP;
       user.resetPasswordExpires = expiryTime;
       await user.save();
 
-      console.log('💾 Token saved to database');
-
-      // Build reset link with raw token using dynamic frontend URL
-      const frontendUrl = config.getFrontendUrl();
-      const resetLink = `${frontendUrl}/reset-password/${rawToken}`;
-
-      console.log('🔗 Password reset link generated:', resetLink);
+      console.log('💾 OTP saved to database');
 
       // Prepare email content
-      const emailSubject = 'Password Reset Request - Mallakhamb Competition';
+      const emailSubject = 'Password Reset OTP - Mallakhamb Competition';
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -91,31 +93,33 @@ async function forgotPassword(req, res) {
             
             <p style="color: #374151; font-size: 16px; line-height: 1.6;">
               You requested to reset your password for your Mallakhamb Competition account. 
-              Click the button below to proceed with resetting your password:
+              Use the OTP code below to proceed with resetting your password:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetLink}" 
-                 style="display: inline-block; padding: 15px 30px; background-color: #2563eb; 
-                        color: white; text-decoration: none; border-radius: 8px; font-weight: bold;
-                        font-size: 16px;">
-                Reset My Password
-              </a>
+              <div style="background-color: #f3f4f6; border: 2px dashed #2563eb; border-radius: 8px; 
+                          padding: 20px; display: inline-block;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0; font-weight: 500;">
+                  Your OTP Code:
+                </p>
+                <p style="font-size: 36px; font-weight: bold; color: #2563eb; margin: 0; 
+                          letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                  ${otp}
+                </p>
+              </div>
             </div>
-            
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
-              Or copy and paste this link into your browser:
-            </p>
-            <p style="word-break: break-all; color: #2563eb; font-size: 14px; background-color: #f3f4f6; 
-                      padding: 10px; border-radius: 5px;">
-              ${resetLink}
-            </p>
             
             <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 5px; 
                         padding: 15px; margin: 20px 0;">
-              <p style="color: #92400e; font-weight: bold; margin: 0; font-size: 14px;">
-                ⚠️ Important: This link will expire in 15 minutes for security reasons.
+              <p style="color: #92400e; font-weight: bold; margin: 0 0 10px 0; font-size: 14px;">
+                ⚠️ Important Security Information:
               </p>
+              <ul style="color: #92400e; font-size: 14px; margin: 0; padding-left: 20px;">
+                <li>This OTP will expire in <strong>10 minutes</strong></li>
+                <li>You have <strong>3 attempts</strong> to enter the correct OTP</li>
+                <li>Never share this OTP with anyone</li>
+                <li>Our team will never ask for your OTP</li>
+              </ul>
             </div>
             
             <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
@@ -135,7 +139,7 @@ async function forgotPassword(req, res) {
 
       console.log('📧 Attempting to send email...');
       
-      // Send email with reset link
+      // Send email with OTP
       const emailSent = await sendEmail(email, emailSubject, emailHtml);
       
       if (emailSent) {
@@ -152,7 +156,7 @@ async function forgotPassword(req, res) {
     // Return same success message regardless of email existence (security best practice)
     // This prevents attackers from determining which emails are registered
     return res.status(200).json({
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message: 'If an account with that email exists, an OTP has been sent to your email.',
       success: true
     });
 
@@ -170,8 +174,251 @@ async function forgotPassword(req, res) {
 }
 
 /**
- * Reset Password Controller
+ * Verify OTP Controller
+ * Validates the OTP provided by the user
+ * 
+ * @route POST /api/auth/verify-otp
+ * @access Public
+ */
+async function verifyOTP(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    // Validate inputs
+    if (!email || !otp) {
+      return res.status(400).json({
+        message: 'Email and OTP are required'
+      });
+    }
+
+    // Validate OTP format
+    if (!isValidOTPFormat(otp)) {
+      return res.status(400).json({
+        message: 'Invalid OTP format. OTP must be 6 digits.'
+      });
+    }
+
+    // Check if email is locked out
+    if (isLockedOut(email)) {
+      const remainingSeconds = getLockoutTimeRemaining(email);
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+      
+      return res.status(429).json({
+        message: `Too many failed attempts. Please try again in ${remainingMinutes} minute(s).`,
+        lockedOut: true,
+        remainingSeconds
+      });
+    }
+
+    console.log('🔍 Verifying OTP for email:', email.toLowerCase());
+
+    // Search for user
+    let user = await Player.findOne({ email: email.toLowerCase() });
+    let userType = 'player';
+
+    if (!user) {
+      user = await Coach.findOne({ email: email.toLowerCase() });
+      userType = 'coach';
+    }
+
+    // If user not found, record failed attempt (to prevent email enumeration timing attacks)
+    if (!user) {
+      const result = recordFailedAttempt(email);
+      return res.status(400).json({
+        message: 'Invalid OTP or OTP has expired.',
+        attemptsRemaining: result.attemptsRemaining
+      });
+    }
+
+    // Check if OTP exists and hasn't expired
+    if (!user.resetPasswordToken || !user.resetPasswordExpires) {
+      return res.status(400).json({
+        message: 'No OTP found. Please request a new password reset.'
+      });
+    }
+
+    // Check if OTP has expired
+    if (Date.now() > user.resetPasswordExpires) {
+      return res.status(400).json({
+        message: 'OTP has expired. Please request a new password reset.'
+      });
+    }
+
+    // Hash the provided OTP and compare with stored hash
+    const hashedOTP = hashOTP(otp);
+    
+    if (hashedOTP !== user.resetPasswordToken) {
+      // OTP doesn't match - record failed attempt
+      const result = recordFailedAttempt(email);
+      
+      console.log(`❌ Invalid OTP attempt for ${email}`);
+      
+      if (result.locked) {
+        return res.status(429).json({
+          message: `Too many failed attempts. Account locked for ${Math.ceil(result.lockoutSeconds / 60)} minutes.`,
+          lockedOut: true,
+          remainingSeconds: result.lockoutSeconds
+        });
+      }
+      
+      return res.status(400).json({
+        message: `Invalid OTP. ${result.attemptsRemaining} attempt(s) remaining.`,
+        attemptsRemaining: result.attemptsRemaining
+      });
+    }
+
+    // OTP is valid - reset attempts
+    resetAttempts(email);
+    
+    console.log(`✅ OTP verified successfully for ${email}`);
+
+    // Return success (don't clear OTP yet - wait for password reset)
+    return res.status(200).json({
+      message: 'OTP verified successfully. You can now reset your password.',
+      verified: true
+    });
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    return res.status(500).json({
+      message: 'An error occurred. Please try again later.'
+    });
+  }
+}
+
+/**
+ * Reset Password with OTP Controller
+ * Resets password after OTP verification
+ * 
+ * @route POST /api/auth/reset-password-otp
+ * @access Public
+ */
+async function resetPasswordWithOTP(req, res) {
+  try {
+    const { email, otp, password } = req.body;
+
+    // Validate inputs
+    if (!email || !otp || !password) {
+      return res.status(400).json({
+        message: 'Email, OTP, and new password are required'
+      });
+    }
+
+    // Validate OTP format
+    if (!isValidOTPFormat(otp)) {
+      return res.status(400).json({
+        message: 'Invalid OTP format. OTP must be 6 digits.'
+      });
+    }
+
+    // Validate password strength
+    const { validatePassword } = require('../utils/passwordValidation');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet requirements',
+        errors: passwordCheck.errors 
+      });
+    }
+
+    // Check if email is locked out
+    if (isLockedOut(email)) {
+      const remainingSeconds = getLockoutTimeRemaining(email);
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+      
+      return res.status(429).json({
+        message: `Too many failed attempts. Please try again in ${remainingMinutes} minute(s).`,
+        lockedOut: true
+      });
+    }
+
+    console.log('🔐 Resetting password with OTP for:', email.toLowerCase());
+
+    // Search for user
+    let user = await Player.findOne({ email: email.toLowerCase() });
+    let userType = 'player';
+
+    if (!user) {
+      user = await Coach.findOne({ email: email.toLowerCase() });
+      userType = 'coach';
+    }
+
+    // If user not found
+    if (!user) {
+      recordFailedAttempt(email);
+      return res.status(400).json({
+        message: 'Invalid OTP or OTP has expired.'
+      });
+    }
+
+    // Check if OTP exists and hasn't expired
+    if (!user.resetPasswordToken || !user.resetPasswordExpires) {
+      return res.status(400).json({
+        message: 'No OTP found. Please request a new password reset.'
+      });
+    }
+
+    // Check if OTP has expired
+    if (Date.now() > user.resetPasswordExpires) {
+      return res.status(400).json({
+        message: 'OTP has expired. Please request a new password reset.'
+      });
+    }
+
+    // Hash the provided OTP and compare with stored hash
+    const hashedOTP = hashOTP(otp);
+    
+    if (hashedOTP !== user.resetPasswordToken) {
+      // OTP doesn't match - record failed attempt
+      const result = recordFailedAttempt(email);
+      
+      console.log(`❌ Invalid OTP attempt during password reset for ${email}`);
+      
+      if (result.locked) {
+        return res.status(429).json({
+          message: `Too many failed attempts. Account locked for ${Math.ceil(result.lockoutSeconds / 60)} minutes.`,
+          lockedOut: true
+        });
+      }
+      
+      return res.status(400).json({
+        message: `Invalid OTP. ${result.attemptsRemaining} attempt(s) remaining.`,
+        attemptsRemaining: result.attemptsRemaining
+      });
+    }
+
+    // OTP is valid - reset password
+    resetAttempts(email);
+    
+    // Update user password (bcrypt hashing will be handled by pre-save hook)
+    user.password = password;
+    
+    // Clear resetPasswordToken and resetPasswordExpires fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    
+    // Save user (this will trigger the pre-save hook to hash the password)
+    await user.save();
+
+    console.log(`✅ Password reset successfully for ${email}`);
+
+    // Return success message
+    return res.status(200).json({
+      message: 'Password has been reset successfully. You can now login with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Reset password with OTP error:', error);
+    return res.status(500).json({
+      message: 'An error occurred. Please try again later.'
+    });
+  }
+}
+
+/**
+ * Reset Password Controller (Legacy - URL Token based)
  * Handles password reset with token validation
+ * Kept for backward compatibility
  * 
  * @route POST /api/auth/reset-password/:token
  * @access Public
@@ -480,6 +727,8 @@ async function logout(req, res) {
 
 module.exports = {
   forgotPassword,
+  verifyOTP,
+  resetPasswordWithOTP,
   resetPassword,
   setCompetition,
   getAssignedCompetitions,

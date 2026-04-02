@@ -1,20 +1,20 @@
 const { sendEmail: sendWithGmail } = require('./emailService');
 
-// Try to load SendGrid service, but don't fail if not available
-let sendWithSendGrid;
+// Load Resend service
+let sendWithResend;
 try {
-  const sendgridService = require('./sendgridService');
-  sendWithSendGrid = sendgridService.sendEmailWithSendGrid;
-  console.log('📧 Unified: SendGrid service loaded successfully');
+  const resendService = require('./resendService');
+  sendWithResend = resendService.sendEmailWithResend;
+  console.log('📧 Unified: Resend service loaded successfully');
 } catch (error) {
-  console.log('📧 Unified: SendGrid service not available:', error.message);
-  sendWithSendGrid = null;
+  console.log('📧 Unified: Resend service not available:', error.message);
+  sendWithResend = null;
 }
 
 /**
  * Unified Email Service
  * Tries multiple email providers in order of preference
- * 1. SendGrid (most reliable for production)
+ * 1. Resend (modern, excellent deliverability)
  * 2. Gmail SMTP (fallback)
  */
 
@@ -27,38 +27,48 @@ try {
  */
 async function sendEmail(to, subject, html) {
   console.log('📧 Unified: Starting email send with multiple providers...');
+  const errors = [];
   
-  // Try SendGrid first (more reliable for production)
-  if (sendWithSendGrid && process.env.SENDGRID_API_KEY) {
-    console.log('📧 Unified: Trying SendGrid...');
+  // Try Resend first (modern, excellent deliverability)
+  if (sendWithResend && process.env.RESEND_API_KEY) {
+    console.log('📧 Unified: Trying Resend...');
     try {
-      const result = await sendWithSendGrid(to, subject, html);
+      const result = await sendWithResend(to, subject, html);
       if (result) {
-        console.log('✅ Unified: Email sent successfully via SendGrid');
+        console.log('✅ Unified: Email sent successfully via Resend');
         return true;
       }
+      errors.push('Resend: Failed to send');
     } catch (error) {
-      console.error('❌ Unified: SendGrid failed:', error.message);
+      console.error('❌ Unified: Resend failed:', error.message);
+      errors.push(`Resend: ${error.message}`);
     }
-  } else if (!sendWithSendGrid) {
-    console.log('📧 Unified: SendGrid service not available, skipping...');
+  } else if (!sendWithResend) {
+    console.log('📧 Unified: Resend service not loaded, skipping...');
   } else {
-    console.log('📧 Unified: SendGrid not configured (missing API key), skipping...');
+    console.log('📧 Unified: Resend not configured (missing RESEND_API_KEY), skipping...');
   }
 
   // Fallback to Gmail SMTP
-  console.log('📧 Unified: Trying Gmail SMTP...');
-  try {
-    const result = await sendWithGmail(to, subject, html);
-    if (result) {
-      console.log('✅ Unified: Email sent successfully via Gmail SMTP');
-      return true;
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    console.log('📧 Unified: Trying Gmail SMTP...');
+    try {
+      const result = await sendWithGmail(to, subject, html);
+      if (result) {
+        console.log('✅ Unified: Email sent successfully via Gmail SMTP');
+        return true;
+      }
+      errors.push('Gmail SMTP: Failed to send');
+    } catch (error) {
+      console.error('❌ Unified: Gmail SMTP failed:', error.message);
+      errors.push(`Gmail SMTP: ${error.message}`);
     }
-  } catch (error) {
-    console.error('❌ Unified: Gmail SMTP failed:', error.message);
+  } else {
+    console.log('📧 Unified: Gmail SMTP not configured (missing EMAIL_USER or EMAIL_PASS), skipping...');
   }
 
   console.error('❌ Unified: All email providers failed');
+  console.error('📧 Unified: Errors:', errors);
   return false;
 }
 

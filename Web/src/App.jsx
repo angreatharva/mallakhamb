@@ -217,6 +217,7 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/scores" element={<PublicScores />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             {/* Player Routes */}

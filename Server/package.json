@@ -10,7 +10,9 @@
     "create-superadmin": "node scripts/createSuperAdmin.js",
     "create-coach": "node scripts/createCoach.js",
     "create-player": "node scripts/createPlayer.js",
-    "create-competition": "node scripts/createCompetition.js"
+    "create-competition": "node scripts/createCompetition.js",
+    "test-email": "node test-email-services.js",
+    "test-resend": "node test-resend-services.js"
   },
   "keywords": [
     "sports",
@@ -35,6 +37,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "nodemailer": "^7.0.12",
+    "resend": "^6.10.0",
     "socket.io": "^4.7.4"
   },
   "devDependencies": {

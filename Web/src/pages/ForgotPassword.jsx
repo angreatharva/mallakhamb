@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,10 +17,12 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors }
   } = useForm();
 
@@ -46,8 +48,13 @@ const ForgotPassword = () => {
       
       logger.log('✅ Forgot password response received');
       
-      setMessage('If an account with that email exists, a password reset link has been sent.');
-      toast.success('Password reset email sent! Check your inbox.', { id: 'forgot-password' });
+      setMessage('If an account with that email exists, an OTP has been sent to your email.');
+      toast.success('OTP sent! Check your email.', { id: 'forgot-password' });
+      
+      // Navigate to reset password page with email
+      setTimeout(() => {
+        navigate('/reset-password', { state: { email: data.email } });
+      }, 2000);
       
     } catch (err) {
       logger.error('❌ Forgot password error:', err);
@@ -84,7 +91,7 @@ const ForgotPassword = () => {
               </div>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Forgot Password</h2>
-            <p className="text-gray-600 mt-2">Enter your email to reset your password</p>
+            <p className="text-gray-600 mt-2">Enter your email to receive an OTP</p>
           </div>
 
           <ResponsiveForm onSubmit={handleSubmit(onSubmit)}>
@@ -118,7 +125,7 @@ const ForgotPassword = () => {
               className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
               disabled={loading}
             >
-              {loading ? 'Sending Reset Link...' : 'Send Reset Link'}
+              {loading ? 'Sending OTP...' : 'Send OTP'}
             </ResponsiveButton>
             
             {loading && (
@@ -126,7 +133,7 @@ const ForgotPassword = () => {
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
                   <p className="text-sm text-blue-800">
-                    Sending reset email... This may take a moment if the server is starting up.
+                    Sending OTP... This may take a moment if the server is starting up.
                   </p>
                 </div>
               </div>
@@ -136,6 +143,9 @@ const ForgotPassword = () => {
           {message && (
             <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800">{message}</p>
+              <p className="text-sm text-green-600 mt-2">
+                Redirecting to password reset page...
+              </p>
             </div>
           )}
 
