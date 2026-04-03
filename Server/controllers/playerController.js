@@ -195,6 +195,7 @@ const getPlayerTeam = async (req, res) => {
         firstName: player.firstName,
         lastName: player.lastName,
         email: player.email,
+        dateOfBirth: player.dateOfBirth,
         ageGroup: ageGroup || null,
         gender: player.gender
       },

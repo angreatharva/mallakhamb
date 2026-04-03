@@ -1,13 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  Users,
-  Filter,
-  UserPlus,
-  Save,
-  Edit,
-  X,
-  Trash2
-} from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Users, Filter, UserPlus, Save, Edit, X, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
@@ -15,40 +8,190 @@ import { useCompetition } from '../contexts/CompetitionContext';
 import { useAgeGroups } from '../hooks/useAgeGroups';
 import { logger } from '../utils/logger';
 import Dropdown from '../components/Dropdown';
-import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
-import { ResponsiveForm, ResponsiveFormField, ResponsiveInput, ResponsiveButton } from '../components/responsive/ResponsiveForm';
-import { ResponsiveTable } from '../components/responsive/ResponsiveTable';
 import { useResponsive } from '../hooks/useResponsive';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
 
+const useReducedMotion = () => {
+  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const h = (e) => setR(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
+  return r;
+};
+
+const FadeIn = ({ children, delay = 0, className = '' }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const reduced = useReducedMotion();
+  return (
+    <motion.div ref={ref} className={className}
+      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
+      {children}
+    </motion.div>
+  );
+};
+
+const DarkCard = ({ children, className = '', style = {} }) => (
+  <div className={`rounded-2xl border ${className}`}
+    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
+    {children}
+  </div>
+);
+
+const DarkInput = ({ label, required, error, hint, rightElement, ...props }) => (
+  <div>
+    {label && (
+      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      </label>
+    )}
+    <div className="relative">
+      <input
+        className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+        style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+        onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+        onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+        {...props}
+      />
+      {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
+    </div>
+    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
+  </div>
+);
+
+const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', className = '' }) => {
+  const bg = {
+    primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
+    purple: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})`,
+    success: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`,
+    danger: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`,
+    ghost: 'transparent',
+  }[variant];
+  const h = size === 'sm' ? '32px' : '44px';
+  return (
+    <motion.button onClick={onClick} disabled={disabled}
+      className={`rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', minHeight: h, padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
+      whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
+      whileTap={!disabled ? { scale: 0.97 } : {}}>
+      {children}
+    </motion.button>
+  );
+};
+
+const EmptyState = ({ icon: Icon, title, desc, action }) => (
+  <div className="text-center py-12">
+    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
+    <p className="text-white/60 font-semibold">{title}</p>
+    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {action && <div className="mt-4">{action}</div>}
+  </div>
+);
+
+const LoadingState = ({ label }) => (
+  <div className="flex items-center justify-center py-12 gap-3">
+    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+    <span className="text-white/40 text-sm">{label}</span>
+  </div>
+);
+
+// ─── Edit Judge Modal ─────────────────────────────────────────────────────────
+const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, generateUsername, generatePassword }) => (
+  <AnimatePresence>
+    {judge && (
+      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={(e) => e.target === e.currentTarget && onCancel()}>
+        <motion.div className="w-full max-w-md rounded-3xl border overflow-hidden"
+          style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
+              <h3 className="text-xl font-black text-white mt-0.5">{judge.name ? 'Edit Judge' : 'Add Judge'}</h3>
+            </div>
+            <button onClick={onCancel} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'rgba(255,255,255,0.5)' }}>
+              <span className="font-bold" style={{ color: ADMIN_COLORS.saffronLight }}>{judge.judgeType}</span>
+              {judge.gender && <> · {judge.gender}</>}
+              {judge.ageGroup && <> · {judge.ageGroup}</>}
+            </div>
+            <DarkInput label="Name" required value={formData.name}
+              onChange={(e) => {
+                const n = e.target.value;
+                setFormData(prev => ({
+                  ...prev, name: n,
+                  username: (!prev.username || prev.username === generateUsername(prev.name, judge.judgeType))
+                    ? (n ? generateUsername(n, judge.judgeType) : '') : prev.username
+                }));
+              }}
+              placeholder="Enter judge name" />
+            <DarkInput label="Username" required value={formData.username}
+              onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+              placeholder="Enter username or click Auto"
+              hint={formData.name ? 'Click "Auto" to generate from name.' : 'Enter a name first.'}
+              rightElement={
+                <DarkBtn size="sm" variant="purple" disabled={!formData.name.trim()}
+                  onClick={() => {
+                    if (formData.name.trim()) {
+                      const u = generateUsername(formData.name, judge.judgeType);
+                      setFormData(prev => ({ ...prev, username: u }));
+                      toast.success(`Username: ${u}`);
+                    }
+                  }}>Auto</DarkBtn>
+              } />
+            <DarkInput label="Password" required value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Enter password"
+              rightElement={
+                <DarkBtn size="sm" variant="ghost"
+                  onClick={() => setFormData(prev => ({ ...prev, password: generatePassword() }))}>Gen</DarkBtn>
+              } />
+          </div>
+          <div className="flex gap-3 p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <DarkBtn variant="ghost" onClick={onCancel} className="flex-1">Cancel</DarkBtn>
+            <DarkBtn variant="success" onClick={onSave} className="flex-1">
+              <Save className="w-4 h-4" />
+              {judge.name ? 'Update' : 'Add Judge'}
+            </DarkBtn>
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const Judges = () => {
   const { routePrefix, storagePrefix } = useRouteContext();
   const { currentCompetition } = useCompetition();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
+  const { isMobile } = useResponsive();
 
-  // Competition selector state (superadmin only)
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [loadingCompetitions, setLoadingCompetitions] = useState(false);
-  
-  // Get available competition types based on user role and competition
+
   const getAvailableCompetitionTypes = () => {
-    if (isSuperAdmin) {
-      // Super admin sees all competition types
-      return ['competition_1', 'competition_2', 'competition_3'];
-    }
-    
-    // Admin sees only competition types assigned to the current competition
-    if (currentCompetition && currentCompetition.competitionTypes) {
-      return currentCompetition.competitionTypes;
-    }
-    
-    // Default to empty if no competition or no types
+    if (isSuperAdmin) return ['competition_1', 'competition_2', 'competition_3'];
+    if (currentCompetition?.competitionTypes) return currentCompetition.competitionTypes;
     return [];
   };
-
   const availableCompetitionTypes = getAvailableCompetitionTypes();
-  // State management
+
   const [judges, setJudges] = useState([]);
   const [judgeFormData, setJudgeFormData] = useState([
     { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
@@ -59,21 +202,28 @@ const Judges = () => {
   ]);
   const [editingJudge, setEditingJudge] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: '', username: '', password: '' });
-
-  // Filters
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
-  const [judgeType, setJudgeType] = useState('add'); // 'add', 'list'
+  const [judgeType, setJudgeType] = useState('add');
   const [judgesExistForSelection, setJudgesExistForSelection] = useState(false);
   const [checkingExistingJudges, setCheckingExistingJudges] = useState(false);
   const [loadingJudges, setLoadingJudges] = useState(false);
   const [ageGroupStarted, setAgeGroupStarted] = useState(false);
 
-  // Responsive hook
-  const { isMobile, isTablet } = useResponsive();
+  const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];
+  const judgeTypes = [{ value: 'add', label: 'Add Judge' }, { value: 'list', label: 'Judge List' }];
+  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
-  // Fetch competitions for superadmin
+  const getCompetitionTypeOptions = () => {
+    const order = ['competition_1', 'competition_2', 'competition_3'];
+    return order.filter(t => availableCompetitionTypes.includes(t)).map(t => ({
+      value: t,
+      label: t === 'competition_1' ? 'Competition I - Team Championship' : t === 'competition_2' ? 'Competition II - All Round Individual' : 'Competition III - Apparatus Championship'
+    }));
+  };
+  const competitionTypeOptions = getCompetitionTypeOptions();
+
   useEffect(() => {
     if (isSuperAdmin) {
       setLoadingCompetitions(true);
@@ -84,135 +234,19 @@ const Judges = () => {
     }
   }, [isSuperAdmin]);
 
-  // Reset filters when competition changes
-  useEffect(() => {
-    setSelectedGender(null);
-    setSelectedAgeGroup(null);
-    setJudges([]);
-    setJudgesExistForSelection(false);
-  }, [selectedCompetition]);
+  useEffect(() => { setSelectedGender(null); setSelectedAgeGroup(null); setJudges([]); setJudgesExistForSelection(false); }, [selectedCompetition]);
 
-  // Set default competition type when available types change
   useEffect(() => {
     if (availableCompetitionTypes.length > 0 && !selectedCompetitionType) {
-      // Default to competition_1 if available, otherwise first available type
-      const defaultType = availableCompetitionTypes.includes('competition_1') 
-        ? 'competition_1' 
-        : availableCompetitionTypes[0];
-      
-      setSelectedCompetitionType({
-        value: defaultType,
-        label: defaultType === 'competition_1' ? 'Competition I - Team Championship' :
-               defaultType === 'competition_2' ? 'Competition II - All Round Individual' :
-               'Competition III - Apparatus Championship'
-      });
+      const def = availableCompetitionTypes.includes('competition_1') ? 'competition_1' : availableCompetitionTypes[0];
+      setSelectedCompetitionType({ value: def, label: getCompetitionTypeOptions().find(o => o.value === def)?.label || def });
     }
-  }, [availableCompetitionTypes]);
+  }, [availableCompetitionTypes.length]);
 
-  // Filter options
-  const genders = [
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
-  ];
-
-  const judgeTypes = [
-    { value: 'add', label: 'Add Judge' },
-    { value: 'list', label: 'Judge List' }
-  ];
-
-  // Get filtered age groups from competition
-  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
-
-  // Get competition type options in fixed order
-  const getCompetitionTypeOptions = () => {
-    const orderedTypes = ['competition_1', 'competition_2', 'competition_3'];
-    return orderedTypes
-      .filter(type => availableCompetitionTypes.includes(type))
-      .map(type => ({
-        value: type,
-        label: type === 'competition_1' ? 'Competition I - Team Championship' :
-               type === 'competition_2' ? 'Competition II - All Round Individual' :
-               'Competition III - Apparatus Championship'
-      }));
-  };
-
-  const competitionTypeOptions = getCompetitionTypeOptions();
-
-
-  // Reset age group when gender changes
   useEffect(() => {
-    if (selectedGender) {
-      setSelectedAgeGroup(null);
-      setJudgesExistForSelection(false);
-      setCheckingExistingJudges(false);
-      setLoadingJudges(false);
-      // Clear judges list when gender changes
-      if (judgeType === 'list') {
-        setJudges([]);
-      }
-    }
+    if (selectedGender) { setSelectedAgeGroup(null); setJudgesExistForSelection(false); setCheckingExistingJudges(false); setLoadingJudges(false); if (judgeType === 'list') setJudges([]); }
   }, [selectedGender]);
 
-  // Check for existing judges when age group is selected
-  const checkForExistingJudges = async (gender, ageGroup) => {
-    if (!gender || !ageGroup || !selectedCompetitionType) return false;
-    if (isSuperAdmin && !selectedCompetition) return false;
-
-    try {
-      const params = {
-        gender: gender.value,
-        ageGroup: ageGroup.value,
-        competitionTypes: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
-      };
-      const response = await api.getJudges(params);
-      // Check if there are any actual judges (not empty placeholders)
-      const actualJudges = response.data.judges.filter(judge =>
-        judge._id &&
-        !judge.isEmpty &&
-        judge.name &&
-        judge.name.trim() !== ''
-      );
-      return actualJudges.length > 0;
-    } catch (error) {
-      logger.error('Error checking existing judges:', error);
-      return false;
-    }
-  };
-
-  // Handle age group selection with validation
-  const handleAgeGroupChange = async (ageGroupOption) => {
-    if (!selectedGender || !ageGroupOption) {
-      setSelectedAgeGroup(ageGroupOption);
-      setJudgesExistForSelection(false);
-      setCheckingExistingJudges(false);
-      return;
-    }
-
-    setCheckingExistingJudges(true);
-    
-    try {
-      // Check if judges already exist for this combination
-      const judgesExist = await checkForExistingJudges(selectedGender, ageGroupOption);
-      setJudgesExistForSelection(judgesExist);
-      
-      if (judgesExist && judgeType === 'add') {
-        toast.error(`Judges already exist for ${selectedGender.label} - ${ageGroupOption.label}. Switch to "Judge List" to view or edit existing judges.`);
-        return; // Don't set the age group if judges already exist
-      }
-
-      setSelectedAgeGroup(ageGroupOption);
-
-      // Auto-load judges if in "list" mode and both gender and age group are selected
-      if (judgeType === 'list' && selectedGender && ageGroupOption) {
-        await fetchJudgesWithParams(selectedGender.value, ageGroupOption.value);
-      }
-    } finally {
-      setCheckingExistingJudges(false);
-    }
-  };
-
-  // Reset judge form when gender or age group changes for judges
   useEffect(() => {
     if (judgeType === 'add') {
       setJudgeFormData([
@@ -223,39 +257,54 @@ const Judges = () => {
         { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' }
       ]);
     }
-    // Reset judges exist state when switching judge types
-    if (judgeType === 'list') {
-      setJudgesExistForSelection(false);
-      setCheckingExistingJudges(false);
-      setLoadingJudges(false);
-    }
+    if (judgeType === 'list') { setJudgesExistForSelection(false); setCheckingExistingJudges(false); setLoadingJudges(false); }
   }, [selectedGender, selectedAgeGroup, judgeType]);
 
-  // Auto-load judges when switching to list mode with both filters selected
   useEffect(() => {
-    if (judgeType === 'list' && selectedGender && selectedAgeGroup) {
-      fetchJudges();
-    } else if (judgeType === 'list') {
-      // Clear judges when switching to list mode without both filters
-      setJudges([]);
-    }
+    if (judgeType === 'list' && selectedGender && selectedAgeGroup) fetchJudges();
+    else if (judgeType === 'list') setJudges([]);
   }, [judgeType]);
 
-  // Reload judges when competition types change in list mode
   useEffect(() => {
-    if (judgeType === 'list' && selectedGender && selectedAgeGroup && selectedCompetitionType) {
-      fetchJudges();
-    }
+    if (judgeType === 'list' && selectedGender && selectedAgeGroup && selectedCompetitionType) fetchJudges();
   }, [selectedCompetitionType, judgeType, selectedGender, selectedAgeGroup]);
 
-  // API Functions
+  const generateUsername = (name, jType) => {
+    if (!name) return '';
+    const initials = name.trim().split(/\s+/).map(w => w.charAt(0).toLowerCase()).join('');
+    const prefix = { 'Senior Judge': 'srj', 'Judge 1': 'j1', 'Judge 2': 'j2', 'Judge 3': 'j3', 'Judge 4': 'j4' }[jType] || 'j';
+    return `${prefix}_${initials}`;
+  };
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  };
+
+  const checkForExistingJudges = async (gender, ageGroup) => {
+    if (!gender || !ageGroup || !selectedCompetitionType) return false;
+    if (isSuperAdmin && !selectedCompetition) return false;
+    try {
+      const params = { gender: gender.value, ageGroup: ageGroup.value, competitionTypes: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
+      const response = await api.getJudges(params);
+      return response.data.judges.filter(j => j._id && !j.isEmpty && j.name?.trim()).length > 0;
+    } catch { return false; }
+  };
+
+  const handleAgeGroupChange = async (ageGroupOption) => {
+    if (!selectedGender || !ageGroupOption) { setSelectedAgeGroup(ageGroupOption); setJudgesExistForSelection(false); setCheckingExistingJudges(false); return; }
+    setCheckingExistingJudges(true);
+    try {
+      const judgesExist = await checkForExistingJudges(selectedGender, ageGroupOption);
+      setJudgesExistForSelection(judgesExist);
+      if (judgesExist && judgeType === 'add') { toast.error(`Judges already exist for ${selectedGender.label} - ${ageGroupOption.label}. Switch to "Judge List".`); return; }
+      setSelectedAgeGroup(ageGroupOption);
+      if (judgeType === 'list' && selectedGender && ageGroupOption) await fetchJudgesWithParams(selectedGender.value, ageGroupOption.value);
+    } finally { setCheckingExistingJudges(false); }
+  };
+
   const fetchJudges = useCallback(async () => {
-    if (!selectedCompetitionType) {
-      toast.error('Please select a competition type');
-      return;
-    }
-    if (isSuperAdmin && !selectedCompetition) return;
-    
+    if (!selectedCompetitionType || (isSuperAdmin && !selectedCompetition)) return;
     setLoadingJudges(true);
     try {
       const params = {};
@@ -263,158 +312,42 @@ const Judges = () => {
       if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
       if (selectedCompetitionType) params.competitionTypes = selectedCompetitionType.value;
       if (isSuperAdmin && selectedCompetition) params.competitionId = selectedCompetition.value;
-
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
-    } catch (error) {
-      toast.error('Failed to load judges');
-    } finally {
-      setLoadingJudges(false);
-    }
+    } catch { toast.error('Failed to load judges'); } finally { setLoadingJudges(false); }
   }, [selectedCompetitionType, selectedGender, selectedAgeGroup, selectedCompetition, api]);
 
   const fetchJudgesWithParams = async (gender, ageGroup) => {
-    if (!selectedCompetitionType) {
-      toast.error('Please select a competition type');
-      return;
-    }
-    if (isSuperAdmin && !selectedCompetition) return;
-    
+    if (!selectedCompetitionType || (isSuperAdmin && !selectedCompetition)) return;
     setLoadingJudges(true);
     try {
-      const params = { 
-        gender, 
-        ageGroup,
-        competitionTypes: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
-      };
+      const params = { gender, ageGroup, competitionTypes: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getJudges(params);
       setJudges(response.data.judges);
-      
-      // Check if age group is started
       const summaryResponse = await api.getAllJudgesSummary();
-      const ageGroupInfo = summaryResponse.data.summary.find(
-        item => item.gender === gender && item.ageGroup === ageGroup
-      );
-      setAgeGroupStarted(ageGroupInfo?.isStarted || false);
-    } catch (error) {
-      toast.error('Failed to load judges');
-    } finally {
-      setLoadingJudges(false);
-    }
+      const info = summaryResponse.data.summary.find(item => item.gender === gender && item.ageGroup === ageGroup);
+      setAgeGroupStarted(info?.isStarted || false);
+    } catch { toast.error('Failed to load judges'); } finally { setLoadingJudges(false); }
   };
 
   const handleJudgeFormChange = (index, field, value) => {
-    const updatedFormData = [...judgeFormData];
-    updatedFormData[index][field] = value;
-    setJudgeFormData(updatedFormData);
-  };
-
-  const generateUsername = (name, judgeType) => {
-    if (!name) return '';
-
-    // Split name into words and get first letter of each word
-    const nameWords = name.trim().split(/\s+/);
-    const initials = nameWords.map(word => word.charAt(0).toLowerCase()).join('');
-
-    // Generate prefix based on judge type
-    let prefix = '';
-    if (judgeType === 'Senior Judge') {
-      prefix = 'srj';
-    } else if (judgeType === 'Judge 1') {
-      prefix = 'j1';
-    } else if (judgeType === 'Judge 2') {
-      prefix = 'j2';
-    } else if (judgeType === 'Judge 3') {
-      prefix = 'j3';
-    } else if (judgeType === 'Judge 4') {
-      prefix = 'j4';
-    }
-
-    return `${prefix}_${initials}`;
-  };
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
-
-  const checkExistingJudges = async () => {
-    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return false;
-    if (isSuperAdmin && !selectedCompetition) return false;
-
-    try {
-      const params = {
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value,
-        competitionTypes: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
-      };
-      const response = await api.getJudges(params);
-      // Check if there are any actual judges (not empty placeholders)
-      const actualJudges = response.data.judges.filter(judge =>
-        judge._id &&
-        !judge.isEmpty &&
-        judge.name &&
-        judge.name.trim() !== ''
-      );
-      return actualJudges.length > 0;
-    } catch (error) {
-      return false;
-    }
+    const updated = [...judgeFormData];
+    updated[index][field] = value;
+    setJudgeFormData(updated);
   };
 
   const handleSaveJudges = async () => {
-    if (!selectedGender || !selectedAgeGroup) {
-      toast.error('Please select gender and age group first');
-      return;
-    }
-
-    if (!selectedCompetitionType) {
-      toast.error('Please select a competition type');
-      return;
-    }
-
-    // Check if judges already exist
-    const judgesExist = await checkExistingJudges();
-    if (judgesExist) {
-      toast.error('Judges already exist for this gender and age group. Use the Judge List to edit existing judges.');
-      return;
-    }
-
-    // Validate at least 3 judges and max 5 have name and password
-    const validJudges = judgeFormData.filter(judge => judge.name.trim() && judge.password.trim());
-    if (validJudges.length < 3) {
-      toast.error('Please fill in at least 3 judges with name and password (maximum 5 allowed)');
-      return;
-    }
-
+    if (!selectedGender || !selectedAgeGroup) { toast.error('Please select gender and age group first'); return; }
+    if (!selectedCompetitionType) { toast.error('Please select a competition type'); return; }
+    const validJudges = judgeFormData.filter(j => j.name.trim() && j.password.trim());
+    if (validJudges.length < 3) { toast.error('Please fill in at least 3 judges with name and password'); return; }
+    const judgesExist = await checkForExistingJudges(selectedGender, selectedAgeGroup);
+    if (judgesExist) { toast.error('Judges already exist. Use "Judge List" to edit.'); return; }
     try {
-      // Clean and validate judge data before sending
-      const cleanedJudges = judgeFormData.map(judge => ({
-        judgeNo: judge.judgeNo,
-        judgeType: judge.judgeType,
-        name: judge.name ? judge.name.trim() : '',
-        username: judge.username ? judge.username.trim() : '',
-        password: judge.password ? judge.password.trim() : ''
-      }));
-
-      const judgesData = {
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value,
-        competitionTypes: [selectedCompetitionType.value],
-        judges: cleanedJudges,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
-      };
-
+      const cleanedJudges = judgeFormData.map(j => ({ judgeNo: j.judgeNo, judgeType: j.judgeType, name: j.name.trim(), username: j.username.trim(), password: j.password.trim() }));
+      const judgesData = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionTypes: [selectedCompetitionType.value], judges: cleanedJudges, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.saveJudges(judgesData);
-      toast.success(`Judge panel created! ${response.data.filledSlots} judges added, ${response.data.emptySlots} slots available for editing.`);
-
-      // Reset form
+      toast.success(`Judge panel created! ${response.data.filledSlots} judges added.`);
       setJudgeFormData([
         { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
         { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
@@ -424,840 +357,248 @@ const Judges = () => {
       ]);
     } catch (error) {
       logger.error('Save judges error:', error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (error.response?.data?.errors) {
-        toast.error('Validation error: ' + error.response.data.errors.map(e => e.msg).join(', '));
-      } else {
-        toast.error('Failed to save judges. Please check the console for details.');
-      }
+      toast.error(error.response?.data?.message || 'Failed to save judges');
     }
   };
 
   const handleEditJudge = (judge) => {
-    if (ageGroupStarted) {
-      toast.error('Cannot edit judges. This age group has already been started.');
-      return;
-    }
+    if (ageGroupStarted) { toast.error('Cannot edit judges. Age group has been started.'); return; }
     setEditingJudge(judge);
-    const initialUsername = judge.username || (judge.name ? generateUsername(judge.name, judge.judgeType) : '');
-    setEditFormData({
-      name: judge.name || '',
-      username: initialUsername,
-      password: judge.password || ''
-    });
+    setEditFormData({ name: judge.name || '', username: judge.username || (judge.name ? generateUsername(judge.name, judge.judgeType) : ''), password: judge.password || '' });
   };
 
   const handleDeleteJudge = async (judge) => {
-    if (!judge._id || !judge.name) {
-      toast.error('Cannot delete an empty judge slot');
-      return;
-    }
-
-    if (ageGroupStarted) {
-      toast.error('Cannot delete judges. This age group has already been started.');
-      return;
-    }
-
-    // Count active judges (judges with names)
-    const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
-    
-    // Prevent deletion if only 3 judges remain (minimum requirement)
-    if (activeJudgesCount <= 3) {
-      toast.error('Cannot delete judge. Minimum 3 judges required (1 Senior Judge + 2 Judges).');
-      return;
-    }
-
-    if (!window.confirm(`Are you sure you want to delete judge "${judge.name}"? This action cannot be undone.`)) {
-      return;
-    }
-
+    if (!judge._id || !judge.name) { toast.error('Cannot delete an empty judge slot'); return; }
+    if (ageGroupStarted) { toast.error('Cannot delete judges. Age group has been started.'); return; }
+    const activeCount = judges.filter(j => j.name?.trim()).length;
+    if (activeCount <= 3) { toast.error('Cannot delete. Minimum 3 judges required.'); return; }
+    if (!window.confirm(`Delete judge "${judge.name}"?`)) return;
     try {
       await api.deleteJudge(judge._id);
-      toast.success('Judge deleted successfully');
+      toast.success('Judge deleted');
       fetchJudges();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete judge');
-    }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to delete judge'); }
   };
 
   const handleUpdateJudge = async () => {
-    if (!editFormData.name.trim() || !editFormData.password.trim()) {
-      toast.error('Please fill in name and password');
-      return;
-    }
-
-    if (!editFormData.username || !editFormData.username.trim()) {
-      toast.error('Please provide a username. You can click "Auto" to generate one from the name.');
-      return;
-    }
-
+    if (!editFormData.name.trim() || !editFormData.password.trim()) { toast.error('Please fill in name and password'); return; }
+    if (!editFormData.username?.trim()) { toast.error('Please provide a username'); return; }
     try {
-      const updatedData = {
-        name: editFormData.name.trim(),
-        username: editFormData.username.trim(),
-        password: editFormData.password.trim()
-      };
-
+      const updatedData = { name: editFormData.name.trim(), username: editFormData.username.trim(), password: editFormData.password.trim() };
       if (editingJudge._id && !editingJudge.isEmpty) {
-        // Update existing judge
         await api.updateJudge(editingJudge._id, updatedData);
-        toast.success('Judge updated successfully!');
+        toast.success('Judge updated!');
       } else {
-        // Create new judge for empty slot
-        const newJudgeData = {
-          gender: editingJudge.gender,
-          ageGroup: editingJudge.ageGroup,
-          judgeNo: editingJudge.judgeNo,
-          judgeType: editingJudge.judgeType,
-          ...updatedData
-        };
-        await api.createSingleJudge(newJudgeData);
-        toast.success('Judge added successfully!');
+        await api.createSingleJudge({ gender: editingJudge.gender, ageGroup: editingJudge.ageGroup, judgeNo: editingJudge.judgeNo, judgeType: editingJudge.judgeType, ...updatedData });
+        toast.success('Judge added!');
       }
-
-      // Refresh judges list
       fetchJudges();
-
-      // Close edit modal
       setEditingJudge(null);
       setEditFormData({ name: '', username: '', password: '' });
     } catch (error) {
       logger.error('Update judge error:', error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('Failed to save judge');
-      }
+      toast.error(error.response?.data?.message || 'Failed to save judge');
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingJudge(null);
-    setEditFormData({ name: '', username: '', password: '' });
-  };
-
-  const competitionOptions = competitions.map(c => ({ value: c._id, label: c.name }));
+  const competitionOptions = competitions.map(c => ({ value: c._id, label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}` }));
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
+  const judgeTypeBadge = (jt) => jt === 'Senior Judge'
+    ? { bg: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight }
+    : { bg: `${ADMIN_COLORS.blue}20`, color: '#93C5FD' };
+
   return (
-    <ResponsiveContainer maxWidth="full" className="py-6">
-      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Judge Management</h2>
+    <div className="space-y-6">
+      <EditJudgeModal judge={editingJudge} formData={editFormData} setFormData={setEditFormData}
+        onSave={handleUpdateJudge} onCancel={() => { setEditingJudge(null); setEditFormData({ name: '', username: '', password: '' }); }}
+        generateUsername={generateUsername} generatePassword={generatePassword} />
 
-        {/* Competition selector - superadmin only */}
-        {isSuperAdmin && (
-          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-            <label className="block text-sm font-semibold text-indigo-800 mb-2">
-              Competition <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              options={competitionOptions}
-              value={selectedCompetition}
-              onChange={setSelectedCompetition}
-              placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select a competition first'}
-              disabled={loadingCompetitions}
-            />
-            {!selectedCompetition && (
-              <p className="text-xs text-indigo-600 mt-2">Select a competition to enable the filters below.</p>
-            )}
-          </div>
-        )}
+      <FadeIn>
+        <DarkCard className="p-6">
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
+          <h2 className="text-2xl font-black text-white mb-6">Manage Judges</h2>
 
-        {!filtersReady ? (
-          <div className="text-center py-10">
-            <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-500 mb-2">Select a Competition First</h3>
-            <p className="text-gray-400">Choose a competition above to start managing judges.</p>
-          </div>
-        ) : (
-        <div className={!filtersReady ? 'opacity-50 pointer-events-none' : ''}>
-
-        {/* Judge Type Selection - Mobile-first responsive grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Judge Action</label>
-            <Dropdown
-              options={judgeTypes}
-              value={judgeTypes.find(j => j.value === judgeType)}
-              onChange={(option) => {
-                setJudgeType(option.value);
-                // If switching to 'add' and both gender and age group are selected, check for existing judges
-                if (option.value === 'add' && selectedGender && selectedAgeGroup) {
-                  handleAgeGroupChange(selectedAgeGroup);
-                }
-              }}
-              placeholder="Select action"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gender <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              options={genders}
-              value={selectedGender}
-              onChange={setSelectedGender}
-              placeholder="Select gender first"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
-            <Dropdown
-              options={availableAgeGroups}
-              value={selectedAgeGroup}
-              onChange={handleAgeGroupChange}
-              placeholder={selectedGender ? "Select age group" : "Select gender first"}
-              disabled={!selectedGender}
-            />
-            {!selectedGender && (
-              <p className="text-xs text-gray-500 mt-1">Please select gender first to see available age groups</p>
-            )}
-            {selectedGender && !checkingExistingJudges && availableAgeGroups.length > 0 && (
-              <p className="text-xs text-blue-600 mt-1">
-                Available: {availableAgeGroups.map(ag => ag.label).join(', ')}
-              </p>
-            )}
-            {checkingExistingJudges && (
-              <p className="text-xs text-orange-600 mt-1">
-                {judgeType === 'add' ? 'Checking for existing judges...' : 'Loading judges...'}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Competition Type Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Competition Type <span className="text-red-500">*</span>
-          </label>
-          {availableCompetitionTypes.length === 0 ? (
-            <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50">
-              <p className="text-sm text-yellow-800">
-                {isSuperAdmin 
-                  ? 'No competition types available. Please check competition configuration.'
-                  : 'No competition types assigned to this competition. Please contact the super admin.'}
-              </p>
+          {isSuperAdmin && (
+            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
+              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
+              </label>
+              <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
+                placeholder={loadingCompetitions ? 'Loading…' : 'Select a competition first'} disabled={loadingCompetitions} />
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${ADMIN_COLORS.saffron}80` }}>Select a competition to enable filters.</p>}
             </div>
-          ) : (
-            <Dropdown
-              options={competitionTypeOptions}
-              value={selectedCompetitionType}
-              onChange={setSelectedCompetitionType}
-              placeholder="Select competition type"
-            />
           )}
-          {!isSuperAdmin && availableCompetitionTypes.length > 0 && (
-            <p className="text-xs text-blue-600 mt-2">
-              Showing competition types assigned to this competition by super admin
-            </p>
-          )}
-        </div>
 
-        {judgeType === 'list' && (selectedGender || selectedAgeGroup) && (
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 space-y-2 md:space-y-0">
-            <div className="text-sm text-gray-600">
-              {selectedGender && selectedAgeGroup ? (
-                <span>Showing judges for: <strong>{selectedGender.label} - {selectedAgeGroup.label}</strong></span>
-              ) : (
-                <span>Select both gender and age group to view judges</span>
+          {!filtersReady ? (
+            <EmptyState icon={Filter} title="Select a Competition First" desc="Choose a competition above to start managing judges." />
+          ) : (
+            <div>
+              {/* Filters row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>Judge Action</label>
+                  <Dropdown options={judgeTypes} value={judgeTypes.find(j => j.value === judgeType)}
+                    onChange={(opt) => { setJudgeType(opt.value); if (opt.value === 'add' && selectedGender && selectedAgeGroup) handleAgeGroupChange(selectedAgeGroup); }}
+                    placeholder="Select action" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>Gender <span style={{ color: ADMIN_COLORS.red }}>*</span></label>
+                  <Dropdown options={genders} value={selectedGender} onChange={setSelectedGender} placeholder="Select gender" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>Age Group</label>
+                  <Dropdown options={availableAgeGroups} value={selectedAgeGroup} onChange={handleAgeGroupChange}
+                    placeholder={selectedGender ? 'Select age group' : 'Select gender first'} disabled={!selectedGender} />
+                  {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
+                </div>
+              </div>
+
+              {/* Competition Type */}
+              <div className="mb-6">
+                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                  Competition Type <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                </label>
+                {availableCompetitionTypes.length === 0 ? (
+                  <div className="p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
+                    <p className="text-sm" style={{ color: ADMIN_COLORS.gold }}>No competition types available. Contact super admin.</p>
+                  </div>
+                ) : (
+                  <Dropdown options={competitionTypeOptions} value={selectedCompetitionType} onChange={setSelectedCompetitionType} placeholder="Select competition type" />
+                )}
+              </div>
+
+              {/* Add Judge Form */}
+              {judgeType === 'add' && (
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-4">Add Judges</h3>
+                  {!selectedGender || !selectedAgeGroup ? (
+                    <EmptyState icon={UserPlus} title="Select gender and age group first" />
+                  ) : judgesExistForSelection ? (
+                    <div className="text-center py-8">
+                      <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
+                        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
+                        <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
+                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}</strong>. Use "Judge List" to view or edit.</p>
+                        <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.blue}10`, borderColor: `${ADMIN_COLORS.blue}30` }}>
+                        <p className="text-white/70">Adding judges for: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span></p>
+                        <p className="text-white/50 text-xs mt-1">Minimum 3 judges required · Maximum 5 allowed · Empty slots can be filled later</p>
+                      </div>
+                      <div className="space-y-4">
+                        {judgeFormData.map((judge, index) => {
+                          const badge = judgeTypeBadge(judge.judgeType);
+                          return (
+                            <div key={index} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                              <div className="flex items-center gap-2 mb-4">
+                                <span className="text-sm font-bold text-white">Judge {judge.judgeNo}</span>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <DarkInput placeholder="Enter judge name" value={judge.name}
+                                  onChange={(e) => { const n = e.target.value; handleJudgeFormChange(index, 'name', n); if (n) handleJudgeFormChange(index, 'username', generateUsername(n, judge.judgeType)); }} />
+                                <DarkInput placeholder="Auto-generated username" value={judge.username}
+                                  onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)} />
+                                <div className="flex gap-2">
+                                  <DarkInput placeholder="Password" value={judge.password}
+                                    onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)}
+                                    className="flex-1" />
+                                  <DarkBtn size="sm" variant="ghost" onClick={() => handleJudgeFormChange(index, 'password', generatePassword())}>Gen</DarkBtn>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-6 flex justify-end">
+                        <DarkBtn variant="success" onClick={handleSaveJudges}>
+                          <Save className="w-4 h-4" />
+                          Save Judges
+                        </DarkBtn>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Judge List */}
+              {judgeType === 'list' && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white">Judge List</h3>
+                    {(selectedGender || selectedAgeGroup) && (
+                      <DarkBtn size="sm" variant="ghost" onClick={() => { setSelectedGender(null); setSelectedAgeGroup(null); setJudges([]); }}>
+                        Clear Filters
+                      </DarkBtn>
+                    )}
+                  </div>
+                  {loadingJudges ? (
+                    <LoadingState label="Loading judges…" />
+                  ) : judges.length > 0 ? (
+                    <div>
+                      <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+                        <span className="text-white/70">Judge panel for: </span>
+                        <span className="font-bold text-white">{selectedGender?.label} — {selectedAgeGroup?.label}</span>
+                        {selectedCompetitionType && <span className="text-white/50 ml-2">· {selectedCompetitionType.label}</span>}
+                      </div>
+                      <div className="space-y-3">
+                        {judges.map((judge, index) => {
+                          const badge = judgeTypeBadge(judge.judgeType);
+                          const activeCount = judges.filter(j => j.name?.trim()).length;
+                          const canDelete = activeCount > 3;
+                          return (
+                            <div key={index} className="rounded-xl border p-4 flex items-center justify-between gap-4"
+                              style={{ background: judge.isEmpty ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badge.bg }}>
+                                  <span className="text-xs font-black" style={{ color: badge.color }}>{judge.judgeNo}</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-bold text-white">{judge.name || <span className="text-white/30 italic">Empty Slot</span>}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
+                                    {judge.name
+                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Active</span>
+                                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}>Available</span>}
+                                  </div>
+                                  {judge.username && <p className="text-xs text-white/40 mt-0.5">@{judge.username}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <DarkBtn size="sm" variant={judge.name ? 'purple' : 'success'} disabled={ageGroupStarted} onClick={() => handleEditJudge(judge)}>
+                                  <Edit className="w-3.5 h-3.5" />
+                                  {judge.name ? 'Edit' : 'Add'}
+                                </DarkBtn>
+                                {judge.name && !ageGroupStarted && (
+                                  <DarkBtn size="sm" variant="danger" disabled={!canDelete} onClick={() => handleDeleteJudge(judge)}>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </DarkBtn>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyState icon={Users}
+                      title={!selectedGender || !selectedAgeGroup || !selectedCompetitionType ? 'Select all filters to view judges' : 'No judges found'}
+                      desc={!selectedGender || !selectedAgeGroup || !selectedCompetitionType
+                        ? 'Select gender, age group, and competition type.'
+                        : `No judge panel for ${selectedGender?.label} — ${selectedAgeGroup?.label}. Switch to "Add Judge" to create one.`}
+                    />
+                  )}
+                </div>
               )}
             </div>
-            <button
-              onClick={() => {
-                setSelectedGender(null);
-                setSelectedAgeGroup(null);
-                setJudges([]);
-              }}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 min-h-[44px]"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
-
-        {/* Judge Content */}
-        {judgeType === 'add' && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Add Judges</h3>
-
-            {!selectedGender || !selectedAgeGroup ? (
-              <div className="text-center py-8">
-                <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Please select gender and age group first to add judges.</p>
-              </div>
-            ) : judgesExistForSelection ? (
-              <div className="text-center py-8">
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center justify-center mb-2">
-                    <Users className="h-8 w-8 text-yellow-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                    Judges Already Exist
-                  </h3>
-                  <p className="text-yellow-700 mb-3">
-                    A judge panel already exists for <strong>{selectedGender.label} - {selectedAgeGroup.label}</strong>
-                  </p>
-                  <p className="text-sm text-yellow-600 mb-4">
-                    You cannot create a new judge panel for this combination. Use "Judge List" to view or edit existing judges.
-                  </p>
-                  <button
-                    onClick={() => setJudgeType('list')}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors min-h-[44px]"
-                  >
-                    Switch to Judge List
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Adding judges for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
-                  </p>
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Competition Type:</strong> {selectedCompetitionType?.label || 'Not selected'}
-                  </p>
-                  <div className="text-xs text-blue-600 space-y-1">
-                    <p>• All 5 judge slots will be created (minimum 3 judges required, maximum 5 judges allowed)</p>
-                    <p>• Empty slots can be filled later using the "Judge List" feature</p>
-                    <p>• Usernames are auto-generated but can be edited</p>
-                  </div>
-                </div>
-
-                {/* Mobile-friendly judge form */}
-                {isMobile ? (
-                  <div className="space-y-6">
-                    {judgeFormData.map((judge, index) => (
-                      <div key={index} className="bg-gray-50 rounded-lg p-4 border">
-                        <div className="mb-3">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium text-gray-900">Judge {judge.judgeNo}</span>
-                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              judge.judgeType === 'Senior Judge'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {judge.judgeType}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                            <ResponsiveInput
-                              type="text"
-                              value={judge.name}
-                              onChange={(e) => {
-                                const newName = e.target.value;
-                                handleJudgeFormChange(index, 'name', newName);
-                                // Auto-generate username when name changes
-                                if (newName) {
-                                  const username = generateUsername(newName, judge.judgeType);
-                                  handleJudgeFormChange(index, 'username', username);
-                                }
-                              }}
-                              placeholder="Enter judge name"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                            <ResponsiveInput
-                              type="text"
-                              value={judge.username}
-                              onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)}
-                              placeholder="Auto-generated"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                            <div className="flex space-x-2">
-                              <ResponsiveInput
-                                type="text"
-                                value={judge.password}
-                                onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)}
-                                placeholder="Enter password"
-                                className="flex-1"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleJudgeFormChange(index, 'password', generatePassword())}
-                                className="px-3 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm min-h-[44px] min-w-[60px]"
-                              >
-                                Gen
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  // Desktop table layout
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Judge No
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Judge Type
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Username
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Password
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {judgeFormData.map((judge, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {judge.judgeNo}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${judge.judgeType === 'Senior Judge'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                {judge.judgeType}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={judge.name}
-                                onChange={(e) => {
-                                  const newName = e.target.value;
-                                  handleJudgeFormChange(index, 'name', newName);
-                                  // Auto-generate username when name changes
-                                  if (newName) {
-                                    const username = generateUsername(newName, judge.judgeType);
-                                    handleJudgeFormChange(index, 'username', username);
-                                  }
-                                }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Enter judge name"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={judge.username}
-                                onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Auto-generated"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex space-x-2">
-                                <input
-                                  type="text"
-                                  value={judge.password}
-                                  onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="Enter password"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleJudgeFormChange(index, 'password', generatePassword())}
-                                  className="px-2 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-xs"
-                                >
-                                  Gen
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <div className="mt-6 flex justify-end">
-                  <ResponsiveButton
-                    onClick={handleSaveJudges}
-                    variant="success"
-                    className="flex items-center space-x-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>Save Judges</span>
-                  </ResponsiveButton>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {judgeType === 'list' && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Judge List</h3>
-
-            {loadingJudges ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                <p className="text-gray-500">Loading judges...</p>
-              </div>
-            ) : judges.length > 0 ? (
-              <div>
-                <div className="mb-4 p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    <strong>Judge Panel for:</strong> {selectedGender?.label} - {selectedAgeGroup?.label}
-                  </p>
-                  <p className="text-sm text-green-800">
-                    <strong>Competition Type:</strong> {selectedCompetitionType?.label || 'Not selected'}
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    Showing all 5 judge slots. Empty slots can be filled by clicking "Add" button.
-                  </p>
-                </div>
-
-                {/* Mobile-friendly judge list */}
-                {isMobile ? (
-                  <div className="space-y-4">
-                    {judges.map((judge, index) => (
-                      <div key={index} className={`bg-white border rounded-lg p-4 ${judge.isEmpty ? 'bg-gray-50 border-gray-200' : 'border-gray-300'}`}>
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="font-medium text-gray-900">Judge {judge.judgeNo}</span>
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                judge.judgeType === 'Senior Judge'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {judge.judgeType}
-                              </span>
-                            </div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {judge.name || <span className="text-gray-400 italic">Empty Slot</span>}
-                            </p>
-                            {judge.username && (
-                              <p className="text-sm text-gray-600">Username: {judge.username}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end space-y-2">
-                            {judge.name ? (
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                Active
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Available
-                              </span>
-                            )}
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleEditJudge(judge)}
-                                disabled={ageGroupStarted}
-                                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] ${
-                                  ageGroupStarted
-                                    ? 'text-gray-400 cursor-not-allowed bg-gray-100'
-                                    : judge.name
-                                    ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                                    : 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                                }`}
-                                title={ageGroupStarted ? 'Age group has been started. Cannot edit judges.' : ''}
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
-                              </button>
-                              {judge.name && !ageGroupStarted && (() => {
-                                const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
-                                const canDelete = activeJudgesCount > 3;
-                                return (
-                                  <button
-                                    onClick={() => handleDeleteJudge(judge)}
-                                    disabled={!canDelete}
-                                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm min-h-[44px] ${
-                                      canDelete
-                                        ? 'text-red-600 hover:text-red-800 hover:bg-red-50'
-                                        : 'text-gray-400 cursor-not-allowed bg-gray-100'
-                                    }`}
-                                    title={canDelete ? 'Delete judge' : 'Cannot delete. Minimum 3 judges required.'}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>Delete</span>
-                                  </button>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  // Desktop table layout
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Judge No
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Judge Type
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Username
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {judges.map((judge, index) => (
-                          <tr key={index} className={judge.isEmpty ? 'bg-gray-50' : ''}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {judge.judgeNo}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${judge.judgeType === 'Senior Judge'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                {judge.judgeType}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {judge.name || <span className="text-gray-400 italic">Empty Slot</span>}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {judge.username || <span className="text-gray-400 italic">-</span>}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {judge.name ? (
-                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                  Active
-                                </span>
-                              ) : (
-                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                  Available
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center space-x-3">
-                                <button
-                                  onClick={() => handleEditJudge(judge)}
-                                  disabled={ageGroupStarted}
-                                  className={`flex items-center space-x-1 ${
-                                    ageGroupStarted
-                                      ? 'text-gray-400 cursor-not-allowed'
-                                      : judge.name
-                                      ? 'text-blue-600 hover:text-blue-800'
-                                      : 'text-green-600 hover:text-green-800'
-                                  }`}
-                                  title={ageGroupStarted ? 'Age group has been started. Cannot edit judges.' : ''}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span>{judge.name ? 'Edit' : 'Add Judge'}</span>
-                                </button>
-                                {judge.name && !ageGroupStarted && (() => {
-                                  const activeJudgesCount = judges.filter(j => j.name && j.name.trim() !== '').length;
-                                  const canDelete = activeJudgesCount > 3;
-                                  return (
-                                    <button
-                                      onClick={() => handleDeleteJudge(judge)}
-                                      disabled={!canDelete}
-                                      className={`flex items-center space-x-1 ${
-                                        canDelete
-                                          ? 'text-red-600 hover:text-red-800'
-                                          : 'text-gray-400 cursor-not-allowed'
-                                      }`}
-                                      title={canDelete ? 'Delete judge' : 'Cannot delete. Minimum 3 judges required.'}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span>Delete</span>
-                                    </button>
-                                  );
-                                })()}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                {!selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
-                  <>
-                    <p className="text-gray-500">Select gender, age group, and competition type to view judges.</p>
-                    <p className="text-gray-400 text-sm mt-2">Judges will be loaded automatically when all filters are selected.</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-500">No judges found for this combination.</p>
-                    <p className="text-gray-400 text-sm mt-2">
-                      No judge panel exists for <strong>{selectedGender.label} - {selectedAgeGroup.label}</strong>. 
-                      Switch to "Add Judge" to create a new panel.
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Edit Judge Modal - Mobile-optimized */}
-        {editingJudge && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <div className="p-6 md:p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {editingJudge?.name ? 'Edit Judge' : 'Add Judge'}
-                  </h3>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      <strong>Judge Type:</strong> {editingJudge.judgeType} |{' '}
-                      <strong>Gender:</strong> {editingJudge.gender} |{' '}
-                      <strong>Age Group:</strong> {editingJudge.ageGroup}
-                    </p>
-                  </div>
-
-                  <ResponsiveFormField
-                    label="Name"
-                    required
-                  >
-                    <ResponsiveInput
-                      type="text"
-                      value={editFormData.name}
-                      onChange={(e) => {
-                        const newName = e.target.value;
-                        setEditFormData({
-                          ...editFormData,
-                          name: newName,
-                          // Auto-generate username if it's empty or was auto-generated
-                          username: (!editFormData.username || editFormData.username === generateUsername(editFormData.name, editingJudge.judgeType))
-                            ? (newName ? generateUsername(newName, editingJudge.judgeType) : '')
-                            : editFormData.username
-                        });
-                      }}
-                      placeholder="Enter judge name"
-                    />
-                  </ResponsiveFormField>
-
-                  <ResponsiveFormField
-                    label="Username"
-                    required
-                  >
-                    <div className="flex space-x-2">
-                      <ResponsiveInput
-                        type="text"
-                        value={editFormData.username}
-                        onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
-                        placeholder="Enter username or click Auto"
-                        className="flex-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (editFormData.name.trim()) {
-                            const newUsername = generateUsername(editFormData.name, editingJudge.judgeType);
-                            setEditFormData({
-                              ...editFormData,
-                              username: newUsername
-                            });
-                            toast.success(`Username generated: ${newUsername}`);
-                          } else {
-                            toast.error('Please enter a name first');
-                          }
-                        }}
-                        className={`px-3 py-3 text-white rounded-md text-sm min-h-[44px] min-w-[60px] ${editFormData.name.trim()
-                          ? 'bg-blue-500 hover:bg-blue-600'
-                          : 'bg-gray-400 cursor-not-allowed'
-                          }`}
-                        disabled={!editFormData.name.trim()}
-                      >
-                        Auto
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Username is required. {editFormData.name ? 'Click "Auto" to generate from name.' : 'Enter a name first, then click "Auto".'}
-                    </p>
-                  </ResponsiveFormField>
-
-                  <ResponsiveFormField
-                    label="Password"
-                    required
-                  >
-                    <div className="flex space-x-2">
-                      <ResponsiveInput
-                        type="text"
-                        value={editFormData.password}
-                        onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                        placeholder="Enter new password"
-                        className="flex-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditFormData({ ...editFormData, password: generatePassword() })}
-                        className="px-3 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm min-h-[44px] min-w-[80px]"
-                      >
-                        Generate
-                      </button>
-                    </div>
-                  </ResponsiveFormField>
-
-                  <div className="flex flex-col md:flex-row justify-end space-y-3 md:space-y-0 md:space-x-3 pt-4">
-                    <ResponsiveButton
-                      onClick={handleCancelEdit}
-                      variant="secondary"
-                      className="order-2 md:order-1"
-                    >
-                      Cancel
-                    </ResponsiveButton>
-                    <ResponsiveButton
-                      onClick={handleUpdateJudge}
-                      variant="primary"
-                      className="order-1 md:order-2 flex items-center justify-center space-x-2"
-                    >
-                      <Save className="h-4 w-4" />
-                      <span>{editingJudge?.name ? 'Update Judge' : 'Add Judge'}</span>
-                    </ResponsiveButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-        )} {/* end filtersReady */}
-      </div>
-    </ResponsiveContainer>
+          )}
+        </DarkCard>
+      </FadeIn>
+    </div>
   );
 };
 

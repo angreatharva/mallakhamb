@@ -1,28 +1,56 @@
-/**
- * ResponsiveTable Component
- * 
- * A comprehensive table component that adapts between table layout on desktop
- * and card layout on mobile. Supports various table patterns including scoring,
- * data display, and team management tables.
- * 
- * Requirements: 8.1, 8.3, 8.4, 10.3
- */
-
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
+import { ADMIN_COLORS } from '../../pages/adminTheme';
 
-/**
- * Main ResponsiveTable component
- * @param {Object} props - Component props
- * @param {Array} props.columns - Column definitions
- * @param {Array} props.data - Table data
- * @param {string} props.type - Table type ('scoring', 'data', 'teams', 'rankings')
- * @param {Function} props.renderMobileCard - Custom mobile card renderer
- * @param {string} props.className - Additional CSS classes
- * @param {Object} props.mobileConfig - Mobile-specific configuration
- * @returns {JSX.Element}
- */
+// ─── Shared token shortcuts ───────────────────────────────────────────────────
+const C = ADMIN_COLORS;
+const surface  = C.darkCard;       // #111
+const elevated = C.darkElevated;   // #161616
+const border   = C.darkBorderSubtle;
+const borderMid = C.darkBorderMid;
+const textPrimary   = 'rgba(255,255,255,0.90)';
+const textSecondary = 'rgba(255,255,255,0.50)';
+const textMuted     = 'rgba(255,255,255,0.30)';
+
+// ─── Shared input style ───────────────────────────────────────────────────────
+const inputStyle = (locked) => ({
+  background: locked ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+  border: `1px solid ${locked ? border : borderMid}`,
+  borderRadius: 8,
+  color: locked ? textSecondary : textPrimary,
+  padding: '6px 10px',
+  fontSize: 13,
+  outline: 'none',
+  width: 80,
+  cursor: locked ? 'not-allowed' : 'text',
+  transition: 'border-color 0.15s',
+});
+
+// ─── Pill badge ───────────────────────────────────────────────────────────────
+const Pill = ({ children, color }) => (
+  <span style={{
+    background: `${color}22`,
+    color,
+    border: `1px solid ${color}44`,
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.03em',
+  }}>
+    {children}
+  </span>
+);
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+const EmptyState = ({ message = 'No data available' }) => (
+  <div style={{ textAlign: 'center', padding: '40px 16px', color: textMuted, fontSize: 14 }}>
+    {message}
+  </div>
+);
+
+// ─── ResponsiveTable ─────────────────────────────────────────────────────────
 export const ResponsiveTable = ({
   columns = [],
   data = [],
@@ -33,112 +61,101 @@ export const ResponsiveTable = ({
   onRowClick = null,
   ...props
 }) => {
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
 
-  // Default mobile card renderer
-  const defaultMobileCardRenderer = (item, index) => {
-    return (
-      <div 
-        key={index} 
-        className={`bg-white border border-gray-200 rounded-lg p-4 space-y-3 ${
-          onRowClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
-        }`}
-        onClick={() => onRowClick && onRowClick(item)}
-      >
-        {columns.map((column, colIndex) => {
-          if (column.hideOnMobile) return null;
-          
-          const value = column.accessor ? item[column.accessor] : column.render ? column.render(item) : '';
-          
-          return (
-            <div key={colIndex} className="flex justify-between items-start">
-              <span className="text-sm font-medium text-gray-600 min-w-0 flex-shrink-0 mr-3">
-                {column.header}:
-              </span>
-              <span className="text-sm text-gray-900 text-right min-w-0 flex-1">
-                {value}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+  const defaultMobileCardRenderer = (item, index) => (
+    <div
+      key={index}
+      onClick={() => onRowClick?.(item)}
+      style={{
+        background: elevated,
+        border: `1px solid ${border}`,
+        borderRadius: 12,
+        padding: '14px 16px',
+        cursor: onRowClick ? 'pointer' : 'default',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
+      onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.borderColor = `${C.saffron}44`; e.currentTarget.style.boxShadow = `0 4px 20px rgba(0,0,0,0.4)`; }}}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
+    >
+      {columns.map((col, ci) => {
+        if (col.hideOnMobile) return null;
+        const value = col.accessor ? item[col.accessor] : col.render ? col.render(item) : '';
+        return (
+          <div key={ci} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: ci < columns.length - 1 ? 10 : 0 }}>
+            <span style={{ fontSize: 12, color: textSecondary, flexShrink: 0, marginRight: 12 }}>{col.header}</span>
+            <span style={{ fontSize: 13, color: textPrimary, textAlign: 'right' }}>{value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 
-  // Mobile layout
   if (isMobile) {
     const cardRenderer = renderMobileCard || defaultMobileCardRenderer;
-    
     return (
-      <ResponsiveContainer className={`mobile-table-cards ${className}`} {...props}>
-        <div className="space-y-4">
-          {data.map((item, index) => cardRenderer(item, index))}
+      <ResponsiveContainer className={className} {...props}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {data.length === 0 ? <EmptyState /> : data.map((item, i) => cardRenderer(item, i))}
         </div>
-        {data.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No data available
-          </div>
-        )}
       </ResponsiveContainer>
     );
   }
 
-  // Tablet/Desktop table layout
   return (
-    <ResponsiveContainer className={`responsive-table-container ${className}`} {...props}>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {columns.map((column, index) => (
-                <th
-                  key={index}
-                  className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.className || ''
-                  }`}
-                >
-                  {column.header}
+    <ResponsiveContainer className={className} {...props}>
+      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: elevated }}>
+              {columns.map((col, i) => (
+                <th key={i} style={{
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: textSecondary,
+                  borderBottom: `1px solid ${border}`,
+                  whiteSpace: 'nowrap',
+                }} className={col.className || ''}>
+                  {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {data.map((item, rowIndex) => (
-              <tr 
-                key={rowIndex} 
-                className={`hover:bg-gray-50 ${
-                  onRowClick ? 'cursor-pointer' : ''
-                }`}
-                onClick={() => onRowClick && onRowClick(item)}
-              >
-                {columns.map((column, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className={`px-4 py-4 whitespace-nowrap ${
-                      column.cellClassName || ''
-                    }`}
-                  >
-                    {column.accessor ? item[column.accessor] : column.render ? column.render(item) : ''}
-                  </td>
-                ))}
-              </tr>
-            ))}
+          <tbody>
+            {data.length === 0
+              ? <tr><td colSpan={columns.length}><EmptyState /></td></tr>
+              : data.map((item, ri) => (
+                <tr key={ri}
+                  onClick={() => onRowClick?.(item)}
+                  style={{
+                    background: ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)',
+                    cursor: onRowClick ? 'pointer' : 'default',
+                    transition: 'background 0.12s',
+                    borderBottom: `1px solid ${border}`,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${C.saffron}0A`; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)'; }}
+                >
+                  {columns.map((col, ci) => (
+                    <td key={ci} style={{ padding: '13px 16px', fontSize: 13, color: textPrimary, whiteSpace: 'nowrap' }} className={col.cellClassName || ''}>
+                      {col.accessor ? item[col.accessor] : col.render ? col.render(item) : ''}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            }
           </tbody>
         </table>
-        {data.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No data available
-          </div>
-        )}
       </div>
     </ResponsiveContainer>
   );
 };
 
-/**
- * Specialized table for scoring data with input fields
- * Optimized for scoring interfaces with mobile card layout
- */
+// ─── ResponsiveScoringTable ───────────────────────────────────────────────────
 export const ResponsiveScoringTable = ({
   players = [],
   scores = {},
@@ -150,282 +167,150 @@ export const ResponsiveScoringTable = ({
 }) => {
   const { isMobile } = useResponsive();
 
-  // Mobile card renderer for scoring
-  const renderScoringCard = (player, index) => (
-    <div key={player.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-      {/* Player Info */}
-      <div className="border-b border-gray-100 pb-3">
-        <h3 className="font-medium text-gray-900">{player.name}</h3>
-        {player.teamName && (
-          <p className="text-sm text-gray-600">{player.teamName}</p>
-        )}
-      </div>
+  const fieldMap = {
+    'Senior Judge': 'seniorJudge',
+    'Judge 1': 'judge1',
+    'Judge 2': 'judge2',
+    'Judge 3': 'judge3',
+    'Judge 4': 'judge4',
+  };
 
-      {/* Time Input */}
-      <div className="flex justify-between items-center">
-        <label className="text-sm font-medium text-gray-600">Time:</label>
-        <input
-          type="text"
-          value={scores[player.id]?.time || ''}
-          onChange={(e) => onScoreChange(player.id, 'time', e.target.value)}
-          disabled={isLocked}
-          className={`w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-            isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
-          placeholder="00:00"
-        />
-      </div>
+  const calculateAverageMarks = (ps) => {
+    const judgeScores = [ps.seniorJudge, ps.judge1, ps.judge2, ps.judge3, ps.judge4]
+      .map(Number).filter(s => s > 0);
+    if (!judgeScores.length) return '0.00';
+    if (judgeScores.length <= 3) return (judgeScores.reduce((a, b) => a + b, 0) / judgeScores.length).toFixed(2);
+    const sorted = [...judgeScores].sort((a, b) => a - b);
+    const trimmed = sorted.slice(1, -1);
+    return (trimmed.reduce((a, b) => a + b, 0) / trimmed.length).toFixed(2);
+  };
 
-      {/* Judge Scores */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-700">Judge Scores:</h4>
-        {judges.map((judge) => {
-          // Map judge type to field name
-          const fieldMap = {
-            'Senior Judge': 'seniorJudge',
-            'Judge 1': 'judge1',
-            'Judge 2': 'judge2',
-            'Judge 3': 'judge3',
-            'Judge 4': 'judge4'
-          };
-          const field = fieldMap[judge.judgeType] || 'seniorJudge';
-          
-          return (
-            <div key={judge._id} className="flex justify-between items-center">
-              <label className="text-sm text-gray-600">{judge.judgeType}:</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                value={scores[player.id]?.[field] || ''}
-                onChange={(e) => onScoreChange(player.id, field, e.target.value)}
-                disabled={isLocked}
-                className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-                  isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-                placeholder="0.0"
-              />
-            </div>
-          );
-        })}
-      </div>
+  const calculateFinalScore = (ps) => {
+    const avg = parseFloat(calculateAverageMarks(ps));
+    return Math.max(0, avg - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);
+  };
 
-      {/* Calculated Scores */}
-      <div className="space-y-2 pt-3 border-t border-gray-100">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-600">Average:</span>
-          <span className="text-sm font-medium text-blue-600">
-            {calculateAverageMarks(scores[player.id] || {})}
-          </span>
-        </div>
-        
-        {/* Deductions */}
-        <div className="flex justify-between items-center">
-          <label className="text-sm text-gray-600">Deduction:</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            value={scores[player.id]?.deduction || ''}
-            onChange={(e) => onScoreChange(player.id, 'deduction', e.target.value)}
-            disabled={isLocked}
-            className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-              isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-            }`}
-            placeholder="0.0"
-          />
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <label className="text-sm text-gray-600">Other Deduction:</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            value={scores[player.id]?.otherDeduction || ''}
-            onChange={(e) => onScoreChange(player.id, 'otherDeduction', e.target.value)}
-            disabled={isLocked}
-            className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-              isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-            }`}
-            placeholder="0.0"
-          />
-        </div>
-        
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-          <span className="text-sm font-bold text-gray-700">Final Score:</span>
-          <span className="text-lg font-bold text-green-600">
-            {calculateFinalScore(scores[player.id] || {})}
-          </span>
-        </div>
-      </div>
-    </div>
+  const ScoreInput = ({ playerId, field, placeholder, type = 'number', step, min, max }) => (
+    <input
+      type={type}
+      step={step}
+      min={min}
+      max={max}
+      value={scores[playerId]?.[field] || ''}
+      onChange={e => onScoreChange(playerId, field, e.target.value)}
+      disabled={isLocked}
+      placeholder={placeholder}
+      style={inputStyle(isLocked)}
+      onFocus={e => { if (!isLocked) e.target.style.borderColor = `${C.saffron}80`; }}
+      onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
+    />
   );
 
-  // Helper functions for score calculations
-  const calculateAverageMarks = (playerScores) => {
-    const judgeScores = [
-      parseFloat(playerScores.seniorJudge) || 0,
-      parseFloat(playerScores.judge1) || 0,
-      parseFloat(playerScores.judge2) || 0,
-      parseFloat(playerScores.judge3) || 0,
-      parseFloat(playerScores.judge4) || 0
-    ].filter(score => score > 0);
-
-    if (judgeScores.length === 0) return '0.00';
-
-    if (judgeScores.length <= 3) {
-      return (judgeScores.reduce((sum, score) => sum + score, 0) / judgeScores.length).toFixed(2);
-    }
-
-    const sortedScores = [...judgeScores].sort((a, b) => a - b);
-    const trimmedScores = sortedScores.slice(1, -1);
-    return (trimmedScores.reduce((sum, score) => sum + score, 0) / trimmedScores.length).toFixed(2);
-  };
-
-  const calculateFinalScore = (playerScores) => {
-    const average = parseFloat(calculateAverageMarks(playerScores));
-    const deduction = parseFloat(playerScores.deduction) || 0;
-    const otherDeduction = parseFloat(playerScores.otherDeduction) || 0;
-    return Math.max(0, average - deduction - otherDeduction).toFixed(2);
-  };
-
-  // Mobile layout for scoring
   if (isMobile) {
     return (
-      <ResponsiveContainer className={`mobile-scoring-cards ${className}`} {...props}>
-        <div className="space-y-4">
-          {players.map((player, index) => renderScoringCard(player, index))}
+      <ResponsiveContainer className={className} {...props}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {players.map(player => (
+            <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 14, padding: 16 }}>
+              {/* Header */}
+              <div style={{ borderBottom: `1px solid ${border}`, paddingBottom: 12, marginBottom: 14 }}>
+                <p style={{ fontWeight: 700, color: textPrimary, fontSize: 15 }}>{player.name}</p>
+                {player.teamName && <p style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{player.teamName}</p>}
+              </div>
+
+              {/* Time */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <label style={{ fontSize: 12, color: textSecondary }}>Time</label>
+                <ScoreInput playerId={player.id} field="time" placeholder="00:00" type="text" />
+              </div>
+
+              {/* Judge scores */}
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textMuted, marginBottom: 8 }}>Judge Scores</p>
+              {judges.map(judge => {
+                const field = fieldMap[judge.judgeType] || 'seniorJudge';
+                return (
+                  <div key={judge._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: textSecondary }}>{judge.judgeType}</label>
+                    <ScoreInput playerId={player.id} field={field} placeholder="0.0" step="0.1" min="0" max="10" />
+                  </div>
+                );
+              })}
+
+              {/* Calculated */}
+              <div style={{ borderTop: `1px solid ${border}`, paddingTop: 12, marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, color: textSecondary }}>Average</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.blue }}>{calculateAverageMarks(scores[player.id] || {})}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, color: textSecondary }}>Deduction</label>
+                  <ScoreInput playerId={player.id} field="deduction" placeholder="0.0" step="0.1" min="0" />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, color: textSecondary }}>Other Deduction</label>
+                  <ScoreInput playerId={player.id} field="otherDeduction" placeholder="0.0" step="0.1" min="0" />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>Final Score</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{calculateFinalScore(scores[player.id] || {})}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </ResponsiveContainer>
     );
   }
 
-  // Desktop table layout (existing table structure)
   return (
-    <ResponsiveContainer className={`responsive-scoring-table ${className}`} {...props}>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Participant Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Time
-              </th>
-              {judges.map((judge) => (
-                <th key={judge._id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {judge.judgeType}
+    <ResponsiveContainer className={className} {...props}>
+      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: elevated }}>
+              {['Participant', 'Time', ...judges.map(j => j.judgeType), 'Average', 'Deduction', 'Other Ded.', 'Final Score'].map((h, i) => (
+                <th key={i} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
+                  {h}
                 </th>
               ))}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Average Marks
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Deduction
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Other Deduction
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Final Score
-              </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {players.map((player) => {
-              // Map judge type to field name
-              const fieldMap = {
-                'Senior Judge': 'seniorJudge',
-                'Judge 1': 'judge1',
-                'Judge 2': 'judge2',
-                'Judge 3': 'judge3',
-                'Judge 4': 'judge4'
-              };
-              
-              return (
-                <tr key={player.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{player.name}</div>
-                    {player.teamName && (
-                      <div className="text-xs text-gray-500">{player.teamName}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <input
-                      type="text"
-                      value={scores[player.id]?.time || ''}
-                      onChange={(e) => onScoreChange(player.id, 'time', e.target.value)}
-                      disabled={isLocked}
-                      className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                      }`}
-                      placeholder="00:00"
-                    />
-                  </td>
-                  {judges.map((judge) => {
-                    const field = fieldMap[judge.judgeType] || 'seniorJudge';
-                    return (
-                      <td key={judge._id} className="px-4 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="10"
-                          value={scores[player.id]?.[field] || ''}
-                          onChange={(e) => onScoreChange(player.id, field, e.target.value)}
-                          disabled={isLocked}
-                          className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                            isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                          }`}
-                          placeholder="0.0"
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="w-20 px-2 py-1 bg-blue-100 rounded text-center font-medium text-blue-800">
-                      {calculateAverageMarks(scores[player.id] || {})}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={scores[player.id]?.deduction || ''}
-                      onChange={(e) => onScoreChange(player.id, 'deduction', e.target.value)}
-                      disabled={isLocked}
-                      className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                      }`}
-                      placeholder="0.0"
-                    />
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={scores[player.id]?.otherDeduction || ''}
-                      onChange={(e) => onScoreChange(player.id, 'otherDeduction', e.target.value)}
-                      disabled={isLocked}
-                      className={`w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                      }`}
-                      placeholder="0.0"
-                    />
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="w-20 px-2 py-1 bg-green-100 rounded text-center font-bold text-green-800">
-                      {calculateFinalScore(scores[player.id] || {})}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody>
+            {players.map((player, ri) => (
+              <tr key={player.id} style={{ background: ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)', borderBottom: `1px solid ${border}` }}>
+                <td style={{ padding: '12px 14px' }}>
+                  <p style={{ fontWeight: 600, color: textPrimary, fontSize: 13 }}>{player.name}</p>
+                  {player.teamName && <p style={{ fontSize: 11, color: textSecondary }}>{player.teamName}</p>}
+                </td>
+                <td style={{ padding: '12px 14px' }}>
+                  <ScoreInput playerId={player.id} field="time" placeholder="00:00" type="text" />
+                </td>
+                {judges.map(judge => {
+                  const field = fieldMap[judge.judgeType] || 'seniorJudge';
+                  return (
+                    <td key={judge._id} style={{ padding: '12px 14px' }}>
+                      <ScoreInput playerId={player.id} field={field} placeholder="0.0" step="0.1" min="0" max="10" />
+                    </td>
+                  );
+                })}
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 600 }}>
+                    {calculateAverageMarks(scores[player.id] || {})}
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px' }}>
+                  <ScoreInput playerId={player.id} field="deduction" placeholder="0.0" step="0.1" min="0" />
+                </td>
+                <td style={{ padding: '12px 14px' }}>
+                  <ScoreInput playerId={player.id} field="otherDeduction" placeholder="0.0" step="0.1" min="0" />
+                </td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ background: `${C.green}18`, color: C.green, borderRadius: 8, padding: '4px 10px', fontSize: 14, fontWeight: 700 }}>
+                    {calculateFinalScore(scores[player.id] || {})}
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -433,9 +318,7 @@ export const ResponsiveScoringTable = ({
   );
 };
 
-/**
- * Specialized table for team listings with responsive cards
- */
+// ─── ResponsiveTeamTable ──────────────────────────────────────────────────────
 export const ResponsiveTeamTable = ({
   teams = [],
   onTeamClick,
@@ -445,90 +328,48 @@ export const ResponsiveTeamTable = ({
 }) => {
   const { isMobile } = useResponsive();
 
-  // Mobile card renderer for teams
-  const renderTeamCard = (team, index) => (
+  const TeamCard = ({ team, compact = false }) => (
     <div
-      key={team._id}
-      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-purple-300"
-      onClick={() => onTeamClick && onTeamClick(team._id)}
+      onClick={() => onTeamClick?.(team._id)}
+      style={{
+        background: elevated,
+        border: `1px solid ${border}`,
+        borderRadius: 14,
+        padding: compact ? '14px 16px' : '18px 20px',
+        cursor: 'pointer',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = `${C.purple}55`; e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.5)`; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Team: {team.team?.name || team.name}</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 700, color: textPrimary, fontSize: compact ? 14 : 16, marginBottom: 4 }}>
+            {team.team?.name || team.name}
+          </p>
+          <p style={{ fontSize: 12, color: textSecondary }}>
+            Coach: {team.coach?.name || 'Unassigned'}
           </p>
           {team.coach?.email && (
-            <p className="text-sm text-gray-600">
-              <strong>Email:</strong> {team.coach.email}
-            </p>
+            <p style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>{team.coach.email}</p>
           )}
         </div>
-        
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-          <span className="text-sm text-gray-600">Total Players</span>
-          <span className="text-lg font-bold text-purple-600">
-            {team.players?.length || 0}
-          </span>
-        </div>
-        
-        <div className="text-right">
-          <span className="text-sm text-purple-600 hover:text-purple-800 font-medium">
-            View Details →
-          </span>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ background: `${C.purple}18`, border: `1px solid ${C.purple}30`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
+            <p style={{ fontSize: 11, color: C.purpleLight, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: C.purple }}>{team.players?.length || 0}</p>
+          </div>
+          <span style={{ fontSize: 12, color: C.purpleLight, fontWeight: 500 }}>View Details →</span>
         </div>
       </div>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <ResponsiveContainer className={`mobile-team-cards ${className}`} {...props}>
-        <div className="space-y-4">
-          {teams.map((team, index) => renderTeamCard(team, index))}
-        </div>
-      </ResponsiveContainer>
-    );
-  }
-
-  // Desktop layout - keep existing structure
   return (
-    <ResponsiveContainer className={`responsive-team-table ${className}`} {...props}>
-      <div className="space-y-4">
-        {teams.map((team) => (
-          <div
-            key={team._id}
-            className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer hover:border-purple-300 bg-white"
-            onClick={() => onTeamClick && onTeamClick(team._id)}
-          >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Team: {team.team?.name || team.name}</h3>
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-600">
-                    <strong>Coach:</strong> {team.coach?.name || 'No coach assigned'}
-                  </p>
-                  {team.coach?.email && (
-                    <p className="text-sm text-gray-600">
-                      <strong>Email:</strong> {team.coach.email}
-                    </p>
-                  )}
-                  {team.description && (
-                    <p className="text-sm text-gray-500 mt-2">{team.description}</p>
-                  )}
-                </div>
-              </div>
-              <div className="text-right ml-6">
-                <div className="bg-purple-50 rounded-lg p-3">
-                  <p className="text-sm font-medium text-purple-900">Total Players</p>
-                  <p className="text-2xl font-bold text-purple-600">{team.players?.length || 0}</p>
-                </div>
-                <button className="mt-2 text-sm text-purple-600 hover:text-purple-800 font-medium">
-                  View Details →
-                </button>
-              </div>
-            </div>
-          </div>
+    <ResponsiveContainer className={className} {...props}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 14 }}>
+        {teams.length === 0 ? <EmptyState message="No teams found" /> : teams.map(team => (
+          <TeamCard key={team._id} team={team} compact={isMobile} />
         ))}
       </div>
     </ResponsiveContainer>

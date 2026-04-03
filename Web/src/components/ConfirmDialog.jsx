@@ -1,17 +1,43 @@
-import { X } from 'lucide-react';
-import { useState } from 'react';
+import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '../utils/logger';
+import { COLORS, useReducedMotion } from '../pages/Home';
 
-const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', cancelText = 'Cancel', confirmButtonClass = 'bg-green-600 hover:bg-green-700' }) => {
+const ConfirmDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  confirmButtonClass = '',
+  variant = 'default', // 'default' | 'danger' | 'success'
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const reduced = useReducedMotion();
+  const cancelRef = useRef(null);
 
-  if (!isOpen) return null;
+  // Focus trap — focus cancel on open
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => cancelRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape' && !loading) onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, loading, onClose]);
 
   const handleConfirm = async () => {
     setLoading(true);
     setError(null);
-    
     try {
       await onConfirm();
       onClose();
@@ -23,51 +49,124 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
     }
   };
 
+  const accentColor = variant === 'danger' ? '#EF4444'
+    : variant === 'success' ? '#22C55E'
+    : COLORS.saffron;
+
+  const IconComp = variant === 'danger' ? Trash2
+    : variant === 'success' ? CheckCircle
+    : AlertTriangle;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 id="dialog-title" className="text-lg font-semibold text-gray-900">{title}</h3>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Close"
-            disabled={loading}
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-message"
+        >
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0"
+            style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => !loading && onClose()}
+          />
 
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-gray-700 whitespace-pre-line">{message}</p>
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+          {/* Panel */}
+          <motion.div
+            className="relative w-full max-w-md rounded-2xl border overflow-hidden"
+            style={{
+              background: '#111111',
+              borderColor: `${accentColor}25`,
+              boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}15`,
+            }}
+            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 10 }}
+            transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            {/* Top accent line */}
+            <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)` }} />
+
+            {/* Header */}
+            <div className="flex items-start justify-between p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${accentColor}18` }}>
+                  <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
+                </div>
+                <h3 id="confirm-dialog-title" className="text-white font-bold text-lg leading-tight">{title}</h3>
+              </div>
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/08 transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:outline-none focus:ring-2"
+                style={{ outlineColor: accentColor }}
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t bg-gray-50 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
-            disabled={loading}
-          >
-            {cancelText}
-          </button>
-          <button
-            onClick={handleConfirm}
-            className={`px-4 py-2 text-white rounded-lg transition-colors min-h-[44px] ${confirmButtonClass} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : confirmText}
-          </button>
+            {/* Body */}
+            <div className="px-6 pb-4">
+              <p id="confirm-dialog-message" className="text-white/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    className="mt-4 p-3 rounded-xl border flex items-start gap-2"
+                    style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
+                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    role="alert"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t"
+              style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.02)' }}>
+              <button
+                ref={cancelRef}
+                onClick={onClose}
+                disabled={loading}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-white/70 hover:text-white transition-all duration-200 min-h-[44px] disabled:opacity-40"
+                style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}
+              >
+                {cancelText}
+              </button>
+              <motion.button
+                onClick={handleConfirm}
+                disabled={loading}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2"
+                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
+                whileHover={loading ? {} : { brightness: 1.1 }}
+                whileTap={loading ? {} : { scale: 0.96 }}
+              >
+                {loading ? (
+                  <>
+                    <motion.div
+                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    />
+                    Processing...
+                  </>
+                ) : confirmText}
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 };
 

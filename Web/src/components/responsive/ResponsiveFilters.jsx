@@ -1,21 +1,112 @@
-/**
- * ResponsiveFilters Component
- * 
- * Responsive filter and search interfaces that adapt to mobile layouts.
- * Provides collapsible filters on mobile and expanded filters on desktop.
- * 
- * Requirements: 8.1, 10.1
- */
-
 import { useState } from 'react';
 import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '../Dropdown';
+import { ADMIN_COLORS } from '../../pages/adminTheme';
 
-/**
- * Main responsive filters component
- */
+const C = ADMIN_COLORS;
+const surface    = C.darkCard;
+const elevated   = C.darkElevated;
+const border     = C.darkBorderSubtle;
+const borderMid  = C.darkBorderMid;
+const textPrimary   = 'rgba(255,255,255,0.90)';
+const textSecondary = 'rgba(255,255,255,0.50)';
+const textMuted     = 'rgba(255,255,255,0.30)';
+
+// ─── Shared search input ──────────────────────────────────────────────────────
+const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
+  <div style={{ position: 'relative' }}>
+    <Search style={{
+      position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+      width: 15, height: 15, color: textSecondary, pointerEvents: 'none',
+    }} />
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        width: '100%',
+        height,
+        paddingLeft: 36,
+        paddingRight: value ? 36 : 14,
+        background: elevated,
+        border: `1px solid ${borderMid}`,
+        borderRadius: 10,
+        color: textPrimary,
+        fontSize: 14,
+        outline: 'none',
+        boxSizing: 'border-box',
+        transition: 'border-color 0.15s',
+      }}
+      onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
+      onBlur={e => { e.target.style.borderColor = borderMid; }}
+    />
+    {value && (
+      <button
+        onClick={() => onChange('')}
+        style={{
+          position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+          color: textSecondary, display: 'flex', alignItems: 'center',
+        }}
+        aria-label="Clear search"
+      >
+        <X style={{ width: 14, height: 14 }} />
+      </button>
+    )}
+  </div>
+);
+
+// ─── Filter label ─────────────────────────────────────────────────────────────
+const FilterLabel = ({ children, required }) => (
+  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textSecondary, marginBottom: 6 }}>
+    {children}
+    {required && <span style={{ color: C.red, marginLeft: 3 }}>*</span>}
+  </label>
+);
+
+// ─── Clear button ─────────────────────────────────────────────────────────────
+const ClearButton = ({ onClick, fullWidth = false }) => (
+  <button
+    onClick={onClick}
+    style={{
+      width: fullWidth ? '100%' : 'auto',
+      padding: '9px 18px',
+      background: 'rgba(255,255,255,0.06)',
+      border: `1px solid ${borderMid}`,
+      borderRadius: 10,
+      color: textSecondary,
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: 'pointer',
+      transition: 'background 0.15s, color 0.15s',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; e.currentTarget.style.color = textPrimary; }}
+    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = textSecondary; }}
+  >
+    Clear Filters
+  </button>
+);
+
+// ─── Active filter count badge ────────────────────────────────────────────────
+const ActiveBadge = ({ count }) => count > 0 ? (
+  <span style={{
+    background: `${C.saffron}22`,
+    color: C.saffronLight,
+    border: `1px solid ${C.saffron}44`,
+    borderRadius: 20,
+    padding: '1px 8px',
+    fontSize: 11,
+    fontWeight: 700,
+    marginLeft: 6,
+  }}>
+    {count}
+  </span>
+) : null;
+
+// ─── ResponsiveFilters ────────────────────────────────────────────────────────
 export const ResponsiveFilters = ({
   searchTerm = '',
   onSearchChange,
@@ -30,87 +121,62 @@ export const ResponsiveFilters = ({
 }) => {
   const { isMobile } = useResponsive();
   const [isExpanded, setIsExpanded] = useState(false);
+  const activeCount = filters.filter(f => f.value).length;
 
-  // Mobile layout with collapsible filters
   if (isMobile) {
     return (
-      <ResponsiveContainer className={`mobile-filters ${className}`} {...props}>
-        <div className="space-y-4">
-          {/* Search Bar */}
+      <ResponsiveContainer className={className} {...props}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {showSearchBar && (
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-base bg-white text-gray-900 h-12"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => onSearchChange('')}
-                  className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
-                >
-                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                </button>
-              )}
-            </div>
+            <SearchInput value={searchTerm} onChange={onSearchChange} placeholder={searchPlaceholder} />
           )}
 
-          {/* Collapsible Filters */}
           {filters.length > 0 && (
-            <div className="border border-gray-200 rounded-lg">
+            <div style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full px-4 py-3 flex items-center justify-between text-left bg-gray-50 rounded-lg hover:bg-gray-100"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: textPrimary,
+                }}
               >
-                <div className="flex items-center space-x-2">
-                  <Filter className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium text-gray-900">Filters</span>
-                  {filters.some(f => f.value) && (
-                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
-                      {filters.filter(f => f.value).length}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Filter style={{ width: 15, height: 15, color: C.saffron }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Filters</span>
+                  <ActiveBadge count={activeCount} />
                 </div>
-                {isExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
+                {isExpanded
+                  ? <ChevronUp style={{ width: 16, height: 16, color: textSecondary }} />
+                  : <ChevronDown style={{ width: 16, height: 16, color: textSecondary }} />
+                }
               </button>
-              
+
               {isExpanded && (
-                <div className="p-4 space-y-4 border-t border-gray-200">
-                  {filters.map((filter, index) => (
-                    <div key={index}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {filter.label}
-                        {filter.required && <span className="text-red-500 ml-1">*</span>}
-                      </label>
+                <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {filters.map((filter, i) => (
+                    <div key={i}>
+                      <FilterLabel required={filter.required}>{filter.label}</FilterLabel>
                       <Dropdown
                         options={filter.options}
                         value={filter.value}
-                        onChange={(value) => onFilterChange(filter.key, value)}
+                        onChange={v => onFilterChange(filter.key, v)}
                         placeholder={filter.placeholder}
                         disabled={filter.disabled}
                       />
                       {filter.helpText && (
-                        <p className="text-xs text-gray-500 mt-1">{filter.helpText}</p>
+                        <p style={{ fontSize: 11, color: textMuted, marginTop: 5 }}>{filter.helpText}</p>
                       )}
                     </div>
                   ))}
-                  
-                  {showClearButton && filters.some(f => f.value) && (
-                    <button
-                      onClick={onClearFilters}
-                      className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
-                    >
-                      Clear All Filters
-                    </button>
+                  {showClearButton && activeCount > 0 && (
+                    <ClearButton onClick={onClearFilters} fullWidth />
                   )}
                 </div>
               )}
@@ -121,71 +187,40 @@ export const ResponsiveFilters = ({
     );
   }
 
-  // Desktop layout with expanded filters
+  // Desktop
+  const totalCols = (showSearchBar ? 1 : 0) + filters.length;
+  const gridCols = Math.min(totalCols, 4);
+
   return (
-    <ResponsiveContainer className={`desktop-filters ${className}`} {...props}>
-      <div className="space-y-4">
-        {/* Search and Filters Row */}
-        <div className={`grid gap-4 ${!showSearchBar ? (filters.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2') : (filters.length === 2 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4')}`}>
-          {/* Search */}
+    <ResponsiveContainer className={className} {...props}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 14 }}>
           {showSearchBar && (
-            <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder={searchPlaceholder}
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900 text-sm"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => onSearchChange('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center z-10"
-                  >
-                    <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                  </button>
-                )}
-              </div>
+            <div>
+              <FilterLabel>Search</FilterLabel>
+              <SearchInput value={searchTerm} onChange={onSearchChange} placeholder={searchPlaceholder} height={40} />
             </div>
           )}
-
-          {/* Filter Dropdowns */}
-          {filters.map((filter, index) => (
-            <div key={index} className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {filter.label}
-                {filter.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
+          {filters.map((filter, i) => (
+            <div key={i}>
+              <FilterLabel required={filter.required}>{filter.label}</FilterLabel>
               <Dropdown
                 options={filter.options}
                 value={filter.value}
-                onChange={(value) => onFilterChange(filter.key, value)}
+                onChange={v => onFilterChange(filter.key, v)}
                 placeholder={filter.placeholder}
                 disabled={filter.disabled}
               />
               {filter.helpText && (
-                <p className="text-xs text-gray-500 mt-1">{filter.helpText}</p>
+                <p style={{ fontSize: 11, color: textMuted, marginTop: 5 }}>{filter.helpText}</p>
               )}
             </div>
           ))}
         </div>
 
-        {/* Clear Filters Button */}
-        {showClearButton && (filters.some(f => f.value) || searchTerm) && (
-          <div className="flex justify-end mt-2.5">
-            <button
-              onClick={onClearFilters}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-            >
-              Clear Filters
-            </button>
+        {showClearButton && (activeCount > 0 || searchTerm) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <ClearButton onClick={onClearFilters} />
           </div>
         )}
       </div>
@@ -193,9 +228,7 @@ export const ResponsiveFilters = ({
   );
 };
 
-/**
- * Specialized filters for team management
- */
+// ─── ResponsiveTeamFilters ────────────────────────────────────────────────────
 export const ResponsiveTeamFilters = ({
   selectedGender,
   onGenderChange,
@@ -204,222 +237,122 @@ export const ResponsiveTeamFilters = ({
   searchTerm,
   onSearchChange,
   onClearFilters,
-  ageGroups, // Accept filtered age groups as prop
+  ageGroups,
   className = '',
   ...props
 }) => {
   const genders = [
     { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
+    { value: 'Female', label: 'Female' },
   ];
 
-  // Fallback age groups if not provided
   const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' },
-    { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' },
-    { value: 'Under18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
+    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
+    { value: 'Above18', label: 'Above 18' },
   ];
-
   const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' },
-    { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' },
-    { value: 'Under16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
+    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
+    { value: 'Above16', label: 'Above 16' },
   ];
 
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    // Use provided age groups if available, otherwise fallback to defaults
-    if (ageGroups && ageGroups.length > 0) {
-      return ageGroups;
-    }
+    if (ageGroups?.length > 0) return ageGroups;
     return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
   };
 
   const filters = [
+    { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
-      key: 'gender',
-      label: 'Gender',
-      required: true,
-      options: genders,
-      value: selectedGender,
-      placeholder: 'Select gender first',
-      helpText: null
-    },
-    {
-      key: 'ageGroup',
-      label: 'Age Group',
-      required: true,
-      options: getAvailableAgeGroups(),
-      value: selectedAgeGroup,
+      key: 'ageGroup', label: 'Age Group', required: true,
+      options: getAvailableAgeGroups(), value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
-      helpText: selectedGender ? 
-        `Available: ${getAvailableAgeGroups().map(ag => ag.label).join(', ')}` : 
-        'Please select gender first to see available age groups'
-    }
+      helpText: !selectedGender ? 'Select gender first' : null,
+    },
   ];
-
-  const handleFilterChange = (key, value) => {
-    if (key === 'gender') {
-      onGenderChange(value);
-    } else if (key === 'ageGroup') {
-      onAgeGroupChange(value);
-    }
-  };
 
   return (
     <ResponsiveFilters
-      searchTerm=""
-      onSearchChange={() => {}}
+      searchTerm="" onSearchChange={() => {}}
       filters={filters}
-      onFilterChange={handleFilterChange}
+      onFilterChange={(key, value) => key === 'gender' ? onGenderChange(value) : onAgeGroupChange(value)}
       onClearFilters={onClearFilters}
-      searchPlaceholder="Search teams by name or coach..."
-      className={`team-filters ${className}`}
+      className={className}
       showSearchBar={false}
       {...props}
     />
   );
 };
 
-/**
- * Specialized filters for scoring and rankings
- */
+// ─── ResponsiveScoreFilters ───────────────────────────────────────────────────
 export const ResponsiveScoreFilters = ({
-  scoreType,
-  onScoreTypeChange,
-  selectedGender,
-  onGenderChange,
-  selectedAgeGroup,
-  onAgeGroupChange,
-  selectedCompetitionType,
-  onCompetitionTypeChange,
-  searchTerm,
-  onSearchChange,
+  scoreType, onScoreTypeChange,
+  selectedGender, onGenderChange,
+  selectedAgeGroup, onAgeGroupChange,
+  selectedCompetitionType, onCompetitionTypeChange,
+  searchTerm, onSearchChange,
   onClearFilters,
-  ageGroups, // Accept filtered age groups as prop
-  competitionTypes, // Accept competition types as prop
+  ageGroups,
+  competitionTypes,
   className = '',
   ...props
 }) => {
   const scoreTypes = [
     { value: 'add', label: 'Add Score' },
     { value: 'individual', label: 'Individual Rankings' },
-    { value: 'rankings', label: 'Team Rankings' }
+    { value: 'rankings', label: 'Team Rankings' },
   ];
-
   const genders = [
     { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
+    { value: 'Female', label: 'Female' },
   ];
-
-  // Fallback age groups if not provided
   const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' },
-    { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' },
-    { value: 'Under18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' }
+    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
+    { value: 'Above18', label: 'Above 18' },
   ];
-
   const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' },
-    { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' },
-    { value: 'Under16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' }
+    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
+    { value: 'Above16', label: 'Above 16' },
   ];
 
   const getAvailableAgeGroups = () => {
     if (!selectedGender) return [];
-    // Use provided age groups if available, otherwise fallback to defaults
-    if (ageGroups && ageGroups.length > 0) {
-      return ageGroups;
-    }
+    if (ageGroups?.length > 0) return ageGroups;
     return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
   };
 
-  const getSearchPlaceholder = () => {
-    switch (scoreType) {
-      case 'add':
-        return 'Search teams by name or coach...';
-      case 'individual':
-        return 'Search players by name or team...';
-      case 'rankings':
-        return 'Search teams by name...';
-      default:
-        return 'Search...';
-    }
-  };
-
   const filters = [
+    { key: 'scoreType', label: 'Score Type', options: scoreTypes, value: scoreTypes.find(s => s.value === scoreType), placeholder: 'Select type' },
+    { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
-      key: 'scoreType',
-      label: 'Score Type',
-      required: false,
-      options: scoreTypes,
-      value: scoreTypes.find(s => s.value === scoreType),
-      placeholder: 'Select score type',
-      helpText: null
-    },
-    {
-      key: 'gender',
-      label: 'Gender Filter',
-      required: true,
-      options: genders,
-      value: selectedGender,
-      placeholder: 'Select gender first',
-      helpText: null
-    },
-    {
-      key: 'ageGroup',
-      label: 'Age Group Filter',
-      required: true,
-      options: getAvailableAgeGroups(),
-      value: selectedAgeGroup,
+      key: 'ageGroup', label: 'Age Group', required: true,
+      options: getAvailableAgeGroups(), value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
-      helpText: selectedGender ? 
-        `Available: ${getAvailableAgeGroups().map(ag => ag.label).join(', ')}` : 
-        'Please select gender first to see available age groups'
+      helpText: !selectedGender ? 'Select gender first' : null,
     },
-    {
-      key: 'competitionType',
-      label: 'Competition Type',
-      required: true,
-      options: competitionTypes || [],
-      value: selectedCompetitionType,
-      placeholder: 'Select competition type',
-      disabled: false,
-      helpText: 'Select the competition type for scoring'
-    }
+    { key: 'competitionType', label: 'Competition Type', required: true, options: competitionTypes || [], value: selectedCompetitionType, placeholder: 'Select type' },
   ];
 
   const handleFilterChange = (key, value) => {
-    if (key === 'scoreType') {
-      onScoreTypeChange(value.value);
-    } else if (key === 'gender') {
-      onGenderChange(value);
-    } else if (key === 'ageGroup') {
-      onAgeGroupChange(value);
-    } else if (key === 'competitionType') {
-      onCompetitionTypeChange(value);
-    }
+    if (key === 'scoreType') onScoreTypeChange(value.value);
+    else if (key === 'gender') onGenderChange(value);
+    else if (key === 'ageGroup') onAgeGroupChange(value);
+    else if (key === 'competitionType') onCompetitionTypeChange(value);
   };
 
   return (
     <ResponsiveFilters
-      searchTerm=""
-      onSearchChange={() => {}}
+      searchTerm="" onSearchChange={() => {}}
       filters={filters}
       onFilterChange={handleFilterChange}
       onClearFilters={onClearFilters}
-      searchPlaceholder={getSearchPlaceholder()}
-      className={`score-filters ${className}`}
+      className={className}
       showSearchBar={false}
       {...props}
     />

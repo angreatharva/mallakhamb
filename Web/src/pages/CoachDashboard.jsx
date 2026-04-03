@@ -1,24 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Users, UserPlus, Search, Trash2, X } from 'lucide-react';
+import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import { coachAPI } from '../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
-import { ResponsiveContainer, ResponsiveCardGrid, ResponsiveFormGrid } from '../components/responsive';
-import { 
-  ResponsiveHeading, 
-  ResponsiveText, 
-  ResponsiveStatNumber, 
-  ResponsiveStatLabel,
-  ResponsiveCardTitle,
-  ResponsiveCardDescription 
-} from '../components/responsive/ResponsiveTypography';
-import { useResponsive } from '../hooks/useResponsive';
+import { COLORS, FadeIn, useReducedMotion } from './Home';
+import BHALogo from '../assets/BHA.png';
 
 const CoachDashboard = () => {
-  const { isMobile, isTablet } = useResponsive();
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,251 +22,125 @@ const CoachDashboard = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
+  const reduced = useReducedMotion();
 
-  const genders = [
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
-  ];
-
-  // Age group age limits mapping
+  const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];
   const ageGroupLimits = {
-    'Under10': { minAge: 0, maxAge: 9 },
-    'Under12': { minAge: 0, maxAge: 11 },
-    'Under14': { minAge: 0, maxAge: 13 },
-    'Under16': { minAge: 0, maxAge: 15 },
-    'Under18': { minAge: 0, maxAge: 17 },
-    'Above16': { minAge: 16, maxAge: 100 },
-    'Above18': { minAge: 18, maxAge: 100 }
+    'Under10': { minAge: 0, maxAge: 9 }, 'Under12': { minAge: 0, maxAge: 11 },
+    'Under14': { minAge: 0, maxAge: 13 }, 'Under16': { minAge: 0, maxAge: 15 },
+    'Under18': { minAge: 0, maxAge: 17 }, 'Above16': { minAge: 16, maxAge: 100 },
+    'Above18': { minAge: 18, maxAge: 100 },
   };
 
-  // Get filtered age groups from competition
   const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
 
-  useEffect(() => {
-    fetchTeamDashboard();
-  }, []);
+  useEffect(() => { fetchTeamDashboard(); }, []);
+  useEffect(() => { if (selectedGender && selectedPlayerData) setSelectedAgeGroup(null); }, [selectedGender, selectedPlayerData]);
 
-  // Calculate age from date of birth
-  const calculateAge = (dateOfBirth) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
+  const calculateAge = (dob) => {
+    const today = new Date(), birth = new Date(dob);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
   };
 
-  // Get available age groups based on gender and player's age
   const getAvailableAgeGroups = (gender, playerAge) => {
-    // Use competition-filtered age groups
-    const ageGroups = competitionAgeGroups.map(ag => ({
-      ...ag,
-      ...ageGroupLimits[ag.value]
-    }));
-
-    // Sort age groups by their max age (for Under categories) or min age (for Above categories)
-    const sortedGroups = [...ageGroups].sort((a, b) => {
-      if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
-        return a.maxAge - b.maxAge;
-      }
-      if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
-        return a.minAge - b.minAge;
-      }
-      // Under categories come before Above categories
-      if (a.value.startsWith('Under')) return -1;
-      if (b.value.startsWith('Under')) return 1;
-      return 0;
+    const ageGroups = competitionAgeGroups.map(ag => ({ ...ag, ...ageGroupLimits[ag.value] }));
+    const sorted = [...ageGroups].sort((a, b) => {
+      if (a.value.startsWith('Under') && b.value.startsWith('Under')) return a.maxAge - b.maxAge;
+      if (a.value.startsWith('Above') && b.value.startsWith('Above')) return a.minAge - b.minAge;
+      return a.value.startsWith('Under') ? -1 : 1;
     });
-
-    // Find the minimum age group the player qualifies for
-    let qualifiesFromIndex = -1;
-    
-    for (let i = 0; i < sortedGroups.length; i++) {
-      const group = sortedGroups[i];
-      
-      if (group.value.startsWith('Under')) {
-        // For "Under" categories, player qualifies if their age is <= maxAge
-        if (playerAge <= group.maxAge) {
-          qualifiesFromIndex = i;
-          break;
-        }
-      } else if (group.value.startsWith('Above')) {
-        // For "Above" categories, player can always play up
-        // They qualify for this category and all higher ones
-        qualifiesFromIndex = i;
-        break;
-      }
+    let idx = -1;
+    for (let i = 0; i < sorted.length; i++) {
+      const g = sorted[i];
+      if (g.value.startsWith('Under') && playerAge <= g.maxAge) { idx = i; break; }
+      if (g.value.startsWith('Above')) { idx = i; break; }
     }
-
-    // If player qualifies for any category, return that category and all higher ones
-    if (qualifiesFromIndex >= 0) {
-      return sortedGroups.slice(qualifiesFromIndex);
-    }
-
-    // If no qualification found (shouldn't happen), return all available groups
-    // This allows players to play up in any category
-    return sortedGroups;
+    return idx >= 0 ? sorted.slice(idx) : sorted;
   };
-
-  // Reset age group when gender changes
-  useEffect(() => {
-    if (selectedGender && selectedPlayerData) {
-      setSelectedAgeGroup(null);
-    }
-  }, [selectedGender, selectedPlayerData]);
 
   const fetchTeamDashboard = async () => {
     try {
       const response = await coachAPI.getDashboard();
       setTeam(response.data.team);
-    } catch (error) {
-      toast.error('Failed to load team dashboard');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load team dashboard'); }
+    finally { setLoading(false); }
   };
 
   const handleSearchPlayers = async (query) => {
-    if (query.length < 2) {
-      setPlayers([]);
-      return;
-    }
-
+    if (query.length < 2) { setPlayers([]); return; }
     setSearchLoading(true);
     try {
       const response = await coachAPI.searchPlayers(query);
       setPlayers(response.data.players);
-    } catch (error) {
-      toast.error('Failed to search players');
-    } finally {
-      setSearchLoading(false);
-    }
+    } catch { toast.error('Failed to search players'); }
+    finally { setSearchLoading(false); }
   };
 
   const handlePlayerSelect = (player) => {
-    // Validate player has complete data
-    if (!player.dateOfBirth) {
-      toast.error('Player date of birth is missing. Cannot determine age category.');
-      return;
-    }
-
-    const playerAge = calculateAge(player.dateOfBirth);
-
-    setSelectedPlayer({
-      value: player._id,
-      label: `${player.firstName} ${player.lastName}`
-    });
-
-    setSelectedPlayerData({
-      ...player,
-      age: playerAge
-    });
-
-    // Auto-select and lock the player's registered gender
-    const playerGender = genders.find(g => g.value === player.gender);
-    setSelectedGender(playerGender);
-
-    // Reset age group selection
+    if (!player.dateOfBirth) { toast.error('Player date of birth is missing.'); return; }
+    const age = calculateAge(player.dateOfBirth);
+    setSelectedPlayer({ value: player._id, label: `${player.firstName} ${player.lastName}` });
+    setSelectedPlayerData({ ...player, age });
+    setSelectedGender(genders.find(g => g.value === player.gender));
     setSelectedAgeGroup(null);
   };
 
   const handleAddPlayer = async () => {
     if (!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedPlayerData) {
-      toast.error('Please select player and age group');
-      return;
+      return toast.error('Please select player and age group');
     }
-
-    // Validate age eligibility - players can play UP but not DOWN
-    const playerAge = selectedPlayerData.age;
-    const ageGroup = selectedAgeGroup;
-
-    // For "Under" categories, check if player is too old (can't play down)
-    if (ageGroup.value.startsWith('Under')) {
-      if (playerAge > ageGroup.maxAge) {
-        toast.error(`Player is ${playerAge} years old and cannot play in ${ageGroup.label} category (maximum age: ${ageGroup.maxAge})`);
-        return;
-      }
+    const { age } = selectedPlayerData;
+    if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
+      return toast.error(`Player is ${age} years old and cannot play in ${selectedAgeGroup.label} (max: ${selectedAgeGroup.maxAge})`);
     }
-    // For "Above" categories, allow all players to play up (no minimum age restriction)
-    // Players of any age can play in higher age categories
-
     try {
-      await coachAPI.addPlayerToAgeGroup({
-        playerId: selectedPlayer.value,
-        ageGroup: selectedAgeGroup.value,
-        gender: selectedGender.value
-      });
-
+      await coachAPI.addPlayerToAgeGroup({ playerId: selectedPlayer.value, ageGroup: selectedAgeGroup.value, gender: selectedGender.value });
       toast.success('Player added to age group successfully!');
       handleCloseModal();
       fetchTeamDashboard();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add player');
-    }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to add player'); }
   };
 
   const handleCloseModal = () => {
-    setShowAddPlayer(false);
-    setSelectedPlayer(null);
-    setSelectedPlayerData(null);
-    setSelectedAgeGroup(null);
-    setSelectedGender(null);
-    setSearchQuery('');
-    setPlayers([]);
+    setShowAddPlayer(false); setSelectedPlayer(null); setSelectedPlayerData(null);
+    setSelectedAgeGroup(null); setSelectedGender(null); setSearchQuery(''); setPlayers([]);
   };
 
   const handleRemovePlayer = async (playerId) => {
-    if (window.confirm('Are you sure you want to remove this player from the age group?')) {
-      try {
-        await coachAPI.removePlayerFromAgeGroup(playerId);
-        toast.success('Player removed successfully!');
-        fetchTeamDashboard();
-      } catch (error) {
-        toast.error('Failed to remove player');
-      }
-    }
+    if (!window.confirm('Remove this player from the age group?')) return;
+    try {
+      await coachAPI.removePlayerFromAgeGroup(playerId);
+      toast.success('Player removed successfully!');
+      fetchTeamDashboard();
+    } catch { toast.error('Failed to remove player'); }
   };
 
-  const getAgeGroupDisplay = (ageGroup) => {
-    const ageGroupMap = {
-      'Under10': 'Under 10',
-      'Under12': 'Under 12',
-      'Under14': 'Under 14',
-      'Under16': 'Under 16',
-      'Under18': 'Under 18',
-      'Above18': 'Above 18',
-      'Above16': 'Above 16'
-    };
-    return ageGroupMap[ageGroup] || ageGroup;
-  };
+  const getAgeGroupDisplay = (ag) => ({
+    'Under10': 'Under 10', 'Under12': 'Under 12', 'Under14': 'Under 14',
+    'Under16': 'Under 16', 'Under18': 'Under 18', 'Above18': 'Above 18', 'Above16': 'Above 16',
+  }[ag] || ag);
 
   const getPlayersByAgeGroup = () => {
     if (!team?.players) return {};
-
-    const grouped = {};
-    team.players.forEach(player => {
-      const key = `${player.gender}_${player.ageGroup}`;
-      if (!grouped[key]) {
-        grouped[key] = [];
-      }
-      grouped[key].push(player);
-    });
-
-    return grouped;
+    return team.players.reduce((acc, p) => {
+      const key = `${p.gender}_${p.ageGroup}`;
+      acc[key] = [...(acc[key] || []), p];
+      return acc;
+    }, {});
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <ResponsiveText className="mt-4 text-gray-600">Loading team dashboard...</ResponsiveText>
+          <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
+            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }} />
+          <p className="text-white/45 text-sm">Loading team dashboard...</p>
         </div>
       </div>
     );
@@ -282,409 +148,306 @@ const CoachDashboard = () => {
 
   if (!team) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
-          {/* Competition Display */}
+      <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <div className="max-w-4xl mx-auto px-4 py-10">
           <CompetitionProvider userType="coach">
-            <CompetitionDisplay className="mb-6 md:mb-8" />
+            <CompetitionDisplay className="mb-8" />
           </CompetitionProvider>
-
-          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 text-center">
-            <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <ResponsiveHeading level={2} className="text-gray-900 mb-2">No Team Registered</ResponsiveHeading>
-            <ResponsiveText className="text-gray-600 mb-6">
-              You don't have a team registered for this competition yet. Please select a team to register.
-            </ResponsiveText>
-            <button
-              onClick={() => window.location.href = '/coach/select-competition'}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
-            >
-              <Trophy className="h-5 w-5" />
-              <span>Select Team for Competition</span>
+          <div className="rounded-3xl border p-12 text-center"
+            style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
+            <h2 className="text-2xl font-black text-white mb-2">No Team Registered</h2>
+            <p className="text-white/45 mb-6">You don't have a team registered for this competition yet.</p>
+            <button onClick={() => window.location.href = '/coach/select-competition'}
+              className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px] inline-flex items-center gap-2"
+              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+              <Trophy className="w-4 h-4" aria-hidden="true" />
+              Select Team for Competition
             </button>
           </div>
-        </ResponsiveContainer>
+        </div>
       </div>
     );
   }
 
   const playersByAgeGroup = getPlayersByAgeGroup();
 
+  const AgeGroupCard = ({ ageGroup, gender, accentColor }) => {
+    const key = `${gender}_${ageGroup}`;
+    const groupPlayers = playersByAgeGroup[key] || [];
+    return (
+      <div className="rounded-xl border p-4"
+        style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorderSubtle }}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-white font-semibold text-sm">{getAgeGroupDisplay(ageGroup)} {gender === 'Male' ? 'Boys' : 'Girls'}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}>
+            {groupPlayers.length}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {groupPlayers.map((player, idx) => (
+            <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <span className="text-white/70 text-sm truncate flex-1">
+                {player.player.firstName} {player.player.lastName}
+              </span>
+              <button onClick={() => handleRemovePlayer(player.player._id)}
+                disabled={team?.isSubmitted}
+                className="ml-2 p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                style={{ color: team?.isSubmitted ? 'rgba(255,255,255,0.2)' : '#EF4444' }}
+                title={team?.isSubmitted ? 'Cannot remove after submission' : 'Remove player'}
+                aria-label={`Remove ${player.player.firstName} ${player.player.lastName}`}>
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+          {groupPlayers.length === 0 && (
+            <p className="text-white/20 text-xs italic px-1">No players assigned</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
-        {/* Competition Display */}
+    <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
         <CompetitionProvider userType="coach">
-          <CompetitionDisplay className="mb-6 md:mb-8" />
+          <CompetitionDisplay className="mb-8" />
         </CompetitionProvider>
 
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6 md:mb-8">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="bg-green-100 p-2 md:p-3 rounded-full">
-                <Trophy className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+        {/* Header card */}
+        <FadeIn className="mb-6">
+          <div className="rounded-3xl border p-6 md:p-8"
+            style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+                  <Trophy className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black text-white">{team.name}</h1>
+                  <p className="text-white/40 text-sm">Team Dashboard</p>
+                </div>
               </div>
-              <div>
-                <ResponsiveHeading level={1} className="text-gray-900">{team.name}</ResponsiveHeading>
-                <ResponsiveText className="text-gray-600">Team Dashboard</ResponsiveText>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <motion.button onClick={() => setShowAddPlayer(true)}
+                  disabled={team?.isSubmitted}
+                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
+                  whileHover={team?.isSubmitted ? {} : { scale: 1.02 }}
+                  whileTap={team?.isSubmitted ? {} : { scale: 0.98 }}>
+                  <UserPlus className="w-4 h-4" aria-hidden="true" />
+                  Add Player
+                </motion.button>
+                <motion.button onClick={() => setShowTeamSummary(true)}
+                  disabled={!team?.players?.length || team?.isSubmitted}
+                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                  whileHover={(!team?.players?.length || team?.isSubmitted) ? {} : { scale: 1.02 }}
+                  whileTap={(!team?.players?.length || team?.isSubmitted) ? {} : { scale: 0.98 }}>
+                  <Trophy className="w-4 h-4" aria-hidden="true" />
+                  {team?.isSubmitted ? 'Team Submitted' : 'Submit Team'}
+                </motion.button>
               </div>
             </div>
-            <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-3">
-              <button
-                onClick={() => setShowAddPlayer(true)}
-                className={`px-4 py-3 md:py-2 rounded-lg flex items-center justify-center space-x-2 min-h-[44px] ${
-                  team?.isSubmitted
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-                disabled={team?.isSubmitted}
-                title={team?.isSubmitted ? 'Cannot add players after team submission' : ''}
-              >
-                <UserPlus className="h-4 w-4" />
-                <span>Add Player</span>
-              </button>
-              <button
-                onClick={() => setShowTeamSummary(true)}
-                className={`px-4 py-3 md:py-2 rounded-lg flex items-center justify-center space-x-2 min-h-[44px] ${
-                  team?.isSubmitted
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-                disabled={!team?.players || team.players.length === 0 || team?.isSubmitted}
-                title={team?.isSubmitted ? 'Please Contact the Admin to make changes in the Team' : ''}
-              >
-                <Trophy className="h-4 w-4" />
-                <span>{team?.isSubmitted ? 'Team Submitted' : 'Submit Team'}</span>
-              </button>
-            </div>
+            {team.description && <p className="mt-4 text-white/40 text-sm">{team.description}</p>}
+            {team?.isSubmitted && (
+              <div className="mt-4 p-3 rounded-xl flex items-center gap-2"
+                style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                <p className="text-sm" style={{ color: COLORS.saffronLight }}>
+                  Team has been submitted. Contact Admin to make changes.
+                </p>
+              </div>
+            )}
           </div>
-
-          {team.description && (
-            <ResponsiveText className="mt-4 text-gray-600">{team.description}</ResponsiveText>
-          )}
-
-          {team?.isSubmitted && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <ResponsiveText size="sm" className="text-yellow-800">
-                <strong>Team has been submitted.</strong> Please contact the Admin to make changes in the Team.
-              </ResponsiveText>
-            </div>
-          )}
-        </div>
+        </FadeIn>
 
         {/* Stats */}
-        <ResponsiveCardGrid className="mb-6 md:mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-3 rounded-full">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel>Total Players</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{team.players?.length || 0}</ResponsiveStatNumber>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {[
+            { icon: Users, label: 'Total Players', value: team.players?.length || 0, color: '#3B82F6' },
+            { icon: Trophy, label: 'Age Groups', value: Object.keys(playersByAgeGroup).length, color: COLORS.saffron },
+          ].map(({ icon: Icon, label, value, color }, i) => (
+            <FadeIn key={label} delay={i * 0.05}>
+              <div className="rounded-2xl border p-5 flex items-center gap-4"
+                style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${color}18` }}>
+                  <Icon className="w-5 h-5" style={{ color }} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wide">{label}</p>
+                  <p className="text-2xl font-black text-white">{value}</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-3 rounded-full">
-                <Trophy className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel>Age Groups</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>
-                    {Object.keys(playersByAgeGroup).length}
-                  </ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ResponsiveCardGrid>
-
-        {/* Age Groups */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          {/* Boys Age Groups */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-            <ResponsiveHeading level={2} className="text-gray-900 mb-4 md:mb-6">Boys Age Groups</ResponsiveHeading>
-            <div className="space-y-4">
-              {maleAgeGroupValues.map(ageGroup => {
-                const key = `Male_${ageGroup}`;
-                const players = playersByAgeGroup[key] || [];
-
-                return (
-                  <div key={ageGroup} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <ResponsiveCardTitle className="text-gray-900">
-                        {getAgeGroupDisplay(ageGroup)} Boys
-                      </ResponsiveCardTitle>
-                      <ResponsiveText size="sm" className="text-gray-600">{players.length} players</ResponsiveText>
-                    </div>
-                    <div className="space-y-2">
-                      {players.map((player, index) => (
-                        <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-                          <span className="text-sm text-gray-900 flex-1 min-w-0 truncate">
-                            {player.player.firstName} {player.player.lastName}
-                          </span>
-                          <button
-                            onClick={() => handleRemovePlayer(player.player._id)}
-                            className={`ml-2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                              team?.isSubmitted
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-red-600 hover:text-red-800'
-                            }`}
-                            disabled={team?.isSubmitted}
-                            title={team?.isSubmitted ? 'Cannot remove players after team submission' : ''}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                      {players.length === 0 && (
-                        <p className="text-sm text-gray-500 italic">No players assigned</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Girls Age Groups */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-            <ResponsiveHeading level={2} className="text-gray-900 mb-4 md:mb-6">Girls Age Groups</ResponsiveHeading>
-            <div className="space-y-4">
-              {femaleAgeGroupValues.map(ageGroup => {
-                const key = `Female_${ageGroup}`;
-                const players = playersByAgeGroup[key] || [];
-
-                return (
-                  <div key={ageGroup} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-gray-900">
-                        {getAgeGroupDisplay(ageGroup)} Girls
-                      </h3>
-                      <span className="text-sm text-gray-600">{players.length} players</span>
-                    </div>
-                    <div className="space-y-2">
-                      {players.map((player, index) => (
-                        <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-                          <span className="text-sm text-gray-900 flex-1 min-w-0 truncate">
-                            {player.player.firstName} {player.player.lastName}
-                          </span>
-                          <button
-                            onClick={() => handleRemovePlayer(player.player._id)}
-                            className={`ml-2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                              team?.isSubmitted
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-red-600 hover:text-red-800'
-                            }`}
-                            disabled={team?.isSubmitted}
-                            title={team?.isSubmitted ? 'Cannot remove players after team submission' : ''}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                      {players.length === 0 && (
-                        <p className="text-sm text-gray-500 italic">No players assigned</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            </FadeIn>
+          ))}
         </div>
 
-        {/* Team Summary Modal */}
-        {showTeamSummary && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 md:p-6 rounded-t-2xl">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900">Team Summary - {team.name}</h3>
-                  <button
-                    onClick={() => setShowTeamSummary(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
+        {/* Age group grids */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <FadeIn delay={0.1}>
+            <div className="rounded-3xl border p-6"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <h2 className="text-lg font-black text-white mb-5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" aria-hidden="true" />
+                Boys Age Groups
+              </h2>
+              <div className="space-y-3">
+                {maleAgeGroupValues.map(ag => (
+                  <AgeGroupCard key={ag} ageGroup={ag} gender="Male" accentColor="#3B82F6" />
+                ))}
               </div>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.15}>
+            <div className="rounded-3xl border p-6"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <h2 className="text-lg font-black text-white mb-5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-pink-400 inline-block" aria-hidden="true" />
+                Girls Age Groups
+              </h2>
+              <div className="space-y-3">
+                {femaleAgeGroupValues.map(ag => (
+                  <AgeGroupCard key={ag} ageGroup={ag} gender="Female" accentColor="#EC4899" />
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
 
-              <div className="p-4 md:p-6 space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2">Team Information</h4>
-                  <p className="text-gray-700"><strong>Team Name:</strong> {team.name}</p>
-                  <p className="text-gray-700"><strong>Total Players:</strong> {team.players?.length || 0}</p>
-                  {team.description && <p className="text-gray-700"><strong>Description:</strong> {team.description}</p>}
-                  
+      {/* Team Summary Modal */}
+      <AnimatePresence>
+        {showTeamSummary && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowTeamSummary(false)} />
+            <motion.div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border"
+              style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
+              <div className="sticky top-0 flex items-center justify-between p-6 border-b"
+                style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
+                <h3 className="text-xl font-black text-white">Team Summary — {team.name}</h3>
+                <button onClick={() => setShowTeamSummary(false)}
+                  className="p-2 rounded-xl text-white/40 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                  <p className="text-white/70 text-sm"><span className="text-white font-semibold">Team:</span> {team.name}</p>
+                  <p className="text-white/70 text-sm mt-1"><span className="text-white font-semibold">Total Players:</span> {team.players?.length || 0}</p>
                   {team?.isSubmitted && (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800">
-                        <strong>Status:</strong> Team Submitted
-                      </p>
-                      {team.submittedAt && (
-                        <p className="text-green-700 text-sm">
-                          <strong>Submitted on:</strong> {new Date(team.submittedAt).toLocaleDateString()}
-                        </p>
-                      )}
+                    <div className="mt-3 flex items-center gap-2 p-2 rounded-lg"
+                      style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                      <CheckCircle className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                      <p className="text-sm" style={{ color: COLORS.saffronLight }}>Team Submitted</p>
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-4">Players by Age Group</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Boys Age Groups */}
-                    <div>
-                      <h5 className="font-medium text-blue-600 mb-3">Boys Age Groups</h5>
-                      <div className="space-y-3">
-                        {maleAgeGroupValues.map(ageGroup => {
-                          const key = `Male_${ageGroup}`;
-                          const players = playersByAgeGroup[key] || [];
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[{ label: 'Boys', values: maleAgeGroupValues, gender: 'Male', color: '#3B82F6' },
+                    { label: 'Girls', values: femaleAgeGroupValues, gender: 'Female', color: '#EC4899' }].map(({ label, values, gender, color }) => (
+                    <div key={gender}>
+                      <h4 className="font-bold text-sm mb-3" style={{ color }}>{label} Age Groups</h4>
+                      <div className="space-y-2">
+                        {values.map(ag => {
+                          const gPlayers = playersByAgeGroup[`${gender}_${ag}`] || [];
                           return (
-                            <div key={ageGroup} className="border border-gray-200 rounded-lg p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium text-gray-900">{getAgeGroupDisplay(ageGroup)}</span>
-                                <span className="text-sm text-gray-600">{players.length} players</span>
+                            <div key={ag} className="p-3 rounded-xl border"
+                              style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorderSubtle }}>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-white text-sm font-semibold">{getAgeGroupDisplay(ag)}</span>
+                                <span className="text-white/40 text-xs">{gPlayers.length} players</span>
                               </div>
-                              {players.length > 0 ? (
-                                <div className="space-y-1">
-                                  {players.map((player, index) => (
-                                    <div key={index} className="text-sm text-gray-700">
-                                      {player.player.firstName} {player.player.lastName}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-gray-500 italic">No players</p>
-                              )}
+                              {gPlayers.length > 0
+                                ? gPlayers.map((p, i) => <p key={i} className="text-white/55 text-xs">{p.player.firstName} {p.player.lastName}</p>)
+                                : <p className="text-white/20 text-xs italic">No players</p>}
                             </div>
                           );
                         })}
                       </div>
                     </div>
-
-                    {/* Girls Age Groups */}
-                    <div>
-                      <h5 className="font-medium text-pink-600 mb-3">Girls Age Groups</h5>
-                      <div className="space-y-3">
-                        {femaleAgeGroupValues.map(ageGroup => {
-                          const key = `Female_${ageGroup}`;
-                          const players = playersByAgeGroup[key] || [];
-
-                          return (
-                            <div key={ageGroup} className="border border-gray-200 rounded-lg p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium text-gray-900">{getAgeGroupDisplay(ageGroup)}</span>
-                                <span className="text-sm text-gray-600">{players.length} players</span>
-                              </div>
-                              {players.length > 0 ? (
-                                <div className="space-y-1">
-                                  {players.map((player, index) => (
-                                    <div key={index} className="text-sm text-gray-700">
-                                      {player.player.firstName} {player.player.lastName}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-gray-500 italic">No players</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-
-                <div className="flex flex-col space-y-3 md:flex-row md:justify-end md:space-y-0 md:space-x-3 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => setShowTeamSummary(false)}
-                    className="px-6 py-3 md:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 min-h-[44px]"
-                  >
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end pt-4 border-t" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                  <button onClick={() => setShowTeamSummary(false)}
+                    className="px-6 py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>
                   {team?.isSubmitted ? (
-                    <div className="px-6 py-3 md:py-2 bg-green-100 text-green-800 rounded-lg border border-green-200 text-center min-h-[44px] flex items-center justify-center">
+                    <div className="px-6 py-3 rounded-xl text-center min-h-[44px] flex items-center justify-center"
+                      style={{ background: `${COLORS.saffron}15`, color: COLORS.saffronLight, border: `1px solid ${COLORS.saffron}30` }}>
                       Team Already Submitted
                     </div>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setShowTeamSummary(false);
-                        window.location.href = '/coach/payment';
-                      }}
-                      className="px-6 py-3 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-h-[44px]"
-                    >
+                    <button onClick={() => { setShowTeamSummary(false); window.location.href = '/coach/payment'; }}
+                      className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px]"
+                      style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
                       Proceed to Payment
                     </button>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Add Player Modal */}
+      {/* Add Player Modal */}
+      <AnimatePresence>
         {showAddPlayer && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-              {/* Close Button */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 rounded-t-2xl">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900">Add Player to Age Group</h3>
-                  <button
-                    onClick={handleCloseModal}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+              onClick={handleCloseModal} />
+            <motion.div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border"
+              style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
+              <div className="sticky top-0 flex items-center justify-between p-6 border-b"
+                style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
+                <h3 className="text-lg font-black text-white">Add Player to Age Group</h3>
+                <button onClick={handleCloseModal}
+                  className="p-2 rounded-xl text-white/40 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
-
-              <div className="p-4 md:p-6 space-y-4">
+              <div className="p-6 space-y-5">
+                {/* Search */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search Players
-                  </label>
+                  <label htmlFor="player-search" className="block text-xs font-semibold tracking-wide uppercase mb-2"
+                    style={{ color: COLORS.saffronLight }}>Search Players</label>
                   <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        handleSearchPlayers(e.target.value);
-                      }}
-                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 min-h-[44px]"
-                      placeholder="Search by name"
-                    />
-                    <Search className="absolute right-3 top-3 md:top-2.5 h-4 w-4 text-gray-400" />
+                    <input id="player-search" type="text" value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); handleSearchPlayers(e.target.value); }}
+                      className="w-full px-4 py-3 pr-10 rounded-xl text-white placeholder-white/25 outline-none min-h-[44px]"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                      onFocus={e => e.target.style.borderColor = COLORS.saffron}
+                      onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle}
+                      placeholder="Search by name" />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" aria-hidden="true" />
                   </div>
-
-                  {searchLoading && (
-                    <p className="text-sm text-gray-500 mt-1">Searching...</p>
-                  )}
-
+                  {searchLoading && <p className="text-white/30 text-xs mt-1">Searching...</p>}
                   {players.length > 0 && (
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md">
-                      {players.map((player, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handlePlayerSelect(player)}
-                          className="w-full text-left px-3 py-3 hover:bg-gray-100 border-b border-gray-100 last:border-b-0 min-h-[44px]"
-                        >
-                          <div className="font-medium text-gray-900">{player.firstName} {player.lastName}</div>
-                          <div className="text-sm text-gray-500">
-                            {player.email} • {player.gender} • {player.dateOfBirth ? ` Age: ${calculateAge(player.dateOfBirth)}` : ' Age: Unknown'}
-                          </div>
+                    <div className="mt-2 rounded-xl border overflow-hidden max-h-40 overflow-y-auto"
+                      style={{ borderColor: COLORS.darkBorderSubtle }}>
+                      {players.map((player, i) => (
+                        <button key={i} onClick={() => handlePlayerSelect(player)}
+                          className="w-full text-left px-4 py-3 hover:bg-white/5 border-b last:border-b-0 transition-colors min-h-[44px]"
+                          style={{ borderColor: COLORS.darkBorderSubtle }}>
+                          <p className="text-white font-medium text-sm">{player.firstName} {player.lastName}</p>
+                          <p className="text-white/40 text-xs">{player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</p>
                         </button>
                       ))}
                     </div>
@@ -693,72 +456,56 @@ const CoachDashboard = () => {
 
                 {selectedPlayer && selectedPlayerData && (
                   <div className="space-y-4">
+                    <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                      <p className="text-white font-semibold text-sm">{selectedPlayer.label}</p>
+                      <p className="text-white/45 text-xs mt-1">
+                        Gender: {selectedPlayerData.gender} · Age: {selectedPlayerData.age} yrs · DOB: {new Date(selectedPlayerData.dateOfBirth).toLocaleDateString()}
+                      </p>
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Selected Player Details
+                      <label className="block text-xs font-semibold tracking-wide uppercase mb-2"
+                        style={{ color: COLORS.saffronLight }}>Gender (Auto-selected)</label>
+                      <div className="px-4 py-3 rounded-xl text-white/50 min-h-[44px] flex items-center"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                        {selectedGender?.label || 'Loading...'}
+                      </div>
+                      <p className="text-white/25 text-xs mt-1">Automatically set from player's registration</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold tracking-wide uppercase mb-2"
+                        style={{ color: COLORS.saffronLight }}>
+                        Age Group <span aria-hidden="true" style={{ color: COLORS.saffron }}>*</span>
                       </label>
-                      <div className="bg-gray-50 p-3 rounded-md space-y-1">
-                        <div className="font-medium text-gray-900">{selectedPlayer.label}</div>
-                        <div className="text-sm text-gray-600">
-                          Gender: {selectedPlayerData.gender} • Age: {selectedPlayerData.age} years
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          DOB: {new Date(selectedPlayerData.dateOfBirth).toLocaleDateString()}
-                        </div>
-                      </div>
+                      <Dropdown
+                        options={selectedGender && selectedPlayerData ? getAvailableAgeGroups(selectedGender.value, selectedPlayerData.age) : []}
+                        value={selectedAgeGroup}
+                        onChange={setSelectedAgeGroup}
+                        placeholder="Select age group"
+                      />
+                      <p className="text-white/25 text-xs mt-1">
+                        Player age: {selectedPlayerData.age} yrs. Showing eligible categories.
+                      </p>
                     </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Gender (Auto-selected)
-                        </label>
-                        <div className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 min-h-[44px] flex items-center">
-                          {selectedGender ? selectedGender.label : 'Loading...'}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Gender is automatically set based on player's registration
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Age Group <span className="text-red-500">*</span>
-                        </label>
-                        <Dropdown
-                          options={selectedGender && selectedPlayerData ? getAvailableAgeGroups(selectedGender.value, selectedPlayerData.age) : []}
-                          value={selectedAgeGroup}
-                          onChange={setSelectedAgeGroup}
-                          placeholder="Select age group"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Player age: {selectedPlayerData.age} years. Showing eligible age groups (player's category and all higher categories).
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:space-x-3">
-                      <button
-                        onClick={handleCloseModal}
-                        className="flex-1 px-4 py-3 md:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 min-h-[44px]"
-                      >
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={handleCloseModal}
+                        className="flex-1 py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                        style={{ borderColor: COLORS.darkBorderSubtle }}>
                         Cancel
                       </button>
-                      <button
-                        onClick={handleAddPlayer}
+                      <button onClick={handleAddPlayer}
                         disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender}
-                        className="flex-1 px-4 py-3 md:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                      >
+                        className="flex-1 py-3 rounded-xl font-bold text-white min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
                         Add Player
                       </button>
                     </div>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
-      </ResponsiveContainer>
+      </AnimatePresence>
     </div>
   );
 };

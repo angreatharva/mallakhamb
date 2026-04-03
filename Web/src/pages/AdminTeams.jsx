@@ -1,47 +1,167 @@
-import { useState, useEffect } from 'react';
-import {
-  Trophy,
-  Filter,
-  Users,
-  X,
-  Search
-} from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Trophy, Filter, Users, X, Search } from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
 import { useAgeGroups } from '../hooks/useAgeGroups';
 import Dropdown from '../components/Dropdown';
 import { ResponsiveTeamTable } from '../components/responsive/ResponsiveTable';
-import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { logger } from '../utils/logger';
 import { ResponsiveTeamFilters } from '../components/responsive/ResponsiveFilters';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
+
+const useReducedMotion = () => {
+  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const h = (e) => setR(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
+  return r;
+};
+
+const FadeIn = ({ children, delay = 0, className = '' }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const reduced = useReducedMotion();
+  return (
+    <motion.div ref={ref} className={className}
+      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
+      {children}
+    </motion.div>
+  );
+};
+
+const DarkCard = ({ children, className = '', style = {} }) => (
+  <div className={`rounded-2xl border ${className}`}
+    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
+    {children}
+  </div>
+);
+
+const DarkSearch = ({ value, onChange, placeholder }) => (
+  <div className="relative">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+    />
+    {value && (
+      <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
+        <X className="w-3.5 h-3.5 text-white/40" />
+      </button>
+    )}
+  </div>
+);
+
+const EmptyState = ({ icon: Icon, title, desc, action }) => (
+  <div className="text-center py-12">
+    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
+    <p className="text-white/60 font-semibold">{title}</p>
+    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {action && <div className="mt-4">{action}</div>}
+  </div>
+);
+
+const LoadingState = ({ label }) => (
+  <div className="flex items-center justify-center py-12 gap-3">
+    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+    <span className="text-white/40 text-sm">{label}</span>
+  </div>
+);
+
+const TeamModal = ({ team, onClose }) => (
+  <AnimatePresence>
+    {team && (
+      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <motion.div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border"
+          style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Team Details</p>
+              <h3 className="text-xl font-black text-white mt-0.5">{team.team?.name || team.name}</h3>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Team Information</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div><span className="text-white/40">Coach: </span><span className="text-white">{team.coach?.name || 'No coach assigned'}</span></div>
+                {team.coach?.email && <div><span className="text-white/40">Email: </span><span className="text-white">{team.coach.email}</span></div>}
+                {team.coach?.phone && <div><span className="text-white/40">Phone: </span><span className="text-white">{team.coach.phone}</span></div>}
+                <div><span className="text-white/40">Players: </span><span className="text-white font-bold">{team.players?.length || 0}</span></div>
+                {team.createdAt && <div><span className="text-white/40">Registered: </span><span className="text-white">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Players ({team.players?.length || 0})</p>
+              {team.players?.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {team.players.map((entry, i) => (
+                    <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                      <p className="font-bold text-white text-sm">{entry.player.firstName} {entry.player.lastName}</p>
+                      <div className="mt-2 space-y-1 text-xs text-white/50">
+                        <p>Gender: <span className="text-white/70">{entry.player.gender}</span></p>
+                        <p>Age Group: <span className="text-white/70">{entry.ageGroup || 'Not assigned'}</span></p>
+                        {entry.player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(entry.player.dateOfBirth).toLocaleDateString()}</span></p>}
+                      </div>
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Active</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 rounded-xl border" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                  <Users className="w-10 h-10 mx-auto mb-2 text-white/20" />
+                  <p className="text-white/40 text-sm">No players registered</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <motion.button onClick={onClose}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all"
+              style={{ background: ADMIN_COLORS.darkPanel, color: 'rgba(255,255,255,0.7)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
+              whileHover={{ color: '#fff' }} whileTap={{ scale: 0.97 }}>
+              Close
+            </motion.button>
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
 
 const Teams = () => {
   const { routePrefix, storagePrefix } = useRouteContext();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
 
-  // Competition selector state (superadmin only)
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [loadingCompetitions, setLoadingCompetitions] = useState(false);
-
   const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const genders = [
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
-  ];
-
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
-  // Fetch competitions for superadmin
   useEffect(() => {
     if (isSuperAdmin) {
       setLoadingCompetitions(true);
@@ -52,38 +172,21 @@ const Teams = () => {
     }
   }, [isSuperAdmin]);
 
-  // Reset filters when competition changes
-  useEffect(() => {
-    setSelectedGender(null);
-    setSelectedAgeGroup(null);
-    setTeams([]);
-    setSearchTerm('');
-  }, [selectedCompetition]);
-
-  useEffect(() => {
-    if (selectedGender) setSelectedAgeGroup(null);
-  }, [selectedGender]);
+  useEffect(() => { setSelectedGender(null); setSelectedAgeGroup(null); setTeams([]); setSearchTerm(''); }, [selectedCompetition]);
+  useEffect(() => { if (selectedGender) setSelectedAgeGroup(null); }, [selectedGender]);
 
   useEffect(() => {
     if (isSuperAdmin && !selectedCompetition) return;
-    if (selectedGender && selectedAgeGroup) {
-      fetchTeams();
-    } else {
-      setTeams([]);
-    }
+    if (selectedGender && selectedAgeGroup) fetchTeams();
+    else setTeams([]);
   }, [selectedGender, selectedAgeGroup, selectedCompetition]);
 
   const fetchTeams = async () => {
     if (!selectedGender || !selectedAgeGroup) return;
     if (isSuperAdmin && !selectedCompetition) return;
-
     setLoading(true);
     try {
-      const params = {
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {})
-      };
+      const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getAllTeams(params);
       setTeams(response.data.teams);
       toast.success(`Loaded ${response.data.teams.length} teams`);
@@ -105,255 +208,71 @@ const Teams = () => {
   };
 
   const handleClearFilters = () => {
-    setSelectedGender(null);
-    setSelectedAgeGroup(null);
-    setTeams([]);
-    setSearchTerm('');
+    setSelectedGender(null); setSelectedAgeGroup(null); setTeams([]); setSearchTerm('');
     if (isSuperAdmin) setSelectedCompetition(null);
   };
 
   const filteredTeams = teams.filter(team => {
     if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    const teamName = (team.team?.name || team.name)?.toLowerCase() || '';
-    const coachName = team.coach?.name?.toLowerCase() || '';
-    return teamName.includes(searchLower) || coachName.includes(searchLower);
+    const s = searchTerm.toLowerCase();
+    return (team.team?.name || team.name || '').toLowerCase().includes(s) || (team.coach?.name || '').toLowerCase().includes(s);
   });
 
-  const competitionOptions = competitions.map(c => ({ value: c._id, label: c.name }));
+  const competitionOptions = competitions.map(c => ({ value: c._id, label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}` }));
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
   return (
     <div className="space-y-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Teams Management</h2>
+      <TeamModal team={selectedTeam} onClose={() => setSelectedTeam(null)} />
+      <FadeIn>
+        <DarkCard className="p-6">
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Teams Management</p>
+          <h2 className="text-2xl font-black text-white mb-6">All Teams</h2>
 
-          {/* Competition selector - superadmin only */}
           {isSuperAdmin && (
-            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-              <label className="block text-sm font-semibold text-indigo-800 mb-2">
-                Competition <span className="text-red-500">*</span>
+            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
+              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
               </label>
-              <Dropdown
-                options={competitionOptions}
-                value={selectedCompetition}
-                onChange={setSelectedCompetition}
-                placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select a competition first'}
-                disabled={loadingCompetitions}
-              />
-              {!selectedCompetition && (
-                <p className="text-xs text-indigo-600 mt-2">Select a competition to enable the filters below.</p>
-              )}
+              <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
+                placeholder={loadingCompetitions ? 'Loading competitions…' : 'Select a competition first'} disabled={loadingCompetitions} />
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${ADMIN_COLORS.saffron}80` }}>Select a competition to enable filters.</p>}
             </div>
           )}
 
-          {/* Filter Section */}
-          <div className={!filtersReady ? 'opacity-50 pointer-events-none' : ''}>
-            <ResponsiveTeamFilters
-              selectedGender={selectedGender}
-              onGenderChange={setSelectedGender}
-              selectedAgeGroup={selectedAgeGroup}
-              onAgeGroupChange={setSelectedAgeGroup}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters}
-              ageGroups={availableAgeGroups}
-            />
+          <div className={!filtersReady ? 'opacity-40 pointer-events-none' : ''}>
+            <ResponsiveTeamFilters selectedGender={selectedGender} onGenderChange={setSelectedGender}
+              selectedAgeGroup={selectedAgeGroup} onAgeGroupChange={setSelectedAgeGroup}
+              searchTerm={searchTerm} onSearchChange={setSearchTerm}
+              onClearFilters={handleClearFilters} ageGroups={availableAgeGroups} />
           </div>
 
-          {/* Teams Display */}
           {!filtersReady ? (
-            <div className="text-center py-10">
-              <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-500 mb-2">Select a Competition First</h3>
-              <p className="text-gray-400">Choose a competition above to start filtering teams.</p>
-            </div>
+            <EmptyState icon={Filter} title="Select a Competition First" desc="Choose a competition above to start filtering teams." />
           ) : !selectedGender || !selectedAgeGroup ? (
-            <div className="text-center py-5">
-              <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-500 mb-2">Select Filters to View Teams</h3>
-              <p className="text-gray-400 mb-6">Please select both gender and age group filters above to view teams.</p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                <p className="text-sm text-blue-800">
-                  <strong>Required:</strong> Gender and Age Group filters must be selected. Teams will load automatically.
-                </p>
-              </div>
-            </div>
+            <EmptyState icon={Filter} title="Select Filters to View Teams" desc="Select gender and age group to load teams automatically." />
           ) : loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading teams...</p>
-            </div>
+            <LoadingState label="Loading teams…" />
           ) : teams.length > 0 ? (
             <div>
-              <div className="mt-2.5 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
-                  <strong>Showing teams for:</strong> {selectedGender.label} - {selectedAgeGroup.label}
-                  {isSuperAdmin && selectedCompetition && ` — ${selectedCompetition.label}`}
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Found {teams.length} team{teams.length !== 1 ? 's' : ''}
-                  {searchTerm && ` (${filteredTeams.length} after search)`}
-                </p>
+              <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+                <span className="text-white/70">Showing </span>
+                <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
+                <span className="text-white/50 ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
               </div>
-
-              <div className="mb-6">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search teams by name or coach..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white text-gray-900"
-                  />
-                  {searchTerm && (
-                    <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
+              <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
               {filteredTeams.length === 0 && searchTerm ? (
-                <div className="text-center py-8">
-                  <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-500 mb-2">No teams found</h3>
-                  <p className="text-gray-400">No teams match "{searchTerm}"</p>
-                  <button onClick={() => setSearchTerm('')} className="mt-3 text-purple-600 hover:text-purple-800 font-medium">Clear search</button>
-                </div>
+                <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
+                  action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
               ) : (
                 <ResponsiveTeamTable teams={filteredTeams} onTeamClick={fetchTeamDetails} searchTerm={searchTerm} />
               )}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-500 mb-2">No Teams Found</h3>
-              <p className="text-gray-500 mb-2">No teams found for the selected filters.</p>
-            </div>
+            <EmptyState icon={Trophy} title="No Teams Found" desc="No teams found for the selected filters." />
           )}
-        </div>
-
-        {/* Team Details Modal */}
-        {selectedTeam && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">{selectedTeam.team?.name || selectedTeam.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">Team Details</p>
-                </div>
-                <button
-                  onClick={() => setSelectedTeam(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6 space-y-6">
-                {/* Team Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Team Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        <strong>Coach:</strong> {selectedTeam.coach?.name || 'No coach assigned'}
-                      </p>
-                      {selectedTeam.coach?.email && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          <strong>Email:</strong> {selectedTeam.coach.email}
-                        </p>
-                      )}
-                      {selectedTeam.coach?.phone && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          <strong>Phone:</strong> {selectedTeam.coach.phone}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        <strong>Total Players:</strong> {selectedTeam.players?.length || 0}
-                      </p>
-                      {selectedTeam.createdAt && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          <strong>Registered:</strong> {new Date(selectedTeam.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {selectedTeam.description && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        <strong>Description:</strong> {selectedTeam.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Players List */}
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">
-                    Players ({selectedTeam.players?.length || 0})
-                  </h4>
-                  {selectedTeam.players && selectedTeam.players.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedTeam.players.map((playerEntry, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {playerEntry.player.firstName} {playerEntry.player.lastName}
-                              </p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                <strong>Gender:</strong> {playerEntry.player.gender}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                <strong>Age Group:</strong> {playerEntry.ageGroup || 'Not assigned'}
-                              </p>
-                              {playerEntry.player.dateOfBirth && (
-                                <p className="text-sm text-gray-600">
-                                  <strong>DOB:</strong> {new Date(playerEntry.player.dateOfBirth).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Active
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <Users className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">No players registered for this team</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setSelectedTeam(null)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </DarkCard>
+      </FadeIn>
     </div>
   );
 };

@@ -36,44 +36,24 @@ export const CompetitionProvider = ({ children, userType }) => {
     return decoded?.currentCompetition || null;
   }, [getToken]);
 
-  // Fetch assigned competitions for the user
+  // Fetch assigned competitions for the user (callable for manual refresh)
   const fetchAssignedCompetitions = useCallback(async () => {
-    if (!userType) {
-      setIsLoading(false);
-      return;
-    }
-
     const token = getToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    if (!userType || !token) return;
 
     try {
       setIsLoading(true);
       setError(null);
-
       const response = await axios.get(
         `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...apiConfig.getHeaders(),
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}`, ...apiConfig.getHeaders() } }
       );
-
-      setAssignedCompetitions(response.data.competitions || []);
-
-      // Check if there's a competition in the token
+      const competitions = response.data.competitions || [];
+      setAssignedCompetitions(competitions);
       const competitionId = getCompetitionFromToken();
       if (competitionId) {
-        const competition = response.data.competitions.find(
-          (c) => c._id === competitionId
-        );
-        if (competition) {
-          setCurrentCompetition(competition);
-        }
+        const match = competitions.find((c) => c._id === competitionId);
+        if (match) setCurrentCompetition(match);
       }
     } catch (err) {
       logger.error('Failed to fetch assigned competitions:', err);
@@ -146,15 +126,9 @@ export const CompetitionProvider = ({ children, userType }) => {
   // Load competitions on mount and when userType changes
   useEffect(() => {
     let isMounted = true;
-    
-    const loadCompetitions = async () => {
-      if (!userType) {
-        setIsLoading(false);
-        return;
-      }
 
-      const token = getToken();
-      if (!token) {
+    const loadCompetitions = async () => {
+      if (!userType || !getToken()) {
         setIsLoading(false);
         return;
       }
@@ -165,26 +139,18 @@ export const CompetitionProvider = ({ children, userType }) => {
 
         const response = await axios.get(
           `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              ...apiConfig.getHeaders(),
-            },
-          }
+          { headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() } }
         );
 
-        if (isMounted) {
-          setAssignedCompetitions(response.data.competitions || []);
+        if (!isMounted) return;
 
-          const competitionId = getCompetitionFromToken();
-          if (competitionId) {
-            const competition = response.data.competitions.find(
-              (c) => c._id === competitionId
-            );
-            if (competition) {
-              setCurrentCompetition(competition);
-            }
-          }
+        const competitions = response.data.competitions || [];
+        setAssignedCompetitions(competitions);
+
+        const competitionId = getCompetitionFromToken();
+        if (competitionId) {
+          const match = competitions.find((c) => c._id === competitionId);
+          if (match) setCurrentCompetition(match);
         }
       } catch (err) {
         if (isMounted) {
@@ -192,17 +158,12 @@ export const CompetitionProvider = ({ children, userType }) => {
           setError(err.response?.data?.message || 'Failed to load competitions');
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     loadCompetitions();
-    
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [userType, getToken, getCompetitionFromToken]);
 
   const value = {
@@ -223,3 +184,13 @@ export const CompetitionProvider = ({ children, userType }) => {
 };
 
 export default CompetitionContext;
+
+/**
+ * Convenience hook — returns the competition error string (if any) so pages
+ * can surface it without manually destructuring the full context.
+ * Returns null when there is no error.
+ */
+export const useCompetitionError = () => {
+  const { error } = useCompetition();
+  return error;
+};

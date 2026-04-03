@@ -352,7 +352,7 @@ const registerTeamForCompetition = async (req, res) => {
 
       // Find the registered team after population
       const populatedTeam = competition.registeredTeams.find(rt => 
-        rt.team._id.toString() === teamId.toString()
+        rt.team && rt.team._id && rt.team._id.toString() === teamId.toString()
       );
 
       if (!populatedTeam) {
@@ -390,7 +390,7 @@ const registerTeamForCompetition = async (req, res) => {
 
     // Find the registered team after population
     const populatedTeam = competition.registeredTeams.find(rt => 
-      rt.team._id.toString() === teamId.toString()
+      rt.team && rt.team._id && rt.team._id.toString() === teamId.toString()
     );
 
     if (!populatedTeam) {
@@ -517,7 +517,7 @@ const getTeamDashboard = async (req, res) => {
 
     // Find the coach's team registration in this competition
     const registeredTeam = competition.registeredTeams.find(
-      rt => rt.coach._id.toString() === req.user._id.toString()
+      rt => rt.coach && rt.coach._id && rt.coach._id.toString() === req.user._id.toString()
     );
 
     if (!registeredTeam) {

@@ -1,28 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, User, Eye, EyeOff, Lock, Mail, Flame, Dumbbell, Star } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Crown, Eye, EyeOff, Lock, Mail, ArrowRight, Star, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playerAPI } from '../services/api';
+import toast from 'react-hot-toast';
+import { superAdminAPI } from '../services/api';
 import { useAuth } from '../App';
 import BHALogo from '../assets/BHA.png';
-import { secureStorage } from '../utils/secureStorage';
-import { useRateLimit } from '../hooks/useRateLimit';
-import { loginSchema } from '../utils/validation';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
   bg:          '#050505',
-  panel:       '#080500',
+  panel:       '#0C0A00',
   card:        '#0A0A0A',
-  saffron:     '#FF6B00',
-  saffronLight:'#FF8C38',
-  saffronDark: '#CC5500',
   gold:        '#F5A623',
+  saffron:     '#FF6B00',
+  saffronDark: '#CC5500',
+  amber:       '#FBBF24',
   red:         '#EF4444',
-  border:      'rgba(255,107,0,0.15)',
-  borderBright:'rgba(255,107,0,0.38)',
+  border:      'rgba(245,166,35,0.18)',
+  borderBright:'rgba(245,166,35,0.40)',
 };
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -41,42 +38,47 @@ const useReducedMotion = () => {
   return r;
 };
 
-// ─── Diagonal stripe background ──────────────────────────────────────────────
-const DiagonalBurst = () => {
+// ─── Radial burst background ──────────────────────────────────────────────────
+const RadialBurst = () => {
   const reduced = useReducedMotion();
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      {/* Diagonal stripes */}
-      <div className="absolute inset-0 opacity-[0.025]"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            ${C.saffron} 0px, ${C.saffron} 1px,
-            transparent 1px, transparent 48px
-          )`,
-        }} />
+      {/* Concentric rings */}
+      {[200, 360, 520, 680].map((r, i) => (
+        <motion.div key={r}
+          className="absolute rounded-full border"
+          style={{
+            width: r, height: r,
+            left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)',
+            borderColor: `${C.gold}${['18', '10', '08', '05'][i]}`,
+          }}
+          animate={reduced ? {} : { scale: [1, 1.04, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.8 }}
+        />
+      ))}
 
-      {/* Saffron radial glow */}
+      {/* Gold radial glow center */}
       <div className="absolute inset-0"
-        style={{ background: `radial-gradient(ellipse at 50% 50%, ${C.saffron}10 0%, transparent 65%)` }} />
+        style={{ background: `radial-gradient(ellipse at 50% 50%, ${C.gold}12 0%, transparent 65%)` }} />
 
-      {/* Top-right corner glow */}
-      <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full"
-        style={{ background: `radial-gradient(circle, ${C.saffron}22, transparent 70%)`, filter: 'blur(60px)' }} />
+      {/* Top-left corner glow */}
+      <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full"
+        style={{ background: `radial-gradient(circle, ${C.saffron}20, transparent 70%)`, filter: 'blur(50px)' }} />
 
-      {/* Bottom-left glow */}
-      <div className="absolute -bottom-16 -left-16 w-72 h-72 rounded-full"
+      {/* Bottom-right glow */}
+      <div className="absolute -bottom-20 -right-20 w-72 h-72 rounded-full"
         style={{ background: `radial-gradient(circle, ${C.gold}15, transparent 70%)`, filter: 'blur(50px)' }} />
 
-      {/* Noise grain */}
+      {/* Noise grain overlay */}
       <div className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           backgroundSize: '200px 200px',
         }} />
 
-      {/* Floating particles */}
-      {!reduced && Array.from({ length: 12 }, (_, i) => (
+      {/* Floating gold particles */}
+      {!reduced && Array.from({ length: 10 }, (_, i) => (
         <motion.div key={i}
           className="absolute rounded-full"
           style={{
@@ -84,9 +86,9 @@ const DiagonalBurst = () => {
             height: Math.random() * 3 + 1,
             left: `${10 + Math.random() * 80}%`,
             top: `${10 + Math.random() * 80}%`,
-            background: C.saffron,
+            background: C.gold,
           }}
-          animate={{ y: [0, -50, 0], opacity: [0.1, 0.5, 0.1] }}
+          animate={{ y: [0, -40, 0], opacity: [0.1, 0.5, 0.1] }}
           transition={{ duration: 5 + Math.random() * 5, delay: Math.random() * 4, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
@@ -94,58 +96,67 @@ const DiagonalBurst = () => {
   );
 };
 
-// ─── Player icon ornament ─────────────────────────────────────────────────────
-const PlayerOrnament = () => {
+// ─── Spinning crown ornament ──────────────────────────────────────────────────
+const CrownOrnament = () => {
   const reduced = useReducedMotion();
   return (
-    <motion.div className="relative flex items-center justify-center"
+    <motion.div
+      className="relative flex items-center justify-center"
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
+      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}
+    >
+      {/* Outer rotating ring */}
       {!reduced && (
-        <motion.div className="absolute w-36 h-36 rounded-full border"
-          style={{ borderColor: `${C.saffron}22`, borderStyle: 'dashed' }}
+        <motion.div
+          className="absolute w-36 h-36 rounded-full border"
+          style={{ borderColor: `${C.gold}25`, borderStyle: 'dashed' }}
           animate={{ rotate: 360 }}
-          transition={{ duration: 22, repeat: Infinity, ease: 'linear' }} />
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+        />
       )}
-      <motion.div className="absolute w-24 h-24 rounded-full border"
-        style={{ borderColor: `${C.saffron}30` }}
+      {/* Middle ring */}
+      <motion.div
+        className="absolute w-24 h-24 rounded-full border"
+        style={{ borderColor: `${C.gold}35` }}
         animate={reduced ? {} : { scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      {/* Icon container */}
       <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
         style={{
-          background: `linear-gradient(135deg, ${C.saffron}20, ${C.gold}15)`,
-          border: `1px solid ${C.saffron}40`,
-          boxShadow: `0 0 40px ${C.saffron}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          background: `linear-gradient(135deg, ${C.gold}20, ${C.saffron}15)`,
+          border: `1px solid ${C.gold}40`,
+          boxShadow: `0 0 40px ${C.gold}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
         }}>
-        <User className="w-10 h-10" style={{ color: C.saffron }} aria-hidden="true" />
+        <Crown className="w-10 h-10" style={{ color: C.gold }} aria-hidden="true" />
       </div>
     </motion.div>
   );
 };
 
 // ─── Input ────────────────────────────────────────────────────────────────────
-const SaffronInput = ({ icon: Icon, error, right, ...props }) => {
+const GoldInput = ({ icon: Icon, error, right, ...props }) => {
   const [focused, setFocused] = useState(false);
   return (
     <div className="relative">
       {Icon && (
         <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
           <Icon className="w-4 h-4 transition-colors duration-200"
-            style={{ color: error ? C.red : focused ? C.saffron : 'rgba(255,255,255,0.22)' }} aria-hidden="true" />
+            style={{ color: error ? C.red : focused ? C.gold : 'rgba(255,255,255,0.22)' }} aria-hidden="true" />
         </div>
       )}
       <input
         className="w-full text-sm text-white outline-none transition-all duration-200 min-h-[50px] rounded-xl"
         style={{
-          background: focused ? `${C.saffron}08` : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${error ? `${C.red}70` : focused ? `${C.saffron}55` : 'rgba(255,255,255,0.09)'}`,
-          boxShadow: focused ? `0 0 0 3px ${error ? C.red : C.saffron}14` : 'none',
+          background: focused ? `${C.gold}08` : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${error ? `${C.red}70` : focused ? `${C.gold}55` : 'rgba(255,255,255,0.09)'}`,
+          boxShadow: focused ? `0 0 0 3px ${error ? C.red : C.gold}14` : 'none',
           paddingLeft: Icon ? '2.75rem' : '1rem',
           paddingRight: right ? '3rem' : '1rem',
           paddingTop: '0.75rem',
           paddingBottom: '0.75rem',
-          caretColor: C.saffron,
+          caretColor: C.gold,
         }}
         placeholder={props.placeholder}
         onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
@@ -157,61 +168,29 @@ const SaffronInput = ({ icon: Icon, error, right, ...props }) => {
   );
 };
 
-// ─── PlayerLogin ──────────────────────────────────────────────────────────────
-const PlayerLogin = () => {
-  const [showPassword, setShowPassword] = useState(false);
+// ─── Super Admin Login ────────────────────────────────────────────────────────
+const SuperAdminLogin = () => {
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
   const reduced = useReducedMotion();
-  const { register, handleSubmit, formState: { errors }, setError } = useForm();
-  const { checkRateLimit, recordAttempt, reset } = useRateLimit(5, 60000);
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
   useEffect(() => {
-    if (user && userType === 'player') {
-      navigate(user.team ? '/player/dashboard' : '/player/select-team');
-    }
+    if (user && userType === 'superadmin') navigate('/superadmin/dashboard');
   }, [user, userType, navigate]);
 
   const onSubmit = async (data) => {
-    // Check rate limit
-    const { allowed, waitTime } = checkRateLimit();
-    if (!allowed) {
-      toast.error(`Too many login attempts. Please wait ${waitTime} seconds.`);
-      return;
-    }
-
-    // Validate input
-    const validation = loginSchema.safeParse(data);
-    if (!validation.success) {
-      validation.error.errors.forEach((err) => {
-        setError(err.path[0], { message: err.message });
-      });
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await playerAPI.login(validation.data);
-      const { token, player } = response.data;
-      
-      // Store token using secure storage directly to ensure it's available immediately
-      secureStorage.setItem('player_token', token);
-      secureStorage.setItem('player_user', JSON.stringify(player));
-      
-      // Then call login to update state
-      login(player, token, 'player');
-      
-      toast.success('Welcome back, athlete!');
-      reset(); // Reset rate limit on success
-      
-      // Small delay to ensure storage is complete before navigation
-      setTimeout(() => {
-        navigate(player.team ? '/player/dashboard' : '/player/select-team');
-      }, 100);
-    } catch (error) {
-      recordAttempt(); // Record failed attempt
-      toast.error(error.response?.data?.message || 'Login failed');
+      const res = await superAdminAPI.login(data);
+      const { token, admin } = res.data;
+      login(admin, token, 'superadmin');
+      toast.success('Welcome, Super Admin');
+      navigate('/superadmin/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -224,75 +203,82 @@ const PlayerLogin = () => {
       {/* ── Left decorative panel (desktop) ── */}
       <div className="hidden lg:flex flex-col items-center justify-center w-[45%] relative border-r"
         style={{ background: C.panel, borderColor: C.border }}>
-        <DiagonalBurst />
+        <RadialBurst />
 
         <div className="relative z-10 text-center px-12">
+          {/* Logo */}
           <motion.div className="flex items-center justify-center gap-3 mb-12"
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, ease: EASE }}>
             <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain opacity-80" />
           </motion.div>
 
+          {/* Crown ornament */}
           <div className="mb-10">
-            <PlayerOrnament />
+            <CrownOrnament />
           </div>
 
+          {/* Title block */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: `${C.saffron}80` }}>
+              style={{ color: `${C.gold}80` }}>
               Bhausaheb Ranade Mallakhamb
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3"
               style={{
-                background: `linear-gradient(135deg, ${C.saffron}, ${C.gold}, ${C.saffronLight})`,
+                background: `linear-gradient(135deg, ${C.gold}, ${C.amber}, ${C.saffron})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}>
-              Athlete<br />Portal
+              Supreme<br />Command
             </h1>
             <p className="text-white/30 text-sm leading-relaxed max-w-xs mx-auto">
-              Register, join your team, and compete in the ancient art of Mallakhamb.
+              Full sovereign access to all competitions, administrators, and platform systems.
             </p>
           </motion.div>
 
+          {/* Stats row */}
           <motion.div className="flex items-center justify-center gap-8 mt-10"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
             {[
-              { icon: Flame, label: 'Compete' },
-              { icon: Dumbbell, label: 'Train' },
-              { icon: Star, label: 'Excel' },
+              { icon: Star, label: 'All Access' },
+              { icon: Zap, label: 'Real-time' },
+              { icon: Crown, label: 'Sovereign' },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex flex-col items-center gap-1.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: `${C.saffron}12`, border: `1px solid ${C.saffron}25` }}>
-                  <Icon className="w-4 h-4" style={{ color: C.saffron }} aria-hidden="true" />
+                  style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}25` }}>
+                  <Icon className="w-4 h-4" style={{ color: C.gold }} aria-hidden="true" />
                 </div>
                 <span className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: `${C.saffron}60` }}>{label}</span>
+                  style={{ color: `${C.gold}60` }}>{label}</span>
               </div>
             ))}
           </motion.div>
         </div>
 
+        {/* Bottom gold line */}
         <div className="absolute bottom-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${C.saffron}40, transparent)` }} />
+          style={{ background: `linear-gradient(90deg, transparent, ${C.gold}40, transparent)` }} />
       </div>
 
       {/* ── Right form panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center relative px-6 py-12">
+        {/* Mobile: radial bg */}
         <div className="lg:hidden absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute inset-0"
-            style={{ background: `radial-gradient(ellipse at 50% 30%, ${C.saffron}10, transparent 65%)` }} />
+            style={{ background: `radial-gradient(ellipse at 50% 30%, ${C.gold}10, transparent 65%)` }} />
         </div>
 
+        {/* Mobile logo */}
         <motion.div className="lg:hidden flex items-center gap-3 mb-8"
           initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, ease: EASE }}>
           <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
           <div className="w-px h-8 bg-white/10" />
           <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: C.saffron }}>Mallakhamb</p>
-            <p className="text-white/30 text-[10px]">Player Portal</p>
+            <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: C.gold }}>Mallakhamb</p>
+            <p className="text-white/30 text-[10px]">Super Admin</p>
           </div>
         </motion.div>
 
@@ -300,35 +286,40 @@ const PlayerLogin = () => {
           initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE }}>
 
+          {/* Header */}
           <motion.div className="mb-8"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            {/* Mobile crown */}
             <div className="lg:hidden mb-5 flex justify-center">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: `${C.saffron}15`, border: `1px solid ${C.saffron}35` }}>
-                <User className="w-8 h-8" style={{ color: C.saffron }} aria-hidden="true" />
+                style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}35` }}>
+                <Crown className="w-8 h-8" style={{ color: C.gold }} aria-hidden="true" />
               </div>
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${C.saffron}40, transparent)` }} />
+              <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${C.gold}40, transparent)` }} />
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: `${C.saffron}70` }}>Player Access</span>
-              <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${C.saffron}40)` }} />
+                style={{ color: `${C.gold}70` }}>
+                Restricted Access
+              </span>
+              <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${C.gold}40)` }} />
             </div>
             <h2 className="text-3xl font-black text-white mt-3">Sign In</h2>
-            <p className="text-white/35 text-sm mt-1">Enter your athlete credentials</p>
+            <p className="text-white/35 text-sm mt-1">Super Administrator credentials required</p>
           </motion.div>
 
+          {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <motion.div className="space-y-4"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
 
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${C.saffron}90` }} htmlFor="pl-email">
+                  style={{ color: `${C.gold}90` }} htmlFor="sa-email">
                   Email <span style={{ color: C.red }}>*</span>
                 </label>
-                <SaffronInput id="pl-email" icon={Mail} type="email" placeholder="you@example.com"
+                <GoldInput id="sa-email" icon={Mail} type="email" placeholder="superadmin@example.com"
                   error={errors.email} autoComplete="email"
                   {...register('email', {
                     required: 'Email is required',
@@ -347,19 +338,17 @@ const PlayerLogin = () => {
 
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${C.saffron}90` }} htmlFor="pl-pw">
+                  style={{ color: `${C.gold}90` }} htmlFor="sa-pw">
                   Password <span style={{ color: C.red }}>*</span>
                 </label>
-                <SaffronInput id="pl-pw" icon={Lock}
-                  type={showPassword ? 'text' : 'password'} placeholder="••••••••"
+                <GoldInput id="sa-pw" icon={Lock}
+                  type={showPw ? 'text' : 'password'} placeholder="••••••••"
                   error={errors.password} autoComplete="current-password"
                   right={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    <button type="button" onClick={() => setShowPw(!showPw)}
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                      {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                      aria-label={showPw ? 'Hide password' : 'Show password'}>
+                      {showPw ? <EyeOff className="w-4 h-4 text-white/25" /> : <Eye className="w-4 h-4 text-white/25" />}
                     </button>
                   }
                   {...register('password', { required: 'Password is required' })} />
@@ -374,14 +363,15 @@ const PlayerLogin = () => {
                 </AnimatePresence>
               </div>
 
+              {/* Submit */}
               <motion.button type="submit" disabled={loading}
                 className="w-full rounded-xl font-black text-sm min-h-[52px] flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mt-2 group"
                 style={{
                   background: loading
-                    ? `${C.saffron}15`
-                    : `linear-gradient(135deg, ${C.saffron}, ${C.saffronDark})`,
-                  color: loading ? C.saffron : '#fff',
-                  boxShadow: loading ? 'none' : `0 8px 28px ${C.saffron}30, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                    ? `${C.gold}15`
+                    : `linear-gradient(135deg, ${C.gold}, ${C.saffron})`,
+                  color: loading ? C.gold : '#000',
+                  boxShadow: loading ? 'none' : `0 8px 28px ${C.gold}30, inset 0 1px 0 rgba(255,255,255,0.2)`,
                   letterSpacing: '0.04em',
                 }}
                 whileHover={!loading ? { scale: 1.02, filter: 'brightness(1.08)' } : {}}
@@ -389,13 +379,13 @@ const PlayerLogin = () => {
                 {loading ? (
                   <>
                     <motion.div className="w-4 h-4 border-2 rounded-full"
-                      style={{ borderColor: `${C.saffron}40`, borderTopColor: C.saffron }}
+                      style={{ borderColor: `${C.gold}40`, borderTopColor: C.gold }}
                       animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                    <span style={{ color: C.saffron }}>Signing in...</span>
+                    <span style={{ color: C.gold }}>Verifying...</span>
                   </>
                 ) : (
                   <>
-                    Sign In
+                    Enter Command Center
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </>
                 )}
@@ -403,12 +393,13 @@ const PlayerLogin = () => {
             </motion.div>
           </form>
 
+          {/* Footer */}
           <motion.div className="mt-7 pt-5 border-t flex items-center justify-between"
-            style={{ borderColor: 'rgba(255,107,0,0.12)' }}
+            style={{ borderColor: 'rgba(245,166,35,0.12)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
             <Link to="/forgot-password"
               className="text-xs transition-colors hover:underline underline-offset-4"
-              style={{ color: `${C.saffron}70` }}>
+              style={{ color: `${C.gold}70` }}>
               Forgot password?
             </Link>
             <div className="flex items-center gap-3">
@@ -416,22 +407,22 @@ const PlayerLogin = () => {
                 ← Home
               </Link>
               <span className="text-white/15 text-xs">·</span>
-              <Link to="/player/register"
-                className="text-xs transition-colors hover:underline underline-offset-4"
-                style={{ color: `${C.saffron}70` }}>
-                Register
+              <Link to="/admin/login"
+                className="text-xs text-white/20 hover:text-white/45 transition-colors">
+                Admin Login
               </Link>
             </div>
           </motion.div>
         </motion.div>
       </div>
 
+      {/* Right gold edge */}
       <motion.div className="absolute right-0 top-0 bottom-0 w-[2px] hidden lg:block"
-        style={{ background: `linear-gradient(to bottom, transparent, ${C.saffron}30, transparent)` }}
+        style={{ background: `linear-gradient(to bottom, transparent, ${C.gold}30, transparent)` }}
         initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
         transition={{ duration: 1.2, delay: 0.4, ease: EASE }} />
     </div>
   );
 };
 
-export default PlayerLogin;
+export default SuperAdminLogin;

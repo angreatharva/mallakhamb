@@ -1,35 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ShieldHalf,
-  Mars,
-  Users,
-  Venus,
-  UserCheck,
-  Target,
-  Award,
-  Filter,
-  Shield,
-  UserPlus,
-  Save,
-  Edit,
-  X,
-  Menu
+  ShieldHalf, Mars, Users, Venus, Target, Award, Shield,
+  Menu, X, LogOut, Play, CheckCircle, XCircle, LayoutDashboard,
+  Users2, Trophy, Gavel, ReceiptIndianRupee, ChevronDown
 } from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
-import Dropdown from '../components/Dropdown';
 import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
 import CompetitionSelector from '../components/CompetitionSelector';
-import { ResponsiveContainer, ResponsiveDashboardGrid } from '../components/responsive';
-import { 
-  ResponsiveHeading, 
-  ResponsiveText, 
-  ResponsiveStatNumber, 
-  ResponsiveStatLabel,
-  ResponsiveNavText 
-} from '../components/responsive/ResponsiveTypography';
 import { useResponsive } from '../hooks/useResponsive';
 import { useRouteContext } from '../contexts/RouteContext';
 import AdminTeams from './AdminTeams';
@@ -39,75 +20,202 @@ import AdminTransactions from './AdminTransactions';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
 import { logger } from '../utils/logger';
-import { Play, CheckCircle, XCircle } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, ADMIN_SPRING } from './adminTheme';
+import BHALogo from '../assets/BHA.png';
 
+// ─── Reduced-motion hook ──────────────────────────────────────────────────────
+const useReducedMotion = () => {
+  const [reduced, setReduced] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = (e) => setReduced(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return reduced;
+};
+
+// ─── FadeIn ───────────────────────────────────────────────────────────────────
+const FadeIn = ({ children, delay = 0, direction = 'up', className = '' }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const reduced = useReducedMotion();
+  const variants = {
+    hidden: reduced ? { opacity: 0 } : {
+      opacity: 0,
+      y: direction === 'up' ? 24 : direction === 'down' ? -24 : 0,
+      x: direction === 'left' ? 24 : direction === 'right' ? -24 : 0,
+    },
+    visible: { opacity: 1, y: 0, x: 0 },
+  };
+  return (
+    <motion.div ref={ref} className={className} variants={variants}
+      initial="hidden" animate={inView ? 'visible' : 'hidden'}
+      transition={{ duration: 0.55, delay, ease: ADMIN_EASE_OUT }}>
+      {children}
+    </motion.div>
+  );
+};
+
+// ─── GradientText ─────────────────────────────────────────────────────────────
+const GradientText = ({ children, className = '', color = 'saffron' }) => {
+  const grad = color === 'purple'
+    ? `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleLight})`
+    : `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.gold}, ${ADMIN_COLORS.saffronLight})`;
+  return (
+    <span className={className} style={{ background: grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+      {children}
+    </span>
+  );
+};
+
+// ─── DarkCard ─────────────────────────────────────────────────────────────────
+const DarkCard = ({ children, className = '', style = {}, hover = false, ...props }) => (
+  <motion.div
+    className={`rounded-2xl border ${className}`}
+    style={{
+      background: ADMIN_COLORS.darkCard,
+      borderColor: ADMIN_COLORS.darkBorderSubtle,
+      ...style,
+    }}
+    whileHover={hover ? { borderColor: `${ADMIN_COLORS.saffron}30`, boxShadow: `0 8px 32px ${ADMIN_COLORS.saffron}08` } : {}}
+    transition={{ duration: 0.2 }}
+    {...props}
+  >
+    {children}
+  </motion.div>
+);
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => (
+  <FadeIn delay={delay}>
+    <DarkCard hover className="p-5 flex items-center gap-4">
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}18` }}>
+        <Icon className="w-5 h-5" style={{ color }} aria-hidden="true" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-white/40 text-xs tracking-wide uppercase truncate">{label}</p>
+        <p className="text-2xl font-black text-white mt-0.5">{value ?? 0}</p>
+      </div>
+    </DarkCard>
+  </FadeIn>
+);
+
+// ─── Age group label helper ───────────────────────────────────────────────────
+const ageLabel = (ag) => ({
+  Under10: 'Under 10', Under12: 'Under 12', Under14: 'Under 14',
+  Under16: 'Under 16', Under18: 'Under 18', Above16: 'Above 16', Above18: 'Above 18',
+}[ag] || ag);
+
+const compLabel = (ct) => ({
+  competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III',
+}[ct] || ct);
+
+// ─── Judges Summary Card ──────────────────────────────────────────────────────
+const JudgeGroupCard = ({ item, genderColor, startingCompTypes, onStart, loadingJudgesSummary }) => (
+  <DarkCard className="p-4">
+    <p className="font-bold text-white text-sm mb-3">{ageLabel(item.ageGroup)}</p>
+    <div className="space-y-2">
+      {item.competitionTypes && Object.entries(item.competitionTypes)
+        .sort(([a], [b]) => ({ competition_1: 1, competition_2: 2, competition_3: 3 }[a] - { competition_1: 1, competition_2: 2, competition_3: 3 }[b]))
+        .map(([compType, data]) => {
+          const key = `${item.gender}_${item.ageGroup}_${compType}`;
+          const isStarting = startingCompTypes[key] || false;
+          const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
+          return (
+            <div key={compType} className="rounded-xl p-3 border"
+              style={{
+                background: data.isStarted ? `${ADMIN_COLORS.blue}10` : data.hasMinimumJudges ? `${ADMIN_COLORS.green}10` : `${ADMIN_COLORS.red}10`,
+                borderColor: data.isStarted ? `${ADMIN_COLORS.blue}30` : data.hasMinimumJudges ? `${ADMIN_COLORS.green}30` : `${ADMIN_COLORS.red}30`,
+              }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white">{compLabel(compType)}</span>
+                  {data.isStarted
+                    ? <span className="px-2 py-0.5 text-xs font-bold rounded-full" style={{ background: `${ADMIN_COLORS.blue}30`, color: ADMIN_COLORS.blue }}>Started</span>
+                    : data.hasMinimumJudges
+                      ? <CheckCircle className="w-3.5 h-3.5" style={{ color: ADMIN_COLORS.green }} />
+                      : <XCircle className="w-3.5 h-3.5" style={{ color: ADMIN_COLORS.red }} />}
+                </div>
+                {!data.isStarted && (
+                  <motion.button
+                    onClick={() => onStart(item.gender, item.ageGroup, compType)}
+                    disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[32px] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    style={{ background: data.hasMinimumJudges ? ADMIN_COLORS.green : ADMIN_COLORS.darkPanel, color: '#fff' }}
+                    whileHover={data.hasMinimumJudges ? { scale: 1.03 } : {}}
+                    whileTap={data.hasMinimumJudges ? { scale: 0.97 } : {}}
+                  >
+                    <Play className="w-3 h-3" />
+                    {isStarting ? 'Starting…' : 'Start'}
+                  </motion.button>
+                )}
+              </div>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Judges ({data.judges?.length || 0}): <span className="text-white/60">{judgeNames}</span>
+              </p>
+            </div>
+          );
+        })}
+    </div>
+  </DarkCard>
+);
+
+// ─── Nav tabs config ──────────────────────────────────────────────────────────
+const NAV_TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'teams', label: 'Teams', icon: Users2 },
+  { id: 'scores', label: 'Scores', icon: Trophy },
+  { id: 'judges', label: 'Judges', icon: Gavel },
+  { id: 'transactions', label: 'Transactions', icon: ReceiptIndianRupee },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   const navigate = useNavigate();
   const { tab } = useParams();
-  const { isMobile, isTablet } = useResponsive();
-  
-  // Use prop if provided, otherwise get from context
+  const { isMobile } = useResponsive();
+  const reduced = useReducedMotion();
+
   const contextValue = useRouteContext();
   const routePrefix = routePrefixProp || contextValue.routePrefix;
   const storagePrefix = contextValue.storagePrefix;
-
-  // Select the appropriate API service based on route context
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
+  const isSuperAdmin = routePrefix === '/superadmin';
 
-  // Get active tab from URL, default to 'dashboard'
   const activeTab = tab || 'dashboard';
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [judgesSummary, setJudgesSummary] = useState([]);
   const [loadingJudgesSummary, setLoadingJudgesSummary] = useState(false);
-  const [startingCompTypes, setStartingCompTypes] = useState({}); // Track which competition types are being started
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: null
-  });
-  
+  const [startingCompTypes, setStartingCompTypes] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+
   const { currentCompetition } = useCompetition();
-
-  // Filters
-  const [selectedGender, setSelectedGender] = useState(null);
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
-
-
-
-  const genders = [
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' }
-  ];
-
-  // Get filtered age groups from competition
-  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
 
-  // Get available age groups based on selected gender
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    return availableAgeGroups;
-  };
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-
-
-
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (activeTab === 'dashboard') {
       fetchDashboardStats();
       fetchJudgesSummary();
-    } else if (activeTab === 'teams') {
-      // Teams component will handle its own data loading
-    } else if (activeTab === 'scores') {
-      // Scores component will handle its own data loading
-    } else if (activeTab === 'judges') {
-      // Judges component will handle its own data loading
     }
   }, [activeTab]);
 
@@ -118,37 +226,22 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
       setJudgesSummary(response.data.summary || []);
     } catch (error) {
       logger.error('Failed to fetch judges summary:', error);
-      // Don't show error toast, just log it
     } finally {
       setLoadingJudgesSummary(false);
     }
   };
 
   const handleStartCompetitionType = async (gender, ageGroup, competitionType) => {
-    const ageGroupLabel = ageGroup === 'Under10' ? 'Under 10' :
-                          ageGroup === 'Under12' ? 'Under 12' :
-                          ageGroup === 'Under14' ? 'Under 14' :
-                          ageGroup === 'Under16' ? 'Under 16' :
-                          ageGroup === 'Under18' ? 'Under 18' :
-                          ageGroup === 'Above18' ? 'Above 18' :
-                          ageGroup === 'Above16' ? 'Above 16' : ageGroup;
-
-    const compTypeLabel = competitionType === 'competition_1' ? 'Competition I' :
-                         competitionType === 'competition_2' ? 'Competition II' :
-                         competitionType === 'competition_3' ? 'Competition III' : competitionType;
-
-    // Show custom confirmation dialog
     setConfirmDialog({
       isOpen: true,
       title: 'Start Competition Type',
-      message: `Are you sure you want to start ${compTypeLabel} for ${gender} ${ageGroupLabel}?\n\nOnce started, judges for this competition type cannot be modified.`,
+      message: `Are you sure you want to start ${compLabel(competitionType)} for ${gender} ${ageLabel(ageGroup)}?\n\nOnce started, judges for this competition type cannot be modified.`,
       onConfirm: async () => {
         const key = `${gender}_${ageGroup}_${competitionType}`;
         setStartingCompTypes(prev => ({ ...prev, [key]: true }));
-
         try {
           await api.startAgeGroup({ gender, ageGroup, competitionType });
-          toast.success(`${compTypeLabel} for ${gender} ${ageGroupLabel} started successfully! Judges can no longer be modified for this competition type.`);
+          toast.success(`${compLabel(competitionType)} for ${gender} ${ageLabel(ageGroup)} started!`);
           fetchJudgesSummary();
         } catch (error) {
           toast.error(error.response?.data?.message || 'Failed to start competition type');
@@ -159,23 +252,11 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
     });
   };
 
-
-
-  // Reset age group when gender changes
-  useEffect(() => {
-    if (selectedGender) {
-      setSelectedAgeGroup(null);
-    }
-  }, [selectedGender]);
-
-
-
   const fetchDashboardStats = async () => {
     setLoading(true);
     try {
       const response = await api.getDashboard();
       setStats(response.data.stats);
-      // setTeams(response.data.teams); // Commented out - using dedicated Teams page
     } catch (error) {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please login again.');
@@ -187,319 +268,127 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem(`${storagePrefix}_token`);
+    localStorage.removeItem(`${storagePrefix}_user`);
+    navigate(`${routePrefix}/login`);
+  };
+
+  const handleTabNav = (tabId) => {
+    navigate(tabId === 'dashboard' ? `${routePrefix}/dashboard` : `${routePrefix}/dashboard/${tabId}`);
+    setMobileMenuOpen(false);
+  };
+
+  // ─── Dashboard Tab Content ─────────────────────────────────────────────────
   const renderDashboardTab = () => (
-    <ResponsiveContainer maxWidth="desktop" padding="responsive">
-      <div className="space-y-6 md:space-y-8">
-        {/* Competition Display */}
+    <div className="space-y-8">
+      {/* Competition Display */}
+      <FadeIn>
         <CompetitionProvider userType={storagePrefix}>
-          <CompetitionDisplay />
+          <div className="rounded-2xl border p-4 md:p-6"
+            style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <CompetitionDisplay />
+          </div>
         </CompetitionProvider>
+      </FadeIn>
 
-        {/* Stats Cards - Responsive Grid */}
-        <ResponsiveDashboardGrid className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-2 md:p-3 rounded-full">
-                <ShieldHalf className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Total Teams</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.totalTeams || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Stats Grid */}
+      <div>
+        <FadeIn>
+          <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: ADMIN_COLORS.saffron }}>
+            Overview
+          </p>
+        </FadeIn>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <StatCard icon={ShieldHalf} label="Total Teams" value={stats?.totalTeams} color={ADMIN_COLORS.purple} delay={0} />
+          <StatCard icon={Users} label="Total Participants" value={stats?.totalParticipants} color={ADMIN_COLORS.saffron} delay={0.05} />
+          <StatCard icon={Mars} label="Boys Teams" value={stats?.boysTeams} color={ADMIN_COLORS.blue} delay={0.1} />
+          <StatCard icon={Venus} label="Girls Teams" value={stats?.girlsTeams} color="#EC4899" delay={0.15} />
+          <StatCard icon={Target} label="Total Boys" value={stats?.totalBoys} color={ADMIN_COLORS.blue} delay={0.2} />
+          <StatCard icon={Target} label="Total Girls" value={stats?.totalGirls} color="#EC4899" delay={0.25} />
+        </div>
+      </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-2 md:p-3 rounded-full">
-                <Users className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Total Participants</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.totalParticipants || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-2 md:p-3 rounded-full">
-                <Mars className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Boys Teams</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.boysTeams || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-pink-100 p-2 md:p-3 rounded-full">
-                <Venus className="h-5 w-5 md:h-6 md:w-6 text-pink-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Girls Teams</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.girlsTeams || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-2 md:p-3 rounded-full">
-                <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Total Boys</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.totalBoys || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-pink-100 p-2 md:p-3 rounded-full">
-                <Target className="h-5 w-5 md:h-6 md:w-6 text-pink-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <div className="flex flex-col">
-                  <ResponsiveStatLabel className="truncate">Total Girls</ResponsiveStatLabel>
-                  <ResponsiveStatNumber>{stats?.totalGirls || 0}</ResponsiveStatNumber>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ResponsiveDashboardGrid>
-
-        {/* Judges Summary and Start Age Group Section */}
-        {currentCompetition && (
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="mb-4">
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-                Judges Assignment Status
-              </h3>
-              <p className="text-sm text-gray-600">
-                Review judge assignments for each age group and competition type. Each competition type needs at least 3 judges to start. Once started, judges for that age group cannot be modified.
+      {/* Judges Assignment Status */}
+      {currentCompetition && (
+        <FadeIn delay={0.1}>
+          <div className="rounded-2xl border p-6"
+            style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <div className="mb-6">
+              <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>
+                Competition Control
+              </p>
+              <h3 className="text-xl font-black text-white">Judges Assignment Status</h3>
+              <p className="text-white/40 text-sm mt-1">
+                Each competition type needs at least 3 judges to start. Once started, judges cannot be modified.
               </p>
             </div>
 
             {loadingJudgesSummary ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600">Loading judges summary...</p>
+              <div className="flex items-center justify-center py-12 gap-3">
+                <div className="w-5 h-5 border-2 border-white/20 border-t-saffron rounded-full animate-spin"
+                  style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+                <span className="text-white/40 text-sm">Loading judges summary…</span>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Boys Age Groups */}
+              <div className="space-y-8">
+                {/* Boys */}
                 <div>
-                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                    <Mars className="h-4 w-4 mr-2 text-blue-600" />
-                    Boys Age Groups
-                  </h4>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Mars className="w-4 h-4" style={{ color: ADMIN_COLORS.blue }} />
+                    <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Boys Age Groups</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {judgesSummary
                       .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
-                      .map((item, index) => {
-                        const ageGroupLabel = item.ageGroup === 'Under10' ? 'Under 10' :
-                                             item.ageGroup === 'Under12' ? 'Under 12' :
-                                             item.ageGroup === 'Under14' ? 'Under 14' :
-                                             item.ageGroup === 'Under18' ? 'Under 18' :
-                                             item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
-                        
-                        return (
-                          <div
-                            key={`male-${item.ageGroup}`}
-                            className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50"
-                          >
-                            <div className="mb-2">
-                              <span className="font-semibold text-gray-900">{ageGroupLabel}</span>
-                            </div>
-                            
-                            {/* Competition Types */}
-                            <div className="ml-4 space-y-2">
-                              {item.competitionTypes && Object.entries(item.competitionTypes)
-                                .sort(([a], [b]) => {
-                                  const order = { 'competition_1': 1, 'competition_2': 2, 'competition_3': 3 };
-                                  return order[a] - order[b];
-                                })
-                                .map(([compType, data]) => {
-                                const compTypeLabel = compType === 'competition_1' ? 'Competition I' :
-                                                     compType === 'competition_2' ? 'Competition II' :
-                                                     compType === 'competition_3' ? 'Competition III' : compType;
-                                const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
-                                const key = `${item.gender}_${item.ageGroup}_${compType}`;
-                                const isStarting = startingCompTypes[key] || false;
-                                
-                                return (
-                                  <div
-                                    key={`${item.gender}-${item.ageGroup}-${compType}`}
-                                    className={`p-3 rounded border-2 ${
-                                      data.isStarted
-                                        ? 'bg-blue-50 border-blue-300'
-                                        : data.hasMinimumJudges
-                                        ? 'bg-green-50 border-green-300'
-                                        : 'bg-red-50 border-red-300'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-sm font-semibold text-gray-900">{compTypeLabel}</span>
-                                        {data.isStarted ? (
-                                          <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
-                                        ) : data.hasMinimumJudges ? (
-                                          <CheckCircle className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                          <XCircle className="h-4 w-4 text-red-600" />
-                                        )}
-                                      </div>
-                                      {!data.isStarted && (
-                                        <button
-                                          onClick={() => handleStartCompetitionType(item.gender, item.ageGroup, compType)}
-                                          disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
-                                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 min-h-[36px] text-xs"
-                                        >
-                                          <Play className="h-3 w-3" />
-                                          <span>{isStarting ? 'Starting...' : 'Start'}</span>
-                                        </button>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-gray-600">
-                                      Judges ({data.judges?.length || 0}): <span className="font-medium">{judgeNames}</span>
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      .map(item => (
+                        <JudgeGroupCard key={`male-${item.ageGroup}`} item={item}
+                          genderColor={ADMIN_COLORS.blue} startingCompTypes={startingCompTypes}
+                          onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary} />
+                      ))}
                   </div>
                 </div>
-
-                {/* Girls Age Groups */}
+                {/* Girls */}
                 <div>
-                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                    <Venus className="h-4 w-4 mr-2 text-pink-600" />
-                    Girls Age Groups
-                  </h4>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Venus className="w-4 h-4" style={{ color: '#EC4899' }} />
+                    <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Girls Age Groups</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {judgesSummary
                       .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
-                      .map((item, index) => {
-                        const ageGroupLabel = item.ageGroup === 'Under10' ? 'Under 10' :
-                                             item.ageGroup === 'Under12' ? 'Under 12' :
-                                             item.ageGroup === 'Under14' ? 'Under 14' :
-                                             item.ageGroup === 'Under16' ? 'Under 16' :
-                                             item.ageGroup === 'Under18' ? 'Under 18' :
-                                             item.ageGroup === 'Above16' ? 'Above 16' :
-                                             item.ageGroup === 'Above18' ? 'Above 18' : item.ageGroup;
-                        
-                        return (
-                          <div
-                            key={`female-${item.ageGroup}`}
-                            className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50"
-                          >
-                            <div className="mb-2">
-                              <span className="font-semibold text-gray-900">{ageGroupLabel}</span>
-                            </div>
-                            
-                            {/* Competition Types */}
-                            <div className="ml-4 space-y-2">
-                              {item.competitionTypes && Object.entries(item.competitionTypes)
-                                .sort(([a], [b]) => {
-                                  const order = { 'competition_1': 1, 'competition_2': 2, 'competition_3': 3 };
-                                  return order[a] - order[b];
-                                })
-                                .map(([compType, data]) => {
-                                const compTypeLabel = compType === 'competition_1' ? 'Competition I' :
-                                                     compType === 'competition_2' ? 'Competition II' :
-                                                     compType === 'competition_3' ? 'Competition III' : compType;
-                                const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
-                                const key = `${item.gender}_${item.ageGroup}_${compType}`;
-                                const isStarting = startingCompTypes[key] || false;
-                                
-                                return (
-                                  <div
-                                    key={`${item.gender}-${item.ageGroup}-${compType}`}
-                                    className={`p-3 rounded border-2 ${
-                                      data.isStarted
-                                        ? 'bg-blue-50 border-blue-300'
-                                        : data.hasMinimumJudges
-                                        ? 'bg-green-50 border-green-300'
-                                        : 'bg-red-50 border-red-300'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-sm font-semibold text-gray-900">{compTypeLabel}</span>
-                                        {data.isStarted ? (
-                                          <span className="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">Started</span>
-                                        ) : data.hasMinimumJudges ? (
-                                          <CheckCircle className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                          <XCircle className="h-4 w-4 text-red-600" />
-                                        )}
-                                      </div>
-                                      {!data.isStarted && (
-                                        <button
-                                          onClick={() => handleStartCompetitionType(item.gender, item.ageGroup, compType)}
-                                          disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
-                                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 min-h-[36px] text-xs"
-                                        >
-                                          <Play className="h-3 w-3" />
-                                          <span>{isStarting ? 'Starting...' : 'Start'}</span>
-                                        </button>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-gray-600">
-                                      Judges ({data.judges?.length || 0}): <span className="font-medium">{judgeNames}</span>
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      .map(item => (
+                        <JudgeGroupCard key={`female-${item.ageGroup}`} item={item}
+                          genderColor="#EC4899" startingCompTypes={startingCompTypes}
+                          onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary} />
+                      ))}
                   </div>
                 </div>
               </div>
             )}
           </div>
-        )}
-
-      </div>
-    </ResponsiveContainer>
+        </FadeIn>
+      )}
+    </div>
   );
 
+  // ─── Loading State ─────────────────────────────────────────────────────────
   if (loading && activeTab === 'dashboard') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center"
+        style={{ background: ADMIN_COLORS.dark }}>
         <div className="text-center">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          </div>
-          <ResponsiveText className="mt-4 text-gray-600 text-center">Loading admin dashboard...</ResponsiveText>
+          <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4"
+            style={{ borderTopColor: ADMIN_COLORS.saffron, animation: 'spin 0.8s linear infinite' }} />
+          <p className="text-white/40 text-sm">Loading dashboard…</p>
         </div>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Confirmation Dialog */}
+    <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
@@ -511,200 +400,148 @@ const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
         confirmButtonClass="bg-green-600 hover:bg-green-700"
       />
 
-      {/* Single Combined Navigation */}
-      <nav className="bg-white shadow-lg border-b">
-        <ResponsiveContainer maxWidth="desktop" padding="responsive">
-          {/* Single row with everything */}
-          <div className="flex justify-between items-center h-14 md:h-16">
-            {/* Left side - Admin Dashboard and tabs */}
-            <div className="flex items-center space-x-4 md:space-x-8">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-                <ResponsiveHeading level={2} className="text-gray-900">
-                  {routePrefix === '/superadmin' ? 'Super Admin Dashboard' : 'Admin Dashboard'}
-                </ResponsiveHeading>
-              </div>
-
-              {/* Desktop Navigation Tabs */}
-              {!isMobile && (
-                <div className="flex space-x-4">
-                  <button
-                    onClick={() => navigate(`${routePrefix}/dashboard`)}
-                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${activeTab === 'dashboard'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                  >
-                    <ResponsiveNavText className={activeTab === 'dashboard' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}>
-                      Dashboard
-                    </ResponsiveNavText>
-                  </button>
-                  <button
-                    onClick={() => navigate(`${routePrefix}/dashboard/teams`)}
-                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${activeTab === 'teams'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                  >
-                    <ResponsiveNavText className={activeTab === 'teams' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}>
-                      Teams
-                    </ResponsiveNavText>
-                  </button>
-                  <button
-                    onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
-                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${activeTab === 'scores'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                  >
-                    <ResponsiveNavText className={activeTab === 'scores' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}>
-                      Scores
-                    </ResponsiveNavText>
-                  </button>
-                  <button
-                    onClick={() => navigate(`${routePrefix}/dashboard/judges`)}
-                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${activeTab === 'judges'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                  >
-                    <ResponsiveNavText className={activeTab === 'judges' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}>
-                      Judges
-                    </ResponsiveNavText>
-                  </button>
-                  <button
-                    onClick={() => navigate(`${routePrefix}/dashboard/transactions`)}
-                    className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium min-h-[44px] md:min-h-0 ${
-                      activeTab === 'transactions'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    <ResponsiveNavText
-                      className={
-                        activeTab === 'transactions'
-                          ? 'text-white'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }
-                    >
-                      Transactions
-                    </ResponsiveNavText>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Right side - Competition Selector, User info and logout */}
-            <div className="flex items-center space-x-2 md:space-x-4">
-              {/* Competition Selector for Admin */}
-              <CompetitionProvider userType={storagePrefix}>
-                <CompetitionSelector userType={storagePrefix} />
-              </CompetitionProvider>
-              
-              <ResponsiveText size="sm" className="text-gray-600 hidden sm:block">Welcome, Admin</ResponsiveText>
-              <button
-                onClick={() => {
-                  // Handle logout
-                  localStorage.removeItem(`${storagePrefix}_token`);
-                  localStorage.removeItem(`${storagePrefix}_user`);
-                  navigate(`${routePrefix}/login`);
-                }}
-                className="px-2 py-1 md:px-3 md:py-1 bg-red-600 text-white rounded hover:bg-red-700 min-h-[44px] md:min-h-0"
-              >
-                <ResponsiveText size="xs" className="text-white">Logout</ResponsiveText>
-              </button>
-              
-              {/* Mobile Menu Button */}
-              {isMobile && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 text-gray-600 hover:text-gray-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                >
-                  <Menu className="h-6 w-6" />
-                </button>
-              )}
+      {/* ─── Navbar ─────────────────────────────────────────────────────── */}
+      <motion.header
+        className="fixed top-0 left-0 right-0 z-50"
+        style={{
+          background: scrolled ? 'rgba(10,10,10,0.94)' : 'rgba(10,10,10,0.80)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${scrolled ? ADMIN_COLORS.darkBorder : ADMIN_COLORS.darkBorderSubtle}`,
+          transition: 'border-color 0.3s',
+        }}
+        initial={{ y: -70, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
+          {/* Left: Logo + Title */}
+          <div className="flex items-center gap-3">
+            <img src={BHALogo} alt="BHA" className="h-8 w-auto object-contain" />
+            <div className="hidden sm:block">
+              <p className="text-xs font-bold tracking-widest uppercase leading-none"
+                style={{ color: isSuperAdmin ? ADMIN_COLORS.saffron : ADMIN_COLORS.purple }}>
+                {isSuperAdmin ? 'Super Admin' : 'Admin'}
+              </p>
+              <p className="text-white text-sm font-bold leading-tight">Dashboard</p>
             </div>
           </div>
 
-          {/* Mobile Navigation Menu */}
-          {isMobile && mobileMenuOpen && (
-            <div className="border-t border-gray-200 py-2">
-              <div className="flex flex-col space-y-1">
-                <button
-                  onClick={() => {
-                    navigate(`${routePrefix}/dashboard`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${activeTab === 'dashboard'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => {
-                    navigate(`${routePrefix}/dashboard/teams`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${activeTab === 'teams'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                  Teams
-                </button>
-                <button
-                  onClick={() => {
-                    navigate(`${routePrefix}/dashboard/scores`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${activeTab === 'scores'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                  Scores
-                </button>
-                <button
-                  onClick={() => {
-                    navigate(`${routePrefix}/dashboard/judges`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${activeTab === 'judges'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                  Judges
-                </button>
-                <button
-                  onClick={() => {
-                    navigate(`${routePrefix}/dashboard/transactions`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-4 py-3 text-left font-medium min-h-[44px] ${
-                    activeTab === 'transactions'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Transactions
-                </button>
-              </div>
-            </div>
+          {/* Center: Desktop Tabs */}
+          {!isMobile && (
+            <nav className="flex items-center gap-1" aria-label="Admin navigation">
+              {NAV_TABS.map((t) => {
+                const Icon = t.icon;
+                const isActive = activeTab === t.id;
+                return (
+                  <motion.button
+                    key={t.id}
+                    onClick={() => handleTabNav(t.id)}
+                    className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 min-h-[36px]"
+                    style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.5)' }}
+                    whileHover={{ color: '#fff' }}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    {isActive && (
+                      <motion.div
+                        className="absolute inset-0 rounded-lg"
+                        style={{ background: `${isSuperAdmin ? ADMIN_COLORS.saffron : ADMIN_COLORS.purple}20`, border: `1px solid ${isSuperAdmin ? ADMIN_COLORS.saffron : ADMIN_COLORS.purple}30` }}
+                        layoutId="activeTab"
+                        transition={ADMIN_SPRING}
+                      />
+                    )}
+                    <Icon className="w-3.5 h-3.5 relative z-10" aria-hidden="true" />
+                    <span className="relative z-10">{t.label}</span>
+                  </motion.button>
+                );
+              })}
+            </nav>
           )}
-        </ResponsiveContainer>
-      </nav>
 
-      {/* Content */}
-      <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
-        {activeTab === 'dashboard' && renderDashboardTab()}
-        {activeTab === 'teams' && <AdminTeams routePrefix={routePrefix} storagePrefix={storagePrefix} />}
-        {activeTab === 'scores' && <AdminScores routePrefix={routePrefix} storagePrefix={storagePrefix} />}
-        {activeTab === 'judges' && <AdminJudges routePrefix={routePrefix} storagePrefix={storagePrefix} />}
-        {activeTab === 'transactions' && <AdminTransactions />}
-      </ResponsiveContainer>
+          {/* Right: Competition Selector + Logout + Mobile Menu */}
+          <div className="flex items-center gap-2">
+            <CompetitionProvider userType={storagePrefix}>
+              <CompetitionSelector userType={storagePrefix} />
+            </CompetitionProvider>
+
+            <motion.button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold min-h-[36px] transition-colors duration-200"
+              style={{ color: 'rgba(255,255,255,0.5)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
+              whileHover={{ color: ADMIN_COLORS.red, borderColor: `${ADMIN_COLORS.red}40` }}
+              aria-label="Logout"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Logout</span>
+            </motion.button>
+
+            {isMobile && (
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.7)' }}
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileMenuOpen}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div key={mobileMenuOpen ? 'x' : 'menu'}
+                    initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                    {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </motion.div>
+                </AnimatePresence>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobile && mobileMenuOpen && (
+            <motion.div
+              className="border-t"
+              style={{ background: 'rgba(10,10,10,0.98)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorder }}
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+            >
+              <div className="px-4 py-4 space-y-1">
+                {NAV_TABS.map((t, i) => {
+                  const Icon = t.icon;
+                  const isActive = activeTab === t.id;
+                  return (
+                    <motion.button
+                      key={t.id}
+                      onClick={() => handleTabNav(t.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] transition-all duration-200"
+                      style={{
+                        background: isActive ? `${isSuperAdmin ? ADMIN_COLORS.saffron : ADMIN_COLORS.purple}18` : 'transparent',
+                        color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${isActive ? (isSuperAdmin ? ADMIN_COLORS.saffron : ADMIN_COLORS.purple) + '30' : 'transparent'}`,
+                      }}
+                      initial={{ opacity: 0, x: -16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
+                      <Icon className="w-4 h-4" aria-hidden="true" />
+                      {t.label}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.header>
+
+      {/* ─── Page Content ───────────────────────────────────────────────── */}
+      <main id="main-content" className="pt-16">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+          {activeTab === 'dashboard' && renderDashboardTab()}
+          {activeTab === 'teams' && <AdminTeams />}
+          {activeTab === 'scores' && <AdminScores />}
+          {activeTab === 'judges' && <AdminJudges />}
+          {activeTab === 'transactions' && <AdminTransactions />}
+        </div>
+      </main>
     </div>
   );
 };

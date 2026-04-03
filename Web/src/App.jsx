@@ -23,6 +23,7 @@ const CoachSelectCompetition = lazy(() => import('./pages/CoachSelectCompetition
 const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
 const CoachPayment = lazy(() => import('./pages/CoachPayment'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const AdminTeams = lazy(() => import('./pages/AdminTeams'));
@@ -37,10 +38,10 @@ const PublicScores = lazy(() => import('./pages/PublicScores'));
 
 // Loading component
 const PageLoader = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0a' }}>
     <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-      <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#FF6B35' }}></div>
+      <p className="mt-4 text-white/45">Loading...</p>
     </div>
   </div>
 );
@@ -207,12 +208,14 @@ function AppContent() {
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
       <CompetitionProvider userType={userType}>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen" style={{ background: '#0a0a0a' }}>
           {/* Only show main navbar if not on admin routes, home page, public scores, or competition selection pages */}
           {!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+        {/* Add padding-top when navbar is shown to prevent content overlap */}
+        <div className={!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage ? 'pt-16' : ''}>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/scores" element={<PublicScores />} />
@@ -346,14 +349,7 @@ function AppContent() {
 
             {/* Super Admin Routes */}
             <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />
-            <Route 
-              path="/superadmin/login" 
-              element={
-                <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
-                  <AdminLogin />
-                </RouteContext.Provider>
-              } 
-            />
+            <Route path="/superadmin/login" element={<SuperAdminLogin />} />
 
             {/* Protected Super Admin Routes */}
             <Route
@@ -391,6 +387,7 @@ function AppContent() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </div>
 
         <Toaster
           position="top-right"

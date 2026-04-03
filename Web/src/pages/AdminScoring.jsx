@@ -1,21 +1,22 @@
+// AdminScoring.jsx - Dark theme version
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
-import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { useRouteContext } from '../contexts/RouteContext';
 import { logger } from '../utils/logger';
+import { ADMIN_COLORS } from './adminTheme';
+import BHALogo from '../assets/BHA.png';
 
 const AdminScoring = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { routePrefix, storagePrefix } = useRouteContext();
+    const { routePrefix } = useRouteContext();
     const { selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType } = location.state || {};
-
-    // Select appropriate API based on route context
     const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
 
     const [socket, setSocket] = useState(null);
@@ -33,231 +34,71 @@ const AdminScoring = () => {
     const [ageGroupStarted, setAgeGroupStarted] = useState(false);
     const [competitionType, setCompetitionType] = useState('Competition I');
 
-    // Initialize Socket.IO connection
     useEffect(() => {
-        // Remove /api from the URL for Socket.IO connection
         const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
         const newSocket = io(socketUrl);
         setSocket(newSocket);
-
         newSocket.on('connect', () => {
-            logger.log('Connected to server');
             setIsConnected(true);
-            // Join scoring room for this age group, gender, and competition type
             if (selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
                 const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
                 newSocket.emit('join_scoring_room', roomId);
-                logger.log('Joined room:', roomId);
-            } else {
-                logger.warn('Cannot join scoring room: missing required filter values', {
-                    gender: selectedGender?.value,
-                    ageGroup: selectedAgeGroup?.value,
-                    competitionType: selectedCompetitionType?.value
-                });
             }
         });
-
-        newSocket.on('disconnect', () => {
-            logger.log('Disconnected from server');
-            setIsConnected(false);
-        });
-
-        newSocket.on('connect_error', (error) => {
-            logger.error('Connection error:', error);
-            setIsConnected(false);
-        });
-
-        return () => {
-            newSocket.disconnect();
-        };
+        newSocket.on('disconnect', () => setIsConnected(false));
+        newSocket.on('connect_error', () => setIsConnected(false));
+        return () => newSocket.disconnect();
     }, [selectedGender, selectedAgeGroup, selectedCompetitionType]);
 
-    // Set up score update listener
     useEffect(() => {
         if (!socket) return;
-
         const handleScoreUpdate = (data) => {
-            logger.log('Received real-time score update:', data);
-
-            // Don't update if scores are locked
-            if (isLocked) {
-                toast.info(`Score update received but entry is locked: ${data.judgeType} scored ${data.score} for ${data.playerName}`);
-                return;
-            }
-
-            // Check if player exists in current players list
+            if (isLocked) { toast.info(`Score update received but locked`); return; }
             const playerExists = players.some(p => p.id === data.playerId);
-
-            if (!playerExists) {
-                logger.warn('Player not found in current players list:', data.playerId);
-                return;
-            }
-
-            // Map judge type to the correct field name
-            let fieldName = '';
-            switch (data.judgeType) {
-                case 'Senior Judge':
-                    fieldName = 'seniorJudge';
-                    break;
-                case 'Judge 1':
-                    fieldName = 'judge1';
-                    break;
-                case 'Judge 2':
-                    fieldName = 'judge2';
-                    break;
-                case 'Judge 3':
-                    fieldName = 'judge3';
-                    break;
-                case 'Judge 4':
-                    fieldName = 'judge4';
-                    break;
-                default:
-                    fieldName = 'seniorJudge';
-            }
-
-            setScores(prevScores => ({
-                ...prevScores,
-                [data.playerId]: {
-                    ...prevScores[data.playerId],
-                    [fieldName]: data.score.toString()
-                }
-            }));
-
+            if (!playerExists) return;
+            const fieldMap = { 'Senior Judge': 'seniorJudge', 'Judge 1': 'judge1', 'Judge 2': 'judge2', 'Judge 3': 'judge3', 'Judge 4': 'judge4' };
+            const fieldName = fieldMap[data.judgeType] || 'seniorJudge';
+            setScores(prev => ({ ...prev, [data.playerId]: { ...prev[data.playerId], [fieldName]: data.score.toString() } }));
             setLastUpdated(new Date());
-
-            toast.success(`${data.judgeType} scored ${data.score} for ${data.playerName}`, {
-                duration: 2000,
-                icon: '🎯'
-            });
+            toast.success(`${data.judgeType} scored ${data.score} for ${data.playerName}`, { duration: 2000, icon: '🎯' });
         };
-
-        socket.on('score_updated', handleScoreUpdate);
-
-        // Listen for scores saved notifications
         const handleScoresSaved = (data) => {
-            logger.log('Received scores saved notification:', data);
-            
-            // If this is for the current team/category, refresh the data
-            if (data.teamId === selectedTeam._id && 
-                data.gender === selectedGender.value && 
-                data.ageGroup === selectedAgeGroup.value) {
-                
-                toast.info('Scores have been updated by another user', {
-                    duration: 3000,
-                    icon: '🔄'
-                });
-                
-                // Refresh the scoring data to get latest scores
+            if (data.teamId === selectedTeam?._id && data.gender === selectedGender?.value && data.ageGroup === selectedAgeGroup?.value) {
+                toast.info('Scores updated by another user', { duration: 3000, icon: '🔄' });
                 fetchScoringData();
             }
         };
-
+        socket.on('score_updated', handleScoreUpdate);
         socket.on('scores_saved_notification', handleScoresSaved);
-
-        return () => {
-            socket.off('score_updated', handleScoreUpdate);
-            socket.off('scores_saved_notification', handleScoresSaved);
-        };
+        return () => { socket.off('score_updated', handleScoreUpdate); socket.off('scores_saved_notification', handleScoresSaved); };
     }, [socket, players, isLocked]);
 
-    // Fetch data on component mount
     useEffect(() => {
-        if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
-            navigate(`${routePrefix}/dashboard/scores`);
-            return;
-        }
-
+        if (!selectedTeam || !selectedGender || !selectedAgeGroup) { navigate(`${routePrefix}/dashboard/scores`); return; }
         fetchScoringData();
     }, [selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
 
     const fetchScoringData = async () => {
         try {
             setLoading(true);
-            logger.log('Fetching scoring data for:', {
-                team: selectedTeam.name,
-                teamId: selectedTeam._id,
-                gender: selectedGender.value,
-                ageGroup: selectedAgeGroup.value,
-                competitionType: selectedCompetitionType?.value
-            });
-
-            // Fetch judges for the selected age group, gender, and competition type
-            const judgesParams = {
-                gender: selectedGender.value,
-                ageGroup: selectedAgeGroup.value
-            };
-            
-            // Add competitionTypes parameter if available
-            if (selectedCompetitionType?.value) {
-                judgesParams.competitionTypes = selectedCompetitionType.value;
-            }
-
+            const judgesParams = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value };
+            if (selectedCompetitionType?.value) judgesParams.competitionTypes = selectedCompetitionType.value;
             const judgesResponse = await api.getJudges(judgesParams);
-
-            const activeJudges = judgesResponse.data.judges
-                .filter(judge => !judge.isEmpty && judge.name && judge.name.trim() !== '')
-                .sort((a, b) => a.judgeNo - b.judgeNo);
-
+            const activeJudges = judgesResponse.data.judges.filter(j => !j.isEmpty && j.name?.trim()).sort((a, b) => a.judgeNo - b.judgeNo);
             setJudges(activeJudges);
-            logger.log('Loaded judges:', activeJudges);
-
-            // Check if age group is started
             const summaryResponse = await api.getAllJudgesSummary();
-            const ageGroupInfo = summaryResponse.data.summary.find(
-                item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
-            );
-            
-            // Check if the specific competition type is started
-            const compTypeStarted = selectedCompetitionType?.value 
-                ? ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false
-                : ageGroupInfo?.isStarted || false;
-            
+            const ageGroupInfo = summaryResponse.data.summary.find(item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value);
+            const compTypeStarted = selectedCompetitionType?.value ? ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false : ageGroupInfo?.isStarted || false;
             setAgeGroupStarted(compTypeStarted);
-
-            // Set competition type from the passed value
-            if (selectedCompetitionType?.label) {
-                setCompetitionType(selectedCompetitionType.label);
-            }
-
-            // Get players from the selected team for this age group
+            if (selectedCompetitionType?.label) setCompetitionType(selectedCompetitionType.label);
             const teamPlayers = selectedTeam.players
-                .filter(playerEntry =>
-                    playerEntry.player.gender === selectedGender.value &&
-                    playerEntry.ageGroup === selectedAgeGroup.value
-                )
-                .map(playerEntry => ({
-                    id: playerEntry.player._id,
-                    name: `${playerEntry.player.firstName} ${playerEntry.player.lastName}`,
-                    gender: playerEntry.player.gender,
-                    ageGroup: playerEntry.ageGroup,
-                    teamId: selectedTeam._id,
-                    teamName: selectedTeam.name
-                }));
-
+                .filter(pe => pe.player.gender === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+                .map(pe => ({ id: pe.player._id, name: `${pe.player.firstName} ${pe.player.lastName}`, gender: pe.player.gender, ageGroup: pe.ageGroup, teamId: selectedTeam._id, teamName: selectedTeam.name }));
             setPlayers(teamPlayers);
-            logger.log('Loaded players:', teamPlayers);
-
-            // Initialize scores object
             const initialScores = {};
-            teamPlayers.forEach(player => {
-                initialScores[player.id] = {
-                    time: '',
-                    seniorJudge: '',
-                    judge1: '',
-                    judge2: '',
-                    judge3: '',
-                    judge4: '',
-                    deduction: '',
-                    otherDeduction: ''
-                };
-            });
-
+            teamPlayers.forEach(p => { initialScores[p.id] = { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '' }; });
             setScores(initialScores);
-            logger.log('Initialized scores:', initialScores);
-
-            // Try to load existing scores from database
             await loadExistingScores(selectedTeam._id, selectedGender.value, selectedAgeGroup.value, initialScores, teamPlayers);
-
         } catch (error) {
             logger.error('Error fetching scoring data:', error);
             toast.error('Failed to load scoring data');
@@ -268,162 +109,31 @@ const AdminScoring = () => {
 
     const loadExistingScores = async (teamId, gender, ageGroup, initialScores, currentPlayers) => {
         try {
-            logger.log('🔍 LOADING EXISTING SCORES');
-            logger.log('Target:', { teamId, gender, ageGroup });
-            logger.log('Current players:', currentPlayers.map(p => ({ id: p.id, name: p.name })));
-
-            // Fetch scores from API with specific filters
-            let allResponse;
-            try {
-                allResponse = await api.getTeamScores({
-                    teamId: teamId,
-                    gender: gender,
-                    ageGroup: ageGroup
-                });
-                logger.log('📊 Raw API response:', allResponse.data);
-            } catch (apiError) {
-                logger.error('❌ API call failed:', apiError);
-                toast.error('API call failed - starting fresh session');
-                setScores(initialScores);
-                return;
-            }
-
-            // Validate response structure
-            if (!allResponse || !allResponse.data) {
-                logger.error('❌ Invalid API response structure:', allResponse);
-                toast.error('Invalid data format - starting fresh session');
-                setScores(initialScores);
-                return;
-            }
-
-            // Handle different response formats
-            let matchingScores = [];
-            if (allResponse.data.scores) {
-                matchingScores = allResponse.data.scores;
-            } else if (allResponse.data.teamScores) {
-                matchingScores = allResponse.data.teamScores;
-            }
-
-            logger.log(`📋 Matching scores found: ${matchingScores.length}`);
-
-            // No scores found scenario
-            if (matchingScores.length === 0) {
-                logger.log('ℹ️ No scores found for this team/category');
-                toast.info('Starting fresh session');
-                setScores(initialScores);
-                return;
-            }
-
-            // Use the most recent score (first one)
+            const allResponse = await api.getTeamScores({ teamId, gender, ageGroup });
+            if (!allResponse?.data) { setScores(initialScores); return; }
+            const matchingScores = allResponse.data.scores || allResponse.data.teamScores || [];
+            if (matchingScores.length === 0) { toast.info('Starting fresh session'); setScores(initialScores); return; }
             const existingScore = matchingScores[0];
-            logger.log('🎯 Using existing score:', existingScore);
-
-            // Validate score data structure
-            if (!existingScore.playerScores || !Array.isArray(existingScore.playerScores)) {
-                logger.error('❌ Invalid score data format - missing or invalid playerScores:', existingScore);
-                toast.error('Invalid data format - starting fresh session');
-                setScores(initialScores);
-                return;
-            }
-
+            if (!existingScore.playerScores || !Array.isArray(existingScore.playerScores)) { setScores(initialScores); return; }
             const existingScores = { ...initialScores };
-
-            // Extract and set lock state from loaded scores
-            const lockState = existingScore.isLocked || false;
-            setIsLocked(lockState);
+            setIsLocked(existingScore.isLocked || false);
             setExistingScoreId(existingScore._id);
-
-            logger.log(`🔒 Lock state: ${lockState ? 'LOCKED' : 'UNLOCKED'}`);
-
-            // Load team details
             if (existingScore.timeKeeper) setTimeKeeper(existingScore.timeKeeper);
             if (existingScore.scorer) setScorer(existingScore.scorer);
             if (existingScore.remarks) setRemarks(existingScore.remarks);
             if (existingScore.competitionType) setCompetitionType(existingScore.competitionType);
-
-            // Track unmatched players for warnings
-            const unmatchedPlayers = [];
-
-            // Map database scores to UI state with improved player matching
-            existingScore.playerScores.forEach(playerScore => {
-                logger.log('👤 Processing player:', playerScore.playerName, playerScore.playerId);
-
-                let targetPlayerId = null;
-
-                // Step 1: Try to match by playerId first (primary matching)
-                if (playerScore.playerId && existingScores[playerScore.playerId]) {
-                    targetPlayerId = playerScore.playerId;
-                    logger.log(`✅ Matched by playerId: ${playerScore.playerName} (${targetPlayerId})`);
-                } else {
-                    // Step 2: Fallback to matching by playerName
-                    const matchingPlayer = currentPlayers.find(p => p.name === playerScore.playerName);
-                    if (matchingPlayer) {
-                        targetPlayerId = matchingPlayer.id;
-                        logger.log(`🔄 Matched by name: ${playerScore.playerName} (${playerScore.playerId} → ${targetPlayerId})`);
-                    }
-                }
-
-                // If we found a match, load the scores
-                if (targetPlayerId && existingScores[targetPlayerId]) {
-                    existingScores[targetPlayerId] = {
-                        time: playerScore.time || '',
-                        seniorJudge: playerScore.judgeScores?.seniorJudge?.toString() || '',
-                        judge1: playerScore.judgeScores?.judge1?.toString() || '',
-                        judge2: playerScore.judgeScores?.judge2?.toString() || '',
-                        judge3: playerScore.judgeScores?.judge3?.toString() || '',
-                        judge4: playerScore.judgeScores?.judge4?.toString() || '',
-                        deduction: playerScore.deduction?.toString() || '',
-                        otherDeduction: playerScore.otherDeduction?.toString() || ''
-                    };
-                    logger.log(`✅ Loaded scores for ${playerScore.playerName}:`, existingScores[targetPlayerId]);
-                } else {
-                    // Track unmatched players
-                    unmatchedPlayers.push(playerScore.playerName);
-                    logger.warn(`⚠️ Could not match player ${playerScore.playerName} (${playerScore.playerId})`);
+            existingScore.playerScores.forEach(ps => {
+                let targetId = ps.playerId && existingScores[ps.playerId] ? ps.playerId : currentPlayers.find(p => p.name === ps.playerName)?.id;
+                if (targetId && existingScores[targetId]) {
+                    existingScores[targetId] = { time: ps.time || '', seniorJudge: ps.judgeScores?.seniorJudge?.toString() || '', judge1: ps.judgeScores?.judge1?.toString() || '', judge2: ps.judgeScores?.judge2?.toString() || '', judge3: ps.judgeScores?.judge3?.toString() || '', judge4: ps.judgeScores?.judge4?.toString() || '', deduction: ps.deduction?.toString() || '', otherDeduction: ps.otherDeduction?.toString() || '' };
                 }
             });
-
-            // Log warnings for unmatched players
-            if (unmatchedPlayers.length > 0) {
-                logger.warn('⚠️ Unmatched players:', unmatchedPlayers);
-                logger.warn('Available players:', currentPlayers.map(p => `${p.name} (${p.id})`));
-                toast.warning(`Player matching failed for: ${unmatchedPlayers.join(', ')}`);
-            }
-
             setScores(existingScores);
             setLastUpdated(new Date(existingScore.updatedAt || existingScore.createdAt));
-
-            logger.log('🎉 FINAL LOADED STATE:', existingScores);
-
-            // Display appropriate user feedback based on lock state
-            if (lockState) {
-                toast.success('Found locked scoring session');
-            } else {
-                toast.success('Found existing scoring session');
-            }
-
+            toast.success(existingScore.isLocked ? 'Found locked scoring session' : 'Found existing scoring session');
         } catch (error) {
-            // Comprehensive error handling with detailed logging
-            logger.error('❌ Error loading existing scores:', error);
-            logger.error('Error details:', {
-                message: error.message,
-                stack: error.stack,
-                name: error.name
-            });
-
-            // Provide specific error feedback to user
-            if (error.response) {
-                // API returned an error response
-                toast.error(`API call failed - starting fresh session`);
-            } else if (error.request) {
-                // Request was made but no response received
-                toast.error('API call failed - starting fresh session');
-            } else {
-                // Something else went wrong
-                toast.error('API call failed - starting fresh session');
-            }
-
-            // Reset to initial state
+            logger.error('Error loading existing scores:', error);
+            toast.error('API call failed - starting fresh session');
             setScores(initialScores);
             setIsLocked(false);
             setExistingScoreId(null);
@@ -431,229 +141,49 @@ const AdminScoring = () => {
     };
 
     const calculateAverageMarks = (playerScores) => {
-        // Get execution scores (exclude senior judge initially)
-        const executionScores = [
-            parseFloat(playerScores.judge1) || 0,
-            parseFloat(playerScores.judge2) || 0,
-            parseFloat(playerScores.judge3) || 0,
-            parseFloat(playerScores.judge4) || 0
-        ].filter(score => score > 0);
-
+        const executionScores = [parseFloat(playerScores.judge1) || 0, parseFloat(playerScores.judge2) || 0, parseFloat(playerScores.judge3) || 0, parseFloat(playerScores.judge4) || 0].filter(s => s > 0);
         if (executionScores.length === 0) return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0 };
-
-        // Calculate execution average
         let executionAverage = 0;
-        if (executionScores.length <= 2) {
-            // Use all scores
-            executionAverage = executionScores.reduce((sum, score) => sum + score, 0) / executionScores.length;
-        } else if (executionScores.length === 3) {
-            // Use middle score
-            const sorted = [...executionScores].sort((a, b) => a - b);
-            executionAverage = sorted[1];
-        } else {
-            // 4 or more: remove highest and lowest, average middle two
-            const sorted = [...executionScores].sort((a, b) => a - b);
-            const trimmed = sorted.slice(1, -1);
-            executionAverage = trimmed.reduce((sum, score) => sum + score, 0) / trimmed.length;
-        }
-
+        if (executionScores.length <= 2) executionAverage = executionScores.reduce((s, v) => s + v, 0) / executionScores.length;
+        else if (executionScores.length === 3) executionAverage = [...executionScores].sort((a, b) => a - b)[1];
+        else { const sorted = [...executionScores].sort((a, b) => a - b); const trimmed = sorted.slice(1, -1); executionAverage = trimmed.reduce((s, v) => s + v, 0) / trimmed.length; }
         const seniorJudge = parseFloat(playerScores.seniorJudge) || 0;
-
-        // If no senior judge score, use execution average only
-        if (seniorJudge === 0) {
-            return {
-                average: parseFloat(executionAverage.toFixed(2)),
-                baseScoreApplied: false,
-                executionAvg: parseFloat(executionAverage.toFixed(2)),
-                baseScore: 0,
-                tolerance: getTolerance(executionAverage)
-            };
-        }
-
-        // Get tolerance based on execution average
+        if (seniorJudge === 0) return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance: getTolerance(executionAverage) };
         const tolerance = getTolerance(executionAverage);
-        const difference = Math.abs(executionAverage - seniorJudge);
-
-        // Check if within tolerance
-        if (difference <= tolerance) {
-            // Use execution average
-            return {
-                average: parseFloat(executionAverage.toFixed(2)),
-                baseScoreApplied: false,
-                executionAvg: parseFloat(executionAverage.toFixed(2)),
-                baseScore: 0,
-                tolerance
-            };
-        } else {
-            // Calculate base score
-            const baseScore = (executionAverage + seniorJudge) / 2;
-            return {
-                average: parseFloat(baseScore.toFixed(2)),
-                baseScoreApplied: true,
-                executionAvg: parseFloat(executionAverage.toFixed(2)),
-                baseScore: parseFloat(baseScore.toFixed(2)),
-                tolerance
-            };
-        }
+        if (Math.abs(executionAverage - seniorJudge) <= tolerance) return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance };
+        const baseScore = (executionAverage + seniorJudge) / 2;
+        return { average: parseFloat(baseScore.toFixed(2)), baseScoreApplied: true, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: parseFloat(baseScore.toFixed(2)), tolerance };
     };
 
-    const getTolerance = (score) => {
-        if (score >= 9.00) return 0.10;
-        if (score >= 8.00) return 0.20;
-        if (score >= 7.00) return 0.30;
-        if (score >= 6.00) return 0.40;
-        if (score >= 5.00) return 0.50;
-        return 1.00;
-    };
-
-    const calculateFinalScore = (playerScores) => {
-        const result = calculateAverageMarks(playerScores);
-        const average = result.average;
-        const deduction = parseFloat(playerScores.deduction) || 0;
-        const otherDeduction = parseFloat(playerScores.otherDeduction) || 0;
-        return Math.max(0, average - deduction - otherDeduction).toFixed(2);
-    };
+    const getTolerance = (score) => { if (score >= 9) return 0.10; if (score >= 8) return 0.20; if (score >= 7) return 0.30; if (score >= 6) return 0.40; if (score >= 5) return 0.50; return 1.00; };
+    const calculateFinalScore = (ps) => { const r = calculateAverageMarks(ps); return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2); };
 
     const handleScoreChange = (playerId, field, value) => {
-        if (isLocked) {
-            toast.error('Cannot edit scores - this entry is locked');
-            return;
-        }
-
-        setScores(prevScores => ({
-            ...prevScores,
-            [playerId]: {
-                ...prevScores[playerId],
-                [field]: value
-            }
-        }));
-
+        if (isLocked) { toast.error('Cannot edit scores - this entry is locked'); return; }
+        setScores(prev => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
         setLastUpdated(new Date());
     };
 
     const handleSaveScores = async () => {
-        if (isLocked) {
-            toast.error('Cannot save - this entry is already locked');
-            return;
-        }
-
+        if (isLocked) { toast.error('Cannot save - this entry is already locked'); return; }
         try {
-            // Validate that we have at least some scores
-            const hasAnyScores = players.some(player => {
-                const playerScores = scores[player.id];
-                return playerScores && (
-                    playerScores.seniorJudge ||
-                    playerScores.judge1 ||
-                    playerScores.judge2 ||
-                    playerScores.judge3 ||
-                    playerScores.judge4
-                );
-            });
-
-            if (!hasAnyScores) {
-                toast.error('Please enter at least some scores before saving');
-                return;
-            }
-
-            // Determine lock state based on score completeness
-            const allPlayersScored = players.every(player => {
-                const playerScore = scores[player.id];
-                if (!playerScore) return false;
-
-                // Check if player has at least one judge score and time
-                const hasJudgeScores =
-                    (playerScore.seniorJudge && parseFloat(playerScore.seniorJudge) > 0) ||
-                    (playerScore.judge1 && parseFloat(playerScore.judge1) > 0) ||
-                    (playerScore.judge2 && parseFloat(playerScore.judge2) > 0) ||
-                    (playerScore.judge3 && parseFloat(playerScore.judge3) > 0) ||
-                    (playerScore.judge4 && parseFloat(playerScore.judge4) > 0);
-                const hasTime = playerScore.time && playerScore.time.trim() !== '';
-
-                return hasJudgeScores && hasTime;
-            });
-
+            const hasAnyScores = players.some(p => { const ps = scores[p.id]; return ps && (ps.seniorJudge || ps.judge1 || ps.judge2 || ps.judge3 || ps.judge4); });
+            if (!hasAnyScores) { toast.error('Please enter at least some scores before saving'); return; }
+            const allPlayersScored = players.every(p => { const ps = scores[p.id]; if (!ps) return false; const hasJudge = (ps.seniorJudge && parseFloat(ps.seniorJudge) > 0) || (ps.judge1 && parseFloat(ps.judge1) > 0) || (ps.judge2 && parseFloat(ps.judge2) > 0) || (ps.judge3 && parseFloat(ps.judge3) > 0) || (ps.judge4 && parseFloat(ps.judge4) > 0); return hasJudge && ps.time?.trim(); });
             const shouldLock = allPlayersScored;
-
             const scoringData = {
-                teamId: selectedTeam._id,
-                teamName: selectedTeam.name,
-                coachName: selectedTeam.coach?.name,
-                coachEmail: selectedTeam.coach?.email,
-                gender: selectedGender.value,
-                ageGroup: selectedAgeGroup.value,
-                competitionType,
-                timeKeeper,
-                scorer,
-                remarks,
-                isLocked: shouldLock,
-                playerScores: players.map(player => {
-                    const result = calculateAverageMarks(scores[player.id]);
-                    return {
-                        playerId: player.id,
-                        playerName: player.name,
-                        time: scores[player.id].time,
-                        judgeScores: {
-                            seniorJudge: parseFloat(scores[player.id].seniorJudge) || 0,
-                            judge1: parseFloat(scores[player.id].judge1) || 0,
-                            judge2: parseFloat(scores[player.id].judge2) || 0,
-                            judge3: parseFloat(scores[player.id].judge3) || 0,
-                            judge4: parseFloat(scores[player.id].judge4) || 0
-                        },
-                        executionAverage: result.executionAvg,
-                        baseScore: result.baseScore,
-                        baseScoreApplied: result.baseScoreApplied,
-                        toleranceUsed: result.tolerance,
-                        averageMarks: result.average,
-                        deduction: parseFloat(scores[player.id].deduction) || 0,
-                        otherDeduction: parseFloat(scores[player.id].otherDeduction) || 0,
-                        finalScore: parseFloat(calculateFinalScore(scores[player.id]))
-                    };
-                }),
-                judgeDetails: judges.map(judge => ({
-                    judgeId: judge._id,
-                    judgeName: judge.name,
-                    judgeType: judge.judgeType,
-                    username: judge.username
-                }))
+                teamId: selectedTeam._id, teamName: selectedTeam.name, coachName: selectedTeam.coach?.name, coachEmail: selectedTeam.coach?.email,
+                gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType, timeKeeper, scorer, remarks, isLocked: shouldLock,
+                playerScores: players.map(p => { const r = calculateAverageMarks(scores[p.id]); return { playerId: p.id, playerName: p.name, time: scores[p.id].time, judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 }, executionAverage: r.executionAvg, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied, toleranceUsed: r.tolerance, averageMarks: r.average, deduction: parseFloat(scores[p.id].deduction) || 0, otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0, finalScore: parseFloat(calculateFinalScore(scores[p.id])) }; }),
+                judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, username: j.username }))
             };
-
-            // Use saveScores for both create and update (backend handles both cases)
             const response = await api.saveScores(scoringData);
-
-            // Update local lock state after successful save
             setIsLocked(shouldLock);
             setExistingScoreId(response.data.scoreId || response.data._id);
-
-            // Show appropriate success message based on lock state
-            if (shouldLock) {
-                toast.success('🎉 Scores saved and locked successfully!', {
-                    duration: 3000,
-                    icon: '✅'
-                });
-            } else {
-                toast.success('Scores saved as draft. You can continue editing.', {
-                    duration: 3000,
-                    icon: '💾'
-                });
-            }
-
-            // Emit save event via socket
+            toast.success(shouldLock ? '🎉 Scores saved and locked!' : 'Scores saved as draft.', { duration: 3000 });
             if (socket && selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
-                const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
-                socket.emit('scores_saved', {
-                    teamId: selectedTeam._id,
-                    roomId,
-                    isLocked: shouldLock
-                });
-            } else {
-                logger.warn('Cannot emit scores_saved: missing required filter values', {
-                    socketConnected: !!socket,
-                    gender: selectedGender?.value,
-                    ageGroup: selectedAgeGroup?.value,
-                    competitionType: selectedCompetitionType?.value
-                });
+                socket.emit('scores_saved', { teamId: selectedTeam._id, roomId: `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`, isLocked: shouldLock });
             }
-
         } catch (error) {
             logger.error('Error saving scores:', error);
             toast.error('Failed to save scores');
@@ -661,15 +191,8 @@ const AdminScoring = () => {
     };
 
     const handleUnlockScores = async () => {
-        if (ageGroupStarted) {
-            toast.error('Cannot unlock scores. This age group has already been started.');
-            return;
-        }
-        if (!existingScoreId) {
-            toast.error('No existing score record found');
-            return;
-        }
-
+        if (ageGroupStarted) { toast.error('Cannot unlock. Age group has been started.'); return; }
+        if (!existingScoreId) { toast.error('No existing score record found'); return; }
         try {
             await api.unlockScores(existingScoreId);
             setIsLocked(false);
@@ -680,12 +203,15 @@ const AdminScoring = () => {
         }
     };
 
+    const darkInput = `w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
+    const darkInputStyle = (disabled) => ({ background: disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` });
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading scoring page...</p>
+                    <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4 animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+                    <p className="text-white/40 text-sm">Loading scoring page…</p>
                 </div>
             </div>
         );
@@ -693,253 +219,167 @@ const AdminScoring = () => {
 
     if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
                 <div className="text-center">
-                    <p className="text-gray-600">Invalid scoring session. Please go back and select a team.</p>
-                    <button
-                        onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
-                        className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
+                    <p className="text-white/50 mb-4">Invalid scoring session. Please go back and select a team.</p>
+                    <motion.button onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px]"
+                        style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                         Back to Scores
-                    </button>
+                    </motion.button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white shadow-lg border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
-                                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-                            >
-                                <ArrowLeft className="h-5 w-5" />
-                                <span>Back to Scores</span>
-                            </button>
-                            <div className="h-6 border-l border-gray-300"></div>
-                            <h1 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-                                <Trophy className="h-6 w-6 text-purple-600" />
-                                <span>{routePrefix === '/superadmin' ? 'Super Admin Scoring' : 'Admin Scoring'}</span>
-                                {isLocked && <Lock className="h-5 w-5 text-red-500" />}
-                            </h1>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm">
-                            {isLocked ? (
-                                <div className="flex items-center space-x-2 text-red-600">
-                                    <Lock className="h-4 w-4" />
-                                    <span>Locked Entry</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center space-x-2 text-green-600">
-                                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                    <span>{isConnected ? 'Live Updates Active' : 'Disconnected'}</span>
-                                </div>
-                            )}
+        <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+            <motion.header className="sticky top-0 z-40 border-b"
+                style={{ background: 'rgba(10,10,10,0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}
+                initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
+                    <div className="flex items-center gap-4">
+                        <motion.button onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
+                            className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-white/10 transition-colors"
+                            style={{ color: 'rgba(255,255,255,0.6)' }} whileHover={{ color: '#fff' }}>
+                            <ArrowLeft className="w-4 h-4" />
+                            <span className="hidden sm:inline">Back to Scores</span>
+                        </motion.button>
+                        <div className="w-px h-5 bg-white/10" />
+                        <div className="flex items-center gap-2">
+                            <img src={BHALogo} alt="BHA" className="h-7 w-auto object-contain opacity-70" />
+                            <Trophy className="w-4 h-4" style={{ color: ADMIN_COLORS.saffron }} />
+                            <span className="text-white font-bold text-sm hidden sm:inline">{routePrefix === '/superadmin' ? 'Super Admin' : 'Admin'} Scoring</span>
+                            {isLocked && <Lock className="w-4 h-4" style={{ color: ADMIN_COLORS.red }} />}
                         </div>
                     </div>
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+                        {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
+                    </span>
                 </div>
-            </div>
+            </motion.header>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Status Banner */}
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
                 {isLocked && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <AlertCircle className="h-5 w-5 text-red-600" />
-                                <div>
-                                    <p className="text-red-800 font-medium">This scoring session is locked</p>
-                                    <p className="text-red-600 text-sm">
-                                        {ageGroupStarted 
-                                            ? 'This age group has been started. Scores cannot be modified.' 
-                                            : 'Scores have been saved and cannot be modified. You can view the results below.'}
-                                    </p>
-                                </div>
+                    <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
+                        style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
+                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: ADMIN_COLORS.red }} />
+                            <div>
+                                <p className="font-bold text-white text-sm">Scoring session is locked</p>
+                                <p className="text-xs mt-0.5 text-white/50">{ageGroupStarted ? 'Age group started. Scores cannot be modified.' : 'Scores saved and locked. Click Unlock to edit.'}</p>
                             </div>
-                            {!ageGroupStarted && (
-                                <button
-                                    onClick={handleUnlockScores}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm flex items-center space-x-1"
-                                >
-                                    <Lock className="h-4 w-4" />
-                                    <span>Unlock</span>
-                                </button>
-                            )}
                         </div>
-                    </div>
+                        {!ageGroupStarted && (
+                            <motion.button onClick={handleUnlockScores}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white min-h-[40px] flex-shrink-0"
+                                style={{ background: `${ADMIN_COLORS.red}40`, border: `1px solid ${ADMIN_COLORS.red}50` }}
+                                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                                <Lock className="w-3.5 h-3.5" /> Unlock
+                            </motion.button>
+                        )}
+                    </motion.div>
                 )}
 
-                {/* Scoring Info */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex justify-between items-start mb-6">
+                <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                {selectedGender.label} - {selectedAgeGroup.label} Scoring
-                            </h2>
-                            <p className="text-gray-600"><strong>Team:</strong> {selectedTeam.name}</p>
-                            <p className="text-gray-600"><strong>Coach:</strong> {selectedTeam.coach?.name}</p>
-                            {selectedCompetitionType && (
-                                <p className="text-gray-600"><strong>Competition:</strong> {selectedCompetitionType.label}</p>
-                            )}
-                            {lastUpdated && (
-                                <p className="text-gray-500 text-sm mt-2">
-                                    Last updated: {lastUpdated.toLocaleString()}
-                                </p>
-                            )}
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm text-gray-500">Players in this category</p>
-                            <p className="text-2xl font-bold text-purple-600">{players.length}</p>
-                        </div>
-                    </div>
-
-                    {/* Competition Type Selection - Removed as it's already selected */}
-                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                            Competition Type
-                        </label>
-                        <div className="p-3 bg-white rounded-lg border-2 border-purple-600">
-                            <div className="text-base font-semibold text-purple-900">{competitionType}</div>
-                            <div className="text-xs mt-1 text-gray-600">
-                                {competitionType === 'Competition I' && 'Team: A=4, B=6, C=1'}
-                                {competitionType === 'Competition II' && 'Individual: A=1, B=6, C=2'}
-                                {competitionType === 'Competition III' && 'Apparatus: A=1, B=6, C=2'}
+                            <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
+                            <h2 className="text-2xl font-black text-white">{selectedGender.label} — {selectedAgeGroup.label}</h2>
+                            <div className="mt-2 space-y-1 text-sm text-white/50">
+                                <p>Team: <span className="text-white font-semibold">{selectedTeam.name}</span></p>
+                                <p>Coach: <span className="text-white/70">{selectedTeam.coach?.name}</span></p>
+                                {selectedCompetitionType && <p>Competition: <span className="text-white/70">{selectedCompetitionType.label}</span></p>}
+                                {lastUpdated && <p>Last updated: <span className="text-white/40">{lastUpdated.toLocaleString()}</span></p>}
                             </div>
                         </div>
-                    </div>
-
-                    {/* Judges Panel */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <Users className="h-5 w-5 mr-2" />
-                            Judges Panel
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                            {judges.map((judge) => (
-                                <div key={judge._id} className="bg-gray-50 rounded-lg p-3 text-center">
-                                    <div className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mb-2 ${judge.judgeType === 'Senior Judge'
-                                        ? 'bg-purple-100 text-purple-800'
-                                        : 'bg-blue-100 text-blue-800'
-                                        }`}>
-                                        {judge.judgeType}
-                                    </div>
-                                    <p className="font-medium text-gray-900">{judge.name}</p>
-                                    <p className="text-xs text-gray-500">{judge.username}</p>
-                                </div>
-                            ))}
+                        <div className="text-right flex-shrink-0">
+                            <p className="text-xs text-white/40 uppercase tracking-wide">Players</p>
+                            <p className="text-4xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</p>
                         </div>
-                        {judges.length === 0 && (
-                            <p className="text-center text-gray-500 py-4">
-                                No judges found for this category. Please add judges first.
-                            </p>
+                    </div>
+                    <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.purple}10`, borderColor: `${ADMIN_COLORS.purple}30` }}>
+                        <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.purpleLight }}>Competition Type</p>
+                        <p className="font-bold text-white">{competitionType}</p>
+                        <p className="text-xs text-white/40 mt-0.5">
+                            {competitionType === 'Competition I' && 'Team: A=4, B=6, C=1'}
+                            {competitionType === 'Competition II' && 'Individual: A=1, B=6, C=2'}
+                            {competitionType === 'Competition III' && 'Apparatus: A=1, B=6, C=2'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Judges Panel</p>
+                        {judges.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                                {judges.map((judge) => {
+                                    const isSenior = judge.judgeType === 'Senior Judge';
+                                    return (
+                                        <div key={judge._id} className="rounded-xl border p-3 text-center"
+                                            style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
+                                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold mb-2"
+                                                style={{ background: isSenior ? `${ADMIN_COLORS.purple}25` : `${ADMIN_COLORS.blue}25`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
+                                                {judge.judgeType}
+                                            </span>
+                                            <p className="font-bold text-white text-sm">{judge.name}</p>
+                                            <p className="text-xs text-white/40">@{judge.username}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-white/30 text-sm text-center py-4">No judges found. Please add judges first.</p>
                         )}
                     </div>
                 </div>
 
-                {/* Scoring Table */}
+                <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
+                    <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
+                        <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
+                        <p><span className="text-white/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
+                        <p><span className="text-white/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
+                        <p><span className="text-white/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
+                    </div>
+                </div>
+
                 {players.length > 0 ? (
-                    <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <Clock className="h-5 w-5 mr-2" />
-                            Player Scoring {isLocked && <Eye className="h-4 w-4 ml-2 text-gray-500" />}
-                        </h3>
-
-                        {/* Scoring System Info */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <h4 className="font-medium text-blue-900 mb-2">Scoring System (Mallakhamb Code of Points)</h4>
-                            <p className="text-sm text-blue-800">
-                                <strong>Execution Average:</strong> Calculated from execution judges (J1-J4). With 4 judges, highest and lowest are excluded.
-                            </p>
-                            <p className="text-sm text-blue-800 mt-1">
-                                <strong>Base Score Logic:</strong> If difference between Execution Average and Senior Judge exceeds tolerance, Base Score = (Execution Avg + Senior Judge) / 2
-                            </p>
-                            <p className="text-sm text-blue-800 mt-1">
-                                <strong>Tolerance:</strong> 9.0-10.0: ±0.10 | 8.0-8.99: ±0.20 | 7.0-7.99: ±0.30 | 6.0-6.99: ±0.40 | 5.0-5.99: ±0.50 | Below 5.0: ±1.00
-                            </p>
-                            <p className="text-sm text-blue-800 mt-1">
-                                <strong>Final Score:</strong> Average Marks (or Base Score if applied) - Time Deduction - Other Deduction
-                            </p>
-                        </div>
-
-                        <ResponsiveScoringTable
-                            players={players}
-                            scores={scores}
-                            judges={judges}
-                            onScoreChange={handleScoreChange}
-                            isLocked={isLocked}
-                        />
+                    <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                        <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: ADMIN_COLORS.saffron }}>
+                            <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
+                        </p>
+                        <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={isLocked} />
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-                        <p className="text-gray-500">No players found for this category.</p>
+                    <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                        <p className="text-white/40">No players found for this category.</p>
                     </div>
                 )}
 
-                {/* Footer Section */}
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Time Keeper
-                            </label>
-                            <input
-                                type="text"
-                                value={timeKeeper}
-                                onChange={(e) => setTimeKeeper(e.target.value)}
-                                disabled={isLocked}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                                    }`}
-                                placeholder="Enter time keeper name"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Scorer
-                            </label>
-                            <input
-                                type="text"
-                                value={scorer}
-                                onChange={(e) => setScorer(e.target.value)}
-                                disabled={isLocked}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                                    }`}
-                                placeholder="Enter scorer name"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Remarks
-                            </label>
-                            <input
-                                type="text"
-                                value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
-                                disabled={isLocked}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                                    }`}
-                                placeholder="Enter any remarks"
-                            />
-                        </div>
+                <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        {[{ label: 'Time Keeper', value: timeKeeper, setter: setTimeKeeper, placeholder: 'Enter time keeper name' }, { label: 'Scorer', value: scorer, setter: setScorer, placeholder: 'Enter scorer name' }, { label: 'Remarks', value: remarks, setter: setRemarks, placeholder: 'Enter any remarks' }].map(({ label, value, setter, placeholder }) => (
+                            <div key={label}>
+                                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>{label}</label>
+                                <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
+                                    onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                                    onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
+                            </div>
+                        ))}
                     </div>
-
                     <div className="flex justify-end">
                         {!isLocked ? (
-                            <button
-                                onClick={handleSaveScores}
-                                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 font-medium"
-                            >
-                                <Save className="h-5 w-5" />
-                                <span>Save & Lock Scores</span>
-                            </button>
+                            <motion.button onClick={handleSaveScores}
+                                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white min-h-[48px]"
+                                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }}
+                                whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }} whileTap={{ scale: 0.97 }}>
+                                <Save className="w-4 h-4" /> Save & Lock Scores
+                            </motion.button>
                         ) : (
-                            <div className="flex items-center space-x-2 text-gray-500">
-                                <Lock className="h-5 w-5" />
-                                <span>Scores are saved and locked</span>
+                            <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                <Lock className="w-4 h-4" /> Scores are saved and locked
                             </div>
                         )}
                     </div>

@@ -1,1394 +1,915 @@
-import { useState, useEffect } from 'react';
-import { Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
+  ChevronDown, Save, Users
+} from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../services/api';
-import { ResponsiveContainer } from '../components/responsive';
-import { ResponsiveHeading, ResponsiveText } from '../components/responsive/ResponsiveTypography';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
 
+// ─── Reduced-motion hook ──────────────────────────────────────────────────────
+const useReducedMotion = () => {
+  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const h = (e) => setR(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
+  return r;
+};
+
+const FadeIn = ({ children, delay = 0, className = '' }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const reduced = useReducedMotion();
+  return (
+    <motion.div ref={ref} className={className}
+      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
+      {children}
+    </motion.div>
+  );
+};
+
+const DarkCard = ({ children, className = '', style = {} }) => (
+  <div className={`rounded-2xl border ${className}`}
+    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
+    {children}
+  </div>
+);
+
+const DarkInput = ({ label, required, error, hint, ...props }) => (
+  <div>
+    {label && (
+      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      </label>
+    )}
+    <input
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      {...props}
+    />
+    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
+  </div>
+);
+
+const DarkSelect = ({ label, required, children, ...props }) => (
+  <div>
+    {label && (
+      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      </label>
+    )}
+    <select
+      className="w-full rounded-xl text-sm text-white outline-none min-h-[44px] px-3 transition-all duration-200"
+      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
+      {...props}>
+      {children}
+    </select>
+  </div>
+);
+
+const DarkTextarea = ({ label, required, ...props }) => (
+  <div>
+    {label && (
+      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      </label>
+    )}
+    <textarea
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200 resize-none"
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      {...props}
+    />
+  </div>
+);
+
+const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
+  const bg = {
+    primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
+    purple: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})`,
+    success: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`,
+    danger: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`,
+    ghost: 'transparent',
+  }[variant];
+  const h = size === 'sm' ? '32px' : '44px';
+  return (
+    <motion.button type={type} onClick={onClick} disabled={disabled}
+      className={`rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', minHeight: h, padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
+      whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
+      whileTap={!disabled ? { scale: 0.97 } : {}}>
+      {children}
+    </motion.button>
+  );
+};
+
+const LoadingState = () => (
+  <div className="flex items-center justify-center py-12 gap-3">
+    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+    <span className="text-white/40 text-sm">Loading…</span>
+  </div>
+);
+
+const EmptyState = ({ icon: Icon, title, desc }) => (
+  <div className="text-center py-12">
+    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
+    <p className="text-white/60 font-semibold">{title}</p>
+    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+  </div>
+);
+
+const StatusBadge = ({ active }) => (
+  <span className="px-2.5 py-1 rounded-full text-xs font-bold"
+    style={{ background: active ? `${ADMIN_COLORS.green}20` : `${ADMIN_COLORS.red}20`, color: active ? ADMIN_COLORS.green : ADMIN_COLORS.red }}>
+    {active ? 'Active' : 'Inactive'}
+  </span>
+);
+
+// ─── Dark Modal wrapper ───────────────────────────────────────────────────────
+const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidth = 'max-w-md' }) => (
+  <AnimatePresence>
+    {isOpen && (
+      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <motion.div className={`w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden`}
+          style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <div>
+              {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>{subtitle}</p>}
+              <h3 className="text-xl font-black text-white">{title}</h3>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">{children}</div>
+          {footer && (
+            <div className="flex gap-3 p-6 border-t flex-shrink-0" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              {footer}
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+const DarkTable = ({ headers, children, empty }) => (
+  <div className="overflow-x-auto">
+    <table className="min-w-full text-sm" role="table">
+      <thead>
+        <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+          {headers.map(h => (
+            <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
+              style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
+    {empty}
+  </div>
+);
+
+const DarkTr = ({ children, delay = 0 }) => (
+  <motion.tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
+    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.3 }}>
+    {children}
+  </motion.tr>
+);
+
+const Td = ({ children, className = '' }) => (
+  <td className={`px-4 py-3 whitespace-nowrap text-white/70 ${className}`}>{children}</td>
+);
+
+// ─── Section Tab Bar ──────────────────────────────────────────────────────────
+const SECTIONS = [
+  { id: 'competitions', label: 'Competitions', icon: Trophy },
+  { id: 'admins', label: 'Admins', icon: Shield },
+  { id: 'coaches', label: 'Coaches', icon: UserCheck },
+  { id: 'addPlayer', label: 'Add Player', icon: UserPlus },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const SuperAdminManagement = () => {
   const [activeSection, setActiveSection] = useState('competitions');
   const [admins, setAdmins] = useState([]);
   const [coaches, setCoaches] = useState([]);
   const [competitions, setCompetitions] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Admin modal
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'admin' });
+
+  // Competition modal
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [competitionFormData, setCompetitionFormData] = useState({
+    name: '', level: 'district', competitionTypes: ['competition_1'],
+    place: '', year: new Date().getFullYear(), startDate: '', endDate: '',
+    description: '', admins: [], ageGroups: []
+  });
+
+  // Admin management modal
   const [showAdminManagementModal, setShowAdminManagementModal] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
-  const [adminSearchQuery, setAdminSearchQuery] = useState('');
-  
-  // Add Player state
-  const [teams, setTeams] = useState([]);
+
+  // Player form
   const [playerFormData, setPlayerFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: 'Male',
-    teamId: '',
-    competitionId: '',
-    paymentStatus: 'pending'
-  });
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'admin'
+    name: '', email: '', password: '', phone: '', dateOfBirth: '',
+    gender: 'Male', teamId: '', competitionId: '', paymentStatus: 'pending'
   });
 
-  const [competitionFormData, setCompetitionFormData] = useState({
-    name: '',
-    level: 'district',
-    competitionTypes: ['competition_1'],
-    place: '',
-    year: new Date().getFullYear(),
-    startDate: '',
-    endDate: '',
-    description: '',
-    admins: [],
-    ageGroups: []
-  });
-
-  // Default age groups list - Gender specific
-  // Boys: Under 10, Under 12, Under 14, Under 18, Above 18
-  // Girls: Under 10, Under 12, Under 14, Under 16, Above 16
-  const defaultAgeGroups = [
-    'Under10',
-    'Under12',
-    'Under14',
-    'Under16',
-    'Under18',
-    'Above16',
-    'Above18'
-  ];
-
+  const defaultAgeGroups = ['Under10','Under12','Under14','Under16','Under18','Above16','Above18'];
   const ageGroupLabels = {
-    'Under10': 'Under 10',
-    'Under12': 'Under 12',
-    'Under14': 'Under 14',
-    'Under16': 'Under 16 (Girls only)',
-    'Under18': 'Under 18 (Boys only)',
-    'Above16': 'Above 16 (Girls only)',
-    'Above18': 'Above 18 (Boys only)'
+    Under10:'Under 10', Under12:'Under 12', Under14:'Under 14',
+    Under16:'Under 16 (Girls)', Under18:'Under 18 (Boys)',
+    Above16:'Above 16 (Girls)', Above18:'Above 18 (Boys)'
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [activeSection]);
+  useEffect(() => { fetchData(); }, [activeSection]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       if (activeSection === 'admins') {
-        const response = await superAdminAPI.getAllAdmins();
-        setAdmins(response.data.admins);
+        const r = await superAdminAPI.getAllAdmins();
+        setAdmins(r.data.admins);
       } else if (activeSection === 'coaches') {
-        const response = await superAdminAPI.getAllCoaches();
-        setCoaches(response.data.coaches);
+        const r = await superAdminAPI.getAllCoaches();
+        setCoaches(r.data.coaches);
       } else if (activeSection === 'competitions') {
-        const [competitionsResponse, adminsResponse] = await Promise.all([
-          superAdminAPI.getAllCompetitions(),
-          superAdminAPI.getAllAdmins()
-        ]);
-        setCompetitions(competitionsResponse.data.competitions);
-        setAdmins(adminsResponse.data.admins);
+        const [cr, ar] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllAdmins()]);
+        setCompetitions(cr.data.competitions);
+        setAdmins(ar.data.admins);
       } else if (activeSection === 'addPlayer') {
-        const [competitionsResponse, teamsResponse] = await Promise.all([
-          superAdminAPI.getAllCompetitions(),
-          superAdminAPI.getAllTeams()
-        ]);
-        setCompetitions(competitionsResponse.data.competitions);
-        setTeams(teamsResponse.data.teams || []);
+        const [cr, tr] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllTeams()]);
+        setCompetitions(cr.data.competitions);
+        setTeams(tr.data.teams || []);
       }
-    } catch (error) {
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load data'); }
+    finally { setLoading(false); }
   };
 
+  // ─── Admin CRUD ────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
     e.preventDefault();
     try {
       await superAdminAPI.createAdmin(formData);
-      toast.success('Admin created successfully');
+      toast.success('Admin created');
       setShowAddAdminModal(false);
       setFormData({ name: '', email: '', password: '', role: 'admin' });
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create admin');
-    }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to create admin'); }
   };
 
   const handleUpdateAdmin = async (e) => {
     e.preventDefault();
     try {
-      await superAdminAPI.updateAdmin(editingAdmin._id, {
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        isActive: formData.isActive
-      });
-      toast.success('Admin updated successfully');
+      await superAdminAPI.updateAdmin(editingAdmin._id, { name: formData.name, email: formData.email, role: formData.role, isActive: formData.isActive });
+      toast.success('Admin updated');
       setEditingAdmin(null);
       setFormData({ name: '', email: '', password: '', role: 'admin' });
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update admin');
-    }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update admin'); }
   };
 
-  const handleDeleteAdmin = async (adminId) => {
-    if (!window.confirm('Are you sure you want to delete this admin?')) return;
-    
+  const handleDeleteAdmin = async (id) => {
+    if (!window.confirm('Delete this admin?')) return;
+    try { await superAdminAPI.deleteAdmin(id); toast.success('Admin deleted'); fetchData(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete admin'); }
+  };
+
+  const openEditModal = (admin) => {
+    setEditingAdmin(admin);
+    setFormData({ name: admin.name, email: admin.email, password: '', role: admin.role, isActive: admin.isActive });
+  };
+
+  // ─── Coach ─────────────────────────────────────────────────────────────────
+  const handleToggleCoachStatus = async (id, current) => {
     try {
-      await superAdminAPI.deleteAdmin(adminId);
-      toast.success('Admin deleted successfully');
+      await superAdminAPI.updateCoachStatus(id, { isActive: !current });
+      toast.success(`Coach ${!current ? 'activated' : 'deactivated'}`);
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete admin');
-    }
+    } catch { toast.error('Failed to update coach status'); }
   };
 
-  const handleToggleCoachStatus = async (coachId, currentStatus) => {
-    try {
-      await superAdminAPI.updateCoachStatus(coachId, { isActive: !currentStatus });
-      toast.success(`Coach ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to update coach status');
-    }
-  };
+  // ─── Competition CRUD ──────────────────────────────────────────────────────
+  const resetCompetitionForm = () => setCompetitionFormData({
+    name: '', level: 'district', competitionTypes: ['competition_1'],
+    place: '', year: new Date().getFullYear(), startDate: '', endDate: '',
+    description: '', admins: [], ageGroups: []
+  });
 
-  const handleCreateCompetition = async (e) => {
-    e.preventDefault();
-    
-    if (competitionFormData.admins.length === 0) {
-      toast.error('At least one admin must be assigned to the competition');
-      return;
-    }
-
-    if (competitionFormData.ageGroups.length === 0) {
-      toast.error('At least one age group must be selected');
-      return;
-    }
-
-    if (competitionFormData.competitionTypes.length === 0) {
-      toast.error('At least one competition type must be selected');
-      return;
-    }
-
-    try {
-      await superAdminAPI.createCompetition(competitionFormData);
-      toast.success('Competition created successfully');
-      setShowCompetitionModal(false);
-      resetCompetitionForm();
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create competition');
-    }
-  };
-
-  const handleUpdateCompetition = async (e) => {
-    e.preventDefault();
-
-    if (competitionFormData.competitionTypes.length === 0) {
-      toast.error('At least one competition type must be selected');
-      return;
-    }
-
-    try {
-      const updateData = {
-        name: competitionFormData.name,
-        level: competitionFormData.level,
-        competitionTypes: competitionFormData.competitionTypes,
-        place: competitionFormData.place,
-        startDate: competitionFormData.startDate,
-        endDate: competitionFormData.endDate,
-        description: competitionFormData.description,
-        ageGroups: competitionFormData.ageGroups
-      };
-      
-      await superAdminAPI.updateCompetition(editingCompetition._id, updateData);
-      toast.success('Competition updated successfully');
-      setShowCompetitionModal(false);
-      setEditingCompetition(null);
-      resetCompetitionForm();
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update competition');
-    }
-  };
-
-  const handleDeleteCompetition = async (competitionId) => {
-    if (!window.confirm('Are you sure you want to delete this competition? This action cannot be undone.')) return;
-    
-    try {
-      await superAdminAPI.deleteCompetition(competitionId);
-      toast.success('Competition deleted successfully');
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete competition');
-    }
-  };
-
-  const handleAssignAdmin = async (adminId) => {
-    try {
-      await superAdminAPI.assignAdminToCompetition(selectedCompetition._id, { adminId });
-      toast.success('Admin assigned successfully');
-      fetchData();
-      // Refresh selected competition data
-      const response = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(response.data.competition);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to assign admin');
-    }
-  };
-
-  const handleRemoveAdmin = async (adminId) => {
-    if (!window.confirm('Are you sure you want to remove this admin from the competition?')) return;
-    
-    try {
-      await superAdminAPI.removeAdminFromCompetition(selectedCompetition._id, adminId);
-      toast.success('Admin removed successfully');
-      fetchData();
-      // Refresh selected competition data
-      const response = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(response.data.competition);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to remove admin');
-    }
-  };
-
-  const handleAddPlayer = async (e) => {
-    e.preventDefault();
-    
-    if (!playerFormData.competitionId) {
-      toast.error('Please select a competition');
-      return;
-    }
-    
-    if (!playerFormData.teamId) {
-      toast.error('Please select a team');
-      return;
-    }
-
-    try {
-      await superAdminAPI.addPlayerToTeam({
-        ...playerFormData,
-        team: playerFormData.teamId,
-        competition: playerFormData.competitionId
-      });
-      toast.success('Player added successfully');
-      setPlayerFormData({
-        name: '',
-        email: '',
-        password: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: 'Male',
-        teamId: '',
-        competitionId: '',
-        paymentStatus: 'pending'
-      });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add player');
-    }
-  };
-
-  const openCompetitionModal = (competition = null) => {
-    if (competition) {
-      setEditingCompetition(competition);
+  const openCompetitionModal = (comp = null) => {
+    if (comp) {
+      setEditingCompetition(comp);
       setCompetitionFormData({
-        name: competition.name,
-        level: competition.level,
-        competitionTypes: competition.competitionTypes || [],
-        place: competition.place,
-        year: competition.year || new Date().getFullYear(),
-        startDate: competition.startDate.split('T')[0],
-        endDate: competition.endDate.split('T')[0],
-        description: competition.description || '',
-        admins: competition.admins.map(a => a._id),
-        ageGroups: competition.ageGroups || []
+        name: comp.name, level: comp.level, competitionTypes: comp.competitionTypes || [],
+        place: comp.place, year: comp.year || new Date().getFullYear(),
+        startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
+        description: comp.description || '', admins: comp.admins.map(a => a._id),
+        ageGroups: comp.ageGroups || []
       });
-    } else {
-      setEditingCompetition(null);
-      resetCompetitionForm();
-    }
+    } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
     setShowCompetitionModal(true);
   };
 
-  const openAdminManagementModal = (competition) => {
-    setSelectedCompetition(competition);
-    setShowAdminManagementModal(true);
+  const handleCreateCompetition = async (e) => {
+    e.preventDefault();
+    if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
+    if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
+    if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    try {
+      await superAdminAPI.createCompetition(competitionFormData);
+      toast.success('Competition created');
+      setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to create competition'); }
   };
 
-  const resetCompetitionForm = () => {
-    setCompetitionFormData({
-      name: '',
-      level: 'district',
-      competitionTypes: ['competition_1'],
-      place: '',
-      year: new Date().getFullYear(),
-      startDate: '',
-      endDate: '',
-      description: '',
-      admins: [],
-      ageGroups: []
-    });
+  const handleUpdateCompetition = async (e) => {
+    e.preventDefault();
+    if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    try {
+      await superAdminAPI.updateCompetition(editingCompetition._id, {
+        name: competitionFormData.name, level: competitionFormData.level,
+        competitionTypes: competitionFormData.competitionTypes, place: competitionFormData.place,
+        startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
+        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups
+      });
+      toast.success('Competition updated');
+      setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update competition'); }
   };
 
-  const toggleAdminSelection = (adminId) => {
-    setCompetitionFormData(prev => ({
-      ...prev,
-      admins: prev.admins.includes(adminId)
-        ? prev.admins.filter(id => id !== adminId)
-        : [...prev.admins, adminId]
-    }));
+  const handleDeleteCompetition = async (id) => {
+    if (!window.confirm('Delete this competition? This cannot be undone.')) return;
+    try { await superAdminAPI.deleteCompetition(id); toast.success('Competition deleted'); fetchData(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete competition'); }
   };
 
-  const toggleAgeGroup = (ageGroup, gender) => {
-    setCompetitionFormData(prev => {
-      const ageGroups = [...prev.ageGroups];
-      const index = ageGroups.findIndex(
-        ag => ag.ageGroup === ageGroup && ag.gender === gender
-      );
-      
-      if (index >= 0) {
-        // Remove if exists
-        ageGroups.splice(index, 1);
-      } else {
-        // Add if doesn't exist
-        ageGroups.push({ ageGroup, gender });
-      }
-      
-      return {
-        ...prev,
-        ageGroups
-      };
-    });
+  const toggleCompetitionType = (type) => setCompetitionFormData(prev => ({
+    ...prev, competitionTypes: prev.competitionTypes.includes(type)
+      ? prev.competitionTypes.filter(t => t !== type)
+      : [...prev.competitionTypes, type]
+  }));
+
+  const toggleAgeGroup = (ag, gender) => setCompetitionFormData(prev => {
+    const groups = [...prev.ageGroups];
+    const idx = groups.findIndex(g => g.ageGroup === ag && g.gender === gender);
+    if (idx >= 0) groups.splice(idx, 1); else groups.push({ ageGroup: ag, gender });
+    return { ...prev, ageGroups: groups };
+  });
+
+  const isAgeGroupSelected = (ag, gender) => competitionFormData.ageGroups.some(g => g.ageGroup === ag && g.gender === gender);
+  const isAgeGroupValidForGender = (ag, gender) => gender === 'Male'
+    ? ['Under10','Under12','Under14','Under18','Above18'].includes(ag)
+    : ['Under10','Under12','Under14','Under16','Above16'].includes(ag);
+  const toggleAdminSelection = (id) => setCompetitionFormData(prev => ({
+    ...prev, admins: prev.admins.includes(id) ? prev.admins.filter(a => a !== id) : [...prev.admins, id]
+  }));
+
+  // ─── Admin management modal ────────────────────────────────────────────────
+  const openAdminManagementModal = (comp) => { setSelectedCompetition(comp); setShowAdminManagementModal(true); };
+
+  const handleAssignAdmin = async (adminId) => {
+    try {
+      await superAdminAPI.assignAdminToCompetition(selectedCompetition._id, { adminId });
+      toast.success('Admin assigned');
+      const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
+      setSelectedCompetition(r.data.competition);
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to assign admin'); }
   };
 
-  const isAgeGroupSelected = (ageGroup, gender) => {
-    return competitionFormData.ageGroups.some(
-      ag => ag.ageGroup === ageGroup && ag.gender === gender
-    );
+  const handleRemoveAdmin = async (adminId) => {
+    if (!window.confirm('Remove this admin from the competition?')) return;
+    try {
+      await superAdminAPI.removeAdminFromCompetition(selectedCompetition._id, adminId);
+      toast.success('Admin removed');
+      const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
+      setSelectedCompetition(r.data.competition);
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove admin'); }
   };
 
-  // Helper function to check if age group is valid for gender
-  const isAgeGroupValidForGender = (ageGroup, gender) => {
-    if (gender === 'Male') {
-      // Boys: Under 10, Under 12, Under 14, Under 18, Above 18
-      return ['Under10', 'Under12', 'Under14', 'Under18', 'Above18'].includes(ageGroup);
-    } else {
-      // Girls: Under 10, Under 12, Under 14, Under 16, Above 16
-      return ['Under10', 'Under12', 'Under14', 'Under16', 'Above16'].includes(ageGroup);
-    }
+  // ─── Add Player ────────────────────────────────────────────────────────────
+  const handleAddPlayer = async (e) => {
+    e.preventDefault();
+    if (!playerFormData.competitionId) { toast.error('Select a competition'); return; }
+    if (!playerFormData.teamId) { toast.error('Select a team'); return; }
+    try {
+      await superAdminAPI.addPlayerToTeam({ ...playerFormData, team: playerFormData.teamId, competition: playerFormData.competitionId });
+      toast.success('Player added');
+      setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:'Male',teamId:'',competitionId:'',paymentStatus:'pending' });
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add player'); }
   };
 
-  const toggleCompetitionType = (type) => {
-    setCompetitionFormData(prev => {
-      const types = [...prev.competitionTypes];
-      const index = types.indexOf(type);
-      
-      if (index >= 0) {
-        // Remove if exists
-        types.splice(index, 1);
-      } else {
-        // Add if doesn't exist
-        types.push(type);
-      }
-      
-      return {
-        ...prev,
-        competitionTypes: types
-      };
-    });
-  };
+  const filteredAdmins = admins.filter(a => a.role !== 'super_admin').filter(a => {
+    if (!adminSearchQuery) return true;
+    const q = adminSearchQuery.toLowerCase();
+    return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+  });
 
-  const isCompetitionTypeSelected = (type) => {
-    return competitionFormData.competitionTypes.includes(type);
-  };
-
-  const filteredAdmins = admins
-    .filter(admin => admin.role !== 'super_admin')
-    .filter(admin => {
-      if (!adminSearchQuery) return true;
-      const query = adminSearchQuery.toLowerCase();
-      return (
-        admin.name.toLowerCase().includes(query) ||
-        admin.email.toLowerCase().includes(query)
-      );
-    });
-
-  const openEditModal = (admin) => {
-    setEditingAdmin(admin);
-    setFormData({
-      name: admin.name,
-      email: admin.email,
-      password: '',
-      role: admin.role,
-      isActive: admin.isActive
-    });
-  };
+  const compTypeLabel = (t) => ({ competition_1:'Competition I', competition_2:'Competition II', competition_3:'Competition III' }[t] || t);
+  const levelColor = (l) => ({ district: ADMIN_COLORS.blue, state: ADMIN_COLORS.purple, national: ADMIN_COLORS.saffron, international: ADMIN_COLORS.gold }[l] || ADMIN_COLORS.saffron);
+  const statusColor = (s) => ({ ongoing: ADMIN_COLORS.green, upcoming: ADMIN_COLORS.gold, completed: 'rgba(255,255,255,0.4)' }[s] || 'rgba(255,255,255,0.4)');
 
   return (
-    <ResponsiveContainer maxWidth="desktop" padding="responsive">
-      <div className="space-y-6">
-        {/* Section Tabs */}
-        <div className="bg-white rounded-xl shadow-lg p-4">
-          <div className="flex space-x-4 overflow-x-auto">
-            <button
-              onClick={() => setActiveSection('competitions')}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                activeSection === 'competitions'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Trophy className="h-5 w-5" />
-                <span>Competitions</span>
+    <div className="space-y-6">
+      {/* ─── Section Tabs ──────────────────────────────────────────────── */}
+      <FadeIn>
+        <DarkCard className="p-2">
+          <div className="flex gap-1 overflow-x-auto">
+            {SECTIONS.map((s) => {
+              const Icon = s.icon;
+              const isActive = activeSection === s.id;
+              return (
+                <motion.button key={s.id} onClick={() => setActiveSection(s.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200"
+                  style={{
+                    background: isActive ? `${ADMIN_COLORS.saffron}18` : 'transparent',
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${isActive ? ADMIN_COLORS.saffron + '30' : 'transparent'}`,
+                  }}
+                  whileHover={{ color: '#fff' }}>
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {s.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        </DarkCard>
+      </FadeIn>
+
+      {/* ─── Competitions ──────────────────────────────────────────────── */}
+      {activeSection === 'competitions' && (
+        <FadeIn>
+          <DarkCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+                <h2 className="text-2xl font-black text-white">Competitions</h2>
               </div>
-            </button>
-            <button
-              onClick={() => setActiveSection('admins')}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                activeSection === 'admins'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <span>Admins</span>
+              <DarkBtn onClick={() => openCompetitionModal()}>
+                <Plus className="w-4 h-4" /> Create
+              </DarkBtn>
+            </div>
+            {loading ? <LoadingState /> : competitions.length === 0 ? (
+              <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
+            ) : (
+              <DarkTable headers={['Name','Types','Level','Place','Dates','Status','Admins','Actions']}>
+                {competitions.map((comp, i) => (
+                  <DarkTr key={comp._id} delay={i * 0.03}>
+                    <Td className="font-bold text-white">{comp.name}</Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-1">
+                        {(comp.competitionTypes || []).map(t => (
+                          <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold"
+                            style={{ background: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight }}>
+                            {compTypeLabel(t)}
+                          </span>
+                        ))}
+                      </div>
+                    </Td>
+                    <Td>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold capitalize"
+                        style={{ background: `${levelColor(comp.level)}20`, color: levelColor(comp.level) }}>
+                        {comp.level}
+                      </span>
+                    </Td>
+                    <Td>{comp.place}</Td>
+                    <Td className="text-xs">
+                      {new Date(comp.startDate).toLocaleDateString()} – {new Date(comp.endDate).toLocaleDateString()}
+                    </Td>
+                    <Td>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold capitalize"
+                        style={{ background: `${statusColor(comp.status)}20`, color: statusColor(comp.status) }}>
+                        {comp.status}
+                      </span>
+                    </Td>
+                    <Td>
+                      <div className="space-y-0.5">
+                        {comp.admins?.length ? comp.admins.map(a => (
+                          <p key={a._id} className="text-xs text-white/60">{a.name}</p>
+                        )) : <span className="text-xs text-white/30">None</span>}
+                      </div>
+                    </Td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <motion.button onClick={() => openAdminManagementModal(comp)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.green }} title="Manage Admins"
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <UserPlus className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button onClick={() => openCompetitionModal(comp)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.blue }} title="Edit"
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Edit className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button onClick={() => handleDeleteCompetition(comp._id)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.red }} title="Delete"
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </td>
+                  </DarkTr>
+                ))}
+              </DarkTable>
+            )}
+          </DarkCard>
+        </FadeIn>
+      )}
+
+      {/* ─── Admins ────────────────────────────────────────────────────── */}
+      {activeSection === 'admins' && (
+        <FadeIn>
+          <DarkCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+                <h2 className="text-2xl font-black text-white">Admins</h2>
               </div>
-            </button>
-            <button
-              onClick={() => setActiveSection('coaches')}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                activeSection === 'coaches'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <UserCheck className="h-5 w-5" />
-                <span>Coaches</span>
+              <DarkBtn onClick={() => setShowAddAdminModal(true)}>
+                <UserPlus className="w-4 h-4" /> Add Admin
+              </DarkBtn>
+            </div>
+            {loading ? <LoadingState /> : (
+              <DarkTable headers={['Name','Email','Role','Status','Actions']}>
+                {admins.map((admin, i) => (
+                  <DarkTr key={admin._id} delay={i * 0.03}>
+                    <Td className="font-semibold text-white">{admin.name}</Td>
+                    <Td>{admin.email}</Td>
+                    <Td>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold"
+                        style={{ background: admin.role === 'super_admin' ? `${ADMIN_COLORS.saffron}20` : `${ADMIN_COLORS.blue}20`, color: admin.role === 'super_admin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
+                        {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                      </span>
+                    </Td>
+                    <Td><StatusBadge active={admin.isActive} /></Td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <motion.button onClick={() => openEditModal(admin)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.blue }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Edit className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button onClick={() => handleDeleteAdmin(admin._id)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.red }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </td>
+                  </DarkTr>
+                ))}
+              </DarkTable>
+            )}
+          </DarkCard>
+        </FadeIn>
+      )}
+
+      {/* ─── Coaches ───────────────────────────────────────────────────── */}
+      {activeSection === 'coaches' && (
+        <FadeIn>
+          <DarkCard className="p-6">
+            <div className="mb-6">
+              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+              <h2 className="text-2xl font-black text-white">Coaches</h2>
+            </div>
+            {loading ? <LoadingState /> : (
+              <DarkTable headers={['Name','Email','Phone','Status','Actions']}>
+                {coaches.map((coach, i) => (
+                  <DarkTr key={coach._id} delay={i * 0.03}>
+                    <Td className="font-semibold text-white">{coach.name}</Td>
+                    <Td>{coach.email}</Td>
+                    <Td>{coach.phone || '—'}</Td>
+                    <Td><StatusBadge active={coach.isActive} /></Td>
+                    <td className="px-4 py-3">
+                      <DarkBtn size="sm" variant={coach.isActive ? 'danger' : 'success'}
+                        onClick={() => handleToggleCoachStatus(coach._id, coach.isActive)}>
+                        {coach.isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        {coach.isActive ? 'Deactivate' : 'Activate'}
+                      </DarkBtn>
+                    </td>
+                  </DarkTr>
+                ))}
+              </DarkTable>
+            )}
+          </DarkCard>
+        </FadeIn>
+      )}
+
+      {/* ─── Add Player ────────────────────────────────────────────────── */}
+      {activeSection === 'addPlayer' && (
+        <FadeIn>
+          <DarkCard className="p-6">
+            <div className="mb-6">
+              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+              <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
+            </div>
+            <form onSubmit={handleAddPlayer} className="max-w-2xl space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DarkInput label="Player Name" required placeholder="Full name" value={playerFormData.name}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, name: e.target.value })} />
+                <DarkInput label="Email" required type="email" placeholder="email@example.com" value={playerFormData.email}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, email: e.target.value })} />
+                <DarkInput label="Password" required type="password" placeholder="Min 6 characters" minLength={6} value={playerFormData.password}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, password: e.target.value })} />
+                <DarkInput label="Phone" type="tel" placeholder="Phone number" value={playerFormData.phone}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })} />
+                <DarkInput label="Date of Birth" required type="date" value={playerFormData.dateOfBirth}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })} />
+                <DarkSelect label="Gender" required value={playerFormData.gender}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, gender: e.target.value })}>
+                  <option value="Male" style={{ background: ADMIN_COLORS.darkCard }}>Male</option>
+                  <option value="Female" style={{ background: ADMIN_COLORS.darkCard }}>Female</option>
+                </DarkSelect>
+                <DarkSelect label="Competition" required value={playerFormData.competitionId}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, competitionId: e.target.value, teamId: '' })}>
+                  <option value="" style={{ background: ADMIN_COLORS.darkCard }}>Select Competition</option>
+                  {competitions.map(c => (
+                    <option key={c._id} value={c._id} style={{ background: ADMIN_COLORS.darkCard }}>
+                      {c.name} {c.year ? `(${c.year})` : ''} — {c.place}
+                    </option>
+                  ))}
+                </DarkSelect>
+                <DarkSelect label="Team" required value={playerFormData.teamId} disabled={!playerFormData.competitionId}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, teamId: e.target.value })}>
+                  <option value="" style={{ background: ADMIN_COLORS.darkCard }}>Select Team</option>
+                  {teams.filter(t => t.competition?._id === playerFormData.competitionId || t.competitionId === playerFormData.competitionId)
+                    .map(t => <option key={t._id} value={t._id} style={{ background: ADMIN_COLORS.darkCard }}>{t.name}</option>)}
+                </DarkSelect>
+                <DarkSelect label="Payment Status" required value={playerFormData.paymentStatus}
+                  onChange={(e) => setPlayerFormData({ ...playerFormData, paymentStatus: e.target.value })}>
+                  <option value="pending" style={{ background: ADMIN_COLORS.darkCard }}>Pending</option>
+                  <option value="completed" style={{ background: ADMIN_COLORS.darkCard }}>Completed</option>
+                  <option value="failed" style={{ background: ADMIN_COLORS.darkCard }}>Failed</option>
+                </DarkSelect>
               </div>
-            </button>
-            <button
-              onClick={() => setActiveSection('addPlayer')}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                activeSection === 'addPlayer'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <UserPlus className="h-5 w-5" />
-                <span>Add Player</span>
+              <div className="flex gap-3 pt-2">
+                <DarkBtn type="button" variant="ghost" onClick={() => setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:'Male',teamId:'',competitionId:'',paymentStatus:'pending' })}>
+                  Reset
+                </DarkBtn>
+                <DarkBtn type="submit" variant="primary">
+                  <UserPlus className="w-4 h-4" /> Add Player
+                </DarkBtn>
               </div>
-            </button>
+            </form>
+          </DarkCard>
+        </FadeIn>
+      )}
+
+      {/* ─── Add/Edit Admin Modal ──────────────────────────────────────── */}
+      <DarkModal
+        isOpen={showAddAdminModal || !!editingAdmin}
+        onClose={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:'admin' }); }}
+        title={editingAdmin ? 'Edit Admin' : 'Add New Admin'}
+        subtitle="Admin Management"
+        footer={<>
+          <DarkBtn variant="ghost" className="flex-1" onClick={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:'admin' }); }}>Cancel</DarkBtn>
+          <DarkBtn variant="primary" className="flex-1" onClick={editingAdmin ? handleUpdateAdmin : handleAddAdmin} type="submit">
+            <Save className="w-4 h-4" /> {editingAdmin ? 'Update' : 'Create'}
+          </DarkBtn>
+        </>}>
+        <form id="admin-form" onSubmit={editingAdmin ? handleUpdateAdmin : handleAddAdmin} className="space-y-4">
+          <DarkInput label="Name" required placeholder="Admin name" value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          <DarkInput label="Email" required type="email" placeholder="admin@example.com" value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+          {!editingAdmin && (
+            <DarkInput label="Password" required type="password" placeholder="Password" value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+          )}
+          <DarkSelect label="Role" required value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+            <option value="admin" style={{ background: ADMIN_COLORS.darkCard }}>Admin</option>
+            <option value="super_admin" style={{ background: ADMIN_COLORS.darkCard }}>Super Admin</option>
+          </DarkSelect>
+          {editingAdmin && (
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" checked={formData.isActive || false}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
+                <div className="w-10 h-6 rounded-full transition-colors duration-200"
+                  style={{ background: formData.isActive ? ADMIN_COLORS.green : 'rgba(255,255,255,0.15)' }}>
+                  <div className="w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-200"
+                    style={{ left: formData.isActive ? '22px' : '4px' }} />
+                </div>
+              </div>
+              <span className="text-sm font-semibold text-white/70">Active</span>
+            </label>
+          )}
+        </form>
+      </DarkModal>
+
+      {/* ─── Create/Edit Competition Modal ────────────────────────────── */}
+      <DarkModal
+        isOpen={showCompetitionModal}
+        onClose={() => { setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); }}
+        title={editingCompetition ? 'Edit Competition' : 'Create Competition'}
+        subtitle="Competition Management"
+        maxWidth="max-w-2xl"
+        footer={<>
+          <DarkBtn variant="ghost" className="flex-1" onClick={() => { setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); }}>Cancel</DarkBtn>
+          <DarkBtn variant="primary" className="flex-1" onClick={editingCompetition ? handleUpdateCompetition : handleCreateCompetition}>
+            <Save className="w-4 h-4" /> {editingCompetition ? 'Update' : 'Create'}
+          </DarkBtn>
+        </>}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DarkInput label="Competition Name" required placeholder="Name" value={competitionFormData.name}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, name: e.target.value })} />
+          <DarkSelect label="Level" required value={competitionFormData.level}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, level: e.target.value })}>
+            {['district','state','national','international'].map(l => (
+              <option key={l} value={l} style={{ background: ADMIN_COLORS.darkCard }} className="capitalize">{l.charAt(0).toUpperCase()+l.slice(1)}</option>
+            ))}
+          </DarkSelect>
+          <DarkInput label="Place" required placeholder="City / Venue" value={competitionFormData.place}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, place: e.target.value })} />
+          <DarkSelect label="Year" required value={competitionFormData.year}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, year: parseInt(e.target.value) })}>
+            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+              <option key={y} value={y} style={{ background: ADMIN_COLORS.darkCard }}>{y}</option>
+            ))}
+          </DarkSelect>
+          <DarkInput label="Start Date" required type="date" value={competitionFormData.startDate}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, startDate: e.target.value })} />
+          <DarkInput label="End Date" required type="date" value={competitionFormData.endDate}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, endDate: e.target.value })} />
+        </div>
+
+        {/* Competition Types */}
+        <div>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+            Competition Types <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          </p>
+          <div className="space-y-2">
+            {[
+              { id: 'competition_1', label: 'Competition I', desc: 'Team Championship & Qualifier' },
+              { id: 'competition_2', label: 'Competition II', desc: 'All Round Individual Final' },
+              { id: 'competition_3', label: 'Competition III', desc: 'Apparatus Championship' },
+            ].map(ct => {
+              const checked = competitionFormData.competitionTypes.includes(ct.id);
+              return (
+                <label key={ct.id} className="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200"
+                  style={{ background: checked ? `${ADMIN_COLORS.purple}10` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${ADMIN_COLORS.purple}40` : ADMIN_COLORS.darkBorderSubtle }}>
+                  <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
+                  <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+                    style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                    {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{ct.label}</p>
+                    <p className="text-xs text-white/40">{ct.desc}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </div>
 
-        {/* Competitions Section */}
-        {activeSection === 'competitions' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <ResponsiveHeading level={3} className="text-gray-900">
-                Competition Management
-              </ResponsiveHeading>
-              <button
-                onClick={() => openCompetitionModal()}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Create Competition</span>
-              </button>
-            </div>
+        <DarkTextarea label="Description" placeholder="Optional description…" rows={3} value={competitionFormData.description}
+          onChange={(e) => setCompetitionFormData({ ...competitionFormData, description: e.target.value })} />
 
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Place</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned Admins</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {competitions.map((competition) => (
-                      <tr key={competition._id}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">{competition.name}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {competition.competitionTypes && competition.competitionTypes.length > 0 ? (
-                              competition.competitionTypes.map((type) => (
-                                <span key={type} className="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 whitespace-nowrap">
-                                  {type === 'competition_1' && 'Type I'}
-                                  {type === 'competition_2' && 'Type II'}
-                                  {type === 'competition_3' && 'Type III'}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">N/A</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
-                            {competition.level}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{competition.place}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {new Date(competition.startDate).toLocaleDateString()} - {new Date(competition.endDate).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            competition.status === 'ongoing'
-                              ? 'bg-green-100 text-green-800'
-                              : competition.status === 'upcoming'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {competition.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col space-y-1">
-                            {competition.admins && competition.admins.length > 0 ? (
-                              competition.admins.map((admin) => (
-                                <span key={admin._id} className="text-sm text-gray-700">
-                                  {admin.name}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-sm text-gray-400">No admins assigned</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => openAdminManagementModal(competition)}
-                              className="text-green-600 hover:text-green-800"
-                              title="Manage Admins"
-                            >
-                              <UserPlus className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => openCompetitionModal(competition)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="Edit Competition"
-                            >
-                              <Edit className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCompetition(competition._id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Delete Competition"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {competitions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    No competitions found. Create your first competition to get started.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Admins Section */}
-        {activeSection === 'admins' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <ResponsiveHeading level={3} className="text-gray-900">
-                Admin Management
-              </ResponsiveHeading>
-              <button
-                onClick={() => setShowAddAdminModal(true)}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-              >
-                <UserPlus className="h-5 w-5" />
-                <span>Add Admin</span>
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {admins.map((admin) => (
-                      <tr key={admin._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{admin.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{admin.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            admin.role === 'super_admin'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            admin.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {admin.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => openEditModal(admin)}
-                              className="text-blue-600 hover:text-blue-800"
-                            >
-                              <Edit className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAdmin(admin._id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Coaches Section */}
-        {activeSection === 'coaches' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <ResponsiveHeading level={3} className="text-gray-900 mb-6">
-              Coach Management
-            </ResponsiveHeading>
-
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {coaches.map((coach) => (
-                      <tr key={coach._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{coach.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{coach.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{coach.phone || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            coach.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {coach.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleToggleCoachStatus(coach._id, coach.isActive)}
-                            className={`px-3 py-1 rounded text-sm ${
-                              coach.isActive
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                          >
-                            {coach.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Add Player Section */}
-        {activeSection === 'addPlayer' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <ResponsiveHeading level={3} className="text-gray-900 mb-6">
-              Add Player to Team
-            </ResponsiveHeading>
-
-            <form onSubmit={handleAddPlayer} className="max-w-2xl space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Player Name *</label>
-                  <input
-                    type="text"
-                    value={playerFormData.name}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    value={playerFormData.email}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                  <input
-                    type="password"
-                    value={playerFormData.password}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                    minLength={6}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={playerFormData.phone}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-                  <input
-                    type="date"
-                    value={playerFormData.dateOfBirth}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                  <select
-                    value={playerFormData.gender}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, gender: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Competition *</label>
-                  <select
-                    value={playerFormData.competitionId}
-                    onChange={(e) => {
-                      setPlayerFormData({ ...playerFormData, competitionId: e.target.value, teamId: '' });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  >
-                    <option value="">Select Competition</option>
-                    {competitions.map((comp) => (
-                      <option key={comp._id} value={comp._id}>
-                        {comp.name} {comp.year ? `(${comp.year})` : ''} - {comp.level} - {comp.place}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Team *</label>
-                  <select
-                    value={playerFormData.teamId}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, teamId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                    disabled={!playerFormData.competitionId}
-                  >
-                    <option value="">Select Team</option>
-                    {teams
-                      .filter(team => team.competition?._id === playerFormData.competitionId || team.competitionId === playerFormData.competitionId)
-                      .map((team) => (
-                        <option key={team._id} value={team._id}>
-                          {team.name}
-                        </option>
-                      ))}
-                  </select>
-                  {!playerFormData.competitionId && (
-                    <p className="text-xs text-gray-500 mt-1">Select a competition first</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status *</label>
-                  <select
-                    value={playerFormData.paymentStatus}
-                    onChange={(e) => setPlayerFormData({ ...playerFormData, paymentStatus: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="failed">Failed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlayerFormData({
-                      name: '',
-                      email: '',
-                      password: '',
-                      phone: '',
-                      dateOfBirth: '',
-                      gender: 'Male',
-                      teamId: '',
-                      competitionId: '',
-                      paymentStatus: 'pending'
-                    });
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                >
-                  Reset
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                >
-                  Add Player
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Add/Edit Admin Modal */}
-        {(showAddAdminModal || editingAdmin) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-              <ResponsiveHeading level={3} className="text-gray-900 mb-4">
-                {editingAdmin ? 'Edit Admin' : 'Add New Admin'}
-              </ResponsiveHeading>
-              
-              <form onSubmit={editingAdmin ? handleUpdateAdmin : handleAddAdmin} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-
-                {!editingAdmin && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
-                  </select>
-                </div>
-
-                {editingAdmin && (
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.isActive}
-                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Active</span>
-                    </label>
-                  </div>
-                )}
-
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                  >
-                    {editingAdmin ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddAdminModal(false);
-                      setEditingAdmin(null);
-                      setFormData({ name: '', email: '', password: '', role: 'admin' });
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Create/Edit Competition Modal */}
-        {showCompetitionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-xl">
-              {/* Modal Header */}
-              <div className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
-                <ResponsiveHeading level={3} className="text-gray-900">
-                  {editingCompetition ? 'Edit Competition' : 'Create New Competition'}
-                </ResponsiveHeading>
-              </div>
-              
-              {/* Scrollable Content */}
-              <form 
-                id="competition-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (editingCompetition) {
-                    handleUpdateCompetition(e);
-                  } else {
-                    handleCreateCompetition(e);
-                  }
-                }}
-                className="flex-1 overflow-y-auto"
-              >
-              <div className="px-6 py-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Competition Name *</label>
-                    <input
-                      type="text"
-                      value={competitionFormData.name}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Level *</label>
-                    <select
-                      value={competitionFormData.level}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, level: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    >
-                      <option value="district">District</option>
-                      <option value="state">State</option>
-                      <option value="national">National</option>
-                      <option value="international">International</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Place *</label>
-                    <input
-                      type="text"
-                      value={competitionFormData.place}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, place: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
-                    <select
-                      value={competitionFormData.year}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, year: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    >
-                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-                    <input
-                      type="date"
-                      value={competitionFormData.startDate}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, startDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
-                    <input
-                      type="date"
-                      value={competitionFormData.endDate}
-                      onChange={(e) => setCompetitionFormData({ ...competitionFormData, endDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Competition Types Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Competition Type * (Select at least one)
-                  </label>
-                  <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3">
-                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={isCompetitionTypeSelected('competition_1')}
-                        onChange={() => toggleCompetitionType('competition_1')}
-                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold text-gray-900 block">Competition I</span>
-                        <span className="text-xs text-gray-600">Team Championship & Qualifier</span>
-                      </div>
-                    </label>
-                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={isCompetitionTypeSelected('competition_2')}
-                        onChange={() => toggleCompetitionType('competition_2')}
-                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold text-gray-900 block">Competition II</span>
-                        <span className="text-xs text-gray-600">All Round Individual Final</span>
-                      </div>
-                    </label>
-                    <label className="flex items-start space-x-3 p-3 rounded-md hover:bg-purple-50 cursor-pointer transition-colors bg-white border border-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={isCompetitionTypeSelected('competition_3')}
-                        onChange={() => toggleCompetitionType('competition_3')}
-                        className="mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold text-gray-900 block">Competition III</span>
-                        <span className="text-xs text-gray-600">Apparatus Championship</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={competitionFormData.description}
-                    onChange={(e) => setCompetitionFormData({ ...competitionFormData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    rows="3"
-                  />
-                </div>
-
-                {/* Age Groups Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Age Groups * (Select at least one)
-                  </label>
-                  <div className="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-gray-50">
-                    <div className="space-y-3">
-                      {defaultAgeGroups.map((ageGroup) => (
-                        <div key={ageGroup} className="bg-white rounded-lg p-3 border border-gray-200">
-                          <div className="font-medium text-gray-800 mb-2 text-sm">{ageGroupLabels[ageGroup]}</div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
-                              isAgeGroupValidForGender(ageGroup, 'Male') 
-                                ? 'hover:bg-purple-50 cursor-pointer' 
-                                : 'opacity-50 cursor-not-allowed bg-gray-100'
-                            }`}>
-                              <input
-                                type="checkbox"
-                                checked={isAgeGroupSelected(ageGroup, 'Male')}
-                                onChange={() => toggleAgeGroup(ageGroup, 'Male')}
-                                disabled={!isAgeGroupValidForGender(ageGroup, 'Male')}
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 disabled:opacity-50"
-                              />
-                              <span className="text-sm text-gray-700 font-medium">Male</span>
-                            </label>
-                            <label className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
-                              isAgeGroupValidForGender(ageGroup, 'Female') 
-                                ? 'hover:bg-purple-50 cursor-pointer' 
-                                : 'opacity-50 cursor-not-allowed bg-gray-100'
-                            }`}>
-                              <input
-                                type="checkbox"
-                                checked={isAgeGroupSelected(ageGroup, 'Female')}
-                                onChange={() => toggleAgeGroup(ageGroup, 'Female')}
-                                disabled={!isAgeGroupValidForGender(ageGroup, 'Female')}
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 disabled:opacity-50"
-                              />
-                              <span className="text-sm text-gray-700 font-medium">Female</span>
-                            </label>
-                          </div>
+        {/* Age Groups */}
+        <div>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+            Age Groups <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          </p>
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {defaultAgeGroups.map(ag => (
+              <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                <p className="text-xs font-bold text-white/60 mb-2">{ageGroupLabels[ag]}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Male','Female'].map(gender => {
+                    const valid = isAgeGroupValidForGender(ag, gender);
+                    const checked = isAgeGroupSelected(ag, gender);
+                    return (
+                      <label key={gender} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${!valid ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        style={{ background: checked && valid ? `${ADMIN_COLORS.saffron}12` : 'transparent' }}>
+                        <input type="checkbox" className="sr-only" checked={checked} disabled={!valid} onChange={() => valid && toggleAgeGroup(ag, gender)} />
+                        <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                          style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                          {checked && valid && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                </div>
-
-                {!editingCompetition && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Assign Admins * (Select at least one)
-                    </label>
-                    
-                    {/* Search Bar */}
-                    <div className="relative mb-3">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search admins by name or email..."
-                        value={adminSearchQuery}
-                        onChange={(e) => setAdminSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50">
-                      {filteredAdmins.map((admin) => (
-                        <label key={admin._id} className="flex items-center space-x-2 py-2 px-2 rounded-md hover:bg-purple-50 cursor-pointer transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={competitionFormData.admins.includes(admin._id)}
-                            onChange={() => toggleAdminSelection(admin._id)}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                          />
-                          <span className="text-sm text-gray-700">{admin.name} ({admin.email})</span>
-                        </label>
-                      ))}
-                      {filteredAdmins.length === 0 && adminSearchQuery && (
-                        <p className="text-sm text-gray-500 p-2">No admins found matching "{adminSearchQuery}"</p>
-                      )}
-                      {admins.filter(admin => admin.role !== 'super_admin').length === 0 && (
-                        <p className="text-sm text-gray-500 p-2">No admins available. Create an admin first.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              </form>
-
-              {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-xl">
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCompetitionModal(false);
-                      setEditingCompetition(null);
-                      resetCompetitionForm();
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    form="competition-form"
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                  >
-                    {editingCompetition ? 'Update Competition' : 'Create Competition'}
-                  </button>
+                        <span className="text-xs font-semibold text-white/70">{gender}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Assign Admins (create only) */}
+        {!editingCompetition && (
+          <div>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+              Assign Admins <span style={{ color: ADMIN_COLORS.red }}>*</span>
+            </p>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              <input type="text" placeholder="Search admins…" value={adminSearchQuery}
+                onChange={(e) => setAdminSearchQuery(e.target.value)}
+                className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all"
+                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
+            </div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {filteredAdmins.map(admin => {
+                const checked = competitionFormData.admins.includes(admin._id);
+                return (
+                  <label key={admin._id} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all"
+                    style={{ background: checked ? `${ADMIN_COLORS.saffron}10` : 'transparent' }}>
+                    <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAdminSelection(admin._id)} />
+                    <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                      {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <span className="text-sm text-white/70">{admin.name} <span className="text-white/35">({admin.email})</span></span>
+                  </label>
+                );
+              })}
+              {filteredAdmins.length === 0 && <p className="text-sm text-white/30 p-2">No admins found.</p>}
             </div>
           </div>
         )}
+      </DarkModal>
 
-        {/* Admin Management Modal */}
-        {showAdminManagementModal && selectedCompetition && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 my-8">
-              <div className="flex justify-between items-center mb-4">
-                <ResponsiveHeading level={3} className="text-gray-900">
-                  Manage Admins - {selectedCompetition.name}
-                </ResponsiveHeading>
-                <button
-                  onClick={() => {
-                    setShowAdminManagementModal(false);
-                    setSelectedCompetition(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Currently Assigned Admins */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Currently Assigned Admins</h4>
+      {/* ─── Admin Management Modal ────────────────────────────────────── */}
+      <DarkModal
+        isOpen={showAdminManagementModal && !!selectedCompetition}
+        onClose={() => { setShowAdminManagementModal(false); setSelectedCompetition(null); }}
+        title={`Manage Admins — ${selectedCompetition?.name || ''}`}
+        subtitle="Competition Admins"
+        maxWidth="max-w-lg">
+        {selectedCompetition && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Assigned Admins</p>
+              {selectedCompetition.admins?.length ? (
                 <div className="space-y-2">
-                  {selectedCompetition.admins && selectedCompetition.admins.length > 0 ? (
-                    selectedCompetition.admins.map((admin) => (
-                      <div key={admin._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-900">{admin.name}</p>
-                          <p className="text-sm text-gray-600">{admin.email}</p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveAdmin(admin._id)}
-                          className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
-                          disabled={selectedCompetition.admins.length === 1}
-                          title={selectedCompetition.admins.length === 1 ? 'Cannot remove the last admin' : 'Remove admin'}
-                        >
-                          Remove
-                        </button>
+                  {selectedCompetition.admins.map(admin => (
+                    <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
+                      style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                      <div>
+                        <p className="text-sm font-bold text-white">{admin.name}</p>
+                        <p className="text-xs text-white/40">{admin.email}</p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">No admins assigned</p>
-                  )}
+                      <DarkBtn size="sm" variant="danger" onClick={() => handleRemoveAdmin(admin._id)}>
+                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                      </DarkBtn>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* Available Admins to Assign */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Available Admins</h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {admins
-                    .filter(admin => 
-                      admin.role !== 'super_admin' && 
-                      !selectedCompetition.admins.some(a => a._id === admin._id)
-                    )
-                    .map((admin) => (
-                      <div key={admin._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-900">{admin.name}</p>
-                          <p className="text-sm text-gray-600">{admin.email}</p>
-                        </div>
-                        <button
-                          onClick={() => handleAssignAdmin(admin._id)}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
-                        >
-                          Assign
-                        </button>
-                      </div>
-                    ))}
-                  {admins.filter(admin => 
-                    admin.role !== 'super_admin' && 
-                    !selectedCompetition.admins.some(a => a._id === admin._id)
-                  ).length === 0 && (
-                    <p className="text-sm text-gray-500">No available admins to assign</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    setShowAdminManagementModal(false);
-                    setSelectedCompetition(null);
-                  }}
-                  className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Close
-                </button>
+              ) : <p className="text-sm text-white/30">No admins assigned.</p>}
+            </div>
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {admins.filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
+                  <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
+                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div>
+                      <p className="text-sm font-bold text-white">{admin.name}</p>
+                      <p className="text-xs text-white/40">{admin.email}</p>
+                    </div>
+                    <DarkBtn size="sm" variant="success" onClick={() => handleAssignAdmin(admin._id)}>
+                      <UserPlus className="w-3.5 h-3.5" /> Assign
+                    </DarkBtn>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         )}
-      </div>
-    </ResponsiveContainer>
+      </DarkModal>
+    </div>
   );
 };
 

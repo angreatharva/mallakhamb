@@ -1,95 +1,99 @@
-import { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import { playerAPI } from '../services/api';
-import Dropdown from '../components/Dropdown';
+import { useAuth } from '../App';
 import { CompetitionProvider } from '../contexts/CompetitionContext';
 import CompetitionDisplay from '../components/CompetitionDisplay';
-import { ResponsiveContainer, ResponsiveCardGrid } from '../components/responsive';
-import { useResponsive } from '../hooks/useResponsive';
 import { logger } from '../utils/logger';
+import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from './Home';
+import Dropdown from '../components/Dropdown';
 
+// ─── Stat card ────────────────────────────────────────────────────────────────
+const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
+  <FadeIn delay={delay}>
+    <motion.div
+      className="p-5 rounded-2xl border relative overflow-hidden"
+      style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
+      whileHover={{ borderColor: `${accent}35`, boxShadow: `0 0 30px ${accent}10` }}
+      transition={{ duration: 0.25 }}>
+      <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
+        style={{ background: `${accent}06`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
+      <div className="flex items-start gap-4 relative z-10">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: `${accent}15` }}>
+          <Icon className="w-5 h-5" style={{ color: accent }} aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-white/45 text-xs font-medium tracking-wide uppercase mb-1">{label}</p>
+          {children || (
+            <p className="text-white font-bold text-lg leading-tight truncate">{value || '—'}</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  </FadeIn>
+);
+
+// ─── Info row ─────────────────────────────────────────────────────────────────
+const InfoRow = ({ label, value, last = false }) => (
+  <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b' : ''}`}
+    style={{ borderColor: COLORS.darkBorderSubtle }}>
+    <span className="text-white/45 text-sm font-medium">{label}</span>
+    <span className="text-white text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
+  </div>
+);
+
+// ─── Status badge ─────────────────────────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+  const map = {
+    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: '#4ADE80' },
+    Active: { bg: `${COLORS.saffron}18`, border: `${COLORS.saffron}40`, text: COLORS.saffronLight },
+  };
+  const style = map[status] || { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.5)' };
+  return (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border"
+      style={{ background: style.bg, borderColor: style.border, color: style.text }}>
+      {status || 'Not assigned'}
+    </span>
+  );
+};
+
+// ─── Age group display ────────────────────────────────────────────────────────
+const AGE_GROUP_MAP = {
+  Under10: 'Under 10', Under12: 'Under 12', Under14: 'Under 14',
+  Under16: 'Under 16', Under18: 'Under 18', Above18: 'Above 18', Above16: 'Above 16',
+};
+
+// ─── PlayerDashboard ──────────────────────────────────────────────────────────
 const PlayerDashboard = () => {
-  const { isMobile, isTablet } = useResponsive();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
-  const emailRef = useRef(null);
-
-  // Function to auto-adjust email font size
-  const adjustEmailFontSize = () => {
-    if (!emailRef.current || !player?.email) return;
-    
-    const container = emailRef.current;
-    const containerWidth = container.offsetWidth;
-    
-    // Start with a reasonable font size
-    let fontSize = 16;
-    container.style.fontSize = fontSize + 'px';
-    
-    // Reduce font size until text fits in one line
-    while (container.scrollWidth > containerWidth && fontSize > 8) {
-      fontSize -= 0.5;
-      container.style.fontSize = fontSize + 'px';
-    }
-  };
+  const { logout } = useAuth();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     fetchPlayerProfile();
-
-    // Set up an interval to refresh player data periodically
-    const interval = setInterval(() => {
-      fetchPlayerProfile();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    // Fetch teams when player has no team assigned
-    if (player && !player.team) {
-      fetchTeams();
-    }
+    if (player && !player.team) fetchTeams();
   }, [player]);
-
-  useEffect(() => {
-    // Adjust email font size when player data changes
-    if (player?.email) {
-      setTimeout(adjustEmailFontSize, 100); // Small delay to ensure DOM is updated
-    }
-  }, [player?.email]);
-
-  useEffect(() => {
-    // Adjust font size on window resize
-    const handleResize = () => {
-      adjustEmailFontSize();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [player?.email]);
 
   const fetchPlayerProfile = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      // Try to get team info with competition context first
       try {
         const teamResponse = await playerAPI.getTeam();
-        setPlayer({
-          ...teamResponse.data.player,
-          team: teamResponse.data.team,
-          teamStatus: teamResponse.data.teamStatus
-        });
-      } catch (teamError) {
-        // Fallback to profile if team endpoint fails (no competition context)
+        setPlayer({ ...teamResponse.data.player, team: teamResponse.data.team, teamStatus: teamResponse.data.teamStatus });
+      } catch {
         const response = await playerAPI.getProfile();
-        setPlayer({
-          ...response.data.player,
-          teamStatus: 'Not assigned'
-        });
+        setPlayer({ ...response.data.player, teamStatus: 'Not assigned' });
       }
     } catch (error) {
       logger.error('Failed to fetch player profile:', error);
@@ -102,12 +106,8 @@ const PlayerDashboard = () => {
     setTeamsLoading(true);
     try {
       const response = await playerAPI.getTeams();
-      const teamOptions = response.data.teams.map(team => ({
-        value: team._id,
-        label: team.name
-      }));
-      setTeams(teamOptions);
-    } catch (error) {
+      setTeams(response.data.teams.map((t) => ({ value: t._id, label: t.name })));
+    } catch {
       toast.error('Failed to load teams');
     } finally {
       setTeamsLoading(false);
@@ -117,12 +117,9 @@ const PlayerDashboard = () => {
   const handleTeamSelect = async (teamOption) => {
     setSelectedTeam(teamOption);
     setUpdatingTeam(true);
-
     try {
       await playerAPI.updateTeam({ teamId: teamOption.value });
       toast.success('Team selected successfully!');
-
-      // Refresh player profile to get updated team info
       await fetchPlayerProfile();
       setSelectedTeam(null);
     } catch (error) {
@@ -133,230 +130,178 @@ const PlayerDashboard = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchPlayerProfile(true);
-  };
-
-  const getAgeGroupDisplay = (ageGroup) => {
-    const ageGroupMap = {
-      'Under10': 'Under 10',
-      'Under12': 'Under 12',
-      'Under14': 'Under 14',
-      'Under16': 'Under 16',
-      'Under18': 'Under 18',
-      'Above18': 'Above 18',
-      'Above16': 'Above 16'
-    };
-    return ageGroupMap[ageGroup] || ageGroup;
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center"
+        style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your profile...</p>
+          <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
+            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
+          <p className="text-white/45 text-sm">Loading your profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ResponsiveContainer maxWidth="desktop" padding="responsive" className="py-6 md:py-8">
-        {/* Competition Display */}
-        <CompetitionProvider userType="player">
-          <CompetitionDisplay className="mb-6 md:mb-8" />
-        </CompetitionProvider>
-
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6 md:mb-8">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="bg-blue-100 p-2 md:p-3 rounded-full">
-                <User className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">
-                  Welcome, {player?.firstName} {player?.lastName}
-                </h1>
-                <p className="text-gray-600">Player Dashboard</p>
-              </div>
+    <div className="min-h-dvh" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {/* Top bar */}
+      <div className="sticky top-0 z-40 border-b"
+        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
+        <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ background: `${COLORS.saffron}18` }}>
+              <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center justify-center space-x-2 px-4 py-3 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] w-full md:w-auto"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+            <div>
+              <p className="text-white font-bold text-sm leading-tight">
+                {player?.firstName} {player?.lastName}
+              </p>
+              <p className="text-white/35 text-xs">Player Dashboard</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => fetchPlayerProfile(true)} disabled={loading}
+              className="p-2 rounded-xl text-white/45 hover:text-white hover:bg-white/5 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Refresh data">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={logout}
+              className="p-2 rounded-xl text-white/45 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Logout">
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <ResponsiveCardGrid className="mb-6 md:mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-2 md:p-3 rounded-full">
-                <Trophy className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8 pt-24">
+        {/* Competition context */}
+        <CompetitionProvider userType="player">
+          <CompetitionDisplay className="mb-0" />
+        </CompetitionProvider>
+
+        {/* Welcome banner */}
+        <FadeIn>
+          <div className="rounded-3xl border p-6 md:p-8 relative overflow-hidden"
+            style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}>
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse at 0% 50%, ${COLORS.saffron}08, transparent 60%)` }} />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
+                <h1 className="text-2xl md:text-3xl font-black text-white">
+                  {player?.firstName} <GradientText>{player?.lastName}</GradientText>
+                </h1>
+                <p className="text-white/40 text-sm mt-1">
+                  {player?.team ? `Team: ${player.team.name}` : 'No team assigned yet'}
+                </p>
               </div>
-              <div className="ml-3 md:ml-4 flex-1 min-w-0">
-                <p className="text-xs md:text-sm font-medium text-gray-600">Team</p>
-                {player?.team ? (
-                  <p className="text-lg md:text-2xl font-bold text-gray-900 truncate">
-                    {player.team.name}
-                  </p>
-                ) : (
-                  <div className="mt-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StatusBadge status={player?.teamStatus} />
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={Trophy} label="Team" accent={COLORS.saffron} delay={0}>
+            {player?.team ? (
+              <p className="text-white font-bold text-base leading-tight truncate">{player.team.name}</p>
+            ) : (
+              <div className="mt-1">
+                <Dropdown
+                  options={teams}
+                  value={selectedTeam}
+                  onChange={handleTeamSelect}
+                  placeholder="Select a team"
+                  loading={teamsLoading || updatingTeam}
+                  disabled={updatingTeam}
+                />
+              </div>
+            )}
+          </StatCard>
+
+          <StatCard icon={Award} label="Age Group" accent="#22C55E" delay={0.06}
+            value={player?.ageGroup ? AGE_GROUP_MAP[player.ageGroup] || player.ageGroup : 'Not assigned'} />
+
+          <StatCard icon={Users} label="Gender" accent="#A855F7" delay={0.12}
+            value={player?.gender} />
+
+          <StatCard icon={Calendar} label="Date of Birth" accent="#3B82F6" delay={0.18}
+            value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
+        </div>
+
+        {/* Detail panels */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Profile */}
+          <FadeIn delay={0.1}>
+            <div className="rounded-2xl border p-6"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
+                <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                Profile Information
+              </h2>
+              <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
+              <InfoRow label="Email" value={player?.email} />
+              <InfoRow label="Date of Birth"
+                value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
+              <InfoRow label="Gender" value={player?.gender} />
+              <InfoRow label="Team" value={player?.team?.name || 'Not assigned'} last />
+            </div>
+          </FadeIn>
+
+          {/* Team info */}
+          <FadeIn delay={0.15}>
+            <div className="rounded-2xl border p-6"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
+                <Trophy className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                Team Information
+              </h2>
+
+              {player?.team ? (
+                <>
+                  <InfoRow label="Team Name" value={player.team.name} />
+                  <InfoRow label="Age Group"
+                    value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || player.ageGroup) : 'Not assigned'} />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1">
+                    <span className="text-white/45 text-sm font-medium">Status</span>
+                    <StatusBadge status={player.teamStatus} />
+                  </div>
+                </>
+              ) : (
+                <div className="py-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <Users className="w-6 h-6 text-white/20" />
+                  </div>
+                  <p className="text-white/45 text-sm mb-1">Not assigned to any team yet.</p>
+                  <p className="text-white/25 text-xs mb-5">Select a team from the card above to join.</p>
+                  <div className="max-w-xs mx-auto">
                     <Dropdown
                       options={teams}
                       value={selectedTeam}
                       onChange={handleTeamSelect}
-                      placeholder="Select a team"
+                      placeholder="Select a team to join"
                       loading={teamsLoading || updatingTeam}
                       disabled={updatingTeam}
                     />
+                    {updatingTeam && (
+                      <p className="text-xs mt-2 text-center" style={{ color: COLORS.saffronLight }}>
+                        Joining team...
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-2 md:p-3 rounded-full">
-                <Award className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <p className="text-xs md:text-sm font-medium text-gray-600">Age Group</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900 truncate">
-                  {player?.ageGroup ? getAgeGroupDisplay(player.ageGroup) : 'Not assigned'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-2 md:p-3 rounded-full">
-                <Users className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-              </div>
-              <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                <p className="text-xs md:text-sm font-medium text-gray-600">Gender</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{player?.gender}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="bg-orange-100 p-2 md:p-3 rounded-full">
-                <Calendar className="h-5 w-5 md:h-6 md:w-6 text-orange-600" />
-              </div>
-              <div className="ml-3 md:ml-4 flex-1 min-w-0">
-                <p className="text-xs md:text-sm font-medium text-gray-600">Email</p>
-                <p 
-                  ref={emailRef}
-                  className="font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
-                  style={{ fontSize: isMobile ? '14px' : '16px' }}
-                >
-                  {player?.email}
-                </p>
-              </div>
-            </div>
-          </div>
-        </ResponsiveCardGrid>
-
-        {/* Profile Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Profile Information</h2>
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600 mb-1 md:mb-0">Full Name:</span>
-                <span className="text-gray-900 break-words">{player?.firstName} {player?.lastName}</span>
-              </div>
-              <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600 mb-1 md:mb-0">Email:</span>
-                <span className="text-gray-900 break-all text-sm md:text-base">{player?.email}</span>
-              </div>
-              <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600 mb-1 md:mb-0">Date of Birth:</span>
-                <span className="text-gray-900">
-                  {player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-              <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600 mb-1 md:mb-0">Gender:</span>
-                <span className="text-gray-900">{player?.gender}</span>
-              </div>
-              <div className="flex flex-col md:flex-row md:justify-between py-2">
-                <span className="font-medium text-gray-600 mb-1 md:mb-0">Team:</span>
-                <span className="text-gray-900 break-words">{player?.team?.name || 'Not assigned'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Team Information</h2>
-            {player?.team ? (
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-600 mb-1 md:mb-0">Team Name:</span>
-                  <span className="text-gray-900 break-words">{player.team.name}</span>
                 </div>
-                <div className="flex flex-col md:flex-row md:justify-between py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-600 mb-1 md:mb-0">Age Group:</span>
-                  <span className="text-gray-900">
-                    {player.ageGroup ? getAgeGroupDisplay(player.ageGroup) : 'Not assigned'}
-                  </span>
-                </div>
-                <div className="flex flex-col md:flex-row md:justify-between py-2">
-                  <span className="font-medium text-gray-600 mb-1 md:mb-0">Status:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${
-                    player.teamStatus === 'Submitted' 
-                      ? 'bg-green-100 text-green-800'
-                      : player.teamStatus === 'Active'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {player.teamStatus || 'Not assigned'}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="py-6 md:py-8">
-                <div className="text-center mb-6">
-                  <Users className="h-10 w-10 md:h-12 md:w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">You are not assigned to any team yet.</p>
-                  <p className="text-sm text-gray-500">
-                    Select a team from the dropdown below to join.
-                  </p>
-                </div>
-                <div className="max-w-sm mx-auto">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Choose Your Team
-                  </label>
-                  <Dropdown
-                    options={teams}
-                    value={selectedTeam}
-                    onChange={handleTeamSelect}
-                    placeholder="Select a team to join"
-                    loading={teamsLoading || updatingTeam}
-                    disabled={updatingTeam}
-                  />
-                  {updatingTeam && (
-                    <p className="text-sm text-blue-600 mt-2 text-center">
-                      Joining team...
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </FadeIn>
         </div>
-      </ResponsiveContainer>
+      </div>
     </div>
   );
 };

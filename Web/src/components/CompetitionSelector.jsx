@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
-import { ChevronDownIcon, CheckIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '../utils/logger';
+import { COLORS, useReducedMotion } from '../pages/Home';
+
+const statusColors = {
+  ongoing: '#22C55E',
+  upcoming: '#3B82F6',
+  completed: 'rgba(255,255,255,0.3)',
+};
 
 const CompetitionSelector = ({ userType }) => {
   const navigate = useNavigate();
@@ -11,229 +19,251 @@ const CompetitionSelector = ({ userType }) => {
   const [isSwitching, setIsSwitching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef(null);
+  const reduced = useReducedMotion();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleCompetitionSwitch = async (competitionId) => {
-    if (competitionId === currentCompetition?._id) {
-      setIsOpen(false);
-      return;
-    }
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') setIsOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen]);
 
+  const handleSwitch = async (competitionId) => {
+    if (competitionId === currentCompetition?._id) { setIsOpen(false); return; }
     try {
       setIsSwitching(true);
       await switchCompetition(competitionId);
       setIsOpen(false);
     } catch (error) {
       logger.error('Failed to switch competition:', error);
+    } finally {
       setIsSwitching(false);
     }
   };
 
   const handleNewRegistration = () => {
     setIsOpen(false);
-    if (userType === 'player') {
-      navigate('/player/select-team');
-    } else if (userType === 'coach') {
-      navigate('/coach/select-competition');
-    }
+    if (userType === 'player') navigate('/player/select-team');
+    else if (userType === 'coach') navigate('/coach/select-competition');
   };
 
-  // Filter competitions based on search query
-  const filteredCompetitions = assignedCompetitions?.filter((competition) => {
+  const filteredCompetitions = assignedCompetitions?.filter((c) => {
     if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase();
     return (
-      competition.name?.toLowerCase().includes(query) ||
-      competition.place?.toLowerCase().includes(query) ||
-      competition.level?.toLowerCase().includes(query) ||
-      competition.status?.toLowerCase().includes(query)
+      c.name?.toLowerCase().includes(q) ||
+      c.place?.toLowerCase().includes(q) ||
+      c.level?.toLowerCase().includes(q) ||
+      c.status?.toLowerCase().includes(q)
     );
   });
 
-  // Show selector if user has competitions OR if they can register for new ones (player/coach)
-  // Don't show for admin as they are assigned by superadmin
-  if (isLoading) {
-    return null;
-  }
-
-  // For admin, don't show if no competitions or only one
-  if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1)) {
-    return null;
-  }
-
-  // For player/coach, always show if they have at least one competition (to allow switching + new registration)
-  if ((userType === 'player' || userType === 'coach') && (!assignedCompetitions || assignedCompetitions.length === 0)) {
-    return null;
-  }
+  if (isLoading) return null;
+  if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1)) return null;
+  if ((userType === 'player' || userType === 'coach') && (!assignedCompetitions || assignedCompetitions.length === 0)) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <motion.button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isSwitching}
-        className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
+        style={{
+          background: isOpen ? `${COLORS.saffron}10` : 'rgba(255,255,255,0.05)',
+          borderColor: isOpen ? `${COLORS.saffron}40` : COLORS.darkBorderSubtle,
+          boxShadow: isOpen ? `0 0 0 3px ${COLORS.saffron}12` : 'none',
+        }}
+        whileTap={{ scale: 0.97 }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label="Select competition"
       >
-        <div className="flex flex-col items-start max-w-[200px]">
-          <span className="text-xs text-gray-500">Competition</span>
-          <div className="text-sm font-medium text-gray-900 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent w-full">
-            {currentCompetition ? `${currentCompetition.name} ${currentCompetition.year || ''}` : 'Select Competition'}
-          </div>
+        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+        <div className="flex flex-col items-start max-w-[160px]">
+          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Competition
+          </span>
+          <span className="text-xs font-semibold text-white truncate w-full">
+            {currentCompetition
+              ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
+              : 'Select'}
+          </span>
         </div>
-        <ChevronDownIcon
-          className={`w-5 h-5 text-gray-400 transition-transform ${
-            isOpen ? 'transform rotate-180' : ''
-          }`}
-        />
-      </button>
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+        </motion.div>
+      </motion.button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          <div className="py-2">
-            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Select Competition
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="absolute right-0 mt-2 w-80 rounded-2xl border overflow-hidden z-50"
+            style={{
+              background: '#111111',
+              borderColor: `${COLORS.saffron}25`,
+              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${COLORS.saffron}10`,
+              maxHeight: 380,
+            }}
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+            role="listbox"
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>
+                Switch Competition
+              </p>
             </div>
-            
-            {/* Search Bar */}
+
+            {/* Search */}
             {assignedCompetitions && assignedCompetitions.length > 3 && (
-              <div className="px-4 pb-2">
+              <div className="p-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
                     placeholder="Search competitions..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-3 py-2 pl-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-8 pr-8 py-2 text-xs rounded-lg focus:outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${COLORS.darkBorderSubtle}`,
+                      color: '#fff',
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <svg
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
                   {searchQuery && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSearchQuery('');
-                      }}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                    <button onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      aria-label="Clear search">
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Competition List */}
-            {filteredCompetitions && filteredCompetitions.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-gray-500">
-                No competitions found matching "{searchQuery}"
-              </div>
-            ) : (
-              filteredCompetitions && filteredCompetitions.map((competition) => (
-              <button
-                key={competition._id}
-                onClick={() => handleCompetitionSwitch(competition._id)}
-                disabled={isSwitching}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  currentCompetition?._id === competition._id ? 'bg-blue-50' : ''
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <div className="font-medium text-gray-900 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent max-w-[240px]">
-                        {competition.name} {competition.year || ''}
-                      </div>
-                      {currentCompetition?._id === competition._id && (
-                        <CheckIcon className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-center space-x-3 text-xs text-gray-500 flex-wrap">
-                      <span className="capitalize">{competition.level}</span>
-                      <span>•</span>
-                      <span className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent max-w-[150px]">{competition.place}</span>
-                      <span>•</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-medium ${
-                          competition.status === 'ongoing'
-                            ? 'bg-green-100 text-green-800'
-                            : competition.status === 'upcoming'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {competition.status}
-                      </span>
-                    </div>
-                    {competition.startDate && competition.endDate && (
-                      <div className="mt-1 text-xs text-gray-400">
-                        {new Date(competition.startDate).toLocaleDateString()} -{' '}
-                        {new Date(competition.endDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
+            {/* List */}
+            <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
+              {filteredCompetitions && filteredCompetitions.length === 0 ? (
+                <div className="py-8 text-center text-white/30 text-xs">
+                  No competitions found for "{searchQuery}"
                 </div>
-              </button>
-            )))}
-            
-            {/* Register for New Competition option - only for player and coach */}
+              ) : (
+                filteredCompetitions?.map((competition) => {
+                  const isActive = currentCompetition?._id === competition._id;
+                  const sc = statusColors[competition.status] || statusColors.completed;
+                  return (
+                    <motion.button
+                      key={competition._id}
+                      onClick={() => handleSwitch(competition._id)}
+                      disabled={isSwitching}
+                      className="w-full text-left px-4 py-3 transition-colors duration-150 disabled:opacity-50 border-b last:border-b-0"
+                      style={{
+                        background: isActive ? `${COLORS.saffron}10` : 'transparent',
+                        borderColor: COLORS.darkBorderSubtle,
+                      }}
+                      whileHover={{ background: `${COLORS.saffron}08` }}
+                      role="option"
+                      aria-selected={isActive}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white truncate">
+                              {competition.name} {competition.year || ''}
+                            </span>
+                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {competition.place && (
+                              <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                <MapPin className="w-2.5 h-2.5" aria-hidden="true" />
+                                {competition.place}
+                              </span>
+                            )}
+                            <span className="text-xs capitalize" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                              {competition.level}
+                            </span>
+                          </div>
+                          {competition.startDate && competition.endDate && (
+                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                              <Calendar className="w-2.5 h-2.5" aria-hidden="true" />
+                              {new Date(competition.startDate).toLocaleDateString()} –{' '}
+                              {new Date(competition.endDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
+                          style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}>
+                          {competition.status}
+                        </span>
+                      </div>
+                    </motion.button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Register new */}
             {(userType === 'player' || userType === 'coach') && (
-              <>
-                <div className="border-t border-gray-200 my-2"></div>
-                <button
+              <div className="border-t" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <motion.button
                   onClick={handleNewRegistration}
                   disabled={isSwitching}
-                  className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
+                  whileHover={{ background: 'rgba(34,197,94,0.08)' }}
                 >
-                  <div className="flex items-center space-x-2">
-                    <PlusCircleIcon className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-green-600">
-                      Register for New Competition
-                    </span>
+                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>Register for New Competition</p>
+                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      {userType === 'player' ? 'Join a team for a new competition' : 'Register your team'}
+                    </p>
                   </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {userType === 'player' ? 'Join a team for a new competition' : 'Register your team for a new competition'}
-                  </div>
-                </button>
-              </>
+                </motion.button>
+              </div>
             )}
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {isSwitching && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="text-gray-700">Switching competition...</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Switching overlay */}
+      <AnimatePresence>
+        {isSwitching && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="flex items-center gap-3 px-6 py-4 rounded-2xl border"
+              style={{ background: '#111111', borderColor: `${COLORS.saffron}30` }}
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+            >
+              <motion.div
+                className="w-5 h-5 rounded-full border-2 border-t-transparent"
+                style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+              />
+              <span className="text-white/70 text-sm font-medium">Switching competition...</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

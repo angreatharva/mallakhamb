@@ -1,78 +1,51 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check, Search, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '../hooks/useResponsive';
+import { COLORS, useReducedMotion } from '../pages/Home';
 
-const Dropdown = ({ 
-  options, 
-  value, 
-  onChange, 
-  placeholder = "Select an option",
+const Dropdown = ({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select an option',
   searchable = false,
   onSearch = null,
   loading = false,
   disabled = false,
   className = '',
   dropdownClassName = '',
-  error = false
+  error = false,
+  label = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
   const { isMobile } = useResponsive();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
-    if (searchable && onSearch && searchTerm.length >= 2) {
-      onSearch(searchTerm);
-    }
+    if (searchable && onSearch && searchTerm.length >= 2) onSearch(searchTerm);
   }, [searchTerm, searchable, onSearch]);
 
-  // Handle keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (!isOpen) return;
-
-      switch (event.key) {
-        case 'Escape': {
-          setIsOpen(false);
-          buttonRef.current?.focus();
-          break;
-        }
-        case 'ArrowDown': {
-          event.preventDefault();
-          // Focus first option or search input
-          const firstOption = dropdownRef.current?.querySelector('[role="option"]');
-          const searchInput = dropdownRef.current?.querySelector('input[type="text"]');
-          (searchInput || firstOption)?.focus();
-          break;
-        }
-        case 'ArrowUp': {
-          event.preventDefault();
-          // Focus last option
-          const options = dropdownRef.current?.querySelectorAll('[role="option"]');
-          options?.[options.length - 1]?.focus();
-          break;
-        }
-        default:
-          break;
-      }
+    if (!isOpen) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') { setIsOpen(false); buttonRef.current?.focus(); }
     };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
   }, [isOpen]);
 
   const handleSelect = (option) => {
@@ -82,159 +55,143 @@ const Dropdown = ({
     buttonRef.current?.focus();
   };
 
-  const handleToggle = () => {
-    if (!disabled) {
-      setIsOpen(!isOpen);
-    }
-  };
-
-  const filteredOptions = searchable 
-    ? options.filter(option => 
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const filteredOptions = searchable
+    ? options.filter(o => o.label.toLowerCase().includes(searchTerm.toLowerCase()))
     : options;
 
-  // Mobile-first button classes with proper touch targets
-  const buttonClasses = [
-    'w-full text-left border border-gray-300 rounded-md shadow-sm',
-    'focus:outline-none focus:ring-2 focus:border-transparent',
-    // Mobile-optimized padding for touch targets (min 44px height)
-    'px-3 py-3 md:py-2',
-    // Text size optimization for mobile
-    'text-base md:text-sm',
-    // Minimum touch target height
-    'min-h-[44px]',
-    // Error state styling
-    error ? 'border-red-300 focus:ring-red-500' : 'focus:ring-blue-500',
-    // Disabled state
-    disabled 
-      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-      : 'bg-white hover:bg-gray-50 text-gray-900',
-    className
-  ].join(' ');
-
-  // Responsive dropdown positioning
-  const getDropdownClasses = () => {
-    const baseClasses = [
-      'absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg',
-      'max-h-60 overflow-auto',
-      dropdownClassName
-    ];
-
-    if (isMobile) {
-      // On mobile, use full viewport width if needed and better positioning
-      baseClasses.push('mobile-dropdown');
-    }
-
-    return baseClasses.join(' ');
-  };
-
-  // Mobile-optimized option classes
-  const getOptionClasses = (isSelected = false) => {
-    return [
-      'w-full px-3 py-3 md:py-2 text-left text-base md:text-sm',
-      'hover:bg-gray-100 focus:outline-none focus:bg-gray-100',
-      'min-h-[44px] md:min-h-[36px] flex items-center',
-      'transition-colors duration-150',
-      isSelected ? 'bg-blue-50 text-blue-900' : 'text-gray-900'
-    ].join(' ');
-  };
+  const borderColor = error
+    ? 'rgba(239,68,68,0.5)'
+    : isOpen
+    ? `${COLORS.saffron}60`
+    : COLORS.darkBorderSubtle;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      {label && (
+        <label className="block text-xs font-semibold tracking-wide mb-1.5"
+          style={{ color: COLORS.saffronLight }}>
+          {label}
+        </label>
+      )}
       <button
         ref={buttonRef}
         type="button"
-        onClick={handleToggle}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={buttonClasses}
+        className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] flex items-center justify-between gap-2 focus:outline-none focus:ring-2"
+        style={{
+          background: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
+          border: `1px solid ${borderColor}`,
+          color: value ? '#fff' : 'rgba(255,255,255,0.45)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          boxShadow: isOpen ? `0 0 0 3px ${COLORS.saffron}18` : 'none',
+          outlineColor: COLORS.saffron,
+        }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={value ? `Selected: ${value.label}` : placeholder}
+        aria-disabled={disabled}
       >
-        <span className="block truncate pr-8">
-          {value ? value.label : placeholder}
-        </span>
-        <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <ChevronDown 
-            className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${
-              isOpen ? 'transform rotate-180' : ''
-            }`} 
-          />
-        </span>
+        <span className="truncate">{value ? value.label : placeholder}</span>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex-shrink-0"
+        >
+          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? COLORS.saffron : 'rgba(255,255,255,0.45)' }} aria-hidden="true" />
+        </motion.div>
       </button>
 
-      {isOpen && !disabled && (
-        <div className={getDropdownClasses()} role="listbox">
-          {searchable && (
-            <div className="p-2 border-b border-gray-200">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search..."
-                className="w-full px-3 py-2 md:py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-base md:text-sm min-h-[44px] md:min-h-[32px]"
-                autoFocus={!isMobile} // Don't auto-focus on mobile to prevent keyboard popup
-              />
-            </div>
-          )}
-          
-          {loading ? (
-            <div className="p-3 text-center text-gray-500 min-h-[44px] flex items-center justify-center">
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span>Loading...</span>
-              </div>
-            </div>
-          ) : filteredOptions.length === 0 ? (
-            <div className="p-3 text-center text-gray-500 min-h-[44px] flex items-center justify-center">
-              No options found
-            </div>
-          ) : (
-            <div className="py-1">
-              {filteredOptions.map((option, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  role="option"
-                  aria-selected={value?.value === option.value}
-                  onClick={() => handleSelect(option)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelect(option);
-                    } else if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      const nextOption = e.target.nextElementSibling;
-                      nextOption?.focus();
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      const prevOption = e.target.previousElementSibling;
-                      if (prevOption) {
-                        prevOption.focus();
-                      } else if (searchable) {
-                        // Focus search input if at first option
-                        const searchInput = dropdownRef.current?.querySelector('input[type="text"]');
-                        searchInput?.focus();
-                      }
-                    }
-                  }}
-                  className={getOptionClasses(value?.value === option.value)}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {value?.value === option.value && (
-                    <span className="ml-auto text-blue-600">
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </span>
+      <AnimatePresence>
+        {isOpen && !disabled && (
+          <motion.div
+            className={`absolute left-0 right-0 mt-2 rounded-xl border overflow-hidden z-50 ${dropdownClassName}`}
+            style={{
+              background: '#111111',
+              borderColor: `${COLORS.saffron}25`,
+              boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${COLORS.saffron}10`,
+              maxHeight: 280,
+              overflowY: 'auto',
+            }}
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+            role="listbox"
+          >
+            {searchable && (
+              <div className="p-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-8 pr-8 py-2 text-sm rounded-lg focus:outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${COLORS.darkBorderSubtle}`,
+                      color: '#fff',
+                    }}
+                    autoFocus={!isMobile}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSearchTerm(''); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   )}
-                </button>
-              ))}
+                </div>
+              </div>
+            )}
+
+            <div className="py-1">
+              {loading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-white/40 text-sm">
+                  <motion.div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60"
+                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                  Loading...
+                </div>
+              ) : filteredOptions.length === 0 ? (
+                <div className="py-6 text-center text-white/35 text-sm">No options found</div>
+              ) : (
+                filteredOptions.map((option, i) => {
+                  const isSelected = value?.value === option.value;
+                  return (
+                    <motion.button
+                      key={i}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => handleSelect(option)}
+                      className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px]"
+                      style={{
+                        color: isSelected ? COLORS.saffronLight : 'rgba(255,255,255,0.75)',
+                        background: isSelected ? `${COLORS.saffron}12` : 'transparent',
+                      }}
+                      whileHover={{ background: `${COLORS.saffron}0A`, color: '#fff' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
+                        else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }
+                        else if (e.key === 'ArrowUp') { e.preventDefault(); e.target.previousElementSibling?.focus(); }
+                      }}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                    </motion.button>
+                  );
+                })
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

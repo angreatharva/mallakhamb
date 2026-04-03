@@ -1,27 +1,111 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Clock, Users, Save, ArrowLeft } from 'lucide-react';
+import { Clock, Users, Save, ArrowLeft, Trophy, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../services/api';
 import { useRouteContext } from '../contexts/RouteContext';
 import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
-import { ResponsiveContainer } from '../components/responsive/ResponsiveContainer';
 import { logger } from '../utils/logger';
+import { COLORS, useReducedMotion, GradientText, FadeIn } from './Home';
+
+const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+
+const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  return (
+    <motion.div className="absolute rounded-full pointer-events-none"
+      style={{
+        left: `${x}%`, top: `${y}%`, width: size, height: size,
+        background: `radial-gradient(circle at 35% 35%, ${color}30, ${color}08, transparent 70%)`,
+        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
+      }}
+      animate={{ y: [0, -25, 0], scale: [1, 1.08, 1], opacity: [0.25, 0.45, 0.25] }}
+      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }} />
+  );
+};
+
+const LiveDot = ({ connected }) => (
+  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold"
+    style={{
+      background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+      borderColor: connected ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)',
+    }}>
+    <motion.div className="w-2 h-2 rounded-full"
+      style={{ background: connected ? '#22C55E' : '#EF4444' }}
+      animate={connected ? { scale: [1, 1.4, 1], opacity: [1, 0.5, 1] } : {}}
+      transition={{ duration: 1.5, repeat: Infinity }} />
+    <span style={{ color: connected ? '#22C55E' : '#EF4444' }}>{connected ? 'Live' : 'Offline'}</span>
+  </div>
+);
+
+const InfoChip = ({ label, value, accent = COLORS.saffron }) => (
+  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-xl border"
+    style={{ background: `${accent}0A`, borderColor: `${accent}20` }}>
+    <span className="text-xs font-bold tracking-widest uppercase" style={{ color: accent }}>{label}</span>
+    <span className="text-white font-bold text-sm">{value}</span>
+  </div>
+);
+
+const JudgeBadge = ({ judge }) => (
+  <div className="flex flex-col items-center gap-2 p-4 rounded-2xl border text-center"
+    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+    <span className="text-xs font-bold px-2 py-1 rounded-full"
+      style={{
+        background: judge.judgeType === 'Senior Judge' ? 'rgba(168,85,247,0.15)' : 'rgba(59,130,246,0.15)',
+        color: judge.judgeType === 'Senior Judge' ? '#C084FC' : '#60A5FA',
+        border: `1px solid ${judge.judgeType === 'Senior Judge' ? 'rgba(168,85,247,0.3)' : 'rgba(59,130,246,0.3)'}`,
+      }}>
+      {judge.judgeType}
+    </span>
+    <p className="text-white font-bold text-sm leading-tight">{judge.name}</p>
+    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{judge.username}</p>
+  </div>
+);
+
+const SectionCard = ({ children, className = '' }) => (
+  <div className={`rounded-2xl border p-5 md:p-6 ${className}`}
+    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+    {children}
+  </div>
+);
+
+const SectionHeading = ({ icon: Icon, children, accent = COLORS.saffron }) => (
+  <div className="flex items-center gap-3 mb-5">
+    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{ background: `${accent}18` }}>
+      <Icon className="w-4 h-4" style={{ color: accent }} aria-hidden="true" />
+    </div>
+    <h3 className="text-white font-black text-base">{children}</h3>
+  </div>
+);
+
+const DarkInput = ({ label, value, onChange, placeholder }) => (
+  <div>
+    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>
+      {label}
+    </label>
+    <input type="text" value={value} onChange={onChange} placeholder={placeholder}
+      className="w-full px-4 py-3 rounded-xl border outline-none transition-all duration-200 text-sm min-h-[44px]"
+      style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: '#fff' }}
+      onFocus={e => { e.target.style.borderColor = `${COLORS.saffron}60`; e.target.style.boxShadow = `0 0 0 3px ${COLORS.saffron}15`; }}
+      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }} />
+  </div>
+);
+
 
 const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Get route context from hook or use prop
   const contextValue = useRouteContext();
   const routePrefix = routePrefixProp || contextValue.routePrefix;
-  
-  // Select the appropriate API service based on route context
   const apiService = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const { selectedTeam, selectedGender, selectedAgeGroup } = location.state || {};
 
   const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [judges, setJudges] = useState([]);
   const [players, setPlayers] = useState([]);
   const [scores, setScores] = useState({});
@@ -29,452 +113,161 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   const [scorer, setScorer] = useState('');
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // Initialize Socket.IO connection
   useEffect(() => {
-    // Remove /api from the URL for Socket.IO connection
     const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
     const newSocket = io(socketUrl);
     setSocket(newSocket);
-
     newSocket.on('connect', () => {
-      logger.log('Connected to server');
-      // Join scoring room for this age group and gender
+      setIsConnected(true);
       if (selectedGender?.value && selectedAgeGroup?.value) {
-        const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}`;
-        newSocket.emit('join_scoring_room', roomId);
-        logger.log('Joined room:', roomId);
+        newSocket.emit('join_scoring_room', `scoring_${selectedGender.value}_${selectedAgeGroup.value}`);
       }
     });
-
-    return () => {
-      newSocket.disconnect();
-    };
+    newSocket.on('disconnect', () => setIsConnected(false));
+    return () => newSocket.disconnect();
   }, []);
 
-  // Set up score update listener after players are loaded
   useEffect(() => {
     if (!socket) return;
-
     const handleScoreUpdate = (data) => {
-      logger.log('Received score update:', data);
-
-      // Check if player exists in current players list
       const playerExists = players.some(p => p.id === data.playerId);
-      logger.log('Player exists in current list:', playerExists);
-      logger.log('Looking for player ID:', data.playerId);
-      logger.log('Available player IDs:', players.map(p => ({ id: p.id, name: p.name })));
-
       if (!playerExists) {
-        logger.warn('Player not found in current players list:', data.playerId);
-        logger.warn('Available players:', players);
-
-        // Try to add the player dynamically if we can
-        const newPlayer = {
-          id: data.playerId,
-          name: data.playerName,
-          gender: selectedGender?.value,
-          ageGroup: selectedAgeGroup?.value,
-          teamName: 'Unknown Team'
-        };
-
-        setPlayers(prevPlayers => [...prevPlayers, newPlayer]);
-
-        // Initialize score for new player
-        setScores(prevScores => ({
-          ...prevScores,
-          [data.playerId]: {
-            time: '',
-            seniorJudge: '',
-            judge1: '',
-            judge2: '',
-            judge3: '',
-            judge4: '',
-            deduction: '',
-            otherDeduction: ''
-          }
-        }));
-
-        toast.success(`Added ${data.playerName} to scoring session`);
+        setPlayers(prev => [...prev, { id: data.playerId, name: data.playerName, gender: selectedGender?.value, ageGroup: selectedAgeGroup?.value, teamName: 'Unknown Team' }]);
+        setScores(prev => ({ ...prev, [data.playerId]: { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '' } }));
+        toast.success(`Added ${data.playerName} to session`);
       }
-
-      // Map judge type to the correct field name
-      let fieldName = '';
-      switch (data.judgeType) {
-        case 'Senior Judge':
-          fieldName = 'seniorJudge';
-          break;
-        case 'Judge 1':
-          fieldName = 'judge1';
-          break;
-        case 'Judge 2':
-          fieldName = 'judge2';
-          break;
-        case 'Judge 3':
-          fieldName = 'judge3';
-          break;
-        case 'Judge 4':
-          fieldName = 'judge4';
-          break;
-        default:
-          fieldName = 'seniorJudge';
-      }
-
-      logger.log('Updating field:', fieldName, 'for player:', data.playerId, 'with score:', data.score);
-
-      setScores(prevScores => {
-        const newScores = {
-          ...prevScores,
-          [data.playerId]: {
-            ...prevScores[data.playerId],
-            [fieldName]: data.score.toString()
-          }
-        };
-        logger.log('New scores state:', newScores);
-        return newScores;
-      });
-
-      toast.success(`${data.judgeType} scored ${data.score} for ${data.playerName}`, {
-        duration: 2000,
-        icon: '🎯'
-      });
+      const fieldMap = { 'Senior Judge': 'seniorJudge', 'Judge 1': 'judge1', 'Judge 2': 'judge2', 'Judge 3': 'judge3', 'Judge 4': 'judge4' };
+      const fieldName = fieldMap[data.judgeType] || 'seniorJudge';
+      setScores(prev => ({ ...prev, [data.playerId]: { ...prev[data.playerId], [fieldName]: data.score.toString() } }));
+      toast.success(`${data.judgeType}: ${data.score} for ${data.playerName}`, { duration: 2000 });
     };
-
-    // Remove any existing listener and add new one
     socket.off('score_updated');
     socket.on('score_updated', handleScoreUpdate);
+    return () => socket.off('score_updated', handleScoreUpdate);
+  }, [socket, players, selectedGender, selectedAgeGroup]);
 
-    return () => {
-      socket.off('score_updated', handleScoreUpdate);
-    };
-  }, [socket, players, scores, selectedGender, selectedAgeGroup]);
-
-  // Join room when socket connects and we have gender/age group
   useEffect(() => {
-    if (socket && socket.connected && selectedGender?.value && selectedAgeGroup?.value) {
-      const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}`;
-      socket.emit('join_scoring_room', roomId);
-      logger.log('Joined scoring room:', roomId);
+    if (socket?.connected && selectedGender?.value && selectedAgeGroup?.value) {
+      socket.emit('join_scoring_room', `scoring_${selectedGender.value}_${selectedAgeGroup.value}`);
     }
   }, [socket, selectedGender, selectedAgeGroup]);
 
-  // Fetch judges and players data
   useEffect(() => {
-    if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
-      navigate(routePrefix);
-      return;
-    }
-
+    if (!selectedTeam || !selectedGender || !selectedAgeGroup) { navigate(routePrefix); return; }
     fetchJudgesAndPlayers();
   }, [selectedTeam, selectedGender, selectedAgeGroup]);
+
+  const initScores = (playersList) => {
+    const s = {};
+    playersList.forEach(p => { s[p.id] = { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '' }; });
+    return s;
+  };
 
   const fetchJudgesAndPlayers = async () => {
     try {
       setLoading(true);
-
-      // Fetch judges for the selected age group and gender
-      const judgesResponse = await apiService.getJudges({
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value
-      });
-
-      // Filter out empty judges and sort by judgeNo
-      const activeJudges = judgesResponse.data.judges
-        .filter(judge => judge.name && judge.name.trim() !== '')
-        .sort((a, b) => a.judgeNo - b.judgeNo);
-
-      setJudges(activeJudges);
-
-      // Get players from the selected team for this age group
-      const teamPlayers = selectedTeam.players
-        .filter(playerEntry =>
-          playerEntry.player.gender === selectedGender.value &&
-          playerEntry.ageGroup === selectedAgeGroup.value
-        )
-        .map(playerEntry => ({
-          id: playerEntry.player._id,
-          name: `${playerEntry.player.firstName} ${playerEntry.player.lastName}`,
-          gender: playerEntry.player.gender,
-          ageGroup: playerEntry.ageGroup,
-          teamId: selectedTeam._id,
-          teamName: selectedTeam.name
-        }));
-
-      // Also try to get all players for this category from all teams to support cross-team scoring
+      const judgesRes = await apiService.getJudges({ gender: selectedGender.value, ageGroup: selectedAgeGroup.value });
+      setJudges(judgesRes.data.judges.filter(j => j.name?.trim()).sort((a, b) => a.judgeNo - b.judgeNo));
       try {
-        const allTeamsResponse = await apiService.getSubmittedTeams({
-          gender: selectedGender.value,
-          ageGroup: selectedAgeGroup.value
-        });
-
+        const allTeamsRes = await apiService.getSubmittedTeams({ gender: selectedGender.value, ageGroup: selectedAgeGroup.value });
         const allPlayers = [];
-        allTeamsResponse.data.teams.forEach(team => {
-          team.players
-            .filter(playerEntry =>
-              playerEntry.player.gender === selectedGender.value &&
-              playerEntry.ageGroup === selectedAgeGroup.value
-            )
-            .forEach(playerEntry => {
-              allPlayers.push({
-                id: playerEntry.player._id,
-                name: `${playerEntry.player.firstName} ${playerEntry.player.lastName}`,
-                gender: playerEntry.player.gender,
-                ageGroup: playerEntry.ageGroup,
-                teamId: team._id,
-                teamName: team.name
-              });
-            });
+        allTeamsRes.data.teams.forEach(team => {
+          team.players.filter(e => e.player.gender === selectedGender.value && e.ageGroup === selectedAgeGroup.value)
+            .forEach(e => allPlayers.push({ id: e.player._id, name: `${e.player.firstName} ${e.player.lastName}`, gender: e.player.gender, ageGroup: e.ageGroup, teamId: team._id, teamName: team.name }));
         });
-
-        logger.log('All players in category:', allPlayers);
         setPlayers(allPlayers);
-
-        // Initialize scores for all players
-        const allPlayersScores = initializeScores(allPlayers);
-        setScores(allPlayersScores);
-
-        // Try to load existing scores from database for all teams
-        loadExistingScores(null, selectedGender.value, selectedAgeGroup.value, allPlayersScores);
-      } catch (error) {
-        logger.log('Could not load all players, using team players only:', error);
+        const initialScores = initScores(allPlayers);
+        setScores(initialScores);
+        loadExistingScores(null, selectedGender.value, selectedAgeGroup.value, initialScores);
+      } catch {
+        const teamPlayers = selectedTeam.players
+          .filter(e => e.player.gender === selectedGender.value && e.ageGroup === selectedAgeGroup.value)
+          .map(e => ({ id: e.player._id, name: `${e.player.firstName} ${e.player.lastName}`, gender: e.player.gender, ageGroup: e.ageGroup, teamId: selectedTeam._id, teamName: selectedTeam.name }));
         setPlayers(teamPlayers);
-
-        // Try to load existing scores from database for selected team
+        const initialScores = initScores(teamPlayers);
+        setScores(initialScores);
         loadExistingScores(selectedTeam._id, selectedGender.value, selectedAgeGroup.value, initialScores);
       }
-
-      // Initialize scores object (this will be updated after we get all players)
-      const initializeScores = (playersList) => {
-        const initialScores = {};
-        playersList.forEach(player => {
-          initialScores[player.id] = {
-            time: '',
-            seniorJudge: '',
-            judge1: '',
-            judge2: '',
-            judge3: '',
-            judge4: '',
-            deduction: '',
-            otherDeduction: ''
-          };
-        });
-        return initialScores;
-      };
-
-      // This will be overridden when we get all players, but set initial state
-      const initialScores = initializeScores(teamPlayers);
-      setScores(initialScores);
-
-      logger.log('Initialized players:', teamPlayers);
-      logger.log('Initialized scores:', initialScores);
-
     } catch (error) {
       logger.error('Error fetching data:', error);
-      toast.error('Failed to load judges and players data');
-    } finally {
-      setLoading(false);
-    }
+      toast.error('Failed to load judges and players');
+    } finally { setLoading(false); }
   };
 
   const loadExistingScores = async (teamId, gender, ageGroup, initialScores) => {
     try {
-      // Try to load existing scores from the database
-      const response = await apiService.getTeamScores({
-        teamId,
-        gender,
-        ageGroup
-      });
-
-      if (response.data && response.data.scores) {
-        const existingScores = { ...initialScores };
-
-        // Map database scores to the scores state
-        response.data.scores.forEach(scoreRecord => {
-          scoreRecord.playerScores.forEach(playerScore => {
-            if (existingScores[playerScore.playerId]) {
-              existingScores[playerScore.playerId] = {
-                ...existingScores[playerScore.playerId],
-                seniorJudge: playerScore.judgeScores.seniorJudge.toString(),
-                judge1: playerScore.judgeScores.judge1.toString(),
-                judge2: playerScore.judgeScores.judge2.toString(),
-                judge3: playerScore.judgeScores.judge3.toString(),
-                judge4: playerScore.judgeScores.judge4.toString(),
-                deduction: playerScore.deduction.toString(),
-                otherDeduction: playerScore.otherDeduction.toString()
-              };
+      const res = await apiService.getTeamScores({ teamId, gender, ageGroup });
+      if (res.data?.scores) {
+        const existing = { ...initialScores };
+        res.data.scores.forEach(record => {
+          record.playerScores.forEach(ps => {
+            if (existing[ps.playerId]) {
+              existing[ps.playerId] = { ...existing[ps.playerId], seniorJudge: ps.judgeScores.seniorJudge.toString(), judge1: ps.judgeScores.judge1.toString(), judge2: ps.judgeScores.judge2.toString(), judge3: ps.judgeScores.judge3.toString(), judge4: ps.judgeScores.judge4.toString(), deduction: ps.deduction.toString(), otherDeduction: ps.otherDeduction.toString() };
             }
           });
         });
-
-        setScores(existingScores);
-        logger.log('Loaded existing scores:', existingScores);
+        setScores(existing);
       }
-    } catch (error) {
-      logger.log('No existing scores found or error loading:', error);
-      // This is fine, we'll start with empty scores
-    }
+    } catch { /* no existing scores */ }
   };
 
-  const calculateAverageMarks = (playerScores) => {
-    const judgeScores = [
-      parseFloat(playerScores.seniorJudge) || 0,
-      parseFloat(playerScores.judge1) || 0,
-      parseFloat(playerScores.judge2) || 0,
-      parseFloat(playerScores.judge3) || 0,
-      parseFloat(playerScores.judge4) || 0
-    ].filter(score => score > 0);
-
-    if (judgeScores.length === 0) return 0;
-
-    // If we have 3 or fewer scores, use all of them
-    if (judgeScores.length <= 3) {
-      return (judgeScores.reduce((sum, score) => sum + score, 0) / judgeScores.length).toFixed(2);
-    }
-
-    // If we have 4 or more scores, remove highest and lowest
-    const sortedScores = [...judgeScores].sort((a, b) => a - b);
-
-    // Remove the lowest (first) and highest (last) scores
-    const trimmedScores = sortedScores.slice(1, -1);
-
-    // Calculate average of remaining scores
-    return (trimmedScores.reduce((sum, score) => sum + score, 0) / trimmedScores.length).toFixed(2);
+  const calcAverage = (ps) => {
+    const vals = [ps.seniorJudge, ps.judge1, ps.judge2, ps.judge3, ps.judge4].map(v => parseFloat(v) || 0).filter(v => v > 0);
+    if (!vals.length) return 0;
+    if (vals.length <= 3) return vals.reduce((s, v) => s + v, 0) / vals.length;
+    const sorted = [...vals].sort((a, b) => a - b);
+    const trimmed = sorted.slice(1, -1);
+    return trimmed.reduce((s, v) => s + v, 0) / trimmed.length;
   };
 
-  const calculateFinalScore = (playerScores) => {
-    const average = parseFloat(calculateAverageMarks(playerScores));
-    const deduction = parseFloat(playerScores.deduction) || 0;
-    const otherDeduction = parseFloat(playerScores.otherDeduction) || 0;
-    return Math.max(0, average - deduction - otherDeduction).toFixed(2);
-  };
-
-  const getScoreBreakdown = (playerScores) => {
-    const judgeScores = [
-      { name: 'Senior', score: parseFloat(playerScores.seniorJudge) || 0 },
-      { name: 'J1', score: parseFloat(playerScores.judge1) || 0 },
-      { name: 'J2', score: parseFloat(playerScores.judge2) || 0 },
-      { name: 'J3', score: parseFloat(playerScores.judge3) || 0 },
-      { name: 'J4', score: parseFloat(playerScores.judge4) || 0 }
-    ].filter(item => item.score > 0);
-
-    if (judgeScores.length <= 3) {
-      return { used: judgeScores, excluded: [] };
-    }
-
-    const sorted = [...judgeScores].sort((a, b) => a.score - b.score);
-    const excluded = [sorted[0], sorted[sorted.length - 1]];
-    const used = sorted.slice(1, -1);
-
-    return { used, excluded };
-  };
+  const calcFinal = (ps) => Math.max(0, calcAverage(ps) - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0));
 
   const handleScoreChange = (playerId, field, value) => {
-    logger.log('Score change:', { playerId, field, value });
-
-    setScores(prevScores => ({
-      ...prevScores,
-      [playerId]: {
-        ...prevScores[playerId],
-        [field]: value
-      }
-    }));
-
-    // Emit real-time update via socket (only for judge scores, not time/deductions)
-    if (socket && field !== 'time' && field !== 'deduction' && field !== 'otherDeduction') {
+    setScores(prev => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
+    if (socket && !['time', 'deduction', 'otherDeduction'].includes(field)) {
       const player = players.find(p => p.id === playerId);
-
-      // Map field name back to judge type
-      let judgeType = '';
-      switch (field) {
-        case 'seniorJudge':
-          judgeType = 'Senior Judge';
-          break;
-        case 'judge1':
-          judgeType = 'Judge 1';
-          break;
-        case 'judge2':
-          judgeType = 'Judge 2';
-          break;
-        case 'judge3':
-          judgeType = 'Judge 3';
-          break;
-        case 'judge4':
-          judgeType = 'Judge 4';
-          break;
-      }
-
-      if (judgeType) {
-        socket.emit('score_update', {
-          playerId,
-          playerName: player?.name,
-          judgeType,
-          score: parseFloat(value) || 0,
-          roomId: `scoring_${selectedGender?.value}_${selectedAgeGroup?.value}`
-        });
-      }
+      const judgeTypeMap = { seniorJudge: 'Senior Judge', judge1: 'Judge 1', judge2: 'Judge 2', judge3: 'Judge 3', judge4: 'Judge 4' };
+      const judgeType = judgeTypeMap[field];
+      if (judgeType) socket.emit('score_update', { playerId, playerName: player?.name, judgeType, score: parseFloat(value) || 0, roomId: `scoring_${selectedGender?.value}_${selectedAgeGroup?.value}` });
     }
   };
 
   const handleSaveScores = async () => {
+    setSaving(true);
     try {
-      const scoringData = {
-        teamId: selectedTeam._id,
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value,
-        timeKeeper,
-        scorer,
-        remarks,
-        playerScores: players.map(player => ({
-          playerId: player.id,
-          playerName: player.name,
-          time: scores[player.id].time,
-          judgeScores: {
-            seniorJudge: parseFloat(scores[player.id].seniorJudge) || 0,
-            judge1: parseFloat(scores[player.id].judge1) || 0,
-            judge2: parseFloat(scores[player.id].judge2) || 0,
-            judge3: parseFloat(scores[player.id].judge3) || 0,
-            judge4: parseFloat(scores[player.id].judge4) || 0
-          },
-          averageMarks: parseFloat(calculateAverageMarks(scores[player.id])),
-          deduction: parseFloat(scores[player.id].deduction) || 0,
-          otherDeduction: parseFloat(scores[player.id].otherDeduction) || 0,
-          finalScore: parseFloat(calculateFinalScore(scores[player.id]))
-        }))
-      };
-
-      await apiService.saveScores(scoringData);
-
-      // Show success message
-      toast.success('🎉 Thank you for scoring! All scores have been saved successfully.', {
-        duration: 3000,
-        icon: '✅'
+      await apiService.saveScores({
+        teamId: selectedTeam._id, gender: selectedGender.value, ageGroup: selectedAgeGroup.value,
+        timeKeeper, scorer, remarks,
+        playerScores: players.map(p => ({
+          playerId: p.id, playerName: p.name, time: scores[p.id].time,
+          judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 },
+          averageMarks: parseFloat(calcAverage(scores[p.id]).toFixed(2)),
+          deduction: parseFloat(scores[p.id].deduction) || 0,
+          otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0,
+          finalScore: parseFloat(calcFinal(scores[p.id]).toFixed(2)),
+        })),
       });
-
-      // Emit save event via socket
-      if (socket) {
-        socket.emit('scores_saved', {
-          teamId: selectedTeam._id,
-          roomId: `scoring_${selectedGender?.value}_${selectedAgeGroup?.value}`
-        });
-      }
-
-      // Redirect to scores tab after a short delay
-      setTimeout(() => {
-        navigate(`${routePrefix}/dashboard/scores`);
-      }, 2000);
-
+      toast.success('All scores saved successfully!', { duration: 3000 });
+      setSaved(true);
+      if (socket) socket.emit('scores_saved', { teamId: selectedTeam._id, roomId: `scoring_${selectedGender?.value}_${selectedAgeGroup?.value}` });
+      setTimeout(() => navigate(`${routePrefix}/dashboard/scores`), 2000);
     } catch (error) {
       logger.error('Error saving scores:', error);
       toast.error('Failed to save scores');
-    }
+    } finally { setSaving(false); }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading scoring page...</p>
+          <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
+            style={{ borderColor: COLORS.saffron, borderTopColor: 'transparent' }}
+            animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+          <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>Loading scoring session...</p>
         </div>
       </div>
     );
@@ -482,14 +275,12 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
 
   if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Invalid scoring session. Please go back and select a team.</p>
-          <button
-            onClick={() => navigate(routePrefix)}
-            className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            Back to Admin Dashboard
+      <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
+        <div className="text-center p-8">
+          <p className="text-white font-bold mb-4">Invalid scoring session.</p>
+          <button onClick={() => navigate(routePrefix)} className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px]"
+            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -497,172 +288,134 @@ const ScoringPage = ({ routePrefix: routePrefixProp }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-lg border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate(routePrefix)}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span>Back to Dashboard</span>
-              </button>
-              <div className="h-6 border-l border-gray-300"></div>
-              <h1 className="text-xl font-bold text-gray-900">Live Scoring</h1>
-            </div>
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Live Updates Active</span>
-              </div>
+    <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <Orb x={5} y={10} size={500} color={COLORS.saffron} delay={0} duration={9} blur={120} />
+      <Orb x={95} y={40} size={350} color="#A855F7" delay={2} duration={11} blur={100} />
+      <Orb x={50} y={90} size={300} color={COLORS.saffronDark} delay={1} duration={8} blur={90} />
 
-              <a
-                href="/judge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-              >
-                Open Judge Panel
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Scoring Info */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Selected {selectedGender.label} - {selectedAgeGroup.label} for scoring
-              </h2>
-              <p className="text-gray-600">Team: {selectedTeam.name}</p>
-              <p className="text-gray-600">Coach: {selectedTeam.coach?.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Players in this category</p>
-              <p className="text-2xl font-bold text-purple-600">{players.length}</p>
-            </div>
-          </div>
-
-          {/* Judges Panel */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              Judges Panel
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {judges.map((judge) => (
-                <div key={judge._id} className="bg-gray-50 rounded-lg p-3 text-center">
-                  <div className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mb-2 ${judge.judgeType === 'Senior Judge'
-                    ? 'bg-purple-100 text-purple-800'
-                    : 'bg-blue-100 text-blue-800'
-                    }`}>
-                    {judge.judgeType}
-                  </div>
-                  <p className="font-medium text-gray-900">{judge.name}</p>
-                  <p className="text-xs text-gray-500">{judge.username}</p>
-                </div>
-              ))}
-            </div>
-            {judges.length === 0 && (
-              <p className="text-center text-gray-500 py-4">
-                No judges found for this category. Please add judges first.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Scoring Table */}
-        {players.length > 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Clock className="h-5 w-5 mr-2" />
-              Player Scoring
-            </h3>
-
-            {/* Scoring System Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-blue-900 mb-2">Scoring System</h4>
-              <p className="text-sm text-blue-800">
-                <strong>Average Calculation:</strong> When 4+ judges score, the highest and lowest scores are excluded,
-                and the average is calculated from the remaining scores. With 3 or fewer scores, all scores are used.
-              </p>
-              <p className="text-sm text-blue-800 mt-1">
-                <strong>Final Score:</strong> Average Marks - Deduction - Other Deduction
-              </p>
-            </div>
-
-            <ResponsiveScoringTable
-              players={players}
-              scores={scores}
-              judges={judges}
-              onScoreChange={handleScoreChange}
-              isLocked={false}
-            />
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <p className="text-gray-500">No players found for this category.</p>
-          </div>
-        )}
-
-        {/* Footer Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Keeper
-              </label>
-              <input
-                type="text"
-                value={timeKeeper}
-                onChange={(e) => setTimeKeeper(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter time keeper name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scorer
-              </label>
-              <input
-                type="text"
-                value={scorer}
-                onChange={(e) => setScorer(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter scorer name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Remarks
-              </label>
-              <input
-                type="text"
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter any remarks"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveScores}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 font-medium"
-            >
-              <Save className="h-5 w-5" />
-              <span>Save Scores</span>
+      <header className="sticky top-0 z-40 border-b"
+        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate(routePrefix)}
+              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] px-2 rounded-xl hover:bg-white/5"
+              style={{ color: 'rgba(255,255,255,0.6)' }} aria-label="Back to Dashboard">
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
+            <div className="w-px h-5" style={{ background: 'rgba(255,255,255,0.1)' }} />
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <h1 className="text-white font-black text-sm sm:text-base">Live Scoring</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <LiveDot connected={isConnected} />
+            <a href="/judge" target="_blank" rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+              Open Judge Panel
+            </a>
           </div>
         </div>
-      </div>
+      </header>
+
+      <main className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6" id="main-content">
+        <FadeIn>
+          <div className="rounded-2xl border p-5 md:p-6"
+            style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorder }}>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+              <div>
+                <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.saffron }}>Scoring Session</p>
+                <h2 className="text-xl md:text-2xl font-black text-white">
+                  {selectedGender.label} · <GradientText>{selectedAgeGroup.label}</GradientText>
+                </h2>
+                <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  Team: {selectedTeam.name}{selectedTeam.coach?.name && ` · Coach: ${selectedTeam.coach.name}`}
+                </p>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <InfoChip label="Players" value={players.length} accent={COLORS.saffron} />
+                <InfoChip label="Judges" value={judges.length} accent="#A855F7" />
+              </div>
+            </div>
+            <div className="p-4 rounded-xl text-xs leading-relaxed"
+              style={{ background: 'rgba(255,107,0,0.06)', border: `1px solid ${COLORS.saffron}20`, color: 'rgba(255,255,255,0.5)' }}>
+              <span className="font-bold" style={{ color: COLORS.saffronLight }}>Scoring System: </span>
+              With 4+ judges, highest and lowest scores are excluded before averaging.
+              <span className="ml-2 font-bold" style={{ color: COLORS.saffronLight }}>Final = </span>
+              Average − Deduction − Other Deduction
+            </div>
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.08}>
+          <SectionCard>
+            <SectionHeading icon={Users} accent="#A855F7">Judges Panel</SectionHeading>
+            {judges.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {judges.map(judge => <JudgeBadge key={judge._id} judge={judge} />)}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No judges found for this category</p>
+              </div>
+            )}
+          </SectionCard>
+        </FadeIn>
+
+        <FadeIn delay={0.12}>
+          <SectionCard>
+            <SectionHeading icon={Clock} accent={COLORS.saffron}>Player Scoring</SectionHeading>
+            {players.length > 0 ? (
+              <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={false} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No players found for this category.</p>
+              </div>
+            )}
+          </SectionCard>
+        </FadeIn>
+
+        <FadeIn delay={0.16}>
+          <SectionCard>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <DarkInput label="Time Keeper" value={timeKeeper} onChange={e => setTimeKeeper(e.target.value)} placeholder="Enter name" />
+              <DarkInput label="Scorer" value={scorer} onChange={e => setScorer(e.target.value)} placeholder="Enter name" />
+              <DarkInput label="Remarks" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional remarks" />
+            </div>
+            <div className="flex justify-end">
+              <motion.button onClick={handleSaveScores} disabled={saving || saved}
+                className="flex items-center gap-2 px-8 py-3 rounded-xl font-black text-white min-h-[48px]"
+                style={{
+                  background: saved ? 'linear-gradient(135deg, #22C55E, #16A34A)' : `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`,
+                  opacity: saving ? 0.7 : 1,
+                }}
+                whileHover={saving || saved ? {} : { scale: 1.02, filter: 'brightness(1.1)' }}
+                whileTap={saving || saved ? {} : { scale: 0.98 }}
+                transition={{ duration: 0.15 }}>
+                <AnimatePresence mode="wait" initial={false}>
+                  {saving ? (
+                    <motion.span key="saving" className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                      Saving...
+                    </motion.span>
+                  ) : saved ? (
+                    <motion.span key="saved" className="flex items-center gap-2" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
+                      <CheckCircle className="w-4 h-4" aria-hidden="true" /> Saved!
+                    </motion.span>
+                  ) : (
+                    <motion.span key="idle" className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Save className="w-4 h-4" aria-hidden="true" /> Save Scores
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </div>
+          </SectionCard>
+        </FadeIn>
+      </main>
     </div>
   );
 };
