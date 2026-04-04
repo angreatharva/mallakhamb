@@ -8,18 +8,8 @@ import { authAPI } from '../services/api';
 import { validateEmailFormat } from '../utils/validation';
 import { logger } from '../utils/logger';
 import BHALogo from '../assets/BHA.png';
-
-const COLORS = {
-  saffron: '#FF6B00',
-  saffronLight: '#FF8C38',
-  saffronDark: '#CC5500',
-  gold: '#F5A623',
-  dark: '#0A0A0A',
-  darkBorder: 'rgba(255,107,0,0.15)',
-  darkBorderSubtle: 'rgba(255,255,255,0.06)',
-};
-
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+import { COLORS, EASE_OUT } from '../styles/tokens';
+import { useReducedMotion as _useReducedMotion } from '../hooks/useResponsive';
 
 const useReducedMotion = () => {
   const [reduced] = useState(

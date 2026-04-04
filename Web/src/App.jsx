@@ -27,9 +27,7 @@ const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const AdminTeams = lazy(() => import('./pages/AdminTeams'));
-const ScoringPage = lazy(() => import('./pages/ScoringPage'));
 const AdminScoring = lazy(() => import('./pages/AdminScoring'));
-const JudgeScoring = lazy(() => import('./pages/JudgeScoring'));
 const JudgeLogin = lazy(() => import('./pages/JudgeLogin'));
 const JudgeScoringNew = lazy(() => import('./pages/JudgeScoringNew'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -335,14 +333,6 @@ function AppContent() {
               element={
                 <ProtectedRoute requiredUserType="judge">
                   <JudgeScoringNew />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/judge/scoring-old" 
-              element={
-                <ProtectedRoute requiredUserType="judge">
-                  <JudgeScoring />
                 </ProtectedRoute>
               } 
             />

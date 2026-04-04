@@ -1,5 +1,61 @@
 import { z } from 'zod';
 
+// ─── Validation Helper Functions ────────────────────────────────────────────
+
+/**
+ * Validate email format
+ * @param {string} email - Email address to validate
+ * @returns {boolean} True if valid email format
+ */
+export const validateEmailFormat = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
+
+/**
+ * Validate password strength
+ * @param {string} password - Password to validate
+ * @returns {object} { isValid: boolean, errors: string[] }
+ */
+export const validatePasswordStrength = (password) => {
+  const errors = [];
+  
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters');
+  }
+  if (password && password.length > 128) {
+    errors.push('Password is too long');
+  }
+  if (password && !/[a-z]/.test(password)) {
+    errors.push('Password must contain a lowercase letter');
+  }
+  if (password && !/[A-Z]/.test(password)) {
+    errors.push('Password must contain an uppercase letter');
+  }
+  if (password && !/[0-9]/.test(password)) {
+    errors.push('Password must contain a number');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};
+
+/**
+ * Validate phone number format (10 digits)
+ * @param {string} phone - Phone number to validate
+ * @returns {boolean} True if valid phone format
+ */
+export const validatePhoneFormat = (phone) => {
+  if (!phone || typeof phone !== 'string') return false;
+  const phoneRegex = /^[0-9]{10}$/;
+  return phoneRegex.test(phone.replace(/\s/g, ''));
+};
+
+// ─── Zod Validation Schemas ─────────────────────────────────────────────────
+
 // Common validation schemas
 export const emailSchema = z.string()
   .min(1, 'Email is required')
