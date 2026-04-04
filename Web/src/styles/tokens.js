@@ -17,10 +17,12 @@ export const DESIGN_TOKENS = {
     
     // ─── Role Colors (matching user types) ─────────────────────────────────────
     roles: {
-      player: '#FF6B00',      // Saffron
-      coach: '#22C55E',       // Green
-      judge: '#A855F7',       // Purple
-      admin: '#EF4444',       // Red
+      admin: '#8B5CF6',       // Purple (WCAG AA compliant)
+      superadmin: '#F5A623',  // Gold (WCAG AA compliant)
+      coach: '#22C55E',       // Green (WCAG AA compliant)
+      player: '#FF6B00',      // Saffron (WCAG AA compliant)
+      judge: '#8B5CF6',       // Purple (WCAG AA compliant)
+      public: '#3B82F6',      // Blue (WCAG AA compliant)
     },
     
     // ─── Semantic Colors ────────────────────────────────────────────────────────
@@ -168,6 +170,8 @@ export const DESIGN_TOKENS = {
 
 /**
  * Get status color based on status value
+ * @param {string} status - Status key (completed, pending, failed, started)
+ * @returns {string} Hex color code
  */
 export const getStatusColor = (status) => {
   return DESIGN_TOKENS.colors.status[status] || DESIGN_TOKENS.colors.brand.saffron;
@@ -175,14 +179,22 @@ export const getStatusColor = (status) => {
 
 /**
  * Get status background color with opacity
+ * @param {string} status - Status key (completed, pending, failed, started)
+ * @returns {string} RGBA color string with 9% opacity
  */
 export const getStatusBg = (status) => {
   const color = getStatusColor(status);
-  return `${color}18`; // 18 = ~9% opacity in hex
+  // Convert hex to rgba with 9% opacity for subtle backgrounds
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.09)`;
 };
 
 /**
  * Get role color based on user type
+ * @param {string} role - Role key (admin, superadmin, coach, player, judge, public)
+ * @returns {string} Hex color code (WCAG AA compliant)
  */
 export const getRoleColor = (role) => {
   return DESIGN_TOKENS.colors.roles[role] || DESIGN_TOKENS.colors.brand.saffron;
@@ -190,14 +202,21 @@ export const getRoleColor = (role) => {
 
 /**
  * Get role background color with opacity
+ * @param {string} role - Role key (admin, superadmin, coach, player, judge, public)
+ * @returns {string} RGBA color string with 9% opacity
  */
 export const getRoleBg = (role) => {
   const color = getRoleColor(role);
-  return `${color}18`;
+  // Convert hex to rgba with 9% opacity for subtle backgrounds
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.09)`;
 };
 
 // ─── Backward Compatibility Exports ─────────────────────────────────────────
 // For gradual migration from old COLORS and ADMIN_COLORS
+// These exports are deprecated and will be removed in a future version
 
 export const COLORS = {
   saffron: DESIGN_TOKENS.colors.brand.saffron,
@@ -230,6 +249,24 @@ export const EASE_OUT = DESIGN_TOKENS.easings.easeOut;
 export const EASE_SPRING = DESIGN_TOKENS.easings.spring;
 export const ADMIN_EASE_OUT = DESIGN_TOKENS.easings.easeOut;
 export const ADMIN_SPRING = DESIGN_TOKENS.easings.spring;
+
+// Show deprecation warnings in development mode
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const warnedExports = new Set();
+  
+  const createDeprecationWarning = (exportName, replacement) => {
+    if (!warnedExports.has(exportName)) {
+      console.warn(
+        `[Design System] "${exportName}" is deprecated and will be removed in a future version. ` +
+        `Use "${replacement}" instead.`
+      );
+      warnedExports.add(exportName);
+    }
+  };
+  
+  // Note: Actual usage detection would require Proxy objects or getter functions
+  // For now, we document the deprecation in comments and migration guide
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
