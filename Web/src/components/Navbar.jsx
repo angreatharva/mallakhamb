@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCompetition } from '../contexts/CompetitionContext';
 import CompetitionSelector from './CompetitionSelector';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 

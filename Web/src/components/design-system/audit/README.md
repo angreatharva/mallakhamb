@@ -62,7 +62,7 @@ Comprehensive typography documentation:
 1. **Add to Router** (in `App.jsx` or your router configuration):
 
 ```jsx
-import DesignTokenAuditPage from './pages/DesignTokenAuditPage';
+import DesignTokenAuditPage from './pages/shared/DesignTokenAuditPage';
 
 // In your routes:
 <Route path="/design-tokens" element={<DesignTokenAuditPage />} />

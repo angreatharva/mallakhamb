@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { coachAPI } from '../services/api';
-import { COLORS, FadeIn, useReducedMotion } from './Home';
+import { coachAPI } from '../../services/api';
+import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
 
 const CoachPayment = () => {
   const navigate = useNavigate();

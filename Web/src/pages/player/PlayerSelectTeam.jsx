@@ -4,12 +4,12 @@ import { useForm } from 'react-hook-form';
 import { ArrowRight, Trophy, ChevronDown, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playerAPI } from '../services/api';
-import { useAuth } from '../App';
-import { COLORS, GradientText, SaffronButton, useReducedMotion } from './Home';
+import { playerAPI } from '../../services/api';
+import { useAuth } from '../../App';
+import { COLORS, GradientText, SaffronButton, useReducedMotion } from '../public/Home';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { secureStorage } from '../utils/secureStorage';
+import { secureStorage } from '../../utils/secureStorage';
 
 // ─── Simple dark dropdown (replaces generic Dropdown for this page) ────────────
 const TeamDropdown = ({ options, value, onChange, loading, placeholder }) => {

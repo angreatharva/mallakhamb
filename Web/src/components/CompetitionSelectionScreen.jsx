@@ -7,7 +7,7 @@ import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { COLORS, useReducedMotion, GradientText, FadeIn } from '../pages/Home';
+import { COLORS, useReducedMotion, GradientText, FadeIn } from '../pages/public/Home';
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 

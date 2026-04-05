@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, UserCheck, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { coachAPI } from '../services/api';
-import { useAuth } from '../App';
-import { COLORS, useReducedMotion } from './Home';
+import { coachAPI } from '../../services/api';
+import { useAuth } from '../../App';
+import { COLORS, useReducedMotion } from '../public/Home';
 
 const CoachRegister = () => {
   const [showPassword, setShowPassword] = useState(false);

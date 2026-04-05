@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playerAPI } from '../services/api';
-import { useAuth } from '../App';
-import { CompetitionProvider } from '../contexts/CompetitionContext';
-import CompetitionDisplay from '../components/CompetitionDisplay';
-import { logger } from '../utils/logger';
-import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from './Home';
-import Dropdown from '../components/Dropdown';
+import { playerAPI } from '../../services/api';
+import { useAuth } from '../../App';
+import { CompetitionProvider } from '../../contexts/CompetitionContext';
+import CompetitionDisplay from '../../components/CompetitionDisplay';
+import { logger } from '../../utils/logger';
+import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
+import Dropdown from '../../components/Dropdown';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (

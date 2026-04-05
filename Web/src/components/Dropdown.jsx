@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '../hooks/useResponsive';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
 
 const Dropdown = ({
   options,

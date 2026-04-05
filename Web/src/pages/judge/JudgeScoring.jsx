@@ -8,9 +8,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import apiConfig from '../utils/apiConfig';
-import { logger } from '../utils/logger';
-import { COLORS, useReducedMotion, FadeIn } from './Home';
+import apiConfig from '../../utils/apiConfig';
+import { logger } from '../../utils/logger';
+import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
 const J = {
@@ -183,7 +183,7 @@ const CheckRow = ({ checked, onChange, label }) => (
 );
 
 //  Main component 
-const JudgeScoringNew = () => {
+const JudgeScoring = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const [socket, setSocket] = useState(null);
@@ -661,4 +661,4 @@ const JudgeScoringNew = () => {
   );
 };
 
-export default JudgeScoringNew;
+export default JudgeScoring;

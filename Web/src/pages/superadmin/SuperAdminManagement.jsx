@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { superAdminAPI } from '../services/api';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
-import { useResponsive } from '../hooks/useResponsive';
+import { superAdminAPI } from '../../services/api';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../admin/adminTheme';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {

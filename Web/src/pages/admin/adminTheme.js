@@ -18,7 +18,7 @@ import {
   ADMIN_SPRING,
   getStatusColor,
   getStatusBg,
-} from '../styles/tokens';
+} from '../../styles/tokens';
 
 // Re-export for backward compatibility
 export { ADMIN_COLORS, ADMIN_EASE_OUT, ADMIN_SPRING };

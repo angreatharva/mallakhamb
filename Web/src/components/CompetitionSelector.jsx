@@ -4,7 +4,7 @@ import { useCompetition } from '../contexts/CompetitionContext';
 import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '../utils/logger';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
 
 const statusColors = {
   ongoing: '#22C55E',

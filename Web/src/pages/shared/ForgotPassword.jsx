@@ -4,12 +4,12 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, Mail, Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, useInView } from 'framer-motion';
-import { authAPI } from '../services/api';
-import { validateEmailFormat } from '../utils/validation';
-import { logger } from '../utils/logger';
-import BHALogo from '../assets/BHA.png';
-import { COLORS, EASE_OUT } from '../styles/tokens';
-import { useReducedMotion as _useReducedMotion } from '../hooks/useResponsive';
+import { authAPI } from '../../services/api';
+import { validateEmailFormat } from '../../utils/validation';
+import { logger } from '../../utils/logger';
+import BHALogo from '../../assets/BHA.png';
+import { COLORS, EASE_OUT } from '../../styles/tokens';
+import { useReducedMotion as _useReducedMotion } from '../../hooks/useResponsive';
 
 const useReducedMotion = () => {
   const [reduced] = useState(

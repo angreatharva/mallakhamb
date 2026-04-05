@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Users, UserCheck, Trophy, Calendar, Camera, Menu, X, MapPin, Phone, Mail, Star, Award, Shield, ChevronDown, Zap, Quote, ArrowRight } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useReducedMotion as _useReducedMotion } from '../hooks/useResponsive';
+import { useReducedMotion as _useReducedMotion } from '../../hooks/useResponsive';
 import { motion, useScroll, useTransform, useInView, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
-import MainHomeImg from '../assets/main-home.jpg';
-import TextRevealBg from '../assets/Mallakhamb.png';
-import BHALogo from '../assets/BHA.png';
+import MainHomeImg from '../../assets/main-home.jpg';
+import TextRevealBg from '../../assets/Mallakhamb.png';
+import BHALogo from '../../assets/BHA.png';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 // Import from unified design system
-import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING } from '../styles/tokens';
+import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING } from '../../styles/tokens';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;

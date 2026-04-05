@@ -3,7 +3,7 @@ import { useCompetition } from '../contexts/CompetitionContext';
 import { Calendar, MapPin, Trophy, Zap, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SafeText from './SafeText';
-import { COLORS } from '../pages/Home';
+import { COLORS } from '../pages/public/Home';
 
 const statusConfig = {
   ongoing: { color: '#22C55E', label: 'Live', pulse: true },

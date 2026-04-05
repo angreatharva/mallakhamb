@@ -3,9 +3,9 @@ import { Filter, Search, X, ArrowLeft, Trophy, Medal, ChevronDown, Users } from 
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { publicAPI } from '../services/api';
-import Dropdown from '../components/Dropdown';
-import { logger } from '../utils/logger';
+import { publicAPI } from '../../services/api';
+import Dropdown from '../../components/Dropdown';
+import { logger } from '../../utils/logger';
 import { COLORS, useReducedMotion, GradientText, FadeIn, GlassCard, SaffronButton } from './Home';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────

@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Calendar, MapPin, ArrowRight, User, LogOut, Search, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { coachAPI } from '../services/api';
-import apiConfig from '../utils/apiConfig.js';
-import { secureStorage } from '../utils/secureStorage.js';
-import { logger } from '../utils/logger';
-import { COLORS, GradientText, useReducedMotion } from './Home';
-import BHALogo from '../assets/BHA.png';
+import { coachAPI } from '../../services/api';
+import apiConfig from '../../utils/apiConfig.js';
+import { secureStorage } from '../../utils/secureStorage.js';
+import { logger } from '../../utils/logger';
+import { COLORS, GradientText, useReducedMotion } from '../public/Home';
+import BHALogo from '../../assets/BHA.png';
 
 const CoachSelectCompetition = () => {
   const [competitions, setCompetitions] = useState([]);

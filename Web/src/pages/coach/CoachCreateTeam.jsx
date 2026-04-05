@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { ArrowRight, Trophy, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { coachAPI } from '../services/api';
-import { COLORS, GradientText, useReducedMotion } from './Home';
+import { coachAPI } from '../../services/api';
+import { COLORS, GradientText, useReducedMotion } from '../public/Home';
 
 const CoachCreateTeam = () => {
   const [loading, setLoading] = useState(false);

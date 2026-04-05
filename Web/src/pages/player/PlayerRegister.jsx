@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { playerAPI } from '../services/api';
-import { useAuth } from '../App';
-import { COLORS, GradientText, SaffronButton, useReducedMotion } from './Home';
+import { playerAPI } from '../../services/api';
+import { useAuth } from '../../App';
+import { COLORS, GradientText, SaffronButton, useReducedMotion } from '../public/Home';
 import { ArrowLeft } from 'lucide-react';
-import { secureStorage } from '../utils/secureStorage';
+import { secureStorage } from '../../utils/secureStorage';
 
 // ─── Shared dark input primitives (same as PlayerLogin) ───────────────────────
 const DarkInput = ({ label, error, required, children }) => (

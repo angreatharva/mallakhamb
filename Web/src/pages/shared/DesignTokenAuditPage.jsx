@@ -1,5 +1,5 @@
 import React from 'react';
-import DesignTokenAudit from '../components/design-system/audit/DesignTokenAudit';
+import DesignTokenAudit from '../../components/design-system/audit/DesignTokenAudit';
 
 /**
  * DesignTokenAuditPage - Standalone page for design token audit

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { coachAPI } from '../services/api';
-import { useAgeGroups, useAgeGroupValues } from '../hooks/useAgeGroups';
-import Dropdown from '../components/Dropdown';
-import { CompetitionProvider } from '../contexts/CompetitionContext';
-import CompetitionDisplay from '../components/CompetitionDisplay';
-import { COLORS, FadeIn, useReducedMotion } from './Home';
-import BHALogo from '../assets/BHA.png';
+import { coachAPI } from '../../services/api';
+import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
+import Dropdown from '../../components/Dropdown';
+import { CompetitionProvider } from '../../contexts/CompetitionContext';
+import CompetitionDisplay from '../../components/CompetitionDisplay';
+import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
+import BHALogo from '../../assets/BHA.png';
 
 const CoachDashboard = () => {
   const [team, setTeam] = useState(null);

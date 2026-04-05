@@ -11,28 +11,28 @@ import { apiCache } from './utils/apiCache';
 import { logger } from './utils/logger';
 
 // Lazy load all pages for better performance
-const Home = lazy(() => import('./pages/Home'));
-const PlayerLogin = lazy(() => import('./pages/PlayerLogin'));
-const PlayerRegister = lazy(() => import('./pages/PlayerRegister'));
-const PlayerSelectTeam = lazy(() => import('./pages/PlayerSelectTeam'));
-const PlayerDashboard = lazy(() => import('./pages/PlayerDashboard'));
-const CoachLogin = lazy(() => import('./pages/CoachLogin'));
-const CoachRegister = lazy(() => import('./pages/CoachRegister'));
-const CoachCreateTeam = lazy(() => import('./pages/CoachCreateTeam'));
-const CoachSelectCompetition = lazy(() => import('./pages/CoachSelectCompetition'));
-const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
-const CoachPayment = lazy(() => import('./pages/CoachPayment'));
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
-const AdminTeams = lazy(() => import('./pages/AdminTeams'));
-const AdminScoring = lazy(() => import('./pages/AdminScoring'));
-const JudgeLogin = lazy(() => import('./pages/JudgeLogin'));
-const JudgeScoringNew = lazy(() => import('./pages/JudgeScoringNew'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const PublicScores = lazy(() => import('./pages/PublicScores'));
+const Home = lazy(() => import('./pages/public/Home'));
+const PlayerLogin = lazy(() => import('./pages/player/PlayerLogin'));
+const PlayerRegister = lazy(() => import('./pages/player/PlayerRegister'));
+const PlayerSelectTeam = lazy(() => import('./pages/player/PlayerSelectTeam'));
+const PlayerDashboard = lazy(() => import('./pages/player/PlayerDashboard'));
+const CoachLogin = lazy(() => import('./pages/coach/CoachLogin'));
+const CoachRegister = lazy(() => import('./pages/coach/CoachRegister'));
+const CoachCreateTeam = lazy(() => import('./pages/coach/CoachCreateTeam'));
+const CoachSelectCompetition = lazy(() => import('./pages/coach/CoachSelectCompetition'));
+const CoachDashboard = lazy(() => import('./pages/coach/CoachDashboard'));
+const CoachPayment = lazy(() => import('./pages/coach/CoachPayment'));
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+const AdminTeams = lazy(() => import('./pages/admin/AdminTeams'));
+const AdminScoring = lazy(() => import('./pages/admin/AdminScoring'));
+const JudgeLogin = lazy(() => import('./pages/judge/JudgeLogin'));
+const JudgeScoring = lazy(() => import('./pages/judge/JudgeScoring'));
+const ForgotPassword = lazy(() => import('./pages/shared/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/shared/ResetPassword'));
+const PublicScores = lazy(() => import('./pages/public/PublicScores'));
 
 // Loading component
 const PageLoader = () => (
@@ -332,7 +332,7 @@ function AppContent() {
               path="/judge/scoring" 
               element={
                 <ProtectedRoute requiredUserType="judge">
-                  <JudgeScoringNew />
+                  <JudgeScoring />
                 </ProtectedRoute>
               } 
             />

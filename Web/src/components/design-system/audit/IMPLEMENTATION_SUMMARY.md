@@ -211,7 +211,7 @@ import { DesignTokenAudit } from '../components/design-system/audit';
 
 ```jsx
 // In App.jsx or router configuration
-import DesignTokenAuditPage from './pages/DesignTokenAuditPage';
+import DesignTokenAuditPage from './pages/shared/DesignTokenAuditPage';
 
 // Add route:
 <Route path="/design-tokens" element={<DesignTokenAuditPage />} />

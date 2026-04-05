@@ -5,12 +5,12 @@ import { io } from 'socket.io-client';
 import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../services/api';
-import { ResponsiveScoringTable } from '../components/responsive/ResponsiveTable';
-import { useRouteContext } from '../contexts/RouteContext';
-import { logger } from '../utils/logger';
+import { adminAPI, superAdminAPI } from '../../services/api';
+import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
+import { useRouteContext } from '../../contexts/RouteContext';
+import { logger } from '../../utils/logger';
 import { ADMIN_COLORS } from './adminTheme';
-import BHALogo from '../assets/BHA.png';
+import BHALogo from '../../assets/BHA.png';
 
 const AdminScoring = () => {
     const location = useLocation();
