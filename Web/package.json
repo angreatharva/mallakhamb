@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest --run"
+    "test:run": "vitest --run",
+    "test:run:dot": "vitest run --reporter=dot"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

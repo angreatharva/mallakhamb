@@ -34,6 +34,10 @@ const ForgotPassword = lazy(() => import('./pages/shared/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/shared/ResetPassword'));
 const PublicScores = lazy(() => import('./pages/public/PublicScores'));
 
+// Lazy load unified components
+const UnifiedRegister = lazy(() => import('./pages/unified/UnifiedRegister'));
+const UnifiedCompetitionSelection = lazy(() => import('./pages/unified/UnifiedCompetitionSelection'));
+
 // Loading component
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0a' }}>
@@ -224,14 +228,14 @@ function AppContent() {
             {/* Player Routes */}
             <Route path="/player" element={<Navigate to="/player/login" replace />} />
             <Route path="/player/login" element={<PlayerLogin />} />
-            <Route path="/player/register" element={<PlayerRegister />} />
+            <Route path="/player/register" element={<UnifiedRegister />} />
 
             {/* Protected Player Routes */}
             <Route
               path="/player/select-team"
               element={
                 <ProtectedRoute requiredUserType="player">
-                  <PlayerSelectTeam />
+                  <UnifiedCompetitionSelection />
                 </ProtectedRoute>
               }
             />
@@ -247,7 +251,7 @@ function AppContent() {
             {/* Coach Routes */}
             <Route path="/coach" element={<Navigate to="/coach/login" replace />} />
             <Route path="/coach/login" element={<CoachLogin />} />
-            <Route path="/coach/register" element={<CoachRegister />} />
+            <Route path="/coach/register" element={<UnifiedRegister />} />
 
             {/* Protected Coach Routes */}
             <Route
@@ -262,7 +266,7 @@ function AppContent() {
               path="/coach/select-competition"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <CoachSelectCompetition />
+                  <UnifiedCompetitionSelection />
                 </ProtectedRoute>
               }
             />

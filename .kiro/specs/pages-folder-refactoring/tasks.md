@@ -66,7 +66,7 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Verify no missing exports
     - _Requirements: 9.2_
 
-- [-] 3. Update routing configuration
+- [x] 3. Update routing configuration
   - [x] 3.1 Update App.jsx lazy imports
     - Update all import paths to use new folder structure
     - Update JudgeScoringNew references to JudgeScoring
@@ -87,20 +87,20 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
 
 ### Phase 2: Unified Component Creation (Sprint 1, Week 2)
 
-- [ ] 5. Create UnifiedRegister component
-  - [ ] 5.1 Implement UnifiedRegister core structure
+- [x] 5. Create UnifiedRegister component
+  - [x] 5.1 Implement UnifiedRegister core structure
     - Create Web/src/pages/unified/UnifiedRegister.jsx
     - Implement role detection from route path (detectRoleFromPath)
     - Wrap with ThemeProvider for role-specific theming
     - _Requirements: 4.1, 4.2, 4.3, 7.1_
 
-  - [ ] 5.2 Implement role-specific form fields
+  - [x] 5.2 Implement role-specific form fields
     - Define coach registration fields (name, email, phone, organization, password)
     - Define player registration fields (name, email, phone, dateOfBirth, gender, password)
     - Implement conditional field rendering based on role
     - _Requirements: 4.4, 4.5, 4.6_
 
-  - [ ] 5.3 Implement form validation and submission
+  - [x] 5.3 Implement form validation and submission
     - Set up react-hook-form with validation rules
     - Implement password confirmation validation
     - Integrate with coachAPI.register and playerAPI.register
@@ -108,27 +108,27 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Implement post-registration navigation (coach → create-team, player → select-team)
     - _Requirements: 4.4, 4.8_
 
-  - [ ] 5.4 Integrate design system components
+  - [x] 5.4 Integrate design system components
     - Use ThemedInput for form fields
     - Use ThemedButton for submit button
     - Use background components (HexMesh for coach, RadialBurst for player)
     - Apply role-specific ornaments
     - _Requirements: 8.2, 8.4, 8.7_
 
-  - [ ] 5.5 Implement accessibility features
+  - [x] 5.5 Implement accessibility features
     - Add ARIA labels to all form inputs
     - Ensure keyboard navigation works
     - Add focus indicators
     - Announce errors to screen readers
     - _Requirements: 12.2, 12.3, 12.4, 12.5_
 
-  - [ ] 5.6 Implement mobile responsive design
+  - [x] 5.6 Implement mobile responsive design
     - Create mobile-friendly layout
     - Ensure touch targets are 44px minimum
     - Test on various screen sizes
     - _Requirements: 17.2, 17.3, 17.8_
 
-  - [ ] 5.7 Write unit tests for UnifiedRegister
+  - [x] 5.7 Write unit tests for UnifiedRegister
     - Test role detection for coach and player paths
     - Test form validation (required fields, email format, password strength)
     - Test API integration (mock coachAPI and playerAPI)
@@ -136,14 +136,14 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Test error handling
     - _Requirements: 13.1, 13.5_
 
-- [ ] 6. Create UnifiedCompetitionSelection component
-  - [ ] 6.1 Implement UnifiedCompetitionSelection core structure
+- [x] 6. Create UnifiedCompetitionSelection component
+  - [x] 6.1 Implement UnifiedCompetitionSelection core structure
     - Create Web/src/pages/unified/UnifiedCompetitionSelection.jsx
     - Implement role detection from route path
     - Wrap with ThemeProvider for role-specific theming
     - _Requirements: 6.1, 6.2, 6.5, 7.1_
 
-  - [ ] 6.2 Implement coach competition selection view
+  - [x] 6.2 Implement coach competition selection view
     - Fetch available competitions from coachAPI
     - Display competitions in grid layout using GlassCard
     - Show competition details (name, location, dates, status)
@@ -152,7 +152,7 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Navigate to /coach/dashboard after selection
     - _Requirements: 6.3, 6.6_
 
-  - [ ] 6.3 Implement player team selection view
+  - [x] 6.3 Implement player team selection view
     - Fetch available teams from playerAPI
     - Display teams in grid layout using GlassCard
     - Show team details (name, coach, competition, member count, gender)
@@ -161,25 +161,25 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Navigate to /player/dashboard after joining
     - _Requirements: 6.4, 6.6_
 
-  - [ ] 6.4 Implement loading and empty states
+  - [x] 6.4 Implement loading and empty states
     - Add loading spinner while fetching data
     - Add empty state message when no competitions/teams available
     - Handle API errors gracefully
     - _Requirements: 16.7_
 
-  - [ ] 6.5 Integrate design system components
+  - [x] 6.5 Integrate design system components
     - Use GlassCard for competition/team cards
     - Use role-specific colors for hover states
     - Use background components
     - _Requirements: 8.2, 8.4_
 
-  - [ ] 6.6 Implement accessibility features
+  - [x] 6.6 Implement accessibility features
     - Add ARIA labels to interactive elements
     - Ensure keyboard navigation works
     - Add focus indicators
     - _Requirements: 12.2, 12.3, 12.4_
 
-  - [ ] 6.7 Write unit tests for UnifiedCompetitionSelection
+  - [x] 6.7 Write unit tests for UnifiedCompetitionSelection
     - Test role detection for coach and player paths
     - Test data fetching (mock APIs)
     - Test selection/join handlers
@@ -187,44 +187,44 @@ This implementation plan refactors the Web/src/pages folder to eliminate code du
     - Test error handling
     - _Requirements: 13.1, 13.5_
 
-- [ ] 7. Create redirect wrappers for backward compatibility
-  - [ ] 7.1 Create redirect wrappers for registration pages
+- [x] 7. Create redirect wrappers for backward compatibility
+  - [x] 7.1 Create redirect wrappers for registration pages
     - Create coach/CoachRegister.jsx that exports UnifiedRegister
     - Create player/PlayerRegister.jsx that exports UnifiedRegister
     - _Requirements: 4.7, 9.1_
 
-  - [ ] 7.2 Create redirect wrappers for selection pages
+  - [x] 7.2 Create redirect wrappers for selection pages
     - Create coach/CoachSelectCompetition.jsx that exports UnifiedCompetitionSelection
     - Create player/PlayerSelectTeam.jsx that exports UnifiedCompetitionSelection
     - _Requirements: 6.7, 9.1_
 
-  - [ ] 7.3 Update root-level index.js
+  - [x] 7.3 Update root-level index.js
     - Add exports for new unified components
     - Add exports for redirect wrappers
     - _Requirements: 9.2_
 
-- [ ] 8. Update App.jsx routes for unified components
-  - [ ] 8.1 Import new unified components
+- [x] 8. Update App.jsx routes for unified components
+  - [x] 8.1 Import new unified components
     - Add lazy imports for UnifiedRegister and UnifiedCompetitionSelection
     - _Requirements: 10.1, 10.2_
 
-  - [ ] 8.2 Update registration routes
+  - [x] 8.2 Update registration routes
     - Update /coach/register to use UnifiedRegister
     - Update /player/register to use UnifiedRegister
     - _Requirements: 10.3_
 
-  - [ ] 8.3 Update selection routes
+  - [x] 8.3 Update selection routes
     - Update /coach/select-competition to use UnifiedCompetitionSelection with ProtectedRoute
     - Update /player/select-team to use UnifiedCompetitionSelection with ProtectedRoute
     - _Requirements: 10.3, 10.7_
 
-  - [ ] 8.4 Verify all routes function correctly
+  - [x] 8.4 Verify all routes function correctly
     - Test registration flows for coach and player
     - Test selection flows for coach and player
     - Verify protected routes enforce authentication
     - _Requirements: 9.4, 10.4_
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
   - Run full test suite
   - Test all unified component flows
   - Verify backward compatibility
