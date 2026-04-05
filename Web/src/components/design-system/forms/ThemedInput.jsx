@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../theme/useTheme';
 import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
+import { useResponsive } from '../../../hooks/useResponsive';
 
 /**
  * ThemedInput - A themed input component that adapts to the current role context
@@ -24,6 +25,8 @@ import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
  * @param {string} [props.className] - Additional CSS classes
  * @param {boolean} [props.disabled] - Disabled state
  * @param {boolean} [props.readOnly] - Readonly state
+ * @param {object|string} [props.padding] - Responsive padding values (e.g., { mobile: 'sm', desktop: 'lg' } or 'md')
+ * @param {object|string} [props.fontSize] - Responsive font size values
  * 
  * @example
  * <ThemedInput 
@@ -38,9 +41,10 @@ import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
  *   type="password"
  *   placeholder="Enter password"
  *   rightElement={<button onClick={toggleVisibility}>👁️</button>}
+ *   padding={{ mobile: 'sm', desktop: 'md' }}
  * />
  * 
- * **Validates: Requirements 3.1, 3.5, 3.6, 3.7, 3.8, 3.9**
+ * **Validates: Requirements 3.1, 3.5, 3.6, 3.7, 3.8, 3.9, 15.1, 15.5**
  */
 export const ThemedInput = forwardRef(({
   icon: Icon,
@@ -49,12 +53,33 @@ export const ThemedInput = forwardRef(({
   className,
   disabled,
   readOnly,
+  padding,
+  fontSize,
   ...props
 }, ref) => {
   const theme = useTheme();
+  const { getResponsiveValue, isMobile } = useResponsive();
   
   const hasError = Boolean(error);
   const errorMessage = typeof error === 'string' ? error : '';
+  
+  // Get responsive padding value
+  const responsivePadding = padding ? getResponsiveValue(padding) : 'md';
+  const paddingMap = {
+    sm: 'px-3 py-2',
+    md: 'px-4 py-3',
+    lg: 'px-5 py-4',
+  };
+  const paddingClass = paddingMap[responsivePadding] || paddingMap.md;
+  
+  // Get responsive font size value
+  const responsiveFontSize = fontSize ? getResponsiveValue(fontSize) : 'base';
+  const fontSizeMap = {
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg',
+  };
+  const fontSizeClass = fontSizeMap[responsiveFontSize] || fontSizeMap.base;
   
   return (
     <div className="w-full">
@@ -83,11 +108,15 @@ export const ThemedInput = forwardRef(({
           readOnly={readOnly}
           className={clsx(
             // Base styles
-            'w-full px-4 py-3 rounded-lg',
+            'w-full rounded-lg',
             'bg-white/5 backdrop-blur-sm',
             'text-white placeholder:text-white/45',
             'border transition-all duration-200',
             'outline-none',
+            
+            // Responsive padding and font size
+            paddingClass,
+            fontSizeClass,
             
             // Minimum touch target (44px)
             'min-h-[44px]',
@@ -169,6 +198,22 @@ ThemedInput.propTypes = {
   className: PropTypes.string,
   disabled: PropTypes.bool,
   readOnly: PropTypes.bool,
+  padding: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      mobile: PropTypes.string,
+      tablet: PropTypes.string,
+      desktop: PropTypes.string,
+    }),
+  ]),
+  fontSize: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      mobile: PropTypes.string,
+      tablet: PropTypes.string,
+      desktop: PropTypes.string,
+    }),
+  ]),
 };
 
 ThemedInput.defaultProps = {
@@ -178,6 +223,8 @@ ThemedInput.defaultProps = {
   className: '',
   disabled: false,
   readOnly: false,
+  padding: null,
+  fontSize: null,
 };
 
 export default ThemedInput;

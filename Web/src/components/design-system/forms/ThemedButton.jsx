@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { Loader2 } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
 import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
+import { useResponsive } from '../../../hooks/useResponsive';
 
 /**
  * ThemedButton - A themed button component that adapts to the current role context
@@ -24,6 +25,7 @@ import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
  * @param {React.ComponentType} [props.icon] - Icon component
  * @param {string} [props.className] - Additional CSS classes
  * @param {boolean} [props.disabled] - Disabled state
+ * @param {object|string} [props.padding] - Responsive padding values
  * @param {React.ReactNode} props.children - Button content
  * 
  * @example
@@ -36,7 +38,12 @@ import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
  *   Add Item
  * </ThemedButton>
  * 
- * **Validates: Requirements 3.4, 3.8**
+ * @example
+ * <ThemedButton padding={{ mobile: 'sm', desktop: 'lg' }}>
+ *   Responsive Button
+ * </ThemedButton>
+ * 
+ * **Validates: Requirements 3.4, 3.8, 15.1, 15.5**
  */
 export const ThemedButton = forwardRef(({
   variant = 'solid',
@@ -45,12 +52,17 @@ export const ThemedButton = forwardRef(({
   icon: Icon,
   className,
   disabled,
+  padding,
   children,
   ...props
 }, ref) => {
   const theme = useTheme();
+  const { getResponsiveValue, isMobile } = useResponsive();
   
   const isDisabled = disabled || loading;
+  
+  // Get responsive size if padding is provided
+  const responsiveSize = padding ? getResponsiveValue(padding) : size;
   
   // Size configurations
   const sizeClasses = {
@@ -108,7 +120,7 @@ export const ThemedButton = forwardRef(({
         'outline-none focus:ring-3',
         
         // Size
-        sizeClasses[size],
+        sizeClasses[responsiveSize],
         
         // Variant
         variantStyles.className,
@@ -135,9 +147,9 @@ export const ThemedButton = forwardRef(({
         <Loader2 
           className={clsx(
             'animate-spin',
-            size === 'sm' && 'w-4 h-4',
-            size === 'md' && 'w-5 h-5',
-            size === 'lg' && 'w-6 h-6',
+            responsiveSize === 'sm' && 'w-4 h-4',
+            responsiveSize === 'md' && 'w-5 h-5',
+            responsiveSize === 'lg' && 'w-6 h-6',
           )}
           aria-hidden="true"
         />
@@ -147,9 +159,9 @@ export const ThemedButton = forwardRef(({
       {!loading && Icon && (
         <Icon 
           className={clsx(
-            size === 'sm' && 'w-4 h-4',
-            size === 'md' && 'w-5 h-5',
-            size === 'lg' && 'w-6 h-6',
+            responsiveSize === 'sm' && 'w-4 h-4',
+            responsiveSize === 'md' && 'w-5 h-5',
+            responsiveSize === 'lg' && 'w-6 h-6',
           )}
           aria-hidden="true"
         />
@@ -170,6 +182,14 @@ ThemedButton.propTypes = {
   icon: PropTypes.elementType,
   className: PropTypes.string,
   disabled: PropTypes.bool,
+  padding: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      mobile: PropTypes.string,
+      tablet: PropTypes.string,
+      desktop: PropTypes.string,
+    }),
+  ]),
   children: PropTypes.node.isRequired,
 };
 
@@ -180,6 +200,7 @@ ThemedButton.defaultProps = {
   icon: null,
   className: '',
   disabled: false,
+  padding: null,
 };
 
 export default ThemedButton;

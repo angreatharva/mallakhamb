@@ -7,6 +7,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
+import { useResponsive } from '../hooks/useResponsive';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -136,37 +137,54 @@ const StatusBadge = ({ active }) => (
 );
 
 // ─── Dark Modal wrapper ───────────────────────────────────────────────────────
-const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidth = 'max-w-md' }) => (
-  <AnimatePresence>
-    {isOpen && (
-      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <motion.div className={`w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden`}
-          style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-          initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
-          <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <div>
-              {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>{subtitle}</p>}
-              <h3 className="text-xl font-black text-white">{title}</h3>
+const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidth = 'max-w-md' }) => {
+  const { isMobile } = useResponsive();
+  
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={(e) => e.target === e.currentTarget && onClose()}>
+          <motion.div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden`}
+            style={{ 
+              background: ADMIN_COLORS.darkElevated, 
+              borderColor: ADMIN_COLORS.darkBorderSubtle,
+              margin: isMobile ? '0 0.5rem' : '0',
+            }}
+            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+            <div className="flex items-center justify-between border-b flex-shrink-0" 
+              style={{ 
+                borderColor: ADMIN_COLORS.darkBorderSubtle,
+                padding: isMobile ? '1rem' : '1.5rem',
+              }}>
+              <div>
+                {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>{subtitle}</p>}
+                <h3 className="font-black text-white" style={{ fontSize: isMobile ? '1.125rem' : '1.25rem' }}>{title}</h3>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
             </div>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">{children}</div>
-          {footer && (
-            <div className="flex gap-3 p-6 border-t flex-shrink-0" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-              {footer}
-            </div>
-          )}
+            <div className="flex-1 overflow-y-auto space-y-4" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>{children}</div>
+            {footer && (
+              <div className="flex gap-3 border-t flex-shrink-0" 
+                style={{ 
+                  borderColor: ADMIN_COLORS.darkBorderSubtle,
+                  padding: isMobile ? '1rem' : '1.5rem',
+                  flexDirection: isMobile ? 'column' : 'row',
+                }}>
+                {footer}
+              </div>
+            )}
+          </motion.div>
         </motion.div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
+      )}
+    </AnimatePresence>
+  );
+};
 
 // ─── Table ────────────────────────────────────────────────────────────────────
 const DarkTable = ({ headers, children, empty }) => (

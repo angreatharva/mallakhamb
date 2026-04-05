@@ -11,6 +11,7 @@ import { useReducedMotion } from '../animations/useReducedMotion';
  * - Respects prefers-reduced-motion setting
  * - Support for custom className and style props
  * - Smooth hover animations
+ * - Memoized for performance optimization
  * 
  * @param {Object} props
  * @param {React.ReactNode} props.children - Card content
@@ -24,14 +25,14 @@ import { useReducedMotion } from '../animations/useReducedMotion';
  *   <p>Card content goes here</p>
  * </TiltCard>
  * 
- * **Validates: Requirements 4.4, 4.6, 4.7**
+ * **Validates: Requirements 4.4, 4.6, 4.7, 10.3**
  */
-export const TiltCard = ({ children, className = '', style = {}, maxTilt = 10 }) => {
+const TiltCardComponent = ({ children, className = '', style = {}, maxTilt = 10 }) => {
   const shouldReduceMotion = useReducedMotion();
   const [tiltX, setTiltX] = React.useState(0);
   const [tiltY, setTiltY] = React.useState(0);
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = React.useCallback((e) => {
     if (shouldReduceMotion) return;
 
     const card = e.currentTarget;
@@ -47,14 +48,14 @@ export const TiltCard = ({ children, className = '', style = {}, maxTilt = 10 })
 
     setTiltX(tiltXValue);
     setTiltY(tiltYValue);
-  };
+  }, [shouldReduceMotion, maxTilt]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = React.useCallback(() => {
     setTiltX(0);
     setTiltY(0);
-  };
+  }, []);
 
-  const baseStyles = {
+  const baseStyles = React.useMemo(() => ({
     background: 'rgba(17, 17, 17, 0.8)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)', // Safari support
@@ -64,7 +65,7 @@ export const TiltCard = ({ children, className = '', style = {}, maxTilt = 10 })
     padding: '1.5rem',
     transformStyle: 'preserve-3d',
     ...style,
-  };
+  }), [style]);
 
   const motionProps = shouldReduceMotion
     ? {}
@@ -93,17 +94,20 @@ export const TiltCard = ({ children, className = '', style = {}, maxTilt = 10 })
   );
 };
 
-TiltCard.propTypes = {
+TiltCardComponent.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
   style: PropTypes.object,
   maxTilt: PropTypes.number,
 };
 
-TiltCard.defaultProps = {
+TiltCardComponent.defaultProps = {
   className: '',
   style: {},
   maxTilt: 10,
 };
+
+// Memoize component to prevent unnecessary re-renders
+export const TiltCard = React.memo(TiltCardComponent);
 
 export default TiltCard;

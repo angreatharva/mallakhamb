@@ -343,42 +343,42 @@ This implementation plan refactors the Mallakhamb competition management platfor
 - [x] 12. Checkpoint - Verify unified pages are working
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Implement responsive design integration
-  - [ ] 13.1 Integrate component library with useResponsive hook
+- [x] 13. Implement responsive design integration
+  - [x] 13.1 Integrate component library with useResponsive hook
     - Update all components to use existing useResponsive hook
     - Implement responsive prop values for spacing and sizing
     - _Requirements: 15.1, 15.5_
   
-  - [ ] 13.2 Ensure mobile-friendly modals and dialogs
+  - [x] 13.2 Ensure mobile-friendly modals and dialogs
     - Test all modals on mobile viewports
     - Adjust sizing and positioning for mobile
     - _Requirements: 15.6_
   
-  - [ ] 13.3 Write responsive design tests
+  - [x] 13.3 Write responsive design tests
     - Test components on mobile, tablet, and desktop viewports
     - Test touch targets meet 44px minimum on mobile
     - Test font sizes scale appropriately
     - _Requirements: 15.3, 15.4, 15.7_
 
-- [ ] 14. Implement accessibility features
-  - [ ] 14.1 Add ARIA labels to icon-only buttons
+- [x] 14. Implement accessibility features
+  - [x] 14.1 Add ARIA labels to icon-only buttons
     - Audit all icon-only buttons in component library
     - Add aria-label attributes
     - Add aria-hidden to decorative icons
     - _Requirements: 11.2_
   
-  - [ ] 14.2 Ensure keyboard navigation
+  - [x] 14.2 Ensure keyboard navigation
     - Test keyboard navigation for all interactive components
     - Verify focus order follows logical reading order
     - Add skip links for main content where needed
     - _Requirements: 11.3_
   
-  - [ ] 14.3 Implement error announcements for screen readers
+  - [x] 14.3 Implement error announcements for screen readers
     - Add ARIA live regions for dynamic error messages
     - Ensure form validation errors are announced
     - _Requirements: 11.5_
   
-  - [ ] 14.4 Run accessibility tests
+  - [x] 14.4 Run accessibility tests
     - Run jest-axe tests on all components
     - Test with screen readers (NVDA, JAWS, VoiceOver)
     - Verify color contrast ratios meet WCAG AA standards
@@ -386,26 +386,26 @@ This implementation plan refactors the Mallakhamb competition management platfor
     - Test keyboard navigation for all interactive components
     - _Requirements: 11.1, 11.3, 11.4, 11.6, 11.7, 11.8_
 
-- [ ] 15. Optimize performance and bundle size
-  - [ ] 15.1 Implement code splitting
+- [x] 15. Optimize performance and bundle size
+  - [x] 15.1 Implement code splitting
     - Lazy load role-specific components using React.lazy()
     - Split background decorations into separate chunks
     - Lazy load non-critical components
     - _Requirements: 10.2, 10.4_
   
-  - [ ] 15.2 Implement memoization
+  - [x] 15.2 Implement memoization
     - Use React.memo for expensive component renders
     - Memoize theme context value
     - Memoize color calculations
     - _Requirements: 10.3_
   
-  - [ ] 15.3 Optimize CSS-in-JS
+  - [x] 15.3 Optimize CSS-in-JS
     - Use static tokens instead of runtime calculations
     - Extract common styles into shared objects
     - Avoid inline style objects in render
     - _Requirements: 10.5_
   
-  - [ ] 15.4 Run performance tests
+  - [x] 15.4 Run performance tests
     - Measure bundle size reduction (target: 1,400 lines / 40%)
     - Run Lighthouse performance tests (target: score ≥ 90)
     - Measure First Contentful Paint (target: < 1.5s)

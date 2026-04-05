@@ -275,4 +275,58 @@ export const ANIMATION_DURATION = 200;
 export const TOAST_DURATION = 4000;
 export const MIN_TOUCH_TARGET = 44; // pixels
 
+// ─── Common Style Objects (for CSS-in-JS optimization) ─────────────────────
+// Pre-computed static style objects to avoid runtime calculations
+// **Validates: Requirements 10.5**
+
+export const COMMON_STYLES = {
+  // Card base styles
+  cardBase: {
+    background: 'rgba(17, 17, 17, 0.8)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+  },
+  
+  // Glass card styles
+  glassCard: {
+    background: 'rgba(255, 255, 255, 0.03)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+  },
+  
+  // Text styles
+  textPrimary: {
+    color: '#FFFFFF',
+  },
+  
+  textSecondary: {
+    color: 'rgba(255, 255, 255, 0.65)',
+  },
+  
+  textMuted: {
+    color: 'rgba(255, 255, 255, 0.45)',
+  },
+  
+  // Transition styles
+  transitionAll: {
+    transition: 'all 0.3s ease',
+  },
+  
+  transitionColors: {
+    transition: 'color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease',
+  },
+  
+  // Focus styles (WCAG AA compliant)
+  focusRing: {
+    outline: 'none',
+    boxShadow: '0 0 0 3px rgba(255, 107, 0, 0.3)',
+  },
+};
+
 export default DESIGN_TOKENS;

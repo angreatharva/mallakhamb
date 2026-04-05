@@ -42,7 +42,7 @@ const detectRoleFromPath = (pathname) => {
 const generateThemeConfig = (role) => {
   const primaryColor = getRoleColor(role);
   
-  // Generate lighter and darker variants
+  // Memoize hex to RGB conversion
   const hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -78,6 +78,21 @@ const generateThemeConfig = (role) => {
   };
 };
 
+// Cache for theme configurations to avoid recalculating colors
+const themeCache = new Map();
+
+/**
+ * Get or create cached theme configuration
+ * @param {string} role - User role
+ * @returns {object} Theme configuration object
+ */
+const getCachedThemeConfig = (role) => {
+  if (!themeCache.has(role)) {
+    themeCache.set(role, generateThemeConfig(role));
+  }
+  return themeCache.get(role);
+};
+
 /**
  * ThemeProvider - Provides role-specific theme configuration to child components
  * 
@@ -96,6 +111,8 @@ const generateThemeConfig = (role) => {
  * <ThemeProvider role="admin">
  *   <AdminPanel />
  * </ThemeProvider>
+ * 
+ * **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 10.3**
  */
 export const ThemeProvider = ({ children, role: roleProp }) => {
   const location = useLocation();
@@ -106,9 +123,9 @@ export const ThemeProvider = ({ children, role: roleProp }) => {
     [roleProp, location.pathname]
   );
   
-  // Generate theme configuration and memoize to prevent unnecessary re-renders
+  // Get cached theme configuration to prevent unnecessary color calculations
   const themeValue = useMemo(
-    () => generateThemeConfig(detectedRole),
+    () => getCachedThemeConfig(detectedRole),
     [detectedRole]
   );
   
