@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Unified Pages Visual Regression > Role-Specific Visual Elements > should match snapshot for admin login with role-specific styling 1`] = `<div />`;
+
+exports[`Unified Pages Visual Regression > Role-Specific Visual Elements > should match snapshot for coach login with role-specific styling 1`] = `<div />`;
+
+exports[`Unified Pages Visual Regression > Role-Specific Visual Elements > should match snapshot for judge login with role-specific styling 1`] = `<div />`;
+
+exports[`Unified Pages Visual Regression > Role-Specific Visual Elements > should match snapshot for player login with role-specific styling 1`] = `<div />`;
+
+exports[`Unified Pages Visual Regression > Role-Specific Visual Elements > should match snapshot for superadmin login with role-specific styling 1`] = `<div />`;

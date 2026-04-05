@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import customRules from './eslint-rules/index.js'
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -22,8 +23,16 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
+    plugins: {
+      'design-system': {
+        rules: customRules,
+      },
+    },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Design system rules - warn in development, can be upgraded to error later
+      'design-system/no-hardcoded-colors': 'warn',
+      'design-system/no-hardcoded-spacing': 'warn',
     },
   },
 ])

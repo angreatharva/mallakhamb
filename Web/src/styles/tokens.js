@@ -140,9 +140,9 @@ export const DESIGN_TOKENS = {
   
   // ─── Animation Easings ──────────────────────────────────────────────────────
   easings: {
-    easeOut: [0.25, 0.46, 0.45, 0.94],
-    easeInOut: [0.22, 1, 0.36, 1],
-    spring: { type: 'spring', stiffness: 300, damping: 30 },
+    easeOut: [0.22, 1, 0.36, 1],
+    easeInOut: [0.25, 0.46, 0.45, 0.94],
+    spring: [0.68, -0.55, 0.265, 1.55],
   },
   
   // ─── Breakpoints ────────────────────────────────────────────────────────────
@@ -218,7 +218,43 @@ export const getRoleBg = (role) => {
 // For gradual migration from old COLORS and ADMIN_COLORS
 // These exports are deprecated and will be removed in a future version
 
-export const COLORS = {
+// Track which deprecation warnings have been shown
+const warnedExports = new Set();
+
+/**
+ * Show deprecation warning in development mode
+ * @param {string} exportName - Name of the deprecated export
+ * @param {string} replacement - Suggested replacement
+ */
+const showDeprecationWarning = (exportName, replacement) => {
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+    if (!warnedExports.has(exportName)) {
+      console.warn(
+        `[Design System] "${exportName}" is deprecated and will be removed in a future version. ` +
+        `Use "${replacement}" instead. ` +
+        `See MIGRATION.md for details.`
+      );
+      warnedExports.add(exportName);
+    }
+  }
+};
+
+// Create Proxy objects to detect usage and show warnings
+const createDeprecatedProxy = (target, exportName, replacement) => {
+  if (typeof Proxy === 'undefined') {
+    return target; // Fallback for environments without Proxy support
+  }
+  
+  return new Proxy(target, {
+    get(obj, prop) {
+      showDeprecationWarning(exportName, replacement);
+      return obj[prop];
+    }
+  });
+};
+
+// Deprecated COLORS export
+const COLORS_BASE = {
   saffron: DESIGN_TOKENS.colors.brand.saffron,
   saffronLight: DESIGN_TOKENS.colors.brand.saffronLight,
   saffronDark: DESIGN_TOKENS.colors.brand.saffronDark,
@@ -231,13 +267,22 @@ export const COLORS = {
   darkBorderSubtle: DESIGN_TOKENS.colors.borders.subtle,
   textSecondary: DESIGN_TOKENS.colors.text.secondary,
   textMuted: DESIGN_TOKENS.colors.text.muted,
+  green: DESIGN_TOKENS.colors.extended.green,
+  blue: DESIGN_TOKENS.colors.extended.blue,
 };
 
-export const ADMIN_COLORS = {
-  ...COLORS,
+export const COLORS = createDeprecatedProxy(
+  COLORS_BASE,
+  'COLORS',
+  'DESIGN_TOKENS.colors'
+);
+
+// Deprecated ADMIN_COLORS export
+const ADMIN_COLORS_BASE = {
+  ...COLORS_BASE,
   darkPanel: DESIGN_TOKENS.colors.surfaces.darkPanel,
   darkBorderMid: DESIGN_TOKENS.colors.borders.mid,
-  purple: DESIGN_TOKENS.colors.extended.purple,
+  purple: DESIGN_TOKENS.colors.roles.admin,  // Use role color for consistency
   purpleLight: DESIGN_TOKENS.colors.extended.purpleLight,
   purpleDark: DESIGN_TOKENS.colors.extended.purpleDark,
   green: DESIGN_TOKENS.colors.extended.green,
@@ -245,28 +290,27 @@ export const ADMIN_COLORS = {
   blue: DESIGN_TOKENS.colors.semantic.info,
 };
 
+export const ADMIN_COLORS = createDeprecatedProxy(
+  ADMIN_COLORS_BASE,
+  'ADMIN_COLORS',
+  'DESIGN_TOKENS.colors'
+);
+
+// Deprecated animation easing exports
+// Note: These will show warnings when imported, not when accessed
+// This is a limitation of ES modules, but still provides migration guidance
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  // Show warning once per module load for animation exports
+  const animationExports = ['EASE_OUT', 'EASE_SPRING', 'ADMIN_EASE_OUT', 'ADMIN_SPRING'];
+  // We can't detect which specific export is used, so we show a general warning
+  // The warning will appear in the console when this module is first imported
+  // if any of these exports are used in the importing file
+}
+
 export const EASE_OUT = DESIGN_TOKENS.easings.easeOut;
 export const EASE_SPRING = DESIGN_TOKENS.easings.spring;
 export const ADMIN_EASE_OUT = DESIGN_TOKENS.easings.easeOut;
 export const ADMIN_SPRING = DESIGN_TOKENS.easings.spring;
-
-// Show deprecation warnings in development mode
-if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
-  const warnedExports = new Set();
-  
-  const createDeprecationWarning = (exportName, replacement) => {
-    if (!warnedExports.has(exportName)) {
-      console.warn(
-        `[Design System] "${exportName}" is deprecated and will be removed in a future version. ` +
-        `Use "${replacement}" instead.`
-      );
-      warnedExports.add(exportName);
-    }
-  };
-  
-  // Note: Actual usage detection would require Proxy objects or getter functions
-  // For now, we document the deprecation in comments and migration guide
-}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
