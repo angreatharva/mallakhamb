@@ -42,6 +42,21 @@ global.IntersectionObserver = class IntersectionObserver {
   }
 };
 
+// Mock matchMedia for tests
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {}, // deprecated
+    removeListener: () => {}, // deprecated
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
+  }),
+});
+
 // Cleanup after each test case
 afterEach(() => {
   cleanup();

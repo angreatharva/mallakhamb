@@ -20,12 +20,15 @@ describe('DesignTokenAudit', () => {
   it('renders all tab navigation buttons', async () => {
     render(<DesignTokenAudit />);
     
+    // Wait for the first button, then check for others
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /colors/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /spacing/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /typography/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /other/i })).toBeInTheDocument();
     }, { timeout: 10000 });
+    
+    // Once colors button is found, others should be present too
+    expect(screen.getByRole('button', { name: /spacing/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /typography/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /other/i })).toBeInTheDocument();
   });
 
   it('displays colors section by default', () => {

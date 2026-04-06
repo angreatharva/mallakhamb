@@ -1,4 +1,4 @@
-import UnifiedDashboard from './unified/UnifiedDashboard';
+import UnifiedDashboard from '../unified/UnifiedDashboard';
 
 /**
  * SuperAdminDashboard - Redirect wrapper for backward compatibility

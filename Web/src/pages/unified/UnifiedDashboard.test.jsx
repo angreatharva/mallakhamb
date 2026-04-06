@@ -157,7 +157,7 @@ describe('UnifiedDashboard', () => {
 
   describe('Admin Role', () => {
     it('should render admin dashboard with competition-specific stats', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         expect(screen.getByText('Admin')).toBeInTheDocument();
@@ -171,23 +171,25 @@ describe('UnifiedDashboard', () => {
     });
 
     it('should show admin navigation tabs', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
+      // Wait for at least one tab to appear, then check for all
       await waitFor(() => {
-        // Use getByRole to find the specific Dashboard tab button
         expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /teams/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /scores/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /judges/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /transactions/i })).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
+
+      // Once dashboard tab is found, others should be present too
+      expect(screen.getByRole('button', { name: /teams/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /scores/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /judges/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /transactions/i })).toBeInTheDocument();
 
       // Should NOT show Management tab (superadmin only)
       expect(screen.queryByRole('button', { name: /management/i })).not.toBeInTheDocument();
     });
 
     it('should display competition display component', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         expect(screen.getByTestId('competition-display')).toBeInTheDocument();
@@ -195,7 +197,7 @@ describe('UnifiedDashboard', () => {
     });
 
     it('should display judges assignment status', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         expect(screen.getByText('Judges Assignment Status')).toBeInTheDocument();
@@ -206,7 +208,7 @@ describe('UnifiedDashboard', () => {
   describe('SuperAdmin Role', () => {
     it('should render superadmin dashboard with system overview', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -226,7 +228,7 @@ describe('UnifiedDashboard', () => {
 
     it('should show superadmin navigation tabs including Management', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -243,7 +245,7 @@ describe('UnifiedDashboard', () => {
 
     it('should display competition filter dropdown', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -256,7 +258,7 @@ describe('UnifiedDashboard', () => {
 
     it('should NOT display competition display component', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -270,7 +272,7 @@ describe('UnifiedDashboard', () => {
   describe('Tab Switching', () => {
     it('should have clickable teams tab', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const dashboardTab = screen.getByRole('button', { name: /dashboard/i });
@@ -285,7 +287,7 @@ describe('UnifiedDashboard', () => {
 
     it('should have clickable scores tab', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const dashboardTab = screen.getByRole('button', { name: /dashboard/i });
@@ -299,7 +301,7 @@ describe('UnifiedDashboard', () => {
 
     it('should have clickable judges tab', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const dashboardTab = screen.getByRole('button', { name: /dashboard/i });
@@ -313,7 +315,7 @@ describe('UnifiedDashboard', () => {
 
     it('should have clickable transactions tab', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const dashboardTab = screen.getByRole('button', { name: /dashboard/i });
@@ -328,7 +330,7 @@ describe('UnifiedDashboard', () => {
     it('should have clickable management tab for superadmin', async () => {
       const user = userEvent.setup();
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -345,7 +347,7 @@ describe('UnifiedDashboard', () => {
 
   describe('Real-time Updates', () => {
     it('should fetch dashboard data on mount', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         expect(api.adminAPI.getDashboard).toHaveBeenCalled();
@@ -355,7 +357,7 @@ describe('UnifiedDashboard', () => {
 
     it('should fetch superadmin data on mount', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
@@ -370,7 +372,7 @@ describe('UnifiedDashboard', () => {
 
   describe('Responsive Behavior', () => {
     it('should render with responsive grid layouts', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const grids = screen.getAllByRole('generic').filter(el => 
@@ -381,7 +383,7 @@ describe('UnifiedDashboard', () => {
     });
 
     it('should have minimum touch target sizes', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const buttons = screen.getAllByRole('button');
@@ -403,7 +405,7 @@ describe('UnifiedDashboard', () => {
 
   describe('Theme Integration', () => {
     it('should apply admin theme colors', async () => {
-      renderWithProviders(<UnifiedDashboard />, { route: '/admin/dashboard' });
+      renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });
 
       await waitFor(() => {
         const adminLabel = screen.getByText('Admin');
@@ -417,7 +419,7 @@ describe('UnifiedDashboard', () => {
 
     it('should apply superadmin theme colors', async () => {
       renderWithProviders(<UnifiedDashboard />, { 
-        route: '/superadmin/dashboard',
+        initialRoute: '/superadmin/dashboard',
         routePrefix: '/superadmin',
         storagePrefix: 'superadmin'
       });
