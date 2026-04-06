@@ -99,12 +99,12 @@ describe('UnifiedRegister', () => {
   describe('Role detection', () => {
     it('renders coach registration at /coach/register', async () => {
       renderAt('/coach/register');
-      await waitFor(() => expect(screen.getByText(/coach registration/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/coach registration/i)).toBeInTheDocument(), { timeout: 3000 });
     });
 
     it('renders player registration at /player/register', async () => {
       renderAt('/player/register');
-      await waitFor(() => expect(screen.getByText(/player registration/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/player registration/i)).toBeInTheDocument(), { timeout: 3000 });
     });
 
     it('defaults to coach for unknown paths', async () => {

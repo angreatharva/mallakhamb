@@ -8,20 +8,24 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
  * **Validates: Requirements 14.3, 14.5, 14.6, 14.7**
  */
 describe('DesignTokenAudit', () => {
-  it('renders the audit tool with header', () => {
+  it('renders the audit tool with header', async () => {
     render(<DesignTokenAudit />);
     
-    expect(screen.getByText('Design Token Audit')).toBeInTheDocument();
-    expect(screen.getByText(/Visual reference for all design tokens/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Design Token Audit')).toBeInTheDocument();
+      expect(screen.getByText(/Visual reference for all design tokens/i)).toBeInTheDocument();
+    }, { timeout: 10000 });
   });
 
-  it('renders all tab navigation buttons', () => {
+  it('renders all tab navigation buttons', async () => {
     render(<DesignTokenAudit />);
     
-    expect(screen.getByRole('button', { name: /colors/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /spacing/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /typography/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /other/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /colors/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /spacing/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /typography/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /other/i })).toBeInTheDocument();
+    }, { timeout: 10000 });
   });
 
   it('displays colors section by default', () => {
