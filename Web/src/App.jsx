@@ -1,10 +1,11 @@
-import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteContext from './contexts/RouteContext';
 import { CompetitionProvider } from './contexts/CompetitionContext';
+import { AuthContext } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { secureStorage } from './utils/secureStorage';
 import { apiCache } from './utils/apiCache';
@@ -47,17 +48,6 @@ const PageLoader = () => (
     </div>
   </div>
 );
-
-// Create Auth Context
-export const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 // Main App Content Component (needs to be inside Router to use useLocation)
 function AppContent() {
@@ -183,7 +173,7 @@ function AppContent() {
           // Ignore errors from logout endpoint - still clear local data
         });
       }
-    } catch (error) {
+    } catch {
       // Ignore logout errors
     }
     

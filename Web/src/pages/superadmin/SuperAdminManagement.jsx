@@ -3,10 +3,10 @@ import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
   ChevronDown, Save, Users
 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../../services/api';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../admin/adminTheme';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────

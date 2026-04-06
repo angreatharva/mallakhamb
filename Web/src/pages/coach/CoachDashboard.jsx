@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { coachAPI } from '../../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
 import Dropdown from '../../components/Dropdown';
@@ -22,7 +22,7 @@ const CoachDashboard = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
-  const reduced = useReducedMotion();
+  useReducedMotion(); // Initialize for accessibility
 
   const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];
   const ageGroupLimits = {

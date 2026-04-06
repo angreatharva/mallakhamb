@@ -6,11 +6,11 @@ import {
   Users, Zap, AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { coachAPI, playerAPI } from '../../services/api';
 import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
-import { useAuth } from '../../App';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -36,7 +36,8 @@ const detectRoleFromPath = (pathname) => {
 
 /**
  * Role-specific configuration for UnifiedCompetitionSelection.
- * @param {'coach'|'player'} role
+ * @param {'coach'|'player'} role - The user role
+ * @returns {Object} Configuration object with UI elements, colors, and navigation paths
  */
 const getRoleConfig = (role) => {
   const configs = {
@@ -163,8 +164,9 @@ const UnifiedCompetitionSelectionInner = () => {
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const authResponse = await fetch(
-          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/set-competition`,
+          `${apiUrl}/auth/set-competition`,
           {
             method: 'POST',
             headers: {
@@ -650,7 +652,6 @@ const UnifiedCompetitionSelectionInner = () => {
 const UnifiedCompetitionSelection = () => {
   const location = useLocation();
   const role = detectRoleFromPath(location.pathname);
-  const config = getRoleConfig(role);
 
   return (
     <ThemeProvider role={role}>

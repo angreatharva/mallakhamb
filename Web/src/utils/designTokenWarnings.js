@@ -17,7 +17,8 @@ const shownWarnings = new Set();
  * @returns {boolean} True if in development mode
  */
 function isDevelopment() {
-  return typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+  const nodeEnv = globalThis?.process?.env?.NODE_ENV;
+  return nodeEnv ? nodeEnv !== 'production' : import.meta.env.DEV;
 }
 
 /**

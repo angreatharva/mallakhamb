@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Mail, Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, useInView } from 'framer-motion';
+import { useInView } from 'framer-motion';
 import { authAPI } from '../../services/api';
 import { validateEmailFormat } from '../../utils/validation';
 import { logger } from '../../utils/logger';

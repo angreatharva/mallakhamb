@@ -6,7 +6,7 @@ import {
   Users2, Trophy, Gavel, ReceiptIndianRupee, Settings, Activity,
   TrendingUp, UserCheck
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
@@ -43,7 +43,7 @@ const compLabel = (ct) => ({
 }[ct] || ct);
 
 // ─── Judges Summary Card ──────────────────────────────────────────────────────
-const JudgeGroupCard = ({ item, genderColor, startingCompTypes, onStart, loadingJudgesSummary, theme }) => (
+const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary }) => (
   <DarkCard className="p-4">
     <p className="font-bold text-white text-sm mb-3">{ageLabel(item.ageGroup)}</p>
     <div className="space-y-2">
@@ -124,7 +124,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const location = useLocation();
   const { tab } = useParams();
   const { isMobile } = useResponsive();
-  const reduced = useReducedMotion();
+  useReducedMotion(); // Initialize for accessibility
   const theme = useTheme();
 
   const contextValue = useRouteContext();

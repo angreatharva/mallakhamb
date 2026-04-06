@@ -6,8 +6,8 @@ import {
   UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../App';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
@@ -38,7 +38,8 @@ const detectRoleFromPath = (pathname) => {
 
 /**
  * Role-specific configuration for UnifiedRegister.
- * @param {'coach'|'player'} role
+ * @param {'coach'|'player'} role - The user role
+ * @returns {Object} Configuration object with title, subtitle, description, and form fields
  */
 const getRoleConfig = (role) => {
   const configs = {
@@ -214,7 +215,7 @@ const UnifiedRegisterInner = () => {
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
   const theme = useTheme();
-  const reduced = useReducedMotion();
+  useReducedMotion(); // Initialize for accessibility
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

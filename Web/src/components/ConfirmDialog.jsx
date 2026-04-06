@@ -5,6 +5,8 @@ import { logger } from '../utils/logger';
 import { COLORS, useReducedMotion } from '../pages/public/Home';
 import { useResponsive } from '../hooks/useResponsive';
 
+void motion;
+
 const ConfirmDialog = ({
   isOpen,
   onClose,
@@ -19,7 +21,7 @@ const ConfirmDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const reduced = useReducedMotion();
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
   const cancelRef = useRef(null);
 
   // Focus trap — focus cancel on open
@@ -159,7 +161,7 @@ const ConfirmDialog = ({
               <motion.button
                 onClick={handleConfirm}
                 disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2"
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
                 style={{ 
                   background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
                   width: isMobile ? '100%' : 'auto',

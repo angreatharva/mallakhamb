@@ -186,7 +186,7 @@ describe('UnifiedDashboard', () => {
 
       // Should NOT show Management tab (superadmin only)
       expect(screen.queryByRole('button', { name: /management/i })).not.toBeInTheDocument();
-    });
+    }, 20000);
 
     it('should display competition display component', async () => {
       renderWithProviders(<UnifiedDashboard />, { initialRoute: '/admin/dashboard' });

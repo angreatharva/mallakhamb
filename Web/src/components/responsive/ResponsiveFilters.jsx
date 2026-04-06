@@ -3,7 +3,7 @@ import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '../Dropdown';
-import { ADMIN_COLORS } from '../../pages/admin/adminTheme';
+import { ADMIN_COLORS } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
 const surface    = C.darkCard;

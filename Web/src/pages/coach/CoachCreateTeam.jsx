@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, Trophy, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import { coachAPI } from '../../services/api';
 import { COLORS, GradientText, useReducedMotion } from '../public/Home';
 

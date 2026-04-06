@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { playerAPI } from '../../services/api';
-import { useAuth } from '../../App';
+import { useAuth } from '../../contexts/AuthContext';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import { logger } from '../../utils/logger';
@@ -75,7 +75,7 @@ const PlayerDashboard = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
   const { logout } = useAuth();
-  const reduced = useReducedMotion();
+  useReducedMotion(); // Initialize for accessibility
 
   useEffect(() => {
     fetchPlayerProfile();

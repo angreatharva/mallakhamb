@@ -41,9 +41,11 @@ const DEFAULT_THEME = {
  */
 export const useTheme = () => {
   const context = useContext(ThemeContext);
+  const nodeEnv = globalThis?.process?.env?.NODE_ENV;
+  const isDev = nodeEnv ? nodeEnv !== 'production' : import.meta.env.DEV;
   
   // In development, throw descriptive error if used outside ThemeProvider
-  if (!context && process.env.NODE_ENV === 'development') {
+  if (!context && isDev) {
     throw new Error(
       'useTheme must be used within a ThemeProvider. ' +
       'Wrap your component tree with <ThemeProvider> to provide theme context.'

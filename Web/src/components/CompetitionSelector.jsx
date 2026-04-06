@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '../utils/logger';
 import { COLORS, useReducedMotion } from '../pages/public/Home';
 
+void motion;
+
 const statusColors = {
   ongoing: '#22C55E',
   upcoming: '#3B82F6',

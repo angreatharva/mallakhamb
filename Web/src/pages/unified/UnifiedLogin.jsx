@@ -6,8 +6,8 @@ import {
   BarChart2, Settings, Users, Star, Zap, Trophy, Layers, Flame, Dumbbell, Gavel, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../App';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { useRateLimit } from '../../hooks/useRateLimit';
 import { loginSchema, judgeLoginSchema } from '../../utils/validation';
@@ -64,6 +64,8 @@ const detectRoleFromPath = (pathname) => {
 
 /**
  * Get role-specific configuration
+ * @param {string} role - The user role (admin, superadmin, coach, player, judge)
+ * @returns {Object} Configuration object with UI elements, icons, and navigation paths
  */
 const getRoleConfig = (role) => {
   const configs = {
@@ -234,7 +236,7 @@ const UnifiedLoginInner = () => {
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
   const theme = useTheme();
-  const reduced = useReducedMotion();
+  useReducedMotion(); // Initialize for accessibility
   
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Filter, UserPlus, Save, Edit, X, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -9,7 +9,7 @@ import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { logger } from '../../utils/logger';
 import Dropdown from '../../components/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

@@ -142,7 +142,6 @@ const PlayerScoreCard = ({ player, rank, isTied, index }) => {
 // ─── Score group card ─────────────────────────────────────────────────────────
 const ScoreGroupCard = ({ scoreEntry, index }) => {
   const [expanded, setExpanded] = useState(true);
-  const reduced = useReducedMotion();
 
   const sorted = [...scoreEntry.playerScores].sort((a, b) => {
     if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;

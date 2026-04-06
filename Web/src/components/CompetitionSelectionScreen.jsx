@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
 import toast from 'react-hot-toast';
@@ -6,8 +6,10 @@ import { logger } from '../utils/logger';
 import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS, useReducedMotion, GradientText, FadeIn } from '../pages/public/Home';
+
+void motion;
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
@@ -151,7 +153,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const reduced = useReducedMotion();
+  useReducedMotion();
 
   useEffect(() => {
     if (!isLoading && assignedCompetitions?.length === 1) {

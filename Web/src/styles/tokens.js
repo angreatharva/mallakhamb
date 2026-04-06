@@ -227,7 +227,10 @@ const warnedExports = new Set();
  * @param {string} replacement - Suggested replacement
  */
 const showDeprecationWarning = (exportName, replacement) => {
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const nodeEnv = globalThis?.process?.env?.NODE_ENV;
+  const isDev = nodeEnv ? nodeEnv !== 'production' : import.meta.env.DEV;
+
+  if (isDev) {
     if (!warnedExports.has(exportName)) {
       console.warn(
         `[Design System] "${exportName}" is deprecated and will be removed in a future version. ` +
@@ -299,12 +302,18 @@ export const ADMIN_COLORS = createDeprecatedProxy(
 // Deprecated animation easing exports
 // Note: These will show warnings when imported, not when accessed
 // This is a limitation of ES modules, but still provides migration guidance
-if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+{
+  const nodeEnv = globalThis?.process?.env?.NODE_ENV;
+  const isDev = nodeEnv ? nodeEnv !== 'production' : import.meta.env.DEV;
+
+  if (isDev) {
   // Show warning once per module load for animation exports
   const animationExports = ['EASE_OUT', 'EASE_SPRING', 'ADMIN_EASE_OUT', 'ADMIN_SPRING'];
   // We can't detect which specific export is used, so we show a general warning
   // The warning will appear in the console when this module is first imported
   // if any of these exports are used in the importing file
+  void animationExports;
+  }
 }
 
 export const EASE_OUT = DESIGN_TOKENS.easings.easeOut;

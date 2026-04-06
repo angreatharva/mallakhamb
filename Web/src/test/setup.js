@@ -32,7 +32,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 }
 
 // Mock IntersectionObserver for tests
-global.IntersectionObserver = class IntersectionObserver {
+globalThis.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}

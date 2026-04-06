@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import SafeText from './SafeText';
 import { COLORS } from '../pages/public/Home';
 
+void motion;
+
 const statusConfig = {
   ongoing: { color: '#22C55E', label: 'Live', pulse: true },
   upcoming: { color: '#3B82F6', label: 'Upcoming', pulse: false },

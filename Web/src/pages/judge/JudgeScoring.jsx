@@ -5,7 +5,7 @@ import {
   Scale, Users, User, Trophy, LogOut, CheckCircle,
   RotateCcw, Send
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import apiConfig from '../../utils/apiConfig';

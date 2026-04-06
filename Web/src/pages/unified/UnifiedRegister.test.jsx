@@ -53,7 +53,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-vi.mock('../../App', () => ({
+vi.mock('../../contexts/AuthContext', () => ({
   useAuth: () => ({ login: vi.fn(), user: null, userType: null }),
 }));
 

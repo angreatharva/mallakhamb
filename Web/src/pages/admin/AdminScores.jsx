@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Filter, X, Search } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -11,7 +11,7 @@ import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable
 import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '../../utils/logger';
 import { ResponsiveScoreFilters } from '../../components/responsive/ResponsiveFilters';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from './adminTheme';
+import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
