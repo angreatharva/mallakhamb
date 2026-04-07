@@ -49,7 +49,7 @@ export const RATE_LIMITS = {
   LOGIN_WINDOW_MS: 60000,        // 1 minute
   OTP_MAX_ATTEMPTS: 3,
   OTP_WINDOW_MS: 300000,         // 5 minutes
-  API_MAX_REQUESTS: 100,
+  API_MAX_REQUESTS: 1000000,
   API_WINDOW_MS: 60000,          // 1 minute
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { coachAPI } from '../../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
 import Dropdown from '../../components/Dropdown';

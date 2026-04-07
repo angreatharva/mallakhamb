@@ -39,7 +39,7 @@ export const CompetitionProvider = ({ children, userType }) => {
   // Fetch assigned competitions for the user (callable for manual refresh)
   const fetchAssignedCompetitions = useCallback(async () => {
     const token = getToken();
-    if (!userType || !token) return;
+    if (!userType || !token || userType === 'judge') return;
 
     try {
       setIsLoading(true);
@@ -128,7 +128,7 @@ export const CompetitionProvider = ({ children, userType }) => {
     let isMounted = true;
 
     const loadCompetitions = async () => {
-      if (!userType || !getToken()) {
+      if (!userType || !getToken() || userType === 'judge') {
         setIsLoading(false);
         return;
       }

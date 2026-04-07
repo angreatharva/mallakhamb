@@ -1,4 +1,5 @@
 import UnifiedDashboard from '../unified/UnifiedDashboard';
+import { ThemeProvider } from '../../components/design-system/theme';
 
 /**
  * SuperAdminDashboard - Redirect wrapper for backward compatibility
@@ -7,7 +8,11 @@ import UnifiedDashboard from '../unified/UnifiedDashboard';
  * It simply renders the UnifiedDashboard component which will auto-detect the superadmin role.
  */
 const SuperAdminDashboard = () => {
-  return <UnifiedDashboard />;
+  return (
+    <ThemeProvider role="superadmin">
+      <UnifiedDashboard />
+    </ThemeProvider>
+  );
 };
 
 export default SuperAdminDashboard;

@@ -1,4 +1,5 @@
 import UnifiedDashboard from '../unified/UnifiedDashboard';
+import { ThemeProvider } from '../../components/design-system/theme';
 
 /**
  * AdminDashboard - Redirect wrapper for backward compatibility
@@ -7,7 +8,11 @@ import UnifiedDashboard from '../unified/UnifiedDashboard';
  * It simply renders the UnifiedDashboard component which will auto-detect the admin role.
  */
 const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
-  return <UnifiedDashboard routePrefix={routePrefixProp} />;
+  return (
+    <ThemeProvider role="admin">
+      <UnifiedDashboard routePrefix={routePrefixProp} />
+    </ThemeProvider>
+  );
 };
 
 export default AdminDashboard;

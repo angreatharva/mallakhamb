@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Trophy, Filter, Users, X, Search } from 'lucide-react';
-import { AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -240,7 +240,7 @@ const Teams = () => {
             </div>
           )}
 
-          <div className={!filtersReady ? 'opacity-40 pointer-events-none' : ''}>
+          <div className={!filtersReady ? 'opacity-40 pointer-events-none mb-6' : 'mb-6'}>
             <ResponsiveTeamFilters selectedGender={selectedGender} onGenderChange={setSelectedGender}
               selectedAgeGroup={selectedAgeGroup} onAgeGroupChange={setSelectedAgeGroup}
               searchTerm={searchTerm} onSearchChange={setSearchTerm}

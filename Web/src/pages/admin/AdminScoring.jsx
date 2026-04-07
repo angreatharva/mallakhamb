@@ -2,12 +2,14 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '../../utils/logger';
+import { secureStorage } from '../../utils/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 
@@ -35,19 +37,36 @@ const AdminScoring = () => {
 
     useEffect(() => {
         const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-        const newSocket = io(socketUrl);
+        const tokenKey = routePrefix === '/superadmin' ? 'admin_token' : 'admin_token';
+        const token = secureStorage.getItem(tokenKey);
+        
+        // Connect with authentication token
+        const newSocket = io(socketUrl, {
+            auth: {
+                token: token
+            }
+        });
+        
         setSocket(newSocket);
         newSocket.on('connect', () => {
             setIsConnected(true);
+            logger.info('Admin socket connected successfully');
             if (selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
                 const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
                 newSocket.emit('join_scoring_room', roomId);
+                logger.info(`Joined scoring room: ${roomId}`);
             }
         });
-        newSocket.on('disconnect', () => setIsConnected(false));
-        newSocket.on('connect_error', () => setIsConnected(false));
+        newSocket.on('disconnect', () => {
+            setIsConnected(false);
+            logger.info('Admin socket disconnected');
+        });
+        newSocket.on('connect_error', (error) => {
+            setIsConnected(false);
+            logger.error('Admin socket connection error:', error);
+        });
         return () => newSocket.disconnect();
-    }, [selectedGender, selectedAgeGroup, selectedCompetitionType]);
+    }, [selectedGender, selectedAgeGroup, selectedCompetitionType, routePrefix]);
 
     useEffect(() => {
         if (!socket) return;

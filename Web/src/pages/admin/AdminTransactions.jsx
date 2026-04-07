@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { ReceiptIndianRupee, Filter, AlertCircle } from 'lucide-react';
-import { useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '../../utils/logger';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import Dropdown from '../../components/Dropdown';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -56,7 +57,7 @@ const AdminTransactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [competitions, setCompetitions] = useState([]);
-  const [selectedCompetition, setSelectedCompetition] = useState('');
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
 
   useEffect(() => {
     if (isSuperAdmin) fetchCompetitions();
@@ -64,7 +65,7 @@ const AdminTransactions = () => {
   }, [routePrefix]);
 
   useEffect(() => {
-    if (isSuperAdmin && selectedCompetition) fetchTransactions(selectedCompetition);
+    if (isSuperAdmin && selectedCompetition) fetchTransactions(selectedCompetition.value);
   }, [selectedCompetition]);
 
   const fetchCompetitions = async () => {
@@ -115,20 +116,19 @@ const AdminTransactions = () => {
 
             {isSuperAdmin && (
               <div className="sm:w-64">
-                <label className="block text-xs font-semibold text-white/40 mb-1">Select Competition</label>
-                <select
+                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                  Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                </label>
+                <Dropdown
+                  options={competitions.map(c => ({
+                    value: c._id,
+                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
+                  }))}
                   value={selectedCompetition}
-                  onChange={(e) => setSelectedCompetition(e.target.value)}
-                  className="w-full rounded-xl text-sm text-white outline-none min-h-[44px] px-3 transition-all duration-200"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
-                >
-                  <option value="" style={{ background: ADMIN_COLORS.darkCard }}>Choose competition…</option>
-                  {competitions.map((comp) => (
-                    <option key={comp._id} value={comp._id} style={{ background: ADMIN_COLORS.darkCard }}>
-                      {comp.name}{comp.year ? ` (${comp.year})` : ''}{comp.place ? ` — ${comp.place}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedCompetition}
+                  placeholder="Select a competition first"
+                  disabled={loading}
+                />
               </div>
             )}
           </div>

@@ -6,7 +6,7 @@ import {
   UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { secureStorage } from '../../utils/secureStorage';

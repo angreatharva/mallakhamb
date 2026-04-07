@@ -6,7 +6,7 @@ import {
   Users2, Trophy, Gavel, ReceiptIndianRupee, Settings, Activity,
   TrendingUp, UserCheck
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
@@ -417,21 +417,39 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 <h3 className="text-xl font-black text-white">Participation Breakdown</h3>
               </div>
             </div>
-            <div className="md:w-64">
+            <div className="md:w-64 relative">
               <select
                 value={selectedCompetition || ''}
                 onChange={(e) => setSelectedCompetition(e.target.value || null)}
-                className="w-full rounded-xl text-sm text-white outline-none min-h-[44px] px-3 transition-all duration-200"
-                style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${theme.colors.border}` }}
+                className="w-full rounded-xl text-sm font-medium text-white outline-none min-h-[44px] px-4 py-3 pr-10 appearance-none cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2"
+                style={{ 
+                  background: 'rgba(255,255,255,0.05)',
+                  border: `1px solid rgba(255,255,255,0.06)`,
+                  color: selectedCompetition ? '#fff' : 'rgba(255,255,255,0.45)',
+                  outlineColor: theme.colors.primary,
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = `${theme.colors.primary}60`;
+                  e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}18`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.06)';
+                  e.target.style.boxShadow = 'none';
+                }}
                 aria-label="Filter by competition"
               >
-                <option value="" style={{ background: theme.colors.card }}>All Competitions</option>
+                <option value="" style={{ background: '#111111', color: 'rgba(255,255,255,0.45)' }}>All Competitions</option>
                 {competitions.map((comp) => (
-                  <option key={comp._id} value={comp._id} style={{ background: theme.colors.card }}>
+                  <option key={comp._id} value={comp._id} style={{ background: '#111111', color: '#fff' }}>
                     {comp.name}
                   </option>
                 ))}
               </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex-shrink-0">
+                <svg className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.45)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
 

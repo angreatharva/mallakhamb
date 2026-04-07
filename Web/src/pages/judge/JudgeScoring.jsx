@@ -5,11 +5,12 @@ import {
   Scale, Users, User, Trophy, LogOut, CheckCircle,
   RotateCcw, Send
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import apiConfig from '../../utils/apiConfig';
 import { logger } from '../../utils/logger';
+import { secureStorage } from '../../utils/secureStorage';
 import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
@@ -219,14 +220,15 @@ const JudgeScoring = () => {
   ];
 
   useEffect(() => {
-    const storedJudge = localStorage.getItem('judge_user');
+    const storedJudge = secureStorage.getItem('judge_user');
     if (!storedJudge) { toast.error('Please login first'); navigate('/judge/login'); return; }
     try {
       const judge = JSON.parse(storedJudge);
       setJudgeInfo(judge);
       if (judge.competitionTypes?.length === 1) setSelectedCompetitionType(judge.competitionTypes[0]);
     } catch {
-      localStorage.removeItem('judge_user');
+      secureStorage.removeItem('judge_user');
+      secureStorage.removeItem('judge_token');
       toast.error('Invalid session. Please login again.');
       navigate('/judge/login');
     }
@@ -235,20 +237,37 @@ const JudgeScoring = () => {
   useEffect(() => {
     if (!judgeInfo) return;
     const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-    const newSocket = io(socketUrl);
+    const token = secureStorage.getItem('judge_token');
+    
+    // Connect with authentication token
+    const newSocket = io(socketUrl, {
+      auth: {
+        token: token
+      }
+    });
+    
     setSocket(newSocket);
     newSocket.on('connect', () => {
       setIsConnected(true);
+      logger.info('Socket connected successfully');
       if (judgeInfo && selectedCompetitionType) {
         const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
         if (joinedRoomRef.current !== roomId) {
           newSocket.emit('join_scoring_room', roomId);
           joinedRoomRef.current = roomId;
+          logger.info(`Joined scoring room: ${roomId}`);
         }
       }
     });
-    newSocket.on('disconnect', () => { setIsConnected(false); joinedRoomRef.current = null; });
-    newSocket.on('connect_error', () => toast.error('Failed to connect to server'));
+    newSocket.on('disconnect', () => { 
+      setIsConnected(false); 
+      joinedRoomRef.current = null;
+      logger.info('Socket disconnected');
+    });
+    newSocket.on('connect_error', (error) => {
+      logger.error('Socket connection error:', error);
+      toast.error('Failed to connect to server');
+    });
     return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
   }, [judgeInfo, selectedCompetitionType]);
 
@@ -268,7 +287,7 @@ const JudgeScoring = () => {
   const fetchTeams = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('judge_token');
+      const token = secureStorage.getItem('judge_token');
       const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
         params: { gender: judgeInfo.gender, ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType },
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
@@ -333,7 +352,7 @@ const JudgeScoring = () => {
     if (parseFloat(calcFinal()) === 0) { toast.error('Please enter scores'); return; }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('judge_token');
+      const token = secureStorage.getItem('judge_token');
       const finalScore = calcFinal();
       const scoreData = {
         playerId: selectedPlayer.id, playerName: selectedPlayer.name,
@@ -358,8 +377,8 @@ const JudgeScoring = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('judge_token');
-    localStorage.removeItem('judge_user');
+    secureStorage.removeItem('judge_token');
+    secureStorage.removeItem('judge_user');
     toast.success('Logged out successfully');
     navigate('/judge/login');
   };

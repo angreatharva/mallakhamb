@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
@@ -63,8 +63,12 @@ export const ThemedInput = forwardRef(({
   const hasError = Boolean(error);
   const errorMessage = typeof error === 'string' ? error : '';
   
-  // Get responsive padding value
-  const responsivePadding = padding ? getResponsiveValue(padding) : 'md';
+  // Get responsive padding value - memoize to prevent infinite loops
+  const responsivePadding = useMemo(() => 
+    padding ? getResponsiveValue(padding) : 'md',
+    [padding, getResponsiveValue]
+  );
+  
   const paddingMap = {
     sm: 'px-3 py-2',
     md: 'px-4 py-3',
@@ -72,14 +76,25 @@ export const ThemedInput = forwardRef(({
   };
   const paddingClass = paddingMap[responsivePadding] || paddingMap.md;
   
-  // Get responsive font size value
-  const responsiveFontSize = fontSize ? getResponsiveValue(fontSize) : 'base';
+  // Get responsive font size value - memoize to prevent infinite loops
+  const responsiveFontSize = useMemo(() =>
+    fontSize ? getResponsiveValue(fontSize) : 'base',
+    [fontSize, getResponsiveValue]
+  );
+  
   const fontSizeMap = {
     sm: 'text-sm',
     base: 'text-base',
     lg: 'text-lg',
   };
   const fontSizeClass = fontSizeMap[responsiveFontSize] || fontSizeMap.base;
+  
+  // Memoize the whileFocus animation to prevent infinite loops
+  const whileFocusAnimation = useMemo(() => ({
+    boxShadow: hasError 
+      ? '0 0 0 3px rgba(239, 68, 68, 0.15)'
+      : `0 0 0 3px ${theme.colors.primaryLight}`,
+  }), [hasError, theme.colors.primaryLight]);
   
   return (
     <div className="w-full">
@@ -157,11 +172,7 @@ export const ThemedInput = forwardRef(({
             // Role-specific focus color with 3:1 contrast ratio
             color: theme.colors.primary,
           }}
-          whileFocus={{
-            boxShadow: hasError 
-              ? '0 0 0 3px rgba(239, 68, 68, 0.15)'
-              : `0 0 0 3px ${theme.colors.primaryLight}`,
-          }}
+          whileFocus={whileFocusAnimation}
           {...props}
         />
         

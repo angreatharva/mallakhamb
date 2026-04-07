@@ -196,7 +196,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 5. NoSQL injection protection
+// 6. NoSQL injection protection
 app.use(mongoSanitize({
   replaceWith: '_',
   onSanitize: ({ req, key }) => {
@@ -204,27 +204,15 @@ app.use(mongoSanitize({
   }
 }));
 
-// 6. General API rate limiter
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window per IP
-  message: 'Too many requests from this IP, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-// 7. Strict rate limiter for authentication endpoints
+// 7. Strict rate limiter for authentication endpoints (login, register, password reset)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 login attempts per window per IP
-  message: 'Too many login attempts, please try again after 15 minutes',
-  skipSuccessfulRequests: true, // Don't count successful logins
+  max: 5, // 5 attempts per window per IP
+  message: 'Too many authentication attempts, please try again after 15 minutes',
+  skipSuccessfulRequests: true, // Don't count successful requests
   standardHeaders: true,
   legacyHeaders: false
 });
-
-// Apply general rate limiter to all API routes
-app.use('/api/', apiLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -238,14 +226,39 @@ app.use(logUnauthorizedAccess);
 // Health check routes (before other routes for quick access)
 app.use('/api', require('./routes/healthRoutes'));
 
-// Routes with rate limiting
+// Routes with rate limiting on authentication endpoints only
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
-app.use('/api/players', require('./routes/playerRoutes'));
-app.use('/api/coaches', require('./routes/coachRoutes'));
+
+// Player routes with rate limiting on login/register
+const playerRoutes = require('./routes/playerRoutes');
+app.post('/api/players/register', authLimiter, playerRoutes);
+app.post('/api/players/login', authLimiter, playerRoutes);
+app.use('/api/players', playerRoutes);
+
+// Coach routes with rate limiting on login/register
+const coachRoutes = require('./routes/coachRoutes');
+app.post('/api/coaches/register', authLimiter, coachRoutes);
+app.post('/api/coaches/login', authLimiter, coachRoutes);
+app.use('/api/coaches', coachRoutes);
+
+// Admin routes with rate limiting on login/register
+const adminRoutes = require('./routes/adminRoutes');
+app.post('/api/admin/register', authLimiter, adminRoutes);
+app.post('/api/admin/login', authLimiter, adminRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Super Admin routes with rate limiting on login
+const superAdminRoutes = require('./routes/superAdminRoutes');
+app.post('/api/superadmin/login', authLimiter, superAdminRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+
+// Judge routes with rate limiting on login
+const judgeRoutes = require('./routes/judgeRoutes');
+app.post('/api/judge/login', authLimiter, judgeRoutes);
+app.use('/api/judge', judgeRoutes);
+
+// Other routes without rate limiting
 app.use('/api/teams', require('./routes/teamRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/superadmin', require('./routes/superAdminRoutes'));
-app.use('/api/judge', require('./routes/judgeRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 
 // Legacy health check endpoint (kept for backward compatibility)

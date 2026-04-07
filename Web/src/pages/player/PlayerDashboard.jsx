@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { playerAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';

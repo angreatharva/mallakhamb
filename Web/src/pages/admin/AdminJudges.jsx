@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Filter, UserPlus, Save, Edit, X, Trash2 } from 'lucide-react';
-import { AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';

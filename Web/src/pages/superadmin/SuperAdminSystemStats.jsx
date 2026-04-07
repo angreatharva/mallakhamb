@@ -3,6 +3,7 @@ import {
   Server, Database, Users, Activity, Clock, HardDrive,
   TrendingUp, AlertCircle, CheckCircle, RefreshCw
 } from 'lucide-react';
+import { AnimatePresence, useInView } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../../services/api';

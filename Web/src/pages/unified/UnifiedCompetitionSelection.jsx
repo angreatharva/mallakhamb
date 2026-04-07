@@ -1,16 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Trophy, Calendar, MapPin, ArrowRight, User, LogOut, Search, X, CheckCircle,
   Users, Zap, AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
 import { coachAPI, playerAPI } from '../../services/api';
 import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -101,6 +100,7 @@ const UnifiedCompetitionSelectionInner = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
+  const [coachTeam, setCoachTeam] = useState(null);
 
   // Load user data on mount
   useEffect(() => {
@@ -128,6 +128,22 @@ const UnifiedCompetitionSelectionInner = () => {
       setError(null);
 
       if (role === 'coach') {
+        // Fetch coach's teams first to get the team ID
+        const teamsResponse = await coachAPI.getTeams();
+        const teams = teamsResponse.data.teams || [];
+        
+        // Find the first team without a competition or the first team
+        const availableTeam = teams.find(t => !t.competitions || t.competitions.length === 0) || teams[0];
+        
+        if (!availableTeam) {
+          setError('Please create a team first before selecting a competition.');
+          setLoading(false);
+          return;
+        }
+        
+        setCoachTeam(availableTeam);
+        
+        // Fetch open competitions
         const response = await coachAPI.getOpenCompetitions();
         setItems(response.data.competitions || []);
       } else {
@@ -160,7 +176,13 @@ const UnifiedCompetitionSelectionInner = () => {
     try {
       if (role === 'coach') {
         // Coach: register team for competition
-        await coachAPI.registerTeamForCompetition(selectedItem.teamId, selectedItem.id);
+        if (!coachTeam) {
+          toast.error('No team found. Please create a team first.');
+          setSubmitting(false);
+          return;
+        }
+        
+        await coachAPI.registerTeamForCompetition(coachTeam.id, selectedItem.id);
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
@@ -237,7 +259,12 @@ const UnifiedCompetitionSelectionInner = () => {
         (v) => v?.toLowerCase().includes(q)
       );
     } else {
-      return [item.name, item.coach, item.competition].some((v) =>
+      // Player: search by team name, coach name, competition name, description
+      const coachName = typeof item.coach === 'string' 
+        ? item.coach 
+        : `${item.coach?.firstName || ''} ${item.coach?.lastName || ''}`.trim();
+      
+      return [item.name, coachName, item.competitionName, item.description].some((v) =>
         v?.toLowerCase().includes(q)
       );
     }
@@ -498,8 +525,13 @@ const UnifiedCompetitionSelectionInner = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3, delay: idx * 0.05 }}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    whileHover={submitting ? {} : {
+                      scale: 1.01,
+                      borderColor: `${config.colorBorder}`,
+                      background: `linear-gradient(135deg, ${config.colorBg}, rgba(255,255,255,0.03))`,
+                      y: -2,
+                    }}
+                    whileTap={submitting ? {} : { scale: 0.99 }}
                     aria-pressed={selectedItem?.id === item.id || selectedItem?._id === item._id}
                   >
                     <div className="flex items-start justify-between">
@@ -545,19 +577,15 @@ const UnifiedCompetitionSelectionInner = () => {
                         {role === 'player' && (
                           <>
                             {item.coach && (
-                              <p className="text-white/40 text-sm mt-1">Coach: {item.coach}</p>
+                              <p className="text-white/40 text-sm mt-1">
+                                Coach: {typeof item.coach === 'string' ? item.coach : `${item.coach.firstName || ''} ${item.coach.lastName || ''}`.trim()}
+                              </p>
                             )}
-                            {item.competition && (
-                              <p className="text-white/40 text-sm">Competition: {item.competition}</p>
+                            {item.competitionName && (
+                              <p className="text-white/40 text-sm">Competition: {item.competitionName}</p>
                             )}
-                            {item.memberCount !== undefined && (
-                              <div className="flex items-center gap-2 text-white/40 text-xs mt-2">
-                                <Users className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
-                                <span>{item.memberCount} members</span>
-                              </div>
-                            )}
-                            {item.gender && (
-                              <p className="text-white/40 text-xs mt-1">Gender: {item.gender}</p>
+                            {item.description && (
+                              <p className="text-white/40 text-xs mt-1 line-clamp-1">{item.description}</p>
                             )}
                           </>
                         )}

@@ -3,11 +3,12 @@ import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
   ChevronDown, Save, Users
 } from 'lucide-react';
-import { AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '../../services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
+import Dropdown from '../../components/Dropdown';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -236,15 +237,15 @@ const SuperAdminManagement = () => {
   // Admin modal
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'admin' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: { value: 'admin', label: 'Admin' } });
 
   // Competition modal
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [competitionFormData, setCompetitionFormData] = useState({
-    name: '', level: 'district', competitionTypes: ['competition_1'],
-    place: '', year: new Date().getFullYear(), startDate: '', endDate: '',
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
+    place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: []
   });
 
@@ -255,7 +256,7 @@ const SuperAdminManagement = () => {
   // Player form
   const [playerFormData, setPlayerFormData] = useState({
     name: '', email: '', password: '', phone: '', dateOfBirth: '',
-    gender: 'Male', teamId: '', competitionId: '', paymentStatus: 'pending'
+    gender: { value: 'Male', label: 'Male' }, teamId: null, competitionId: null, paymentStatus: { value: 'pending', label: 'Pending' }
   });
 
   const defaultAgeGroups = ['Under10','Under12','Under14','Under16','Under18','Above16','Above18'];
@@ -293,10 +294,10 @@ const SuperAdminManagement = () => {
   const handleAddAdmin = async (e) => {
     e.preventDefault();
     try {
-      await superAdminAPI.createAdmin(formData);
+      await superAdminAPI.createAdmin({ ...formData, role: formData.role.value });
       toast.success('Admin created');
       setShowAddAdminModal(false);
-      setFormData({ name: '', email: '', password: '', role: 'admin' });
+      setFormData({ name: '', email: '', password: '', role: { value: 'admin', label: 'Admin' } });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to create admin'); }
   };
@@ -304,10 +305,10 @@ const SuperAdminManagement = () => {
   const handleUpdateAdmin = async (e) => {
     e.preventDefault();
     try {
-      await superAdminAPI.updateAdmin(editingAdmin._id, { name: formData.name, email: formData.email, role: formData.role, isActive: formData.isActive });
+      await superAdminAPI.updateAdmin(editingAdmin._id, { name: formData.name, email: formData.email, role: formData.role.value, isActive: formData.isActive });
       toast.success('Admin updated');
       setEditingAdmin(null);
-      setFormData({ name: '', email: '', password: '', role: 'admin' });
+      setFormData({ name: '', email: '', password: '', role: { value: 'admin', label: 'Admin' } });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to update admin'); }
   };
@@ -320,7 +321,10 @@ const SuperAdminManagement = () => {
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
-    setFormData({ name: admin.name, email: admin.email, password: '', role: admin.role, isActive: admin.isActive });
+    const roleOption = admin.role === 'super_admin' 
+      ? { value: 'super_admin', label: 'Super Admin' }
+      : { value: 'admin', label: 'Admin' };
+    setFormData({ name: admin.name, email: admin.email, password: '', role: roleOption, isActive: admin.isActive });
   };
 
   // ─── Coach ─────────────────────────────────────────────────────────────────
@@ -334,17 +338,25 @@ const SuperAdminManagement = () => {
 
   // ─── Competition CRUD ──────────────────────────────────────────────────────
   const resetCompetitionForm = () => setCompetitionFormData({
-    name: '', level: 'district', competitionTypes: ['competition_1'],
-    place: '', year: new Date().getFullYear(), startDate: '', endDate: '',
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
+    place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: []
   });
 
   const openCompetitionModal = (comp = null) => {
     if (comp) {
       setEditingCompetition(comp);
+      const levelOption = { 
+        value: comp.level, 
+        label: comp.level.charAt(0).toUpperCase() + comp.level.slice(1) 
+      };
+      const yearOption = { 
+        value: comp.year || new Date().getFullYear(), 
+        label: (comp.year || new Date().getFullYear()).toString() 
+      };
       setCompetitionFormData({
-        name: comp.name, level: comp.level, competitionTypes: comp.competitionTypes || [],
-        place: comp.place, year: comp.year || new Date().getFullYear(),
+        name: comp.name, level: levelOption, competitionTypes: comp.competitionTypes || [],
+        place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
         ageGroups: comp.ageGroups || []
@@ -360,7 +372,11 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
     try {
-      await superAdminAPI.createCompetition(competitionFormData);
+      await superAdminAPI.createCompetition({
+        ...competitionFormData,
+        level: competitionFormData.level.value,
+        year: competitionFormData.year.value
+      });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to create competition'); }
@@ -371,7 +387,7 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
-        name: competitionFormData.name, level: competitionFormData.level,
+        name: competitionFormData.name, level: competitionFormData.level.value,
         competitionTypes: competitionFormData.competitionTypes, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups
@@ -438,9 +454,15 @@ const SuperAdminManagement = () => {
     if (!playerFormData.competitionId) { toast.error('Select a competition'); return; }
     if (!playerFormData.teamId) { toast.error('Select a team'); return; }
     try {
-      await superAdminAPI.addPlayerToTeam({ ...playerFormData, team: playerFormData.teamId, competition: playerFormData.competitionId });
+      await superAdminAPI.addPlayerToTeam({ 
+        ...playerFormData, 
+        gender: playerFormData.gender.value,
+        team: playerFormData.teamId.value, 
+        competition: playerFormData.competitionId.value,
+        paymentStatus: playerFormData.paymentStatus.value
+      });
       toast.success('Player added');
-      setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:'Male',teamId:'',competitionId:'',paymentStatus:'pending' });
+      setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } });
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to add player'); }
   };
 
@@ -663,35 +685,50 @@ const SuperAdminManagement = () => {
                   onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })} />
                 <DarkInput label="Date of Birth" required type="date" value={playerFormData.dateOfBirth}
                   onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })} />
-                <DarkSelect label="Gender" required value={playerFormData.gender}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, gender: e.target.value })}>
-                  <option value="Male" style={{ background: ADMIN_COLORS.darkCard }}>Male</option>
-                  <option value="Female" style={{ background: ADMIN_COLORS.darkCard }}>Female</option>
-                </DarkSelect>
-                <DarkSelect label="Competition" required value={playerFormData.competitionId}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, competitionId: e.target.value, teamId: '' })}>
-                  <option value="" style={{ background: ADMIN_COLORS.darkCard }}>Select Competition</option>
-                  {competitions.map(c => (
-                    <option key={c._id} value={c._id} style={{ background: ADMIN_COLORS.darkCard }}>
-                      {c.name} {c.year ? `(${c.year})` : ''} — {c.place}
-                    </option>
-                  ))}
-                </DarkSelect>
-                <DarkSelect label="Team" required value={playerFormData.teamId} disabled={!playerFormData.competitionId}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, teamId: e.target.value })}>
-                  <option value="" style={{ background: ADMIN_COLORS.darkCard }}>Select Team</option>
-                  {teams.filter(t => t.competition?._id === playerFormData.competitionId || t.competitionId === playerFormData.competitionId)
-                    .map(t => <option key={t._id} value={t._id} style={{ background: ADMIN_COLORS.darkCard }}>{t.name}</option>)}
-                </DarkSelect>
-                <DarkSelect label="Payment Status" required value={playerFormData.paymentStatus}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, paymentStatus: e.target.value })}>
-                  <option value="pending" style={{ background: ADMIN_COLORS.darkCard }}>Pending</option>
-                  <option value="completed" style={{ background: ADMIN_COLORS.darkCard }}>Completed</option>
-                  <option value="failed" style={{ background: ADMIN_COLORS.darkCard }}>Failed</option>
-                </DarkSelect>
+                <Dropdown 
+                  label="Gender" 
+                  options={[
+                    { value: 'Male', label: 'Male' },
+                    { value: 'Female', label: 'Female' }
+                  ]}
+                  value={playerFormData.gender}
+                  onChange={(option) => setPlayerFormData({ ...playerFormData, gender: option })}
+                  placeholder="Select gender"
+                />
+                <Dropdown 
+                  label="Competition" 
+                  options={competitions.map(c => ({
+                    value: c._id,
+                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
+                  }))}
+                  value={playerFormData.competitionId}
+                  onChange={(option) => setPlayerFormData({ ...playerFormData, competitionId: option, teamId: null })}
+                  placeholder="Select Competition"
+                />
+                <Dropdown 
+                  label="Team" 
+                  options={teams
+                    .filter(t => playerFormData.competitionId && (t.competition?._id === playerFormData.competitionId.value || t.competitionId === playerFormData.competitionId.value))
+                    .map(t => ({ value: t._id, label: t.team?.name || t.name || 'Unnamed Team' }))}
+                  value={playerFormData.teamId}
+                  onChange={(option) => setPlayerFormData({ ...playerFormData, teamId: option })}
+                  placeholder="Select Team"
+                  disabled={!playerFormData.competitionId}
+                />
+                <Dropdown 
+                  label="Payment Status" 
+                  options={[
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'completed', label: 'Completed' },
+                    { value: 'failed', label: 'Failed' }
+                  ]}
+                  value={playerFormData.paymentStatus}
+                  onChange={(option) => setPlayerFormData({ ...playerFormData, paymentStatus: option })}
+                  placeholder="Select payment status"
+                />
               </div>
               <div className="flex gap-3 pt-2">
-                <DarkBtn type="button" variant="ghost" onClick={() => setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:'Male',teamId:'',competitionId:'',paymentStatus:'pending' })}>
+                <DarkBtn type="button" variant="ghost" onClick={() => setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } })}>
                   Reset
                 </DarkBtn>
                 <DarkBtn type="submit" variant="primary">
@@ -706,11 +743,11 @@ const SuperAdminManagement = () => {
       {/* ─── Add/Edit Admin Modal ──────────────────────────────────────── */}
       <DarkModal
         isOpen={showAddAdminModal || !!editingAdmin}
-        onClose={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:'admin' }); }}
+        onClose={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:{ value: 'admin', label: 'Admin' } }); }}
         title={editingAdmin ? 'Edit Admin' : 'Add New Admin'}
         subtitle="Admin Management"
         footer={<>
-          <DarkBtn variant="ghost" className="flex-1" onClick={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:'admin' }); }}>Cancel</DarkBtn>
+          <DarkBtn variant="ghost" className="flex-1" onClick={() => { setShowAddAdminModal(false); setEditingAdmin(null); setFormData({ name:'',email:'',password:'',role:{ value: 'admin', label: 'Admin' } }); }}>Cancel</DarkBtn>
           <DarkBtn variant="primary" className="flex-1" onClick={editingAdmin ? handleUpdateAdmin : handleAddAdmin} type="submit">
             <Save className="w-4 h-4" /> {editingAdmin ? 'Update' : 'Create'}
           </DarkBtn>
@@ -724,10 +761,16 @@ const SuperAdminManagement = () => {
             <DarkInput label="Password" required type="password" placeholder="Password" value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
           )}
-          <DarkSelect label="Role" required value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-            <option value="admin" style={{ background: ADMIN_COLORS.darkCard }}>Admin</option>
-            <option value="super_admin" style={{ background: ADMIN_COLORS.darkCard }}>Super Admin</option>
-          </DarkSelect>
+          <Dropdown 
+            label="Role" 
+            options={[
+              { value: 'admin', label: 'Admin' },
+              { value: 'super_admin', label: 'Super Admin' }
+            ]}
+            value={formData.role}
+            onChange={(option) => setFormData({ ...formData, role: option })}
+            placeholder="Select role"
+          />
           {editingAdmin && (
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="relative">
@@ -761,20 +804,30 @@ const SuperAdminManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DarkInput label="Competition Name" required placeholder="Name" value={competitionFormData.name}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, name: e.target.value })} />
-          <DarkSelect label="Level" required value={competitionFormData.level}
-            onChange={(e) => setCompetitionFormData({ ...competitionFormData, level: e.target.value })}>
-            {['district','state','national','international'].map(l => (
-              <option key={l} value={l} style={{ background: ADMIN_COLORS.darkCard }} className="capitalize">{l.charAt(0).toUpperCase()+l.slice(1)}</option>
-            ))}
-          </DarkSelect>
+          <Dropdown 
+            label="Level" 
+            options={[
+              { value: 'district', label: 'District' },
+              { value: 'state', label: 'State' },
+              { value: 'national', label: 'National' },
+              { value: 'international', label: 'International' }
+            ]}
+            value={competitionFormData.level}
+            onChange={(option) => setCompetitionFormData({ ...competitionFormData, level: option })}
+            placeholder="Select level"
+          />
           <DarkInput label="Place" required placeholder="City / Venue" value={competitionFormData.place}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, place: e.target.value })} />
-          <DarkSelect label="Year" required value={competitionFormData.year}
-            onChange={(e) => setCompetitionFormData({ ...competitionFormData, year: parseInt(e.target.value) })}>
-            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
-              <option key={y} value={y} style={{ background: ADMIN_COLORS.darkCard }}>{y}</option>
-            ))}
-          </DarkSelect>
+          <Dropdown 
+            label="Year" 
+            options={Array.from({ length: 10 }, (_, i) => {
+              const year = new Date().getFullYear() - 2 + i;
+              return { value: year, label: year.toString() };
+            })}
+            value={competitionFormData.year}
+            onChange={(option) => setCompetitionFormData({ ...competitionFormData, year: option })}
+            placeholder="Select year"
+          />
           <DarkInput label="Start Date" required type="date" value={competitionFormData.startDate}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, startDate: e.target.value })} />
           <DarkInput label="End Date" required type="date" value={competitionFormData.endDate}

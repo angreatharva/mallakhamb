@@ -6,7 +6,7 @@ import {
   BarChart2, Settings, Users, Star, Zap, Trophy, Layers, Flame, Dumbbell, Gavel, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { useRateLimit } from '../../hooks/useRateLimit';
@@ -261,9 +261,9 @@ const UnifiedLoginInner = () => {
     return services[role];
   };
   
-  // Redirect if already logged in
+  // Redirect if already logged in (but not during active login process)
   useEffect(() => {
-    if (user && userType === role && !showCompetitionSelection) {
+    if (user && userType === role && !showCompetitionSelection && !loading) {
       const redirectPaths = {
         admin: '/admin/dashboard',
         superadmin: '/superadmin/dashboard',
@@ -271,9 +271,14 @@ const UnifiedLoginInner = () => {
         player: user.team ? '/player/dashboard' : '/player/select-team',
         judge: '/judge/scoring',
       };
-      navigate(redirectPaths[role] || '/');
+      const targetPath = redirectPaths[role] || '/';
+
+      // Avoid redirect loops when this component is rendered on the destination route.
+      if (location.pathname !== targetPath) {
+        navigate(targetPath);
+      }
     }
-  }, [user, userType, role, navigate, showCompetitionSelection]);
+  }, [user, userType, role, navigate, showCompetitionSelection, loading, location.pathname]);
   
   // Handle form submission
   const onSubmit = async (data) => {
@@ -310,6 +315,7 @@ const UnifiedLoginInner = () => {
         );
         secureStorage.setItem('judge_token', response.data.token);
         secureStorage.setItem('judge_user', JSON.stringify(response.data.judge));
+        login(response.data.judge, response.data.token, 'judge');
         toast.success(`Welcome ${response.data.judge.name}!`);
         reset();
         navigate('/judge/scoring');
@@ -320,13 +326,21 @@ const UnifiedLoginInner = () => {
       const apiService = getAPIService();
       response = await apiService.login(validation.data);
       const { token } = response.data;
-      const userData = response.data[role]; // admin, coach, player, etc.
-      
-      // Store token for player immediately
-      if (role === 'player') {
-        secureStorage.setItem('player_token', token);
-        secureStorage.setItem('player_user', JSON.stringify(userData));
+      const userDataKeyByRole = {
+        admin: 'admin',
+        superadmin: 'admin',
+        coach: 'coach',
+        player: 'player',
+      };
+      const expectedUserKey = userDataKeyByRole[role];
+      const userData = response.data[expectedUserKey] || response.data.user || response.data.profile;
+      if (!token || !userData) {
+        throw new Error('Invalid login response');
       }
+      
+      // Store token and user data immediately for all roles
+      secureStorage.setItem(`${role}_token`, token);
+      secureStorage.setItem(`${role}_user`, JSON.stringify(userData));
       
       login(userData, token, role);
       toast.success(role === 'coach' ? 'Welcome back, Coach!' : 'Login successful!');
@@ -348,7 +362,10 @@ const UnifiedLoginInner = () => {
           navigate(userData.team ? '/player/dashboard' : '/player/select-team');
         }, 100);
       } else {
-        navigate(`/${role}/dashboard`);
+        // Add small delay for state to update before navigation
+        setTimeout(() => {
+          navigate(`/${role}/dashboard`);
+        }, 100);
       }
     } catch (error) {
       recordAttempt();

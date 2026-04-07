@@ -23,6 +23,9 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
     if (path.startsWith('/player')) {
       return { storagePrefix: 'player', loginPath: '/player/login' };
     }
+    if (path.startsWith('/judge')) {
+      return { storagePrefix: 'judge', loginPath: '/judge/login' };
+    }
     // Default fallback
     return { storagePrefix: requiredUserType || 'admin', loginPath: '/' };
   };
@@ -52,14 +55,51 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
     }
   }
 
+  // Also check if auth data exists in storage even if user state hasn't loaded yet
+  const token = secureStorage.getItem(`${storagePrefix}_token`);
+  const userData = secureStorage.getItem(`${storagePrefix}_user`);
+  
+  // If we have stored auth data but user state is not yet loaded, show loading
+  if (!user && token && userData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm w-full">
+          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+            isMobile ? 'h-8 w-8' : 'h-12 w-12'
+          }`}></div>
+          <p className={`mt-4 text-gray-600 ${
+            isMobile ? 'text-sm' : 'text-base'
+          }`}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If not authenticated, redirect to the correct login page based on route context
   if (!user) {
     return <Navigate to={loginPath} replace />;
   }
 
   // If user type doesn't match required type, redirect to correct login page
-  if (requiredUserType && userType !== requiredUserType) {
+  // But only if userType is actually loaded (not null/undefined during loading)
+  if (requiredUserType && userType && userType !== requiredUserType) {
     return <Navigate to={loginPath} replace />;
+  }
+  
+  // If user exists but userType hasn't loaded yet, show loading
+  if (user && !userType && requiredUserType) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm w-full">
+          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+            isMobile ? 'h-8 w-8' : 'h-12 w-12'
+          }`}></div>
+          <p className={`mt-4 text-gray-600 ${
+            isMobile ? 'text-sm' : 'text-base'
+          }`}>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   // Wrap children in responsive container to preserve layouts

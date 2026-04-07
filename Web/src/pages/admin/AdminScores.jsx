@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Filter, X, Search } from 'lucide-react';
-import { AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
