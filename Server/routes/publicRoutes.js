@@ -1,5 +1,6 @@
 const express = require('express');
 const { getJudges, getSubmittedTeams, saveIndividualScore, getPublicScores, getPublicTeams, getPublicCompetitions } = require('../controllers/adminController');
+const { reconcileRazorpayWebhook } = require('../controllers/paymentController');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
@@ -60,5 +61,6 @@ router.post('/save-score', optionalAuth, saveIndividualScore);
 // Public routes for viewing scores
 router.get('/teams', getPublicTeams);
 router.get('/scores', getPublicScores);
+router.post('/payments/razorpay/webhook', reconcileRazorpayWebhook);
 
 module.exports = router;

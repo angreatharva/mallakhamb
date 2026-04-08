@@ -1281,10 +1281,47 @@ const getTransactions = async (req, res) => {
   try {
     const competitionId = req.competitionId;
 
-    const transactions = await Transaction.find({ competition: competitionId })
+    const competition = await Competition.findById(competitionId)
+      .populate('registeredTeams.team', 'name')
+      .populate('registeredTeams.players.player', 'firstName lastName email');
+
+    const teamPlayersByTeamId = {};
+    if (competition?.registeredTeams?.length) {
+      competition.registeredTeams.forEach((registeredTeam) => {
+        const teamId = registeredTeam.team?._id?.toString();
+        if (!teamId) {
+          return;
+        }
+
+        teamPlayersByTeamId[teamId] = (registeredTeam.players || []).map((entry) => ({
+          playerId: entry.player?._id || null,
+          playerName: entry.player
+            ? `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || entry.player.email || 'Unknown Player'
+            : 'Unknown Player',
+          ageGroup: entry.ageGroup || '',
+          gender: entry.gender || '',
+        }));
+      });
+    }
+
+    const transactionsRaw = await Transaction.find({ competition: competitionId })
+      .populate('competition', 'name year place')
       .populate('coach', 'name email')
       .populate('team', 'name')
+      .populate('player', 'firstName lastName email')
       .sort({ createdAt: -1 });
+
+    const transactions = transactionsRaw.map((tx) => {
+      const transaction = tx.toObject();
+      const teamId = transaction.team?._id?.toString();
+
+      return {
+        ...transaction,
+        razorpayOrderId: transaction.metadata?.razorpayOrderId || null,
+        razorpayPaymentId: transaction.metadata?.razorpayPaymentId || null,
+        teamPlayers: teamId ? (teamPlayersByTeamId[teamId] || []) : [],
+      };
+    });
 
     res.json({ transactions });
   } catch (error) {

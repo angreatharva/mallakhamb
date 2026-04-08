@@ -1097,6 +1097,7 @@ const getTransactions = async (req, res) => {
   try {
     const { competitionId } = req.query;
     const Transaction = require('../models/Transaction');
+    const Competition = require('../models/Competition');
 
     // Build query
     const query = {};
@@ -1104,11 +1105,52 @@ const getTransactions = async (req, res) => {
       query.competition = competitionId;
     }
 
-    const transactions = await Transaction.find(query)
+    const competitionQuery = {};
+    if (competitionId) {
+      competitionQuery._id = competitionId;
+    }
+
+    const competitions = await Competition.find(competitionQuery)
+      .populate('registeredTeams.team', 'name')
+      .populate('registeredTeams.players.player', 'firstName lastName email');
+
+    const teamPlayersByTeamId = {};
+    competitions.forEach((comp) => {
+      (comp.registeredTeams || []).forEach((registeredTeam) => {
+        const teamId = registeredTeam.team?._id?.toString();
+        if (!teamId) {
+          return;
+        }
+
+        teamPlayersByTeamId[teamId] = (registeredTeam.players || []).map((entry) => ({
+          playerId: entry.player?._id || null,
+          playerName: entry.player
+            ? `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || entry.player.email || 'Unknown Player'
+            : 'Unknown Player',
+          ageGroup: entry.ageGroup || '',
+          gender: entry.gender || '',
+        }));
+      });
+    });
+
+    const transactionsRaw = await Transaction.find(query)
       .populate('coach', 'name email')
       .populate('team', 'name')
+      .populate('player', 'firstName lastName email')
       .populate('competition', 'name year place')
       .sort({ createdAt: -1 });
+
+    const transactions = transactionsRaw.map((tx) => {
+      const transaction = tx.toObject();
+      const teamId = transaction.team?._id?.toString();
+
+      return {
+        ...transaction,
+        razorpayOrderId: transaction.metadata?.razorpayOrderId || null,
+        razorpayPaymentId: transaction.metadata?.razorpayPaymentId || null,
+        teamPlayers: teamId ? (teamPlayersByTeamId[teamId] || []) : [],
+      };
+    });
 
     res.json({ transactions });
   } catch (error) {

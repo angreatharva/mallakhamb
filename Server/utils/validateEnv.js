@@ -8,7 +8,10 @@ const validateEnvironment = () => {
     'MONGODB_URI',
     'JWT_SECRET',
     'EMAIL_USER',
-    'EMAIL_PASS'
+    'EMAIL_PASS',
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
+    'RAZORPAY_WEBHOOK_SECRET'
   ];
   
   const missing = required.filter(key => !process.env[key]);

@@ -173,9 +173,13 @@ export const coachAPI = {
     clearCachePattern('/coaches/dashboard');
     return api.delete(`/coaches/remove-player/${playerId}`);
   },
-  submitTeam: () => {
+  createPaymentOrder: () => {
     clearCachePattern('/coaches');
-    return api.post('/coaches/submit-team');
+    return api.post('/coaches/payments/create-order');
+  },
+  verifyPaymentAndSubmit: (data) => {
+    clearCachePattern('/coaches');
+    return api.post('/coaches/payments/verify-and-submit', data);
   },
 };
 

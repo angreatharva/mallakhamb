@@ -14,7 +14,8 @@ const {
   searchPlayers,
   addPlayerToAgeGroup,
   removePlayerFromAgeGroup,
-  submitTeam,
+  createTeamPaymentOrder,
+  verifyTeamPaymentAndSubmit,
   getTeamStatus
 } = require('../controllers/coachController');
 const { authMiddleware, coachAuth } = require('../middleware/authMiddleware');
@@ -74,6 +75,7 @@ router.get('/dashboard', authMiddleware, coachAuth, validateCompetitionContext, 
 router.get('/search-players', authMiddleware, coachAuth, validateCompetitionContext, searchPlayers);
 router.post('/add-player', authMiddleware, coachAuth, validateCompetitionContext, addPlayerValidation, addPlayerToAgeGroup);
 router.delete('/remove-player/:playerId', authMiddleware, coachAuth, validateCompetitionContext, removePlayerFromAgeGroup);
-router.post('/submit-team', authMiddleware, coachAuth, validateCompetitionContext, submitTeam);
+router.post('/payments/create-order', authMiddleware, coachAuth, validateCompetitionContext, createTeamPaymentOrder);
+router.post('/payments/verify-and-submit', authMiddleware, coachAuth, validateCompetitionContext, verifyTeamPaymentAndSubmit);
 
 module.exports = router;
