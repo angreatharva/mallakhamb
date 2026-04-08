@@ -103,6 +103,25 @@ const competitionSchema = new mongoose.Schema({
     paymentAmount: {
       type: Number
     },
+    paymentGateway: {
+      type: String,
+      enum: ['razorpay'],
+    },
+    paymentOrderId: {
+      type: String,
+      trim: true,
+    },
+    paymentId: {
+      type: String,
+      trim: true,
+    },
+    paymentSignature: {
+      type: String,
+      trim: true,
+    },
+    paymentVerifiedAt: {
+      type: Date,
+    },
     isActive: {
       type: Boolean,
       default: true

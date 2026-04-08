@@ -154,6 +154,9 @@ MONGODB_URI=mongodb://localhost:27017/sports-event-app
 JWT_SECRET=<32+ character random string>
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=<gmail-app-password>
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=<razorpay-key-secret>
+RAZORPAY_WEBHOOK_SECRET=<razorpay-webhook-secret>
 ```
 
 ### Optional Variables
@@ -641,11 +644,12 @@ const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 - Shows: Team details, players by age group, submission status
 
 **Step 4: Submit Team**
-- Endpoint: `POST /api/coaches/submit-team`
-- Finalizes team roster
-- Calculates payment: Base (₹500) + Players × ₹100
-- Creates transaction record
-- Team becomes visible to admins/judges
+- Endpoint 1: `POST /api/coaches/payments/create-order`
+- Endpoint 2: `POST /api/coaches/payments/verify-and-submit`
+- Creates Razorpay order from server-calculated amount
+- Verifies payment signature server-side before final submission
+- Creates transaction record after successful verification
+- Team becomes visible to admins/judges only after verified payment
 
 **Payment Calculation:**
 ```
@@ -956,7 +960,8 @@ Authorization: Bearer <jwt_token>
 | GET | `/search-players` | Search players by name |
 | POST | `/add-player` | Add player to age group |
 | DELETE | `/remove-player/:playerId` | Remove player |
-| POST | `/submit-team` | Submit team + record payment |
+| POST | `/payments/create-order` | Create Razorpay order for team submission |
+| POST | `/payments/verify-and-submit` | Verify Razorpay payment and submit team |
 | GET | `/competition/team-status` | Check team status |
 
 ### Admin (`/api/admin`)
@@ -1030,6 +1035,7 @@ Authorization: Bearer <jwt_token>
 | GET | `/submitted-teams` | Filtered submitted teams |
 | GET | `/judges` | View judge assignments |
 | POST | `/save-score` | Submit score (public interface) |
+| POST | `/payments/razorpay/webhook` | Reconcile Razorpay `payment.captured` / `payment.failed` events |
 
 ### Health (`/api`)
 
@@ -1524,6 +1530,7 @@ Account lockout, token invalidation on logout, and password reset tracking all u
 - [ ] Set `PRODUCTION_URL` to your frontend URL
 - [ ] Set `MONGODB_URI` to production database
 - [ ] Set `EMAIL_USER` and `EMAIL_PASS`
+- [ ] Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`
 - [ ] Ensure HTTPS is enabled on hosting platform
 - [ ] Update frontend Socket.IO code (see below)
 - [ ] Test all login endpoints

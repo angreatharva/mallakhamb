@@ -4,6 +4,13 @@ const Player = require('../models/Player');
 const Competition = require('../models/Competition');
 const { generateToken } = require('../utils/tokenUtils');
 const Transaction = require('../models/Transaction');
+const { getRazorpayInstance, verifyRazorpaySignature, isRazorpayConfigured } = require('../utils/razorpayService');
+
+const TEAM_REGISTRATION_BASE_FEE = 500;
+const TEAM_REGISTRATION_PER_PLAYER_FEE = 100;
+
+const calculateTeamRegistrationAmount = (playerCount) =>
+  TEAM_REGISTRATION_BASE_FEE + (playerCount * TEAM_REGISTRATION_PER_PLAYER_FEE);
 
 // Register a new coach
 const registerCoach = async (req, res) => {
@@ -679,9 +686,13 @@ const removePlayerFromAgeGroup = async (req, res) => {
   }
 };
 
-// Submit team for competition
-const submitTeam = async (req, res) => {
+// Create Razorpay order for team submission
+const createTeamPaymentOrder = async (req, res) => {
   try {
+    if (!isRazorpayConfigured()) {
+      return res.status(503).json({ message: 'Payment service is not configured' });
+    }
+
     // Find competition and coach's registered team
     const competition = await Competition.findById(req.competitionId)
       .populate('registeredTeams.team', 'name');
@@ -708,10 +719,102 @@ const submitTeam = async (req, res) => {
       return res.status(400).json({ message: 'Team has already been submitted' });
     }
 
-    // Calculate payment amount
-    const baseAmount = 500; // Base registration fee
-    const perPlayerAmount = 100; // Per player fee
-    const totalAmount = baseAmount + (registeredTeam.players.length * perPlayerAmount);
+    const totalAmount = calculateTeamRegistrationAmount(registeredTeam.players.length);
+    const razorpay = getRazorpayInstance();
+
+    const compactTeamId = String(registeredTeam._id || '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(-12);
+    const compactTs = Date.now().toString(36);
+    const receipt = `tm_${compactTeamId}_${compactTs}`.slice(0, 40);
+
+    const order = await razorpay.orders.create({
+      amount: totalAmount * 100,
+      currency: 'INR',
+      receipt,
+      notes: {
+        competitionId: String(competition._id),
+        teamId: String(registeredTeam.team?._id || registeredTeam.team),
+        coachId: String(req.user._id),
+      },
+    });
+
+    registeredTeam.paymentStatus = 'pending';
+    registeredTeam.paymentGateway = 'razorpay';
+    registeredTeam.paymentOrderId = order.id;
+    await competition.save();
+
+    res.json({
+      message: 'Payment order created successfully',
+      order: {
+        id: order.id,
+        amount: totalAmount,
+        currency: order.currency,
+      },
+      team: {
+        name: registeredTeam.team?.name || 'Team',
+        playerCount: registeredTeam.players.length,
+      },
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    });
+  } catch (error) {
+    console.error('Create team payment order error:', error);
+    res.status(500).json({ message: 'Failed to create payment order' });
+  }
+};
+
+// Verify Razorpay payment and submit team atomically
+const verifyTeamPaymentAndSubmit = async (req, res) => {
+  try {
+    const {
+      razorpay_order_id: razorpayOrderId,
+      razorpay_payment_id: razorpayPaymentId,
+      razorpay_signature: razorpaySignature,
+    } = req.body;
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({ message: 'Invalid payment verification payload' });
+    }
+
+    const isSignatureValid = verifyRazorpaySignature({
+      orderId: razorpayOrderId,
+      paymentId: razorpayPaymentId,
+      signature: razorpaySignature,
+    });
+
+    if (!isSignatureValid) {
+      return res.status(400).json({ message: 'Payment signature verification failed' });
+    }
+
+    // Find competition and coach's registered team
+    const competition = await Competition.findById(req.competitionId)
+      .populate('registeredTeams.team', 'name');
+    
+    if (!competition) {
+      return res.status(404).json({ message: 'Competition not found' });
+    }
+
+    const registeredTeam = competition.registeredTeams.find(
+      rt => rt.coach.toString() === req.user._id.toString()
+    );
+
+    if (!registeredTeam) {
+      return res.status(404).json({ message: 'Team not registered for this competition' });
+    }
+
+    if (registeredTeam.isSubmitted) {
+      return res.status(200).json({ message: 'Team has already been submitted' });
+    }
+
+    if (!registeredTeam.players || registeredTeam.players.length === 0) {
+      return res.status(400).json({ message: 'Cannot submit team without players' });
+    }
+
+    if (registeredTeam.paymentOrderId && registeredTeam.paymentOrderId !== razorpayOrderId) {
+      return res.status(400).json({ message: 'Payment order does not match the active order' });
+    }
+
+    const totalAmount = calculateTeamRegistrationAmount(registeredTeam.players.length);
 
     // Use mongoose session for atomic transaction
     const mongoose = require('mongoose');
@@ -722,8 +825,13 @@ const submitTeam = async (req, res) => {
         // Update team submission status
         registeredTeam.isSubmitted = true;
         registeredTeam.submittedAt = new Date();
-        registeredTeam.paymentStatus = 'completed'; // Simulated successful payment
+        registeredTeam.paymentStatus = 'completed';
         registeredTeam.paymentAmount = totalAmount;
+        registeredTeam.paymentGateway = 'razorpay';
+        registeredTeam.paymentOrderId = razorpayOrderId;
+        registeredTeam.paymentId = razorpayPaymentId;
+        registeredTeam.paymentSignature = razorpaySignature;
+        registeredTeam.paymentVerifiedAt = new Date();
 
         await competition.save({ session });
 
@@ -743,6 +851,9 @@ const submitTeam = async (req, res) => {
           description: `Team "${teamName}" submitted for competition`,
           metadata: {
             playerCount: registeredTeam.players.length,
+            paymentGateway: 'razorpay',
+            razorpayOrderId,
+            razorpayPaymentId,
           },
         }], { session });
       });
@@ -755,7 +866,9 @@ const submitTeam = async (req, res) => {
           teamName: registeredTeam.team.name,
           playerCount: registeredTeam.players.length,
           paymentAmount: totalAmount,
-          submittedAt: registeredTeam.submittedAt
+          submittedAt: registeredTeam.submittedAt,
+          paymentGateway: 'razorpay',
+          paymentId: razorpayPaymentId,
         }
       });
     } catch (txError) {
@@ -764,10 +877,10 @@ const submitTeam = async (req, res) => {
       throw new Error('Failed to complete team submission and payment recording. Please try again.');
     }
   } catch (error) {
-    console.error('Submit team error:', error);
+    console.error('Verify team payment error:', error);
     res.status(500).json({ 
       message: error.message || 'Server error',
-      details: 'Team submission and payment recording must complete together'
+      details: 'Payment verification and team submission must complete together'
     });
   }
 };
@@ -838,6 +951,7 @@ module.exports = {
   searchPlayers,
   addPlayerToAgeGroup,
   removePlayerFromAgeGroup,
-  submitTeam,
+  createTeamPaymentOrder,
+  verifyTeamPaymentAndSubmit,
   getTeamStatus
 };

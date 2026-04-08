@@ -157,7 +157,7 @@ const AdminTransactions = () => {
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    {['Date / Time', 'Type', 'Source', 'Competition', 'Team', 'Player', 'Amount', 'Status'].map(h => (
+                    {['Date / Time', 'Type', 'Source', 'Competition', 'Team', 'Coach', 'Razorpay Order ID', 'Razorpay Payment ID', 'Players (Age Group)', 'Amount', 'Status'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
                         style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
                     ))}
@@ -168,12 +168,15 @@ const AdminTransactions = () => {
                     const competitionLabel = tx.competition
                       ? `${tx.competition.name}${tx.competition.year ? ` (${tx.competition.year})` : ''}${tx.competition.place ? ` — ${tx.competition.place}` : ''}`
                       : '-';
-                    const playerName = tx.player
-                      ? `${tx.player.firstName || ''} ${tx.player.lastName || ''}`.trim() || tx.player.email
+                    const coachName = tx.coach?.name || '-';
+                    const playersLabel = tx.teamPlayers?.length
+                      ? tx.teamPlayers
+                        .map(p => `${p.playerName}${p.ageGroup ? ` (${p.ageGroup})` : ''}`)
+                        .join(', ')
                       : '-';
                     const { bg, color } = statusStyle(tx.paymentStatus);
                     return (
-                      <motion.tr key={tx.id}
+                      <motion.tr key={tx._id}
                         style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -183,7 +186,10 @@ const AdminTransactions = () => {
                         <td className="px-4 py-3 whitespace-nowrap text-white/80">{sourceLabel(tx.source)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-white/60">{competitionLabel}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-white/80">{tx.team?.name || '-'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/60">{playerName}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{coachName}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{tx.razorpayOrderId || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{tx.razorpayPaymentId || '-'}</td>
+                        <td className="px-4 py-3 text-white/70 max-w-md whitespace-normal break-words">{playersLabel}</td>
                         <td className="px-4 py-3 whitespace-nowrap font-bold text-white">{formatAmount(tx.amount)}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: bg, color }}>

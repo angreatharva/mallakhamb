@@ -193,7 +193,13 @@ app.use((req, res, next) => {
 });
 
 // 4. Request size limits (reduced from 10mb to 1mb for security)
-app.use(express.json({ limit: '1mb' }));
+// Store raw JSON body for webhook signature verification.
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 6. NoSQL injection protection

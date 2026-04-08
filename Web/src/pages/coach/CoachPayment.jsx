@@ -16,6 +16,67 @@ const CoachPayment = () => {
 
   useEffect(() => { fetchTeamData(); }, []);
 
+  const loadRazorpayScript = () => new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    let settled = false;
+    const done = (result) => {
+      if (!settled) {
+        settled = true;
+        resolve(result);
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      done(Boolean(window.Razorpay));
+    }, 20000);
+
+    const onLoad = () => {
+      window.clearTimeout(timeoutId);
+      done(true);
+    };
+
+    const onError = () => {
+      window.clearTimeout(timeoutId);
+      done(false);
+    };
+
+    let existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript?.dataset?.rzpFailed === 'true') {
+      existingScript.remove();
+      existingScript = null;
+    }
+
+    if (existingScript) {
+      // If the browser already finished loading this script, events won't fire again.
+      // In that case, directly resolve based on global availability.
+      if (existingScript.dataset?.rzpLoaded === 'true') {
+        window.clearTimeout(timeoutId);
+        done(Boolean(window.Razorpay));
+        return;
+      }
+      existingScript.addEventListener('load', onLoad, { once: true });
+      existingScript.addEventListener('error', onError, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      script.dataset.rzpLoaded = 'true';
+      onLoad();
+    };
+    script.onerror = () => {
+      script.dataset.rzpFailed = 'true';
+      onError();
+    };
+    document.body.appendChild(script);
+  });
+
   const fetchTeamData = async () => {
     try {
       const response = await coachAPI.getDashboard();
@@ -29,18 +90,68 @@ const CoachPayment = () => {
   };
 
   const handlePayment = async () => {
-    setProcessing(true);
-    setTimeout(async () => {
-      try {
-        await coachAPI.submitTeam();
-        setPaymentComplete(true);
-        toast.success('Payment successful! Team submitted for competition.');
-      } catch {
-        toast.error('Payment failed. Please try again.');
-      } finally {
+    try {
+      setProcessing(true);
+
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
         setProcessing(false);
+        toast.error('Razorpay checkout failed to load. Disable ad-block/privacy extensions or try another network.');
+        return;
       }
-    }, 2000);
+
+      const orderResponse = await coachAPI.createPaymentOrder();
+      const { order, razorpayKeyId, team: orderTeam } = orderResponse.data;
+
+      if (!order?.id || !razorpayKeyId) {
+        setProcessing(false);
+        toast.error('Unable to initialize payment. Please try again.');
+        return;
+      }
+
+      const options = {
+        key: razorpayKeyId,
+        amount: order.amount * 100,
+        currency: order.currency || 'INR',
+        name: 'Mallakhamb Competition',
+        description: `Registration for ${orderTeam?.name || team?.name || 'Team'}`,
+        order_id: order.id,
+        handler: async (response) => {
+          try {
+            await coachAPI.verifyPaymentAndSubmit(response);
+            setPaymentComplete(true);
+            toast.success('Payment successful! Team submitted for competition.');
+          } catch {
+            toast.error('Payment verification failed. Please contact support with your payment reference.');
+          } finally {
+            setProcessing(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setProcessing(false);
+          },
+        },
+        prefill: {
+          name: orderTeam?.name || team?.name || '',
+        },
+        theme: {
+          color: COLORS.saffron,
+        },
+      };
+
+      if (!window.Razorpay) {
+        setProcessing(false);
+        toast.error('Payment gateway is unavailable right now. Please retry.');
+        return;
+      }
+
+      const instance = new window.Razorpay(options);
+      instance.open();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Payment failed. Please try again.');
+      setProcessing(false);
+    }
   };
 
   const calculateTotal = () => {
@@ -188,43 +299,8 @@ const CoachPayment = () => {
                 </div>
               </div>
 
-              {/* Card form */}
+              {/* Checkout */}
               <div className="space-y-4">
-                {[
-                  { id: 'card-number', label: 'Card Number', placeholder: '1234 5678 9012 3456', type: 'text' },
-                  { id: 'card-name', label: 'Cardholder Name', placeholder: 'John Doe', type: 'text' },
-                ].map(({ id, label, placeholder, type }) => (
-                  <div key={id}>
-                    <label htmlFor={id} className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                      style={{ color: COLORS.saffronLight }}>
-                      {label} <span aria-hidden="true" style={{ color: COLORS.saffron }}>*</span>
-                    </label>
-                    <input id={id} type={type} placeholder={placeholder}
-                      className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 outline-none min-h-[44px]"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
-                      onFocus={e => e.target.style.borderColor = COLORS.saffron}
-                      onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle} />
-                  </div>
-                ))}
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { id: 'expiry', label: 'Expiry Date', placeholder: 'MM/YY' },
-                    { id: 'cvv', label: 'CVV', placeholder: '123' },
-                  ].map(({ id, label, placeholder }) => (
-                    <div key={id}>
-                      <label htmlFor={id} className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                        style={{ color: COLORS.saffronLight }}>
-                        {label} <span aria-hidden="true" style={{ color: COLORS.saffron }}>*</span>
-                      </label>
-                      <input id={id} type="text" placeholder={placeholder}
-                        className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 outline-none min-h-[44px]"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
-                        onFocus={e => e.target.style.borderColor = COLORS.saffron}
-                        onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle} />
-                    </div>
-                  ))}
-                </div>
-
                 <motion.button onClick={handlePayment} disabled={processing}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
@@ -248,7 +324,7 @@ const CoachPayment = () => {
 
                 <div className="flex items-center justify-center gap-2 text-white/20 text-xs">
                   <Lock className="w-3 h-3" aria-hidden="true" />
-                  Demo payment — no actual charges will be made
+                  Secure Razorpay checkout
                 </div>
               </div>
             </div>
