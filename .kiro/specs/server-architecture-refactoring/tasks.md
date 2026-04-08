@@ -21,7 +21,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement circular dependency detection
     - _Requirements: 3.1, 3.2, 3.3, 3.8_
   
-  - [ ]* 2.2 Write unit tests for DI Container
+  - [ ] 2.2 Write unit tests for DI Container
     - Test service registration and resolution
     - Test singleton vs transient lifecycles
     - Test circular dependency detection
@@ -34,7 +34,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement configuration validation at startup
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 23.1_
   
-  - [ ]* 3.2 Write unit tests for Configuration Manager
+  - [ ] 3.2 Write unit tests for Configuration Manager
     - Test configuration loading and validation
     - Test required field validation
     - Test type conversion
@@ -48,7 +48,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Configure file transports with rotation
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   
-  - [ ]* 4.2 Write unit tests for Logger
+  - [ ] 4.2 Write unit tests for Logger
     - Test log formatting
     - Test sensitive data redaction
     - Test log levels
@@ -61,7 +61,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement error serialization (toJSON)
     - _Requirements: 6.1, 6.2, 6.3, 6.7_
   
-  - [ ]* 5.2 Write unit tests for Error Classes
+  - [ ] 5.2 Write unit tests for Error Classes
     - Test error creation and serialization
     - Test error properties
     - _Requirements: 15.1_
@@ -74,7 +74,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement asyncHandler wrapper
     - _Requirements: 6.2, 6.4, 6.5, 6.6, 6.7, 6.8_
   
-  - [ ]* 6.2 Write unit tests for Error Middleware
+  - [ ] 6.2 Write unit tests for Error Middleware
     - Test error handling and formatting
     - Test environment-specific behavior
     - _Requirements: 15.1_
@@ -99,7 +99,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Use .lean() for performance
     - _Requirements: 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 16.1_
   
-  - [ ]* 9.2 Write unit tests for Base Repository
+  - [ ] 9.2 Write unit tests for Base Repository
     - Test CRUD operations with mocked Mongoose model
     - Test query options
     - Test error handling
@@ -153,14 +153,14 @@ The implementation follows a 7-phase approach where each phase builds incrementa
   - Inject logger into each repository
   - _Requirements: 3.4, 3.5_
 
-- [ ]* 12. Write integration tests for repositories
-  - [ ]* 12.1 Write integration tests for PlayerRepository
+- [ ] 12. Write integration tests for repositories
+  - [ ] 12.1 Write integration tests for PlayerRepository
     - Test CRUD operations with test database
     - Test domain-specific queries
     - Test pagination
     - _Requirements: 15.2, 15.6_
   
-  - [ ]* 12.2 Write integration tests for other repositories
+  - [ ] 12.2 Write integration tests for other repositories
     - Test CompetitionRepository, TeamRepository, ScoreRepository
     - Test complex queries and relationships
     - _Requirements: 15.2, 15.6_
@@ -195,7 +195,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement resource ownership validation
     - _Requirements: 1.2, 1.8_
   
-  - [ ]* 14.5 Write unit tests for Authentication Services
+  - [ ] 14.5 Write unit tests for Authentication Services
     - Test login with valid/invalid credentials
     - Test registration with duplicate email
     - Test password reset flow
@@ -224,7 +224,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement user management
     - _Requirements: 1.5, 1.8_
   
-  - [ ]* 15.5 Write unit tests for User Services
+  - [ ] 15.5 Write unit tests for User Services
     - Test profile operations
     - Test password changes
     - Test role-specific operations
@@ -243,7 +243,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement registration status tracking
     - _Requirements: 1.5, 1.7, 1.8_
   
-  - [ ]* 16.3 Write unit tests for Competition Services
+  - [ ] 16.3 Write unit tests for Competition Services
     - Test competition CRUD operations
     - Test registration validation
     - Test business rules
@@ -256,7 +256,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement team validation (size limits, eligibility)
     - _Requirements: 1.5, 1.7, 1.8_
   
-  - [ ]* 17.2 Write unit tests for Team Service
+  - [ ] 17.2 Write unit tests for Team Service
     - Test team CRUD operations
     - Test player management
     - Test validation rules
@@ -274,7 +274,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement final score computation
     - _Requirements: 1.5, 1.8_
   
-  - [ ]* 18.3 Write unit tests for Scoring Services
+  - [ ] 18.3 Write unit tests for Scoring Services
     - Test score submission and validation
     - Test calculation logic
     - Test ranking algorithms
@@ -294,7 +294,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement delivery tracking
     - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7_
   
-  - [ ]* 19.3 Write unit tests for Email Service
+  - [ ] 19.3 Write unit tests for Email Service
     - Test email sending with different providers
     - Test template rendering
     - Test retry logic
@@ -308,7 +308,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement wrap helper for caching function results
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
   
-  - [ ]* 20.2 Write unit tests for Cache Service
+  - [ ] 20.2 Write unit tests for Cache Service
     - Test cache operations
     - Test TTL expiration
     - Test LRU eviction
@@ -337,7 +337,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Create common.validator.js (ObjectId, pagination, date range)
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8_
   
-  - [ ]* 23.2 Write unit tests for validators
+  - [ ] 23.2 Write unit tests for validators
     - Test validation rules
     - Test error messages
     - Test sanitization
@@ -352,7 +352,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 19.1, 19.2_
   
-  - [ ]* 24.2 Write API tests for Auth Controller
+  - [ ] 24.2 Write API tests for Auth Controller
     - Test all authentication endpoints
     - Verify backward compatibility
     - Test error responses
@@ -366,7 +366,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 25.2 Write API tests for Player Controller
+  - [ ] 25.2 Write API tests for Player Controller
     - Test all player endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
@@ -379,7 +379,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 26.2 Write API tests for Coach Controller
+  - [ ] 26.2 Write API tests for Coach Controller
     - Test all coach endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
@@ -392,7 +392,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 27.2 Write API tests for Admin Controller
+  - [ ] 27.2 Write API tests for Admin Controller
     - Test all admin endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
@@ -405,7 +405,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 28.2 Write API tests for Competition Controller
+  - [ ] 28.2 Write API tests for Competition Controller
     - Test all competition endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
@@ -418,7 +418,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 29.2 Write API tests for Team Controller
+  - [ ] 29.2 Write API tests for Team Controller
     - Test all team endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
@@ -430,7 +430,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Use asyncHandler and validation middleware
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ]* 30.2 Write API tests for Scoring Controller
+  - [ ] 30.2 Write API tests for Scoring Controller
     - Test all scoring endpoints
     - Test validation rules
     - _Requirements: 15.3, 19.7_
@@ -443,7 +443,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement /health/metrics (performance metrics)
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
   
-  - [ ]* 31.2 Write API tests for Health Controller
+  - [ ] 31.2 Write API tests for Health Controller
     - Test all health endpoints
     - Test health check responses
     - _Requirements: 15.3_
@@ -515,7 +515,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement emit helpers (emitToRoom, emitToUser, broadcast)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 4.7, 4.8_
   
-  - [ ]* 36.2 Write unit tests for Socket Manager
+  - [ ] 36.2 Write unit tests for Socket Manager
     - Test authentication middleware
     - Test event registration and handling
     - Test emit helpers
@@ -535,7 +535,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Broadcast to appropriate users/rooms
     - _Requirements: 4.3, 4.4, 4.5_
   
-  - [ ]* 37.3 Write tests for Socket.IO handlers
+  - [ ] 37.3 Write tests for Socket.IO handlers
     - Test event handling
     - Test permission validation
     - Test broadcasting
@@ -594,7 +594,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement email service check
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.8_
   
-  - [ ]* 43.2 Write unit tests for Health Monitor
+  - [ ] 43.2 Write unit tests for Health Monitor
     - Test health checks
     - Test probe endpoints
     - _Requirements: 15.1_
@@ -616,7 +616,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Track errors
     - _Requirements: 20.2, 20.3, 20.4_
   
-  - [ ]* 44.3 Write unit tests for Metrics Collector
+  - [ ] 44.3 Write unit tests for Metrics Collector
     - Test metric tracking
     - Test Prometheus format export
     - _Requirements: 15.1_
@@ -632,7 +632,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Exit with appropriate code
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8_
   
-  - [ ]* 45.2 Write integration tests for Graceful Shutdown
+  - [ ] 45.2 Write integration tests for Graceful Shutdown
     - Test shutdown sequence
     - Test timeout handling
     - _Requirements: 15.1_
@@ -696,7 +696,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Return 404 if feature disabled
     - _Requirements: 25.5_
   
-  - [ ]* 49.3 Write unit tests for Feature Flag System
+  - [ ] 49.3 Write unit tests for Feature Flag System
     - Test flag evaluation
     - Test percentage rollouts
     - Test user-specific flags
@@ -712,46 +712,46 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 ## Phase 7: Testing & Documentation (Week 15-16)
 
 - [ ] 52. Complete unit test coverage
-  - [ ]* 52.1 Achieve 80% coverage for service layer
+  - [ ] 52.1 Achieve 80% coverage for service layer
     - Add missing tests for all services
     - Test edge cases and error conditions
     - _Requirements: 15.6_
   
-  - [ ]* 52.2 Achieve 80% coverage for repository layer
+  - [ ] 52.2 Achieve 80% coverage for repository layer
     - Add missing tests for all repositories
     - Test complex queries
     - _Requirements: 15.6_
   
-  - [ ]* 52.3 Achieve 70% coverage for controllers
+  - [ ] 52.3 Achieve 70% coverage for controllers
     - Add missing API tests
     - Test error responses
     - _Requirements: 15.6_
   
-  - [ ]* 52.4 Achieve 80% coverage for utilities
+  - [ ] 52.4 Achieve 80% coverage for utilities
     - Test all utility functions
     - _Requirements: 15.6_
 
-- [ ]* 53. Create test fixtures and helpers
-  - [ ]* 53.1 Create test data factories
+- [ ] 53. Create test fixtures and helpers
+  - [ ] 53.1 Create test data factories
     - Factory for creating test users (players, coaches, admins)
     - Factory for creating test competitions
     - Factory for creating test teams
     - Factory for creating test scores
     - _Requirements: 15.4_
   
-  - [ ]* 53.2 Create test utilities
+  - [ ] 53.2 Create test utilities
     - Authentication helpers for tests
     - Database setup/teardown helpers
     - Mock implementations for external services
     - _Requirements: 15.5, 15.7_
 
-- [ ]* 54. Write end-to-end tests
-  - [ ]* 54.1 Create E2E test suite for authentication flow
+- [ ] 54. Write end-to-end tests
+  - [ ] 54.1 Create E2E test suite for authentication flow
     - Test complete registration and login flow
     - Test password reset flow
     - _Requirements: 15.3_
   
-  - [ ]* 54.2 Create E2E test suite for competition flow
+  - [ ] 54.2 Create E2E test suite for competition flow
     - Test competition creation and registration
     - Test scoring flow
     - Test real-time updates
@@ -887,7 +887,7 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 
 ## Notes
 
-- Tasks marked with `*` are optional testing tasks and can be skipped for faster MVP
+- Tasks marked with `` are optional testing tasks and can be skipped for faster MVP
 - Each task references specific requirements for traceability
 - Checkpoints ensure incremental validation at the end of each phase
 - The refactoring maintains 100% backward compatibility throughout
@@ -898,12 +898,12 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 
 This refactoring follows a phased approach where:
 
-1. **Phase 1-2** establish the foundation without breaking existing code
-2. **Phase 3** extracts business logic into testable services
-3. **Phase 4** updates controllers to use services while maintaining API contracts
-4. **Phase 5** refactors real-time features
-5. **Phase 6** adds production-grade features (caching, monitoring, performance)
-6. **Phase 7** completes testing and documentation
+1. Phase 1-2 establish the foundation without breaking existing code
+2. Phase 3 extracts business logic into testable services
+3. Phase 4 updates controllers to use services while maintaining API contracts
+4. Phase 5 refactors real-time features
+5. Phase 6 adds production-grade features (caching, monitoring, performance)
+6. Phase 7 completes testing and documentation
 
 Each phase includes checkpoints to verify the system remains functional. The old and new implementations can coexist during migration, allowing for gradual rollout and easy rollback if issues arise.
 
