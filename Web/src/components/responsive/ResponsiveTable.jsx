@@ -1,7 +1,7 @@
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS } from '../../pages/adminTheme';
+import { ADMIN_COLORS } from '../../styles/tokens';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
 const C = ADMIN_COLORS;
@@ -342,19 +342,19 @@ export const ResponsiveTeamTable = ({
       onMouseEnter={e => { e.currentTarget.style.borderColor = `${C.purple}55`; e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.5)`; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 700, color: textPrimary, fontSize: compact ? 14 : 16, marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+          <p style={{ fontWeight: 700, color: textPrimary, fontSize: compact ? 14 : 16, marginBottom: 6 }}>
             {team.team?.name || team.name}
           </p>
-          <p style={{ fontSize: 12, color: textSecondary }}>
+          <p style={{ fontSize: 12, color: textSecondary, marginBottom: 2 }}>
             Coach: {team.coach?.name || 'Unassigned'}
           </p>
           {team.coach?.email && (
-            <p style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>{team.coach.email}</p>
+            <p style={{ fontSize: 11, color: textMuted }}>{team.coach.email}</p>
           )}
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
           <div style={{ background: `${C.purple}18`, border: `1px solid ${C.purple}30`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
             <p style={{ fontSize: 11, color: C.purpleLight, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
             <p style={{ fontSize: 22, fontWeight: 800, color: C.purple }}>{team.players?.length || 0}</p>

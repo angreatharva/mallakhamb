@@ -2,7 +2,10 @@ import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '../utils/logger';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
+import { useResponsive } from '../hooks/useResponsive';
+
+void motion;
 
 const ConfirmDialog = ({
   isOpen,
@@ -18,6 +21,7 @@ const ConfirmDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const reduced = useReducedMotion();
+  const { isMobile } = useResponsive();
   const cancelRef = useRef(null);
 
   // Focus trap — focus cancel on open
@@ -78,8 +82,10 @@ const ConfirmDialog = ({
 
           {/* Panel */}
           <motion.div
-            className="relative w-full max-w-md rounded-2xl border overflow-hidden"
+            className="relative w-full rounded-2xl border overflow-hidden"
             style={{
+              maxWidth: isMobile ? '100%' : '28rem',
+              margin: isMobile ? '0 1rem' : '0',
               background: '#111111',
               borderColor: `${accentColor}25`,
               boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}15`,
@@ -93,13 +99,13 @@ const ConfirmDialog = ({
             <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)` }} />
 
             {/* Header */}
-            <div className="flex items-start justify-between p-6 pb-4">
+            <div className="flex items-start justify-between p-6 pb-4" style={{ padding: isMobile ? '1rem' : '1.5rem', paddingBottom: isMobile ? '0.75rem' : '1rem' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: `${accentColor}18` }}>
                   <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
                 </div>
-                <h3 id="confirm-dialog-title" className="text-white font-bold text-lg leading-tight">{title}</h3>
+                <h3 id="confirm-dialog-title" className="text-white font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
               </div>
               <button
                 onClick={onClose}
@@ -113,7 +119,7 @@ const ConfirmDialog = ({
             </div>
 
             {/* Body */}
-            <div className="px-6 pb-4">
+            <div className="px-6 pb-4" style={{ padding: isMobile ? '0 1rem 0.75rem' : '0 1.5rem 1rem' }}>
               <p id="confirm-dialog-message" className="text-white/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
 
               <AnimatePresence>
@@ -133,21 +139,34 @@ const ConfirmDialog = ({
 
             {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t"
-              style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.02)' }}>
+              style={{ 
+                borderColor: COLORS.darkBorderSubtle, 
+                background: 'rgba(255,255,255,0.02)',
+                padding: isMobile ? '1rem' : '1.5rem',
+                flexDirection: isMobile ? 'column' : 'row',
+              }}>
               <button
                 ref={cancelRef}
                 onClick={onClose}
                 disabled={loading}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-white/70 hover:text-white transition-all duration-200 min-h-[44px] disabled:opacity-40"
-                style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}
+                style={{ 
+                  borderColor: COLORS.darkBorderSubtle, 
+                  background: 'rgba(255,255,255,0.04)',
+                  width: isMobile ? '100%' : 'auto',
+                }}
               >
                 {cancelText}
               </button>
               <motion.button
                 onClick={handleConfirm}
                 disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2"
-                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
+                style={{ 
+                  background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                  width: isMobile ? '100%' : 'auto',
+                  justifyContent: 'center',
+                }}
                 whileHover={loading ? {} : { brightness: 1.1 }}
                 whileTap={loading ? {} : { scale: 0.96 }}
               >

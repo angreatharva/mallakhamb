@@ -18,6 +18,7 @@ const getCurrentUserTypeFromURL = () => {
   const path = window.location.pathname;
   if (path.startsWith('/player')) return 'player';
   if (path.startsWith('/coach')) return 'coach';
+  if (path.startsWith('/judge')) return 'judge';
   if (path.startsWith('/superadmin')) return 'superadmin';
   if (path.startsWith('/admin')) return 'admin';
   return null;
@@ -121,8 +122,12 @@ api.interceptors.response.use(
           if (token) {
             logger.warn('Competition context invalid, redirecting to login for re-selection');
           }
-          
-          window.location.href = `/${currentType}/login`;
+
+          // Super admin routes can legitimately operate without explicit competition context.
+          // Avoid forcing a login redirect for these users on competition-related 403s.
+          if (currentType !== 'superadmin') {
+            window.location.href = `/${currentType}/login`;
+          }
         }
       }
     }
@@ -168,9 +173,13 @@ export const coachAPI = {
     clearCachePattern('/coaches/dashboard');
     return api.delete(`/coaches/remove-player/${playerId}`);
   },
-  submitTeam: () => {
+  createPaymentOrder: () => {
     clearCachePattern('/coaches');
-    return api.post('/coaches/submit-team');
+    return api.post('/coaches/payments/create-order');
+  },
+  verifyPaymentAndSubmit: (data) => {
+    clearCachePattern('/coaches');
+    return api.post('/coaches/payments/verify-and-submit', data);
   },
 };
 

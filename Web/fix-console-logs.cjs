@@ -3,11 +3,9 @@ const fs = require('fs');
 const path = require('path');
 
 const filesToFix = [
-  'src/pages/ForgotPassword.jsx',
-  'src/pages/ScoringPage.jsx',
-  'src/pages/JudgeScoringNew.jsx',
-  'src/pages/JudgeScoring.jsx',
-  'src/pages/AdminScoring.jsx'
+  'src/pages/shared/ForgotPassword.jsx',
+  'src/pages/judge/JudgeScoring.jsx',
+  'src/pages/admin/AdminScoring.jsx'
 ];
 
 filesToFix.forEach(file => {

@@ -1,0 +1,79 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for admin login (desktop) > admin-login-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for admin login (tablet) > admin-login-tablet 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for coach login (desktop) > coach-login-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for coach login (mobile) > coach-login-mobile 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for judge login (desktop) > judge-login-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for player login (desktop) > player-login-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for player login (mobile) > player-login-mobile 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedLogin: Visual Snapshots > should match snapshot for superadmin login (desktop) > superadmin-login-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedRegister: Visual Snapshots > should match snapshot for coach registration (desktop) > coach-register-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedRegister: Visual Snapshots > should match snapshot for coach registration (mobile) > coach-register-mobile 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedRegister: Visual Snapshots > should match snapshot for coach registration (tablet) > coach-register-tablet 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedRegister: Visual Snapshots > should match snapshot for player registration (desktop) > player-register-desktop 1`] = `
+<div>
+  Loading...
+</div>
+`;
+
+exports[`Visual Regression Tests: Unified Components > UnifiedRegister: Visual Snapshots > should match snapshot for player registration (mobile) > player-register-mobile 1`] = `
+<div>
+  Loading...
+</div>
+`;

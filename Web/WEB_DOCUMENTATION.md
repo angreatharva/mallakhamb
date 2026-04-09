@@ -162,9 +162,8 @@ App.jsx
 | `/admin/teams` | AdminTeams | admin |
 | `/admin/scoring` | AdminScoring | admin |
 | `/judge/login` | JudgeLogin | Public |
-| `/judge/scoring` | JudgeScoringNew | judge |
-| `/judge/scoring-old` | JudgeScoring | judge |
-| `/superadmin/login` | AdminLogin | Public |
+| `/judge/scoring` | JudgeScoring | judge |
+| `/superadmin/login` | SuperAdminLogin | Public |
 | `/superadmin/dashboard` | SuperAdminDashboard | superadmin |
 | `/superadmin/dashboard/:tab` | SuperAdminDashboard | superadmin |
 | `/superadmin/scoring` | AdminScoring | superadmin |
@@ -529,7 +528,7 @@ Socket.IO connects to `VITE_API_URL` with `/api` stripped.
 | `score_updated` | Receive live judge score updates |
 | `scores_saved_notification` | Notified when another user saves scores |
 
-Used in: `AdminScoring.jsx`, `JudgeScoringNew.jsx`, `JudgeScoring.jsx`, `ScoringPage.jsx`
+Used in: `AdminScoring.jsx`, `JudgeScoring.jsx`
 
 ---
 

@@ -538,7 +538,8 @@ Authorization: Bearer <your_jwt_token>
 - `GET /api/coaches/search-players` - Search players (requires competition)
 - `POST /api/coaches/add-player` - Add player to team (requires competition)
 - `DELETE /api/coaches/remove-player/:playerId` - Remove player (requires competition)
-- `POST /api/coaches/submit-team` - Submit team (requires competition)
+- `POST /api/coaches/payments/create-order` - Create Razorpay order (requires competition)
+- `POST /api/coaches/payments/verify-and-submit` - Verify payment and submit team (requires competition)
 - `GET /api/coaches/competition/team-status` - Get team status (requires competition)
 
 ### Key Workflows
@@ -574,11 +575,15 @@ For complete request/response examples for all 15 coach endpoints, see the origi
 - Validates age group matches player's age
 - Requires competition context
 
-**POST /api/coaches/submit-team**
-- Finalizes team roster
-- Calculates payment amount
-- Creates transaction record
-- Team becomes visible to admins/judges
+**POST /api/coaches/payments/create-order**
+- Creates a Razorpay order for team submission
+- Calculates amount using server-side pricing rules
+- Stores order reference against the registered team
+
+**POST /api/coaches/payments/verify-and-submit**
+- Verifies Razorpay signature server-side
+- Atomically submits team + records transaction
+- Persists gateway metadata (order ID, payment ID, verification timestamp)
 
 ---
 
@@ -730,6 +735,7 @@ For complete request/response examples, see API_DOCUMENTATION.md sections 10.1-1
 - `GET /api/public/competitions` - Get public competitions
 - `GET /api/public/judges` - Get public judges
 - `GET /api/public/submitted-teams` - Get submitted teams
+- `POST /api/public/payments/razorpay/webhook` - Razorpay webhook reconciliation
 - `POST /api/public/save-score` - Save public score
 - `GET /api/public/scores` - Get public scores
 - `GET /api/public/teams` - Get public teams
@@ -1179,6 +1185,11 @@ JWT_SECRET=your_jwt_secret_key_32_chars_minimum
 # Email Configuration
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_gmail_app_password
+
+# Razorpay Configuration
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
 ```
 
 ### Optional Variables

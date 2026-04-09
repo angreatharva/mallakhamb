@@ -1,38 +1,43 @@
-import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteContext from './contexts/RouteContext';
 import { CompetitionProvider } from './contexts/CompetitionContext';
+import { AuthContext } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { secureStorage } from './utils/secureStorage';
 import { apiCache } from './utils/apiCache';
 import { logger } from './utils/logger';
 
 // Lazy load all pages for better performance
-const Home = lazy(() => import('./pages/Home'));
-const PlayerLogin = lazy(() => import('./pages/PlayerLogin'));
-const PlayerRegister = lazy(() => import('./pages/PlayerRegister'));
-const PlayerSelectTeam = lazy(() => import('./pages/PlayerSelectTeam'));
-const PlayerDashboard = lazy(() => import('./pages/PlayerDashboard'));
-const CoachLogin = lazy(() => import('./pages/CoachLogin'));
-const CoachRegister = lazy(() => import('./pages/CoachRegister'));
-const CoachCreateTeam = lazy(() => import('./pages/CoachCreateTeam'));
-const CoachSelectCompetition = lazy(() => import('./pages/CoachSelectCompetition'));
-const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
-const CoachPayment = lazy(() => import('./pages/CoachPayment'));
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
-const AdminTeams = lazy(() => import('./pages/AdminTeams'));
-const AdminScoring = lazy(() => import('./pages/AdminScoring'));
-const JudgeLogin = lazy(() => import('./pages/JudgeLogin'));
-const JudgeScoringNew = lazy(() => import('./pages/JudgeScoringNew'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const PublicScores = lazy(() => import('./pages/PublicScores'));
+const Home = lazy(() => import('./pages/public/Home'));
+const PlayerLogin = lazy(() => import('./pages/player/PlayerLogin'));
+const PlayerRegister = lazy(() => import('./pages/player/PlayerRegister'));
+const PlayerSelectTeam = lazy(() => import('./pages/player/PlayerSelectTeam'));
+const PlayerDashboard = lazy(() => import('./pages/player/PlayerDashboard'));
+const CoachLogin = lazy(() => import('./pages/coach/CoachLogin'));
+const CoachRegister = lazy(() => import('./pages/coach/CoachRegister'));
+const CoachCreateTeam = lazy(() => import('./pages/coach/CoachCreateTeam'));
+const CoachSelectCompetition = lazy(() => import('./pages/coach/CoachSelectCompetition'));
+const CoachDashboard = lazy(() => import('./pages/coach/CoachDashboard'));
+const CoachPayment = lazy(() => import('./pages/coach/CoachPayment'));
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+const AdminTeams = lazy(() => import('./pages/admin/AdminTeams'));
+const AdminScoring = lazy(() => import('./pages/admin/AdminScoring'));
+const JudgeLogin = lazy(() => import('./pages/judge/JudgeLogin'));
+const JudgeScoring = lazy(() => import('./pages/judge/JudgeScoring'));
+const ForgotPassword = lazy(() => import('./pages/shared/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/shared/ResetPassword'));
+const PublicScores = lazy(() => import('./pages/public/PublicScores'));
+
+// Lazy load unified components
+const UnifiedRegister = lazy(() => import('./pages/unified/UnifiedRegister'));
+const UnifiedCompetitionSelection = lazy(() => import('./pages/unified/UnifiedCompetitionSelection'));
 
 // Loading component
 const PageLoader = () => (
@@ -43,17 +48,6 @@ const PageLoader = () => (
     </div>
   </div>
 );
-
-// Create Auth Context
-export const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 // Main App Content Component (needs to be inside Router to use useLocation)
 function AppContent() {
@@ -179,7 +173,7 @@ function AppContent() {
           // Ignore errors from logout endpoint - still clear local data
         });
       }
-    } catch (error) {
+    } catch {
       // Ignore logout errors
     }
     
@@ -224,14 +218,14 @@ function AppContent() {
             {/* Player Routes */}
             <Route path="/player" element={<Navigate to="/player/login" replace />} />
             <Route path="/player/login" element={<PlayerLogin />} />
-            <Route path="/player/register" element={<PlayerRegister />} />
+            <Route path="/player/register" element={<UnifiedRegister />} />
 
             {/* Protected Player Routes */}
             <Route
               path="/player/select-team"
               element={
                 <ProtectedRoute requiredUserType="player">
-                  <PlayerSelectTeam />
+                  <UnifiedCompetitionSelection />
                 </ProtectedRoute>
               }
             />
@@ -247,7 +241,7 @@ function AppContent() {
             {/* Coach Routes */}
             <Route path="/coach" element={<Navigate to="/coach/login" replace />} />
             <Route path="/coach/login" element={<CoachLogin />} />
-            <Route path="/coach/register" element={<CoachRegister />} />
+            <Route path="/coach/register" element={<UnifiedRegister />} />
 
             {/* Protected Coach Routes */}
             <Route
@@ -262,7 +256,7 @@ function AppContent() {
               path="/coach/select-competition"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <CoachSelectCompetition />
+                  <UnifiedCompetitionSelection />
                 </ProtectedRoute>
               }
             />
@@ -332,7 +326,7 @@ function AppContent() {
               path="/judge/scoring" 
               element={
                 <ProtectedRoute requiredUserType="judge">
-                  <JudgeScoringNew />
+                  <JudgeScoring />
                 </ProtectedRoute>
               } 
             />

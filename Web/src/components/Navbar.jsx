@@ -1,10 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User, Trophy, Menu, X, ChevronDown } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { LogOut, User, Trophy, Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCompetition } from '../contexts/CompetitionContext';
 import CompetitionSelector from './CompetitionSelector';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
+
+void motion;
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
@@ -12,7 +14,7 @@ const Navbar = ({ user, userType, onLogout }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const reduced = useReducedMotion();
+  useReducedMotion();
   const { clearCompetitionContext } = useCompetition();
 
   useEffect(() => {

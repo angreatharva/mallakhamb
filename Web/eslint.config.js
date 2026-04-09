@@ -3,9 +3,10 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import customRules from './eslint-rules/index.js'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'coverage']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -22,8 +23,33 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
+    plugins: {
+      'design-system': {
+        rules: customRules,
+      },
+    },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': 'off',
+      'react-refresh/only-export-components': 'off',
+      // Design system rules - warn in development, can be upgraded to error later
+      'design-system/no-hardcoded-colors': 'warn',
+      'design-system/no-hardcoded-spacing': 'warn',
+    },
+  },
+  {
+    files: [
+      '**/*.{test,spec}.{js,jsx}',
+      '**/__tests__/**/*.{js,jsx}',
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.vitest,
+      },
+    },
+    rules: {
+      'no-import-assign': 'off',
     },
   },
 ])

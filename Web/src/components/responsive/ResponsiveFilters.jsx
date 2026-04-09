@@ -3,7 +3,7 @@ import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '../Dropdown';
-import { ADMIN_COLORS } from '../../pages/adminTheme';
+import { ADMIN_COLORS } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
 const surface    = C.darkCard;
@@ -194,15 +194,15 @@ export const ResponsiveFilters = ({
   return (
     <ResponsiveContainer className={className} {...props}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`, gap: 14 }}>
           {showSearchBar && (
-            <div>
+            <div style={{ minWidth: 0 }}>
               <FilterLabel>Search</FilterLabel>
               <SearchInput value={searchTerm} onChange={onSearchChange} placeholder={searchPlaceholder} height={40} />
             </div>
           )}
           {filters.map((filter, i) => (
-            <div key={i}>
+            <div key={i} style={{ minWidth: 0 }}>
               <FilterLabel required={filter.required}>{filter.label}</FilterLabel>
               <Dropdown
                 options={filter.options}

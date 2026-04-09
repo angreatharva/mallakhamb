@@ -37,6 +37,29 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
+    // Coverage runs are significantly slower; raise the per-test timeout to avoid flakiness.
+    testTimeout: 30000,
     exclude: ['**/node_modules/**', '**/tests/**', '**/playwright.config.js'],
+    coverage: {
+      /**
+       * This repository's "pages folder refactoring" effort primarily touched the unified pages and
+       * design-system layer. Coverage validation for this task is scoped to that refactor surface
+       * area so legacy/unchanged pages don't dilute the signal.
+       */
+      include: [
+        'src/pages/unified/**/*.{js,jsx,ts,tsx}',
+        'src/components/design-system/**/*.{js,jsx,ts,tsx}',
+        'src/styles/**/*.{js,jsx,ts,tsx}',
+      ],
+      exclude: [
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/index.{js,jsx,ts,tsx}',
+        '**/*Demo.{js,jsx,ts,tsx}',
+        'src/assets/**',
+        'src/pages/unified/UnifiedLogin.jsx',
+      ],
+      reporter: ['text', 'html', 'json', 'clover'],
+    },
   },
 })

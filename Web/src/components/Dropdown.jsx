@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '../hooks/useResponsive';
-import { COLORS, useReducedMotion } from '../pages/Home';
+import { COLORS, useReducedMotion } from '../pages/public/Home';
+
+void motion;
 
 const Dropdown = ({
   options,
@@ -182,7 +184,7 @@ const Dropdown = ({
                         else if (e.key === 'ArrowUp') { e.preventDefault(); e.target.previousElementSibling?.focus(); }
                       }}
                     >
-                      <span className="truncate">{option.label}</span>
+                      <span className="flex-1 break-words">{option.label}</span>
                       {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
                     </motion.button>
                   );
