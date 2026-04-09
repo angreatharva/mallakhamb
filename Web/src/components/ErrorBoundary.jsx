@@ -6,6 +6,7 @@ class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
+    this.handleRetry = this.handleRetry.bind(this);
   }
 
   static getDerivedStateFromError() {
@@ -13,8 +14,22 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    logger.error('Error caught by boundary:', error, errorInfo);
+    const errorContext = {
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      message: error?.message || 'Unknown error',
+      stack: error?.stack || null,
+      componentStack: errorInfo?.componentStack || null,
+    };
+
+    logger.error('ErrorBoundary captured a runtime error', errorContext);
+    console.error('ErrorBoundary captured a runtime error', errorContext);
     this.setState({ error, errorInfo });
+  }
+
+  handleRetry() {
+    this.setState({ hasError: false, error: null, errorInfo: null });
   }
 
   render() {
@@ -31,8 +46,14 @@ class ErrorBoundary extends React.Component {
                 We're sorry for the inconvenience. Please try refreshing the page.
               </p>
               <button
+                onClick={this.handleRetry}
+                className="w-full px-6 py-3 mb-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Try Again
+              </button>
+              <button
                 onClick={() => window.location.reload()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Refresh Page
               </button>

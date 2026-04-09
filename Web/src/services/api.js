@@ -4,6 +4,7 @@ import { isTokenExpired, getCompetitionIdFromToken } from '../utils/tokenUtils.j
 import { secureStorage } from '../utils/secureStorage.js';
 import { apiCache, clearCachePattern } from '../utils/apiCache.js';
 import { logger } from '../utils/logger.js';
+import { setupInterceptors } from './apiInterceptor.js';
 
 logger.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
@@ -134,6 +135,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+setupInterceptors(api);
 
 // Player API
 export const playerAPI = {

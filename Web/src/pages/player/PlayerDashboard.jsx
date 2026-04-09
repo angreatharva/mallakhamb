@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
@@ -7,6 +8,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import { logger } from '../../utils/logger';
+import { useProfileQuery } from '../../hooks/queries/useProfileQuery';
+import { useTeamsQuery } from '../../hooks/queries/useTeamsQuery';
+import { queryKeys } from '../../utils/queryClient';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
 import Dropdown from '../../components/Dropdown';
 
@@ -68,65 +72,54 @@ const AGE_GROUP_MAP = {
 
 // ─── PlayerDashboard ──────────────────────────────────────────────────────────
 const PlayerDashboard = () => {
-  const [player, setPlayer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [teams, setTeams] = useState([]);
-  const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [updatingTeam, setUpdatingTeam] = useState(false);
   const { logout } = useAuth();
+  const queryClient = useQueryClient();
   useReducedMotion(); // Initialize for accessibility
 
-  useEffect(() => {
-    fetchPlayerProfile();
-  }, []);
+  const profileQuery = useProfileQuery({ scope: 'player' });
+  const teamsQuery = useTeamsQuery({
+    scope: 'player',
+    enabled: Boolean(profileQuery.data && !profileQuery.data.team),
+  });
 
-  useEffect(() => {
-    if (player && !player.team) fetchTeams();
-  }, [player]);
+  const updateTeamMutation = useMutation({
+    mutationFn: (teamId) => playerAPI.updateTeam({ teamId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile('player') });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.teams('player') });
+    },
+  });
 
-  const fetchPlayerProfile = async (showLoading = false) => {
-    if (showLoading) setLoading(true);
+  const player = profileQuery.data;
+  const loading = profileQuery.isLoading || profileQuery.isFetching;
+  const teamsLoading = teamsQuery.isLoading || teamsQuery.isFetching;
+  const updatingTeam = updateTeamMutation.isPending;
+  const teams = useMemo(
+    () => (teamsQuery.data || []).map((t) => ({ value: t._id, label: t.name })),
+    [teamsQuery.data]
+  );
+
+  const refreshProfile = async () => {
     try {
-      try {
-        const teamResponse = await playerAPI.getTeam();
-        setPlayer({ ...teamResponse.data.player, team: teamResponse.data.team, teamStatus: teamResponse.data.teamStatus });
-      } catch {
-        const response = await playerAPI.getProfile();
-        setPlayer({ ...response.data.player, teamStatus: 'Not assigned' });
+      await profileQuery.refetch();
+      if (!player?.team) {
+        await teamsQuery.refetch();
       }
     } catch (error) {
-      logger.error('Failed to fetch player profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTeams = async () => {
-    setTeamsLoading(true);
-    try {
-      const response = await playerAPI.getTeams();
-      setTeams(response.data.teams.map((t) => ({ value: t._id, label: t.name })));
-    } catch {
-      toast.error('Failed to load teams');
-    } finally {
-      setTeamsLoading(false);
+      logger.error('Failed to refresh player dashboard data:', error);
     }
   };
 
   const handleTeamSelect = async (teamOption) => {
     setSelectedTeam(teamOption);
-    setUpdatingTeam(true);
     try {
-      await playerAPI.updateTeam({ teamId: teamOption.value });
+      await updateTeamMutation.mutateAsync(teamOption.value);
       toast.success('Team selected successfully!');
-      await fetchPlayerProfile();
       setSelectedTeam(null);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to select team');
       setSelectedTeam(null);
-    } finally {
-      setUpdatingTeam(false);
     }
   };
 
@@ -163,7 +156,7 @@ const PlayerDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => fetchPlayerProfile(true)} disabled={loading}
+            <button onClick={refreshProfile} disabled={loading}
               className="p-2 rounded-xl text-white/45 hover:text-white hover:bg-white/5 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Refresh data">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />

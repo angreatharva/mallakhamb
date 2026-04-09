@@ -44,7 +44,7 @@ services:
     name: mallakhamb-web
     env: static
     rootDir: Web
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npx playwright install --with-deps chromium && npm run test:e2e:ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL

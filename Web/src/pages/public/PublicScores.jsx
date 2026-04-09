@@ -3,7 +3,8 @@ import { Filter, Search, X, ArrowLeft, Trophy, Medal, ChevronDown, Users } from 
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { publicAPI } from '../../services/api';
+import { useTeamsQuery } from '../../hooks/queries/useTeamsQuery';
+import { useScoresQuery } from '../../hooks/queries/useScoresQuery';
 import Dropdown from '../../components/Dropdown';
 import { logger } from '../../utils/logger';
 import { COLORS, useReducedMotion, GradientText, FadeIn, GlassCard, SaffronButton } from './Home';
@@ -232,9 +233,6 @@ const FilterLabel = ({ children }) => (
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const PublicScores = () => {
-  const [teams, setTeams] = useState([]);
-  const [scores, setScores] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
@@ -269,48 +267,45 @@ const PublicScores = () => {
   useEffect(() => { if (selectedGender) setSelectedAgeGroup(null); }, [selectedGender]);
   useEffect(() => { if (selectedTeam) { setSelectedGender(null); setSelectedAgeGroup(null); } }, [selectedTeam]);
 
-  useEffect(() => { fetchTeams(); }, []);
+  const teamsQuery = useTeamsQuery({ scope: 'public' });
+  const scoreParams = {
+    teamId: selectedTeam?.value,
+    gender: selectedGender?.value,
+    ageGroup: selectedAgeGroup?.value,
+  };
+  const allFiltersSet = Boolean(selectedTeam && selectedGender && selectedAgeGroup);
+  const scoresQuery = useScoresQuery({
+    params: scoreParams,
+    enabled: allFiltersSet,
+  });
+
+  const teams = teamsQuery.data || [];
+  const scores = scoresQuery.data || [];
+  const loading = scoresQuery.isLoading || scoresQuery.isFetching;
 
   useEffect(() => {
-    if (selectedTeam && selectedGender && selectedAgeGroup) fetchScores();
-    else setScores([]);
-  }, [selectedTeam, selectedGender, selectedAgeGroup]);
-
-  const fetchTeams = async () => {
-    try {
-      const response = await publicAPI.getTeams();
-      setTeams(response.data.teams || []);
-    } catch (error) {
+    if (teamsQuery.isError) {
       toast.error('Failed to load teams');
-      logger.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', teamsQuery.error);
     }
-  };
+  }, [teamsQuery.isError, teamsQuery.error]);
 
-  const fetchScores = async () => {
-    if (!selectedTeam || !selectedGender || !selectedAgeGroup) return;
-    setLoading(true);
-    try {
-      const response = await publicAPI.getScores({
-        teamId: selectedTeam.value,
-        gender: selectedGender.value,
-        ageGroup: selectedAgeGroup.value,
-      });
-      setScores(response.data.scores || []);
-      if (!response.data.scores?.length) toast.info('No scores found for this category');
-    } catch (error) {
+  useEffect(() => {
+    if (!allFiltersSet || scoresQuery.isLoading) return;
+    if (scoresQuery.isError) {
       toast.error('Failed to load scores');
-      logger.error('Error fetching scores:', error);
-      setScores([]);
-    } finally {
-      setLoading(false);
+      logger.error('Error fetching scores:', scoresQuery.error);
+      return;
     }
-  };
+    if (!scores.length) {
+      toast.info('No scores found for this category');
+    }
+  }, [allFiltersSet, scores.length, scoresQuery.isError, scoresQuery.error, scoresQuery.isLoading]);
 
   const handleClearFilters = () => {
     setSelectedTeam(null);
     setSelectedGender(null);
     setSelectedAgeGroup(null);
-    setScores([]);
     setSearchTerm('');
   };
 
@@ -324,7 +319,6 @@ const PublicScores = () => {
     })).filter(entry => entry.playerScores.length > 0);
   };
 
-  const allFiltersSet = selectedTeam && selectedGender && selectedAgeGroup;
   const filtered = getFilteredScores();
 
   return (

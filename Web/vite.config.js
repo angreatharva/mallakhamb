@@ -1,13 +1,46 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+import { pwaWorkboxConfig } from './src/config/pwa'
+
+const cspDirectives = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'nonce-dev-inline-style'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' ws: wss: http: https:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+]
+
+const securityHeaders = {
+  'Content-Security-Policy': cspDirectives.join('; '),
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy':
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()',
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: false,
+      manifest: false,
+      workbox: pwaWorkboxConfig,
+    }),
+  ],
   server: {
     host: '0.0.0.0', // Allow external connections
     port: 5173,
-    allowedHosts: 'all' // Allow all hosts including ngrok
+    allowedHosts: 'all', // Allow all hosts including ngrok
+    headers: securityHeaders,
   },
   build: {
     sourcemap: false, // Disable source maps in production for security

@@ -13,8 +13,7 @@ import { useRateLimit } from '../../hooks/useRateLimit';
 import { loginSchema, judgeLoginSchema } from '../../utils/validation';
 import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
-import axios from 'axios';
-import apiConfig from '../../utils/apiConfig';
+import { useLoginMutation } from '../../hooks/mutations/useLoginMutation';
 
 // Import design system components
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -34,7 +33,7 @@ import {
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // Import API services
-import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '../../services/api';
+import { coachAPI } from '../../services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionSelectionScreen from '../../components/CompetitionSelectionScreen';
 
@@ -249,17 +248,7 @@ const UnifiedLoginInner = () => {
   const role = detectRoleFromPath(location.pathname);
   const config = getRoleConfig(role);
   
-  // Get API service based on role
-  const getAPIService = () => {
-    const services = {
-      admin: adminAPI,
-      superadmin: superAdminAPI,
-      coach: coachAPI,
-      player: playerAPI,
-      judge: null, // Judge uses custom axios call
-    };
-    return services[role];
-  };
+  const loginMutation = useLoginMutation({ role });
   
   // Redirect if already logged in (but not during active login process)
   useEffect(() => {
@@ -301,31 +290,24 @@ const UnifiedLoginInner = () => {
     
     setLoading(true);
     try {
-      let response;
-      
-      // Judge login uses different endpoint
+      let data;
+
       if (role === 'judge') {
-        response = await axios.post(
-          `${apiConfig.getBaseUrl()}/judge/login`,
-          { 
+        data = await loginMutation.mutateAsync({
             username: validation.data.username.toLowerCase(), 
             password: validation.data.password 
-          },
-          { headers: apiConfig.getHeaders() }
-        );
-        secureStorage.setItem('judge_token', response.data.token);
-        secureStorage.setItem('judge_user', JSON.stringify(response.data.judge));
-        login(response.data.judge, response.data.token, 'judge');
-        toast.success(`Welcome ${response.data.judge.name}!`);
+        });
+        secureStorage.setItem('judge_token', data.token);
+        secureStorage.setItem('judge_user', JSON.stringify(data.judge));
+        login(data.judge, data.token, 'judge');
+        toast.success(`Welcome ${data.judge.name}!`);
         reset();
         navigate('/judge/scoring');
         return;
       }
-      
-      // Other roles use API service
-      const apiService = getAPIService();
-      response = await apiService.login(validation.data);
-      const { token } = response.data;
+
+      data = await loginMutation.mutateAsync(validation.data);
+      const { token } = data;
       const userDataKeyByRole = {
         admin: 'admin',
         superadmin: 'admin',
@@ -333,7 +315,7 @@ const UnifiedLoginInner = () => {
         player: 'player',
       };
       const expectedUserKey = userDataKeyByRole[role];
-      const userData = response.data[expectedUserKey] || response.data.user || response.data.profile;
+      const userData = data[expectedUserKey] || data.user || data.profile;
       if (!token || !userData) {
         throw new Error('Invalid login response');
       }

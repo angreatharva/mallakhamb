@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ArrowRight, Trophy, Users } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { coachAPI } from '../../services/api';
+import { useCreateTeamMutation } from '../../hooks/mutations/useCreateTeamMutation';
 import { COLORS, GradientText, useReducedMotion } from '../public/Home';
 
 const CoachCreateTeam = () => {
@@ -12,11 +12,12 @@ const CoachCreateTeam = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const { register, handleSubmit, formState: { errors } } = useForm();
+  const createTeamMutation = useCreateTeamMutation();
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await coachAPI.createTeam(data);
+      await createTeamMutation.mutateAsync(data);
       toast.success('Team created successfully! Now register it for a competition.');
       navigate('/coach/select-competition');
     } catch (error) {

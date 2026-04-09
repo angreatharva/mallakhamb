@@ -11,6 +11,7 @@ import axios from 'axios';
 import apiConfig from '../../utils/apiConfig';
 import { logger } from '../../utils/logger';
 import { secureStorage } from '../../utils/secureStorage';
+import { useUpdateScoreMutation } from '../../hooks/mutations/useUpdateScoreMutation';
 import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
@@ -196,9 +197,11 @@ const JudgeScoring = () => {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const joinedRoomRef = useRef(null);
+  const updateScoreMutation = useUpdateScoreMutation({ scope: 'judge' });
+  const submitting = updateScoreMutation.isPending;
+
 
   const [scores, setScores] = useState({
     difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
@@ -350,9 +353,7 @@ const JudgeScoring = () => {
   const submitScore = async () => {
     if (!selectedPlayer) { toast.error('Please select a player'); return; }
     if (parseFloat(calcFinal()) === 0) { toast.error('Please enter scores'); return; }
-    setSubmitting(true);
     try {
-      const token = secureStorage.getItem('judge_token');
       const finalScore = calcFinal();
       const scoreData = {
         playerId: selectedPlayer.id, playerName: selectedPlayer.name,
@@ -361,9 +362,7 @@ const JudgeScoring = () => {
         ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
         breakdown: { difficulty: scores.difficulty, combination: scores.combination, execution: parseFloat(scores.execution || 0), originality: parseFloat(scores.originality || 0) }
       };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
-      });
+      await updateScoreMutation.mutateAsync(scoreData);
       if (socket?.connected) {
         socket.emit('score_update', { ...scoreData, roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}` });
       }
@@ -373,7 +372,7 @@ const JudgeScoring = () => {
     } catch (error) {
       logger.error('Failed to save score:', error);
       toast.error('Failed to save score. Please try again.');
-    } finally { setSubmitting(false); }
+    }
   };
 
   const handleLogout = () => {
