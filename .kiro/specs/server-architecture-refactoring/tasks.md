@@ -90,8 +90,8 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 
 ## Phase 2: Data Layer (Week 3-4)
 
-- [ ] 9. Implement Base Repository
-  - [ ] 9.1 Create BaseRepository class with common CRUD operations
+- [x] 9. Implement Base Repository
+  - [x] 9.1 Create BaseRepository class with common CRUD operations
     - Implement create, findById, findOne, find, updateById, deleteById methods
     - Implement count, exists helper methods
     - Implement query options support (select, populate, sort, limit, skip)
@@ -99,73 +99,73 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Use .lean() for performance
     - _Requirements: 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 16.1_
   
-  - [ ] 9.2 Write unit tests for Base Repository
+  - [x] 9.2 Write unit tests for Base Repository
     - Test CRUD operations with mocked Mongoose model
     - Test query options
     - Test error handling
     - _Requirements: 2.5, 15.2, 15.6_
 
-- [ ] 10. Implement domain-specific repositories
-  - [ ] 10.1 Create PlayerRepository with domain-specific methods
+- [x] 10. Implement domain-specific repositories
+  - [x] 10.1 Create PlayerRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByEmail, findActive, findByTeam, findByAgeGroupAndGender
     - Implement updateTeam, isEmailTaken, findPaginated
     - _Requirements: 2.1, 2.4, 2.5, 16.3_
   
-  - [ ] 10.2 Create CoachRepository with domain-specific methods
+  - [x] 10.2 Create CoachRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByEmail, findActive, isEmailTaken, findPaginated
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.3 Create AdminRepository with domain-specific methods
+  - [x] 10.3 Create AdminRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByEmail, findActive, isEmailTaken, findByRole
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.4 Create JudgeRepository with domain-specific methods
+  - [x] 10.4 Create JudgeRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByEmail, findActive, findByCompetition
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.5 Create CompetitionRepository with domain-specific methods
+  - [x] 10.5 Create CompetitionRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findActive, findByStatus, findUpcoming, findByDateRange
     - Implement addTeam, removeTeam, updateRegistration
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.6 Create TeamRepository with domain-specific methods
+  - [x] 10.6 Create TeamRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByCoach, findByCompetition, addPlayer, removePlayer
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.7 Create ScoreRepository with domain-specific methods
+  - [x] 10.7 Create ScoreRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByCompetition, findByPlayer, findByJudge, calculateAverages
     - _Requirements: 2.1, 2.4, 2.5_
   
-  - [ ] 10.8 Create TransactionRepository with domain-specific methods
+  - [x] 10.8 Create TransactionRepository with domain-specific methods
     - Extend BaseRepository
     - Implement findByUser, findByStatus, findByDateRange
     - _Requirements: 2.1, 2.4, 2.5_
 
-- [ ] 11. Register repositories in DI container
+- [x] 11. Register repositories in DI container
   - Update bootstrap module to register all repositories
   - Inject logger into each repository
   - _Requirements: 3.4, 3.5_
 
-- [ ] 12. Write integration tests for repositories
-  - [ ] 12.1 Write integration tests for PlayerRepository
+- [x] 12. Write integration tests for repositories
+  - [x] 12.1 Write integration tests for PlayerRepository
     - Test CRUD operations with test database
     - Test domain-specific queries
     - Test pagination
     - _Requirements: 15.2, 15.6_
   
-  - [ ] 12.2 Write integration tests for other repositories
+  - [x] 12.2 Write integration tests for other repositories
     - Test CompetitionRepository, TeamRepository, ScoreRepository
     - Test complex queries and relationships
     - _Requirements: 15.2, 15.6_
 
-- [ ] 13. Checkpoint - Verify repository layer
+- [x] 13. Checkpoint - Verify repository layer
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 3: Service Layer (Week 5-7)

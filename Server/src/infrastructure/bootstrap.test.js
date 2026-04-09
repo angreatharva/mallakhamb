@@ -122,4 +122,66 @@ describe('Bootstrap', () => {
     expect(config.server.nodeEnv).toBe('production');
     expect(config.server.port).toBe(8080);
   });
+
+  test('should register all repositories in DI container', () => {
+    const { bootstrap } = require('./bootstrap');
+
+    const { container } = bootstrap();
+
+    expect(container.has('playerRepository')).toBe(true);
+    expect(container.has('coachRepository')).toBe(true);
+    expect(container.has('adminRepository')).toBe(true);
+    expect(container.has('judgeRepository')).toBe(true);
+    expect(container.has('competitionRepository')).toBe(true);
+    expect(container.has('teamRepository')).toBe(true);
+    expect(container.has('scoreRepository')).toBe(true);
+    expect(container.has('transactionRepository')).toBe(true);
+  });
+
+  test('should resolve repositories from DI container', () => {
+    const { bootstrap } = require('./bootstrap');
+
+    const { container } = bootstrap();
+
+    const playerRepo = container.resolve('playerRepository');
+    const coachRepo = container.resolve('coachRepository');
+    const adminRepo = container.resolve('adminRepository');
+    const judgeRepo = container.resolve('judgeRepository');
+    const competitionRepo = container.resolve('competitionRepository');
+    const teamRepo = container.resolve('teamRepository');
+    const scoreRepo = container.resolve('scoreRepository');
+    const transactionRepo = container.resolve('transactionRepository');
+
+    expect(playerRepo).toBeDefined();
+    expect(coachRepo).toBeDefined();
+    expect(adminRepo).toBeDefined();
+    expect(judgeRepo).toBeDefined();
+    expect(competitionRepo).toBeDefined();
+    expect(teamRepo).toBeDefined();
+    expect(scoreRepo).toBeDefined();
+    expect(transactionRepo).toBeDefined();
+  });
+
+  test('should inject logger into repositories', () => {
+    const { bootstrap } = require('./bootstrap');
+
+    const { container } = bootstrap();
+
+    const playerRepo = container.resolve('playerRepository');
+    const logger = container.resolve('logger');
+
+    expect(playerRepo.logger).toBeDefined();
+    expect(playerRepo.logger).toBe(logger);
+  });
+
+  test('should return same repository instance from container (singleton)', () => {
+    const { bootstrap } = require('./bootstrap');
+
+    const { container } = bootstrap();
+
+    const playerRepo1 = container.resolve('playerRepository');
+    const playerRepo2 = container.resolve('playerRepository');
+
+    expect(playerRepo1).toBe(playerRepo2);
+  });
 });
