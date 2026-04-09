@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "create-admin": "node scripts/createAdmin.js",
     "create-superadmin": "node scripts/createSuperAdmin.js",
     "create-coach": "node scripts/createCoach.js",
@@ -39,7 +42,9 @@
     "nodemailer": "^7.0.12",
     "razorpay": "^2.9.6",
     "resend": "^6.10.0",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.7.4",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.7.0",
