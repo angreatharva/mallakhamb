@@ -4,26 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "pretest": "node -e \"require('fs').mkdirSync('coverage/.tmp',{ recursive: true })\"",
     "dev": "vite",
-    "dev:host": "vite --host 0.0.0.0",
     "build": "vite build",
-    "build:strict": "npm run test:a11y && npm run build",
     "lint": "eslint .",
     "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint:staged": "lint-staged",
-    "commit:nohooks": "git commit --no-verify",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest",
     "test:run": "vitest --run",
-    "test:run:dot": "vitest run --reporter=dot",
     "test:a11y": "vitest run src/components/design-system/accessibility/design-system.a11y.test.jsx src/components/design-system/accessibility/keyboard-and-screenreader.a11y.test.jsx src/pages/accessibility-automated.test.jsx src/test/aria-contrast-validation.test.jsx",
-    "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test --project=chromium --reporter=html,line",
-    "prepare": "cd .. && node Web/node_modules/husky/bin.js"
+    "test:e2e": "playwright test"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

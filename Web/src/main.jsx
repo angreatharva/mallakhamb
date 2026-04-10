@@ -26,7 +26,8 @@ const renderEnvValidationError = (error) => {
 try {
   validateEnv();
 
-  if (import.meta.env.PROD) {
+  const isAutomatedBrowser = typeof navigator !== 'undefined' && navigator.webdriver;
+  if (import.meta.env.PROD && !isAutomatedBrowser) {
     registerServiceWorker({
       onNeedRefresh: () => {
         window.dispatchEvent(new Event('sw:need-refresh'));

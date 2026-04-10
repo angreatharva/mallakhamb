@@ -182,14 +182,10 @@ export const CompetitionProvider = ({ children, userType }) => {
   return <CompetitionContext.Provider value={value}>{children}</CompetitionContext.Provider>;
 };
 
-export default CompetitionContext;
-
-/**
- * Convenience hook — returns the competition error string (if any) so pages
- * can surface it without manually destructuring the full context.
- * Returns null when there is no error.
- */
+// Convenience hook for accessing competition error
 export const useCompetitionError = () => {
   const { error } = useCompetition();
   return error;
 };
+
+export default CompetitionContext;

@@ -6,8 +6,9 @@ import { pwaWorkboxConfig } from './src/config/pwa';
 
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'nonce-dev-inline-style'",
+  // Dev tooling and some dependencies rely on dynamic evaluation paths.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self' ws: wss: http: https:",
