@@ -12,9 +12,7 @@ describe('Card Components', () => {
   const renderWithTheme = (ui, role = 'admin') => {
     return render(
       <MemoryRouter>
-        <ThemeProvider role={role}>
-          {ui}
-        </ThemeProvider>
+        <ThemeProvider role={role}>{ui}</ThemeProvider>
       </MemoryRouter>
     );
   };
@@ -27,16 +25,14 @@ describe('Card Components', () => {
           <p>Test content</p>
         </GlassCard>
       );
-      
+
       expect(screen.getByText('Test Title')).toBeInTheDocument();
       expect(screen.getByText('Test content')).toBeInTheDocument();
     });
 
     it('should apply glassmorphism styling', () => {
-      const { container } = renderWithTheme(
-        <GlassCard>Content</GlassCard>
-      );
-      
+      const { container } = renderWithTheme(<GlassCard>Content</GlassCard>);
+
       const card = container.querySelector('.glass-card');
       // Check that the card has the expected inline styles
       expect(card).toBeInTheDocument();
@@ -48,7 +44,7 @@ describe('Card Components', () => {
       const { container } = renderWithTheme(
         <GlassCard className="custom-class">Content</GlassCard>
       );
-      
+
       const card = container.querySelector('.glass-card');
       expect(card.className).toContain('custom-class');
     });
@@ -57,7 +53,7 @@ describe('Card Components', () => {
       const { container } = renderWithTheme(
         <GlassCard style={{ padding: '2rem' }}>Content</GlassCard>
       );
-      
+
       const card = container.querySelector('.glass-card');
       expect(card).toHaveStyle({ padding: '2rem' });
     });
@@ -70,15 +66,13 @@ describe('Card Components', () => {
           <h2>Dark Card Title</h2>
         </DarkCard>
       );
-      
+
       expect(screen.getByText('Dark Card Title')).toBeInTheDocument();
     });
 
     it('should apply dark glassmorphism styling', () => {
-      const { container } = renderWithTheme(
-        <DarkCard>Content</DarkCard>
-      );
-      
+      const { container } = renderWithTheme(<DarkCard>Content</DarkCard>);
+
       const card = container.querySelector('.dark-card');
       // Check that the card has the expected inline styles
       expect(card).toBeInTheDocument();
@@ -87,15 +81,13 @@ describe('Card Components', () => {
     });
 
     it('should apply hover styles when hover prop is true', () => {
-      const { container } = renderWithTheme(
-        <DarkCard hover>Content</DarkCard>
-      );
-      
+      const { container } = renderWithTheme(<DarkCard hover>Content</DarkCard>);
+
       const card = container.querySelector('.dark-card');
-      
+
       // Simulate mouse enter
       fireEvent.mouseEnter(card);
-      
+
       // Check that transform is applied on hover
       expect(card).toHaveStyle({
         transform: 'translateY(-2px)',
@@ -103,15 +95,13 @@ describe('Card Components', () => {
     });
 
     it('should not apply hover styles when hover prop is false', () => {
-      const { container } = renderWithTheme(
-        <DarkCard hover={false}>Content</DarkCard>
-      );
-      
+      const { container } = renderWithTheme(<DarkCard hover={false}>Content</DarkCard>);
+
       const card = container.querySelector('.dark-card');
-      
+
       // Simulate mouse enter
       fireEvent.mouseEnter(card);
-      
+
       // Transform should remain at 0
       expect(card).toHaveStyle({
         transform: 'translateY(0)',
@@ -119,10 +109,8 @@ describe('Card Components', () => {
     });
 
     it('should support custom className', () => {
-      const { container } = renderWithTheme(
-        <DarkCard className="custom-dark">Content</DarkCard>
-      );
-      
+      const { container } = renderWithTheme(<DarkCard className="custom-dark">Content</DarkCard>);
+
       const card = container.querySelector('.dark-card');
       expect(card.className).toContain('custom-dark');
     });
@@ -131,7 +119,7 @@ describe('Card Components', () => {
       const { container } = renderWithTheme(
         <DarkCard style={{ margin: '1rem' }}>Content</DarkCard>
       );
-      
+
       const card = container.querySelector('.dark-card');
       expect(card).toHaveStyle({ margin: '1rem' });
     });
@@ -139,28 +127,17 @@ describe('Card Components', () => {
 
   describe('StatCard', () => {
     it('should render label and value', () => {
-      renderWithTheme(
-        <StatCard 
-          label="Total Users" 
-          value={1234}
-          color="#8B5CF6"
-        />
-      );
-      
+      renderWithTheme(<StatCard label="Total Users" value={1234} color="#8B5CF6" />);
+
       expect(screen.getByText('Total Users')).toBeInTheDocument();
       expect(screen.getByText('1234')).toBeInTheDocument();
     });
 
     it('should render icon when provided', () => {
       const { container } = renderWithTheme(
-        <StatCard 
-          icon={Users}
-          label="Total Users" 
-          value={1234}
-          color="#8B5CF6"
-        />
+        <StatCard icon={Users} label="Total Users" value={1234} color="#8B5CF6" />
       );
-      
+
       // Check that icon SVG is rendered
       const icon = container.querySelector('svg');
       expect(icon).toBeInTheDocument();
@@ -168,54 +145,35 @@ describe('Card Components', () => {
 
     it('should render subtitle when provided', () => {
       renderWithTheme(
-        <StatCard 
-          label="Total Users" 
-          value={1234}
-          color="#8B5CF6"
-          subtitle="Active this month"
-        />
+        <StatCard label="Total Users" value={1234} color="#8B5CF6" subtitle="Active this month" />
       );
-      
+
       expect(screen.getByText('Active this month')).toBeInTheDocument();
     });
 
     it('should apply custom color', () => {
       const { container } = renderWithTheme(
-        <StatCard 
-          label="Total Users" 
-          value={1234}
-          color="#FF6B00"
-        />
+        <StatCard label="Total Users" value={1234} color="#FF6B00" />
       );
-      
+
       const value = screen.getByText('1234');
       expect(value).toHaveStyle({ color: '#FF6B00' });
     });
 
     it('should support custom className', () => {
       const { container } = renderWithTheme(
-        <StatCard 
-          label="Total Users" 
-          value={1234}
-          color="#8B5CF6"
-          className="custom-stat"
-        />
+        <StatCard label="Total Users" value={1234} color="#8B5CF6" className="custom-stat" />
       );
-      
+
       const card = container.querySelector('.stat-card');
       expect(card.className).toContain('custom-stat');
     });
 
     it('should support custom style props', () => {
       const { container } = renderWithTheme(
-        <StatCard 
-          label="Total Users" 
-          value={1234}
-          color="#8B5CF6"
-          style={{ width: '300px' }}
-        />
+        <StatCard label="Total Users" value={1234} color="#8B5CF6" style={{ width: '300px' }} />
       );
-      
+
       const card = container.querySelector('.stat-card');
       expect(card).toHaveStyle({ width: '300px' });
     });
@@ -228,7 +186,7 @@ describe('Card Components', () => {
           <h2>Tilt Card Title</h2>
         </TiltCard>
       );
-      
+
       expect(screen.getByText('Tilt Card Title')).toBeInTheDocument();
     });
 
@@ -240,28 +198,24 @@ describe('Card Components', () => {
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }));
-      
+
       window.matchMedia = mockMatchMedia;
-      
-      const { container } = renderWithTheme(
-        <TiltCard>Content</TiltCard>
-      );
-      
+
+      const { container } = renderWithTheme(<TiltCard>Content</TiltCard>);
+
       const card = container.querySelector('.tilt-card');
-      
+
       // Simulate mouse move
       fireEvent.mouseMove(card, { clientX: 100, clientY: 100 });
-      
+
       // With reduced motion, tilt should not be applied
       // The card should not have rotateX or rotateY transforms
       expect(card).toBeInTheDocument();
     });
 
     it('should support custom className', () => {
-      const { container } = renderWithTheme(
-        <TiltCard className="custom-tilt">Content</TiltCard>
-      );
-      
+      const { container } = renderWithTheme(<TiltCard className="custom-tilt">Content</TiltCard>);
+
       const card = container.querySelector('.tilt-card');
       expect(card.className).toContain('custom-tilt');
     });
@@ -270,7 +224,7 @@ describe('Card Components', () => {
       const { container } = renderWithTheme(
         <TiltCard style={{ minHeight: '200px' }}>Content</TiltCard>
       );
-      
+
       const card = container.querySelector('.tilt-card');
       expect(card).toHaveStyle({ minHeight: '200px' });
     });
@@ -281,7 +235,7 @@ describe('Card Components', () => {
       // Mock mobile viewport
       global.innerWidth = 375;
       global.innerHeight = 667;
-      
+
       const { container } = renderWithTheme(
         <>
           <GlassCard>Glass Card</GlassCard>
@@ -290,7 +244,7 @@ describe('Card Components', () => {
           <TiltCard>Tilt Card</TiltCard>
         </>
       );
-      
+
       expect(screen.getByText('Glass Card')).toBeInTheDocument();
       expect(screen.getByText('Dark Card')).toBeInTheDocument();
       expect(screen.getByText('Stat')).toBeInTheDocument();
@@ -299,11 +253,9 @@ describe('Card Components', () => {
 
     it('should maintain consistent padding on mobile', () => {
       global.innerWidth = 375;
-      
-      const { container } = renderWithTheme(
-        <GlassCard>Content</GlassCard>
-      );
-      
+
+      const { container } = renderWithTheme(<GlassCard>Content</GlassCard>);
+
       const card = container.querySelector('.glass-card');
       expect(card).toHaveStyle({ padding: '1.5rem' });
     });

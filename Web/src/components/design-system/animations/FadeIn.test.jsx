@@ -13,7 +13,7 @@ describe('FadeIn', () => {
     observedElements = new Set();
 
     // Mock IntersectionObserver as a proper constructor
-    mockIntersectionObserver = vi.fn(function(callback) {
+    mockIntersectionObserver = vi.fn(function (callback) {
       observerCallback = callback;
       this.observe = vi.fn((element) => {
         observedElements.add(element);
@@ -286,7 +286,7 @@ describe('FadeIn', () => {
 
     it('should unobserve element on unmount', () => {
       const unobserveMock = vi.fn();
-      mockIntersectionObserver = vi.fn(function(callback) {
+      mockIntersectionObserver = vi.fn(function (callback) {
         observerCallback = callback;
         this.observe = vi.fn();
         this.unobserve = unobserveMock;
@@ -444,14 +444,14 @@ describe('FadeIn', () => {
       let observer2Callback;
       let callCount = 0;
 
-      mockIntersectionObserver = vi.fn(function(callback) {
+      mockIntersectionObserver = vi.fn(function (callback) {
         if (callCount === 0) {
           observer1Callback = callback;
         } else {
           observer2Callback = callback;
         }
         callCount++;
-        
+
         this.observe = vi.fn();
         this.unobserve = vi.fn();
         this.disconnect = vi.fn();

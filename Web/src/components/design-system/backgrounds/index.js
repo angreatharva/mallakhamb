@@ -1,11 +1,11 @@
 /**
  * Background Decorations
- * 
+ *
  * Reusable background decoration components for visual effects.
  * All components are positioned absolutely, non-interactive, and respect prefers-reduced-motion.
- * 
+ *
  * Components are lazy-loaded to optimize bundle size.
- * 
+ *
  * **Validates: Requirements 10.2, 10.4**
  */
 

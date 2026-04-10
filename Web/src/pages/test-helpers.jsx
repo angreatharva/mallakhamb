@@ -1,6 +1,6 @@
 /**
  * Test Helpers for Pages Accessibility Testing
- * 
+ *
  * Provides utility functions and mock providers for testing pages
  */
 
@@ -23,28 +23,16 @@ export const MockAuthProvider = ({ children, value = {} }) => {
     ...value,
   };
 
-  return (
-    <AuthContext.Provider value={defaultValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={defaultValue}>{children}</AuthContext.Provider>;
 };
 
 /**
  * Render component with Router and AuthProvider
  */
-export const renderWithProviders = (
-  component,
-  {
-    initialRoute = '/',
-    authValue = {},
-  } = {}
-) => {
+export const renderWithProviders = (component, { initialRoute = '/', authValue = {} } = {}) => {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
-      <MockAuthProvider value={authValue}>
-        {component}
-      </MockAuthProvider>
+      <MockAuthProvider value={authValue}>{component}</MockAuthProvider>
     </MemoryRouter>
   );
 };
@@ -78,4 +66,4 @@ export const mockMatchMedia = (matches = false) => {
 /**
  * Wait for async operations to complete
  */
-export const waitForAsync = () => new Promise(resolve => setTimeout(resolve, 0));
+export const waitForAsync = () => new Promise((resolve) => setTimeout(resolve, 0));

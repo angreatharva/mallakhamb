@@ -44,7 +44,10 @@ const Dropdown = ({
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e) => {
-      if (e.key === 'Escape') { setIsOpen(false); buttonRef.current?.focus(); }
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -58,20 +61,22 @@ const Dropdown = ({
   };
 
   const filteredOptions = searchable
-    ? options.filter(o => o.label.toLowerCase().includes(searchTerm.toLowerCase()))
+    ? options.filter((o) => o.label.toLowerCase().includes(searchTerm.toLowerCase()))
     : options;
 
   const borderColor = error
     ? 'rgba(239,68,68,0.5)'
     : isOpen
-    ? `${COLORS.saffron}60`
-    : COLORS.darkBorderSubtle;
+      ? `${COLORS.saffron}60`
+      : COLORS.darkBorderSubtle;
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-xs font-semibold tracking-wide mb-1.5"
-          style={{ color: COLORS.saffronLight }}>
+        <label
+          className="block text-xs font-semibold tracking-wide mb-1.5"
+          style={{ color: COLORS.saffronLight }}
+        >
           {label}
         </label>
       )}
@@ -100,7 +105,11 @@ const Dropdown = ({
           transition={{ duration: 0.2 }}
           className="flex-shrink-0"
         >
-          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? COLORS.saffron : 'rgba(255,255,255,0.45)' }} aria-hidden="true" />
+          <ChevronDown
+            className="w-4 h-4"
+            style={{ color: isOpen ? COLORS.saffron : 'rgba(255,255,255,0.45)' }}
+            aria-hidden="true"
+          />
         </motion.div>
       </button>
 
@@ -124,8 +133,11 @@ const Dropdown = ({
             {searchable && (
               <div className="p-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                    aria-hidden="true"
+                  />
                   <input
                     type="text"
                     value={searchTerm}
@@ -142,7 +154,10 @@ const Dropdown = ({
                   />
                   {searchTerm && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setSearchTerm(''); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchTerm('');
+                      }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                       aria-label="Clear search"
                     >
@@ -156,8 +171,11 @@ const Dropdown = ({
             <div className="py-1">
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-white/40 text-sm">
-                  <motion.div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60"
-                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                  <motion.div
+                    className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                  />
                   Loading...
                 </div>
               ) : filteredOptions.length === 0 ? (
@@ -179,13 +197,26 @@ const Dropdown = ({
                       }}
                       whileHover={{ background: `${COLORS.saffron}0A`, color: '#fff' }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
-                        else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }
-                        else if (e.key === 'ArrowUp') { e.preventDefault(); e.target.previousElementSibling?.focus(); }
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect(option);
+                        } else if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          e.target.nextElementSibling?.focus();
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          e.target.previousElementSibling?.focus();
+                        }
                       }}
                     >
                       <span className="flex-1 break-words">{option.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                      {isSelected && (
+                        <Check
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: COLORS.saffron }}
+                          aria-hidden="true"
+                        />
+                      )}
                     </motion.button>
                   );
                 })

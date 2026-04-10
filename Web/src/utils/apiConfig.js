@@ -18,7 +18,7 @@ class ApiConfig {
   // Get headers with ngrok-skip-browser-warning if using ngrok
   getHeaders() {
     const headers = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
 
     if (this.isUsingNgrok()) {

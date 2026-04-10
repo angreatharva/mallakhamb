@@ -9,7 +9,10 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import Dropdown from '../../components/Dropdown';
 
 const useReducedMotion = () => {
-  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [r, setR] = useState(
+    () =>
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const h = (e) => setR(e.matches);
@@ -24,18 +27,27 @@ const FadeIn = ({ children, delay = 0, className = '' }) => {
   const inView = useInView(ref, { once: true, margin: '-40px' });
   const reduced = useReducedMotion();
   return (
-    <motion.div ref={ref} className={className}
+    <motion.div
+      ref={ref}
+      className={className}
       initial={{ opacity: 0, y: reduced ? 0 : 20 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
+      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}
+    >
       {children}
     </motion.div>
   );
 };
 
 const DarkCard = ({ children, className = '', style = {} }) => (
-  <div className={`rounded-2xl border ${className}`}
-    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
+  <div
+    className={`rounded-2xl border ${className}`}
+    style={{
+      background: ADMIN_COLORS.darkCard,
+      borderColor: ADMIN_COLORS.darkBorderSubtle,
+      ...style,
+    }}
+  >
     {children}
   </div>
 );
@@ -93,11 +105,18 @@ const AdminTransactions = () => {
     }
   };
 
-  const formatAmount = (amount) => amount != null ? `₹${amount.toLocaleString()}` : '-';
-  const formatDateTime = (value) => { try { return value ? new Date(value).toLocaleString() : '-'; } catch { return '-'; } };
+  const formatAmount = (amount) => (amount != null ? `₹${amount.toLocaleString()}` : '-');
+  const formatDateTime = (value) => {
+    try {
+      return value ? new Date(value).toLocaleString() : '-';
+    } catch {
+      return '-';
+    }
+  };
 
-  const typeLabel = (t) => ({ team_submission: 'Team Submission', player_add: 'Player Added' }[t] || 'Other');
-  const sourceLabel = (s) => ({ coach: 'Coach', superadmin: 'Super Admin' }[s] || s);
+  const typeLabel = (t) =>
+    ({ team_submission: 'Team Submission', player_add: 'Player Added' })[t] || 'Other';
+  const sourceLabel = (s) => ({ coach: 'Coach', superadmin: 'Super Admin' })[s] || s;
 
   return (
     <div className="space-y-6">
@@ -105,24 +124,35 @@ const AdminTransactions = () => {
         <DarkCard className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${ADMIN_COLORS.purple}18` }}>
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{ background: `${ADMIN_COLORS.purple}18` }}
+              >
                 <ReceiptIndianRupee className="w-5 h-5" style={{ color: ADMIN_COLORS.purple }} />
               </div>
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Transactions</p>
+                <p
+                  className="text-xs font-bold tracking-widest uppercase"
+                  style={{ color: ADMIN_COLORS.saffron }}
+                >
+                  Transactions
+                </p>
                 <h2 className="text-xl font-black text-white">Payment History</h2>
               </div>
             </div>
 
             {isSuperAdmin && (
               <div className="sm:w-64">
-                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                <label
+                  className="block text-xs font-bold tracking-widest uppercase mb-2"
+                  style={{ color: ADMIN_COLORS.saffronLight }}
+                >
                   Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
                 </label>
                 <Dropdown
-                  options={competitions.map(c => ({
+                  options={competitions.map((c) => ({
                     value: c._id,
-                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
+                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`,
                   }))}
                   value={selectedCompetition}
                   onChange={setSelectedCompetition}
@@ -135,7 +165,10 @@ const AdminTransactions = () => {
 
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+              <div
+                className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin"
+                style={{ borderTopColor: ADMIN_COLORS.saffron }}
+              />
               <span className="text-white/40 text-sm">Loading transactions…</span>
             </div>
           ) : transactions.length === 0 ? (
@@ -143,7 +176,9 @@ const AdminTransactions = () => {
               {isSuperAdmin && !selectedCompetition ? (
                 <>
                   <Filter className="w-12 h-12 mx-auto mb-3 text-white/15" />
-                  <p className="text-white/50 font-semibold">Select a competition to view transactions.</p>
+                  <p className="text-white/50 font-semibold">
+                    Select a competition to view transactions.
+                  </p>
                 </>
               ) : (
                 <>
@@ -157,9 +192,26 @@ const AdminTransactions = () => {
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    {['Date / Time', 'Type', 'Source', 'Competition', 'Team', 'Coach', 'Razorpay Order ID', 'Razorpay Payment ID', 'Players (Age Group)', 'Amount', 'Status'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                        style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+                    {[
+                      'Date / Time',
+                      'Type',
+                      'Source',
+                      'Competition',
+                      'Team',
+                      'Coach',
+                      'Razorpay Order ID',
+                      'Razorpay Payment ID',
+                      'Players (Age Group)',
+                      'Amount',
+                      'Status',
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
+                        style={{ color: 'rgba(255,255,255,0.35)' }}
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -171,28 +223,51 @@ const AdminTransactions = () => {
                     const coachName = tx.coach?.name || '-';
                     const playersLabel = tx.teamPlayers?.length
                       ? tx.teamPlayers
-                        .map(p => `${p.playerName}${p.ageGroup ? ` (${p.ageGroup})` : ''}`)
-                        .join(', ')
+                          .map((p) => `${p.playerName}${p.ageGroup ? ` (${p.ageGroup})` : ''}`)
+                          .join(', ')
                       : '-';
                     const { bg, color } = statusStyle(tx.paymentStatus);
                     return (
-                      <motion.tr key={tx._id}
+                      <motion.tr
+                        key={tx._id}
                         style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.02, duration: 0.3 }}>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/60">{formatDateTime(tx.createdAt)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{typeLabel(tx.type)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{sourceLabel(tx.source)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/60">{competitionLabel}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{tx.team?.name || '-'}</td>
+                        transition={{ delay: i * 0.02, duration: 0.3 }}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap text-white/60">
+                          {formatDateTime(tx.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/80">
+                          {typeLabel(tx.type)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/80">
+                          {sourceLabel(tx.source)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/60">
+                          {competitionLabel}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/80">
+                          {tx.team?.name || '-'}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-white/70">{coachName}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{tx.razorpayOrderId || '-'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{tx.razorpayPaymentId || '-'}</td>
-                        <td className="px-4 py-3 text-white/70 max-w-md whitespace-normal break-words">{playersLabel}</td>
-                        <td className="px-4 py-3 whitespace-nowrap font-bold text-white">{formatAmount(tx.amount)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/70">
+                          {tx.razorpayOrderId || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-white/70">
+                          {tx.razorpayPaymentId || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-white/70 max-w-md whitespace-normal break-words">
+                          {playersLabel}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap font-bold text-white">
+                          {formatAmount(tx.amount)}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: bg, color }}>
+                          <span
+                            className="px-2.5 py-1 rounded-full text-xs font-bold"
+                            style={{ background: bg, color }}
+                          >
                             {tx.paymentStatus || 'unknown'}
                           </span>
                         </td>

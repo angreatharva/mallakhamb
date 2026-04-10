@@ -28,24 +28,24 @@
 
 ## Tech Stack
 
-| Category | Library | Version |
-|---|---|---|
-| Framework | React + React DOM | 19.1.1 |
-| Build | Vite | 7.1.7 |
-| Routing | React Router DOM | 6.20.1 |
-| Styling | Tailwind CSS | 3.3.6 |
-| HTTP | Axios | 1.6.2 |
-| Real-time | Socket.IO Client | 4.7.4 |
-| Forms | React Hook Form | 7.48.2 |
-| Animations | Framer Motion | 12.23.25 |
-| Icons | Lucide React + Heroicons | 0.546.0 / 2.2.0 |
-| Notifications | React Hot Toast | 2.4.1 |
-| Encryption | CryptoJS | 4.2.0 |
-| Sanitization | DOMPurify | 3.3.3 |
-| JWT | jwt-decode | 4.0.0 |
-| Testing | Vitest + Testing Library | 4.0.16 |
-| Linting | ESLint | 9.36.0 |
-| Minification | Terser | 5.46.0 |
+| Category      | Library                  | Version         |
+| ------------- | ------------------------ | --------------- |
+| Framework     | React + React DOM        | 19.1.1          |
+| Build         | Vite                     | 7.1.7           |
+| Routing       | React Router DOM         | 6.20.1          |
+| Styling       | Tailwind CSS             | 3.3.6           |
+| HTTP          | Axios                    | 1.6.2           |
+| Real-time     | Socket.IO Client         | 4.7.4           |
+| Forms         | React Hook Form          | 7.48.2          |
+| Animations    | Framer Motion            | 12.23.25        |
+| Icons         | Lucide React + Heroicons | 0.546.0 / 2.2.0 |
+| Notifications | React Hot Toast          | 2.4.1           |
+| Encryption    | CryptoJS                 | 4.2.0           |
+| Sanitization  | DOMPurify                | 3.3.3           |
+| JWT           | jwt-decode               | 4.0.0           |
+| Testing       | Vitest + Testing Library | 4.0.16          |
+| Linting       | ESLint                   | 9.36.0          |
+| Minification  | Terser                   | 5.46.0          |
 
 ---
 
@@ -109,11 +109,16 @@ Web/
 # .env_example
 VITE_API_URL=http://localhost:5000/api        # Backend URL (ngrok or production)
 VITE_STORAGE_KEY=mallakhamb-india-2026        # Encryption key — CHANGE IN PRODUCTION
+VITE_ENABLE_PWA=false                          # Optional feature flag
+VITE_ENABLE_I18N=false                         # Optional feature flag
+VITE_ANALYTICS_ID=                             # Optional analytics identifier
+VITE_SENTRY_DSN=                               # Optional Sentry DSN
 ```
 
 - All variables must be prefixed `VITE_` to be exposed to the client
 - Accessed via `import.meta.env.VITE_*`
-- `VITE_API_URL` falls back to `http://localhost:5000/api` if unset
+- `VITE_API_URL` is validated at startup and must be a valid URL
+- Optional flags and IDs are validated by `src/config/envSchema.js` with safe defaults
 - Socket.IO derives its URL by stripping `/api` from `VITE_API_URL`
 
 ---
@@ -140,40 +145,41 @@ App.jsx
 
 ## Routing
 
-| Path | Component | Auth |
-|---|---|---|
-| `/` | Home | Public |
-| `/scores` | PublicScores | Public |
-| `/forgot-password` | ForgotPassword | Public |
-| `/reset-password/:token` | ResetPassword | Public |
-| `/player/login` | PlayerLogin | Public |
-| `/player/register` | PlayerRegister | Public |
-| `/player/select-team` | PlayerSelectTeam | player |
-| `/player/dashboard` | PlayerDashboard | player |
-| `/coach/login` | CoachLogin | Public |
-| `/coach/register` | CoachRegister | Public |
-| `/coach/create-team` | CoachCreateTeam | coach |
-| `/coach/select-competition` | CoachSelectCompetition | coach |
-| `/coach/dashboard` | CoachDashboard | coach |
-| `/coach/payment` | CoachPayment | coach |
-| `/admin/login` | AdminLogin | Public |
-| `/admin/dashboard` | AdminDashboard | admin |
-| `/admin/dashboard/:tab` | AdminDashboard | admin |
-| `/admin/teams` | AdminTeams | admin |
-| `/admin/scoring` | AdminScoring | admin |
-| `/judge/login` | JudgeLogin | Public |
-| `/judge/scoring` | JudgeScoring | judge |
-| `/superadmin/login` | SuperAdminLogin | Public |
-| `/superadmin/dashboard` | SuperAdminDashboard | superadmin |
-| `/superadmin/dashboard/:tab` | SuperAdminDashboard | superadmin |
-| `/superadmin/scoring` | AdminScoring | superadmin |
-| `*` | → `/` | — |
+| Path                         | Component              | Auth       |
+| ---------------------------- | ---------------------- | ---------- |
+| `/`                          | Home                   | Public     |
+| `/scores`                    | PublicScores           | Public     |
+| `/forgot-password`           | ForgotPassword         | Public     |
+| `/reset-password/:token`     | ResetPassword          | Public     |
+| `/player/login`              | PlayerLogin            | Public     |
+| `/player/register`           | PlayerRegister         | Public     |
+| `/player/select-team`        | PlayerSelectTeam       | player     |
+| `/player/dashboard`          | PlayerDashboard        | player     |
+| `/coach/login`               | CoachLogin             | Public     |
+| `/coach/register`            | CoachRegister          | Public     |
+| `/coach/create-team`         | CoachCreateTeam        | coach      |
+| `/coach/select-competition`  | CoachSelectCompetition | coach      |
+| `/coach/dashboard`           | CoachDashboard         | coach      |
+| `/coach/payment`             | CoachPayment           | coach      |
+| `/admin/login`               | AdminLogin             | Public     |
+| `/admin/dashboard`           | AdminDashboard         | admin      |
+| `/admin/dashboard/:tab`      | AdminDashboard         | admin      |
+| `/admin/teams`               | AdminTeams             | admin      |
+| `/admin/scoring`             | AdminScoring           | admin      |
+| `/judge/login`               | JudgeLogin             | Public     |
+| `/judge/scoring`             | JudgeScoring           | judge      |
+| `/superadmin/login`          | SuperAdminLogin        | Public     |
+| `/superadmin/dashboard`      | SuperAdminDashboard    | superadmin |
+| `/superadmin/dashboard/:tab` | SuperAdminDashboard    | superadmin |
+| `/superadmin/scoring`        | AdminScoring           | superadmin |
+| `*`                          | → `/`                  | —          |
 
 ---
 
 ## State Management
 
 ### AuthContext (`App.jsx`)
+
 - Stores `user` and `userType` in React state
 - On mount: reads from `secureStorage` keyed by URL-detected user type
 - Migrates legacy plain-localStorage tokens to secureStorage on first load
@@ -181,6 +187,7 @@ App.jsx
 - `logout()` — calls backend `/api/auth/logout`, then clears secureStorage + localStorage + sessionStorage + apiCache
 
 ### CompetitionContext
+
 - Fetches `/auth/competitions/assigned` on mount
 - `switchCompetition(id)` — POSTs to `/auth/set-competition`, stores new token, reloads page
 - Exposes `currentCompetition`, `assignedCompetitions`, `isLoading`, `error`
@@ -196,10 +203,12 @@ App.jsx
 ## API Integration
 
 ### Axios Instance (`services/api.js`)
+
 - Base URL from `apiConfig.getBaseUrl()` (reads `VITE_API_URL`)
 - Ngrok header (`ngrok-skip-browser-warning`) auto-added when URL contains `ngrok`
 
 ### Request Interceptor
+
 1. Check in-memory cache for GET requests (public endpoints only)
 2. Detect user type from URL path
 3. Read token from `secureStorage`
@@ -208,21 +217,22 @@ App.jsx
 6. Inject `x-competition-id` header from token payload
 
 ### Response Interceptor
+
 - Cache successful GET responses (public endpoints only, 1-min TTL)
 - `401` → clear storage, redirect to login
 - `403` with competition error → redirect to competition selection
 
 ### API Modules
 
-| Module | Key Methods |
-|---|---|
-| `playerAPI` | register, login, getProfile, getTeam, updateTeam, getTeams |
-| `coachAPI` | register, login, createTeam, getTeams, selectCompetition, registerTeamForCompetition, getDashboard, searchPlayers, addPlayerToAgeGroup, removePlayerFromAgeGroup, submitTeam |
-| `adminAPI` | login, getDashboard, getAllTeams, getTeamDetails, saveJudges, getJudges, getAllJudgesSummary, startAgeGroup, saveScores, unlockScores, getTeamScores, getIndividualScores, getTeamRankings, getTransactions |
-| `superAdminAPI` | All adminAPI methods + createAdmin, updateAdmin, deleteAdmin, getAllCoaches, createCompetition, getAllCompetitions, updateCompetition, deleteCompetition, assignAdminToCompetition, getSystemStats |
-| `authAPI` | forgotPassword, resetPassword, getAssignedCompetitions, setCompetition |
-| `judgeAPI` | getCompetitions, getJudges, getSubmittedTeams, saveScore |
-| `publicAPI` | getTeams, getScores |
+| Module          | Key Methods                                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playerAPI`     | register, login, getProfile, getTeam, updateTeam, getTeams                                                                                                                                                  |
+| `coachAPI`      | register, login, createTeam, getTeams, selectCompetition, registerTeamForCompetition, getDashboard, searchPlayers, addPlayerToAgeGroup, removePlayerFromAgeGroup, submitTeam                                |
+| `adminAPI`      | login, getDashboard, getAllTeams, getTeamDetails, saveJudges, getJudges, getAllJudgesSummary, startAgeGroup, saveScores, unlockScores, getTeamScores, getIndividualScores, getTeamRankings, getTransactions |
+| `superAdminAPI` | All adminAPI methods + createAdmin, updateAdmin, deleteAdmin, getAllCoaches, createCompetition, getAllCompetitions, updateCompetition, deleteCompetition, assignAdminToCompetition, getSystemStats          |
+| `authAPI`       | forgotPassword, resetPassword, getAssignedCompetitions, setCompetition                                                                                                                                      |
+| `judgeAPI`      | getCompetitions, getJudges, getSubmittedTeams, saveScore                                                                                                                                                    |
+| `publicAPI`     | getTeams, getScores                                                                                                                                                                                         |
 
 ---
 
@@ -255,12 +265,14 @@ if (isValidRedirectPath(userInput)) {
 ```
 
 **When to Use:**
+
 - Redirecting based on URL parameters (e.g., `?redirect=/player/dashboard`)
 - Processing OAuth callbacks or external authentication flows
 - Handling deep links from emails or notifications
 - Any navigation triggered by user input or external data
 
 **Whitelist Coverage:**
+
 - All static routes (login pages, dashboards, etc.)
 - Dynamic routes via regex patterns (`/admin/dashboard/:tab`, `/reset-password/:token`)
 - Query strings and hashes are automatically stripped during validation
@@ -283,11 +295,13 @@ import SafeText from '../components/SafeText';
 ```
 
 **How it Works:**
+
 - Uses DOMPurify with `ALLOWED_TAGS: []` — strips all HTML
 - Returns plain text only, preventing script injection
 - Handles non-string children gracefully (passes through unchanged)
 
 **When to Use:**
+
 - Displaying player/coach/admin names
 - Showing team names and descriptions
 - Rendering judge names in scoring interfaces
@@ -299,34 +313,35 @@ import SafeText from '../components/SafeText';
 
 ### Summary
 
-| # | Issue | Severity | Status |
-|---|---|---|---|
-| 1 | Weak encryption key for secureStorage | Critical | ✅ Fixed Mar 26 — enhanced fingerprinting |
-| 2 | CSP allows unsafe-inline / unsafe-eval | Medium | ✅ Improved Mar 26 — added frame-ancestors, base-uri, form-action |
-| 3 | Tokens stored in localStorage | Critical | ⚠️ Acknowledged — requires backend |
-| 4 | CSRF protection | — | ❌ Not applicable (JWT auth) |
-| 5 | Judge auth used plain localStorage | Critical | ✅ Fixed Mar 12 |
-| 6 | Token expiry buffer too large (5 min) | High | ✅ Fixed Mar 12 — now 30s |
-| 7 | API cache stored private data | High | ✅ Fixed Mar 12 — whitelist only |
-| 8 | Logout didn't clear all storage | Low | ✅ Fixed Mar 12 |
-| 9 | No password autocomplete attributes | Medium | ✅ Fixed Mar 12 |
-| 10 | No XSS-safe text renderer | High | ✅ Fixed Mar 12 — SafeText created |
-| 11 | secureStorage fell back to plain storage on error | High | ✅ Fixed Mar 20 |
-| 12 | Debug useEffect in AdminScoring (50 API calls on load) | High | ✅ Fixed Mar 20 |
-| 13 | console.* calls in 16 source files (leaked in dev) | Medium | ✅ Fixed Mar 20 |
-| 14 | Conditional hook call in useBreakpoint (rules-of-hooks) | High | ✅ Fixed Mar 20 |
-| 15 | Unused getTokenData import in api.js | Low | ✅ Fixed Mar 20 |
-| 16 | Unused error param in ErrorBoundary.getDerivedStateFromError | Low | ✅ Fixed Mar 26 |
-| 17 | SafeText not applied across all user-content displays | Medium | ✅ Partially Fixed Mar 26 — applied to CompetitionDisplay |
-| 18 | No redirect validation whitelist | Medium | ✅ Fixed Mar 22 |
-| 19 | No security headers (X-Frame-Options, etc.) | Medium | ⚠️ Requires hosting config |
-| 20 | ESLint warnings (126 total) | Low | ✅ Partially Fixed Mar 26 — 8 critical errors resolved |
+| #   | Issue                                                        | Severity | Status                                                            |
+| --- | ------------------------------------------------------------ | -------- | ----------------------------------------------------------------- |
+| 1   | Weak encryption key for secureStorage                        | Critical | ✅ Fixed Mar 26 — enhanced fingerprinting                         |
+| 2   | CSP allows unsafe-inline / unsafe-eval                       | Medium   | ✅ Improved Mar 26 — added frame-ancestors, base-uri, form-action |
+| 3   | Tokens stored in localStorage                                | Critical | ⚠️ Acknowledged — requires backend                                |
+| 4   | CSRF protection                                              | —        | ❌ Not applicable (JWT auth)                                      |
+| 5   | Judge auth used plain localStorage                           | Critical | ✅ Fixed Mar 12                                                   |
+| 6   | Token expiry buffer too large (5 min)                        | High     | ✅ Fixed Mar 12 — now 30s                                         |
+| 7   | API cache stored private data                                | High     | ✅ Fixed Mar 12 — whitelist only                                  |
+| 8   | Logout didn't clear all storage                              | Low      | ✅ Fixed Mar 12                                                   |
+| 9   | No password autocomplete attributes                          | Medium   | ✅ Fixed Mar 12                                                   |
+| 10  | No XSS-safe text renderer                                    | High     | ✅ Fixed Mar 12 — SafeText created                                |
+| 11  | secureStorage fell back to plain storage on error            | High     | ✅ Fixed Mar 20                                                   |
+| 12  | Debug useEffect in AdminScoring (50 API calls on load)       | High     | ✅ Fixed Mar 20                                                   |
+| 13  | console.\* calls in 16 source files (leaked in dev)          | Medium   | ✅ Fixed Mar 20                                                   |
+| 14  | Conditional hook call in useBreakpoint (rules-of-hooks)      | High     | ✅ Fixed Mar 20                                                   |
+| 15  | Unused getTokenData import in api.js                         | Low      | ✅ Fixed Mar 20                                                   |
+| 16  | Unused error param in ErrorBoundary.getDerivedStateFromError | Low      | ✅ Fixed Mar 26                                                   |
+| 17  | SafeText not applied across all user-content displays        | Medium   | ✅ Partially Fixed Mar 26 — applied to CompetitionDisplay         |
+| 18  | No redirect validation whitelist                             | Medium   | ✅ Fixed Mar 22                                                   |
+| 19  | No security headers (X-Frame-Options, etc.)                  | Medium   | ⚠️ Requires hosting config                                        |
+| 20  | ESLint warnings (126 total)                                  | Low      | ✅ Partially Fixed Mar 26 — 8 critical errors resolved            |
 
 ---
 
 ### Fixed Issues — Detail
 
 **#5 — Judge auth plain localStorage** (`JudgeLogin.jsx`)
+
 ```js
 // Before
 localStorage.setItem('judge_token', response.data.token);
@@ -335,6 +350,7 @@ secureStorage.setItem('judge_token', response.data.token);
 ```
 
 **#6 — Token expiry buffer** (`tokenUtils.js`)
+
 ```js
 // Before: 5 * 60 * 1000  (5 minutes)
 const bufferTime = 30 * 1000; // 30 seconds
@@ -344,6 +360,7 @@ const bufferTime = 30 * 1000; // 30 seconds
 Cache now only stores responses from `/public/*` endpoints. Private data is never cached.
 
 **#8 — Logout storage clearing** (`App.jsx`)
+
 ```js
 secureStorage.clear();
 localStorage.clear();
@@ -356,6 +373,7 @@ All password inputs now have `autoComplete="current-password"`.
 
 **#10 — SafeText component** (`components/SafeText.jsx`)  
 Wraps DOMPurify with `ALLOWED_TAGS: []` — strips all HTML. Use instead of bare `{value}` for user-generated content.
+
 ```jsx
 import SafeText from '../components/SafeText';
 <SafeText>{player.firstName}</SafeText>
@@ -368,7 +386,7 @@ On encryption/decryption failure, the old code silently wrote/read plain text. N
 **#12 — Debug useEffect removed** (`AdminScoring.jsx`)  
 A 50-line debug block that fired 4 API calls 2 seconds after every mount (marked "Remove in production") has been deleted.
 
-**#13 — console.* → logger.*** (16 files)  
+**#13 — console._ → logger._** (16 files)  
 All direct `console.log/error/warn` calls replaced with `logger.*`. The logger utility is a no-op in production (Terser also strips it via `drop_console: true`).
 
 **#14 — useBreakpoint hook rule** (`useResponsive.js`)  
@@ -414,6 +432,7 @@ import SafeText from '../components/SafeText';
 ```
 
 Remaining priority areas:
+
 - Player/Coach/Admin names in dashboards
 - Team names and descriptions in other components
 - Judge names in scoring interfaces
@@ -438,6 +457,7 @@ if (isValidRedirectPath(path)) {
 ```
 
 The whitelist includes all application routes and patterns for dynamic routes (e.g., `/admin/dashboard/:tab`). Apply this utility when:
+
 - Redirecting based on user input or URL parameters
 - Handling OAuth callbacks or external redirects
 - Processing deep links
@@ -453,6 +473,7 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
 ```
 
 For Render.com, add to `render.yaml`:
+
 ```yaml
 services:
   - type: web
@@ -472,17 +493,20 @@ services:
 ## Performance
 
 ### Build Optimizations (vite.config.js)
+
 - Source maps: **disabled** (security)
 - Minifier: **Terser** with `drop_console: true`, `drop_debugger: true`
 - Manual chunks: `react-vendor`, `ui-vendor`, `form-vendor`, `icons`, `utils`
 - All 26 pages lazy-loaded via `React.lazy()`
 
 ### API Cache (`utils/apiCache.js`)
+
 - In-memory Map, 1-minute TTL
 - Whitelist: `/public/competitions`, `/public/scores`, `/public/teams`, `/public/judges`, `/public/submitted-teams`
 - Cleared on logout
 
 ### Known Performance Gaps (not blocking deployment)
+
 - No image compression plugin (BHA.png is 3.9MB — largest asset)
 - No request deduplication for concurrent identical calls
 - No debounce on CoachDashboard player search (fires on every keystroke)
@@ -494,6 +518,7 @@ services:
 ## Responsive Design
 
 ### Breakpoints
+
 ```
 xs / mobile:     320px
 mobile-lg:       480px
@@ -507,10 +532,12 @@ desktop-lg:     1920px
 ```
 
 ### Touch Targets
+
 - Minimum: 44×44px (WCAG 2.1 AAA)
 - Applied via `.touch-target` utility class and `ResponsiveForm` inputs
 
 ### Responsive Components
+
 - `ResponsiveContainer` — adaptive padding + max-width
 - `ResponsiveTable` — card layout on mobile, full table on desktop
 - `ResponsiveForm` / `ResponsivePasswordInput` — touch-friendly inputs with autocomplete
@@ -522,11 +549,11 @@ desktop-lg:     1920px
 
 Socket.IO connects to `VITE_API_URL` with `/api` stripped.
 
-| Event (emit) | Purpose |
-|---|---|
-| `join_scoring_room` | Join room keyed by gender + ageGroup + competitionType |
-| `score_updated` | Receive live judge score updates |
-| `scores_saved_notification` | Notified when another user saves scores |
+| Event (emit)                | Purpose                                                |
+| --------------------------- | ------------------------------------------------------ |
+| `join_scoring_room`         | Join room keyed by gender + ageGroup + competitionType |
+| `score_updated`             | Receive live judge score updates                       |
+| `scores_saved_notification` | Notified when another user saves scores                |
 
 Used in: `AdminScoring.jsx`, `JudgeScoring.jsx`
 
@@ -535,15 +562,18 @@ Used in: `AdminScoring.jsx`, `JudgeScoring.jsx`
 ## Error Handling & Logging
 
 ### ErrorBoundary (`components/ErrorBoundary.jsx`)
+
 - Wraps entire app — catches any render error
 - Shows user-friendly fallback UI with "Refresh Page" button
 - Error details shown only in development (`import.meta.env.MODE === 'development'`)
 
 ### Centralised Error Handler (`utils/errorHandler.js`)
+
 - Maps HTTP status codes to user-facing toast messages
 - 401 → "Session expired", 403 → "Access denied", 429 → "Too many requests", 5xx → "Server error"
 
 ### Logger (`utils/logger.js`)
+
 - `logger.log / .error / .warn / .info` — wraps console, only active when `MODE === 'development'`
 - Terser additionally strips all console calls in production builds
 - All 16 source files that previously used `console.*` directly now use `logger.*`
@@ -553,6 +583,7 @@ Used in: `AdminScoring.jsx`, `JudgeScoring.jsx`
 ## Build & Deployment
 
 ### Scripts
+
 ```bash
 npm run dev          # Dev server on localhost:5173
 npm run dev:host     # Dev server on 0.0.0.0 (for ngrok)
@@ -562,9 +593,30 @@ npm run lint         # ESLint
 npm run test:run     # Vitest single run
 ```
 
+### Bundle Analysis
+
+- Bundle analysis is enabled via `rollup-plugin-visualizer` in `vite.config.js`.
+- Each production build generates a treemap report at `dist/stats.html`.
+- The report includes both parsed and gzipped sizes for each chunk/module.
+
+```bash
+# Generate production bundle + visualizer report
+npm run build
+
+# Open report in browser
+start dist/stats.html
+```
+
+Latest build review highlights:
+
+- Largest JS chunk is `dist/assets/index-B2xLoR5c.js` (~342 kB parsed, ~102 kB gzipped).
+- `ui-vendor` and `utils` chunks are both relatively heavy and good candidates for deeper split-by-route optimization.
+- The dominant overall payload is image assets (`BHA.png` ~3.9 MB and `main-home.jpg` ~607 kB), so image compression/lazy loading offers the highest impact.
+
 ### Deployment Checklist
 
 **Pre-deployment (Required)**
+
 - [x] `npm run build` passes clean (0 errors)
 - [x] Source maps disabled in production
 - [x] Console logs removed (Terser + logger utility)
@@ -578,6 +630,7 @@ npm run test:run     # Vitest single run
 - [ ] Test competition switching functionality
 
 **Post-deployment (Recommended)**
+
 - [ ] Configure security headers on hosting platform (see #19 above)
 - [ ] Enable HTTPS and verify certificate
 - [ ] Test password reset email flow
@@ -589,6 +642,7 @@ npm run test:run     # Vitest single run
 - [ ] Enable gzip/brotli compression on hosting platform
 
 **Security Hardening (Optional but Recommended)**
+
 - [ ] Apply `safeRedirect` to all dynamic navigation calls
 - [ ] Apply `SafeText` to user-generated content displays
 - [ ] Implement Content Security Policy with nonces
@@ -601,6 +655,7 @@ npm run test:run     # Vitest single run
 ### Deployment Checklist
 
 **Pre-deployment (Required)**
+
 - [x] `npm run build` passes clean (0 errors)
 - [x] Source maps disabled in production
 - [x] Console logs removed (Terser + logger utility)
@@ -614,6 +669,7 @@ npm run test:run     # Vitest single run
 - [ ] Test competition switching functionality
 
 **Post-deployment (Recommended)**
+
 - [ ] Configure security headers on hosting platform (see #19 above)
 - [ ] Enable HTTPS and verify certificate
 - [ ] Test password reset email flow
@@ -625,6 +681,7 @@ npm run test:run     # Vitest single run
 - [ ] Enable gzip/brotli compression on hosting platform
 
 **Security Hardening (Optional but Recommended)**
+
 - [ ] Apply `safeRedirect` to all dynamic navigation calls
 - [ ] Apply `SafeText` to user-generated content displays
 - [ ] Implement Content Security Policy with nonces
@@ -647,6 +704,7 @@ npm run test:run     # Vitest single run
 ## Known Limitations & Future Work
 
 ### Current Limitations
+
 - No offline / PWA support
 - No i18n (English only)
 - No dark mode
@@ -656,6 +714,7 @@ npm run test:run     # Vitest single run
 - BHA.png asset is 3.9MB uncompressed
 
 ### Recommended Future Work
+
 1. ✅ Apply `SafeText` systematically across all user-content displays — Started Mar 26 (CompetitionDisplay)
 2. Apply `safeRedirect` utility to all navigation calls that use dynamic paths
 3. Configure security headers on production hosting platform
@@ -675,6 +734,7 @@ npm run test:run     # Vitest single run
 Build passes with 126 linting issues (96 errors, 30 warnings) - down from 134 after March 26 fixes. These are cosmetic and don't affect runtime behavior or deployment.
 
 ### Recent Fixes (March 26, 2026)
+
 - ✅ Fixed case block declaration errors in `Dropdown.jsx` (3 errors)
 - ✅ Wrapped switch case statements in curly braces to comply with ESLint rules
 - ✅ Reduced total issues from 134 to 126 (8 issues resolved)
@@ -731,7 +791,7 @@ npm run lint -- --fix
 
 ---
 
-*Last reviewed: March 26, 2026*  
-*All critical and high-priority security issues resolved or significantly improved.*  
-*System is production-ready with enhanced encryption and CSP.*  
-*ESLint warnings (126) are cosmetic only and don't block deployment.*
+_Last reviewed: March 26, 2026_  
+_All critical and high-priority security issues resolved or significantly improved._  
+_System is production-ready with enhanced encryption and CSP._  
+_ESLint warnings (126) are cosmetic only and don't block deployment._

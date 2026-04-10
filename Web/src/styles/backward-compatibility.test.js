@@ -1,9 +1,9 @@
 /**
  * Backward Compatibility Tests
- * 
+ *
  * These tests verify that old import paths and deprecated functions still work
  * with appropriate warnings during the migration period.
- * 
+ *
  * Requirements: 9.1, 9.2, 9.5 - Backward compatibility verification
  */
 
@@ -26,10 +26,10 @@ describe('Backward Compatibility', () => {
     it('should allow importing COLORS with deprecation warning', () => {
       // Access a property to trigger the proxy warning
       const saffron = COLORS.saffron;
-      
+
       expect(saffron).toBeDefined();
       expect(saffron).toBe('#FF6B00');
-      
+
       // In development mode, should have warned
       if (process.env.NODE_ENV === 'development') {
         expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -41,10 +41,10 @@ describe('Backward Compatibility', () => {
     it('should allow importing ADMIN_COLORS with deprecation warning', () => {
       // Access a property to trigger the proxy warning
       const purple = ADMIN_COLORS.purple;
-      
+
       expect(purple).toBeDefined();
       expect(purple).toBe('#8B5CF6');
-      
+
       // In development mode, should have warned
       if (process.env.NODE_ENV === 'development') {
         expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -113,7 +113,7 @@ describe('Backward Compatibility', () => {
       const oldSaffron = COLORS.saffron;
       // New way
       const newSaffron = DESIGN_TOKENS.colors.brand.saffron;
-      
+
       expect(oldSaffron).toBe(newSaffron);
     });
 
@@ -122,7 +122,7 @@ describe('Backward Compatibility', () => {
       const oldPurple = ADMIN_COLORS.purple;
       // New way
       const newPurple = DESIGN_TOKENS.colors.roles.admin;
-      
+
       expect(oldPurple).toBe(newPurple);
     });
 
@@ -135,16 +135,16 @@ describe('Backward Compatibility', () => {
   describe('Deprecation Warnings Only in Development', () => {
     it('should only warn in development mode', () => {
       const originalEnv = process.env.NODE_ENV;
-      
+
       // Test development mode
       process.env.NODE_ENV = 'development';
       consoleWarnSpy.mockClear();
       const _ = COLORS.saffron; // Access to trigger warning
-      
+
       if (originalEnv === 'development') {
         expect(consoleWarnSpy).toHaveBeenCalled();
       }
-      
+
       // Restore
       process.env.NODE_ENV = originalEnv;
     });
@@ -154,10 +154,10 @@ describe('Backward Compatibility', () => {
     it('should support both old and new import styles', () => {
       // Old style (deprecated but working)
       const oldColor = COLORS.saffron;
-      
+
       // New style (recommended)
       const newColor = DESIGN_TOKENS.colors.brand.saffron;
-      
+
       // Both should work and return the same value
       expect(oldColor).toBe(newColor);
       expect(oldColor).toBe('#FF6B00');
@@ -167,7 +167,7 @@ describe('Backward Compatibility', () => {
       // Component can use mix of old and new
       const oldSaffron = COLORS.saffron;
       const newGreen = DESIGN_TOKENS.colors.roles.coach;
-      
+
       expect(oldSaffron).toBeDefined();
       expect(newGreen).toBeDefined();
       expect(oldSaffron).toBe('#FF6B00');

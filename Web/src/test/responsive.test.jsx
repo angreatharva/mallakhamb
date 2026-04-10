@@ -1,9 +1,9 @@
 /**
  * Responsive Design Tests
- * 
+ *
  * Tests for responsive behavior across different viewport sizes.
  * Validates breakpoints, layout adaptations, and mobile-friendly features.
- * 
+ *
  * Requirements: 17.1, 17.3, 17.4, 17.5, 17.6
  */
 
@@ -295,7 +295,7 @@ describe('Cross-Browser Compatibility', () => {
 
   it('should handle missing matchMedia (old browsers)', () => {
     const originalMatchMedia = window.matchMedia;
-    
+
     // Mock matchMedia to return a basic object
     window.matchMedia = vi.fn(() => ({
       matches: false,
@@ -472,7 +472,7 @@ describe('Requirements Validation', () => {
 /**
  * Note: Full cross-browser testing requires manual testing or E2E tools like Playwright.
  * These tests validate the responsive utilities and hooks work correctly.
- * 
+ *
  * For comprehensive cross-browser testing, see:
  * - Web/CROSS_BROWSER_MOBILE_TESTING.md
  * - Web/CROSS_BROWSER_TESTING_CHECKLIST.md

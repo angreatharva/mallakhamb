@@ -1,9 +1,9 @@
 /**
  * Responsive Typography Components
- * 
+ *
  * Provides responsive typography components that automatically scale
  * based on viewport size while preserving desktop layouts.
- * 
+ *
  * Requirements: 5.1, 5.2, 5.4
  */
 
@@ -14,18 +14,18 @@ import { cn } from '../../utils/cn';
 /**
  * Responsive heading component that scales appropriately across viewports
  */
-export const ResponsiveHeading = ({ 
-  level = 1, 
-  children, 
-  className = '', 
+export const ResponsiveHeading = ({
+  level = 1,
+  children,
+  className = '',
   variant = 'default',
-  ...props 
+  ...props
 }) => {
   const Tag = `h${level}`;
-  
+
   const getHeadingClasses = () => {
     const baseClasses = 'font-bold leading-tight';
-    
+
     switch (level) {
       case 1:
         return cn(
@@ -35,35 +35,15 @@ export const ResponsiveHeading = ({
           className
         );
       case 2:
-        return cn(
-          baseClasses,
-          'text-xl md:text-2xl lg:text-3xl',
-          className
-        );
+        return cn(baseClasses, 'text-xl md:text-2xl lg:text-3xl', className);
       case 3:
-        return cn(
-          baseClasses,
-          'text-lg md:text-xl lg:text-2xl',
-          className
-        );
+        return cn(baseClasses, 'text-lg md:text-xl lg:text-2xl', className);
       case 4:
-        return cn(
-          baseClasses,
-          'text-base md:text-lg lg:text-xl',
-          className
-        );
+        return cn(baseClasses, 'text-base md:text-lg lg:text-xl', className);
       case 5:
-        return cn(
-          baseClasses,
-          'text-sm md:text-base lg:text-lg',
-          className
-        );
+        return cn(baseClasses, 'text-sm md:text-base lg:text-lg', className);
       case 6:
-        return cn(
-          baseClasses,
-          'text-xs md:text-sm lg:text-base',
-          className
-        );
+        return cn(baseClasses, 'text-xs md:text-sm lg:text-base', className);
       default:
         return cn(baseClasses, className);
     }
@@ -79,13 +59,9 @@ export const ResponsiveHeading = ({
 /**
  * Responsive hero text component for large display text
  */
-export const ResponsiveHeroText = ({ 
-  children, 
-  className = '', 
-  ...props 
-}) => {
+export const ResponsiveHeroText = ({ children, className = '', ...props }) => {
   return (
-    <h1 
+    <h1
       className={cn(
         'text-responsive-hero',
         'text-4xl md:text-6xl lg:text-8xl', // Fallback
@@ -102,27 +78,19 @@ export const ResponsiveHeroText = ({
 /**
  * Responsive body text component
  */
-export const ResponsiveText = ({ 
-  children, 
-  className = '', 
+export const ResponsiveText = ({
+  children,
+  className = '',
   size = 'base',
   variant = 'body',
-  ...props 
+  ...props
 }) => {
   const getTextClasses = () => {
     switch (size) {
       case 'xs':
-        return cn(
-          'leading-relaxed',
-          'text-xs md:text-sm',
-          className
-        );
+        return cn('leading-relaxed', 'text-xs md:text-sm', className);
       case 'sm':
-        return cn(
-          'leading-relaxed',
-          'text-sm md:text-base',
-          className
-        );
+        return cn('leading-relaxed', 'text-sm md:text-base', className);
       case 'base':
         return cn(
           'leading-relaxed',
@@ -131,17 +99,9 @@ export const ResponsiveText = ({
           className
         );
       case 'lg':
-        return cn(
-          'leading-relaxed',
-          'text-lg md:text-xl lg:text-2xl',
-          className
-        );
+        return cn('leading-relaxed', 'text-lg md:text-xl lg:text-2xl', className);
       case 'xl':
-        return cn(
-          'leading-relaxed',
-          'text-xl md:text-2xl lg:text-3xl',
-          className
-        );
+        return cn('leading-relaxed', 'text-xl md:text-2xl lg:text-3xl', className);
       default:
         return cn('leading-relaxed', className);
     }
@@ -157,18 +117,10 @@ export const ResponsiveText = ({
 /**
  * Responsive label component for forms
  */
-export const ResponsiveLabel = ({ 
-  children, 
-  className = '', 
-  required = false,
-  ...props 
-}) => {
+export const ResponsiveLabel = ({ children, className = '', required = false, ...props }) => {
   return (
-    <label 
-      className={cn(
-        'block text-sm md:text-base font-medium text-gray-700 mb-1 md:mb-2',
-        className
-      )}
+    <label
+      className={cn('block text-sm md:text-base font-medium text-gray-700 mb-1 md:mb-2', className)}
       {...props}
     >
       {children}
@@ -180,12 +132,7 @@ export const ResponsiveLabel = ({
 /**
  * Responsive caption/helper text component
  */
-export const ResponsiveCaption = ({ 
-  children, 
-  className = '', 
-  variant = 'default',
-  ...props 
-}) => {
+export const ResponsiveCaption = ({ children, className = '', variant = 'default', ...props }) => {
   const getVariantClasses = () => {
     switch (variant) {
       case 'error':
@@ -202,12 +149,8 @@ export const ResponsiveCaption = ({
   };
 
   return (
-    <p 
-      className={cn(
-        'text-xs md:text-sm leading-relaxed',
-        getVariantClasses(),
-        className
-      )}
+    <p
+      className={cn('text-xs md:text-sm leading-relaxed', getVariantClasses(), className)}
       {...props}
     >
       {children}
@@ -218,13 +161,7 @@ export const ResponsiveCaption = ({
 /**
  * Responsive link component with proper touch targets
  */
-export const ResponsiveLink = ({ 
-  children, 
-  className = '', 
-  variant = 'default',
-  to,
-  ...props 
-}) => {
+export const ResponsiveLink = ({ children, className = '', variant = 'default', to, ...props }) => {
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
@@ -241,7 +178,7 @@ export const ResponsiveLink = ({
   // If 'to' prop is provided, use React Router Link, otherwise use regular anchor
   if (to) {
     return (
-      <Link 
+      <Link
         to={to}
         className={cn(
           'text-sm md:text-base',
@@ -260,7 +197,7 @@ export const ResponsiveLink = ({
   }
 
   return (
-    <a 
+    <a
       className={cn(
         'text-sm md:text-base',
         'min-h-[44px] md:min-h-0', // Touch target on mobile
@@ -280,14 +217,9 @@ export const ResponsiveLink = ({
 /**
  * Responsive navigation text component
  */
-export const ResponsiveNavText = ({ 
-  children, 
-  className = '', 
-  active = false,
-  ...props 
-}) => {
+export const ResponsiveNavText = ({ children, className = '', active = false, ...props }) => {
   return (
-    <span 
+    <span
       className={cn(
         'text-sm md:text-base font-medium',
         'min-h-[44px] md:min-h-0', // Touch target on mobile
@@ -306,12 +238,7 @@ export const ResponsiveNavText = ({
 /**
  * Responsive button text component
  */
-export const ResponsiveButtonText = ({ 
-  children, 
-  className = '', 
-  size = 'base',
-  ...props 
-}) => {
+export const ResponsiveButtonText = ({ children, className = '', size = 'base', ...props }) => {
   const getSizeClasses = () => {
     switch (size) {
       case 'sm':
@@ -326,14 +253,7 @@ export const ResponsiveButtonText = ({
   };
 
   return (
-    <span 
-      className={cn(
-        getSizeClasses(),
-        'font-medium leading-none',
-        className
-      )}
-      {...props}
-    >
+    <span className={cn(getSizeClasses(), 'font-medium leading-none', className)} {...props}>
       {children}
     </span>
   );
@@ -342,13 +262,9 @@ export const ResponsiveButtonText = ({
 /**
  * Responsive card title component
  */
-export const ResponsiveCardTitle = ({ 
-  children, 
-  className = '', 
-  ...props 
-}) => {
+export const ResponsiveCardTitle = ({ children, className = '', ...props }) => {
   return (
-    <h3 
+    <h3
       className={cn(
         'text-lg md:text-xl lg:text-2xl',
         'font-semibold leading-tight text-gray-900',
@@ -364,18 +280,10 @@ export const ResponsiveCardTitle = ({
 /**
  * Responsive card description component
  */
-export const ResponsiveCardDescription = ({ 
-  children, 
-  className = '', 
-  ...props 
-}) => {
+export const ResponsiveCardDescription = ({ children, className = '', ...props }) => {
   return (
-    <p 
-      className={cn(
-        'text-sm md:text-base',
-        'text-gray-600 leading-relaxed',
-        className
-      )}
+    <p
+      className={cn('text-sm md:text-base', 'text-gray-600 leading-relaxed', className)}
       {...props}
     >
       {children}
@@ -386,13 +294,9 @@ export const ResponsiveCardDescription = ({
 /**
  * Responsive stat number component for dashboard cards
  */
-export const ResponsiveStatNumber = ({ 
-  children, 
-  className = '', 
-  ...props 
-}) => {
+export const ResponsiveStatNumber = ({ children, className = '', ...props }) => {
   return (
-    <span 
+    <span
       className={cn(
         'text-2xl md:text-3xl lg:text-4xl',
         'font-bold text-gray-900 leading-none',
@@ -408,18 +312,10 @@ export const ResponsiveStatNumber = ({
 /**
  * Responsive stat label component for dashboard cards
  */
-export const ResponsiveStatLabel = ({ 
-  children, 
-  className = '', 
-  ...props 
-}) => {
+export const ResponsiveStatLabel = ({ children, className = '', ...props }) => {
   return (
-    <span 
-      className={cn(
-        'text-xs md:text-sm',
-        'font-medium text-gray-600 leading-tight',
-        className
-      )}
+    <span
+      className={cn('text-xs md:text-sm', 'font-medium text-gray-600 leading-tight', className)}
       {...props}
     >
       {children}

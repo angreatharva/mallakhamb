@@ -109,4 +109,3 @@ describe('Design System a11y coverage', () => {
     expect(screen.getByText('Saved successfully')).toBeInTheDocument();
   });
 });
-

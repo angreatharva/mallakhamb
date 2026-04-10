@@ -1,8 +1,8 @@
 /**
  * Tests for ARIA Live Region Components
- * 
+ *
  * Tests screen reader announcements for dynamic content
- * 
+ *
  * **Validates: Requirement 11.5**
  */
 
@@ -16,10 +16,8 @@ describe('LiveRegion', () => {
    * ARIA live regions should announce dynamic content to screen readers
    */
   it('should render with polite aria-live by default', () => {
-    const { container } = render(
-      <LiveRegion>Test announcement</LiveRegion>
-    );
-    
+    const { container } = render(<LiveRegion>Test announcement</LiveRegion>);
+
     const region = container.querySelector('[aria-live]');
     expect(region).toBeInTheDocument();
     expect(region).toHaveAttribute('aria-live', 'polite');
@@ -30,57 +28,47 @@ describe('LiveRegion', () => {
     const { container } = render(
       <LiveRegion politeness="assertive">Urgent announcement</LiveRegion>
     );
-    
+
     const region = container.querySelector('[aria-live]');
     expect(region).toHaveAttribute('aria-live', 'assertive');
   });
 
   it('should render with alert role when specified', () => {
-    const { container } = render(
-      <LiveRegion role="alert">Error message</LiveRegion>
-    );
-    
+    const { container } = render(<LiveRegion role="alert">Error message</LiveRegion>);
+
     const region = container.querySelector('[role="alert"]');
     expect(region).toBeInTheDocument();
   });
 
   it('should have aria-atomic attribute', () => {
-    const { container } = render(
-      <LiveRegion atomic={true}>Test announcement</LiveRegion>
-    );
-    
+    const { container } = render(<LiveRegion atomic={true}>Test announcement</LiveRegion>);
+
     const region = container.querySelector('[aria-live]');
     expect(region).toHaveAttribute('aria-atomic', 'true');
   });
 
   it('should be visually hidden but accessible to screen readers', () => {
-    const { container } = render(
-      <LiveRegion>Test announcement</LiveRegion>
-    );
-    
+    const { container } = render(<LiveRegion>Test announcement</LiveRegion>);
+
     const region = container.querySelector('[aria-live]');
     expect(region).toHaveClass('sr-only');
   });
 
   it('should not render when children is null', () => {
-    const { container } = render(
-      <LiveRegion>{null}</LiveRegion>
-    );
-    
+    const { container } = render(<LiveRegion>{null}</LiveRegion>);
+
     const region = container.querySelector('[aria-live]');
     expect(region).not.toBeInTheDocument();
   });
 
   it('should update content when children changes', () => {
-    const { container, rerender } = render(
-      <LiveRegion>First message</LiveRegion>
-    );
-    
+    const { container, rerender } = render(<LiveRegion>First message</LiveRegion>);
+
     let region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('First message');
-    
+
     rerender(<LiveRegion>Second message</LiveRegion>);
-    
+
     region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('Second message');
   });
@@ -92,10 +80,8 @@ describe('ErrorAnnouncement', () => {
    * Error messages should be announced assertively to screen readers
    */
   it('should render error with assertive politeness', () => {
-    const { container } = render(
-      <ErrorAnnouncement error="Email is required" />
-    );
-    
+    const { container } = render(<ErrorAnnouncement error="Email is required" />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).toBeInTheDocument();
     expect(region).toHaveAttribute('aria-live', 'assertive');
@@ -104,33 +90,27 @@ describe('ErrorAnnouncement', () => {
   });
 
   it('should not render when error is null', () => {
-    const { container } = render(
-      <ErrorAnnouncement error={null} />
-    );
-    
+    const { container } = render(<ErrorAnnouncement error={null} />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).not.toBeInTheDocument();
   });
 
   it('should not render when error is empty string', () => {
-    const { container } = render(
-      <ErrorAnnouncement error="" />
-    );
-    
+    const { container } = render(<ErrorAnnouncement error="" />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).not.toBeInTheDocument();
   });
 
   it('should update when error message changes', () => {
-    const { container, rerender } = render(
-      <ErrorAnnouncement error="First error" />
-    );
-    
+    const { container, rerender } = render(<ErrorAnnouncement error="First error" />);
+
     let region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('First error');
-    
+
     rerender(<ErrorAnnouncement error="Second error" />);
-    
+
     region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('Second error');
   });
@@ -142,10 +122,8 @@ describe('StatusAnnouncement', () => {
    * Status messages should be announced politely to screen readers
    */
   it('should render status with polite politeness', () => {
-    const { container } = render(
-      <StatusAnnouncement message="Form submitted successfully" />
-    );
-    
+    const { container } = render(<StatusAnnouncement message="Form submitted successfully" />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).toBeInTheDocument();
     expect(region).toHaveAttribute('aria-live', 'polite');
@@ -154,33 +132,27 @@ describe('StatusAnnouncement', () => {
   });
 
   it('should not render when message is null', () => {
-    const { container } = render(
-      <StatusAnnouncement message={null} />
-    );
-    
+    const { container } = render(<StatusAnnouncement message={null} />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).not.toBeInTheDocument();
   });
 
   it('should not render when message is empty string', () => {
-    const { container } = render(
-      <StatusAnnouncement message="" />
-    );
-    
+    const { container } = render(<StatusAnnouncement message="" />);
+
     const region = container.querySelector('[aria-live]');
     expect(region).not.toBeInTheDocument();
   });
 
   it('should update when message changes', () => {
-    const { container, rerender } = render(
-      <StatusAnnouncement message="Loading..." />
-    );
-    
+    const { container, rerender } = render(<StatusAnnouncement message="Loading..." />);
+
     let region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('Loading...');
-    
+
     rerender(<StatusAnnouncement message="Loaded successfully" />);
-    
+
     region = container.querySelector('[aria-live]');
     expect(region).toHaveTextContent('Loaded successfully');
   });
@@ -200,7 +172,7 @@ describe('Form Error Announcements Integration', () => {
         </div>
       </div>
     );
-    
+
     const errorMessage = container.querySelector('[role="alert"]');
     expect(errorMessage).toBeInTheDocument();
     expect(errorMessage).toHaveTextContent('Email is required');
@@ -215,10 +187,10 @@ describe('Form Error Announcements Integration', () => {
         </div>
       </div>
     );
-    
+
     const input = container.querySelector('input');
     const errorMessage = container.querySelector('[role="alert"]');
-    
+
     expect(input).toHaveAttribute('aria-describedby', 'email-error');
     expect(errorMessage).toHaveAttribute('id', 'email-error');
   });

@@ -143,9 +143,9 @@ img {
 }
 
 /* Prevent images from causing horizontal overflow */
-img, 
-video, 
-canvas, 
+img,
+video,
+canvas,
 svg {
   max-width: 100%;
   height: auto;

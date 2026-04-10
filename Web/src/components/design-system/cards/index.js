@@ -1,8 +1,8 @@
 /**
  * Card Components
- * 
+ *
  * Barrel export for all card components in the design system.
- * 
+ *
  * **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
  */
 

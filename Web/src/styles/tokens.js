@@ -14,17 +14,17 @@ export const DESIGN_TOKENS = {
       gold: '#F5A623',
       cream: '#FFF8F0',
     },
-    
+
     // ─── Role Colors (matching user types) ─────────────────────────────────────
     roles: {
-      admin: '#8B5CF6',       // Purple (WCAG AA compliant)
-      superadmin: '#F5A623',  // Gold (WCAG AA compliant)
-      coach: '#22C55E',       // Green (WCAG AA compliant)
-      player: '#FF6B00',      // Saffron (WCAG AA compliant)
-      judge: '#8B5CF6',       // Purple (WCAG AA compliant)
-      public: '#3B82F6',      // Blue (WCAG AA compliant)
+      admin: '#8B5CF6', // Purple (WCAG AA compliant)
+      superadmin: '#F5A623', // Gold (WCAG AA compliant)
+      coach: '#22C55E', // Green (WCAG AA compliant)
+      player: '#FF6B00', // Saffron (WCAG AA compliant)
+      judge: '#8B5CF6', // Purple (WCAG AA compliant)
+      public: '#3B82F6', // Blue (WCAG AA compliant)
     },
-    
+
     // ─── Semantic Colors ────────────────────────────────────────────────────────
     semantic: {
       success: '#22C55E',
@@ -32,7 +32,7 @@ export const DESIGN_TOKENS = {
       warning: '#F59E0B',
       info: '#3B82F6',
     },
-    
+
     // ─── Status Colors ──────────────────────────────────────────────────────────
     status: {
       completed: '#22C55E',
@@ -40,7 +40,7 @@ export const DESIGN_TOKENS = {
       failed: '#EF4444',
       started: '#3B82F6',
     },
-    
+
     // ─── Surface Colors ─────────────────────────────────────────────────────────
     surfaces: {
       dark: '#0A0A0A',
@@ -48,7 +48,7 @@ export const DESIGN_TOKENS = {
       darkElevated: '#161616',
       darkPanel: '#1A1A1A',
     },
-    
+
     // ─── Border Colors ──────────────────────────────────────────────────────────
     borders: {
       saffron: 'rgba(255,107,0,0.15)',
@@ -56,15 +56,15 @@ export const DESIGN_TOKENS = {
       mid: 'rgba(255,255,255,0.10)',
       bright: 'rgba(255,107,0,0.38)',
     },
-    
+
     // ─── Text Colors (WCAG AA Compliant) ────────────────────────────────────────
     text: {
       primary: '#FFFFFF',
-      secondary: 'rgba(255,255,255,0.65)',  // Improved contrast
-      muted: 'rgba(255,255,255,0.45)',      // Improved contrast
+      secondary: 'rgba(255,255,255,0.65)', // Improved contrast
+      muted: 'rgba(255,255,255,0.45)', // Improved contrast
       disabled: 'rgba(255,255,255,0.30)',
     },
-    
+
     // ─── Extended Palette ───────────────────────────────────────────────────────
     extended: {
       purple: '#A855F7',
@@ -78,7 +78,7 @@ export const DESIGN_TOKENS = {
       indigo: '#6366F1',
     },
   },
-  
+
   // ─── Spacing Scale ──────────────────────────────────────────────────────────
   spacing: {
     xs: '4px',
@@ -90,7 +90,7 @@ export const DESIGN_TOKENS = {
     '3xl': '64px',
     '4xl': '96px',
   },
-  
+
   // ─── Typography Scale ───────────────────────────────────────────────────────
   typography: {
     fontSize: {
@@ -117,7 +117,7 @@ export const DESIGN_TOKENS = {
       relaxed: 1.75,
     },
   },
-  
+
   // ─── Border Radius ──────────────────────────────────────────────────────────
   radii: {
     sm: '4px',
@@ -127,7 +127,7 @@ export const DESIGN_TOKENS = {
     '2xl': '24px',
     full: '9999px',
   },
-  
+
   // ─── Shadows ────────────────────────────────────────────────────────────────
   shadows: {
     sm: '0 1px 2px rgba(0,0,0,0.05)',
@@ -137,14 +137,14 @@ export const DESIGN_TOKENS = {
     '2xl': '0 40px 80px rgba(0,0,0,0.6)',
     saffron: '0 8px 28px rgba(255,107,0,0.3)',
   },
-  
+
   // ─── Animation Easings ──────────────────────────────────────────────────────
   easings: {
     easeOut: [0.22, 1, 0.36, 1],
     easeInOut: [0.25, 0.46, 0.45, 0.94],
     spring: [0.68, -0.55, 0.265, 1.55],
   },
-  
+
   // ─── Breakpoints ────────────────────────────────────────────────────────────
   breakpoints: {
     mobile: '320px',
@@ -152,7 +152,7 @@ export const DESIGN_TOKENS = {
     desktop: '1024px',
     wide: '1280px',
   },
-  
+
   // ─── Z-Index Scale ──────────────────────────────────────────────────────────
   zIndex: {
     base: 0,
@@ -234,8 +234,8 @@ const showDeprecationWarning = (exportName, replacement) => {
     if (!warnedExports.has(exportName)) {
       console.warn(
         `[Design System] "${exportName}" is deprecated and will be removed in a future version. ` +
-        `Use "${replacement}" instead. ` +
-        `See MIGRATION.md for details.`
+          `Use "${replacement}" instead. ` +
+          `See MIGRATION.md for details.`
       );
       warnedExports.add(exportName);
     }
@@ -247,12 +247,12 @@ const createDeprecatedProxy = (target, exportName, replacement) => {
   if (typeof Proxy === 'undefined') {
     return target; // Fallback for environments without Proxy support
   }
-  
+
   return new Proxy(target, {
     get(obj, prop) {
       showDeprecationWarning(exportName, replacement);
       return obj[prop];
-    }
+    },
   });
 };
 
@@ -274,18 +274,14 @@ const COLORS_BASE = {
   blue: DESIGN_TOKENS.colors.extended.blue,
 };
 
-export const COLORS = createDeprecatedProxy(
-  COLORS_BASE,
-  'COLORS',
-  'DESIGN_TOKENS.colors'
-);
+export const COLORS = createDeprecatedProxy(COLORS_BASE, 'COLORS', 'DESIGN_TOKENS.colors');
 
 // Deprecated ADMIN_COLORS export
 const ADMIN_COLORS_BASE = {
   ...COLORS_BASE,
   darkPanel: DESIGN_TOKENS.colors.surfaces.darkPanel,
   darkBorderMid: DESIGN_TOKENS.colors.borders.mid,
-  purple: DESIGN_TOKENS.colors.roles.admin,  // Use role color for consistency
+  purple: DESIGN_TOKENS.colors.roles.admin, // Use role color for consistency
   purpleLight: DESIGN_TOKENS.colors.extended.purpleLight,
   purpleDark: DESIGN_TOKENS.colors.extended.purpleDark,
   green: DESIGN_TOKENS.colors.extended.green,
@@ -307,12 +303,12 @@ export const ADMIN_COLORS = createDeprecatedProxy(
   const isDev = nodeEnv ? nodeEnv !== 'production' : import.meta.env.DEV;
 
   if (isDev) {
-  // Show warning once per module load for animation exports
-  const animationExports = ['EASE_OUT', 'EASE_SPRING', 'ADMIN_EASE_OUT', 'ADMIN_SPRING'];
-  // We can't detect which specific export is used, so we show a general warning
-  // The warning will appear in the console when this module is first imported
-  // if any of these exports are used in the importing file
-  void animationExports;
+    // Show warning once per module load for animation exports
+    const animationExports = ['EASE_OUT', 'EASE_SPRING', 'ADMIN_EASE_OUT', 'ADMIN_SPRING'];
+    // We can't detect which specific export is used, so we show a general warning
+    // The warning will appear in the console when this module is first imported
+    // if any of these exports are used in the importing file
+    void animationExports;
   }
 }
 
@@ -342,7 +338,7 @@ export const COMMON_STYLES = {
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
-  
+
   // Glass card styles
   glassCard: {
     background: 'rgba(255, 255, 255, 0.03)',
@@ -352,29 +348,29 @@ export const COMMON_STYLES = {
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
-  
+
   // Text styles
   textPrimary: {
     color: '#FFFFFF',
   },
-  
+
   textSecondary: {
     color: 'rgba(255, 255, 255, 0.65)',
   },
-  
+
   textMuted: {
     color: 'rgba(255, 255, 255, 0.45)',
   },
-  
+
   // Transition styles
   transitionAll: {
     transition: 'all 0.3s ease',
   },
-  
+
   transitionColors: {
     transition: 'color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease',
   },
-  
+
   // Focus styles (WCAG AA compliant)
   focusRing: {
     outline: 'none',

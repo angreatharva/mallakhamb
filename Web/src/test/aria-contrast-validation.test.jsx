@@ -19,7 +19,12 @@ describe('ARIA and contrast validation', () => {
     renderWithTheme(
       <form aria-label="Accessible form">
         <label htmlFor="email-input">Email</label>
-        <ThemedInput id="email-input" type="email" error="Email is required" aria-describedby="email-hint" />
+        <ThemedInput
+          id="email-input"
+          type="email"
+          error="Email is required"
+          aria-describedby="email-hint"
+        />
         <span id="email-hint">Use your registered email address</span>
         <ThemedButton aria-label="Submit form">Submit</ThemedButton>
       </form>
@@ -41,4 +46,3 @@ describe('ARIA and contrast validation', () => {
     expectContrastAtLeast(largeText, bg, 3);
   });
 });
-

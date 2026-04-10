@@ -4,7 +4,7 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * BackgroundsDemo - Demonstration of all background decoration components
- * 
+ *
  * This component showcases all available background decorations with interactive controls.
  * Use this as a reference for implementing backgrounds in your pages.
  */
@@ -26,7 +26,9 @@ const BackgroundsDemo = () => {
     },
     diagonalburst: {
       name: 'DiagonalBurst',
-      component: <DiagonalBurst color={color} opacity={opacity} direction="top-left-to-bottom-right" />,
+      component: (
+        <DiagonalBurst color={color} opacity={opacity} direction="top-left-to-bottom-right" />
+      ),
       description: 'Diagonal gradient effect for dynamic backgrounds',
     },
     hexmesh: {
@@ -60,7 +62,7 @@ const BackgroundsDemo = () => {
         {/* Controls */}
         <div className="bg-[#111111] rounded-lg p-6 mb-8 border border-white/10">
           <h2 className="text-xl font-semibold mb-4">Controls</h2>
-          
+
           {/* Component Selector */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Component</label>
@@ -90,9 +92,7 @@ const BackgroundsDemo = () => {
                   key={roleColor.name}
                   onClick={() => setColor(roleColor.value)}
                   className={`px-4 py-2 rounded-lg transition-colors ${
-                    color === roleColor.value
-                      ? 'ring-2 ring-white'
-                      : 'hover:ring-1 ring-gray-500'
+                    color === roleColor.value ? 'ring-2 ring-white' : 'hover:ring-1 ring-gray-500'
                   }`}
                   style={{ backgroundColor: roleColor.value }}
                 >
@@ -104,9 +104,7 @@ const BackgroundsDemo = () => {
 
           {/* Opacity Slider */}
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Opacity: {opacity.toFixed(2)}
-            </label>
+            <label className="block text-sm font-medium mb-2">Opacity: {opacity.toFixed(2)}</label>
             <input
               type="range"
               min="0"
@@ -125,7 +123,10 @@ const BackgroundsDemo = () => {
         </div>
 
         {/* Preview */}
-        <div className="relative bg-[#111111] rounded-lg overflow-hidden border border-white/10" style={{ height: '500px' }}>
+        <div
+          className="relative bg-[#111111] rounded-lg overflow-hidden border border-white/10"
+          style={{ height: '500px' }}
+        >
           {/* Background decoration */}
           {demos[activeDemo].component}
 
@@ -133,8 +134,8 @@ const BackgroundsDemo = () => {
           <div className="relative z-10 p-8 h-full flex flex-col justify-center items-center">
             <h2 className="text-3xl font-bold mb-4">{demos[activeDemo].name}</h2>
             <p className="text-gray-300 text-center max-w-md mb-6">
-              This content demonstrates that the background decoration does not interfere with readability.
-              All decorations are positioned absolutely with pointer-events-none.
+              This content demonstrates that the background decoration does not interfere with
+              readability. All decorations are positioned absolutely with pointer-events-none.
             </p>
             <div className="grid grid-cols-3 gap-4 w-full max-w-2xl">
               <div className="bg-white/5 backdrop-blur-sm p-4 rounded-lg border border-white/10">
@@ -158,7 +159,7 @@ const BackgroundsDemo = () => {
           <h2 className="text-xl font-semibold mb-4">Usage Example</h2>
           <pre className="bg-[#0A0A0A] p-4 rounded-lg overflow-x-auto text-sm">
             <code className="text-green-400">
-{`import { ${demos[activeDemo].name} } from '@/components/design-system/backgrounds';
+              {`import { ${demos[activeDemo].name} } from '@/components/design-system/backgrounds';
 
 <div className="relative">
   <${demos[activeDemo].name} 
@@ -177,21 +178,15 @@ const BackgroundsDemo = () => {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#111111] rounded-lg p-6 border border-white/10">
             <h3 className="font-semibold mb-2">🎨 Customizable</h3>
-            <p className="text-sm text-gray-400">
-              Configure color and opacity to match your theme
-            </p>
+            <p className="text-sm text-gray-400">Configure color and opacity to match your theme</p>
           </div>
           <div className="bg-[#111111] rounded-lg p-6 border border-white/10">
             <h3 className="font-semibold mb-2">♿ Accessible</h3>
-            <p className="text-sm text-gray-400">
-              Respects prefers-reduced-motion setting
-            </p>
+            <p className="text-sm text-gray-400">Respects prefers-reduced-motion setting</p>
           </div>
           <div className="bg-[#111111] rounded-lg p-6 border border-white/10">
             <h3 className="font-semibold mb-2">🚀 Non-intrusive</h3>
-            <p className="text-sm text-gray-400">
-              Positioned absolutely with pointer-events-none
-            </p>
+            <p className="text-sm text-gray-400">Positioned absolutely with pointer-events-none</p>
           </div>
         </div>
       </div>

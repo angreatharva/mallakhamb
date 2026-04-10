@@ -58,7 +58,11 @@ test('coach team creation flow', async ({ page }) => {
       return;
     }
 
-    if (pathname.includes('/coaches/team/') && pathname.endsWith('/register-competition') && method === 'POST') {
+    if (
+      pathname.includes('/coaches/team/') &&
+      pathname.endsWith('/register-competition') &&
+      method === 'POST'
+    ) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -72,7 +76,10 @@ test('coach team creation flow', async ({ page }) => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: { team: { _id: 'team-1', name: 'Team Phoenix', players: [] }, paymentStatus: 'paid' },
+          data: {
+            team: { _id: 'team-1', name: 'Team Phoenix', players: [] },
+            paymentStatus: 'paid',
+          },
         }),
       });
       return;

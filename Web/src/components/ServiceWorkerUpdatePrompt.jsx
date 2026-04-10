@@ -1,27 +1,27 @@
-import { useEffect, useState } from 'react'
-import { updateServiceWorker } from '../utils/registerSW'
+import { useEffect, useState } from 'react';
+import { updateServiceWorker } from '../utils/registerSW';
 
 function ServiceWorkerUpdatePrompt() {
-  const [needsRefresh, setNeedsRefresh] = useState(false)
-  const [offlineReady, setOfflineReady] = useState(false)
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const [offlineReady, setOfflineReady] = useState(false);
 
   useEffect(() => {
-    const handleNeedRefresh = () => setNeedsRefresh(true)
+    const handleNeedRefresh = () => setNeedsRefresh(true);
     const handleOfflineReady = () => {
-      setOfflineReady(true)
-      window.setTimeout(() => setOfflineReady(false), 3500)
-    }
+      setOfflineReady(true);
+      window.setTimeout(() => setOfflineReady(false), 3500);
+    };
 
-    window.addEventListener('sw:need-refresh', handleNeedRefresh)
-    window.addEventListener('sw:offline-ready', handleOfflineReady)
+    window.addEventListener('sw:need-refresh', handleNeedRefresh);
+    window.addEventListener('sw:offline-ready', handleOfflineReady);
 
     return () => {
-      window.removeEventListener('sw:need-refresh', handleNeedRefresh)
-      window.removeEventListener('sw:offline-ready', handleOfflineReady)
-    }
-  }, [])
+      window.removeEventListener('sw:need-refresh', handleNeedRefresh);
+      window.removeEventListener('sw:offline-ready', handleOfflineReady);
+    };
+  }, []);
 
-  if (!needsRefresh && !offlineReady) return null
+  if (!needsRefresh && !offlineReady) return null;
 
   return (
     <div
@@ -62,7 +62,7 @@ function ServiceWorkerUpdatePrompt() {
         <p style={{ margin: 0 }}>Offline support is ready for this app.</p>
       )}
     </div>
-  )
+  );
 }
 
-export default ServiceWorkerUpdatePrompt
+export default ServiceWorkerUpdatePrompt;

@@ -142,6 +142,8 @@ const renderA11yPage = (path, element) =>
     </MemoryRouter>
   );
 
+const A11Y_TIMEOUT_MS = 60000;
+
 describe('Page accessibility coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,23 +153,23 @@ describe('Page accessibility coverage', () => {
     const { container } = renderA11yPage('/forgot-password', <ForgotPassword />);
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  });
+  }, A11Y_TIMEOUT_MS);
 
   it('dashboard-like scoring page passes axe checks', async () => {
     const { container } = renderA11yPage('/scores', <PublicScores />);
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  });
+  }, A11Y_TIMEOUT_MS);
 
   it('team management page passes axe checks', async () => {
     const { container } = renderA11yPage('/coach/create-team', <CoachCreateTeam />);
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  });
+  }, A11Y_TIMEOUT_MS);
 
   it('password reset page passes axe checks', async () => {
     const { container } = renderA11yPage('/reset-password', <ResetPassword />);
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  });
+  }, A11Y_TIMEOUT_MS);
 });

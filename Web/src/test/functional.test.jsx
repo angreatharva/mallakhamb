@@ -1,6 +1,6 @@
 /**
  * Functional Integration Tests for Pages Folder Refactoring
- * 
+ *
  * This test suite validates critical functionality across the refactored pages
  * using a focused, reliable testing approach that avoids full App component rendering.
  */
@@ -26,9 +26,22 @@ vi.mock('socket.io-client', () => ({
 
 const mockUsers = {
   admin: { _id: 'admin1', username: 'admin', email: 'admin@test.com', role: 'admin' },
-  superadmin: { _id: 'superadmin1', username: 'superadmin', email: 'superadmin@test.com', role: 'superadmin' },
+  superadmin: {
+    _id: 'superadmin1',
+    username: 'superadmin',
+    email: 'superadmin@test.com',
+    role: 'superadmin',
+  },
   coach: { _id: 'coach1', name: 'Test Coach', email: 'coach@test.com', phone: '1234567890' },
-  player: { _id: 'player1', firstName: 'Test', lastName: 'Player', email: 'player@test.com', phone: '9876543210', dateOfBirth: '2000-01-01', gender: 'Male' },
+  player: {
+    _id: 'player1',
+    firstName: 'Test',
+    lastName: 'Player',
+    email: 'player@test.com',
+    phone: '9876543210',
+    dateOfBirth: '2000-01-01',
+    gender: 'Male',
+  },
   judge: { _id: 'judge1', username: 'judge', email: 'judge@test.com' },
 };
 
@@ -151,7 +164,13 @@ describe('Task 10.3: Navigation Flows - Route Detection', () => {
     const roleMatch = pathname.match(/^\/([^/]+)/);
     if (!roleMatch) return 'admin';
     const segment = roleMatch[1].toLowerCase();
-    const roleMap = { admin: 'admin', superadmin: 'superadmin', coach: 'coach', player: 'player', judge: 'judge' };
+    const roleMap = {
+      admin: 'admin',
+      superadmin: 'superadmin',
+      coach: 'coach',
+      player: 'player',
+      judge: 'judge',
+    };
     return roleMap[segment] || 'admin';
   };
 

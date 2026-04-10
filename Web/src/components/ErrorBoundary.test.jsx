@@ -1,49 +1,49 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import ErrorBoundary from './ErrorBoundary'
-import { logger } from '../utils/logger'
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import ErrorBoundary from './ErrorBoundary';
+import { logger } from '../utils/logger';
 
 vi.mock('../utils/logger', () => ({
   logger: {
     error: vi.fn(),
   },
-}))
+}));
 
 const ThrowError = () => {
-  throw new Error('Crash in component')
-}
+  throw new Error('Crash in component');
+};
 
 describe('ErrorBoundary', () => {
-  const originalError = console.error
+  const originalError = console.error;
 
   beforeEach(() => {
-    console.error = vi.fn()
-  })
+    console.error = vi.fn();
+  });
 
   afterEach(() => {
-    console.error = originalError
-    vi.clearAllMocks()
-  })
+    console.error = originalError;
+    vi.clearAllMocks();
+  });
 
   it('catches render errors and shows fallback UI', () => {
     render(
       <ErrorBoundary>
         <ThrowError />
-      </ErrorBoundary>,
-    )
+      </ErrorBoundary>
+    );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Refresh Page' })).toBeInTheDocument()
-  })
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh Page' })).toBeInTheDocument();
+  });
 
   it('logs structured error details with required context', () => {
     render(
       <ErrorBoundary>
         <ThrowError />
-      </ErrorBoundary>,
-    )
+      </ErrorBoundary>
+    );
 
     expect(logger.error).toHaveBeenCalledWith(
       'ErrorBoundary captured a runtime error',
@@ -54,20 +54,20 @@ describe('ErrorBoundary', () => {
         message: 'Crash in component',
         stack: expect.any(String),
         componentStack: expect.any(String),
-      }),
-    )
-  })
+      })
+    );
+  });
 
   it('attempts recovery when user clicks try again', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup();
     render(
       <ErrorBoundary>
         <ThrowError />
-      </ErrorBoundary>,
-    )
+      </ErrorBoundary>
+    );
 
-    await user.click(screen.getByRole('button', { name: 'Try Again' }))
+    await user.click(screen.getByRole('button', { name: 'Try Again' }));
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-  })
-})
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+  });
+});

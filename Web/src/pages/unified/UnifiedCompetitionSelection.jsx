@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Trophy, Calendar, MapPin, ArrowRight, User, LogOut, Search, X, CheckCircle,
-  Users, Zap, AlertCircle,
+  Trophy,
+  Calendar,
+  MapPin,
+  ArrowRight,
+  User,
+  LogOut,
+  Search,
+  X,
+  CheckCircle,
+  Users,
+  Zap,
+  AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI, playerAPI } from '../../services/api';
@@ -131,18 +141,19 @@ const UnifiedCompetitionSelectionInner = () => {
         // Fetch coach's teams first to get the team ID
         const teamsResponse = await coachAPI.getTeams();
         const teams = teamsResponse.data.teams || [];
-        
+
         // Find the first team without a competition or the first team
-        const availableTeam = teams.find(t => !t.competitions || t.competitions.length === 0) || teams[0];
-        
+        const availableTeam =
+          teams.find((t) => !t.competitions || t.competitions.length === 0) || teams[0];
+
         if (!availableTeam) {
           setError('Please create a team first before selecting a competition.');
           setLoading(false);
           return;
         }
-        
+
         setCoachTeam(availableTeam);
-        
+
         // Fetch open competitions
         const response = await coachAPI.getOpenCompetitions();
         setItems(response.data.competitions || []);
@@ -154,8 +165,8 @@ const UnifiedCompetitionSelectionInner = () => {
       logger.error(`Failed to load ${role} data:`, err);
       setError(
         err.response?.data?.message ||
-        err.message ||
-        `Failed to load ${config.itemLabel.toLowerCase()}s`
+          err.message ||
+          `Failed to load ${config.itemLabel.toLowerCase()}s`
       );
       toast.error(error || `Failed to load ${config.itemLabel.toLowerCase()}s`);
     } finally {
@@ -181,23 +192,20 @@ const UnifiedCompetitionSelectionInner = () => {
           setSubmitting(false);
           return;
         }
-        
+
         await coachAPI.registerTeamForCompetition(coachTeam.id, selectedItem.id);
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const authResponse = await fetch(
-          `${apiUrl}/auth/set-competition`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ competitionId: selectedItem.id }),
-          }
-        );
+        const authResponse = await fetch(`${apiUrl}/auth/set-competition`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ competitionId: selectedItem.id }),
+        });
 
         if (!authResponse.ok) {
           const errorData = await authResponse.json();
@@ -255,15 +263,16 @@ const UnifiedCompetitionSelectionInner = () => {
     const q = searchQuery.toLowerCase();
 
     if (role === 'coach') {
-      return [item.name, item.place, item.level, item.status, item.description].some(
-        (v) => v?.toLowerCase().includes(q)
+      return [item.name, item.place, item.level, item.status, item.description].some((v) =>
+        v?.toLowerCase().includes(q)
       );
     } else {
       // Player: search by team name, coach name, competition name, description
-      const coachName = typeof item.coach === 'string' 
-        ? item.coach 
-        : `${item.coach?.firstName || ''} ${item.coach?.lastName || ''}`.trim();
-      
+      const coachName =
+        typeof item.coach === 'string'
+          ? item.coach
+          : `${item.coach?.firstName || ''} ${item.coach?.lastName || ''}`.trim();
+
       return [item.name, coachName, item.competitionName, item.description].some((v) =>
         v?.toLowerCase().includes(q)
       );
@@ -280,7 +289,11 @@ const UnifiedCompetitionSelectionInner = () => {
     if (status === 'upcoming') {
       return { bg: '#3B82F618', border: '#3B82F640', color: '#60A5FA' };
     }
-    return { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' };
+    return {
+      bg: 'rgba(255,255,255,0.05)',
+      border: 'rgba(255,255,255,0.1)',
+      color: 'rgba(255,255,255,0.4)',
+    };
   };
 
   // Loading state
@@ -342,7 +355,9 @@ const UnifiedCompetitionSelectionInner = () => {
                 }}
               >
                 <User className="w-4 h-4 text-white/40" aria-hidden="true" />
-                <span className="text-white/70 text-sm">{user.name || user.firstName || 'User'}</span>
+                <span className="text-white/70 text-sm">
+                  {user.name || user.firstName || 'User'}
+                </span>
               </div>
             )}
             <button
@@ -378,7 +393,9 @@ const UnifiedCompetitionSelectionInner = () => {
               color: config.colorLight,
             }}
           >
-            {config.icon && typeof config.icon === 'function' && <config.icon className="w-3 h-3" aria-hidden="true" />}
+            {config.icon && typeof config.icon === 'function' && (
+              <config.icon className="w-3 h-3" aria-hidden="true" />
+            )}
             {config.accessLabel}
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-white mb-3">
@@ -433,7 +450,9 @@ const UnifiedCompetitionSelectionInner = () => {
           {/* Empty state */}
           {filteredItems.length === 0 && !searchQuery && (
             <GlassCard className="p-8 text-center">
-              {config.icon && typeof config.icon === 'function' && <config.icon className="w-12 h-12 mx-auto mb-4 text-white/20" aria-hidden="true" />}
+              {config.icon && typeof config.icon === 'function' && (
+                <config.icon className="w-12 h-12 mx-auto mb-4 text-white/20" aria-hidden="true" />
+              )}
               <p className="text-white/45 mb-4">
                 No {config.itemLabel.toLowerCase()}s available right now.
               </p>
@@ -454,7 +473,10 @@ const UnifiedCompetitionSelectionInner = () => {
           {/* Search bar */}
           {filteredItems.length > 3 && (
             <div className="relative mb-4">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" aria-hidden="true" />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
+                aria-hidden="true"
+              />
               <input
                 type="search"
                 placeholder={`Search ${config.itemLabel.toLowerCase()}s...`}
@@ -525,12 +547,16 @@ const UnifiedCompetitionSelectionInner = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3, delay: idx * 0.05 }}
-                    whileHover={submitting ? {} : {
-                      scale: 1.01,
-                      borderColor: `${config.colorBorder}`,
-                      background: `linear-gradient(135deg, ${config.colorBg}, rgba(255,255,255,0.03))`,
-                      y: -2,
-                    }}
+                    whileHover={
+                      submitting
+                        ? {}
+                        : {
+                            scale: 1.01,
+                            borderColor: `${config.colorBorder}`,
+                            background: `linear-gradient(135deg, ${config.colorBg}, rgba(255,255,255,0.03))`,
+                            y: -2,
+                          }
+                    }
                     whileTap={submitting ? {} : { scale: 0.99 }}
                     aria-pressed={selectedItem?.id === item.id || selectedItem?._id === item._id}
                   >
@@ -578,14 +604,21 @@ const UnifiedCompetitionSelectionInner = () => {
                           <>
                             {item.coach && (
                               <p className="text-white/40 text-sm mt-1">
-                                Coach: {typeof item.coach === 'string' ? item.coach : `${item.coach.firstName || ''} ${item.coach.lastName || ''}`.trim()}
+                                Coach:{' '}
+                                {typeof item.coach === 'string'
+                                  ? item.coach
+                                  : `${item.coach.firstName || ''} ${item.coach.lastName || ''}`.trim()}
                               </p>
                             )}
                             {item.competitionName && (
-                              <p className="text-white/40 text-sm">Competition: {item.competitionName}</p>
+                              <p className="text-white/40 text-sm">
+                                Competition: {item.competitionName}
+                              </p>
                             )}
                             {item.description && (
-                              <p className="text-white/40 text-xs mt-1 line-clamp-1">{item.description}</p>
+                              <p className="text-white/40 text-xs mt-1 line-clamp-1">
+                                {item.description}
+                              </p>
                             )}
                           </>
                         )}
@@ -635,7 +668,14 @@ const UnifiedCompetitionSelectionInner = () => {
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   aria-hidden="true"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
                   <path
                     className="opacity-75"
                     fill="currentColor"

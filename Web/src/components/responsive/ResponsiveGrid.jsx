@@ -1,10 +1,10 @@
 /**
  * ResponsiveGrid Component
- * 
+ *
  * A flexible grid component that adapts its column count, gap, and layout
  * based on the current viewport size. Supports various grid patterns with
  * mobile-first CSS Grid implementation.
- * 
+ *
  * Requirements: 2.1, 3.2, 8.1
  */
 
@@ -35,16 +35,16 @@ export const ResponsiveGrid = ({
   ...props
 }) => {
   const { viewport, isMobile, isTablet, isDesktop } = useResponsive();
-  
+
   // Get grid configuration based on type
   const gridConfig = getResponsiveGrid(type);
-  
+
   // Determine grid styles based on viewport and configuration
   const getGridStyles = () => {
     const styles = {
       display: 'grid',
     };
-    
+
     // Set responsive columns - mobile-first approach
     if (columns) {
       // Custom column configuration
@@ -74,7 +74,7 @@ export const ResponsiveGrid = ({
         styles.gridTemplateColumns = gridConfig.columns;
       }
     }
-    
+
     // Set responsive gap - mobile-first approach
     if (gap) {
       if (isMobile && gap.mobile) {
@@ -96,14 +96,14 @@ export const ResponsiveGrid = ({
         styles.gap = getResponsiveSpacing('gap') || '1.5rem';
       }
     }
-    
+
     return styles;
   };
-  
+
   // Get responsive grid classes
   const getGridClasses = () => {
     const classes = [];
-    
+
     // Add type-specific classes
     switch (type) {
       case 'cards':
@@ -121,22 +121,18 @@ export const ResponsiveGrid = ({
       default:
         classes.push('grid-responsive-custom');
     }
-    
+
     // Add responsive utilities
     classes.push('w-full');
-    
+
     return classes.join(' ');
   };
-  
+
   const gridClasses = `${getGridClasses()} ${className}`.trim();
   const gridStyles = getGridStyles();
-  
+
   return (
-    <Component 
-      className={gridClasses} 
-      style={gridStyles}
-      {...props}
-    >
+    <Component className={gridClasses} style={gridStyles} {...props}>
       {children}
     </Component>
   );
@@ -150,15 +146,15 @@ export const ResponsiveCardGrid = ({ children, className = '', ...props }) => {
   const cardColumns = {
     mobile: '1fr',
     tablet: 'repeat(2, 1fr)',
-    desktop: 'repeat(auto-fit, minmax(280px, 1fr))'
+    desktop: 'repeat(auto-fit, minmax(280px, 1fr))',
   };
-  
+
   const cardGap = {
     mobile: '1rem',
     tablet: '1.25rem',
-    desktop: '1.5rem'
+    desktop: '1.5rem',
   };
-  
+
   return (
     <ResponsiveGrid
       type="cards"
@@ -180,15 +176,15 @@ export const ResponsiveFormGrid = ({ children, className = '', ...props }) => {
   const formColumns = {
     mobile: '1fr',
     tablet: 'repeat(2, 1fr)',
-    desktop: 'repeat(2, 1fr)'
+    desktop: 'repeat(2, 1fr)',
   };
-  
+
   const formGap = {
     mobile: '1rem',
     tablet: '1.25rem',
-    desktop: '1.5rem'
+    desktop: '1.5rem',
   };
-  
+
   return (
     <ResponsiveGrid
       type="form"
@@ -206,18 +202,18 @@ export const ResponsiveFormGrid = ({ children, className = '', ...props }) => {
  * Auto-fit grid that adapts to content size with responsive minimum widths
  * Automatically adjusts column count based on available space
  */
-export const ResponsiveAutoGrid = ({ 
-  children, 
+export const ResponsiveAutoGrid = ({
+  children,
   minItemWidth = '250px',
-  className = '', 
-  ...props 
+  className = '',
+  ...props
 }) => {
   const autoColumns = {
     mobile: '1fr',
     tablet: `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`,
-    desktop: `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`
+    desktop: `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`,
   };
-  
+
   return (
     <ResponsiveGrid
       type="autoFit"
@@ -239,15 +235,15 @@ export const ResponsiveDashboardGrid = ({ children, className = '', ...props }) 
   const dashboardColumns = {
     mobile: '1fr',
     tablet: 'repeat(2, 1fr)',
-    desktop: 'repeat(3, 1fr)'
+    desktop: 'repeat(3, 1fr)',
   };
-  
+
   const dashboardGap = {
     mobile: '1rem',
     tablet: '1.5rem',
-    desktop: '2rem'
+    desktop: '2rem',
   };
-  
+
   return (
     <ResponsiveGrid
       type="cards"
@@ -265,28 +261,29 @@ export const ResponsiveDashboardGrid = ({ children, className = '', ...props }) 
  * Masonry-style grid for varied content heights with responsive columns
  * Uses CSS Grid with auto-fit for masonry-like behavior
  */
-export const ResponsiveMasonryGrid = ({ children, className = '', minItemWidth = '300px', ...props }) => {
+export const ResponsiveMasonryGrid = ({
+  children,
+  className = '',
+  minItemWidth = '300px',
+  ...props
+}) => {
   const { isMobile, isTablet } = useResponsive();
-  
+
   // Dynamic masonry styles based on viewport
   const masonryStyles = {
     display: 'grid',
-    gridTemplateColumns: isMobile 
-      ? '1fr' 
-      : isTablet 
+    gridTemplateColumns: isMobile
+      ? '1fr'
+      : isTablet
         ? 'repeat(2, 1fr)'
         : `repeat(auto-fit, minmax(${minItemWidth}, 1fr))`,
     gridAutoRows: 'min-content',
     gap: isMobile ? '1rem' : isTablet ? '1.25rem' : '1.5rem',
-    alignItems: 'start'
+    alignItems: 'start',
   };
-  
+
   return (
-    <div 
-      className={`responsive-masonry-grid w-full ${className}`}
-      style={masonryStyles}
-      {...props}
-    >
+    <div className={`responsive-masonry-grid w-full ${className}`} style={masonryStyles} {...props}>
       {children}
     </div>
   );
@@ -298,19 +295,19 @@ export const ResponsiveMasonryGrid = ({ children, className = '', minItemWidth =
  */
 export const ResponsiveTableGrid = ({ children, className = '', ...props }) => {
   const { isMobile } = useResponsive();
-  
+
   const tableColumns = {
     mobile: '1fr', // Stack as cards on mobile
     tablet: 'auto', // Auto-sized columns on tablet
-    desktop: 'auto' // Auto-sized columns on desktop
+    desktop: 'auto', // Auto-sized columns on desktop
   };
-  
+
   const tableGap = {
     mobile: '0.5rem',
     tablet: '1rem',
-    desktop: '1rem'
+    desktop: '1rem',
   };
-  
+
   return (
     <ResponsiveGrid
       type="table"

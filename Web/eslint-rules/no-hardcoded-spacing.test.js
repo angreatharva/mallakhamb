@@ -1,6 +1,6 @@
 /**
  * Tests for no-hardcoded-spacing ESLint rule
- * 
+ *
  * Note: These tests verify the rule structure and basic functionality.
  * For comprehensive ESLint rule testing, run: npx eslint --rule 'no-hardcoded-spacing: error' <file>
  */
@@ -28,7 +28,7 @@ describe('no-hardcoded-spacing', () => {
       getFilename: () => 'test.js',
       report: () => {},
     };
-    
+
     const visitor = rule.create(context);
     expect(visitor).toBeDefined();
     expect(typeof visitor).toBe('object');
@@ -39,7 +39,7 @@ describe('no-hardcoded-spacing', () => {
       getFilename: () => 'tokens.js',
       report: () => {},
     };
-    
+
     const visitor = rule.create(tokensContext);
     // Should return empty object for allowed contexts
     expect(Object.keys(visitor).length).toBe(0);

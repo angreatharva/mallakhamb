@@ -31,7 +31,7 @@ export const CompetitionProvider = ({ children, userType }) => {
   const getCompetitionFromToken = useCallback(() => {
     const token = getToken();
     if (!token) return null;
-    
+
     const decoded = getTokenData(token);
     return decoded?.currentCompetition || null;
   }, [getToken]);
@@ -44,10 +44,9 @@ export const CompetitionProvider = ({ children, userType }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get(
-        `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-        { headers: { Authorization: `Bearer ${token}`, ...apiConfig.getHeaders() } }
-      );
+      const response = await axios.get(`${apiConfig.getBaseUrl()}/auth/competitions/assigned`, {
+        headers: { Authorization: `Bearer ${token}`, ...apiConfig.getHeaders() },
+      });
       const competitions = response.data.competitions || [];
       setAssignedCompetitions(competitions);
       const competitionId = getCompetitionFromToken();
@@ -64,57 +63,60 @@ export const CompetitionProvider = ({ children, userType }) => {
   }, [userType, getToken, getCompetitionFromToken]);
 
   // Switch to a different competition
-  const switchCompetition = useCallback(async (competitionId) => {
-    if (!userType) {
-      throw new Error('User type is required to switch competition');
-    }
-
-    const token = getToken();
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-
-    // Prevent multiple simultaneous switches
-    if (isLoading) {
-      throw new Error('Competition switch already in progress');
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await axios.post(
-        `${apiConfig.getBaseUrl()}/auth/set-competition`,
-        { competitionId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...apiConfig.getHeaders(),
-          },
-        }
-      );
-
-      // Update token in secure storage
-      const newToken = response.data.token;
-      secureStorage.setItem(`${userType}_token`, newToken);
-
-      // Update current competition
-      const competition = assignedCompetitions.find((c) => c._id === competitionId);
-      if (competition) {
-        setCurrentCompetition(competition);
+  const switchCompetition = useCallback(
+    async (competitionId) => {
+      if (!userType) {
+        throw new Error('User type is required to switch competition');
       }
 
-      // Small delay for state update before reload
-      await new Promise(resolve => setTimeout(resolve, 100));
-      window.location.reload();
-    } catch (err) {
-      logger.error('Failed to switch competition:', err);
-      setError(err.response?.data?.message || 'Failed to switch competition');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userType, getToken, assignedCompetitions, isLoading]);
+      const token = getToken();
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      // Prevent multiple simultaneous switches
+      if (isLoading) {
+        throw new Error('Competition switch already in progress');
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await axios.post(
+          `${apiConfig.getBaseUrl()}/auth/set-competition`,
+          { competitionId },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...apiConfig.getHeaders(),
+            },
+          }
+        );
+
+        // Update token in secure storage
+        const newToken = response.data.token;
+        secureStorage.setItem(`${userType}_token`, newToken);
+
+        // Update current competition
+        const competition = assignedCompetitions.find((c) => c._id === competitionId);
+        if (competition) {
+          setCurrentCompetition(competition);
+        }
+
+        // Small delay for state update before reload
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        window.location.reload();
+      } catch (err) {
+        logger.error('Failed to switch competition:', err);
+        setError(err.response?.data?.message || 'Failed to switch competition');
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [userType, getToken, assignedCompetitions, isLoading]
+  );
 
   // Clear competition context (for logout)
   const clearCompetitionContext = useCallback(() => {
@@ -137,10 +139,9 @@ export const CompetitionProvider = ({ children, userType }) => {
         setIsLoading(true);
         setError(null);
 
-        const response = await axios.get(
-          `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-          { headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() } }
-        );
+        const response = await axios.get(`${apiConfig.getBaseUrl()}/auth/competitions/assigned`, {
+          headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() },
+        });
 
         if (!isMounted) return;
 
@@ -163,7 +164,9 @@ export const CompetitionProvider = ({ children, userType }) => {
     };
 
     loadCompetitions();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [userType, getToken, getCompetitionFromToken]);
 
   const value = {
@@ -176,11 +179,7 @@ export const CompetitionProvider = ({ children, userType }) => {
     clearCompetitionContext,
   };
 
-  return (
-    <CompetitionContext.Provider value={value}>
-      {children}
-    </CompetitionContext.Provider>
-  );
+  return <CompetitionContext.Provider value={value}>{children}</CompetitionContext.Provider>;
 };
 
 export default CompetitionContext;

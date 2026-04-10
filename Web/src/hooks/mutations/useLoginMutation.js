@@ -14,11 +14,9 @@ export function useLoginMutation({ role }) {
   return useMutation({
     mutationFn: async (credentials) => {
       if (role === 'judge') {
-        const response = await axios.post(
-          `${apiConfig.getBaseUrl()}/judge/login`,
-          credentials,
-          { headers: apiConfig.getHeaders() }
-        );
+        const response = await axios.post(`${apiConfig.getBaseUrl()}/judge/login`, credentials, {
+          headers: apiConfig.getHeaders(),
+        });
         return response.data;
       }
 

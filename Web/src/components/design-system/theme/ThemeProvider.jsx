@@ -16,11 +16,11 @@ export const ThemeContext = createContext(null);
 const detectRoleFromPath = (pathname) => {
   // Match patterns like /admin/*, /coach/*, etc.
   const roleMatch = pathname.match(/^\/([^/]+)/);
-  
+
   if (!roleMatch) return 'public';
-  
+
   const segment = roleMatch[1].toLowerCase();
-  
+
   // Map route segments to roles
   const roleMap = {
     admin: 'admin',
@@ -30,7 +30,7 @@ const detectRoleFromPath = (pathname) => {
     player: 'player',
     judge: 'judge',
   };
-  
+
   return roleMap[segment] || 'public';
 };
 
@@ -41,25 +41,23 @@ const detectRoleFromPath = (pathname) => {
  */
 const generateThemeConfig = (role) => {
   const primaryColor = getRoleColor(role);
-  
+
   // Memoize hex to RGB conversion
   const hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16),
-    } : null;
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
   };
-  
+
   const rgb = hexToRgb(primaryColor);
-  const primaryLight = rgb 
-    ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`
-    : 'rgba(255, 107, 0, 0.15)';
-  const primaryDark = rgb
-    ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)`
-    : 'rgba(255, 107, 0, 0.9)';
-  
+  const primaryLight = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)` : 'rgba(255, 107, 0, 0.15)';
+  const primaryDark = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)` : 'rgba(255, 107, 0, 0.9)';
+
   return {
     role,
     colors: {
@@ -95,45 +93,38 @@ const getCachedThemeConfig = (role) => {
 
 /**
  * ThemeProvider - Provides role-specific theme configuration to child components
- * 
+ *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Child components
  * @param {string} [props.role] - Manual role override (admin, superadmin, coach, player, judge, public)
- * 
+ *
  * @example
  * // Auto-detect role from route
  * <ThemeProvider>
  *   <App />
  * </ThemeProvider>
- * 
+ *
  * @example
  * // Manual role override
  * <ThemeProvider role="admin">
  *   <AdminPanel />
  * </ThemeProvider>
- * 
+ *
  * **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 10.3**
  */
 export const ThemeProvider = ({ children, role: roleProp }) => {
   const location = useLocation();
-  
+
   // Use manual role override if provided, otherwise detect from route
   const detectedRole = useMemo(
     () => roleProp || detectRoleFromPath(location.pathname),
     [roleProp, location.pathname]
   );
-  
+
   // Get cached theme configuration to prevent unnecessary color calculations
-  const themeValue = useMemo(
-    () => getCachedThemeConfig(detectedRole),
-    [detectedRole]
-  );
-  
-  return (
-    <ThemeContext.Provider value={themeValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  const themeValue = useMemo(() => getCachedThemeConfig(detectedRole), [detectedRole]);
+
+  return <ThemeContext.Provider value={themeValue}>{children}</ThemeContext.Provider>;
 };
 
 ThemeProvider.propTypes = {

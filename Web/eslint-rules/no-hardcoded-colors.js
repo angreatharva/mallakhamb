@@ -1,13 +1,13 @@
 /**
  * ESLint Rule: no-hardcoded-colors
  * Flags hardcoded color values and suggests using design tokens instead
- * 
+ *
  * This rule detects:
  * - Hex colors (#FFFFFF, #fff)
  * - RGB/RGBA colors (rgb(), rgba())
  * - HSL/HSLA colors (hsl(), hsla())
  * - Named colors (red, blue, etc.)
- * 
+ *
  * Validates: Requirements 14.1, 14.4
  */
 
@@ -48,9 +48,29 @@ const DESIGN_TOKENS = {
 
 // Common CSS named colors to detect
 const NAMED_COLORS = [
-  'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple',
-  'pink', 'brown', 'gray', 'grey', 'cyan', 'magenta', 'lime', 'navy',
-  'teal', 'aqua', 'maroon', 'olive', 'silver', 'fuchsia', 'indigo',
+  'black',
+  'white',
+  'red',
+  'green',
+  'blue',
+  'yellow',
+  'orange',
+  'purple',
+  'pink',
+  'brown',
+  'gray',
+  'grey',
+  'cyan',
+  'magenta',
+  'lime',
+  'navy',
+  'teal',
+  'aqua',
+  'maroon',
+  'olive',
+  'silver',
+  'fuchsia',
+  'indigo',
 ];
 
 /**
@@ -60,7 +80,7 @@ const NAMED_COLORS = [
  */
 function findClosestToken(color) {
   const normalizedColor = color.toLowerCase().replace(/\s/g, '');
-  
+
   // Direct hex match
   for (const [category, tokens] of Object.entries(DESIGN_TOKENS.colors)) {
     for (const [tokenName, tokenValue] of Object.entries(tokens)) {
@@ -69,7 +89,7 @@ function findClosestToken(color) {
       }
     }
   }
-  
+
   // Suggest based on color name or common patterns
   if (normalizedColor.includes('fff') || normalizedColor === 'white') {
     return 'DESIGN_TOKENS.colors.text.primary';
@@ -77,7 +97,11 @@ function findClosestToken(color) {
   if (normalizedColor.includes('000') || normalizedColor === 'black') {
     return 'DESIGN_TOKENS.colors.surfaces.dark';
   }
-  if (normalizedColor.includes('red') || normalizedColor.includes('f44') || normalizedColor.includes('ef4')) {
+  if (
+    normalizedColor.includes('red') ||
+    normalizedColor.includes('f44') ||
+    normalizedColor.includes('ef4')
+  ) {
     return 'DESIGN_TOKENS.colors.semantic.error';
   }
   if (normalizedColor.includes('green') || normalizedColor.includes('22c')) {
@@ -86,16 +110,24 @@ function findClosestToken(color) {
   if (normalizedColor.includes('blue') || normalizedColor.includes('3b8')) {
     return 'DESIGN_TOKENS.colors.semantic.info';
   }
-  if (normalizedColor.includes('orange') || normalizedColor.includes('ff6') || normalizedColor.includes('f59')) {
+  if (
+    normalizedColor.includes('orange') ||
+    normalizedColor.includes('ff6') ||
+    normalizedColor.includes('f59')
+  ) {
     return 'DESIGN_TOKENS.colors.brand.saffron or DESIGN_TOKENS.colors.semantic.warning';
   }
-  if (normalizedColor.includes('purple') || normalizedColor.includes('8b5') || normalizedColor.includes('a85')) {
+  if (
+    normalizedColor.includes('purple') ||
+    normalizedColor.includes('8b5') ||
+    normalizedColor.includes('a85')
+  ) {
     return 'DESIGN_TOKENS.colors.roles.admin';
   }
   if (normalizedColor.includes('gold') || normalizedColor.includes('f5a')) {
     return 'DESIGN_TOKENS.colors.brand.gold';
   }
-  
+
   return null;
 }
 
@@ -106,33 +138,37 @@ function findClosestToken(color) {
  */
 function detectColorValue(value) {
   if (!value || typeof value !== 'string') return null;
-  
+
   // Hex colors: #RGB, #RRGGBB, #RGBA, #RRGGBBAA
   const hexMatch = value.match(/#([0-9a-fA-F]{3,8})\b/);
   if (hexMatch) {
     return { type: 'hex', value: hexMatch[0], full: value };
   }
-  
+
   // RGB/RGBA colors
   const rgbMatch = value.match(/rgba?\s*\([^)]+\)/i);
   if (rgbMatch) {
     return { type: 'rgb', value: rgbMatch[0], full: value };
   }
-  
+
   // HSL/HSLA colors
   const hslMatch = value.match(/hsla?\s*\([^)]+\)/i);
   if (hslMatch) {
     return { type: 'hsl', value: hslMatch[0], full: value };
   }
-  
+
   // Named colors (only if it's the entire value or part of a CSS property)
   const lowerValue = value.toLowerCase().trim();
   for (const namedColor of NAMED_COLORS) {
-    if (lowerValue === namedColor || lowerValue.startsWith(namedColor + ' ') || lowerValue.endsWith(' ' + namedColor)) {
+    if (
+      lowerValue === namedColor ||
+      lowerValue.startsWith(namedColor + ' ') ||
+      lowerValue.endsWith(' ' + namedColor)
+    ) {
       return { type: 'named', value: namedColor, full: value };
     }
   }
-  
+
   return null;
 }
 
@@ -143,22 +179,22 @@ function detectColorValue(value) {
  */
 function isAllowedContext(context) {
   const filename = context.getFilename();
-  
+
   // Allow in design tokens file
   if (filename.includes('tokens.js') || filename.includes('tokens.ts')) {
     return true;
   }
-  
+
   // Allow in test files
   if (filename.includes('.test.') || filename.includes('.spec.')) {
     return true;
   }
-  
+
   // Allow in Storybook stories
   if (filename.includes('.stories.')) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -171,30 +207,31 @@ export default {
       recommended: true,
     },
     messages: {
-      hardcodedColor: 'Hardcoded color "{{color}}" detected. Use design tokens instead.{{suggestion}}',
+      hardcodedColor:
+        'Hardcoded color "{{color}}" detected. Use design tokens instead.{{suggestion}}',
     },
     schema: [],
   },
-  
+
   create(context) {
     // Skip if in allowed context
     if (isAllowedContext(context)) {
       return {};
     }
-    
+
     return {
       // Check string literals
       Literal(node) {
         if (typeof node.value !== 'string') return;
-        
+
         const colorMatch = detectColorValue(node.value);
         if (!colorMatch) return;
-        
+
         const suggestion = findClosestToken(colorMatch.value);
-        const suggestionText = suggestion 
-          ? ` Consider using: ${suggestion}` 
+        const suggestionText = suggestion
+          ? ` Consider using: ${suggestion}`
           : ' Check DESIGN_TOKENS.colors for available tokens.';
-        
+
         context.report({
           node,
           messageId: 'hardcodedColor',
@@ -204,18 +241,18 @@ export default {
           },
         });
       },
-      
+
       // Check template literals
       TemplateLiteral(node) {
         for (const quasi of node.quasis) {
           const colorMatch = detectColorValue(quasi.value.raw);
           if (!colorMatch) continue;
-          
+
           const suggestion = findClosestToken(colorMatch.value);
-          const suggestionText = suggestion 
-            ? ` Consider using: ${suggestion}` 
+          const suggestionText = suggestion
+            ? ` Consider using: ${suggestion}`
             : ' Check DESIGN_TOKENS.colors for available tokens.';
-          
+
           context.report({
             node,
             messageId: 'hardcodedColor',
@@ -226,30 +263,32 @@ export default {
           });
         }
       },
-      
+
       // Check JSX attribute values
       JSXAttribute(node) {
         if (!node.value) return;
-        
+
         let valueToCheck = null;
-        
+
         if (node.value.type === 'Literal') {
           valueToCheck = node.value.value;
-        } else if (node.value.type === 'JSXExpressionContainer' && 
-                   node.value.expression.type === 'Literal') {
+        } else if (
+          node.value.type === 'JSXExpressionContainer' &&
+          node.value.expression.type === 'Literal'
+        ) {
           valueToCheck = node.value.expression.value;
         }
-        
+
         if (!valueToCheck || typeof valueToCheck !== 'string') return;
-        
+
         const colorMatch = detectColorValue(valueToCheck);
         if (!colorMatch) return;
-        
+
         const suggestion = findClosestToken(colorMatch.value);
-        const suggestionText = suggestion 
-          ? ` Consider using: ${suggestion}` 
+        const suggestionText = suggestion
+          ? ` Consider using: ${suggestion}`
           : ' Check DESIGN_TOKENS.colors for available tokens.';
-        
+
         context.report({
           node: node.value,
           messageId: 'hardcodedColor',

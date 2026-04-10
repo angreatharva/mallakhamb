@@ -2,8 +2,23 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
-  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Building, Calendar,
-  UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  User,
+  Phone,
+  Building,
+  Calendar,
+  UserCheck,
+  UserPlus,
+  Users,
+  Trophy,
+  Layers,
+  Flame,
+  Dumbbell,
+  Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
@@ -305,7 +320,10 @@ const UnifiedRegisterInner = () => {
       >
         {field.label}
         {field.rules?.required && (
-          <span style={{ color: '#EF4444' }} aria-hidden="true"> *</span>
+          <span style={{ color: '#EF4444' }} aria-hidden="true">
+            {' '}
+            *
+          </span>
         )}
       </label>
       <ThemedInput
@@ -515,7 +533,11 @@ const UnifiedRegisterInner = () => {
           </motion.div>
 
           {/* Registration form */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label={`${config.title} registration form`}>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            aria-label={`${config.title} registration form`}
+          >
             <motion.div
               className="space-y-4"
               initial={{ opacity: 0 }}
@@ -533,7 +555,10 @@ const UnifiedRegisterInner = () => {
                     className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
                     style={{ color: `${theme.colors.primary}90` }}
                   >
-                    Gender <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                    Gender{' '}
+                    <span style={{ color: '#EF4444' }} aria-hidden="true">
+                      *
+                    </span>
                   </label>
                   <ThemedSelect
                     id="player-reg-gender"
@@ -572,7 +597,10 @@ const UnifiedRegisterInner = () => {
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
                   style={{ color: `${theme.colors.primary}90` }}
                 >
-                  Password <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                  Password{' '}
+                  <span style={{ color: '#EF4444' }} aria-hidden="true">
+                    *
+                  </span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-password`}
@@ -590,9 +618,11 @@ const UnifiedRegisterInner = () => {
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4 text-white/25" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-white/25" />
+                      )}
                     </button>
                   }
                   {...register('password', {
@@ -625,7 +655,10 @@ const UnifiedRegisterInner = () => {
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
                   style={{ color: `${theme.colors.primary}90` }}
                 >
-                  Confirm Password <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                  Confirm Password{' '}
+                  <span style={{ color: '#EF4444' }} aria-hidden="true">
+                    *
+                  </span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-confirmPassword`}
@@ -635,7 +668,9 @@ const UnifiedRegisterInner = () => {
                   autoComplete="new-password"
                   error={errors.confirmPassword?.message}
                   aria-required="true"
-                  aria-describedby={errors.confirmPassword ? `${role}-reg-confirmPassword-error` : undefined}
+                  aria-describedby={
+                    errors.confirmPassword ? `${role}-reg-confirmPassword-error` : undefined
+                  }
                   rightElement={
                     <button
                       type="button"
@@ -643,15 +678,16 @@ const UnifiedRegisterInner = () => {
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                       aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
                     >
-                      {showConfirm
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                      {showConfirm ? (
+                        <EyeOff className="w-4 h-4 text-white/25" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-white/25" />
+                      )}
                     </button>
                   }
                   {...register('confirmPassword', {
                     required: 'Please confirm your password',
-                    validate: (value) =>
-                      value === passwordValue || 'Passwords do not match',
+                    validate: (value) => value === passwordValue || 'Passwords do not match',
                   })}
                 />
                 <AnimatePresence>
@@ -693,10 +729,7 @@ const UnifiedRegisterInner = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.65 }}
           >
-            <Link
-              to="/"
-              className="text-xs text-white/20 hover:text-white/45 transition-colors"
-            >
+            <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors">
               ← Home
             </Link>
             <div className="flex items-center gap-3">

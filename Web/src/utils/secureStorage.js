@@ -5,19 +5,19 @@ import { logger } from './logger';
 // Generate a more robust encryption key
 const getEncryptionKey = () => {
   const envKey = import.meta.env.VITE_STORAGE_KEY || 'mallakhamb-india-2026';
-  
+
   // Use multiple browser fingerprinting factors for better entropy
   const browserFingerprint = [
     navigator.userAgent.substring(0, 30),
     navigator.language || 'en',
     screen.colorDepth || '24',
     screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset().toString()
+    new Date().getTimezoneOffset().toString(),
   ].join('|');
-  
+
   // Hash the fingerprint for consistent length
   const fingerprintHash = CryptoJS.SHA256(browserFingerprint).toString().substring(0, 32);
-  
+
   return `${envKey}-${fingerprintHash}`;
 };
 
@@ -31,12 +31,12 @@ export const secureStorage = {
       // Do not fall back to plain storage - fail silently to avoid exposing sensitive data
     }
   },
-  
+
   getItem: (key) => {
     try {
       const encrypted = localStorage.getItem(key);
       if (!encrypted) return null;
-      
+
       const decrypted = CryptoJS.AES.decrypt(encrypted, getEncryptionKey());
       const value = decrypted.toString(CryptoJS.enc.Utf8);
       return value || null;
@@ -45,12 +45,12 @@ export const secureStorage = {
       return null; // Do not fall back to plain storage
     }
   },
-  
+
   removeItem: (key) => {
     localStorage.removeItem(key);
   },
-  
+
   clear: () => {
     localStorage.clear();
-  }
+  },
 };

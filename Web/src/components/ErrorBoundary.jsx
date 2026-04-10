@@ -39,9 +39,7 @@ class ErrorBoundary extends React.Component {
           <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
             <div className="text-center">
               <div className="text-red-600 text-6xl mb-4">⚠️</div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Something went wrong
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
               <p className="text-gray-600 mb-6">
                 We're sorry for the inconvenience. Please try refreshing the page.
               </p>

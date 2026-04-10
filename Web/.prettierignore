@@ -1,0 +1,22 @@
+# Build outputs
+dist
+build
+storybook-static
+
+# Dependencies
+node_modules
+
+# Test artifacts
+coverage
+playwright-report
+test-results
+
+# Caches
+.cache
+.storybook-cache
+.vite
+.turbo
+
+# Logs
+*.log
+

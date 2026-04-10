@@ -5,16 +5,16 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * DiagonalBurst - Diagonal gradient background decoration
- * 
+ *
  * Renders a diagonal gradient effect that respects user motion preferences.
  * Positioned absolutely and designed to not interfere with content readability.
- * 
+ *
  * @param {Object} props
  * @param {string} props.color - Hex color for the gradient (default: saffron)
  * @param {number} props.opacity - Opacity value 0-1 (default: 0.08)
  * @param {string} props.direction - Gradient direction: 'top-left-to-bottom-right', 'top-right-to-bottom-left', 'bottom-left-to-top-right', 'bottom-right-to-top-left' (default: 'top-left-to-bottom-right')
  * @param {string} props.className - Additional CSS classes
- * 
+ *
  * @example
  * <DiagonalBurst color="#8B5CF6" direction="top-right-to-bottom-left" opacity={0.1} />
  */

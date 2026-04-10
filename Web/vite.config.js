@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
-import { pwaWorkboxConfig } from './src/config/pwa'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
+import { pwaWorkboxConfig } from './src/config/pwa';
 
 const cspDirectives = [
   "default-src 'self'",
@@ -14,7 +15,7 @@ const cspDirectives = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-]
+];
 
 const securityHeaders = {
   'Content-Security-Policy': cspDirectives.join('; '),
@@ -23,18 +24,22 @@ const securityHeaders = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy':
     'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()',
-}
+};
+
+const isStorybookBuild =
+  process.env.STORYBOOK === 'true' || process.env.npm_lifecycle_event === 'build-storybook';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'prompt',
-      injectRegister: false,
-      manifest: false,
-      workbox: pwaWorkboxConfig,
-    }),
+    !isStorybookBuild &&
+      VitePWA({
+        registerType: 'prompt',
+        injectRegister: false,
+        manifest: false,
+        workbox: pwaWorkboxConfig,
+      }),
   ],
   server: {
     host: '0.0.0.0', // Allow external connections
@@ -48,22 +53,30 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: true, // Remove console.log in production
-        drop_debugger: true
-      }
+        drop_debugger: true,
+      },
     },
     rollupOptions: {
+      plugins: [
+        visualizer({
+          filename: 'dist/stats.html',
+          template: 'treemap',
+          gzipSize: true,
+          open: false,
+        }),
+      ],
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['framer-motion', 'react-hot-toast'],
           'form-vendor': ['react-hook-form'],
-          'icons': ['lucide-react', '@heroicons/react'],
-          'utils': ['axios', 'jwt-decode', 'crypto-js', 'dompurify']
-        }
-      }
+          icons: ['lucide-react', '@heroicons/react'],
+          utils: ['axios', 'jwt-decode', 'crypto-js', 'dompurify'],
+        },
+      },
     },
     // Copy _redirects file to dist folder for Render SPA routing
-    copyPublicDir: true
+    copyPublicDir: true,
   },
   publicDir: 'public',
   test: {
@@ -95,4 +108,4 @@ export default defineConfig({
       reporter: ['text', 'html', 'json', 'clover'],
     },
   },
-})
+});

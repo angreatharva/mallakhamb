@@ -5,17 +5,17 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * RadialBurst - Radial gradient background decoration
- * 
+ *
  * Renders a radial gradient burst effect that respects user motion preferences.
  * Positioned absolutely and designed to not interfere with content readability.
- * 
+ *
  * @param {Object} props
  * @param {string} props.color - Hex color for the burst (default: saffron)
  * @param {number} props.opacity - Opacity value 0-1 (default: 0.15)
  * @param {string} props.position - Position of burst: 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'center' (default: 'top-right')
  * @param {string} props.size - Size of burst: 'sm', 'md', 'lg' (default: 'md')
  * @param {string} props.className - Additional CSS classes
- * 
+ *
  * @example
  * <RadialBurst color="#8B5CF6" position="top-left" size="lg" opacity={0.2} />
  */
@@ -41,7 +41,7 @@ const RadialBurst = ({
     'top-right': { top: '-10%', right: '-10%' },
     'bottom-left': { bottom: '-10%', left: '-10%' },
     'bottom-right': { bottom: '-10%', right: '-10%' },
-    'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+    center: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
   };
 
   const burstSize = sizeMap[size] || sizeMap.md;

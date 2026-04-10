@@ -38,7 +38,8 @@ export function useProfileQuery({ scope = 'player', enabled = true } = {}) {
         admin: 'admin',
         superadmin: 'admin',
       };
-      const base = response.data?.[keyMap[scope]] || response.data?.user || response.data?.profile || null;
+      const base =
+        response.data?.[keyMap[scope]] || response.data?.user || response.data?.profile || null;
       if (scope === 'player' && base) {
         return {
           ...base,

@@ -1,6 +1,6 @@
 /**
  * Responsive Components Index
- * 
+ *
  * Exports all responsive layout components for easy importing
  * throughout the application.
  */
@@ -33,11 +33,7 @@ export {
   ResponsiveFormGrid as ResponsiveFormGridLayout,
 } from './ResponsiveForm';
 
-export {
-  ResponsiveTable,
-  ResponsiveScoringTable,
-  ResponsiveTeamTable,
-} from './ResponsiveTable';
+export { ResponsiveTable, ResponsiveScoringTable, ResponsiveTeamTable } from './ResponsiveTable';
 
 export {
   ResponsiveIndividualRankings,

@@ -3,13 +3,13 @@ import { useCompetition } from '../contexts/CompetitionContext';
 
 // Age group mapping from competition format to display format
 const ageGroupMapping = {
-  'Under10': { value: 'Under10', label: 'Under 10' },
-  'Under12': { value: 'Under12', label: 'Under 12' },
-  'Under14': { value: 'Under14', label: 'Under 14' },
-  'Under16': { value: 'Under16', label: 'Under 16' },
-  'Under18': { value: 'Under18', label: 'Under 18' },
-  'Above16': { value: 'Above16', label: 'Above 16' },
-  'Above18': { value: 'Above18', label: 'Above 18' }
+  Under10: { value: 'Under10', label: 'Under 10' },
+  Under12: { value: 'Under12', label: 'Under 12' },
+  Under14: { value: 'Under14', label: 'Under 14' },
+  Under16: { value: 'Under16', label: 'Under 16' },
+  Under18: { value: 'Under18', label: 'Under 18' },
+  Above16: { value: 'Above16', label: 'Above 16' },
+  Above18: { value: 'Above18', label: 'Above 18' },
 };
 
 /**
@@ -23,40 +23,44 @@ export const useAgeGroups = (gender) => {
   const { currentCompetition } = useCompetition();
 
   return useMemo(() => {
-    if (!currentCompetition || !currentCompetition.ageGroups || currentCompetition.ageGroups.length === 0) {
+    if (
+      !currentCompetition ||
+      !currentCompetition.ageGroups ||
+      currentCompetition.ageGroups.length === 0
+    ) {
       // Fallback to default age groups if competition doesn't have age groups set
-      return gender === 'Male' 
+      return gender === 'Male'
         ? [
             { value: 'Under10', label: 'Under 10' },
             { value: 'Under12', label: 'Under 12' },
             { value: 'Under14', label: 'Under 14' },
             { value: 'Under18', label: 'Under 18' },
-            { value: 'Above18', label: 'Above 18' }
+            { value: 'Above18', label: 'Above 18' },
           ]
         : [
             { value: 'Under10', label: 'Under 10' },
             { value: 'Under12', label: 'Under 12' },
             { value: 'Under14', label: 'Under 14' },
             { value: 'Under16', label: 'Under 16' },
-            { value: 'Above16', label: 'Above 16' }
+            { value: 'Above16', label: 'Above 16' },
           ];
     }
 
     // Filter age groups by gender from competition
     const filteredAgeGroups = currentCompetition.ageGroups
-      .filter(ag => ag.gender === gender)
-      .map(ag => {
+      .filter((ag) => ag.gender === gender)
+      .map((ag) => {
         const mapping = ageGroupMapping[ag.ageGroup];
         if (mapping) {
           return {
             value: mapping.value,
-            label: mapping.label
+            label: mapping.label,
           };
         }
         // Fallback if mapping not found
         return {
           value: ag.ageGroup,
-          label: ag.ageGroup
+          label: ag.ageGroup,
         };
       })
       .sort((a, b) => {
@@ -77,40 +81,44 @@ export const useAllAgeGroups = () => {
   const { currentCompetition } = useCompetition();
 
   const getAgeGroupsForGender = (gender) => {
-    if (!currentCompetition || !currentCompetition.ageGroups || currentCompetition.ageGroups.length === 0) {
+    if (
+      !currentCompetition ||
+      !currentCompetition.ageGroups ||
+      currentCompetition.ageGroups.length === 0
+    ) {
       // Fallback to default age groups if competition doesn't have age groups set
-      return gender === 'Male' 
+      return gender === 'Male'
         ? [
             { value: 'Under10', label: 'Under 10' },
             { value: 'Under12', label: 'Under 12' },
             { value: 'Under14', label: 'Under 14' },
             { value: 'Under18', label: 'Under 18' },
-            { value: 'Above18', label: 'Above 18' }
+            { value: 'Above18', label: 'Above 18' },
           ]
         : [
             { value: 'Under10', label: 'Under 10' },
             { value: 'Under12', label: 'Under 12' },
             { value: 'Under14', label: 'Under 14' },
             { value: 'Under16', label: 'Under 16' },
-            { value: 'Above16', label: 'Above 16' }
+            { value: 'Above16', label: 'Above 16' },
           ];
     }
 
     // Filter age groups by gender from competition
     const filteredAgeGroups = currentCompetition.ageGroups
-      .filter(ag => ag.gender === gender)
-      .map(ag => {
+      .filter((ag) => ag.gender === gender)
+      .map((ag) => {
         const mapping = ageGroupMapping[ag.ageGroup];
         if (mapping) {
           return {
             value: mapping.value,
-            label: mapping.label
+            label: mapping.label,
           };
         }
         // Fallback if mapping not found
         return {
           value: ag.ageGroup,
-          label: ag.ageGroup
+          label: ag.ageGroup,
         };
       })
       .sort((a, b) => {
@@ -125,7 +133,7 @@ export const useAllAgeGroups = () => {
   return useMemo(() => {
     return {
       Male: getAgeGroupsForGender('Male'),
-      Female: getAgeGroupsForGender('Female')
+      Female: getAgeGroupsForGender('Female'),
     };
   }, [currentCompetition]);
 };
@@ -137,7 +145,7 @@ export const useAllAgeGroups = () => {
  */
 export const useAgeGroupValues = (gender) => {
   const groups = useAgeGroups(gender);
-  return useMemo(() => groups.map(g => g.value), [groups]);
+  return useMemo(() => groups.map((g) => g.value), [groups]);
 };
 
 export default useAgeGroups;

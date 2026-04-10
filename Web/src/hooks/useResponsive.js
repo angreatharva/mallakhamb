@@ -1,9 +1,9 @@
 /**
  * React Hook for Responsive State Management
- * 
+ *
  * Provides reactive responsive state that updates when viewport changes.
  * Includes breakpoint detection, viewport categorization, and performance optimization.
- * 
+ *
  * Requirements: 1.1, 1.2, 8.1
  */
 
@@ -30,7 +30,7 @@ import { logger } from '../utils/logger.js';
  */
 export const useResponsive = (options = {}) => {
   const { debounceMs = 250, updateCSSProperties = true } = options;
-  
+
   // Initialize state
   const [viewport, setViewport] = useState(() => ({
     width: typeof window !== 'undefined' ? window.innerWidth : 1440,
@@ -87,7 +87,7 @@ export const useResponsive = (options = {}) => {
     if (typeof window === 'undefined') return;
 
     let timeoutId;
-    
+
     const handleResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(updateResponsiveState, debounceMs);
@@ -107,17 +107,23 @@ export const useResponsive = (options = {}) => {
   }, [updateResponsiveState, debounceMs]);
 
   // Utility functions
-  const isBreakpointActive = useCallback((breakpoint) => {
-    return breakpoints[breakpoint] || false;
-  }, [breakpoints]);
+  const isBreakpointActive = useCallback(
+    (breakpoint) => {
+      return breakpoints[breakpoint] || false;
+    },
+    [breakpoints]
+  );
 
-  const getResponsiveValue = useCallback((values) => {
-    if (typeof values === 'object' && values !== null) {
-      // Return value based on current viewport category
-      return values[viewport.category] || values.desktop || values.default;
-    }
-    return values;
-  }, [viewport.category]);
+  const getResponsiveValue = useCallback(
+    (values) => {
+      if (typeof values === 'object' && values !== null) {
+        // Return value based on current viewport category
+        return values[viewport.category] || values.desktop || values.default;
+      }
+      return values;
+    },
+    [viewport.category]
+  );
 
   const matchesMediaQuery = useCallback((query) => {
     if (typeof window === 'undefined') return false;
@@ -127,15 +133,15 @@ export const useResponsive = (options = {}) => {
   return {
     // Viewport information
     viewport,
-    
+
     // Breakpoint states
     ...breakpoints,
-    
+
     // Utility functions
     isBreakpointActive,
     getResponsiveValue,
     matchesMediaQuery,
-    
+
     // Constants for reference
     BREAKPOINTS,
     RESPONSIVE_RANGES,
@@ -179,7 +185,7 @@ export const useMediaQuery = (query) => {
  */
 export const useBreakpoint = (breakpoint) => {
   const breakpointValue = BREAKPOINTS[breakpoint];
-  
+
   if (!breakpointValue) {
     logger.warn(`Unknown breakpoint: ${breakpoint}`);
   }

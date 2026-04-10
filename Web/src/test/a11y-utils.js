@@ -78,4 +78,3 @@ export const expectContrastAtLeast = (foregroundHex, backgroundHex, minRatio = 4
   const ratio = getContrastRatio(foregroundHex, backgroundHex);
   expect(ratio).toBeGreaterThanOrEqual(minRatio);
 };
-

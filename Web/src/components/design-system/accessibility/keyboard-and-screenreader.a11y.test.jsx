@@ -75,4 +75,3 @@ describe('Keyboard navigation and screen reader tests', () => {
     expect(cancelButton).toHaveFocus();
   });
 });
-

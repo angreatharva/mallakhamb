@@ -16,7 +16,8 @@ const statusColors = {
 
 const CompetitionSelector = ({ userType }) => {
   const navigate = useNavigate();
-  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading } =
+    useCompetition();
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,13 +34,18 @@ const CompetitionSelector = ({ userType }) => {
 
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e) => { if (e.key === 'Escape') setIsOpen(false); };
+    const handler = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen]);
 
   const handleSwitch = async (competitionId) => {
-    if (competitionId === currentCompetition?._id) { setIsOpen(false); return; }
+    if (competitionId === currentCompetition?._id) {
+      setIsOpen(false);
+      return;
+    }
     try {
       setIsSwitching(true);
       await switchCompetition(competitionId);
@@ -69,8 +75,13 @@ const CompetitionSelector = ({ userType }) => {
   });
 
   if (isLoading) return null;
-  if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1)) return null;
-  if ((userType === 'player' || userType === 'coach') && (!assignedCompetitions || assignedCompetitions.length === 0)) return null;
+  if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1))
+    return null;
+  if (
+    (userType === 'player' || userType === 'coach') &&
+    (!assignedCompetitions || assignedCompetitions.length === 0)
+  )
+    return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -88,9 +99,16 @@ const CompetitionSelector = ({ userType }) => {
         aria-expanded={isOpen}
         aria-label="Select competition"
       >
-        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+        <Trophy
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: COLORS.saffron }}
+          aria-hidden="true"
+        />
         <div className="flex flex-col items-start max-w-[160px]">
-          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span
+            className="text-[10px] font-semibold tracking-widest uppercase"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+          >
             Competition
           </span>
           <span className="text-xs font-semibold text-white truncate w-full">
@@ -100,7 +118,10 @@ const CompetitionSelector = ({ userType }) => {
           </span>
         </div>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+          <ChevronDown
+            className="w-3.5 h-3.5 flex-shrink-0"
+            style={{ color: 'rgba(255,255,255,0.35)' }}
+          />
         </motion.div>
       </motion.button>
 
@@ -122,7 +143,10 @@ const CompetitionSelector = ({ userType }) => {
           >
             {/* Header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>
+              <p
+                className="text-xs font-bold tracking-widest uppercase"
+                style={{ color: COLORS.saffron }}
+              >
                 Switch Competition
               </p>
             </div>
@@ -131,8 +155,11 @@ const CompetitionSelector = ({ userType }) => {
             {assignedCompetitions && assignedCompetitions.length > 3 && (
               <div className="p-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                    aria-hidden="true"
+                  />
                   <input
                     type="text"
                     placeholder="Search competitions..."
@@ -147,9 +174,14 @@ const CompetitionSelector = ({ userType }) => {
                     onClick={(e) => e.stopPropagation()}
                   />
                   {searchQuery && (
-                    <button onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchQuery('');
+                      }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-                      aria-label="Clear search">
+                      aria-label="Clear search"
+                    >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -187,29 +219,46 @@ const CompetitionSelector = ({ userType }) => {
                             <span className="text-sm font-semibold text-white truncate">
                               {competition.name} {competition.year || ''}
                             </span>
-                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                            {isActive && (
+                              <Check
+                                className="w-3.5 h-3.5 flex-shrink-0"
+                                style={{ color: COLORS.saffron }}
+                                aria-hidden="true"
+                              />
+                            )}
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {competition.place && (
-                              <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              <span
+                                className="flex items-center gap-1 text-xs"
+                                style={{ color: 'rgba(255,255,255,0.35)' }}
+                              >
                                 <MapPin className="w-2.5 h-2.5" aria-hidden="true" />
                                 {competition.place}
                               </span>
                             )}
-                            <span className="text-xs capitalize" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            <span
+                              className="text-xs capitalize"
+                              style={{ color: 'rgba(255,255,255,0.3)' }}
+                            >
                               {competition.level}
                             </span>
                           </div>
                           {competition.startDate && competition.endDate && (
-                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            <div
+                              className="flex items-center gap-1 mt-1 text-xs"
+                              style={{ color: 'rgba(255,255,255,0.25)' }}
+                            >
                               <Calendar className="w-2.5 h-2.5" aria-hidden="true" />
                               {new Date(competition.startDate).toLocaleDateString()} –{' '}
                               {new Date(competition.endDate).toLocaleDateString()}
                             </div>
                           )}
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
-                          style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}>
+                        <span
+                          className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
+                          style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}
+                        >
                           {competition.status}
                         </span>
                       </div>
@@ -228,11 +277,19 @@ const CompetitionSelector = ({ userType }) => {
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
                   whileHover={{ background: 'rgba(34,197,94,0.08)' }}
                 >
-                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <PlusCircle
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: '#22C55E' }}
+                    aria-hidden="true"
+                  />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>Register for New Competition</p>
+                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
+                      Register for New Competition
+                    </p>
                     <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {userType === 'player' ? 'Join a team for a new competition' : 'Register your team'}
+                      {userType === 'player'
+                        ? 'Join a team for a new competition'
+                        : 'Register your team'}
                     </p>
                   </div>
                 </motion.button>
@@ -248,12 +305,16 @@ const CompetitionSelector = ({ userType }) => {
           <motion.div
             className="fixed inset-0 z-[100] flex items-center justify-center"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
             <motion.div
               className="flex items-center gap-3 px-6 py-4 rounded-2xl border"
               style={{ background: '#111111', borderColor: `${COLORS.saffron}30` }}
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
             >
               <motion.div
                 className="w-5 h-5 rounded-full border-2 border-t-transparent"

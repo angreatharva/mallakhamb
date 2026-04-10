@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  DESIGN_TOKENS,
-  getStatusColor,
-  getStatusBg,
-  getRoleColor,
-  getRoleBg,
-} from './tokens';
+import { DESIGN_TOKENS, getStatusColor, getStatusBg, getRoleColor, getRoleBg } from './tokens';
 
 describe('Token Helper Functions', () => {
   describe('getStatusColor', () => {
@@ -270,7 +264,7 @@ describe('Token Helper Functions', () => {
         const bgColor = getRoleBg(role);
         const match = bgColor.match(/rgba\((\d+), (\d+), (\d+), 0\.09\)/);
         expect(match).toBeTruthy();
-        
+
         const [, r, g, b] = match;
         expect(parseInt(r)).toBeGreaterThanOrEqual(0);
         expect(parseInt(r)).toBeLessThanOrEqual(255);
@@ -286,7 +280,7 @@ describe('Token Helper Functions', () => {
     it('should use consistent fallback color for all helper functions', () => {
       const statusFallback = getStatusColor('invalid');
       const roleFallback = getRoleColor('invalid');
-      
+
       expect(statusFallback).toBe(DESIGN_TOKENS.colors.brand.saffron);
       expect(roleFallback).toBe(DESIGN_TOKENS.colors.brand.saffron);
       expect(statusFallback).toBe(roleFallback);
@@ -295,7 +289,7 @@ describe('Token Helper Functions', () => {
     it('should use consistent fallback background for all helper functions', () => {
       const statusBgFallback = getStatusBg('invalid');
       const roleBgFallback = getRoleBg('invalid');
-      
+
       expect(statusBgFallback).toBe('rgba(255, 107, 0, 0.09)');
       expect(roleBgFallback).toBe('rgba(255, 107, 0, 0.09)');
       expect(statusBgFallback).toBe(roleBgFallback);
@@ -303,11 +297,11 @@ describe('Token Helper Functions', () => {
 
     it('should handle various falsy values consistently', () => {
       const falsyValues = [null, undefined, '', 0, false];
-      
+
       falsyValues.forEach((value) => {
         const statusColor = getStatusColor(value);
         const roleColor = getRoleColor(value);
-        
+
         expect(statusColor).toBe(DESIGN_TOKENS.colors.brand.saffron);
         expect(roleColor).toBe(DESIGN_TOKENS.colors.brand.saffron);
       });
@@ -315,11 +309,11 @@ describe('Token Helper Functions', () => {
 
     it('should handle special characters in input', () => {
       const specialInputs = ['@#$%', '!!!', '   ', '\n\t'];
-      
+
       specialInputs.forEach((input) => {
         const statusColor = getStatusColor(input);
         const roleColor = getRoleColor(input);
-        
+
         expect(statusColor).toBe(DESIGN_TOKENS.colors.brand.saffron);
         expect(roleColor).toBe(DESIGN_TOKENS.colors.brand.saffron);
       });
@@ -366,7 +360,7 @@ describe('Token Helper Functions', () => {
       const color = getStatusColor(['completed']);
       // This actually returns the completed color because JS coerces the array to string
       expect(color).toBe(DESIGN_TOKENS.colors.status.completed);
-      
+
       // But an array without a matching key returns fallback
       const color2 = getStatusColor(['invalid']);
       expect(color2).toBe(DESIGN_TOKENS.colors.brand.saffron);
@@ -377,7 +371,7 @@ describe('Token Helper Functions', () => {
       inputs.forEach((input) => {
         const statusColor = getStatusColor(input);
         const roleColor = getRoleColor(input);
-        
+
         expect(typeof statusColor).toBe('string');
         expect(typeof roleColor).toBe('string');
       });
@@ -388,7 +382,7 @@ describe('Token Helper Functions', () => {
       inputs.forEach((input) => {
         const statusColor = getStatusColor(input);
         const roleColor = getRoleColor(input);
-        
+
         expect(statusColor).toMatch(/^#[0-9A-F]{6}$/i);
         expect(roleColor).toMatch(/^#[0-9A-F]{6}$/i);
       });
@@ -399,7 +393,7 @@ describe('Token Helper Functions', () => {
       inputs.forEach((input) => {
         const statusBg = getStatusBg(input);
         const roleBg = getRoleBg(input);
-        
+
         expect(statusBg).toMatch(/^rgba\(\d+, \d+, \d+, 0\.09\)$/);
         expect(roleBg).toMatch(/^rgba\(\d+, \d+, \d+, 0\.09\)$/);
       });
