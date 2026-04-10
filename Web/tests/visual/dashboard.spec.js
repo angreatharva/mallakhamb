@@ -31,11 +31,14 @@ test.describe('Visual regression - dashboard page', () => {
 
   test('superadmin dashboard matches baseline', async ({ page }) => {
     await page.goto('/superadmin/login');
-    await page.getByRole('textbox', { name: 'Email *' }).fill('superadmin@example.com');
-    await page.getByRole('textbox', { name: 'Password *' }).fill('Password123!');
+    await page.locator('#superadmin-email').fill('superadmin@example.com');
+    await page.locator('#superadmin-password').fill('Password123!');
     await page.getByRole('button', { name: /Enter Command Center|Sign In/i }).click();
 
     await expect(page).toHaveURL(/\/superadmin\/dashboard$/, { timeout: 15000 });
-    await expect(page).toHaveScreenshot('superadmin-dashboard.png', { fullPage: true, timeout: 20000 });
+    await expect(page).toHaveScreenshot('superadmin-dashboard.png', {
+      fullPage: true,
+      timeout: 20000,
+    });
   });
 });

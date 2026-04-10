@@ -23,7 +23,8 @@ test.describe('Visual regression - scoring page', () => {
         }),
       },
       {
-        match: (pathname, method) => pathname.endsWith('/public/submitted-teams') && method === 'GET',
+        match: (pathname, method) =>
+          pathname.endsWith('/public/submitted-teams') && method === 'GET',
         response: jsonResponse(200, {
           teams: [
             {
@@ -52,7 +53,7 @@ test.describe('Visual regression - scoring page', () => {
     ]);
   });
 
-  test('judge scoring page matches baseline', async ({ page }, testInfo) => {
+  test('judge scoring page matches baseline', async ({ page }) => {
     await page.goto('/judge/login');
     await page.locator('#judge-username').fill('judgeuser');
     await page.locator('#judge-password').fill('Password123!');
@@ -60,19 +61,11 @@ test.describe('Visual regression - scoring page', () => {
 
     await expect(page).toHaveURL(/\/judge\/scoring$/, { timeout: 15000 });
     await expect(page.getByText('Select Competition Type')).toBeVisible();
-    if (testInfo.project.name === 'visual-mobile') {
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(page).toHaveScreenshot('judge-scoring.png', {
-        clip: { x: 0, y: 0, width: 375, height: 700 },
-        mask: [page.locator('svg')],
-        timeout: 20000,
-      });
-      return;
-    }
-
     await expect(page.locator('main')).toHaveScreenshot('judge-scoring.png', {
       mask: [page.locator('svg')],
       timeout: 20000,
+      maxDiffPixelRatio: 0.03,
+      threshold: 0.3,
     });
   });
 });

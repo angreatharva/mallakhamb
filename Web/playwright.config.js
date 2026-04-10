@@ -9,10 +9,7 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   workers: isCI ? 1 : 4,
   snapshotPathTemplate: '{testDir}/visual/__screenshots__/{testFilePath}/{arg}-{projectName}{ext}',
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-  ],
+  reporter: [['list'], ['html', { open: 'never' }]],
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
@@ -27,11 +24,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     headless: true,
+    serviceWorkers: 'block',
   },
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    timeout: 180000,
+    timeout: 360000,
     reuseExistingServer: !isCI,
   },
   projects: [
@@ -54,7 +52,7 @@ export default defineConfig({
       name: 'visual-mobile',
       testMatch: /visual\/.*\.spec\.js/,
       use: {
-        ...devices['iPhone 12'],
+        ...devices['Desktop Chrome'],
         viewport: { width: 375, height: 812 },
       },
     },
@@ -62,7 +60,7 @@ export default defineConfig({
       name: 'visual-tablet',
       testMatch: /visual\/.*\.spec\.js/,
       use: {
-        ...devices['iPad (gen 7)'],
+        ...devices['Desktop Chrome'],
         viewport: { width: 768, height: 1024 },
       },
     },

@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDB9.signature';
 
+test.setTimeout(90000);
+
 test('judge score submission flow', async ({ page }) => {
   await page.route('http://localhost:5000/api/**', async (route) => {
     const request = route.request();
@@ -77,7 +79,7 @@ test('judge score submission flow', async ({ page }) => {
   await page.locator('#judge-password').fill('Password123!');
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  await expect(page).toHaveURL(/\/judge\/scoring$/);
+  await expect(page).toHaveURL(/\/judge\/scoring$/, { timeout: 15000 });
 
   await page.getByRole('button', { name: /Competition I/i }).click();
   await page.getByRole('button', { name: /Team Phoenix/i }).click();

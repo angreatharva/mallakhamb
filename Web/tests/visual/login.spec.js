@@ -5,7 +5,7 @@ test.describe('Visual regression - login page', () => {
 
   test('player login page matches baseline', async ({ page }) => {
     await page.goto('/player/login');
-    await expect(page.getByRole('textbox', { name: 'Email *' })).toBeVisible();
+    await expect(page.locator('#player-email')).toBeVisible({ timeout: 15000 });
     await expect(page).toHaveScreenshot('player-login.png', { fullPage: true, timeout: 20000 });
   });
 });
