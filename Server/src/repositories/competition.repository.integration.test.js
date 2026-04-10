@@ -25,11 +25,14 @@ describe('CompetitionRepository Integration Tests', () => {
   beforeAll(async () => {
     const mongoUri = process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/test-db';
     await mongoose.connect(mongoUri);
-  });
+  }, 60000);
 
   afterAll(async () => {
+    await Competition.deleteMany({});
+    await Team.deleteMany({});
+    await Coach.deleteMany({});
     await mongoose.connection.close();
-  });
+  }, 60000);
 
   beforeEach(async () => {
     mockLogger = {
@@ -60,13 +63,13 @@ describe('CompetitionRepository Integration Tests', () => {
       description: 'Test team'
     });
     testTeamId = team._id;
-  });
+  }, 60000);
 
   afterEach(async () => {
     await Competition.deleteMany({});
     await Team.deleteMany({});
     await Coach.deleteMany({});
-  });
+  }, 60000);
 
   describe('CRUD Operations', () => {
     test('should create a competition', async () => {
@@ -383,6 +386,9 @@ describe('CompetitionRepository Integration Tests', () => {
     });
 
     test('should sort competitions by start date', async () => {
+      // Clear existing competitions first to avoid conflicts
+      await Competition.deleteMany({});
+      
       await Competition.create([
         {
           name: 'Competition C',

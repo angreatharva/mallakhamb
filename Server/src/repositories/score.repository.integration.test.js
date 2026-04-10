@@ -29,11 +29,16 @@ describe('ScoreRepository Integration Tests', () => {
   beforeAll(async () => {
     const mongoUri = process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/test-db';
     await mongoose.connect(mongoUri);
-  });
+  }, 60000);
 
   afterAll(async () => {
+    await Score.deleteMany({});
+    await Competition.deleteMany({});
+    await Team.deleteMany({});
+    await Player.deleteMany({});
+    await Coach.deleteMany({});
     await mongoose.connection.close();
-  });
+  }, 60000);
 
   beforeEach(async () => {
     mockLogger = {
@@ -103,7 +108,7 @@ describe('ScoreRepository Integration Tests', () => {
       team: testTeamId
     });
     testPlayerId2 = player2._id;
-  });
+  }, 60000);
 
   afterEach(async () => {
     await Score.deleteMany({});
@@ -111,7 +116,7 @@ describe('ScoreRepository Integration Tests', () => {
     await Team.deleteMany({});
     await Player.deleteMany({});
     await Coach.deleteMany({});
-  });
+  }, 60000);
 
   describe('CRUD Operations', () => {
     test('should create a score', async () => {
@@ -578,6 +583,44 @@ describe('ScoreRepository Integration Tests', () => {
     });
 
     test('should count scores with criteria', async () => {
+      // Clear existing competitions to avoid duplicate key error
+      await Competition.deleteMany({});
+      
+      // Recreate test competition with unique values
+      const uniqueCompetition = await Competition.create({
+        name: `Count Test Competition ${Date.now()}`,
+        level: 'state',
+        competitionTypes: ['competition_1'],
+        place: `Mumbai-${Date.now()}`,
+        year: 2024,
+        startDate: new Date('2024-06-01'),
+        endDate: new Date('2024-06-05'),
+        status: 'ongoing'
+      });
+      
+      // Clear and recreate scores with new competition
+      await Score.deleteMany({});
+      await Score.create([
+        {
+          competition: uniqueCompetition._id,
+          teamId: testTeamId,
+          gender: 'Male',
+          ageGroup: 'Under18',
+          competitionType: 'Competition I',
+          isLocked: true,
+          playerScores: []
+        },
+        {
+          competition: uniqueCompetition._id,
+          teamId: testTeamId,
+          gender: 'Male',
+          ageGroup: 'Under18',
+          competitionType: 'Competition II',
+          isLocked: false,
+          playerScores: []
+        }
+      ]);
+
       const lockedCount = await repository.count({ isLocked: true });
       const unlockedCount = await repository.count({ isLocked: false });
 
