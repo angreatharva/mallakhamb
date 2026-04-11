@@ -9,9 +9,17 @@ lerna-debug.log*
 
 .env
 node_modules/
-dist
+dist/
 dist-ssr
 *.local
+coverage/
+playwright-report/
+test-results/
+storybook-static/
+.cache/
+.storybook-cache/
+.vite/
+.turbo/
 
 # Editor directories and files
 .vscode/*

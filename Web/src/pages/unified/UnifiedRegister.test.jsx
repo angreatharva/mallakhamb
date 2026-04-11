@@ -29,19 +29,64 @@ vi.mock('../../components/design-system/ornaments', () => ({
 // Mock framer-motion to render plain HTML elements (avoids animation issues in tests)
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }) => <div {...props}>{children}</div>,
-    input: React.forwardRef(({ whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }, ref) => (
-      <input ref={ref} {...props} />
-    )),
-    button: ({ children, whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }) => (
-      <button {...props}>{children}</button>
+    div: ({
+      children,
+      whileFocus,
+      whileHover,
+      whileTap,
+      initial,
+      animate,
+      exit,
+      transition,
+      ...props
+    }) => <div {...props}>{children}</div>,
+    input: React.forwardRef(
+      ({ whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }, ref) => (
+        <input ref={ref} {...props} />
+      )
     ),
-    p: ({ children, whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }) => (
-      <p {...props}>{children}</p>
+    button: ({
+      children,
+      whileFocus,
+      whileHover,
+      whileTap,
+      initial,
+      animate,
+      exit,
+      transition,
+      ...props
+    }) => <button {...props}>{children}</button>,
+    p: ({
+      children,
+      whileFocus,
+      whileHover,
+      whileTap,
+      initial,
+      animate,
+      exit,
+      transition,
+      ...props
+    }) => <p {...props}>{children}</p>,
+    select: React.forwardRef(
+      (
+        {
+          children,
+          whileFocus,
+          whileHover,
+          whileTap,
+          initial,
+          animate,
+          exit,
+          transition,
+          ...props
+        },
+        ref
+      ) => (
+        <select ref={ref} {...props}>
+          {children}
+        </select>
+      )
     ),
-    select: React.forwardRef(({ children, whileFocus, whileHover, whileTap, initial, animate, exit, transition, ...props }, ref) => (
-      <select ref={ref} {...props}>{children}</select>
-    )),
   },
   AnimatePresence: ({ children }) => <>{children}</>,
   useReducedMotion: () => false,
@@ -62,7 +107,7 @@ vi.mock('../../hooks/useResponsive', () => ({
     isMobile: false,
     isTablet: false,
     isDesktop: true,
-    getResponsiveValue: (v) => (typeof v === 'string' ? v : v.desktop ?? 'md'),
+    getResponsiveValue: (v) => (typeof v === 'string' ? v : (v.desktop ?? 'md')),
   }),
 }));
 
@@ -80,8 +125,7 @@ const renderAt = (route) =>
   );
 
 // Use querySelector to avoid label-text ambiguity for password fields
-const getPasswordInput = (container, role) =>
-  container.querySelector(`#${role}-reg-password`);
+const getPasswordInput = (container, role) => container.querySelector(`#${role}-reg-password`);
 
 const getConfirmPasswordInput = (container, role) =>
   container.querySelector(`#${role}-reg-confirmPassword`);
@@ -99,12 +143,16 @@ describe('UnifiedRegister', () => {
   describe('Role detection', () => {
     it('renders coach registration at /coach/register', async () => {
       renderAt('/coach/register');
-      await waitFor(() => expect(screen.getByText(/coach registration/i)).toBeInTheDocument(), { timeout: 3000 });
+      await waitFor(() => expect(screen.getByText(/coach registration/i)).toBeInTheDocument(), {
+        timeout: 3000,
+      });
     });
 
     it('renders player registration at /player/register', async () => {
       renderAt('/player/register');
-      await waitFor(() => expect(screen.getByText(/player registration/i)).toBeInTheDocument(), { timeout: 3000 });
+      await waitFor(() => expect(screen.getByText(/player registration/i)).toBeInTheDocument(), {
+        timeout: 3000,
+      });
     });
 
     it('defaults to coach for unknown paths', async () => {
@@ -162,14 +210,16 @@ describe('UnifiedRegister', () => {
     it('shows required errors when submitting empty coach form', async () => {
       const user = userEvent.setup();
       renderAt('/coach/register');
-      await waitFor(() => expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
+      );
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
-        expect(alerts.some(a => a.textContent.includes('Name is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Email is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Phone number is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Password is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Name is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Email is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Phone number is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Password is required'))).toBe(true);
       });
     });
 
@@ -181,7 +231,7 @@ describe('UnifiedRegister', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
-        expect(alerts.some(a => a.textContent.includes('Invalid email'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Invalid email'))).toBe(true);
       });
     });
 
@@ -193,7 +243,7 @@ describe('UnifiedRegister', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
-        expect(alerts.some(a => a.textContent.includes('at least 6 characters'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('at least 6 characters'))).toBe(true);
       });
     });
 
@@ -206,7 +256,9 @@ describe('UnifiedRegister', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
-        const passwordMismatchAlert = alerts.find(alert => alert.textContent.includes('Passwords do not match'));
+        const passwordMismatchAlert = alerts.find((alert) =>
+          alert.textContent.includes('Passwords do not match')
+        );
         expect(passwordMismatchAlert).toBeInTheDocument();
       });
     });
@@ -214,15 +266,17 @@ describe('UnifiedRegister', () => {
     it('shows required errors when submitting empty player form', async () => {
       const user = userEvent.setup();
       renderAt('/player/register');
-      await waitFor(() => expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
+      );
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
         // Check for at least the main required fields
-        expect(alerts.some(a => a.textContent.includes('First name is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Last name is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Email is required'))).toBe(true);
-        expect(alerts.some(a => a.textContent.includes('Date of birth is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('First name is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Last name is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Email is required'))).toBe(true);
+        expect(alerts.some((a) => a.textContent.includes('Date of birth is required'))).toBe(true);
       });
     });
   });
@@ -306,7 +360,9 @@ describe('UnifiedRegister', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => expect(api.coachAPI.register).toHaveBeenCalled());
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/coach/create-team'), { timeout: 2000 });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/coach/create-team'), {
+        timeout: 2000,
+      });
     });
 
     it('navigates player to /player/select-team after successful registration', async () => {
@@ -331,7 +387,9 @@ describe('UnifiedRegister', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => expect(api.playerAPI.register).toHaveBeenCalled());
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/player/select-team'), { timeout: 2000 });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/player/select-team'), {
+        timeout: 2000,
+      });
     });
   });
 
@@ -408,7 +466,9 @@ describe('UnifiedRegister', () => {
     it('error messages have role="alert"', async () => {
       const user = userEvent.setup();
       renderAt('/coach/register');
-      await waitFor(() => expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
+      );
       await user.click(screen.getByRole('button', { name: /create account/i }));
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');

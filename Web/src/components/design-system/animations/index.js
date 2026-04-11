@@ -1,6 +1,6 @@
 /**
  * Animation Utilities and Components
- * 
+ *
  * Centralized animation utilities for the design system.
  * All animations respect prefers-reduced-motion setting.
  */

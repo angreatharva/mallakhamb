@@ -10,7 +10,7 @@ describe('Ornament Components', () => {
   beforeEach(() => {
     // Mock useReducedMotion to return false by default
     vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(false);
-    
+
     // Mock useTheme to return a default theme
     vi.spyOn(useThemeModule, 'useTheme').mockReturnValue({
       colors: {
@@ -86,7 +86,7 @@ describe('Ornament Components', () => {
       it('should not render animated rings when reduced motion is preferred', () => {
         vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(true);
         const { container } = render(<ShieldOrnament />);
-        
+
         // Outer dashed ring should not be rendered
         const dashedRing = container.querySelector('[style*="dashed"]');
         expect(dashedRing).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('Ornament Components', () => {
       it('should render animated rings when motion is allowed', () => {
         vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(false);
         const { container } = render(<ShieldOrnament />);
-        
+
         // Outer dashed ring should be rendered
         const dashedRing = container.querySelector('[style*="dashed"]');
         expect(dashedRing).toBeInTheDocument();
@@ -161,7 +161,7 @@ describe('Ornament Components', () => {
       it('should not render animated rings when reduced motion is preferred', () => {
         vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(true);
         const { container } = render(<CoachOrnament />);
-        
+
         // Outer dashed ring should not be rendered
         const dashedRing = container.querySelector('[style*="dashed"]');
         expect(dashedRing).not.toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('Ornament Components', () => {
       it('should render animated rings when motion is allowed', () => {
         vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(false);
         const { container } = render(<CoachOrnament />);
-        
+
         // Outer dashed ring should be rendered
         const dashedRing = container.querySelector('[style*="dashed"]');
         expect(dashedRing).toBeInTheDocument();
@@ -194,9 +194,7 @@ describe('Ornament Components', () => {
       });
 
       it('should apply custom className', () => {
-        const { container } = render(
-          <GradientText className="custom-class">Test</GradientText>
-        );
+        const { container } = render(<GradientText className="custom-class">Test</GradientText>);
         const span = container.querySelector('.custom-class');
         expect(span).toBeInTheDocument();
       });
@@ -214,9 +212,7 @@ describe('Ornament Components', () => {
     describe('Color Customization', () => {
       it('should use custom colors when provided', () => {
         const customColors = ['#FF0000', '#00FF00', '#0000FF'];
-        const { container } = render(
-          <GradientText colors={customColors}>Test</GradientText>
-        );
+        const { container } = render(<GradientText colors={customColors}>Test</GradientText>);
         const span = container.querySelector('span');
         // Check that custom colors are in the gradient
         expect(span.style.background).toContain('linear-gradient');
@@ -249,9 +245,7 @@ describe('Ornament Components', () => {
       });
 
       it('should animate when animate prop is true', () => {
-        const { container } = render(
-          <GradientText animate>Test</GradientText>
-        );
+        const { container } = render(<GradientText animate>Test</GradientText>);
         const span = container.querySelector('span');
         // Animated span should have backgroundSize set
         expect(span.style.backgroundSize).toBe('200% 200%');
@@ -259,9 +253,7 @@ describe('Ornament Components', () => {
 
       it('should not animate when reduced motion is preferred', () => {
         vi.spyOn(useReducedMotionModule, 'useReducedMotion').mockReturnValue(true);
-        const { container } = render(
-          <GradientText animate>Test</GradientText>
-        );
+        const { container } = render(<GradientText animate>Test</GradientText>);
         const span = container.querySelector('span');
         // Should render static span when reduced motion is preferred
         expect(span.style.backgroundSize).not.toBe('200% 200%');
@@ -275,18 +267,14 @@ describe('Ornament Components', () => {
       });
 
       it('should handle single color in colors array', () => {
-        const { container } = render(
-          <GradientText colors={['#FF0000']}>Test</GradientText>
-        );
+        const { container } = render(<GradientText colors={['#FF0000']}>Test</GradientText>);
         const span = container.querySelector('span');
         // Should fallback to theme colors when less than 2 colors provided
         expect(span).toBeInTheDocument();
       });
 
       it('should handle invalid colors array', () => {
-        const { container } = render(
-          <GradientText colors="not-an-array">Test</GradientText>
-        );
+        const { container } = render(<GradientText colors="not-an-array">Test</GradientText>);
         const span = container.querySelector('span');
         // Should fallback to theme colors
         expect(span).toBeInTheDocument();
@@ -303,7 +291,7 @@ describe('Ornament Components', () => {
           <GradientText>Test</GradientText>
         </div>
       );
-      
+
       expect(container).toBeInTheDocument();
       expect(screen.getByText('Test')).toBeInTheDocument();
     });
@@ -316,9 +304,9 @@ describe('Ornament Components', () => {
           primaryDark: '#AA0000',
         },
       };
-      
+
       vi.spyOn(useThemeModule, 'useTheme').mockReturnValue(customTheme);
-      
+
       const { container } = render(
         <div>
           <ShieldOrnament />
@@ -326,9 +314,9 @@ describe('Ornament Components', () => {
           <GradientText>Test</GradientText>
         </div>
       );
-      
+
       const icons = container.querySelectorAll('svg[aria-hidden="true"]');
-      icons.forEach(icon => {
+      icons.forEach((icon) => {
         expect(icon).toHaveStyle({ color: '#FF0000' });
       });
     });

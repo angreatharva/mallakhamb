@@ -1,8 +1,8 @@
 /**
  * Accessibility Tests for Design System Components
- * 
+ *
  * Tests ARIA labels, keyboard navigation, and screen reader support
- * 
+ *
  * **Validates: Requirements 11.1, 11.2, 11.3, 11.4, 11.5**
  */
 
@@ -20,9 +20,7 @@ import { Mail, Plus, X } from 'lucide-react';
 const renderWithTheme = (component, role = 'admin') => {
   return render(
     <MemoryRouter initialEntries={[`/${role}/dashboard`]}>
-      <ThemeProvider role={role}>
-        {component}
-      </ThemeProvider>
+      <ThemeProvider role={role}>{component}</ThemeProvider>
     </MemoryRouter>
   );
 };
@@ -33,10 +31,8 @@ describe('Accessibility - ARIA Labels for Icon-Only Buttons', () => {
    * Icon-only buttons must have aria-label attributes
    */
   it('icon-only button should have aria-label', () => {
-    renderWithTheme(
-      <ThemedButton icon={Plus} aria-label="Add item" />
-    );
-    
+    renderWithTheme(<ThemedButton icon={Plus} aria-label="Add item" />);
+
     const button = screen.getByRole('button', { name: 'Add item' });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('aria-label', 'Add item');
@@ -48,25 +44,21 @@ describe('Accessibility - ARIA Labels for Icon-Only Buttons', () => {
         <X className="w-4 h-4" aria-hidden="true" />
       </button>
     );
-    
+
     const button = screen.getByRole('button', { name: 'Close dialog' });
     expect(button).toBeInTheDocument();
   });
 
   it('decorative icons should have aria-hidden="true"', () => {
-    const { container } = renderWithTheme(
-      <ThemedButton icon={Plus} aria-label="Add item" />
-    );
-    
+    const { container } = renderWithTheme(<ThemedButton icon={Plus} aria-label="Add item" />);
+
     const icon = container.querySelector('svg');
     expect(icon).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('button with text and icon should not require aria-label', () => {
-    renderWithTheme(
-      <ThemedButton icon={Plus}>Add Item</ThemedButton>
-    );
-    
+    renderWithTheme(<ThemedButton icon={Plus}>Add Item</ThemedButton>);
+
     const button = screen.getByRole('button', { name: /add item/i });
     expect(button).toBeInTheDocument();
   });
@@ -78,50 +70,40 @@ describe('Accessibility - Keyboard Navigation', () => {
    * All interactive components must be keyboard accessible
    */
   it('ThemedButton should be focusable', () => {
-    renderWithTheme(
-      <ThemedButton>Click me</ThemedButton>
-    );
-    
+    renderWithTheme(<ThemedButton>Click me</ThemedButton>);
+
     const button = screen.getByRole('button');
     button.focus();
     expect(button).toHaveFocus();
   });
 
   it('ThemedInput should be focusable', () => {
-    renderWithTheme(
-      <ThemedInput placeholder="Enter text" />
-    );
-    
+    renderWithTheme(<ThemedInput placeholder="Enter text" />);
+
     const input = screen.getByPlaceholderText('Enter text');
     input.focus();
     expect(input).toHaveFocus();
   });
 
   it('ThemedSelect should be focusable', () => {
-    renderWithTheme(
-      <ThemedSelect options={[{ value: '1', label: 'Option 1' }]} />
-    );
-    
+    renderWithTheme(<ThemedSelect options={[{ value: '1', label: 'Option 1' }]} />);
+
     const select = screen.getByRole('combobox');
     select.focus();
     expect(select).toHaveFocus();
   });
 
   it('ThemedTextarea should be focusable', () => {
-    renderWithTheme(
-      <ThemedTextarea placeholder="Enter text" />
-    );
-    
+    renderWithTheme(<ThemedTextarea placeholder="Enter text" />);
+
     const textarea = screen.getByPlaceholderText('Enter text');
     textarea.focus();
     expect(textarea).toHaveFocus();
   });
 
   it('disabled button should not be focusable', () => {
-    renderWithTheme(
-      <ThemedButton disabled>Disabled</ThemedButton>
-    );
-    
+    renderWithTheme(<ThemedButton disabled>Disabled</ThemedButton>);
+
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
   });
@@ -133,19 +115,15 @@ describe('Accessibility - Focus Indicators', () => {
    * Focus indicators must have sufficient contrast (3:1 ratio)
    */
   it('ThemedButton should have focus ring', () => {
-    const { container } = renderWithTheme(
-      <ThemedButton>Click me</ThemedButton>
-    );
-    
+    const { container } = renderWithTheme(<ThemedButton>Click me</ThemedButton>);
+
     const button = screen.getByRole('button');
     expect(button.className).toContain('focus:ring');
   });
 
   it('ThemedInput should have focus styling', () => {
-    const { container } = renderWithTheme(
-      <ThemedInput placeholder="Enter text" />
-    );
-    
+    const { container } = renderWithTheme(<ThemedInput placeholder="Enter text" />);
+
     const input = screen.getByPlaceholderText('Enter text');
     // Input has focus styles applied via onFocus handler
     expect(input).toBeInTheDocument();
@@ -164,7 +142,7 @@ describe('Accessibility - Form Labels', () => {
         <ThemedInput id="email-input" type="email" />
       </div>
     );
-    
+
     const input = screen.getByLabelText('Email');
     expect(input).toBeInTheDocument();
   });
@@ -173,13 +151,10 @@ describe('Accessibility - Form Labels', () => {
     renderWithTheme(
       <div>
         <label htmlFor="role-select">Role</label>
-        <ThemedSelect 
-          id="role-select"
-          options={[{ value: 'admin', label: 'Admin' }]} 
-        />
+        <ThemedSelect id="role-select" options={[{ value: 'admin', label: 'Admin' }]} />
       </div>
     );
-    
+
     const select = screen.getByLabelText('Role');
     expect(select).toBeInTheDocument();
   });
@@ -191,33 +166,26 @@ describe('Accessibility - Touch Targets', () => {
    * All interactive elements must have minimum 44px touch targets
    */
   it('ThemedButton should have minimum 44px height', () => {
-    const { container } = renderWithTheme(
-      <ThemedButton>Click me</ThemedButton>
-    );
-    
+    const { container } = renderWithTheme(<ThemedButton>Click me</ThemedButton>);
+
     const button = screen.getByRole('button');
     expect(button.className).toContain('min-h-[44px]');
   });
 
   it('ThemedInput should have minimum 44px height', () => {
-    const { container } = renderWithTheme(
-      <ThemedInput placeholder="Enter text" />
-    );
-    
+    const { container } = renderWithTheme(<ThemedInput placeholder="Enter text" />);
+
     const input = screen.getByPlaceholderText('Enter text');
     expect(input.className).toContain('min-h-[44px]');
   });
 
   it('icon-only button should have minimum 44px touch target', () => {
     const { container } = renderWithTheme(
-      <button 
-        className="min-h-[44px] min-w-[44px]"
-        aria-label="Close"
-      >
+      <button className="min-h-[44px] min-w-[44px]" aria-label="Close">
         <X className="w-4 h-4" aria-hidden="true" />
       </button>
     );
-    
+
     const button = screen.getByRole('button');
     expect(button.className).toContain('min-h-[44px]');
     expect(button.className).toContain('min-w-[44px]');
@@ -230,10 +198,8 @@ describe('Accessibility - jest-axe Tests', () => {
    * Run automated accessibility tests using jest-axe
    */
   it('ThemedButton should have no accessibility violations', async () => {
-    const { container } = renderWithTheme(
-      <ThemedButton>Click me</ThemedButton>
-    );
-    
+    const { container } = renderWithTheme(<ThemedButton>Click me</ThemedButton>);
+
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
   });
@@ -245,7 +211,7 @@ describe('Accessibility - jest-axe Tests', () => {
         <ThemedInput id="test-input" placeholder="Enter text" />
       </div>
     );
-    
+
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
   });
@@ -254,13 +220,10 @@ describe('Accessibility - jest-axe Tests', () => {
     const { container } = renderWithTheme(
       <div>
         <label htmlFor="test-select">Test Select</label>
-        <ThemedSelect 
-          id="test-select"
-          options={[{ value: '1', label: 'Option 1' }]} 
-        />
+        <ThemedSelect id="test-select" options={[{ value: '1', label: 'Option 1' }]} />
       </div>
     );
-    
+
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
   });
@@ -278,18 +241,18 @@ describe('Accessibility - jest-axe Tests', () => {
         </div>
         <div>
           <label htmlFor="role">Role</label>
-          <ThemedSelect 
+          <ThemedSelect
             id="role"
             options={[
               { value: 'admin', label: 'Admin' },
-              { value: 'coach', label: 'Coach' }
-            ]} 
+              { value: 'coach', label: 'Coach' },
+            ]}
           />
         </div>
         <ThemedButton type="submit">Submit</ThemedButton>
       </form>
     );
-    
+
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
   });
@@ -301,13 +264,8 @@ describe('Accessibility - Error Announcements', () => {
    * Error messages should be announced to screen readers
    */
   it('ThemedInput with error should display error message', () => {
-    renderWithTheme(
-      <ThemedInput 
-        placeholder="Enter email"
-        error="Email is required"
-      />
-    );
-    
+    renderWithTheme(<ThemedInput placeholder="Enter email" error="Email is required" />);
+
     const errorMessage = screen.getByText('Email is required');
     expect(errorMessage).toBeInTheDocument();
   });
@@ -316,17 +274,13 @@ describe('Accessibility - Error Announcements', () => {
     const { container } = renderWithTheme(
       <div>
         <label htmlFor="email-input">Email</label>
-        <ThemedInput 
-          id="email-input"
-          placeholder="Enter email"
-          error="Email is required"
-        />
+        <ThemedInput id="email-input" placeholder="Enter email" error="Email is required" />
       </div>
     );
-    
+
     const input = screen.getByLabelText('Email');
     const errorMessage = screen.getByText('Email is required');
-    
+
     // Error message should be visible
     expect(errorMessage).toBeInTheDocument();
     expect(input).toBeInTheDocument();

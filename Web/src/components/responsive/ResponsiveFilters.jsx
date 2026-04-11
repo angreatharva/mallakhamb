@@ -6,26 +6,34 @@ import Dropdown from '../Dropdown';
 import { ADMIN_COLORS } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
-const surface    = C.darkCard;
-const elevated   = C.darkElevated;
-const border     = C.darkBorderSubtle;
-const borderMid  = C.darkBorderMid;
-const textPrimary   = 'rgba(255,255,255,0.90)';
+const surface = C.darkCard;
+const elevated = C.darkElevated;
+const border = C.darkBorderSubtle;
+const borderMid = C.darkBorderMid;
+const textPrimary = 'rgba(255,255,255,0.90)';
 const textSecondary = 'rgba(255,255,255,0.50)';
-const textMuted     = 'rgba(255,255,255,0.30)';
+const textMuted = 'rgba(255,255,255,0.30)';
 
 // ─── Shared search input ──────────────────────────────────────────────────────
 const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
   <div style={{ position: 'relative' }}>
-    <Search style={{
-      position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-      width: 15, height: 15, color: textSecondary, pointerEvents: 'none',
-    }} />
+    <Search
+      style={{
+        position: 'absolute',
+        left: 12,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: 15,
+        height: 15,
+        color: textSecondary,
+        pointerEvents: 'none',
+      }}
+    />
     <input
       type="text"
       placeholder={placeholder}
       value={value}
-      onChange={e => onChange(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
       style={{
         width: '100%',
         height,
@@ -40,16 +48,28 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
         boxSizing: 'border-box',
         transition: 'border-color 0.15s',
       }}
-      onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
-      onBlur={e => { e.target.style.borderColor = borderMid; }}
+      onFocus={(e) => {
+        e.target.style.borderColor = `${C.saffron}70`;
+      }}
+      onBlur={(e) => {
+        e.target.style.borderColor = borderMid;
+      }}
     />
     {value && (
       <button
         onClick={() => onChange('')}
         style={{
-          position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-          color: textSecondary, display: 'flex', alignItems: 'center',
+          position: 'absolute',
+          right: 10,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 4,
+          color: textSecondary,
+          display: 'flex',
+          alignItems: 'center',
         }}
         aria-label="Clear search"
       >
@@ -61,7 +81,17 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
 
 // ─── Filter label ─────────────────────────────────────────────────────────────
 const FilterLabel = ({ children, required }) => (
-  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textSecondary, marginBottom: 6 }}>
+  <label
+    style={{
+      display: 'block',
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      color: textSecondary,
+      marginBottom: 6,
+    }}
+  >
     {children}
     {required && <span style={{ color: C.red, marginLeft: 3 }}>*</span>}
   </label>
@@ -83,28 +113,37 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
       cursor: 'pointer',
       transition: 'background 0.15s, color 0.15s',
     }}
-    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; e.currentTarget.style.color = textPrimary; }}
-    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = textSecondary; }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = 'rgba(255,255,255,0.10)';
+      e.currentTarget.style.color = textPrimary;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+      e.currentTarget.style.color = textSecondary;
+    }}
   >
     Clear Filters
   </button>
 );
 
 // ─── Active filter count badge ────────────────────────────────────────────────
-const ActiveBadge = ({ count }) => count > 0 ? (
-  <span style={{
-    background: `${C.saffron}22`,
-    color: C.saffronLight,
-    border: `1px solid ${C.saffron}44`,
-    borderRadius: 20,
-    padding: '1px 8px',
-    fontSize: 11,
-    fontWeight: 700,
-    marginLeft: 6,
-  }}>
-    {count}
-  </span>
-) : null;
+const ActiveBadge = ({ count }) =>
+  count > 0 ? (
+    <span
+      style={{
+        background: `${C.saffron}22`,
+        color: C.saffronLight,
+        border: `1px solid ${C.saffron}44`,
+        borderRadius: 20,
+        padding: '1px 8px',
+        fontSize: 11,
+        fontWeight: 700,
+        marginLeft: 6,
+      }}
+    >
+      {count}
+    </span>
+  ) : null;
 
 // ─── ResponsiveFilters ────────────────────────────────────────────────────────
 export const ResponsiveFilters = ({
@@ -121,18 +160,29 @@ export const ResponsiveFilters = ({
 }) => {
   const { isMobile } = useResponsive();
   const [isExpanded, setIsExpanded] = useState(false);
-  const activeCount = filters.filter(f => f.value).length;
+  const activeCount = filters.filter((f) => f.value).length;
 
   if (isMobile) {
     return (
       <ResponsiveContainer className={className} {...props}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {showSearchBar && (
-            <SearchInput value={searchTerm} onChange={onSearchChange} placeholder={searchPlaceholder} />
+            <SearchInput
+              value={searchTerm}
+              onChange={onSearchChange}
+              placeholder={searchPlaceholder}
+            />
           )}
 
           {filters.length > 0 && (
-            <div style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
+            <div
+              style={{
+                background: elevated,
+                border: `1px solid ${border}`,
+                borderRadius: 12,
+                overflow: 'hidden',
+              }}
+            >
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 style={{
@@ -152,26 +202,38 @@ export const ResponsiveFilters = ({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Filters</span>
                   <ActiveBadge count={activeCount} />
                 </div>
-                {isExpanded
-                  ? <ChevronUp style={{ width: 16, height: 16, color: textSecondary }} />
-                  : <ChevronDown style={{ width: 16, height: 16, color: textSecondary }} />
-                }
+                {isExpanded ? (
+                  <ChevronUp style={{ width: 16, height: 16, color: textSecondary }} />
+                ) : (
+                  <ChevronDown style={{ width: 16, height: 16, color: textSecondary }} />
+                )}
               </button>
 
               {isExpanded && (
-                <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div
+                  style={{
+                    padding: '0 16px 16px',
+                    borderTop: `1px solid ${border}`,
+                    paddingTop: 14,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14,
+                  }}
+                >
                   {filters.map((filter, i) => (
                     <div key={i}>
                       <FilterLabel required={filter.required}>{filter.label}</FilterLabel>
                       <Dropdown
                         options={filter.options}
                         value={filter.value}
-                        onChange={v => onFilterChange(filter.key, v)}
+                        onChange={(v) => onFilterChange(filter.key, v)}
                         placeholder={filter.placeholder}
                         disabled={filter.disabled}
                       />
                       {filter.helpText && (
-                        <p style={{ fontSize: 11, color: textMuted, marginTop: 5 }}>{filter.helpText}</p>
+                        <p style={{ fontSize: 11, color: textMuted, marginTop: 5 }}>
+                          {filter.helpText}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -194,11 +256,22 @@ export const ResponsiveFilters = ({
   return (
     <ResponsiveContainer className={className} {...props}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`, gap: 14 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+            gap: 14,
+          }}
+        >
           {showSearchBar && (
             <div style={{ minWidth: 0 }}>
               <FilterLabel>Search</FilterLabel>
-              <SearchInput value={searchTerm} onChange={onSearchChange} placeholder={searchPlaceholder} height={40} />
+              <SearchInput
+                value={searchTerm}
+                onChange={onSearchChange}
+                placeholder={searchPlaceholder}
+                height={40}
+              />
             </div>
           )}
           {filters.map((filter, i) => (
@@ -207,7 +280,7 @@ export const ResponsiveFilters = ({
               <Dropdown
                 options={filter.options}
                 value={filter.value}
-                onChange={v => onFilterChange(filter.key, v)}
+                onChange={(v) => onFilterChange(filter.key, v)}
                 placeholder={filter.placeholder}
                 disabled={filter.disabled}
               />
@@ -247,13 +320,17 @@ export const ResponsiveTeamFilters = ({
   ];
 
   const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under18', label: 'Under 18' },
     { value: 'Above18', label: 'Above 18' },
   ];
   const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under16', label: 'Under 16' },
     { value: 'Above16', label: 'Above 16' },
   ];
 
@@ -264,10 +341,20 @@ export const ResponsiveTeamFilters = ({
   };
 
   const filters = [
-    { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
-      key: 'ageGroup', label: 'Age Group', required: true,
-      options: getAvailableAgeGroups(), value: selectedAgeGroup,
+      key: 'gender',
+      label: 'Gender',
+      required: true,
+      options: genders,
+      value: selectedGender,
+      placeholder: 'Select gender',
+    },
+    {
+      key: 'ageGroup',
+      label: 'Age Group',
+      required: true,
+      options: getAvailableAgeGroups(),
+      value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
       helpText: !selectedGender ? 'Select gender first' : null,
@@ -276,9 +363,12 @@ export const ResponsiveTeamFilters = ({
 
   return (
     <ResponsiveFilters
-      searchTerm="" onSearchChange={() => {}}
+      searchTerm=""
+      onSearchChange={() => {}}
       filters={filters}
-      onFilterChange={(key, value) => key === 'gender' ? onGenderChange(value) : onAgeGroupChange(value)}
+      onFilterChange={(key, value) =>
+        key === 'gender' ? onGenderChange(value) : onAgeGroupChange(value)
+      }
       onClearFilters={onClearFilters}
       className={className}
       showSearchBar={false}
@@ -289,11 +379,16 @@ export const ResponsiveTeamFilters = ({
 
 // ─── ResponsiveScoreFilters ───────────────────────────────────────────────────
 export const ResponsiveScoreFilters = ({
-  scoreType, onScoreTypeChange,
-  selectedGender, onGenderChange,
-  selectedAgeGroup, onAgeGroupChange,
-  selectedCompetitionType, onCompetitionTypeChange,
-  searchTerm, onSearchChange,
+  scoreType,
+  onScoreTypeChange,
+  selectedGender,
+  onGenderChange,
+  selectedAgeGroup,
+  onAgeGroupChange,
+  selectedCompetitionType,
+  onCompetitionTypeChange,
+  searchTerm,
+  onSearchChange,
   onClearFilters,
   ageGroups,
   competitionTypes,
@@ -310,13 +405,17 @@ export const ResponsiveScoreFilters = ({
     { value: 'Female', label: 'Female' },
   ];
   const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under18', label: 'Under 18' },
     { value: 'Above18', label: 'Above 18' },
   ];
   const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
+    { value: 'Under10', label: 'Under 10' },
+    { value: 'Under12', label: 'Under 12' },
+    { value: 'Under14', label: 'Under 14' },
+    { value: 'Under16', label: 'Under 16' },
     { value: 'Above16', label: 'Above 16' },
   ];
 
@@ -327,16 +426,39 @@ export const ResponsiveScoreFilters = ({
   };
 
   const filters = [
-    { key: 'scoreType', label: 'Score Type', options: scoreTypes, value: scoreTypes.find(s => s.value === scoreType), placeholder: 'Select type' },
-    { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
-      key: 'ageGroup', label: 'Age Group', required: true,
-      options: getAvailableAgeGroups(), value: selectedAgeGroup,
+      key: 'scoreType',
+      label: 'Score Type',
+      options: scoreTypes,
+      value: scoreTypes.find((s) => s.value === scoreType),
+      placeholder: 'Select type',
+    },
+    {
+      key: 'gender',
+      label: 'Gender',
+      required: true,
+      options: genders,
+      value: selectedGender,
+      placeholder: 'Select gender',
+    },
+    {
+      key: 'ageGroup',
+      label: 'Age Group',
+      required: true,
+      options: getAvailableAgeGroups(),
+      value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
       helpText: !selectedGender ? 'Select gender first' : null,
     },
-    { key: 'competitionType', label: 'Competition Type', required: true, options: competitionTypes || [], value: selectedCompetitionType, placeholder: 'Select type' },
+    {
+      key: 'competitionType',
+      label: 'Competition Type',
+      required: true,
+      options: competitionTypes || [],
+      value: selectedCompetitionType,
+      placeholder: 'Select type',
+    },
   ];
 
   const handleFilterChange = (key, value) => {
@@ -348,7 +470,8 @@ export const ResponsiveScoreFilters = ({
 
   return (
     <ResponsiveFilters
-      searchTerm="" onSearchChange={() => {}}
+      searchTerm=""
+      onSearchChange={() => {}}
       filters={filters}
       onFilterChange={handleFilterChange}
       onClearFilters={onClearFilters}

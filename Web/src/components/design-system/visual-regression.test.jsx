@@ -1,10 +1,10 @@
 /**
  * Visual Regression Tests for Design System Components
- * 
+ *
  * These tests create snapshots of themed components to ensure visual consistency
  * across refactoring and updates. They validate that components render correctly
  * with different themes and props.
- * 
+ *
  * Requirements: 12.4 - Visual regression tests for themed components
  */
 
@@ -24,9 +24,7 @@ import { Users } from 'lucide-react';
 const renderWithTheme = (component, role = 'admin') => {
   return render(
     <BrowserRouter>
-      <ThemeProvider role={role}>
-        {component}
-      </ThemeProvider>
+      <ThemeProvider role={role}>{component}</ThemeProvider>
     </BrowserRouter>
   );
 };
@@ -58,33 +56,24 @@ describe('Visual Regression Tests', () => {
     });
 
     it('should match snapshot for loading state', () => {
-      const { container } = renderWithTheme(
-        <ThemedButton loading>Loading</ThemedButton>
-      );
+      const { container } = renderWithTheme(<ThemedButton loading>Loading</ThemedButton>);
       expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should match snapshot for disabled state', () => {
-      const { container } = renderWithTheme(
-        <ThemedButton disabled>Disabled</ThemedButton>
-      );
+      const { container } = renderWithTheme(<ThemedButton disabled>Disabled</ThemedButton>);
       expect(container.firstChild).toMatchSnapshot();
     });
   });
 
   describe('ThemedInput Snapshots', () => {
     it('should match snapshot for default input with admin theme', () => {
-      const { container } = renderWithTheme(
-        <ThemedInput placeholder="Enter text" />,
-        'admin'
-      );
+      const { container } = renderWithTheme(<ThemedInput placeholder="Enter text" />, 'admin');
       expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should match snapshot for input with icon', () => {
-      const { container } = renderWithTheme(
-        <ThemedInput icon={Users} placeholder="Enter text" />
-      );
+      const { container } = renderWithTheme(<ThemedInput icon={Users} placeholder="Enter text" />);
       expect(container.firstChild).toMatchSnapshot();
     });
 
@@ -96,9 +85,7 @@ describe('Visual Regression Tests', () => {
     });
 
     it('should match snapshot for disabled input', () => {
-      const { container } = renderWithTheme(
-        <ThemedInput disabled placeholder="Enter text" />
-      );
+      const { container } = renderWithTheme(<ThemedInput disabled placeholder="Enter text" />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });
@@ -158,12 +145,7 @@ describe('Visual Regression Tests', () => {
 
     it('should match snapshot for StatCard', () => {
       const { container } = renderWithTheme(
-        <StatCard
-          icon={Users}
-          label="Total Users"
-          value={150}
-          color="#8B5CF6"
-        />
+        <StatCard icon={Users} label="Total Users" value={150} color="#8B5CF6" />
       );
       expect(container.firstChild).toMatchSnapshot();
     });
@@ -172,7 +154,7 @@ describe('Visual Regression Tests', () => {
   describe('Theme Variations', () => {
     const roles = ['admin', 'superadmin', 'coach', 'player', 'judge'];
 
-    roles.forEach(role => {
+    roles.forEach((role) => {
       it(`should match snapshot for ThemedButton with ${role} theme`, () => {
         const { container } = renderWithTheme(
           <ThemedButton variant="solid">Button</ThemedButton>,
@@ -182,10 +164,7 @@ describe('Visual Regression Tests', () => {
       });
 
       it(`should match snapshot for DarkCard with ${role} theme`, () => {
-        const { container } = renderWithTheme(
-          <DarkCard>Card Content</DarkCard>,
-          role
-        );
+        const { container } = renderWithTheme(<DarkCard>Card Content</DarkCard>, role);
         expect(container.firstChild).toMatchSnapshot();
       });
     });

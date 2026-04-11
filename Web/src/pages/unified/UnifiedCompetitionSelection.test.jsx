@@ -27,25 +27,33 @@ const mockLocationState = { pathname: '/coach/select-competition' };
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
-  return { 
-    ...actual, 
+  return {
+    ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => mockLocationState,
   };
 });
 
 vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => ({ 
-    login: vi.fn(), 
-    user: null, 
+  useAuth: () => ({
+    login: vi.fn(),
+    user: null,
     userType: null,
   }),
 }));
 
 // Mock background components - return a div since they're just decorative
 vi.mock('../../components/design-system/backgrounds', () => ({
-  HexMesh: ({ children, ...props }) => <div data-testid="hex-mesh" {...props}>{children}</div>,
-  RadialBurst: ({ children, ...props }) => <div data-testid="radial-burst" {...props}>{children}</div>,
+  HexMesh: ({ children, ...props }) => (
+    <div data-testid="hex-mesh" {...props}>
+      {children}
+    </div>
+  ),
+  RadialBurst: ({ children, ...props }) => (
+    <div data-testid="radial-burst" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock design system components
@@ -62,7 +70,11 @@ vi.mock('../../components/design-system/theme', () => ({
 }));
 
 vi.mock('../../components/design-system/cards', () => ({
-  GlassCard: ({ children, ...props }) => <div data-testid="glass-card" {...props}>{children}</div>,
+  GlassCard: ({ children, ...props }) => (
+    <div data-testid="glass-card" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('../../components/design-system/animations', () => ({
@@ -109,9 +121,7 @@ const stripMotionProps = (props) => {
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }) => <div {...stripMotionProps(props)}>{children}</div>,
-    section: ({ children, ...props }) => (
-      <section {...stripMotionProps(props)}>{children}</section>
-    ),
+    section: ({ children, ...props }) => <section {...stripMotionProps(props)}>{children}</section>,
     button: ({ children, ...props }) => (
       <button type="button" {...stripMotionProps(props)}>
         {children}
@@ -191,6 +201,21 @@ describe('UnifiedCompetitionSelection', () => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
     mockLocationState.pathname = '/coach/select-competition';
+    api.coachAPI.getTeams.mockResolvedValue({
+      data: { teams: [{ id: 'team-1', competitions: [] }] },
+    });
+    api.coachAPI.getOpenCompetitions.mockResolvedValue({
+      data: { competitions: [] },
+    });
+    api.playerAPI.getTeams.mockResolvedValue({
+      data: { teams: [] },
+    });
+    api.coachAPI.registerTeamForCompetition.mockResolvedValue({
+      data: { success: true },
+    });
+    api.playerAPI.updateTeam.mockResolvedValue({
+      data: { token: 'new-token', team: { id: 'team-1' } },
+    });
     secureStorageModule.secureStorage.getItem.mockReturnValue(null);
     secureStorageModule.secureStorage.setItem.mockImplementation(() => {});
     secureStorageModule.secureStorage.removeItem.mockImplementation(() => {});
@@ -432,9 +457,7 @@ describe('UnifiedCompetitionSelection', () => {
     });
 
     it('should handle network errors gracefully', async () => {
-      api.coachAPI.getOpenCompetitions.mockRejectedValue(
-        new Error('Network error')
-      );
+      api.coachAPI.getOpenCompetitions.mockRejectedValue(new Error('Network error'));
 
       renderWithRouter('/coach/select-competition');
 

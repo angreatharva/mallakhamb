@@ -1,12 +1,12 @@
 /**
  * ESLint Rule: no-hardcoded-spacing
  * Flags hardcoded spacing values and suggests using design tokens instead
- * 
+ *
  * This rule detects:
  * - Pixel values (10px, 20px, etc.)
  * - Rem values (1rem, 2rem, etc.)
  * - Em values (1em, 2em, etc.)
- * 
+ *
  * Validates: Requirements 14.2, 14.4
  */
 
@@ -46,11 +46,29 @@ const SPACING_MAP = {
 
 // CSS properties that typically use spacing values
 const SPACING_PROPERTIES = [
-  'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-  'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-  'gap', 'row-gap', 'column-gap',
-  'top', 'right', 'bottom', 'left',
-  'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
+  'margin',
+  'margin-top',
+  'margin-right',
+  'margin-bottom',
+  'margin-left',
+  'padding',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+  'gap',
+  'row-gap',
+  'column-gap',
+  'top',
+  'right',
+  'bottom',
+  'left',
+  'width',
+  'height',
+  'min-width',
+  'min-height',
+  'max-width',
+  'max-height',
 ];
 
 /**
@@ -60,22 +78,22 @@ const SPACING_PROPERTIES = [
  */
 function findClosestSpacingToken(value) {
   const normalizedValue = value.toLowerCase().trim();
-  
+
   // Direct match
   if (SPACING_MAP[normalizedValue]) {
     return `DESIGN_TOKENS.spacing.${SPACING_MAP[normalizedValue]}`;
   }
-  
+
   // Try to find closest match for pixel values
   const pxMatch = normalizedValue.match(/^(\d+(?:\.\d+)?)px$/);
   if (pxMatch) {
     const pixels = parseFloat(pxMatch[1]);
     const spacingValues = [4, 8, 16, 24, 32, 48, 64, 96];
-    
+
     // Find closest spacing value
     let closest = spacingValues[0];
     let minDiff = Math.abs(pixels - closest);
-    
+
     for (const spacing of spacingValues) {
       const diff = Math.abs(pixels - spacing);
       if (diff < minDiff) {
@@ -83,24 +101,24 @@ function findClosestSpacingToken(value) {
         closest = spacing;
       }
     }
-    
+
     // Only suggest if reasonably close (within 4px)
     if (minDiff <= 4) {
       const tokenName = SPACING_MAP[`${closest}px`];
       return `DESIGN_TOKENS.spacing.${tokenName} (${closest}px)`;
     }
   }
-  
+
   // Try to find closest match for rem values
   const remMatch = normalizedValue.match(/^(\d+(?:\.\d+)?)rem$/);
   if (remMatch) {
     const rems = parseFloat(remMatch[1]);
     const pixels = rems * 16; // Assuming 16px base
     const spacingValues = [4, 8, 16, 24, 32, 48, 64, 96];
-    
+
     let closest = spacingValues[0];
     let minDiff = Math.abs(pixels - closest);
-    
+
     for (const spacing of spacingValues) {
       const diff = Math.abs(pixels - spacing);
       if (diff < minDiff) {
@@ -108,13 +126,13 @@ function findClosestSpacingToken(value) {
         closest = spacing;
       }
     }
-    
+
     if (minDiff <= 4) {
       const tokenName = SPACING_MAP[`${closest}px`];
       return `DESIGN_TOKENS.spacing.${tokenName} (${closest}px)`;
     }
   }
-  
+
   return null;
 }
 
@@ -126,34 +144,34 @@ function findClosestSpacingToken(value) {
  */
 function detectSpacingValue(value, propertyName = '') {
   if (!value || typeof value !== 'string') return null;
-  
+
   // Pixel values
   const pxMatch = value.match(/\b(\d+(?:\.\d+)?px)\b/);
   if (pxMatch) {
     const pixels = parseFloat(pxMatch[1]);
     // Ignore very small values (likely borders) and very large values (likely widths/heights)
     // unless they're in spacing-related properties
-    const isSpacingProperty = SPACING_PROPERTIES.some(prop => 
+    const isSpacingProperty = SPACING_PROPERTIES.some((prop) =>
       propertyName.toLowerCase().includes(prop)
     );
-    
+
     if (isSpacingProperty || (pixels >= 4 && pixels <= 100)) {
       return { type: 'px', value: pxMatch[1], full: value };
     }
   }
-  
+
   // Rem values
   const remMatch = value.match(/\b(\d+(?:\.\d+)?rem)\b/);
   if (remMatch) {
     return { type: 'rem', value: remMatch[1], full: value };
   }
-  
+
   // Em values
   const emMatch = value.match(/\b(\d+(?:\.\d+)?em)\b/);
   if (emMatch) {
     return { type: 'em', value: emMatch[1], full: value };
   }
-  
+
   return null;
 }
 
@@ -164,27 +182,27 @@ function detectSpacingValue(value, propertyName = '') {
  */
 function isAllowedContext(context) {
   const filename = context.getFilename();
-  
+
   // Allow in design tokens file
   if (filename.includes('tokens.js') || filename.includes('tokens.ts')) {
     return true;
   }
-  
+
   // Allow in test files
   if (filename.includes('.test.') || filename.includes('.spec.')) {
     return true;
   }
-  
+
   // Allow in Storybook stories
   if (filename.includes('.stories.')) {
     return true;
   }
-  
+
   // Allow in Tailwind config
   if (filename.includes('tailwind.config')) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -214,31 +232,32 @@ export default {
       recommended: true,
     },
     messages: {
-      hardcodedSpacing: 'Hardcoded spacing "{{spacing}}" detected. Use design tokens instead.{{suggestion}}',
+      hardcodedSpacing:
+        'Hardcoded spacing "{{spacing}}" detected. Use design tokens instead.{{suggestion}}',
     },
     schema: [],
   },
-  
+
   create(context) {
     // Skip if in allowed context
     if (isAllowedContext(context)) {
       return {};
     }
-    
+
     return {
       // Check string literals in object properties (style objects)
       'Property > Literal'(node) {
         if (typeof node.value !== 'string') return;
-        
+
         const propertyName = getPropertyName(node.parent);
         const spacingMatch = detectSpacingValue(node.value, propertyName);
         if (!spacingMatch) return;
-        
+
         const suggestion = findClosestSpacingToken(spacingMatch.value);
-        const suggestionText = suggestion 
-          ? ` Consider using: ${suggestion}` 
+        const suggestionText = suggestion
+          ? ` Consider using: ${suggestion}`
           : ' Check DESIGN_TOKENS.spacing for available tokens.';
-        
+
         context.report({
           node,
           messageId: 'hardcodedSpacing',
@@ -248,18 +267,18 @@ export default {
           },
         });
       },
-      
+
       // Check template literals
       TemplateLiteral(node) {
         for (const quasi of node.quasis) {
           const spacingMatch = detectSpacingValue(quasi.value.raw);
           if (!spacingMatch) continue;
-          
+
           const suggestion = findClosestSpacingToken(spacingMatch.value);
-          const suggestionText = suggestion 
-            ? ` Consider using: ${suggestion}` 
+          const suggestionText = suggestion
+            ? ` Consider using: ${suggestion}`
             : ' Check DESIGN_TOKENS.spacing for available tokens.';
-          
+
           context.report({
             node,
             messageId: 'hardcodedSpacing',
@@ -270,31 +289,33 @@ export default {
           });
         }
       },
-      
+
       // Check JSX attribute values (e.g., style prop)
       JSXAttribute(node) {
         if (!node.value) return;
-        
+
         let valueToCheck = null;
         let propertyName = node.name?.name || '';
-        
+
         if (node.value.type === 'Literal') {
           valueToCheck = node.value.value;
-        } else if (node.value.type === 'JSXExpressionContainer' && 
-                   node.value.expression.type === 'Literal') {
+        } else if (
+          node.value.type === 'JSXExpressionContainer' &&
+          node.value.expression.type === 'Literal'
+        ) {
           valueToCheck = node.value.expression.value;
         }
-        
+
         if (!valueToCheck || typeof valueToCheck !== 'string') return;
-        
+
         const spacingMatch = detectSpacingValue(valueToCheck, propertyName);
         if (!spacingMatch) return;
-        
+
         const suggestion = findClosestSpacingToken(spacingMatch.value);
-        const suggestionText = suggestion 
-          ? ` Consider using: ${suggestion}` 
+        const suggestionText = suggestion
+          ? ` Consider using: ${suggestion}`
           : ' Check DESIGN_TOKENS.spacing for available tokens.';
-        
+
         context.report({
           node: node.value,
           messageId: 'hardcodedSpacing',

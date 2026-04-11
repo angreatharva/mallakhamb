@@ -1,9 +1,9 @@
 /**
  * Image Utilities for Responsive Design
- * 
+ *
  * Provides utilities for responsive image handling, optimization,
  * and aspect ratio management across different viewport sizes.
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4
  */
 
@@ -16,12 +16,8 @@
  * @returns {string} Sizes attribute string
  */
 export const generateResponsiveSizes = (options = {}) => {
-  const {
-    mobile = '100vw',
-    tablet = '50vw',
-    desktop = '33vw'
-  } = options;
-  
+  const { mobile = '100vw', tablet = '50vw', desktop = '33vw' } = options;
+
   return `(max-width: 768px) ${mobile}, (max-width: 1024px) ${tablet}, ${desktop}`;
 };
 
@@ -36,11 +32,9 @@ export const generateSrcSet = (baseSrc, widths = [320, 640, 768, 1024, 1280, 192
     // For local images, return the base source
     return baseSrc;
   }
-  
+
   // For external images (like Unsplash), generate different sizes
-  return widths
-    .map(width => `${baseSrc}&w=${width} ${width}w`)
-    .join(', ');
+  return widths.map((width) => `${baseSrc}&w=${width} ${width}w`).join(', ');
 };
 
 /**
@@ -54,25 +48,25 @@ export const getOptimalImageDimensions = (viewport, imageType) => {
     hero: {
       mobile: { width: 375, height: 250 },
       tablet: { width: 768, height: 400 },
-      desktop: { width: 1920, height: 800 }
+      desktop: { width: 1920, height: 800 },
     },
     card: {
       mobile: { width: 300, height: 200 },
       tablet: { width: 350, height: 250 },
-      desktop: { width: 400, height: 300 }
+      desktop: { width: 400, height: 300 },
     },
     avatar: {
       mobile: { width: 64, height: 64 },
       tablet: { width: 80, height: 80 },
-      desktop: { width: 96, height: 96 }
+      desktop: { width: 96, height: 96 },
     },
     gallery: {
       mobile: { width: 300, height: 300 },
       tablet: { width: 400, height: 400 },
-      desktop: { width: 500, height: 500 }
-    }
+      desktop: { width: 500, height: 500 },
+    },
   };
-  
+
   return dimensions[imageType]?.[viewport] || dimensions.card[viewport];
 };
 
@@ -83,7 +77,7 @@ export const getOptimalImageDimensions = (viewport, imageType) => {
  * @returns {string} Aspect ratio string (e.g., '16/9')
  */
 export const calculateAspectRatio = (width, height) => {
-  const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
   const divisor = gcd(width, height);
   return `${width / divisor}/${height / divisor}`;
 };
@@ -96,25 +90,25 @@ export const calculateAspectRatio = (width, height) => {
  */
 export const getResponsiveImageClasses = (context, viewport) => {
   const baseClasses = 'responsive-img';
-  
+
   const contextClasses = {
     hero: 'responsive-img-hero object-cover w-full',
     card: 'responsive-img-card object-cover rounded-lg',
     avatar: 'responsive-img-avatar object-cover rounded-full',
     gallery: 'responsive-img object-cover hover:scale-105 transition-transform duration-300',
-    content: 'responsive-img object-contain mx-auto'
+    content: 'responsive-img object-contain mx-auto',
   };
-  
+
   const viewportClasses = {
     mobile: 'max-w-full',
     tablet: 'max-w-full',
-    desktop: 'max-w-full'
+    desktop: 'max-w-full',
   };
-  
+
   return [
     baseClasses,
     contextClasses[context] || contextClasses.content,
-    viewportClasses[viewport] || viewportClasses.mobile
+    viewportClasses[viewport] || viewportClasses.mobile,
   ].join(' ');
 };
 
@@ -130,7 +124,7 @@ export const getResponsiveImageClasses = (context, viewport) => {
  */
 export const optimizeImageUrl = (src, options = {}) => {
   const { width, height, format = 'webp', quality = 80 } = options;
-  
+
   // Handle Unsplash URLs
   if (src.includes('unsplash.com')) {
     const params = new URLSearchParams();
@@ -140,11 +134,11 @@ export const optimizeImageUrl = (src, options = {}) => {
     if (quality) params.set('q', quality);
     params.set('fit', 'crop');
     params.set('crop', 'smart');
-    
+
     const separator = src.includes('?') ? '&' : '?';
     return `${src}${separator}${params.toString()}`;
   }
-  
+
   // For local images, return as-is (could be enhanced with build-time optimization)
   return src;
 };
@@ -156,18 +150,18 @@ export const optimizeImageUrl = (src, options = {}) => {
  */
 export const preloadCriticalImages = (imageSources, viewport = 'desktop') => {
   if (typeof window === 'undefined') return;
-  
-  imageSources.forEach(src => {
+
+  imageSources.forEach((src) => {
     const link = document.createElement('link');
     link.rel = 'preload';
     link.as = 'image';
-    
+
     // Optimize the source for current viewport
     const optimizedSrc = optimizeImageUrl(src, {
       width: viewport === 'mobile' ? 375 : viewport === 'tablet' ? 768 : 1200,
-      format: 'webp'
+      format: 'webp',
     });
-    
+
     link.href = optimizedSrc;
     document.head.appendChild(link);
   });
@@ -186,16 +180,16 @@ export const lazyLoadImage = (imageElement, options = {}) => {
     }
     return;
   }
-  
+
   const defaultOptions = {
     root: null,
     rootMargin: '50px',
     threshold: 0.1,
-    ...options
+    ...options,
   };
-  
+
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
         const img = entry.target;
         if (img.dataset.src) {
@@ -207,7 +201,7 @@ export const lazyLoadImage = (imageElement, options = {}) => {
       }
     });
   }, defaultOptions);
-  
+
   observer.observe(imageElement);
 };
 
@@ -221,12 +215,9 @@ export const validateImageAspectRatio = (imageElement, expectedRatio) => {
   if (!imageElement.naturalWidth || !imageElement.naturalHeight) {
     return false;
   }
-  
-  const actualRatio = calculateAspectRatio(
-    imageElement.naturalWidth, 
-    imageElement.naturalHeight
-  );
-  
+
+  const actualRatio = calculateAspectRatio(imageElement.naturalWidth, imageElement.naturalHeight);
+
   return actualRatio === expectedRatio;
 };
 
@@ -242,31 +233,31 @@ export const getResponsiveImageConfig = (useCase) => {
       sizes: generateResponsiveSizes({ mobile: '100vw', tablet: '100vw', desktop: '100vw' }),
       objectFit: 'cover',
       priority: true,
-      widths: [375, 768, 1024, 1440, 1920]
+      widths: [375, 768, 1024, 1440, 1920],
     },
     gallery: {
       aspectRatio: '1/1',
       sizes: generateResponsiveSizes({ mobile: '50vw', tablet: '33vw', desktop: '25vw' }),
       objectFit: 'cover',
       priority: false,
-      widths: [200, 300, 400, 500, 600]
+      widths: [200, 300, 400, 500, 600],
     },
     profile: {
       aspectRatio: '1/1',
       sizes: generateResponsiveSizes({ mobile: '80px', tablet: '100px', desktop: '120px' }),
       objectFit: 'cover',
       priority: false,
-      widths: [80, 100, 120, 160, 200]
+      widths: [80, 100, 120, 160, 200],
     },
     thumbnail: {
       aspectRatio: '4/3',
       sizes: generateResponsiveSizes({ mobile: '100px', tablet: '150px', desktop: '200px' }),
       objectFit: 'cover',
       priority: false,
-      widths: [100, 150, 200, 250, 300]
-    }
+      widths: [100, 150, 200, 250, 300],
+    },
   };
-  
+
   return configs[useCase] || configs.gallery;
 };
 
@@ -306,5 +297,5 @@ export default {
   lazyLoadImage,
   validateImageAspectRatio,
   getResponsiveImageConfig,
-  handleImageError
+  handleImageError,
 };

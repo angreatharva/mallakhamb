@@ -4,6 +4,7 @@ import { isTokenExpired, getCompetitionIdFromToken } from '../utils/tokenUtils.j
 import { secureStorage } from '../utils/secureStorage.js';
 import { apiCache, clearCachePattern } from '../utils/apiCache.js';
 import { logger } from '../utils/logger.js';
+import { setupInterceptors } from './apiInterceptor.js';
 
 logger.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
@@ -42,7 +43,7 @@ api.interceptors.request.use(
         return Promise.reject({
           config,
           response: { data: cached },
-          cached: true
+          cached: true,
         });
       }
     }
@@ -59,7 +60,7 @@ api.interceptors.request.use(
       }
       secureStorage.removeItem('token');
       secureStorage.removeItem('user');
-      
+
       // Redirect to login
       window.location.href = '/';
       return Promise.reject(new Error('Token expired'));
@@ -67,7 +68,7 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      
+
       // Add competition context header
       const competitionId = getCompetitionIdFromToken(token);
       if (competitionId) {
@@ -113,10 +114,10 @@ api.interceptors.response.use(
     } else if (error.response?.status === 403) {
       // Handle competition context errors
       const errorMessage = error.response?.data?.message || '';
-      
+
       if (errorMessage.includes('competition') || errorMessage.includes('Competition')) {
         const currentType = getCurrentUserTypeFromURL();
-        
+
         if (currentType) {
           const token = getToken(currentType);
           if (token) {
@@ -134,6 +135,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+setupInterceptors(api);
 
 // Player API
 export const playerAPI = {
@@ -249,17 +252,19 @@ export const superAdminAPI = {
   updateCompetition: (id, data) => api.put(`/superadmin/competitions/${id}`, data),
   deleteCompetition: (id) => api.delete(`/superadmin/competitions/${id}`),
   assignAdminToCompetition: (id, data) => api.post(`/superadmin/competitions/${id}/admins`, data),
-  removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`),
+  removeAdminFromCompetition: (id, adminId) =>
+    api.delete(`/superadmin/competitions/${id}/admins/${adminId}`),
   // Team and Player management
   getAllTeams: (params) => api.get('/superadmin/teams', { params }),
-  addPlayerToTeam: (data) => api.post('/superadmin/players/add', data)
+  addPlayerToTeam: (data) => api.post('/superadmin/players/add', data),
 };
 
 // Auth API
 export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   verifyOTP: (email, otp) => api.post('/auth/verify-otp', { email, otp }),
-  resetPasswordWithOTP: (email, otp, password) => api.post('/auth/reset-password-otp', { email, otp, password }),
+  resetPasswordWithOTP: (email, otp, password) =>
+    api.post('/auth/reset-password-otp', { email, otp, password }),
   resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
   getAssignedCompetitions: () => api.get('/auth/competitions/assigned'),
   setCompetition: (competitionId) => api.post('/auth/set-competition', { competitionId }),

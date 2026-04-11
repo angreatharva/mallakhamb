@@ -1,9 +1,9 @@
 /**
  * Design Token Validation Utilities
- * 
+ *
  * Provides runtime warnings in development mode for non-standard colors
  * and spacing values that don't match design tokens.
- * 
+ *
  * Validates: Requirements 14.4
  */
 
@@ -27,7 +27,7 @@ function isDevelopment() {
  */
 function getValidColors() {
   const colors = new Set();
-  
+
   function collectColors(obj) {
     for (const value of Object.values(obj)) {
       if (typeof value === 'string' && value.startsWith('#')) {
@@ -37,7 +37,7 @@ function getValidColors() {
       }
     }
   }
-  
+
   collectColors(DESIGN_TOKENS.colors);
   return colors;
 }
@@ -61,24 +61,24 @@ const VALID_SPACING = getValidSpacing();
  */
 function normalizeColor(color) {
   if (!color || typeof color !== 'string') return null;
-  
+
   const trimmed = color.trim().toLowerCase();
-  
+
   // Hex colors
   if (trimmed.startsWith('#')) {
     return trimmed;
   }
-  
+
   // RGB/RGBA colors - we can't easily compare these, so skip
   if (trimmed.startsWith('rgb')) {
     return null;
   }
-  
+
   // HSL/HSLA colors - we can't easily compare these, so skip
   if (trimmed.startsWith('hsl')) {
     return null;
   }
-  
+
   return trimmed;
 }
 
@@ -89,23 +89,23 @@ function normalizeColor(color) {
  */
 export function warnNonStandardColor(color, context = 'component') {
   if (!isDevelopment()) return;
-  
+
   const normalized = normalizeColor(color);
   if (!normalized) return;
-  
+
   // Check if it's a valid design token color
   if (VALID_COLORS.has(normalized)) return;
-  
+
   // Create unique key for this warning
   const warningKey = `color:${normalized}:${context}`;
   if (shownWarnings.has(warningKey)) return;
-  
+
   shownWarnings.add(warningKey);
-  
+
   console.warn(
     `[Design System] Non-standard color "${color}" used in ${context}. ` +
-    `Consider using a color from DESIGN_TOKENS.colors instead. ` +
-    `See Web/src/styles/tokens.js for available colors.`
+      `Consider using a color from DESIGN_TOKENS.colors instead. ` +
+      `See Web/src/styles/tokens.js for available colors.`
   );
 }
 
@@ -116,24 +116,24 @@ export function warnNonStandardColor(color, context = 'component') {
  */
 export function warnNonStandardSpacing(spacing, context = 'component') {
   if (!isDevelopment()) return;
-  
+
   if (!spacing || typeof spacing !== 'string') return;
-  
+
   const trimmed = spacing.trim();
-  
+
   // Check if it's a valid design token spacing
   if (VALID_SPACING.has(trimmed)) return;
-  
+
   // Create unique key for this warning
   const warningKey = `spacing:${trimmed}:${context}`;
   if (shownWarnings.has(warningKey)) return;
-  
+
   shownWarnings.add(warningKey);
-  
+
   console.warn(
     `[Design System] Non-standard spacing "${spacing}" used in ${context}. ` +
-    `Consider using a spacing value from DESIGN_TOKENS.spacing instead. ` +
-    `See Web/src/styles/tokens.js for available spacing values.`
+      `Consider using a spacing value from DESIGN_TOKENS.spacing instead. ` +
+      `See Web/src/styles/tokens.js for available spacing values.`
   );
 }
 
@@ -144,30 +144,52 @@ export function warnNonStandardSpacing(spacing, context = 'component') {
  */
 export function validateStyles(styles, context = 'component') {
   if (!isDevelopment() || !styles || typeof styles !== 'object') return;
-  
+
   // Properties that typically contain colors
   const colorProperties = [
-    'color', 'backgroundColor', 'borderColor', 'borderTopColor',
-    'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-    'outlineColor', 'fill', 'stroke',
+    'color',
+    'backgroundColor',
+    'borderColor',
+    'borderTopColor',
+    'borderRightColor',
+    'borderBottomColor',
+    'borderLeftColor',
+    'outlineColor',
+    'fill',
+    'stroke',
   ];
-  
+
   // Properties that typically contain spacing
   const spacingProperties = [
-    'margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
-    'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-    'gap', 'rowGap', 'columnGap',
-    'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
+    'margin',
+    'marginTop',
+    'marginRight',
+    'marginBottom',
+    'marginLeft',
+    'padding',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'gap',
+    'rowGap',
+    'columnGap',
+    'width',
+    'height',
+    'minWidth',
+    'minHeight',
+    'maxWidth',
+    'maxHeight',
   ];
-  
+
   for (const [property, value] of Object.entries(styles)) {
     if (typeof value !== 'string') continue;
-    
+
     // Check color properties
     if (colorProperties.includes(property)) {
       warnNonStandardColor(value, `${context}.${property}`);
     }
-    
+
     // Check spacing properties
     if (spacingProperties.includes(property)) {
       // Only warn for px, rem, em values
@@ -181,7 +203,7 @@ export function validateStyles(styles, context = 'component') {
 /**
  * Create a validated style object that warns about non-standard values
  * This is a helper for creating style objects with automatic validation
- * 
+ *
  * @param {Object} styles - Style object
  * @param {string} context - Context identifier
  * @returns {Object} The same style object (validation happens as side effect)

@@ -1,22 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     // Enhanced responsive breakpoints for the project
     screens: {
-      'xs': '320px',        // Extra small mobile devices
-      'mobile': '320px',    // Mobile baseline
+      xs: '320px', // Extra small mobile devices
+      mobile: '320px', // Mobile baseline
       'mobile-lg': '480px', // Large mobile devices
-      'sm': '640px',        // Small tablets and large phones
-      'md': '768px',        // Tablets
-      'tablet': '768px',    // Tablet baseline
-      'lg': '1024px',       // Small desktops and laptops
-      'xl': '1280px',       // Desktops
-      'desktop': '1440px',  // Desktop baseline (preservation point)
-      '2xl': '1536px',      // Large desktops
+      sm: '640px', // Small tablets and large phones
+      md: '768px', // Tablets
+      tablet: '768px', // Tablet baseline
+      lg: '1024px', // Small desktops and laptops
+      xl: '1280px', // Desktops
+      desktop: '1440px', // Desktop baseline (preservation point)
+      '2xl': '1536px', // Large desktops
       'desktop-lg': '1920px', // Large desktop displays
     },
     extend: {
@@ -44,24 +41,24 @@ export default {
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
-        }
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       // Enhanced responsive spacing system
       spacing: {
-        'touch-target': '44px',      // Minimum touch target size
-        'touch-target-lg': '48px',   // Recommended touch target size
-        'mobile-padding': '1rem',    // Mobile container padding
-        'tablet-padding': '1.5rem',  // Tablet container padding
-        'desktop-padding': '2rem',   // Desktop container padding
-        'mobile-gap': '0.75rem',     // Mobile grid/flex gap
-        'tablet-gap': '1rem',        // Tablet grid/flex gap
-        'desktop-gap': '1.5rem',     // Desktop grid/flex gap
-        'section-mobile': '2rem',    // Mobile section spacing
-        'section-tablet': '3rem',    // Tablet section spacing
-        'section-desktop': '4rem',   // Desktop section spacing
+        'touch-target': '44px', // Minimum touch target size
+        'touch-target-lg': '48px', // Recommended touch target size
+        'mobile-padding': '1rem', // Mobile container padding
+        'tablet-padding': '1.5rem', // Tablet container padding
+        'desktop-padding': '2rem', // Desktop container padding
+        'mobile-gap': '0.75rem', // Mobile grid/flex gap
+        'tablet-gap': '1rem', // Tablet grid/flex gap
+        'desktop-gap': '1.5rem', // Desktop grid/flex gap
+        'section-mobile': '2rem', // Mobile section spacing
+        'section-tablet': '3rem', // Tablet section spacing
+        'section-desktop': '4rem', // Desktop section spacing
       },
       // Responsive typography scale
       fontSize: {
@@ -77,11 +74,11 @@ export default {
       },
       // Enhanced responsive container sizes
       maxWidth: {
-        'mobile': '100%',
+        mobile: '100%',
         'mobile-content': '480px',
-        'tablet': '768px',
+        tablet: '768px',
         'tablet-content': '900px',
-        'desktop': '1200px',
+        desktop: '1200px',
         'desktop-wide': '1440px',
         'desktop-max': '1920px',
       },
@@ -118,14 +115,14 @@ export default {
       // Z-index scale for layering
       zIndex: {
         'mobile-menu': '50',
-        'modal': '100',
-        'tooltip': '200',
+        modal: '100',
+        tooltip: '200',
       },
     },
   },
   plugins: [
     // Enhanced plugin for responsive utilities
-    function({ addUtilities, addComponents, theme }) {
+    function ({ addUtilities, addComponents, theme }) {
       const newUtilities = {
         // Enhanced touch target utilities
         '.touch-target': {
@@ -142,7 +139,7 @@ export default {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        
+
         // Enhanced mobile-first container utilities
         '.container-responsive': {
           width: '100%',
@@ -157,7 +154,7 @@ export default {
             paddingRight: theme('spacing.desktop-padding'),
           },
         },
-        
+
         '.container-centered': {
           width: '100%',
           marginLeft: 'auto',
@@ -178,7 +175,7 @@ export default {
             maxWidth: theme('maxWidth.desktop-wide'),
           },
         },
-        
+
         // Enhanced responsive text utilities
         '.text-responsive-hero': {
           fontSize: theme('fontSize.hero-mobile[0]'),
@@ -195,7 +192,7 @@ export default {
             letterSpacing: theme('fontSize.hero-desktop[1].letterSpacing'),
           },
         },
-        
+
         '.text-responsive-h1': {
           fontSize: theme('fontSize.h1-mobile[0]'),
           lineHeight: theme('fontSize.h1-mobile[1].lineHeight'),
@@ -211,7 +208,7 @@ export default {
             letterSpacing: theme('fontSize.h1-desktop[1].letterSpacing'),
           },
         },
-        
+
         '.text-responsive-body': {
           fontSize: theme('fontSize.body-mobile[0]'),
           lineHeight: theme('fontSize.body-mobile[1].lineHeight'),
@@ -224,7 +221,7 @@ export default {
             lineHeight: theme('fontSize.body-desktop[1].lineHeight'),
           },
         },
-        
+
         // Enhanced layout utilities
         '.grid-responsive-auto': {
           display: 'grid',
@@ -239,7 +236,7 @@ export default {
             gap: theme('spacing.desktop-gap'),
           },
         },
-        
+
         '.grid-responsive-cards': {
           display: 'grid',
           gridTemplateColumns: '1fr',
@@ -255,7 +252,7 @@ export default {
             gridTemplateColumns: 'repeat(4, 1fr)',
           },
         },
-        
+
         '.flex-responsive-stack': {
           display: 'flex',
           flexDirection: 'column',
@@ -268,28 +265,28 @@ export default {
             gap: theme('spacing.desktop-gap'),
           },
         },
-        
+
         // Enhanced responsive image utilities
         '.responsive-img': {
           maxWidth: '100%',
           height: 'auto',
           display: 'block',
         },
-        
+
         '.responsive-img-cover': {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
           objectPosition: 'center',
         },
-        
+
         '.responsive-img-contain': {
           width: '100%',
           height: '100%',
           objectFit: 'contain',
           objectPosition: 'center',
         },
-        
+
         '.responsive-img-hero': {
           width: '100%',
           height: '100vh',
@@ -302,7 +299,7 @@ export default {
             height: '100vh',
           },
         },
-        
+
         '.responsive-img-card': {
           width: '100%',
           aspectRatio: '16 / 9',
@@ -312,7 +309,7 @@ export default {
             aspectRatio: '4 / 3',
           },
         },
-        
+
         '.responsive-img-avatar': {
           width: theme('spacing.12'),
           height: theme('spacing.12'),
@@ -323,7 +320,7 @@ export default {
             height: theme('spacing.16'),
           },
         },
-        
+
         '.responsive-img-logo': {
           height: theme('spacing.8'),
           width: 'auto',
@@ -335,49 +332,49 @@ export default {
             height: theme('spacing.16'),
           },
         },
-        
+
         // Responsive background image utilities
         '.responsive-bg-cover': {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         },
-        
+
         '.responsive-bg-contain': {
           backgroundSize: 'contain',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         },
-        
+
         // Image container utilities
         '.responsive-img-container': {
           position: 'relative',
           overflow: 'hidden',
           width: '100%',
         },
-        
+
         '.responsive-img-container-square': {
           aspectRatio: '1 / 1',
         },
-        
+
         '.responsive-img-container-video': {
           aspectRatio: '16 / 9',
         },
-        
+
         '.responsive-img-container-portrait': {
           aspectRatio: '3 / 4',
         },
-        
+
         '.responsive-img-container-landscape': {
           aspectRatio: '4 / 3',
         },
-        
+
         // Enhanced mobile utilities
         '.no-horizontal-scroll': {
           overflowX: 'hidden',
           maxWidth: '100vw',
         },
-        
+
         '.mobile-full-width': {
           width: '100vw',
           marginLeft: 'calc(-50vw + 50%)',
@@ -386,7 +383,7 @@ export default {
             marginLeft: 'auto',
           },
         },
-        
+
         // Enhanced mobile menu utilities
         '.mobile-menu-overlay': {
           position: 'fixed',
@@ -400,12 +397,12 @@ export default {
           visibility: 'hidden',
           transition: 'opacity 0.3s ease-in-out, visibility 0.3s ease-in-out',
         },
-        
+
         '.mobile-menu-overlay.open': {
           opacity: '1',
           visibility: 'visible',
         },
-        
+
         '.mobile-menu-panel': {
           position: 'fixed',
           top: '0',
@@ -418,11 +415,11 @@ export default {
           transition: 'transform 0.3s ease-in-out',
           boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)',
         },
-        
+
         '.mobile-menu-panel.open': {
           transform: 'translateX(0)',
         },
-        
+
         // Enhanced responsive form utilities
         '.responsive-form-field': {
           marginBottom: theme('spacing.4'),
@@ -430,7 +427,7 @@ export default {
             marginBottom: theme('spacing.6'),
           },
         },
-        
+
         '.responsive-input': {
           display: 'block',
           width: '100%',
@@ -454,7 +451,7 @@ export default {
             minHeight: 'auto',
           },
         },
-        
+
         '.responsive-button': {
           display: 'inline-flex',
           alignItems: 'center',
@@ -480,7 +477,7 @@ export default {
             minHeight: 'auto',
           },
         },
-        
+
         '.responsive-select': {
           display: 'block',
           width: '100%',
@@ -504,7 +501,7 @@ export default {
             minHeight: 'auto',
           },
         },
-        
+
         // Enhanced dropdown utilities
         '.mobile-dropdown': {
           '@media (max-width: 767px)': {
@@ -516,7 +513,7 @@ export default {
             zIndex: '100',
           },
         },
-        
+
         // Responsive table utilities
         '.table-responsive': {
           overflowX: 'auto',
@@ -524,7 +521,7 @@ export default {
             overflowX: 'visible',
           },
         },
-        
+
         '.table-mobile-cards': {
           '@media (max-width: 767px)': {
             '& thead': {
@@ -554,7 +551,7 @@ export default {
           },
         },
       };
-      
+
       // Add responsive component classes
       const responsiveComponents = {
         '.responsive-container': {
@@ -570,9 +567,9 @@ export default {
           '@apply text-responsive-body': {},
         },
       };
-      
+
       addUtilities(newUtilities);
       addComponents(responsiveComponents);
     },
   ],
-}
+};

@@ -1,12 +1,33 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import customRules from './eslint-rules/index.js'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import customRules from './eslint-rules/index.js';
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    'node_modules',
+    'storybook-static',
+    'playwright-report',
+    'test-results',
+    '**/.cache',
+  ]),
+  {
+    files: [
+      '**/*.config.{js,cjs,mjs}',
+      'vite.config.js',
+      'playwright.config.js',
+      'tailwind.config.js',
+      'postcss.config.js',
+      'fix-console-logs.cjs',
+    ],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -37,10 +58,7 @@ export default defineConfig([
     },
   },
   {
-    files: [
-      '**/*.{test,spec}.{js,jsx}',
-      '**/__tests__/**/*.{js,jsx}',
-    ],
+    files: ['**/*.{test,spec}.{js,jsx}', '**/__tests__/**/*.{js,jsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -52,4 +70,20 @@ export default defineConfig([
       'no-import-assign': 'off',
     },
   },
-])
+  {
+    files: ['src/test/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest,
+      },
+    },
+  },
+  {
+    files: ['**/*.stories.{js,jsx,ts,tsx}'],
+    rules: {
+      // Storybook stories commonly use `render` functions that call hooks.
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+]);

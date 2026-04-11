@@ -7,10 +7,7 @@ const originalWarn = console.warn;
 beforeAll(() => {
   console.warn = (...args) => {
     const first = args[0];
-    if (
-      typeof first === 'string' &&
-      first.includes('React Router Future Flag')
-    ) {
+    if (typeof first === 'string' && first.includes('React Router Future Flag')) {
       return;
     }
     originalWarn.apply(console, args);

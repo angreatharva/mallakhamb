@@ -50,15 +50,15 @@ const ALLOWED_PATTERNS = [
  */
 export const isValidRedirectPath = (path) => {
   if (!path || typeof path !== 'string') return false;
-  
+
   // Remove query string and hash for validation
   const cleanPath = path.split('?')[0].split('#')[0];
-  
+
   // Check against whitelist
   if (ALLOWED_PATHS.includes(cleanPath)) return true;
-  
+
   // Check against patterns
-  return ALLOWED_PATTERNS.some(pattern => pattern.test(cleanPath));
+  return ALLOWED_PATTERNS.some((pattern) => pattern.test(cleanPath));
 };
 
 /**

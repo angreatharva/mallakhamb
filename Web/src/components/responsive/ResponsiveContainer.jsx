@@ -1,9 +1,9 @@
 /**
  * ResponsiveContainer Component
- * 
+ *
  * A flexible container component that adapts its layout, padding, and max-width
  * based on the current viewport size. Follows mobile-first design principles.
- * 
+ *
  * Requirements: 2.1, 2.2, 3.1, 3.2
  */
 
@@ -32,19 +32,19 @@ export const ResponsiveContainer = ({
   ...props
 }) => {
   const { viewport, isMobile, isTablet, isDesktop } = useResponsive();
-  
+
   // Get responsive layout configuration
   const layout = getResponsiveLayout('container');
-  
+
   // Determine container classes based on props and viewport
   const getContainerClasses = () => {
     const classes = ['w-full'];
-    
+
     // Add centering if enabled
     if (centered) {
       classes.push('mx-auto');
     }
-    
+
     // Add responsive padding - mobile-first approach
     if (padding === 'responsive') {
       classes.push('px-4 md:px-6 lg:px-8 desktop:px-8');
@@ -58,7 +58,7 @@ export const ResponsiveContainer = ({
       // Custom padding class
       classes.push(padding);
     }
-    
+
     // Add max-width constraints for different viewport categories
     switch (maxWidth) {
       case 'mobile':
@@ -68,20 +68,24 @@ export const ResponsiveContainer = ({
         classes.push('max-w-tablet md:max-w-tablet-content');
         break;
       case 'desktop':
-        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide');
+        classes.push(
+          'max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide'
+        );
         break;
       case 'full':
         // No max-width constraint - full viewport width
         break;
       default:
-        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide');
+        classes.push(
+          'max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide'
+        );
     }
-    
+
     return classes.join(' ');
   };
-  
+
   const containerClasses = `${getContainerClasses()} ${className}`.trim();
-  
+
   return (
     <Component className={containerClasses} {...props}>
       {children}
@@ -111,9 +115,9 @@ export const ResponsiveCenteredContainer = ({ children, className = '', ...props
  */
 export const ResponsiveFullWidthContainer = ({ children, className = '', ...props }) => {
   const { isMobile } = useResponsive();
-  
+
   const fullWidthClasses = isMobile ? 'mobile-full-width no-horizontal-scroll' : '';
-  
+
   return (
     <ResponsiveContainer
       maxWidth="full"

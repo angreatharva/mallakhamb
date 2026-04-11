@@ -353,13 +353,19 @@ describe('Background Decoration Components', () => {
     it('should memoize star positions (not regenerate on re-render)', () => {
       const { container, rerender } = render(<Constellation starCount={10} />);
       const initialCircles = Array.from(container.querySelectorAll('circle'));
-      const initialPositions = initialCircles.map(c => ({ cx: c.getAttribute('cx'), cy: c.getAttribute('cy') }));
+      const initialPositions = initialCircles.map((c) => ({
+        cx: c.getAttribute('cx'),
+        cy: c.getAttribute('cy'),
+      }));
 
       // Re-render with same props
       rerender(<Constellation starCount={10} />);
-      
+
       const newCircles = Array.from(container.querySelectorAll('circle'));
-      const newPositions = newCircles.map(c => ({ cx: c.getAttribute('cx'), cy: c.getAttribute('cy') }));
+      const newPositions = newCircles.map((c) => ({
+        cx: c.getAttribute('cx'),
+        cy: c.getAttribute('cy'),
+      }));
 
       // Positions should be the same (memoized)
       expect(initialPositions).toEqual(newPositions);
@@ -374,10 +380,10 @@ describe('Background Decoration Components', () => {
           <div data-testid="content">Content</div>
         </div>
       );
-      
+
       const content = screen.getByTestId('content');
       const svg = container.querySelector('svg');
-      
+
       expect(content).toBeInTheDocument();
       expect(parseFloat(svg.style.opacity)).toBeLessThanOrEqual(0.1);
     });
@@ -386,13 +392,15 @@ describe('Background Decoration Components', () => {
       const { container } = render(
         <div style={{ position: 'relative' }}>
           <RadialBurst />
-          <div data-testid="content" style={{ position: 'relative', zIndex: 1 }}>Content</div>
+          <div data-testid="content" style={{ position: 'relative', zIndex: 1 }}>
+            Content
+          </div>
         </div>
       );
-      
+
       const content = screen.getByTestId('content');
       const burst = container.querySelector('.pointer-events-none');
-      
+
       expect(content).toBeInTheDocument();
       expect(burst).toHaveStyle({ zIndex: '0' });
     });
@@ -404,10 +412,10 @@ describe('Background Decoration Components', () => {
           <div data-testid="content">Content</div>
         </div>
       );
-      
+
       const content = screen.getByTestId('content');
       const burst = container.querySelector('.pointer-events-none');
-      
+
       expect(content).toBeInTheDocument();
       expect(parseFloat(burst.style.opacity)).toBeLessThanOrEqual(0.15);
     });
@@ -422,7 +430,7 @@ describe('Background Decoration Components', () => {
           <Constellation />
         </div>
       );
-      
+
       const decorations = container.querySelectorAll('.pointer-events-none');
       expect(decorations.length).toBe(5);
     });
@@ -468,7 +476,7 @@ describe('Background Decoration Components', () => {
   describe('Barrel Export', () => {
     it('should export all background components', async () => {
       const module = await import('./index.js');
-      
+
       expect(module.HexGrid).toBeDefined();
       expect(module.RadialBurst).toBeDefined();
       expect(module.DiagonalBurst).toBeDefined();

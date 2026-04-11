@@ -5,19 +5,23 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * HexGrid - SVG-based hexagonal pattern background decoration
- * 
+ *
  * Renders a non-interactive hexagonal grid pattern that respects user motion preferences.
  * Positioned absolutely and designed to not interfere with content readability.
- * 
+ *
  * @param {Object} props
  * @param {string} props.color - Hex color for the pattern (default: saffron)
  * @param {number} props.opacity - Opacity value 0-1 (default: 0.03)
  * @param {string} props.className - Additional CSS classes
- * 
+ *
  * @example
  * <HexGrid color="#8B5CF6" opacity={0.05} />
  */
-const HexGrid = ({ color = DESIGN_TOKENS.colors.brand.saffron, opacity = 0.03, className = '' }) => {
+const HexGrid = ({
+  color = DESIGN_TOKENS.colors.brand.saffron,
+  opacity = 0.03,
+  className = '',
+}) => {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -26,22 +30,10 @@ const HexGrid = ({ color = DESIGN_TOKENS.colors.brand.saffron, opacity = 0.03, c
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      <svg
-        width="100%"
-        height="100%"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{ opacity }}
-      >
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ opacity }}>
         <defs>
           {/* Define hexagon pattern */}
-          <pattern
-            id="hexgrid"
-            x="0"
-            y="0"
-            width="56"
-            height="100"
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id="hexgrid" x="0" y="0" width="56" height="100" patternUnits="userSpaceOnUse">
             {/* First hexagon */}
             <path
               d="M28 0 L42 8 L42 24 L28 32 L14 24 L14 8 Z"
@@ -65,13 +57,9 @@ const HexGrid = ({ color = DESIGN_TOKENS.colors.brand.saffron, opacity = 0.03, c
             />
           </pattern>
         </defs>
-        
+
         {/* Apply pattern to full viewport */}
-        <rect
-          width="100%"
-          height="100%"
-          fill="url(#hexgrid)"
-        />
+        <rect width="100%" height="100%" fill="url(#hexgrid)" />
       </svg>
     </div>
   );

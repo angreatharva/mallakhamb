@@ -18,9 +18,7 @@ describe('useReducedMotion', () => {
         listeners.push({ event, handler });
       }),
       removeEventListener: vi.fn((event, handler) => {
-        listeners = listeners.filter(
-          (l) => l.event !== event || l.handler !== handler
-        );
+        listeners = listeners.filter((l) => l.event !== event || l.handler !== handler);
       }),
     }));
 

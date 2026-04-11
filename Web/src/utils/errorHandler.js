@@ -7,14 +7,14 @@ export const handleAPIError = (error, customMessage = null) => {
     toast.error(customMessage || 'Network error. Please check your connection.');
     return {
       type: 'network',
-      message: 'Network error'
+      message: 'Network error',
     };
   }
-  
+
   // HTTP error
   const status = error.response.status;
   const message = error.response.data?.message || error.message;
-  
+
   switch (status) {
     case 400:
       toast.error(customMessage || message || 'Invalid request');
@@ -39,10 +39,10 @@ export const handleAPIError = (error, customMessage = null) => {
     default:
       toast.error(customMessage || message || 'An error occurred');
   }
-  
+
   return {
     type: 'http',
     status,
-    message
+    message,
   };
 };

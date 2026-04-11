@@ -5,34 +5,29 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * GradientText - Animated gradient text component
- * 
+ *
  * Displays text with a gradient color effect and optional animation.
  * Respects prefers-reduced-motion setting.
- * 
+ *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Text content to display
  * @param {string} props.className - Additional CSS classes
  * @param {Array<string>} props.colors - Array of gradient colors (default: uses theme colors)
  * @param {boolean} props.animate - Enable gradient animation (default: false)
- * 
+ *
  * @example
  * <GradientText>Hello World</GradientText>
  * <GradientText colors={['#FF6B00', '#F5A623', '#FF8C38']} animate>
  *   Animated Text
  * </GradientText>
  */
-const GradientText = ({ 
-  children, 
-  className = '', 
-  colors,
-  animate = false 
-}) => {
+const GradientText = ({ children, className = '', colors, animate = false }) => {
   const reduced = useReducedMotion();
   const theme = useTheme();
-  
+
   // Determine gradient colors
   let gradientColors;
-  
+
   if (colors && Array.isArray(colors) && colors.length >= 2) {
     // Use provided colors
     gradientColors = colors;
@@ -51,10 +46,10 @@ const GradientText = ({
       DESIGN_TOKENS.colors.brand.saffronLight,
     ];
   }
-  
+
   // Create gradient string
   const gradientString = `linear-gradient(135deg, ${gradientColors.join(', ')})`;
-  
+
   // Base styles
   const baseStyle = {
     background: gradientString,
@@ -62,10 +57,10 @@ const GradientText = ({
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
   };
-  
+
   // Animation styles (only if animate is true and motion is not reduced)
   const shouldAnimate = animate && !reduced;
-  
+
   if (shouldAnimate) {
     return (
       <motion.span
@@ -87,7 +82,7 @@ const GradientText = ({
       </motion.span>
     );
   }
-  
+
   // Static gradient text
   return (
     <span className={className} style={baseStyle}>

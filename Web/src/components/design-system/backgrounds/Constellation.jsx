@@ -5,17 +5,17 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
 
 /**
  * Constellation - Star field with connected dots background decoration
- * 
+ *
  * Renders a star field with lines connecting nearby stars, creating a constellation effect.
  * Respects user motion preferences. Positioned absolutely and designed to not interfere with content readability.
- * 
+ *
  * @param {Object} props
  * @param {string} props.color - Hex color for stars and connections (default: saffron)
  * @param {number} props.opacity - Opacity value 0-1 (default: 0.3)
  * @param {number} props.starCount - Number of stars to render (default: 50)
  * @param {number} props.connectionDistance - Maximum distance for connecting stars (default: 150)
  * @param {string} props.className - Additional CSS classes
- * 
+ *
  * @example
  * <Constellation color="#8B5CF6" starCount={60} opacity={0.4} />
  */
@@ -44,15 +44,16 @@ const Constellation = ({
   // Calculate connections between nearby stars
   const connections = useMemo(() => {
     const connectionArray = [];
-    
+
     for (let i = 0; i < stars.length; i++) {
       for (let j = i + 1; j < stars.length; j++) {
         const dx = stars[j].x - stars[i].x;
         const dy = stars[j].y - stars[i].y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Connect stars within connectionDistance (as percentage of viewport)
-        if (distance < connectionDistance / 10) { // Adjust for percentage scale
+        if (distance < connectionDistance / 10) {
+          // Adjust for percentage scale
           connectionArray.push({
             x1: stars[i].x,
             y1: stars[i].y,
@@ -62,7 +63,7 @@ const Constellation = ({
         }
       }
     }
-    
+
     return connectionArray;
   }, [stars, connectionDistance]);
 
@@ -72,12 +73,7 @@ const Constellation = ({
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      <svg
-        width="100%"
-        height="100%"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{ opacity }}
-      >
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ opacity }}>
         {/* Render connection lines */}
         {connections.map((conn, index) => (
           <line
@@ -91,7 +87,7 @@ const Constellation = ({
             strokeOpacity="0.3"
           />
         ))}
-        
+
         {/* Render stars */}
         {stars.map((star, index) => (
           <circle

@@ -5,29 +5,29 @@
 
 // ─── Timing Constants ───────────────────────────────────────────────────────
 export const TIMING = {
-  DEBOUNCE_DELAY: 300,           // ms - Input debounce delay
-  ANIMATION_DURATION: 200,       // ms - Standard animation duration
-  TOAST_DURATION: 4000,          // ms - Toast notification duration
-  MODAL_TRANSITION: 280,         // ms - Modal open/close transition
-  DROPDOWN_TRANSITION: 180,      // ms - Dropdown open/close transition
-  TOOLTIP_DELAY: 500,            // ms - Tooltip show delay
-  AUTO_SAVE_DELAY: 1000,         // ms - Auto-save debounce
-  POLLING_INTERVAL: 5000,        // ms - Data polling interval
+  DEBOUNCE_DELAY: 300, // ms - Input debounce delay
+  ANIMATION_DURATION: 200, // ms - Standard animation duration
+  TOAST_DURATION: 4000, // ms - Toast notification duration
+  MODAL_TRANSITION: 280, // ms - Modal open/close transition
+  DROPDOWN_TRANSITION: 180, // ms - Dropdown open/close transition
+  TOOLTIP_DELAY: 500, // ms - Tooltip show delay
+  AUTO_SAVE_DELAY: 1000, // ms - Auto-save debounce
+  POLLING_INTERVAL: 5000, // ms - Data polling interval
   SESSION_CHECK_INTERVAL: 60000, // ms - Session validity check (1 minute)
 };
 
 // ─── Size Constants ─────────────────────────────────────────────────────────
 export const SIZES = {
-  MIN_TOUCH_TARGET: 44,          // px - Minimum touch target size (WCAG)
-  MAX_MOBILE_WIDTH: 768,         // px - Mobile breakpoint
-  MAX_TABLET_WIDTH: 1024,        // px - Tablet breakpoint
-  MAX_CONTENT_WIDTH: 1280,       // px - Maximum content width
-  SIDEBAR_WIDTH: 280,            // px - Sidebar width
-  NAVBAR_HEIGHT: 64,             // px - Navbar height
-  MODAL_MAX_WIDTH: 600,          // px - Modal maximum width
-  AVATAR_SIZE_SM: 32,            // px - Small avatar
-  AVATAR_SIZE_MD: 48,            // px - Medium avatar
-  AVATAR_SIZE_LG: 64,            // px - Large avatar
+  MIN_TOUCH_TARGET: 44, // px - Minimum touch target size (WCAG)
+  MAX_MOBILE_WIDTH: 768, // px - Mobile breakpoint
+  MAX_TABLET_WIDTH: 1024, // px - Tablet breakpoint
+  MAX_CONTENT_WIDTH: 1280, // px - Maximum content width
+  SIDEBAR_WIDTH: 280, // px - Sidebar width
+  NAVBAR_HEIGHT: 64, // px - Navbar height
+  MODAL_MAX_WIDTH: 600, // px - Modal maximum width
+  AVATAR_SIZE_SM: 32, // px - Small avatar
+  AVATAR_SIZE_MD: 48, // px - Medium avatar
+  AVATAR_SIZE_LG: 64, // px - Large avatar
 };
 
 // ─── Validation Constants ───────────────────────────────────────────────────
@@ -46,11 +46,11 @@ export const VALIDATION = {
 // ─── Rate Limiting Constants ────────────────────────────────────────────────
 export const RATE_LIMITS = {
   LOGIN_MAX_ATTEMPTS: 5,
-  LOGIN_WINDOW_MS: 60000,        // 1 minute
+  LOGIN_WINDOW_MS: 60000, // 1 minute
   OTP_MAX_ATTEMPTS: 3,
-  OTP_WINDOW_MS: 300000,         // 5 minutes
+  OTP_WINDOW_MS: 300000, // 5 minutes
   API_MAX_REQUESTS: 1000000,
-  API_WINDOW_MS: 60000,          // 1 minute
+  API_WINDOW_MS: 60000, // 1 minute
 };
 
 // ─── Pagination Constants ───────────────────────────────────────────────────
@@ -71,16 +71,16 @@ export const STORAGE_KEYS = {
 
 // ─── API Constants ──────────────────────────────────────────────────────────
 export const API = {
-  TIMEOUT: 30000,                // ms - Request timeout
+  TIMEOUT: 30000, // ms - Request timeout
   RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 1000,             // ms - Delay between retries
+  RETRY_DELAY: 1000, // ms - Delay between retries
 };
 
 // ─── File Upload Constants ──────────────────────────────────────────────────
 export const UPLOAD = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024,     // 5MB
+  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
   MAX_FILES: 10,
-  CHUNK_SIZE: 1024 * 1024,            // 1MB chunks
+  CHUNK_SIZE: 1024 * 1024, // 1MB chunks
   ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.webp', '.pdf'],
 };
 

@@ -21,7 +21,8 @@ const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 const useReducedMotion = () => {
   const [reduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    () =>
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
   return reduced;
 };
@@ -33,9 +34,13 @@ const AmbientOrb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
     <motion.div
       className="absolute rounded-full pointer-events-none"
       style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
+        left: `${x}%`,
+        top: `${y}%`,
+        width: size,
+        height: size,
         background: `radial-gradient(circle at 35% 35%, ${color}55, ${color}15, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
+        filter: `blur(${blur}px)`,
+        transform: 'translate(-50%, -50%)',
       }}
       animate={{ y: [0, -30, 0], scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
       transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
@@ -44,10 +49,17 @@ const AmbientOrb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
 };
 
 const GradientText = ({ children, className = '' }) => (
-  <span className={className} style={{
-    background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  }}>{children}</span>
+  <span
+    className={className}
+    style={{
+      background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    }}
+  >
+    {children}
+  </span>
 );
 
 const StyledInput = ({ error, verified, ...props }) => (
@@ -58,13 +70,13 @@ const StyledInput = ({ error, verified, ...props }) => (
       border: `1px solid ${error ? '#EF4444' : verified ? 'rgba(34,197,94,0.4)' : COLORS.darkBorderSubtle}`,
       caretColor: COLORS.saffron,
     }}
-    onFocus={e => {
+    onFocus={(e) => {
       if (!verified) {
         e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron;
         e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`;
       }
     }}
-    onBlur={e => {
+    onBlur={(e) => {
       if (!verified) {
         e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle;
         e.target.style.boxShadow = 'none';
@@ -84,8 +96,14 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
         border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
         caretColor: COLORS.saffron,
       }}
-      onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`; }}
-      onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
+      onFocus={(e) => {
+        e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron;
+        e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`;
+      }}
+      onBlur={(e) => {
+        e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle;
+        e.target.style.boxShadow = 'none';
+      }}
       {...props}
     />
     <button
@@ -94,7 +112,11 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
       className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-white/35 hover:text-white/70 transition-colors duration-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
       aria-label={showPassword ? 'Hide password' : 'Show password'}
     >
-      {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+      {showPassword ? (
+        <EyeOff className="w-4 h-4" aria-hidden="true" />
+      ) : (
+        <Eye className="w-4 h-4" aria-hidden="true" />
+      )}
     </button>
   </div>
 );
@@ -128,7 +150,12 @@ const ResetPassword = () => {
     }
   }, [token]);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm({
     defaultValues: { email: emailFromState },
   });
   const password = watch('password');
@@ -136,23 +163,33 @@ const ResetPassword = () => {
   useEffect(() => {
     if (lockoutSeconds <= 0) return;
     const t = setTimeout(() => {
-      setLockoutSeconds(p => {
+      setLockoutSeconds((p) => {
         const n = p - 1;
-        if (n <= 0) { setIsLockedOut(false); setAttemptsRemaining(3); }
+        if (n <= 0) {
+          setIsLockedOut(false);
+          setAttemptsRemaining(3);
+        }
         return n;
       });
     }, 1000);
     return () => clearTimeout(t);
   }, [lockoutSeconds]);
 
-  const formatTime = s => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   const handleVerifyOTP = async () => {
     const email = watch('email');
     const otp = watch('otp');
-    if (!email || !otp) { toast.error('Please enter email and OTP'); return; }
-    if (otp.length !== 6) { toast.error('OTP must be 6 digits'); return; }
-    setVerifying(true); setError('');
+    if (!email || !otp) {
+      toast.error('Please enter email and OTP');
+      return;
+    }
+    if (otp.length !== 6) {
+      toast.error('OTP must be 6 digits');
+      return;
+    }
+    setVerifying(true);
+    setError('');
     try {
       await authAPI.verifyOTP(email, otp);
       setOtpVerified(true);
@@ -163,22 +200,34 @@ const ResetPassword = () => {
       const left = err.response?.data?.attemptsRemaining;
       const locked = err.response?.data?.lockedOut;
       const secs = err.response?.data?.remainingSeconds;
-      toast.error(msg); setError(msg);
-      if (locked) { setIsLockedOut(true); setLockoutSeconds(secs || 900); setAttemptsRemaining(0); }
-      else if (left !== undefined) setAttemptsRemaining(left);
+      toast.error(msg);
+      setError(msg);
+      if (locked) {
+        setIsLockedOut(true);
+        setLockoutSeconds(secs || 900);
+        setAttemptsRemaining(0);
+      } else if (left !== undefined) setAttemptsRemaining(left);
     } finally {
       setVerifying(false);
     }
   };
 
   const onSubmit = async (data) => {
-    if (isLockedOut) { toast.error(`Locked. Try again in ${formatTime(lockoutSeconds)}`); return; }
-    setLoading(true); setError('');
+    if (isLockedOut) {
+      toast.error(`Locked. Try again in ${formatTime(lockoutSeconds)}`);
+      return;
+    }
+    setLoading(true);
+    setError('');
     try {
       if (isOTPMethod) {
         await authAPI.resetPasswordWithOTP(data.email, data.otp, data.password);
       } else {
-        if (!resetToken) { setError('Invalid reset link. Please request a new one.'); setLoading(false); return; }
+        if (!resetToken) {
+          setError('Invalid reset link. Please request a new one.');
+          setLoading(false);
+          return;
+        }
         await authAPI.resetPassword(resetToken, data.password);
       }
       setSuccess(true);
@@ -190,10 +239,14 @@ const ResetPassword = () => {
       const left = err.response?.data?.attemptsRemaining;
       const locked = err.response?.data?.lockedOut;
       const secs = err.response?.data?.remainingSeconds;
-      setError(msg); toast.error(msg);
+      setError(msg);
+      toast.error(msg);
       if (isOTPMethod) {
-        if (locked) { setIsLockedOut(true); setLockoutSeconds(secs || 900); setAttemptsRemaining(0); }
-        else if (left !== undefined) setAttemptsRemaining(left);
+        if (locked) {
+          setIsLockedOut(true);
+          setLockoutSeconds(secs || 900);
+          setAttemptsRemaining(0);
+        } else if (left !== undefined) setAttemptsRemaining(left);
       }
     } finally {
       setLoading(false);
@@ -208,11 +261,28 @@ const ResetPassword = () => {
       className="min-h-dvh flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}
     >
-      <AmbientOrb x={20} y={15} size={380} color={COLORS.saffron} delay={0} duration={8} blur={120} />
-      <AmbientOrb x={80} y={75} size={280} color={COLORS.gold} delay={1.5} duration={10} blur={100} />
+      <AmbientOrb
+        x={20}
+        y={15}
+        size={380}
+        color={COLORS.saffron}
+        delay={0}
+        duration={8}
+        blur={120}
+      />
+      <AmbientOrb
+        x={80}
+        y={75}
+        size={280}
+        color={COLORS.gold}
+        delay={1.5}
+        duration={10}
+        blur={100}
+      />
 
       {!reduced && (
-        <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
+        <div
+          className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
           style={{
             backgroundImage: `linear-gradient(${COLORS.saffron}80 1px, transparent 1px), linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
@@ -223,62 +293,101 @@ const ResetPassword = () => {
       )}
 
       {/* Logo */}
-      <motion.div className="mb-8 flex items-center gap-3"
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: EASE_OUT }}>
+      <motion.div
+        className="mb-8 flex items-center gap-3"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: EASE_OUT }}
+      >
         <Link to="/" aria-label="Back to home">
           <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>Bhausaheb Ranade</p>
+          <p
+            className="text-xs font-bold tracking-widest uppercase"
+            style={{ color: COLORS.saffron }}
+          >
+            Bhausaheb Ranade
+          </p>
           <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
 
       {/* Card */}
-      <motion.div ref={cardRef} className="w-full max-w-md relative z-10"
+      <motion.div
+        ref={cardRef}
+        className="w-full max-w-md relative z-10"
         initial={{ opacity: 0, y: 40, scale: 0.97 }}
         animate={cardInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-        transition={{ duration: 0.65, ease: EASE_OUT }}>
-        <div className="rounded-3xl p-8 border" style={{
-          background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(24px)',
-          borderColor: COLORS.darkBorder,
-          boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
-        }}>
+        transition={{ duration: 0.65, ease: EASE_OUT }}
+      >
+        <div
+          className="rounded-3xl p-8 border"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(24px)',
+            borderColor: COLORS.darkBorder,
+            boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
+          }}
+        >
           {/* Icon + heading */}
           <div className="text-center mb-6">
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.darkBorder}` }}
-              initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
+              style={{
+                background: `${COLORS.saffron}18`,
+                border: `1px solid ${COLORS.darkBorder}`,
+              }}
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{
+                duration: 0.5,
+                delay: 0.2,
+                type: 'spring',
+                stiffness: 300,
+                damping: 20,
+              }}
+            >
               <Lock className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
             </motion.div>
             <h1 className="text-2xl font-black text-white mb-2">
               Reset <GradientText>Password</GradientText>
             </h1>
             <p className="text-white/45 text-sm">
-              {isOTPMethod ? 'Verify your OTP then set a new password' : 'Enter your new password below'}
+              {isOTPMethod
+                ? 'Verify your OTP then set a new password'
+                : 'Enter your new password below'}
             </p>
           </div>
 
           {/* Step indicator (OTP flow only) */}
           {isOTPMethod && (
             <div className="flex items-center gap-2 mb-6">
-              {[1, 2].map(s => (
+              {[1, 2].map((s) => (
                 <div key={s} className="flex items-center gap-2 flex-1">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-all duration-300"
+                  <div
+                    className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-all duration-300"
                     style={{
                       background: step >= s ? COLORS.saffron : 'rgba(255,255,255,0.08)',
                       color: step >= s ? '#fff' : 'rgba(255,255,255,0.3)',
-                    }}>
+                    }}
+                  >
                     {step > s ? <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> : s}
                   </div>
-                  <span className="text-xs font-medium transition-colors duration-300"
-                    style={{ color: step >= s ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)' }}>
+                  <span
+                    className="text-xs font-medium transition-colors duration-300"
+                    style={{
+                      color: step >= s ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)',
+                    }}
+                  >
                     {s === 1 ? 'Verify OTP' : 'New Password'}
                   </span>
-                  {s < 2 && <div className="flex-1 h-px" style={{ background: step > s ? COLORS.saffron : COLORS.darkBorderSubtle }} />}
+                  {s < 2 && (
+                    <div
+                      className="flex-1 h-px"
+                      style={{ background: step > s ? COLORS.saffron : COLORS.darkBorderSubtle }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -287,15 +396,21 @@ const ResetPassword = () => {
           {/* Lockout banner */}
           <AnimatePresence>
             {isLockedOut && (
-              <motion.div className="mb-5 p-4 rounded-xl border flex items-start gap-3"
+              <motion.div
+                className="mb-5 p-4 rounded-xl border flex items-start gap-3"
                 style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}
-                role="alert">
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                role="alert"
+              >
                 <Shield className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-semibold text-red-400">Account Temporarily Locked</p>
-                  <p className="text-xs text-red-400/70 mt-0.5">Too many failed attempts. Try again in {formatTime(lockoutSeconds)}</p>
+                  <p className="text-xs text-red-400/70 mt-0.5">
+                    Too many failed attempts. Try again in {formatTime(lockoutSeconds)}
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -304,12 +419,24 @@ const ResetPassword = () => {
           {/* Attempts warning */}
           <AnimatePresence>
             {isOTPMethod && !isLockedOut && attemptsRemaining < 3 && !otpVerified && (
-              <motion.div className="mb-5 p-3 rounded-xl border flex items-center gap-2"
-                style={{ background: 'rgba(245,166,35,0.08)', borderColor: 'rgba(245,166,35,0.25)' }}
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-                role="status" aria-live="polite">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.gold }} aria-hidden="true" />
+              <motion.div
+                className="mb-5 p-3 rounded-xl border flex items-center gap-2"
+                style={{
+                  background: 'rgba(245,166,35,0.08)',
+                  borderColor: 'rgba(245,166,35,0.25)',
+                }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                role="status"
+                aria-live="polite"
+              >
+                <AlertTriangle
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: COLORS.gold }}
+                  aria-hidden="true"
+                />
                 <p className="text-xs font-medium" style={{ color: COLORS.gold }}>
                   {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining
                 </p>
@@ -320,13 +447,19 @@ const ResetPassword = () => {
           {/* OTP verified banner */}
           <AnimatePresence>
             {otpVerified && (
-              <motion.div className="mb-5 p-3 rounded-xl border flex items-center gap-2"
+              <motion.div
+                className="mb-5 p-3 rounded-xl border flex items-center gap-2"
                 style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
-                initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, type: 'spring', stiffness: 300, damping: 25 }}
-                role="status" aria-live="polite">
+                role="status"
+                aria-live="polite"
+              >
                 <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" aria-hidden="true" />
-                <p className="text-xs font-semibold text-green-400">OTP verified — set your new password below</p>
+                <p className="text-xs font-semibold text-green-400">
+                  OTP verified — set your new password below
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -338,22 +471,37 @@ const ResetPassword = () => {
                 {/* Email */}
                 <div className="mb-4">
                   <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
-                    Email Address <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    Email Address{' '}
+                    <span style={{ color: COLORS.saffron }} aria-hidden="true">
+                      *
+                    </span>
                   </label>
                   <StyledInput
                     {...register('email', {
                       required: 'Email is required',
-                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email' },
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                        message: 'Please enter a valid email',
+                      },
                     })}
-                    id="email" type="email" autoComplete="email"
+                    id="email"
+                    type="email"
+                    autoComplete="email"
                     placeholder="you@example.com"
                     disabled={loading || isLockedOut || otpVerified}
-                    error={!!errors.email} verified={otpVerified}
+                    error={!!errors.email}
+                    verified={otpVerified}
                     aria-invalid={!!errors.email}
                   />
                   {errors.email && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
-                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                    <motion.p
+                      role="alert"
+                      className="mt-1.5 text-xs font-medium"
+                      style={{ color: '#EF4444' }}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       {errors.email.message}
                     </motion.p>
                   )}
@@ -362,7 +510,10 @@ const ResetPassword = () => {
                 {/* OTP */}
                 <div className="mb-4">
                   <label htmlFor="otp" className="block text-sm font-semibold text-white/70 mb-2">
-                    OTP Code <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    OTP Code{' '}
+                    <span style={{ color: COLORS.saffron }} aria-hidden="true">
+                      *
+                    </span>
                   </label>
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
@@ -371,10 +522,15 @@ const ResetPassword = () => {
                           required: 'OTP is required',
                           pattern: { value: /^\d{6}$/, message: 'OTP must be 6 digits' },
                         })}
-                        id="otp" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+                        id="otp"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
                         placeholder="6-digit code"
                         disabled={loading || isLockedOut || otpVerified}
-                        error={!!errors.otp} verified={otpVerified}
+                        error={!!errors.otp}
+                        verified={otpVerified}
                         aria-invalid={!!errors.otp}
                       />
                       {otpVerified && (
@@ -394,21 +550,37 @@ const ResetPassword = () => {
                         color: otpVerified ? '#4ade80' : COLORS.saffronLight,
                       }}
                       whileHover={!otpVerified && !verifying ? { scale: 1.03 } : {}}
-                      whileTap={!otpVerified && !verifying ? { scale: 0.97 } : {}}>
+                      whileTap={!otpVerified && !verifying ? { scale: 0.97 } : {}}
+                    >
                       {verifying ? (
-                        <motion.div className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto"
-                          animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                      ) : otpVerified ? '✓ Verified' : 'Verify'}
+                        <motion.div
+                          className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                        />
+                      ) : otpVerified ? (
+                        '✓ Verified'
+                      ) : (
+                        'Verify'
+                      )}
                     </motion.button>
                   </div>
                   {errors.otp && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
-                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                    <motion.p
+                      role="alert"
+                      className="mt-1.5 text-xs font-medium"
+                      style={{ color: '#EF4444' }}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       {errors.otp.message}
                     </motion.p>
                   )}
                   {!otpVerified && !errors.otp && (
-                    <p className="mt-1.5 text-xs text-white/30">Check your email for the 6-digit code</p>
+                    <p className="mt-1.5 text-xs text-white/30">
+                      Check your email for the 6-digit code
+                    </p>
                   )}
                 </div>
               </>
@@ -418,53 +590,82 @@ const ResetPassword = () => {
             <AnimatePresence>
               {(!isOTPMethod || otpVerified) && (
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.3 }}>
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <div className="mb-4">
-                    <label htmlFor="password" className="block text-sm font-semibold text-white/70 mb-2">
-                      New Password <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-semibold text-white/70 mb-2"
+                    >
+                      New Password{' '}
+                      <span style={{ color: COLORS.saffron }} aria-hidden="true">
+                        *
+                      </span>
                     </label>
                     <PasswordInput
                       {...register('password', {
                         required: 'Password is required',
                         minLength: { value: 8, message: 'Password must be at least 8 characters' },
                       })}
-                      id="password" autoComplete="new-password"
+                      id="password"
+                      autoComplete="new-password"
                       placeholder="Min. 8 characters"
                       disabled={loading || isLockedOut}
                       error={!!errors.password}
                       showPassword={showPassword}
-                      onToggle={() => setShowPassword(p => !p)}
+                      onToggle={() => setShowPassword((p) => !p)}
                       aria-invalid={!!errors.password}
                     />
                     {errors.password && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
-                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                      <motion.p
+                        role="alert"
+                        className="mt-1.5 text-xs font-medium"
+                        style={{ color: '#EF4444' }}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
                         {errors.password.message}
                       </motion.p>
                     )}
                   </div>
 
                   <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-white/70 mb-2">
-                      Confirm Password <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    <label
+                      htmlFor="confirmPassword"
+                      className="block text-sm font-semibold text-white/70 mb-2"
+                    >
+                      Confirm Password{' '}
+                      <span style={{ color: COLORS.saffron }} aria-hidden="true">
+                        *
+                      </span>
                     </label>
                     <PasswordInput
                       {...register('confirmPassword', {
                         required: 'Please confirm your password',
-                        validate: v => v === password || 'Passwords do not match',
+                        validate: (v) => v === password || 'Passwords do not match',
                       })}
-                      id="confirmPassword" autoComplete="new-password"
+                      id="confirmPassword"
+                      autoComplete="new-password"
                       placeholder="Repeat your password"
                       disabled={loading || isLockedOut}
                       error={!!errors.confirmPassword}
                       showPassword={showConfirmPassword}
-                      onToggle={() => setShowConfirmPassword(p => !p)}
+                      onToggle={() => setShowConfirmPassword((p) => !p)}
                       aria-invalid={!!errors.confirmPassword}
                     />
                     {errors.confirmPassword && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
-                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                      <motion.p
+                        role="alert"
+                        className="mt-1.5 text-xs font-medium"
+                        style={{ color: '#EF4444' }}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
                         {errors.confirmPassword.message}
                       </motion.p>
                     )}
@@ -479,19 +680,30 @@ const ResetPassword = () => {
                 type="submit"
                 disabled={loading || isLockedOut || success}
                 className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm text-white min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                style={{
+                  background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`,
+                }}
                 whileHover={!loading && !isLockedOut && !success ? { scale: 1.02 } : {}}
-                whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}>
+                whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}
+              >
                 {loading ? (
                   <>
-                    <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                    <motion.div
+                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    />
                     Resetting Password…
                   </>
                 ) : success ? (
-                  <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Password Reset — Redirecting…</>
+                  <>
+                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Password Reset —
+                    Redirecting…
+                  </>
                 ) : (
-                  <><Lock className="w-4 h-4" aria-hidden="true" /> Reset Password</>
+                  <>
+                    <Lock className="w-4 h-4" aria-hidden="true" /> Reset Password
+                  </>
                 )}
               </motion.button>
             )}
@@ -500,13 +712,21 @@ const ResetPassword = () => {
           {/* Success */}
           <AnimatePresence>
             {success && (
-              <motion.div className="mt-5 p-4 rounded-xl border"
+              <motion.div
+                className="mt-5 p-4 rounded-xl border"
                 style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-                role="status" aria-live="polite">
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                role="status"
+                aria-live="polite"
+              >
                 <p className="text-sm font-semibold text-green-400">Password reset successfully!</p>
-                <Link to="/player/login" className="text-xs text-green-400/70 hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center">
+                <Link
+                  to="/player/login"
+                  className="text-xs text-green-400/70 hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center"
+                >
                   Go to Login →
                 </Link>
               </motion.div>
@@ -516,36 +736,53 @@ const ResetPassword = () => {
           {/* Error */}
           <AnimatePresence>
             {error && !isLockedOut && !success && (
-              <motion.div className="mt-5 p-4 rounded-xl border"
+              <motion.div
+                className="mt-5 p-4 rounded-xl border"
                 style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-                role="alert" aria-live="assertive">
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                role="alert"
+                aria-live="assertive"
+              >
                 <p className="text-sm text-red-400">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Footer links */}
-          <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
+          <div
+            className="mt-8 pt-6 border-t flex flex-col items-center gap-3"
+            style={{ borderColor: COLORS.darkBorderSubtle }}
+          >
             {isOTPMethod ? (
               <p className="text-sm text-white/35">
                 Didn't receive OTP?{' '}
-                <Link to="/forgot-password" className="font-semibold transition-colors duration-200 hover:opacity-80"
-                  style={{ color: COLORS.saffronLight }}>
+                <Link
+                  to="/forgot-password"
+                  className="font-semibold transition-colors duration-200 hover:opacity-80"
+                  style={{ color: COLORS.saffronLight }}
+                >
                   Request New OTP
                 </Link>
               </p>
             ) : (
               <p className="text-sm text-white/35">
                 Remember your password?{' '}
-                <Link to="/player/login" className="font-semibold transition-colors duration-200 hover:opacity-80"
-                  style={{ color: COLORS.saffronLight }}>
+                <Link
+                  to="/player/login"
+                  className="font-semibold transition-colors duration-200 hover:opacity-80"
+                  style={{ color: COLORS.saffronLight }}
+                >
                   Back to Login
                 </Link>
               </p>
             )}
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]"
+            >
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home
             </Link>

@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
 import toast from 'react-hot-toast';
 import { logger } from '../utils/logger';
-import {
-  Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
-} from 'lucide-react';
+import { Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS, useReducedMotion, GradientText, FadeIn } from '../pages/public/Home';
 
@@ -27,8 +25,10 @@ const AmbientOrb = ({ x, y, size, color, delay }) => {
     <motion.div
       className="absolute rounded-full pointer-events-none"
       style={{
-        left: `${x}%`, top: `${y}%`,
-        width: size, height: size,
+        left: `${x}%`,
+        top: `${y}%`,
+        width: size,
+        height: size,
         background: `radial-gradient(circle at 35% 35%, ${color}55, transparent 70%)`,
         filter: 'blur(80px)',
         transform: 'translate(-50%, -50%)',
@@ -55,32 +55,48 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
           ? `linear-gradient(135deg, ${COLORS.saffron}12, rgba(255,255,255,0.03))`
           : 'rgba(255,255,255,0.03)',
         borderColor: isSelected ? `${COLORS.saffron}45` : COLORS.darkBorderSubtle,
-        boxShadow: isSelected ? `0 0 0 1px ${COLORS.saffron}20, 0 8px 32px ${COLORS.saffron}10` : 'none',
+        boxShadow: isSelected
+          ? `0 0 0 1px ${COLORS.saffron}20, 0 8px 32px ${COLORS.saffron}10`
+          : 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
-      whileHover={disabled ? {} : {
-        borderColor: `${COLORS.saffron}35`,
-        background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.03))`,
-        y: -2,
-      }}
+      whileHover={
+        disabled
+          ? {}
+          : {
+              borderColor: `${COLORS.saffron}35`,
+              background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.03))`,
+              y: -2,
+            }
+      }
       whileTap={disabled ? {} : { scale: 0.99 }}
       aria-pressed={isSelected}
     >
       {/* Selected shimmer */}
       {isSelected && (
-        <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}60, transparent)` }} />
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${COLORS.saffron}60, transparent)`,
+          }}
+        />
       )}
 
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: isSelected ? `${COLORS.saffron}20` : 'rgba(255,255,255,0.06)' }}>
-              <Trophy className="w-5 h-5" style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: isSelected ? `${COLORS.saffron}20` : 'rgba(255,255,255,0.06)' }}
+            >
+              <Trophy
+                className="w-5 h-5"
+                style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }}
+                aria-hidden="true"
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-white font-bold text-sm leading-tight">
@@ -88,14 +104,19 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
               </h3>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                 {competition.place && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <span
+                    className="flex items-center gap-1 text-xs"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}
+                  >
                     <MapPin className="w-3 h-3" aria-hidden="true" />
                     {competition.place}
                   </span>
                 )}
                 {competition.level && (
-                  <span className="text-xs capitalize px-2 py-0.5 rounded-full"
-                    style={{ background: `${COLORS.saffron}12`, color: COLORS.saffronLight }}>
+                  <span
+                    className="text-xs capitalize px-2 py-0.5 rounded-full"
+                    style={{ background: `${COLORS.saffron}12`, color: COLORS.saffronLight }}
+                  >
                     {competition.level}
                   </span>
                 )}
@@ -105,13 +126,21 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
 
           {/* Status + check */}
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-              style={{ background: `${status.color}15`, color: status.color, border: `1px solid ${status.color}30` }}>
+            <span
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style={{
+                background: `${status.color}15`,
+                color: status.color,
+                border: `1px solid ${status.color}30`,
+              }}
+            >
               {competition.status === 'ongoing' && (
-                <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                <motion.span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                   style={{ background: status.color }}
                   animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.2, repeat: Infinity }} />
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                />
               )}
               {status.label}
             </span>
@@ -119,7 +148,8 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
               <motion.div
                 className="w-6 h-6 rounded-full flex items-center justify-center"
                 style={{ background: COLORS.saffron }}
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               >
                 <Check className="w-3.5 h-3.5 text-white" aria-hidden="true" />
@@ -129,7 +159,10 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
         </div>
 
         {competition.startDate && competition.endDate && (
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <div
+            className="flex items-center gap-1.5 text-xs"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+          >
             <Calendar className="w-3 h-3" aria-hidden="true" />
             {new Date(competition.startDate).toLocaleDateString()} –{' '}
             {new Date(competition.endDate).toLocaleDateString()}
@@ -137,7 +170,10 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
         )}
 
         {competition.description && (
-          <p className="mt-2 text-xs leading-relaxed line-clamp-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p
+            className="mt-2 text-xs leading-relaxed line-clamp-2"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+          >
             {competition.description}
           </p>
         )}
@@ -175,7 +211,10 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   };
 
   const handleCompetitionSelect = async () => {
-    if (!selectedCompetition) { toast.error('Please select a competition'); return; }
+    if (!selectedCompetition) {
+      toast.error('Please select a competition');
+      return;
+    }
     try {
       setIsSelecting(true);
       await switchCompetition(selectedCompetition);
@@ -214,7 +253,10 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   // ── Loading ──
   if (isLoading || isSelecting) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
+      <div
+        className="min-h-dvh flex items-center justify-center"
+        style={{ background: COLORS.dark }}
+      >
         <div className="text-center">
           <motion.div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
@@ -235,10 +277,18 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   // ── Empty ──
   if (!assignedCompetitions || assignedCompetitions.length === 0) {
     return (
-      <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
+      <div
+        className="min-h-dvh flex items-center justify-center p-4"
+        style={{ background: COLORS.dark }}
+      >
         <FadeIn className="text-center max-w-sm w-full">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${COLORS.darkBorderSubtle}`,
+            }}
+          >
             <Trophy className="w-10 h-10 text-white/20" />
           </div>
           <h2 className="text-2xl font-black text-white mb-3">No Competitions</h2>
@@ -248,7 +298,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           <button
             onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
-            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+            style={{
+              background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`,
+            }}
           >
             Go to Home <ArrowRight className="w-4 h-4" />
           </button>
@@ -265,17 +317,25 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       <AmbientOrb x={85} y={70} size={300} color={COLORS.gold} delay={2} />
 
       {/* Noise texture overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }} />
+        }}
+      />
 
       <div className="relative z-10 min-h-dvh flex flex-col items-center justify-center p-4 py-16">
         <div className="w-full max-w-3xl">
           {/* Header */}
           <FadeIn className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border"
-              style={{ background: `${COLORS.saffron}12`, borderColor: `${COLORS.saffron}35`, color: COLORS.saffronLight }}>
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border"
+              style={{
+                background: `${COLORS.saffron}12`,
+                borderColor: `${COLORS.saffron}35`,
+                color: COLORS.saffronLight,
+              }}
+            >
               <Trophy className="w-3 h-3" aria-hidden="true" />
               Competition Selection
             </div>
@@ -291,8 +351,11 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           {assignedCompetitions.length > 3 && (
             <FadeIn delay={0.1} className="mb-6">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                  aria-hidden="true"
+                />
                 <input
                   type="text"
                   placeholder="Search by name, place, level, or status..."
@@ -311,7 +374,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                     <motion.button
                       onClick={() => setSearchQuery('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
-                      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
                       aria-label="Clear search"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -328,12 +393,16 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               <motion.div
                 key="empty"
                 className="text-center py-16"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               >
                 <p className="text-white/30 text-sm">No competitions found for "{searchQuery}"</p>
-                <button onClick={() => setSearchQuery('')}
+                <button
+                  onClick={() => setSearchQuery('')}
                   className="mt-2 text-xs font-semibold transition-colors"
-                  style={{ color: COLORS.saffronLight }}>
+                  style={{ color: COLORS.saffronLight }}
+                >
                   Clear search
                 </button>
               </motion.div>
@@ -341,7 +410,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               <motion.div
                 key="grid"
                 className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               >
                 {filteredCompetitions?.map((competition, i) => (
                   <CompetitionCard
@@ -369,7 +440,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   : 'rgba(255,255,255,0.08)',
                 border: `1px solid ${selectedCompetition ? 'transparent' : COLORS.darkBorderSubtle}`,
               }}
-              whileHover={selectedCompetition && !isSelecting ? { scale: 1.02, brightness: 1.1 } : {}}
+              whileHover={
+                selectedCompetition && !isSelecting ? { scale: 1.02, brightness: 1.1 } : {}
+              }
               whileTap={selectedCompetition && !isSelecting ? { scale: 0.97 } : {}}
             >
               {isSelecting ? (

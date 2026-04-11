@@ -1,14 +1,14 @@
 /**
  * Visual Regression Tests for Unified Pages
- * 
+ *
  * These tests document the visual regression test requirements for unified pages.
- * 
+ *
  * Requirements: 12.4 - Screenshot tests for login and dashboard pages
- * 
+ *
  * Note: Full visual regression testing with snapshots should be done with
  * end-to-end testing tools like Playwright or Chromatic in a real browser
  * environment with actual API responses and routing.
- * 
+ *
  * These tests serve as documentation for what should be tested visually.
  */
 
@@ -18,23 +18,23 @@ describe('Unified Pages Visual Regression', () => {
   describe('Role Configuration', () => {
     it('should support all required roles for login', () => {
       const roles = ['admin', 'superadmin', 'coach', 'player', 'judge'];
-      
-      roles.forEach(role => {
+
+      roles.forEach((role) => {
         expect(role).toBeDefined();
         expect(typeof role).toBe('string');
       });
-      
+
       expect(roles.length).toBe(5);
     });
 
     it('should support dashboard roles', () => {
       const dashboardRoles = ['admin', 'superadmin'];
-      
-      dashboardRoles.forEach(role => {
+
+      dashboardRoles.forEach((role) => {
         expect(role).toBeDefined();
         expect(typeof role).toBe('string');
       });
-      
+
       expect(dashboardRoles.length).toBe(2);
     });
   });
@@ -47,7 +47,7 @@ describe('Unified Pages Visual Regression', () => {
         path: '/admin/login',
         expectedColor: '#8B5CF6',
       };
-      
+
       expect(testCase.component).toBe('UnifiedLogin');
       expect(testCase.role).toBe('admin');
       expect(testCase.path).toBe('/admin/login');
@@ -60,7 +60,7 @@ describe('Unified Pages Visual Regression', () => {
         path: '/superadmin/login',
         expectedColor: '#F5A623',
       };
-      
+
       expect(testCase.component).toBe('UnifiedLogin');
       expect(testCase.role).toBe('superadmin');
     });
@@ -72,7 +72,7 @@ describe('Unified Pages Visual Regression', () => {
         path: '/coach/login',
         expectedColor: '#22C55E',
       };
-      
+
       expect(testCase.component).toBe('UnifiedLogin');
       expect(testCase.role).toBe('coach');
     });
@@ -84,7 +84,7 @@ describe('Unified Pages Visual Regression', () => {
         path: '/player/login',
         expectedColor: '#FF6B00',
       };
-      
+
       expect(testCase.component).toBe('UnifiedLogin');
       expect(testCase.role).toBe('player');
     });
@@ -96,7 +96,7 @@ describe('Unified Pages Visual Regression', () => {
         path: '/judge/login',
         expectedColor: '#8B5CF6',
       };
-      
+
       expect(testCase.component).toBe('UnifiedLogin');
       expect(testCase.role).toBe('judge');
     });
@@ -107,7 +107,7 @@ describe('Unified Pages Visual Regression', () => {
         role: 'admin',
         path: '/admin/dashboard',
       };
-      
+
       expect(testCase.component).toBe('UnifiedDashboard');
       expect(testCase.role).toBe('admin');
     });
@@ -118,7 +118,7 @@ describe('Unified Pages Visual Regression', () => {
         role: 'superadmin',
         path: '/superadmin/dashboard',
       };
-      
+
       expect(testCase.component).toBe('UnifiedDashboard');
       expect(testCase.role).toBe('superadmin');
     });
@@ -140,7 +140,7 @@ describe('Unified Pages Visual Regression', () => {
         viewports: ['mobile', 'tablet', 'desktop'],
         states: ['default', 'error', 'loading'],
       };
-      
+
       expect(requirements.testCases.length).toBe(7);
       expect(requirements.viewports.length).toBe(3);
       expect(requirements.states.length).toBe(3);
@@ -174,7 +174,7 @@ describe('Unified Pages Visual Regression', () => {
           color: '#8B5CF6',
         },
       };
-      
+
       expect(Object.keys(visualElements).length).toBe(5);
       expect(visualElements.admin.color).toBe('#8B5CF6');
       expect(visualElements.coach.color).toBe('#22C55E');

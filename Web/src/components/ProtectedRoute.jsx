@@ -37,18 +37,18 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
     // Check if there's stored auth data for this user type using detected storage prefix
     const token = secureStorage.getItem(`${storagePrefix}_token`);
     const userData = secureStorage.getItem(`${storagePrefix}_user`);
-    
+
     if (token && userData) {
       // Auth data exists but context hasn't loaded yet, show responsive loading
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <div className="text-center max-w-sm w-full">
-            <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-              isMobile ? 'h-8 w-8' : 'h-12 w-12'
-            }`}></div>
-            <p className={`mt-4 text-gray-600 ${
-              isMobile ? 'text-sm' : 'text-base'
-            }`}>Loading...</p>
+            <div
+              className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+                isMobile ? 'h-8 w-8' : 'h-12 w-12'
+              }`}
+            ></div>
+            <p className={`mt-4 text-gray-600 ${isMobile ? 'text-sm' : 'text-base'}`}>Loading...</p>
           </div>
         </div>
       );
@@ -58,18 +58,18 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   // Also check if auth data exists in storage even if user state hasn't loaded yet
   const token = secureStorage.getItem(`${storagePrefix}_token`);
   const userData = secureStorage.getItem(`${storagePrefix}_user`);
-  
+
   // If we have stored auth data but user state is not yet loaded, show loading
   if (!user && token && userData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center max-w-sm w-full">
-          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-            isMobile ? 'h-8 w-8' : 'h-12 w-12'
-          }`}></div>
-          <p className={`mt-4 text-gray-600 ${
-            isMobile ? 'text-sm' : 'text-base'
-          }`}>Loading...</p>
+          <div
+            className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+              isMobile ? 'h-8 w-8' : 'h-12 w-12'
+            }`}
+          ></div>
+          <p className={`mt-4 text-gray-600 ${isMobile ? 'text-sm' : 'text-base'}`}>Loading...</p>
         </div>
       </div>
     );
@@ -85,29 +85,25 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   if (requiredUserType && userType && userType !== requiredUserType) {
     return <Navigate to={loginPath} replace />;
   }
-  
+
   // If user exists but userType hasn't loaded yet, show loading
   if (user && !userType && requiredUserType) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center max-w-sm w-full">
-          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-            isMobile ? 'h-8 w-8' : 'h-12 w-12'
-          }`}></div>
-          <p className={`mt-4 text-gray-600 ${
-            isMobile ? 'text-sm' : 'text-base'
-          }`}>Loading...</p>
+          <div
+            className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+              isMobile ? 'h-8 w-8' : 'h-12 w-12'
+            }`}
+          ></div>
+          <p className={`mt-4 text-gray-600 ${isMobile ? 'text-sm' : 'text-base'}`}>Loading...</p>
         </div>
       </div>
     );
   }
 
   // Wrap children in responsive container to preserve layouts
-  return (
-    <div className="min-h-screen w-full">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen w-full">{children}</div>;
 };
 
 export default ProtectedRoute;
