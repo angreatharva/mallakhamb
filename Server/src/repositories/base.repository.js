@@ -172,8 +172,14 @@ class BaseRepository {
    */
   async updateById(id, updates) {
     try {
-      const doc = await this.model.findByIdAndUpdate(
-        id,
+      // Build query with soft delete filter if applicable
+      const query = { _id: id };
+      if (this.model.schema.paths.isDeleted) {
+        query.isDeleted = { $ne: true };
+      }
+      
+      const doc = await this.model.findOneAndUpdate(
+        query,
         updates,
         { new: true, runValidators: true }
       ).lean().exec();

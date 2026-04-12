@@ -4,66 +4,70 @@
  * Tests for the bootstrap module to ensure all services are registered correctly
  */
 
-// Mock the config manager before importing bootstrap
-jest.mock('../config/config-manager', () => ({
-  load: jest.fn(() => {
-    const mockConfig = {
-      server: {
-        port: 5000,
-        nodeEnv: 'test',
-        corsOrigins: []
+// Mock the config manager before importing bootstrap (real module is a ConfigManager-like singleton)
+jest.mock('../config/config-manager', () => {
+  const mockConfigState = {
+    server: {
+      port: 5000,
+      nodeEnv: 'test',
+      corsOrigins: []
+    },
+    database: {
+      uri: 'mongodb://localhost:27017/test',
+      poolSize: { min: 10, max: 100 },
+      timeouts: { connection: 10000, socket: 45000 }
+    },
+    jwt: {
+      secret: 'test-secret-32-characters-minimum!',
+      expiresIn: '24h'
+    },
+    email: {
+      provider: 'nodemailer',
+      from: 'test@example.com',
+      nodemailer: {
+        host: 'smtp.test.com',
+        port: 587,
+        user: 'test',
+        password: 'test'
       },
-      database: {
-        uri: 'mongodb://localhost:27017/test',
-        poolSize: { min: 10, max: 100 },
-        timeouts: { connection: 10000, socket: 45000 }
-      },
-      jwt: {
-        secret: 'test-secret',
-        expiresIn: '24h'
-      },
-      email: {
-        provider: 'nodemailer',
-        from: 'test@example.com',
-        nodemailer: {
-          host: 'smtp.test.com',
-          port: 587,
-          user: 'test',
-          password: 'test'
-        }
-      },
-      security: {
-        bcryptRounds: 10,
-        otpLength: 6,
-        otpExpiry: 10,
-        maxLoginAttempts: 5,
-        lockoutDuration: 15
-      },
-      cache: {
-        ttl: 300,
-        maxSize: 1000
-      },
-      features: {
-        enableCaching: true,
-        enableMetrics: true,
-        enableNgrok: false
+      resend: {
+        apiKey: '',
+        fromEmail: ''
       }
-    };
-    
-    // Add get method to config object
-    mockConfig.get = (path) => {
-      const keys = path.split('.');
-      let value = mockConfig;
-      for (const key of keys) {
-        value = value[key];
-        if (value === undefined) return undefined;
-      }
-      return value;
-    };
-    
-    return mockConfig;
-  })
-}));
+    },
+    security: {
+      bcryptRounds: 10,
+      otpLength: 6,
+      otpExpiry: 10,
+      maxLoginAttempts: 5,
+      lockoutDuration: 15
+    },
+    cache: {
+      ttl: 300,
+      maxSize: 1000
+    },
+    features: {
+      enableCaching: true,
+      enableMetrics: true,
+      enableNgrok: false
+    }
+  };
+
+  const get = jest.fn((path) => {
+    const keys = path.split('.');
+    let value = mockConfigState;
+    for (const key of keys) {
+      if (value === undefined || value === null) return undefined;
+      value = value[key];
+    }
+    return value;
+  });
+
+  return {
+    load: jest.fn(() => mockConfigState),
+    get
+  };
+});
 
 const { bootstrap } = require('./bootstrap');
 
@@ -288,6 +292,40 @@ describe('Bootstrap Module', () => {
       expect(service.playerRepository).toBeDefined();
       expect(service.judgeRepository).toBeDefined();
       expect(service.logger).toBeDefined();
+    });
+  });
+
+  describe('Controller Registration', () => {
+    test('should register competitionController', () => {
+      const controller = container.resolve('competitionController');
+      expect(controller).toBeDefined();
+      expect(controller.competitionService).toBeDefined();
+      expect(controller.registrationService).toBeDefined();
+      expect(controller.logger).toBeDefined();
+    });
+
+    test('should register teamController', () => {
+      const controller = container.resolve('teamController');
+      expect(controller).toBeDefined();
+      expect(controller.teamService).toBeDefined();
+      expect(controller.logger).toBeDefined();
+    });
+
+    test('should register healthController', () => {
+      const controller = container.resolve('healthController');
+      expect(controller).toBeDefined();
+      expect(controller.healthMonitor).toBeDefined();
+      expect(controller.metricsCollector).toBeDefined();
+      expect(controller.logger).toBeDefined();
+    });
+
+    test('should register coachController', () => {
+      const controller = container.resolve('coachController');
+      expect(controller).toBeDefined();
+      // Coach controller is a functional module, so it should have exported functions
+      expect(typeof controller.registerCoach).toBe('function');
+      expect(typeof controller.loginCoach).toBe('function');
+      expect(typeof controller.getCoachProfile).toBe('function');
     });
   });
 });

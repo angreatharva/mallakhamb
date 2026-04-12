@@ -189,11 +189,12 @@ describe('TeamRepository Integration Tests', () => {
       const teams = await Team.find({ coach: testCoachId, isActive: true });
       const teamIds = teams.map(t => t._id);
 
+      const uniquePlace = `Mumbai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const competition = await Competition.create({
         name: 'Test Competition',
         level: 'state',
         competitionTypes: ['competition_1'],
-        place: 'Mumbai',
+        place: uniquePlace,
         year: 2024,
         startDate: new Date('2024-06-01'),
         endDate: new Date('2024-06-05'),
@@ -214,11 +215,12 @@ describe('TeamRepository Integration Tests', () => {
     });
 
     test('should return empty array for competition with no teams', async () => {
+      const uniquePlace = `Pune-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const competition = await Competition.create({
         name: 'Empty Competition',
         level: 'district',
         competitionTypes: ['competition_1'],
-        place: 'Pune',
+        place: uniquePlace,
         year: 2024,
         startDate: new Date('2024-07-01'),
         endDate: new Date('2024-07-05'),

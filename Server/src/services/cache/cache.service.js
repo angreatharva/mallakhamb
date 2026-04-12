@@ -23,6 +23,19 @@ class CacheService {
     this.misses = 0;
   }
 
+  readConfig(path) {
+    if (this.config && typeof this.config.get === 'function') {
+      return this.config.get(path);
+    }
+    const keys = path.split('.');
+    let value = this.config;
+    for (const key of keys) {
+      if (value === undefined || value === null) return undefined;
+      value = value[key];
+    }
+    return value;
+  }
+
   /**
    * Get value from cache
    * @param {string} key - Cache key
@@ -61,7 +74,9 @@ class CacheService {
    */
   set(key, value, ttl = null) {
     // Enforce max cache size with LRU eviction
-    if (this.cache.size >= this.config.cache.maxSize && !this.cache.has(key)) {
+    const maxSize = this.readConfig('cache.maxSize');
+    const defaultTtl = this.readConfig('cache.ttl');
+    if (this.cache.size >= maxSize && !this.cache.has(key)) {
       this.evictLRU();
     }
 
@@ -71,11 +86,11 @@ class CacheService {
     // Set TTL
     if (ttl !== null) {
       this.ttls.set(key, Date.now() + (ttl * 1000));
-    } else if (this.config.cache.ttl) {
-      this.ttls.set(key, Date.now() + (this.config.cache.ttl * 1000));
+    } else if (defaultTtl) {
+      this.ttls.set(key, Date.now() + (defaultTtl * 1000));
     }
 
-    this.logger.debug('Cache set', { key, ttl: ttl || this.config.cache.ttl });
+    this.logger.debug('Cache set', { key, ttl: ttl || defaultTtl });
   }
 
   /**
@@ -145,7 +160,7 @@ class CacheService {
       misses: this.misses,
       hitRate: total > 0 ? parseFloat((this.hits / total * 100).toFixed(2)) : 0,
       size: this.cache.size,
-      maxSize: this.config.cache.maxSize
+      maxSize: this.readConfig('cache.maxSize')
     };
   }
 

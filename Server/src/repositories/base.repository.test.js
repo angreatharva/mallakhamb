@@ -37,6 +37,7 @@ describe('BaseRepository', () => {
       findOne: jest.fn(),
       find: jest.fn(),
       findByIdAndUpdate: jest.fn(),
+      findOneAndUpdate: jest.fn(),
       findByIdAndDelete: jest.fn(),
       countDocuments: jest.fn(),
       exists: jest.fn()
@@ -363,12 +364,12 @@ describe('BaseRepository', () => {
         exec: jest.fn().mockResolvedValue(mockDoc)
       };
 
-      mockModel.findByIdAndUpdate.mockReturnValue(mockQuery);
+      mockModel.findOneAndUpdate.mockReturnValue(mockQuery);
 
       const result = await repository.updateById('123', updates);
 
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        '123',
+      expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: '123' },
         updates,
         { new: true, runValidators: true }
       );
@@ -381,7 +382,7 @@ describe('BaseRepository', () => {
         exec: jest.fn().mockResolvedValue(null)
       };
 
-      mockModel.findByIdAndUpdate.mockReturnValue(mockQuery);
+      mockModel.findOneAndUpdate.mockReturnValue(mockQuery);
 
       const result = await repository.updateById('999', { name: 'Updated' });
 
@@ -395,7 +396,7 @@ describe('BaseRepository', () => {
         exec: jest.fn().mockRejectedValue(error)
       };
 
-      mockModel.findByIdAndUpdate.mockReturnValue(mockQuery);
+      mockModel.findOneAndUpdate.mockReturnValue(mockQuery);
 
       await expect(repository.updateById('123', { name: 'Updated' })).rejects.toThrow('Database error');
       

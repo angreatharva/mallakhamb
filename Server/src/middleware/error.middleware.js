@@ -27,7 +27,7 @@ const { BaseError } = require('../errors');
  */
 const asyncHandler = (fn) => {
   return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+    return Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
@@ -56,6 +56,11 @@ const notFoundHandler = (req, res, next) => {
  * @param {Function} next - Express next function
  */
 const errorHandler = (err, req, res, next) => {
+  // Check if headers already sent
+  if (res.headersSent) {
+    return next(err);
+  }
+  
   // Get logger from request (injected by logging middleware) or use console
   const logger = req.logger || console;
   

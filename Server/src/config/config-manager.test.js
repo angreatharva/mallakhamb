@@ -294,7 +294,7 @@ describe('ConfigManager', () => {
     test('get should retrieve nested configuration value', () => {
       ConfigManager.load();
       
-      expect(ConfigManager.get('server.port')).toBe(5000);
+      expect(ConfigManager.get('server.port')).toBe(5001); // Test setup uses 5001
       expect(ConfigManager.get('database.poolSize.min')).toBe(10);
       expect(ConfigManager.get('jwt.secret')).toBe('test-secret-key-minimum-32-characters-long');
     });

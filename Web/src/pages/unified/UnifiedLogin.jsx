@@ -264,10 +264,41 @@ const UnifiedLoginInner = () => {
   // Redirect if already logged in (but not during active login process)
   useEffect(() => {
     if (user && userType === role && !showCompetitionSelection && !loading) {
+      // For coaches, check their status before redirecting
+      if (role === 'coach') {
+        const checkCoachStatus = async () => {
+          try {
+            const response = await coachAPI.getStatus();
+            const { step } = response.data;
+            
+            const coachRedirectPaths = {
+              'create-team': '/coach/create-team',
+              'select-competition': '/coach/select-competition',
+              'add-players': '/coach/select-competition', // Has team and competition
+            };
+            
+            const targetPath = coachRedirectPaths[step] || '/coach/select-competition';
+            
+            if (location.pathname !== targetPath) {
+              navigate(targetPath);
+            }
+          } catch (error) {
+            console.error('Failed to check coach status:', error);
+            // Fallback to select-competition on error
+            if (location.pathname !== '/coach/select-competition') {
+              navigate('/coach/select-competition');
+            }
+          }
+        };
+        
+        checkCoachStatus();
+        return;
+      }
+      
+      // For other roles, use standard redirect logic
       const redirectPaths = {
         admin: '/admin/dashboard',
         superadmin: '/superadmin/dashboard',
-        coach: '/coach/select-competition',
         player: user.team ? '/player/dashboard' : '/player/select-team',
         judge: '/judge/scoring',
       };

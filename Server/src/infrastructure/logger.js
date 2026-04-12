@@ -14,11 +14,31 @@ class Logger {
   }
 
   /**
+   * Read a dotted config path. Supports ConfigManager (.get) and plain objects (tests).
+   * @param {string} path
+   * @returns {*}
+   */
+  getConfig(path) {
+    if (this.config && typeof this.config.get === 'function') {
+      return this.config.get(path);
+    }
+    const keys = path.split('.');
+    let value = this.config;
+    for (const key of keys) {
+      if (value === undefined || value === null) {
+        return undefined;
+      }
+      value = value[key];
+    }
+    return value;
+  }
+
+  /**
    * Create Winston logger with appropriate configuration
    * @returns {winston.Logger}
    */
   createLogger() {
-    const isDevelopment = this.config.server.nodeEnv === 'development';
+    const isDevelopment = this.getConfig('server.nodeEnv') === 'development';
 
     // Format for development (human-readable, colorized)
     const devFormat = winston.format.combine(
@@ -98,7 +118,7 @@ class Logger {
       level: isDevelopment ? 'debug' : 'info',
       defaultMeta: {
         service: 'mallakhamb-api',
-        environment: this.config.server.nodeEnv
+        environment: this.getConfig('server.nodeEnv')
       },
       transports
     });

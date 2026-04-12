@@ -322,12 +322,13 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 
 - [x] 22. Checkpoint - Verify service layer
   - Ensure all tests pass, ask the user if questions arise.
+/
 
 
 ## Phase 4: Controller Refactoring (Week 8-10)
 
-- [ ] 23. Implement request validators
-  - [ ] 23.1 Create validation schemas using express-validator
+- [x] 23. Implement request validators
+  - [x] 23.1 Create validation schemas using express-validator
     - Create auth.validator.js (login, register, password reset)
     - Create player.validator.js (create, update)
     - Create coach.validator.js (create, update)
@@ -337,14 +338,14 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Create common.validator.js (ObjectId, pagination, date range)
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8_
   
-  - [ ] 23.2 Write unit tests for validators
+  - [x] 23.2 Write unit tests for validators
     - Test validation rules
     - Test error messages
     - Test sanitization
     - _Requirements: 15.1, 15.6_
 
-- [ ] 24. Refactor Authentication Controller
-  - [ ] 24.1 Update AuthController to use AuthenticationService
+- [x] 24. Refactor Authentication Controller
+  - [x] 24.1 Update AuthController to use AuthenticationService
     - Refactor login, register, forgotPassword, verifyOTP, resetPassword endpoints
     - Use asyncHandler for error handling
     - Apply validation middleware
@@ -352,142 +353,142 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Maintain identical API contracts
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 19.1, 19.2_
   
-  - [ ] 24.2 Write API tests for Auth Controller
+  - [x] 24.2 Write API tests for Auth Controller
     - Test all authentication endpoints
     - Verify backward compatibility
     - Test error responses
     - _Requirements: 15.3, 15.6, 19.7_
 
-- [ ] 25. Refactor Player Controller
-  - [ ] 25.1 Update PlayerController to use PlayerService
+- [x] 25. Refactor Player Controller
+  - [x] 25.1 Update PlayerController to use PlayerService
     - Refactor all player endpoints (CRUD, profile, team assignment)
     - Use asyncHandler and validation middleware
     - Remove direct model access
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 25.2 Write API tests for Player Controller
+  - [x] 25.2 Write API tests for Player Controller
     - Test all player endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
 
-- [ ] 26. Refactor Coach Controller
-  - [ ] 26.1 Update CoachController to use CoachService
+- [x] 26. Refactor Coach Controller
+  - [x] 26.1 Update CoachController to use CoachService
     - Refactor all coach endpoints (CRUD, profile, team management)
     - Use asyncHandler and validation middleware
     - Remove direct model access
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 26.2 Write API tests for Coach Controller
+  - [x] 26.2 Write API tests for Coach Controller
     - Test all coach endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
 
-- [ ] 27. Refactor Admin Controller
-  - [ ] 27.1 Update AdminController to use AdminService
+ - [x] 27. Refactor Admin Controller
+  - [x] 27.1 Update AdminController to use AdminService
     - Refactor all admin endpoints (CRUD, user management)
     - Use asyncHandler and validation middleware
     - Remove direct model access
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 27.2 Write API tests for Admin Controller
+  - [x] 27.2 Write API tests for Admin Controller
     - Test all admin endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
 
-- [ ] 28. Refactor Competition Controller
-  - [ ] 28.1 Update CompetitionController to use CompetitionService
+- [x] 28. Refactor Competition Controller
+  - [x] 28.1 Update CompetitionController to use CompetitionService
     - Refactor all competition endpoints (CRUD, registration, status)
     - Use asyncHandler and validation middleware
     - Remove direct model access
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 28.2 Write API tests for Competition Controller
+  - [x] 28.2 Write API tests for Competition Controller
     - Test all competition endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
 
-- [ ] 29. Refactor Team Controller
-  - [ ] 29.1 Update TeamController to use TeamService
+- [x] 29. Refactor Team Controller
+  - [x] 29.1 Update TeamController to use TeamService
     - Refactor all team endpoints (CRUD, player management)
     - Use asyncHandler and validation middleware
     - Remove direct model access
     - Maintain identical API contracts
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 29.2 Write API tests for Team Controller
+  - [x] 29.2 Write API tests for Team Controller
     - Test all team endpoints
     - Verify backward compatibility
     - _Requirements: 15.3, 19.7_
 
-- [ ] 30. Create Scoring Controller
-  - [ ] 30.1 Create ScoringController using ScoringService
+- [x] 30. Create Scoring Controller
+  - [x] 30.1 Create ScoringController using ScoringService
     - Implement score submission, update, delete endpoints
     - Implement score retrieval with filtering
     - Use asyncHandler and validation middleware
     - _Requirements: 1.2, 1.5, 19.1, 19.2_
   
-  - [ ] 30.2 Write API tests for Scoring Controller
+  - [x] 30.2 Write API tests for Scoring Controller
     - Test all scoring endpoints
     - Test validation rules
     - _Requirements: 15.3, 19.7_
 
-- [ ] 31. Implement Health Controller
-  - [ ] 31.1 Create HealthController for health check endpoints
+- [x] 31. Implement Health Controller
+  - [x] 31.1 Create HealthController for health check endpoints
     - Implement /health/live (liveness probe)
     - Implement /health/ready (readiness probe)
     - Implement /health (detailed health status)
     - Implement /health/metrics (performance metrics)
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
   
-  - [ ] 31.2 Write API tests for Health Controller
+  - [x] 31.2 Write API tests for Health Controller
     - Test all health endpoints
     - Test health check responses
     - _Requirements: 15.3_
 
-- [ ] 32. Update middleware stack
-  - [ ] 32.1 Refactor authentication middleware to use AuthenticationService
+- [x] 32. Update middleware stack
+  - [x] 32.1 Refactor authentication middleware to use AuthenticationService
     - Update token verification to use TokenService
     - Update user loading to use repositories
     - _Requirements: 1.2, 13.3, 19.1_
   
-  - [ ] 32.2 Refactor authorization middleware to use AuthorizationService
+  - [x] 32.2 Refactor authorization middleware to use AuthorizationService
     - Update permission checks to use AuthorizationService
     - Update competition context validation
     - _Requirements: 1.2, 13.3, 19.1_
   
-  - [ ] 32.3 Create correlation ID middleware
+  - [x] 32.3 Create correlation ID middleware
     - Generate unique ID for each request
     - Attach to request object and logs
     - _Requirements: 12.8, 13.5_
   
-  - [ ] 32.4 Create request timing middleware
+  - [x] 32.4 Create request timing middleware
     - Track request duration
     - Log slow requests
     - _Requirements: 13.6, 20.3_
   
-  - [ ] 32.5 Update security middleware
+  - [x] 32.5 Update security middleware
     - Configure helmet for security headers
     - Configure CORS with environment-specific settings
     - Implement rate limiting per user and per IP
     - _Requirements: 13.7, 17.1, 17.2, 17.4, 23.4_
   
-  - [ ] 32.6 Create audit logging middleware
+  - [x] 32.6 Create audit logging middleware
     - Log sensitive operations
     - Include user context and correlation ID
     - _Requirements: 13.8, 17.6_
 
-- [ ] 33. Organize route definitions
-  - [ ] 33.1 Create route loader module
+- [x] 33. Organize route definitions
+  - [x] 33.1 Create route loader module
     - Implement route registration from DI container
     - Apply middleware in correct order
     - Group routes by domain
     - _Requirements: 14.1, 14.2, 14.3, 14.7_
   
-  - [ ] 33.2 Update route files to use refactored controllers
+  - [x] 33.2 Update route files to use refactored controllers
     - Update auth.routes.js
     - Update player.routes.js, coach.routes.js, admin.routes.js
     - Update competition.routes.js, team.routes.js
@@ -495,12 +496,12 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Create health.routes.js
     - _Requirements: 14.1, 14.2, 14.3, 14.8_
 
-- [ ] 34. Register controllers in DI container
+- [x] 34. Register controllers in DI container
   - Update bootstrap module to register all controllers
   - Wire controller dependencies
   - _Requirements: 3.4, 3.5_
 
-- [ ] 35. Checkpoint - Verify controller refactoring
+- [x] 35. Checkpoint - Verify controller refactoring
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 5: Socket.IO Refactoring (Week 11-12)

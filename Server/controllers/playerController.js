@@ -1,350 +1,301 @@
-const Player = require('../models/Player');
-const Team = require('../models/Team');
-const Competition = require('../models/Competition');
-const { generateToken } = require('../utils/tokenUtils');
+/**
+ * Player Controller (Refactored)
+ * 
+ * Handles player HTTP endpoints by delegating to PlayerService and AuthenticationService.
+ * Uses asyncHandler for error handling and validation middleware.
+ * Maintains 100% backward compatibility with existing API contracts.
+ * 
+ * This controller handles:
+ * - Player registration and login
+ * - Player profile management
+ * - Team assignment and management
+ * - Available teams listing
+ * 
+ * Requirements: 1.2, 1.5, 19.1, 19.2
+ */
 
-// Register a new player
-const registerPlayer = async (req, res) => {
-  try {
-    const { firstName, lastName, email, dateOfBirth, password, gender } = req.body;
+const { asyncHandler } = require('../src/middleware/error.middleware');
+const container = require('../src/infrastructure/di-container');
 
-    // Validate password strength
-    const { validatePassword } = require('../utils/passwordValidation');
-    const passwordCheck = validatePassword(password);
-    if (!passwordCheck.isValid) {
-      return res.status(400).json({ 
-        message: 'Password does not meet requirements',
-        errors: passwordCheck.errors 
-      });
+/**
+ * Register a new player
+ * 
+ * @route POST /api/players/register
+ * @access Public
+ */
+const registerPlayer = asyncHandler(async (req, res) => {
+  const authService = container.resolve('authenticationService');
+  const { firstName, lastName, email, dateOfBirth, password, gender } = req.body;
+
+  const result = await authService.register(
+    { firstName, lastName, email, dateOfBirth, password, gender },
+    'player'
+  );
+
+  res.status(201).json({
+    message: 'Player registered successfully',
+    token: result.token,
+    player: {
+      id: result.user._id,
+      firstName: result.user.firstName,
+      lastName: result.user.lastName,
+      email: result.user.email,
+      team: result.user.team
     }
+  });
+});
 
-    // Check if player already exists
-    const existingPlayer = await Player.findOne({ email });
-    if (existingPlayer) {
-      return res.status(400).json({ message: 'Player with this email already exists' });
+/**
+ * Login player
+ * 
+ * @route POST /api/players/login
+ * @access Public
+ */
+const loginPlayer = asyncHandler(async (req, res) => {
+  const authService = container.resolve('authenticationService');
+  const tokenService = container.resolve('tokenService');
+  const { email, password } = req.body;
+
+  const result = await authService.login(email, password, 'player');
+
+  // Get competition context from player's team if available
+  let competitionId = null;
+  if (result.user.team && result.user.team.competition) {
+    competitionId = result.user.team.competition.toString();
+  }
+
+  // Generate token with competition context if available
+  const token = competitionId 
+    ? tokenService.generateToken(result.user._id.toString(), 'player', competitionId)
+    : result.token;
+
+  res.json({
+    message: 'Login successful',
+    token,
+    player: {
+      id: result.user._id,
+      firstName: result.user.firstName,
+      lastName: result.user.lastName,
+      email: result.user.email,
+      team: result.user.team?._id || result.user.team,
+      ageGroup: result.user.ageGroup
     }
+  });
+});
 
-    // Create new player
-    const player = new Player({
-      firstName,
-      lastName,
-      email,
-      dateOfBirth,
-      password,
-      gender
+/**
+ * Get player profile
+ * 
+ * @route GET /api/players/profile
+ * @access Protected (requires authentication)
+ */
+const getPlayerProfile = asyncHandler(async (req, res) => {
+  const playerService = container.resolve('playerService');
+  const playerId = req.user._id.toString();
+
+  const player = await playerService.getProfile(playerId);
+
+  res.json({ player });
+});
+
+/**
+ * Get player's team for current competition
+ * 
+ * @route GET /api/players/team
+ * @access Protected (requires authentication and competition context)
+ */
+const getPlayerTeam = asyncHandler(async (req, res) => {
+  const playerService = container.resolve('playerService');
+  const competitionRepository = container.resolve('competitionRepository');
+  const playerId = req.user._id.toString();
+  const competitionId = req.competitionId;
+
+  // Get player profile
+  const player = await playerService.getProfile(playerId);
+
+  let team = null;
+  let ageGroup = null;
+  let teamStatus = 'Not assigned';
+
+  // If player has a team, check if it's registered in the current competition
+  if (player.team) {
+    const competition = await competitionRepository.findById(competitionId, {
+      populate: 'registeredTeams.coach'
     });
 
-    await player.save();
+    if (competition) {
+      const registeredTeam = competition.registeredTeams.find(
+        rt => rt.team && rt.team._id && rt.team._id.toString() === player.team._id.toString() && rt.isActive
+      );
 
-    // Generate token
-    const token = generateToken(player._id, 'player');
+      if (registeredTeam) {
+        team = {
+          _id: player.team._id,
+          name: player.team.name,
+          description: player.team.description,
+          coach: registeredTeam.coach
+        };
 
-    res.status(201).json({
-      message: 'Player registered successfully',
-      token,
-      player: {
-        id: player._id,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        email: player.email,
-        team: player.team
-      }
-    });
-  } catch (error) {
-    console.error('Player registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
-  }
-};
-
-// Login player
-const loginPlayer = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const { checkAccountLockout, recordFailedAttempt, clearFailedAttempts } = require('../utils/accountLockout');
-
-    // Check if account is locked
-    const lockStatus = checkAccountLockout(email);
-    if (lockStatus.isLocked) {
-      return res.status(429).json({ 
-        message: `Account temporarily locked due to multiple failed login attempts. Please try again in ${lockStatus.remainingTime} minutes.`,
-        remainingTime: lockStatus.remainingTime
-      });
-    }
-
-    // Find player by email and populate team to get competition
-    const player = await Player.findOne({ email }).populate('team', 'competition');
-    if (!player) {
-      recordFailedAttempt(email);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Check password
-    const isMatch = await player.comparePassword(password);
-    if (!isMatch) {
-      const failureStatus = recordFailedAttempt(email);
-      if (failureStatus.isLocked) {
-        return res.status(429).json({ 
-          message: `Account locked due to multiple failed login attempts. Please try again in ${failureStatus.remainingTime} minutes.`,
-          remainingTime: failureStatus.remainingTime
-        });
-      }
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Clear failed attempts on successful login
-    clearFailedAttempts(email);
-
-    // Get competition context from player's team
-    let competitionId = null;
-    if (player.team && player.team.competition) {
-      competitionId = player.team.competition.toString();
-    }
-
-    // Generate token with competition context if available
-    const token = generateToken(player._id, 'player', competitionId);
-
-    res.json({
-      message: 'Login successful',
-      token,
-      player: {
-        id: player._id,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        email: player.email,
-        team: player.team?._id || player.team,
-        ageGroup: player.ageGroup
-      }
-    });
-  } catch (error) {
-    console.error('Player login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
-  }
-};
-
-// Get player profile
-const getPlayerProfile = async (req, res) => {
-  try {
-    const player = await Player.findById(req.user._id)
-      .populate('team', 'name')
-      .select('-password');
-
-    if (!player) {
-      return res.status(404).json({ message: 'Player not found' });
-    }
-
-    res.json({ player });
-  } catch (error) {
-    console.error('Get player profile error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Get player's team for current competition
-const getPlayerTeam = async (req, res) => {
-  try {
-    const player = await Player.findById(req.user._id)
-      .populate('team', 'name description')
-      .select('-password');
-
-    if (!player) {
-      return res.status(404).json({ message: 'Player not found' });
-    }
-
-    let team = null;
-    let ageGroup = null;
-    let teamStatus = 'Not assigned';
-    
-    // If player has a team, check if it's registered in the current competition
-    if (player.team) {
-      const competition = await Competition.findById(req.competitionId)
-        .populate('registeredTeams.coach', 'firstName lastName email');
-      
-      if (competition) {
-        const registeredTeam = competition.registeredTeams.find(
-          rt => rt.team && rt.team._id && rt.team._id.toString() === player.team._id.toString() && rt.isActive
+        // Find player's age group in this competition
+        const playerEntry = registeredTeam.players.find(
+          p => p.player && p.player.toString() === playerId
         );
-        
-        if (registeredTeam) {
-          team = {
-            _id: player.team._id,
-            name: player.team.name,
-            description: player.team.description,
-            coach: registeredTeam.coach
-          };
 
-          // Find player's age group in this competition
-          const playerEntry = registeredTeam.players.find(
-            p => p.player && p.player.toString() === player._id.toString()
-          );
-          
-          if (playerEntry) {
-            ageGroup = playerEntry.ageGroup;
-            teamStatus = registeredTeam.isSubmitted ? 'Submitted' : 'Active';
-          } else {
-            teamStatus = 'Not assigned to age group';
-          }
+        if (playerEntry) {
+          ageGroup = playerEntry.ageGroup;
+          teamStatus = registeredTeam.isSubmitted ? 'Submitted' : 'Active';
         } else {
-          teamStatus = 'Team not registered in competition';
+          teamStatus = 'Not assigned to age group';
         }
+      } else {
+        teamStatus = 'Team not registered in competition';
       }
     }
-
-    res.json({ 
-      player: {
-        id: player._id,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        email: player.email,
-        dateOfBirth: player.dateOfBirth,
-        ageGroup: ageGroup || null,
-        gender: player.gender
-      },
-      team,
-      teamStatus
-    });
-  } catch (error) {
-    console.error('Get player team error:', error);
-    res.status(500).json({ message: 'Server error' });
   }
-};
 
-// Join a team (teamId + competitionId in body; returns new token with competition set)
-const joinTeam = async (req, res) => {
-  try {
-    const { teamId, competitionId } = req.body;
+  res.json({
+    player: {
+      id: player._id,
+      firstName: player.firstName,
+      lastName: player.lastName,
+      email: player.email,
+      dateOfBirth: player.dateOfBirth,
+      ageGroup: ageGroup || null,
+      gender: player.gender
+    },
+    team,
+    teamStatus
+  });
+});
 
-    if (!teamId || !competitionId) {
-      return res.status(400).json({
-        message: 'Both teamId and competitionId are required'
-      });
+/**
+ * Join a team
+ * Player joins a team in a specific competition
+ * 
+ * @route POST /api/players/team/join
+ * @access Protected (requires authentication)
+ */
+const joinTeam = asyncHandler(async (req, res) => {
+  const playerService = container.resolve('playerService');
+  const competitionRepository = container.resolve('competitionRepository');
+  const tokenService = container.resolve('tokenService');
+  const { teamId, competitionId } = req.body;
+  const playerId = req.user._id.toString();
+
+  // Validate competition exists
+  const competition = await competitionRepository.findById(competitionId, {
+    populate: 'registeredTeams.team'
+  });
+
+  if (!competition) {
+    return res.status(404).json({ message: 'Competition not found' });
+  }
+
+  // Validate team is registered in competition
+  const registeredTeam = competition.registeredTeams.find(
+    rt => rt.team && rt.team._id && rt.team._id.toString() === teamId && rt.isActive
+  );
+
+  if (!registeredTeam || !registeredTeam.team || !registeredTeam.team.isActive) {
+    return res.status(404).json({
+      message: 'Team not found or not registered for this competition'
+    });
+  }
+
+  // Assign player to team
+  await playerService.assignToTeam(playerId, teamId);
+
+  // Generate new token with competition context
+  const token = tokenService.generateToken(playerId, 'player', competitionId);
+
+  res.json({
+    message: 'Successfully joined team',
+    token,
+    team: {
+      id: registeredTeam.team._id,
+      name: registeredTeam.team.name
     }
+  });
+});
 
-    const player = await Player.findById(req.user._id);
-    if (!player) {
-      return res.status(404).json({ message: 'Player not found' });
-    }
+/**
+ * Get available teams for player to join
+ * Returns teams from open competitions
+ * 
+ * @route GET /api/players/teams
+ * @access Protected (requires authentication)
+ */
+const getAvailableTeams = asyncHandler(async (req, res) => {
+  const competitionRepository = container.resolve('competitionRepository');
+  const competitionId = req.competitionId || req.query.competitionId;
 
-    const competition = await Competition.findById(competitionId)
-      .populate('registeredTeams.team');
+  if (competitionId) {
+    // Filter by specific competition
+    const competition = await competitionRepository.findById(competitionId, {
+      populate: [
+        { path: 'registeredTeams.team', select: 'name description isActive' },
+        { path: 'registeredTeams.coach', select: 'firstName lastName' }
+      ]
+    });
 
     if (!competition) {
-      return res.status(404).json({ message: 'Competition not found' });
-    }
-
-    const registeredTeam = competition.registeredTeams.find(
-      rt => rt.team && rt.team._id && rt.team._id.toString() === teamId && rt.isActive
-    );
-
-    if (!registeredTeam || !registeredTeam.team || !registeredTeam.team.isActive) {
-      return res.status(404).json({
-        message: 'Team not found or not registered for this competition'
-      });
-    }
-
-    player.team = teamId;
-    await player.save();
-
-    const token = generateToken(player._id, 'player', competitionId);
-
-    res.json({
-      message: 'Successfully joined team',
-      token,
-      team: {
-        id: registeredTeam.team._id,
-        name: registeredTeam.team.name
-      }
-    });
-  } catch (error) {
-    console.error('Join team error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Get all teams available for player to join (no competition required)
-// Returns distinct teams from all open competitions
-const getAvailableTeams = async (req, res) => {
-  try {
-    const competitionId = req.competitionId || req.query.competitionId;
-
-    if (competitionId) {
-      // Optional: filter by one competition (e.g. when competition was already selected)
-      const competition = await Competition.findById(competitionId)
-        .populate('registeredTeams.team', 'name description isActive')
-        .populate('registeredTeams.coach', 'firstName lastName');
-
-      if (!competition) {
-        return res.json({ teams: [] });
-      }
-
-      const teams = competition.registeredTeams
-        .filter(rt => rt.isActive && rt.team && rt.team.isActive)
-        .map(rt => ({
-          _id: rt.team._id,
-          name: rt.team.name,
-          description: rt.team.description,
-          coach: rt.coach,
-          competitionId: competition._id,
-          competitionName: competition.name
-        }));
-
-      return res.json({ teams });
-    }
-
-    // No competition selected: return distinct teams from open competitions
-    const openCompetitions = await Competition.find({
-      status: { $in: ['upcoming', 'ongoing'] },
-      isDeleted: false
-    })
-      .populate('registeredTeams.team', 'name description isActive')
-      .populate('registeredTeams.coach', 'firstName lastName')
-      .select('_id name registeredTeams status');
-
-    console.log('Found open competitions:', openCompetitions.length);
-    
-    if (openCompetitions.length === 0) {
-      console.log('No open competitions found');
       return res.json({ teams: [] });
     }
 
-    // Collect all unique teams from all open competitions
-    const teamsMap = new Map();
-    
-    openCompetitions.forEach(comp => {
-      console.log(`Competition: ${comp.name}, Status: ${comp.status}, Registered Teams: ${comp.registeredTeams.length}`);
-      
-      comp.registeredTeams
-        .filter(rt => {
-          const isValid = rt.isActive && rt.team && rt.team.isActive;
-          if (!isValid) {
-            console.log(`Filtered out team - isActive: ${rt.isActive}, team exists: ${!!rt.team}, team.isActive: ${rt.team?.isActive}`);
-          }
-          return isValid;
-        })
-        .forEach(rt => {
-          const teamId = rt.team._id.toString();
-          if (!teamsMap.has(teamId)) {
-            console.log(`Adding team: ${rt.team.name} (${teamId})`);
-            teamsMap.set(teamId, {
-              _id: rt.team._id,
-              name: rt.team.name,
-              description: rt.team.description,
-              coach: rt.coach,
-              competitionId: comp._id,
-              competitionName: comp.name
-            });
-          }
-        });
-    });
+    const teams = competition.registeredTeams
+      .filter(rt => rt.isActive && rt.team && rt.team.isActive)
+      .map(rt => ({
+        _id: rt.team._id,
+        name: rt.team.name,
+        description: rt.team.description,
+        coach: rt.coach,
+        competitionId: competition._id,
+        competitionName: competition.name
+      }));
 
-    const teams = Array.from(teamsMap.values());
-    console.log('Total unique teams available:', teams.length);
-
-    res.json({ teams });
-  } catch (error) {
-    console.error('Get available teams error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.json({ teams });
   }
-};
+
+  // No competition selected: return teams from open competitions
+  const openCompetitions = await competitionRepository.find(
+    {
+      status: { $in: ['upcoming', 'ongoing'] },
+      isDeleted: false
+    },
+    {
+      populate: [
+        { path: 'registeredTeams.team', select: 'name description isActive' },
+        { path: 'registeredTeams.coach', select: 'firstName lastName' }
+      ],
+      select: '_id name registeredTeams status'
+    }
+  );
+
+  // Collect all unique teams from all open competitions
+  const teamsMap = new Map();
+
+  openCompetitions.forEach(comp => {
+    comp.registeredTeams
+      .filter(rt => rt.isActive && rt.team && rt.team.isActive)
+      .forEach(rt => {
+        const teamId = rt.team._id.toString();
+        if (!teamsMap.has(teamId)) {
+          teamsMap.set(teamId, {
+            _id: rt.team._id,
+            name: rt.team.name,
+            description: rt.team.description,
+            coach: rt.coach,
+            competitionId: comp._id,
+            competitionName: comp.name
+          });
+        }
+      });
+  });
+
+  const teams = Array.from(teamsMap.values());
+
+  res.json({ teams });
+});
 
 module.exports = {
   registerPlayer,

@@ -814,7 +814,37 @@ const verifyTeamPaymentAndSubmit = async (req, res) => {
       return res.status(400).json({ message: 'Payment order does not match the active order' });
     }
 
-    const totalAmount = calculateTeamRegistrationAmount(registeredTeam.players.length);
+    // Verify payment amount matches the expected amount for current roster
+    const expectedAmount = calculateTeamRegistrationAmount(registeredTeam.players.length);
+    
+    // Fetch the actual payment details from Razorpay to verify captured amount
+    const razorpay = getRazorpayInstance();
+    let actualPaymentAmount;
+    
+    try {
+      const payment = await razorpay.payments.fetch(razorpayPaymentId);
+      actualPaymentAmount = payment.amount / 100; // Convert paise to rupees
+      
+      // Verify the captured amount matches expected amount
+      if (actualPaymentAmount !== expectedAmount) {
+        return res.status(400).json({ 
+          message: 'Payment amount mismatch. The payment amount does not match the current team roster.',
+          details: {
+            expected: expectedAmount,
+            received: actualPaymentAmount,
+            playerCount: registeredTeam.players.length
+          }
+        });
+      }
+    } catch (paymentFetchError) {
+      console.error('Failed to fetch payment details from Razorpay:', paymentFetchError);
+      return res.status(500).json({ 
+        message: 'Unable to verify payment amount. Please contact support.',
+        error: 'Payment verification failed'
+      });
+    }
+
+    const totalAmount = expectedAmount;
 
     // Use mongoose session for atomic transaction
     const mongoose = require('mongoose');

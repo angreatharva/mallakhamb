@@ -36,19 +36,38 @@ const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
 
+// Import controllers
+const CompetitionController = require('../controllers/competition.controller');
+const TeamController = require('../controllers/team.controller');
+const HealthController = require('../controllers/health.controller');
+const coachController = require('../controllers/coach.controller');
+
+// Import infrastructure components
+const HealthMonitor = require('./health-monitor');
+const MetricsCollector = require('./metrics-collector');
+
 /**
  * Initialize application infrastructure
  * Loads configuration and registers core services
  */
 function bootstrap() {
   // Load and validate configuration first
-  const config = configManager.load();
+  configManager.load();
 
-  // Register configuration object as singleton
-  container.register('config', () => config, 'singleton');
+  // Register ConfigManager instance as singleton (not just the config object)
+  container.register('config', () => configManager, 'singleton');
 
   // Register logger as singleton
   container.register('logger', (c) => new Logger(c.resolve('config')), 'singleton');
+
+  // Register infrastructure components
+  container.register('metricsCollector', (c) => new MetricsCollector(c.resolve('logger')), 'singleton');
+  
+  container.register('healthMonitor', (c) => new HealthMonitor(
+    c.resolve('config'),
+    c.resolve('logger'),
+    c.resolve('emailService')
+  ), 'singleton');
 
   // Register repositories as singletons with logger injection
   container.register('playerRepository', (c) => new PlayerRepository(c.resolve('logger')), 'singleton');
@@ -170,9 +189,30 @@ function bootstrap() {
     c.resolve('logger')
   ), 'singleton');
 
+  // Register controllers
+  container.register('competitionController', (c) => new CompetitionController(
+    c.resolve('competitionService'),
+    c.resolve('registrationService'),
+    c.resolve('logger')
+  ), 'singleton');
+
+  container.register('teamController', (c) => new TeamController(
+    c.resolve('teamService'),
+    c.resolve('logger')
+  ), 'singleton');
+
+  container.register('healthController', (c) => new HealthController(
+    c.resolve('healthMonitor'),
+    c.resolve('metricsCollector'),
+    c.resolve('logger')
+  ), 'singleton');
+
+  // Register coach controller (functional module, not a class)
+  container.register('coachController', () => coachController, 'singleton');
+
   return {
     container,
-    config
+    config: container.resolve('config')
   };
 }
 

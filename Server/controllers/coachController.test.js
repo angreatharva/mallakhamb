@@ -102,6 +102,17 @@ describe('coachController Razorpay flow', () => {
     const { competition } = buildCompetitionWithTeam({ orderId: 'order_123' });
     mockFindByIdPopulate(competition);
 
+    // Mock Razorpay payment fetch to return payment details
+    const paymentsFetch = jest.fn().mockResolvedValue({
+      id: 'pay_123',
+      amount: 70000, // 700 rupees in paise (base fee 500 + 2 players * 100)
+      currency: 'INR',
+      status: 'captured',
+    });
+    getRazorpayInstance.mockReturnValue({ 
+      payments: { fetch: paymentsFetch }
+    });
+
     const withTransaction = jest.fn(async (cb) => cb());
     const endSession = jest.fn().mockResolvedValue(true);
     mongoose.startSession.mockResolvedValue({ withTransaction, endSession });
@@ -119,6 +130,7 @@ describe('coachController Razorpay flow', () => {
     await verifyTeamPaymentAndSubmit(req, res);
 
     expect(verifyRazorpaySignature).toHaveBeenCalled();
+    expect(paymentsFetch).toHaveBeenCalledWith('pay_123');
     expect(Transaction.create).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,6 +156,52 @@ describe('coachController Razorpay flow', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Payment signature verification failed' })
+    );
+  });
+
+  test('verifyTeamPaymentAndSubmit should reject payment amount mismatch', async () => {
+    verifyRazorpaySignature.mockReturnValue(true);
+    const { competition } = buildCompetitionWithTeam({ 
+      orderId: 'order_123',
+      players: [{ id: 1 }, { id: 2 }] // 2 players = 700 rupees expected
+    });
+    mockFindByIdPopulate(competition);
+
+    // Mock Razorpay payment fetch to return WRONG amount (only 1 player worth)
+    const paymentsFetch = jest.fn().mockResolvedValue({
+      id: 'pay_123',
+      amount: 60000, // 600 rupees in paise (base fee 500 + 1 player * 100) - WRONG!
+      currency: 'INR',
+      status: 'captured',
+    });
+    getRazorpayInstance.mockReturnValue({ 
+      payments: { fetch: paymentsFetch }
+    });
+
+    const req = {
+      competitionId: 'comp1',
+      user: { _id: 'coach1' },
+      body: {
+        razorpay_order_id: 'order_123',
+        razorpay_payment_id: 'pay_123',
+        razorpay_signature: 'sig_123',
+      },
+    };
+    const res = buildRes();
+    await verifyTeamPaymentAndSubmit(req, res);
+
+    expect(verifyRazorpaySignature).toHaveBeenCalled();
+    expect(paymentsFetch).toHaveBeenCalledWith('pay_123');
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ 
+        message: 'Payment amount mismatch. The payment amount does not match the current team roster.',
+        details: expect.objectContaining({
+          expected: 700,
+          received: 600,
+          playerCount: 2
+        })
+      })
     );
   });
 });
