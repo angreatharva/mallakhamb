@@ -48,10 +48,18 @@ describe('CompetitionService', () => {
       debug: jest.fn()
     };
 
+    // Mock socketManager (optional)
+    const mockSocketManager = {
+      emitToRoom: jest.fn(),
+      emitToUser: jest.fn(),
+      broadcast: jest.fn()
+    };
+
     // Create service instance
     competitionService = new CompetitionService(
       mockCompetitionRepo,
       mockCacheService,
+      mockSocketManager,
       mockLogger
     );
   });

@@ -21,13 +21,15 @@ class TeamService {
    * @param {PlayerRepository} playerRepository - Player repository
    * @param {CompetitionRepository} competitionRepository - Competition repository
    * @param {CacheService} cacheService - Cache service
+   * @param {SocketManager} socketManager - Socket.IO manager (optional)
    * @param {Logger} logger - Logger instance
    */
-  constructor(teamRepository, playerRepository, competitionRepository, cacheService, logger) {
+  constructor(teamRepository, playerRepository, competitionRepository, cacheService, socketManager, logger) {
     this.teamRepository = teamRepository;
     this.playerRepository = playerRepository;
     this.competitionRepository = competitionRepository;
     this.cacheService = cacheService;
+    this.socketManager = socketManager;
     this.logger = logger;
   }
 
@@ -77,6 +79,16 @@ class TeamService {
         name: team.name,
         coachId
       });
+
+      // Emit Socket.IO event for real-time team creation
+      if (this.socketManager) {
+        this.socketManager.emitToUser(coachId, 'team_created', {
+          teamId: team._id,
+          name: team.name,
+          coachId,
+          timestamp: new Date()
+        });
+      }
 
       return team;
     } catch (error) {
@@ -151,6 +163,15 @@ class TeamService {
         teamId,
         updates: Object.keys(allowedUpdates)
       });
+
+      // Emit Socket.IO event for real-time team update
+      if (this.socketManager) {
+        this.socketManager.emitToUser(coachId, 'team_updated', {
+          teamId,
+          updates: allowedUpdates,
+          timestamp: new Date()
+        });
+      }
 
       return updated;
     } catch (error) {
@@ -373,6 +394,15 @@ class TeamService {
         playerId
       });
 
+      // Emit Socket.IO event for real-time team roster update
+      if (this.socketManager) {
+        this.socketManager.emitToUser(coachId, 'team_player_added', {
+          teamId,
+          playerId,
+          timestamp: new Date()
+        });
+      }
+
       // Return updated team
       return await this.getTeamById(teamId);
     } catch (error) {
@@ -443,6 +473,15 @@ class TeamService {
         teamId,
         playerId
       });
+
+      // Emit Socket.IO event for real-time team roster update
+      if (this.socketManager) {
+        this.socketManager.emitToUser(coachId, 'team_player_removed', {
+          teamId,
+          playerId,
+          timestamp: new Date()
+        });
+      }
 
       // Return updated team
       return await this.getTeamById(teamId);

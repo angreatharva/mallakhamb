@@ -388,6 +388,49 @@ class AuthorizationService {
   }
 
   /**
+   * Check if judge can score in a competition
+   * @param {string} judgeId - Judge ID
+   * @param {string} competitionId - Competition ID
+   * @returns {Promise<boolean>} True if judge can score
+   */
+  async canJudgeScore(judgeId, competitionId) {
+    try {
+      // Get judge
+      const judge = await this.judgeRepository.findById(judgeId);
+
+      if (!judge) {
+        this.logger.warn('Judge not found', { judgeId });
+        return false;
+      }
+
+      // Check if judge is active
+      if (!judge.isActive) {
+        this.logger.warn('Judge is not active', { judgeId });
+        return false;
+      }
+
+      // Check if judge is assigned to this competition
+      if (judge.competition && judge.competition.toString() === competitionId.toString()) {
+        return true;
+      }
+
+      this.logger.warn('Judge not assigned to competition', { 
+        judgeId, 
+        competitionId,
+        judgeCompetition: judge.competition 
+      });
+      return false;
+    } catch (error) {
+      this.logger.error('Can judge score check error', { 
+        judgeId, 
+        competitionId, 
+        error: error.message 
+      });
+      return false;
+    }
+  }
+
+  /**
    * Get repository by user type
    * @param {string} userType - User type
    * @returns {BaseRepository} Repository instance

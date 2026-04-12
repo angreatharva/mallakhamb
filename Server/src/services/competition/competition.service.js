@@ -19,11 +19,13 @@ class CompetitionService {
    * Create a competition service
    * @param {CompetitionRepository} competitionRepository - Competition repository
    * @param {CacheService} cacheService - Cache service
+   * @param {SocketManager} socketManager - Socket.IO manager (optional)
    * @param {Logger} logger - Logger instance
    */
-  constructor(competitionRepository, cacheService, logger) {
+  constructor(competitionRepository, cacheService, socketManager, logger) {
     this.competitionRepository = competitionRepository;
     this.cacheService = cacheService;
+    this.socketManager = socketManager;
     this.logger = logger;
   }
 
@@ -79,6 +81,18 @@ class CompetitionService {
         createdBy
       });
 
+      // Emit Socket.IO event for real-time competition creation
+      if (this.socketManager) {
+        this.socketManager.broadcast('competition_created', {
+          competitionId: competition._id,
+          name: competition.name,
+          status: competition.status,
+          startDate: competition.startDate,
+          endDate: competition.endDate,
+          timestamp: new Date()
+        });
+      }
+
       return competition;
     } catch (error) {
       if (error instanceof ConflictError || error instanceof ValidationError) {
@@ -131,6 +145,19 @@ class CompetitionService {
         competitionId,
         updates: Object.keys(allowedUpdates)
       });
+
+      // Emit Socket.IO event for real-time competition update
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(
+          `competition:${competitionId}`,
+          'competition_updated',
+          {
+            competitionId,
+            updates: allowedUpdates,
+            timestamp: new Date()
+          }
+        );
+      }
 
       return updated;
     } catch (error) {
@@ -384,6 +411,20 @@ class CompetitionService {
         oldStatus: competition.status,
         newStatus
       });
+
+      // Emit Socket.IO event for real-time status update
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(
+          `competition:${competitionId}`,
+          'competition_status_updated',
+          {
+            competitionId,
+            oldStatus: competition.status,
+            newStatus,
+            timestamp: new Date()
+          }
+        );
+      }
 
       return updated;
     } catch (error) {

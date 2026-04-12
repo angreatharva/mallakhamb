@@ -46,6 +46,11 @@ const coachController = require('../controllers/coach.controller');
 const HealthMonitor = require('./health-monitor');
 const MetricsCollector = require('./metrics-collector');
 
+// Import Socket.IO components
+const SocketManager = require('../socket/socket.manager');
+const ScoringHandler = require('../socket/handlers/scoring.handler');
+const NotificationHandler = require('../socket/handlers/notification.handler');
+
 /**
  * Initialize application infrastructure
  * Loads configuration and registers core services
@@ -154,11 +159,23 @@ function bootstrap() {
   ), 'singleton');
   
   // Competition services
-  container.register('competitionService', (c) => new CompetitionService(
-    c.resolve('competitionRepository'),
-    c.resolve('cacheService'),
-    c.resolve('logger')
-  ), 'singleton');
+  // Note: CompetitionService will have socketManager injected after Socket.IO initialization
+  container.register('competitionService', (c) => {
+    // Try to resolve socketManager if available, otherwise pass null
+    let socketManager = null;
+    try {
+      socketManager = c.resolve('socketManager');
+    } catch (e) {
+      // socketManager not yet registered, will be set later
+    }
+    
+    return new CompetitionService(
+      c.resolve('competitionRepository'),
+      c.resolve('cacheService'),
+      socketManager,
+      c.resolve('logger')
+    );
+  }, 'singleton');
   
   container.register('registrationService', (c) => new RegistrationService(
     c.resolve('competitionRepository'),
@@ -168,26 +185,50 @@ function bootstrap() {
   ), 'singleton');
   
   // Team service
-  container.register('teamService', (c) => new TeamService(
-    c.resolve('teamRepository'),
-    c.resolve('playerRepository'),
-    c.resolve('competitionRepository'),
-    c.resolve('cacheService'),
-    c.resolve('logger')
-  ), 'singleton');
+  // Note: TeamService will have socketManager injected after Socket.IO initialization
+  container.register('teamService', (c) => {
+    // Try to resolve socketManager if available, otherwise pass null
+    let socketManager = null;
+    try {
+      socketManager = c.resolve('socketManager');
+    } catch (e) {
+      // socketManager not yet registered, will be set later
+    }
+    
+    return new TeamService(
+      c.resolve('teamRepository'),
+      c.resolve('playerRepository'),
+      c.resolve('competitionRepository'),
+      c.resolve('cacheService'),
+      socketManager,
+      c.resolve('logger')
+    );
+  }, 'singleton');
   
   // Scoring services
   container.register('calculationService', (c) => new CalculationService(
     c.resolve('logger')
   ), 'singleton');
   
-  container.register('scoringService', (c) => new ScoringService(
-    c.resolve('scoreRepository'),
-    c.resolve('competitionRepository'),
-    c.resolve('playerRepository'),
-    c.resolve('judgeRepository'),
-    c.resolve('logger')
-  ), 'singleton');
+  // Note: ScoringService will have socketManager injected after Socket.IO initialization
+  container.register('scoringService', (c) => {
+    // Try to resolve socketManager if available, otherwise pass null
+    let socketManager = null;
+    try {
+      socketManager = c.resolve('socketManager');
+    } catch (e) {
+      // socketManager not yet registered, will be set later
+    }
+    
+    return new ScoringService(
+      c.resolve('scoreRepository'),
+      c.resolve('competitionRepository'),
+      c.resolve('playerRepository'),
+      c.resolve('judgeRepository'),
+      socketManager,
+      c.resolve('logger')
+    );
+  }, 'singleton');
 
   // Register controllers
   container.register('competitionController', (c) => new CompetitionController(
@@ -210,10 +251,84 @@ function bootstrap() {
   // Register coach controller (functional module, not a class)
   container.register('coachController', () => coachController, 'singleton');
 
+  // Note: Socket.IO components are registered separately via initializeSocketIO()
+  // because they require the HTTP server instance which is not available during bootstrap
+
   return {
     container,
     config: container.resolve('config')
   };
 }
 
-module.exports = { bootstrap };
+/**
+ * Initialize Socket.IO components
+ * Must be called after HTTP server is created
+ * @param {http.Server} httpServer - HTTP server instance
+ * @returns {SocketManager} Socket manager instance
+ */
+function initializeSocketIO(httpServer) {
+  // Register Socket.IO manager
+  container.register('socketManager', (c) => {
+    const manager = new SocketManager(
+      httpServer,
+      c.resolve('tokenService'),
+      c.resolve('authorizationService'),
+      c.resolve('config'),
+      c.resolve('logger'),
+      c.resolve('metricsCollector')
+    );
+    
+    // Initialize the Socket.IO server
+    manager.initialize();
+    
+    return manager;
+  }, 'singleton');
+
+  // Resolve socketManager to initialize it
+  const socketManager = container.resolve('socketManager');
+
+  // Inject socketManager into services that need it
+  const scoringService = container.resolve('scoringService');
+  scoringService.socketManager = socketManager;
+
+  const competitionService = container.resolve('competitionService');
+  competitionService.socketManager = socketManager;
+
+  const teamService = container.resolve('teamService');
+  teamService.socketManager = socketManager;
+
+  // Register event handlers
+  container.register('scoringHandler', (c) => {
+    const handler = new ScoringHandler(
+      c.resolve('socketManager'),
+      c.resolve('scoringService'),
+      c.resolve('authorizationService'),
+      c.resolve('logger')
+    );
+    
+    // Register event handlers
+    handler.register();
+    
+    return handler;
+  }, 'singleton');
+
+  container.register('notificationHandler', (c) => {
+    const handler = new NotificationHandler(
+      c.resolve('socketManager'),
+      c.resolve('logger')
+    );
+    
+    // Register event handlers
+    handler.register();
+    
+    return handler;
+  }, 'singleton');
+
+  // Resolve handlers to initialize
+  container.resolve('scoringHandler');
+  container.resolve('notificationHandler');
+
+  return socketManager;
+}
+
+module.exports = { bootstrap, initializeSocketIO };

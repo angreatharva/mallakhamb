@@ -69,7 +69,8 @@ jest.mock('../config/config-manager', () => {
   };
 });
 
-const { bootstrap } = require('./bootstrap');
+const { bootstrap, initializeSocketIO } = require('./bootstrap');
+const http = require('http');
 
 describe('Bootstrap Module', () => {
   let container;
@@ -326,6 +327,101 @@ describe('Bootstrap Module', () => {
       expect(typeof controller.registerCoach).toBe('function');
       expect(typeof controller.loginCoach).toBe('function');
       expect(typeof controller.getCoachProfile).toBe('function');
+    });
+  });
+
+  describe('Socket.IO Component Registration', () => {
+    let httpServer;
+    let socketManager;
+
+    beforeAll(() => {
+      // Create a mock HTTP server
+      httpServer = http.createServer();
+      
+      // Initialize Socket.IO components
+      socketManager = initializeSocketIO(httpServer);
+    });
+
+    afterAll(() => {
+      // Clean up
+      if (socketManager) {
+        socketManager.close();
+      }
+      if (httpServer) {
+        httpServer.close();
+      }
+    });
+
+    test('should register socketManager', () => {
+      const manager = container.resolve('socketManager');
+      expect(manager).toBeDefined();
+      expect(manager).toBe(socketManager);
+      expect(manager.initialize).toBeDefined();
+      expect(manager.registerEventHandler).toBeDefined();
+      expect(manager.emitToRoom).toBeDefined();
+      expect(manager.emitToUser).toBeDefined();
+      expect(manager.broadcast).toBeDefined();
+    });
+
+    test('should register scoringHandler', () => {
+      const handler = container.resolve('scoringHandler');
+      expect(handler).toBeDefined();
+      expect(handler.socketManager).toBeDefined();
+      expect(handler.scoringService).toBeDefined();
+      expect(handler.authorizationService).toBeDefined();
+      expect(handler.logger).toBeDefined();
+      expect(handler.register).toBeDefined();
+    });
+
+    test('should register notificationHandler', () => {
+      const handler = container.resolve('notificationHandler');
+      expect(handler).toBeDefined();
+      expect(handler.socketManager).toBeDefined();
+      expect(handler.logger).toBeDefined();
+      expect(handler.register).toBeDefined();
+      expect(handler.sendToUser).toBeDefined();
+      expect(handler.sendToCompetition).toBeDefined();
+      expect(handler.broadcastCompetitionUpdate).toBeDefined();
+      expect(handler.broadcastTeamUpdate).toBeDefined();
+    });
+
+    test('socketManager should have all required dependencies', () => {
+      const manager = container.resolve('socketManager');
+      expect(manager.tokenService).toBeDefined();
+      expect(manager.authorizationService).toBeDefined();
+      expect(manager.config).toBeDefined();
+      expect(manager.logger).toBeDefined();
+      expect(manager.metricsCollector).toBeDefined();
+    });
+
+    test('should inject socketManager into services that need it', () => {
+      const scoringService = container.resolve('scoringService');
+      expect(scoringService.socketManager).toBeDefined();
+      expect(scoringService.socketManager).toBe(socketManager);
+
+      const competitionService = container.resolve('competitionService');
+      expect(competitionService.socketManager).toBeDefined();
+      expect(competitionService.socketManager).toBe(socketManager);
+
+      const teamService = container.resolve('teamService');
+      expect(teamService.socketManager).toBeDefined();
+      expect(teamService.socketManager).toBe(socketManager);
+    });
+
+    test('should initialize Socket.IO server', () => {
+      const manager = container.resolve('socketManager');
+      const io = manager.getIO();
+      expect(io).toBeDefined();
+      expect(io.on).toBeDefined();
+      expect(io.emit).toBeDefined();
+    });
+
+    test('event handlers should be registered with socketManager', () => {
+      const manager = container.resolve('socketManager');
+      // Event handlers are registered in the handler's register() method
+      // which is called during initialization
+      expect(manager.eventHandlers).toBeDefined();
+      expect(manager.eventHandlers.size).toBeGreaterThan(0);
     });
   });
 });

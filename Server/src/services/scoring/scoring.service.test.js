@@ -50,12 +50,20 @@ describe('ScoringService', () => {
       debug: jest.fn()
     };
 
+    // Mock socketManager (optional)
+    const mockSocketManager = {
+      emitToRoom: jest.fn(),
+      emitToUser: jest.fn(),
+      broadcast: jest.fn()
+    };
+
     // Create service instance
     scoringService = new ScoringService(
       mockScoreRepository,
       mockCompetitionRepository,
       mockPlayerRepository,
       mockJudgeRepository,
+      mockSocketManager,
       mockLogger
     );
 

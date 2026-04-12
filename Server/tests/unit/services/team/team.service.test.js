@@ -62,12 +62,20 @@ describe('TeamService', () => {
       debug: jest.fn()
     };
 
+    // Mock socketManager (optional)
+    const mockSocketManager = {
+      emitToRoom: jest.fn(),
+      emitToUser: jest.fn(),
+      broadcast: jest.fn()
+    };
+
     // Create service instance
     teamService = new TeamService(
       mockTeamRepo,
       mockPlayerRepo,
       mockCompetitionRepo,
       mockCacheService,
+      mockSocketManager,
       mockLogger
     );
   });

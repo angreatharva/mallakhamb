@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
-const { Server } = require('socket.io');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
@@ -22,11 +21,17 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { logUnauthorizedAccess } = require('./middleware/securityLogger');
 const { startCleanupJobs } = require('./utils/cleanupJobs');
 
+// Import bootstrap for DI container and Socket.IO initialization
+const { bootstrap, initializeSocketIO } = require('./src/infrastructure/bootstrap');
+
 // Connect to database
 connectDB();
 
 // Start cleanup jobs
 startCleanupJobs();
+
+// Bootstrap application (initialize DI container and services)
+const { container } = bootstrap();
 
 const app = express();
 const server = http.createServer(app);
@@ -35,95 +40,11 @@ const server = http.createServer(app);
 // This allows Express to correctly identify client IPs from X-Forwarded-For header
 app.set('trust proxy', 1);
 
-// Socket.IO setup with CORS and authentication
-const io = new Server(server, {
-  cors: {
-    origin: config.getAllowedOrigins(),
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+// Initialize Socket.IO using the new SocketManager
+const socketManager = initializeSocketIO(server);
+const io = socketManager.getIO();
 
-// Socket.IO authentication middleware
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth.token;
-    
-    if (!token) {
-      return next(new Error('Authentication token required'));
-    }
-
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Attach user info to socket
-    socket.userId = decoded.userId;
-    socket.userType = decoded.userType;
-    socket.currentCompetition = decoded.currentCompetition;
-    
-    console.log(`✅ Socket authenticated: ${decoded.userType} - ${decoded.userId}`);
-    next();
-  } catch (err) {
-    console.error('Socket authentication error:', err.message);
-    next(new Error('Authentication failed'));
-  }
-});
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log(`🔌 User connected: ${socket.userType} - ${socket.userId}`);
-  
-  // Join scoring room with validation
-  socket.on('join_scoring_room', (roomId) => {
-    // Basic validation: ensure roomId is provided
-    if (!roomId) {
-      socket.emit('error', { message: 'Room ID required' });
-      return;
-    }
-    
-    // Validate user has access to this competition
-    // Room ID format: competitionId_gender_ageGroup_competitionType
-    const competitionId = roomId.split('_')[0];
-    
-    // Judges and admins can join any room in their competition
-    if (socket.userType === 'judge' || socket.userType === 'admin' || socket.userType === 'superadmin') {
-      socket.join(roomId);
-      console.log(`✅ ${socket.userType} joined room: ${roomId}`);
-    } else {
-      socket.emit('error', { message: 'Unauthorized to join scoring room' });
-    }
-  });
-
-  // Handle score updates with validation
-  socket.on('score_update', (data) => {
-    // Validate user is a judge
-    if (socket.userType !== 'judge') {
-      socket.emit('error', { message: 'Only judges can update scores' });
-      return;
-    }
-    
-    // Broadcast to all users in the same room except sender
-    socket.to(data.roomId).emit('score_updated', data);
-  });
-
-  // Handle scores saved event
-  socket.on('scores_saved', (data) => {
-    // Validate user is a judge or admin
-    if (socket.userType !== 'judge' && socket.userType !== 'admin' && socket.userType !== 'superadmin') {
-      socket.emit('error', { message: 'Unauthorized to save scores' });
-      return;
-    }
-    
-    // Broadcast to all users in the same room
-    io.to(data.roomId).emit('scores_saved_notification', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`🔌 User disconnected: ${socket.userType} - ${socket.userId}`);
-  });
-});
-
-// Make io available to routes
+// Make io available to routes for backward compatibility
 app.set('io', io);
 
 // Get allowed origins once at startup
@@ -385,11 +306,23 @@ if (require.main === module) {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\nShutting down gracefully...');
+  
+  // Close Socket.IO connections
+  if (socketManager) {
+    socketManager.close();
+  }
+  
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\nShutting down gracefully...');
+  
+  // Close Socket.IO connections
+  if (socketManager) {
+    socketManager.close();
+  }
+  
   process.exit(0);
 });
 

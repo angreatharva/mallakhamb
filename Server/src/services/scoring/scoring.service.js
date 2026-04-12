@@ -20,13 +20,15 @@ class ScoringService {
    * @param {CompetitionRepository} competitionRepository - Competition repository
    * @param {PlayerRepository} playerRepository - Player repository
    * @param {JudgeRepository} judgeRepository - Judge repository
+   * @param {SocketManager} socketManager - Socket.IO manager (optional)
    * @param {Logger} logger - Logger instance
    */
-  constructor(scoreRepository, competitionRepository, playerRepository, judgeRepository, logger) {
+  constructor(scoreRepository, competitionRepository, playerRepository, judgeRepository, socketManager, logger) {
     this.scoreRepository = scoreRepository;
     this.competitionRepository = competitionRepository;
     this.playerRepository = playerRepository;
     this.judgeRepository = judgeRepository;
+    this.socketManager = socketManager;
     this.logger = logger;
   }
 
@@ -77,6 +79,21 @@ class ScoringService {
         teamId: scoreData.teamId,
         playerCount: scoreData.playerScores?.length || 0
       });
+
+      // Emit Socket.IO event for real-time score update
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(
+          `competition:${scoreData.competition}`,
+          'score_submitted',
+          {
+            scoreId: score._id,
+            competitionId: scoreData.competition,
+            teamId: scoreData.teamId,
+            playerScores: scoreData.playerScores,
+            timestamp: new Date()
+          }
+        );
+      }
 
       return score;
     } catch (error) {
@@ -136,6 +153,21 @@ class ScoringService {
         updates: Object.keys(allowedUpdates)
       });
 
+      // Emit Socket.IO event for real-time score update
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(
+          `competition:${score.competition}`,
+          'score_updated',
+          {
+            scoreId,
+            competitionId: score.competition,
+            teamId: score.teamId,
+            updates: allowedUpdates,
+            timestamp: new Date()
+          }
+        );
+      }
+
       return updated;
     } catch (error) {
       if (error instanceof NotFoundError || 
@@ -178,6 +210,20 @@ class ScoringService {
       await this.scoreRepository.deleteById(scoreId);
 
       this.logger.info('Score deleted', { scoreId });
+
+      // Emit Socket.IO event for real-time score deletion
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(
+          `competition:${score.competition}`,
+          'score_deleted',
+          {
+            scoreId,
+            competitionId: score.competition,
+            teamId: score.teamId,
+            timestamp: new Date()
+          }
+        );
+      }
 
       return true;
     } catch (error) {

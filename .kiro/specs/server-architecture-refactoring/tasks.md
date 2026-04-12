@@ -506,8 +506,8 @@ The implementation follows a 7-phase approach where each phase builds incrementa
 
 ## Phase 5: Socket.IO Refactoring (Week 11-12)
 
-- [ ] 36. Implement Socket.IO Manager
-  - [ ] 36.1 Create SocketManager class
+- [x] 36. Implement Socket.IO Manager
+  - [x] 36.1 Create SocketManager class
     - Implement Socket.IO server initialization with CORS
     - Implement authentication middleware for sockets
     - Implement connection/disconnection handling
@@ -516,49 +516,49 @@ The implementation follows a 7-phase approach where each phase builds incrementa
     - Implement emit helpers (emitToRoom, emitToUser, broadcast)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 4.7, 4.8_
   
-  - [ ] 36.2 Write unit tests for Socket Manager
+  - [x] 36.2 Write unit tests for Socket Manager
     - Test authentication middleware
     - Test event registration and handling
     - Test emit helpers
     - _Requirements: 15.1, 15.8_
 
-- [ ] 37. Implement Socket.IO event handlers
-  - [ ] 37.1 Create ScoringHandler for scoring events
+- [x] 37. Implement Socket.IO event handlers
+  - [x] 37.1 Create ScoringHandler for scoring events
     - Implement score_update event handler
     - Validate permissions using AuthorizationService
     - Delegate to ScoringService
     - Broadcast updates to competition room
     - _Requirements: 4.3, 4.4, 4.5_
   
-  - [ ] 37.2 Create NotificationHandler for notification events
+  - [x] 37.2 Create NotificationHandler for notification events
     - Implement notification events
     - Validate permissions
     - Broadcast to appropriate users/rooms
     - _Requirements: 4.3, 4.4, 4.5_
   
-  - [ ] 37.3 Write tests for Socket.IO handlers
+  - [x] 37.3 Write tests for Socket.IO handlers
     - Test event handling
     - Test permission validation
     - Test broadcasting
     - _Requirements: 15.8_
 
-- [ ] 38. Update services to emit Socket.IO events
+- [x] 38. Update services to emit Socket.IO events
   - Update ScoringService to emit score updates via SocketManager
   - Update CompetitionService to emit competition updates
   - Update TeamService to emit team updates
   - _Requirements: 4.7_
 
-- [ ] 39. Integrate Socket.IO Manager with server startup
+- [x] 39. Integrate Socket.IO Manager with server startup
   - Update server.js to initialize SocketManager
   - Register event handlers
   - _Requirements: 4.1, 4.3_
 
-- [ ] 40. Register Socket.IO components in DI container
+- [x] 40. Register Socket.IO components in DI container
   - Register SocketManager
   - Register event handlers
   - _Requirements: 3.4, 3.5_
 
-- [ ] 41. Checkpoint - Verify Socket.IO refactoring
+- [x] 41. Checkpoint - Verify Socket.IO refactoring
   - Ensure all tests pass, ask the user if questions arise.
 
 
