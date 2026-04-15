@@ -4,7 +4,7 @@
  * Base service for common user operations across all user types.
  * Provides profile management, password changes, and account activation.
  * 
- * Requirements: 1.5, 1.8
+ * Requirements: 1.5, 1.8, 7.2, 7.3, 7.4, 7.5, 7.6
  */
 
 const bcrypt = require('bcryptjs');
@@ -21,11 +21,13 @@ class UserService {
    * @param {BaseRepository} repository - User repository (Player, Coach, or Admin)
    * @param {Logger} logger - Logger instance
    * @param {string} userType - User type identifier (player, coach, admin)
+   * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(repository, logger, userType) {
+  constructor(repository, logger, userType, cacheService = null) {
     this.repository = repository;
     this.logger = logger;
     this.userType = userType;
+    this.cacheService = cacheService;
   }
 
   /**
@@ -36,25 +38,35 @@ class UserService {
    */
   async getProfile(userId) {
     try {
-      const user = await this.repository.findById(userId);
+      // Try cache first if available
+      const cacheKey = `user:${this.userType}:${userId}`;
+      
+      const fetchUser = async () => {
+        const user = await this.repository.findById(userId);
 
-      if (!user) {
-        this.logger.warn('Get profile failed: User not found', { 
+        if (!user) {
+          this.logger.warn('Get profile failed: User not found', { 
+            userId, 
+            userType: this.userType 
+          });
+          throw new NotFoundError(`${this.userType} not found`);
+        }
+
+        // Remove password from response
+        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = user;
+
+        this.logger.info('Profile retrieved from database', { 
           userId, 
           userType: this.userType 
         });
-        throw new NotFoundError(`${this.userType} not found`);
+
+        return profile;
+      };
+
+      if (this.cacheService) {
+        return await this.cacheService.wrap(cacheKey, fetchUser, 300);
       }
-
-      // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = user;
-
-      this.logger.info('Profile retrieved', { 
-        userId, 
-        userType: this.userType 
-      });
-
-      return profile;
+      return await fetchUser();
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -119,6 +131,9 @@ class UserService {
       // Remove password from response
       const { password: _, resetPasswordToken: __, resetPasswordExpires: ___, ...profile } = updatedUser;
 
+      // Invalidate cache
+      if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
+
       this.logger.info('Profile updated', { 
         userId, 
         userType: this.userType,
@@ -182,6 +197,9 @@ class UserService {
         password: newPassword
       });
 
+      // Invalidate cache
+      if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
+
       this.logger.info('Password changed', { 
         userId, 
         userType: this.userType 
@@ -227,6 +245,9 @@ class UserService {
       // Remove password from response
       const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedUser;
 
+      // Invalidate cache
+      if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
+
       this.logger.info('Account activated', { 
         userId, 
         userType: this.userType 
@@ -270,14 +291,17 @@ class UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedUser;
+      const { password: _p, resetPasswordToken: _r, resetPasswordExpires: _e, ...profile2 } = updatedUser;
+
+      // Invalidate cache
+      if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
 
       this.logger.info('Account deactivated', { 
         userId, 
         userType: this.userType 
       });
 
-      return profile;
+      return profile2;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;

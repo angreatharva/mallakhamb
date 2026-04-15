@@ -143,6 +143,51 @@ describe('Bootstrap Module', () => {
     });
   });
 
+  describe('Monitoring Components Registration', () => {
+    test('should register metricsCollector', () => {
+      const metricsCollector = container.resolve('metricsCollector');
+      expect(metricsCollector).toBeDefined();
+      expect(metricsCollector.recordRequest).toBeDefined();
+      expect(metricsCollector.recordError).toBeDefined();
+      expect(metricsCollector.getMetrics).toBeDefined();
+      expect(metricsCollector.exportPrometheus).toBeDefined();
+    });
+
+    test('should register healthMonitor', () => {
+      const healthMonitor = container.resolve('healthMonitor');
+      expect(healthMonitor).toBeDefined();
+      expect(healthMonitor.checkHealth).toBeDefined();
+      expect(healthMonitor.checkLiveness).toBeDefined();
+      expect(healthMonitor.checkReadiness).toBeDefined();
+    });
+
+    test('should register gracefulShutdownHandler', () => {
+      const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
+      expect(gracefulShutdownHandler).toBeDefined();
+      expect(gracefulShutdownHandler.register).toBeDefined();
+      expect(gracefulShutdownHandler.shutdown).toBeDefined();
+      expect(gracefulShutdownHandler.isShutdownInProgress).toBeDefined();
+    });
+
+    test('healthMonitor should have all required dependencies', () => {
+      const healthMonitor = container.resolve('healthMonitor');
+      expect(healthMonitor.config).toBeDefined();
+      expect(healthMonitor.logger).toBeDefined();
+      // emailService is optional and injected after registration
+    });
+
+    test('metricsCollector should have logger dependency', () => {
+      const metricsCollector = container.resolve('metricsCollector');
+      expect(metricsCollector.logger).toBeDefined();
+    });
+
+    test('gracefulShutdownHandler should have all required dependencies', () => {
+      const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
+      expect(gracefulShutdownHandler.logger).toBeDefined();
+      expect(gracefulShutdownHandler.config).toBeDefined();
+    });
+  });
+
   describe('Service Registration', () => {
     test('should register cacheService', () => {
       const service = container.resolve('cacheService');

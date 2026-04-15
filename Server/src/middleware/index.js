@@ -58,6 +58,10 @@ const {
   auditSensitiveDataAccess,
   auditBulkExport
 } = require('./audit.middleware');
+const {
+  createFeatureFlagMiddleware,
+  attachFeatureFlagChecker
+} = require('./feature-flag.middleware');
 
 module.exports = {
   // Error handling
@@ -117,5 +121,9 @@ module.exports = {
   auditPaymentInitiated,
   auditPaymentCompleted,
   auditSensitiveDataAccess,
-  auditBulkExport
+  auditBulkExport,
+  
+  // Feature flags
+  createFeatureFlagMiddleware,
+  attachFeatureFlagChecker
 };

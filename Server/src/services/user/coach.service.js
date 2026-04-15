@@ -16,9 +16,10 @@ class CoachService extends UserService {
    * @param {CoachRepository} coachRepository - Coach repository
    * @param {TeamRepository} teamRepository - Team repository
    * @param {Logger} logger - Logger instance
+   * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(coachRepository, teamRepository, logger) {
-    super(coachRepository, logger, 'coach');
+  constructor(coachRepository, teamRepository, logger, cacheService = null) {
+    super(coachRepository, logger, 'coach', cacheService);
     this.teamRepository = teamRepository;
   }
 

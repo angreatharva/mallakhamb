@@ -52,7 +52,7 @@ describe('MetricsCollector', () => {
         metricsCollector.trackRequest('GET', '/api/test', 200, i);
       }
 
-      expect(metricsCollector.metrics.responseTimes.length).toBe(1000);
+      expect(metricsCollector._simple.responseTimes.length).toBe(1000);
     });
   });
 
@@ -142,13 +142,13 @@ describe('MetricsCollector', () => {
 
       const metrics = metricsCollector.getMetrics();
 
-      expect(metrics.cache.hitRate).toBe(80); // 4 hits out of 5 total = 80%
+      expect(metrics.cache.hitRate).toBe('80.00%'); // 4 hits out of 5 total = 80%
     });
 
     it('should return 0 hit rate when no cache operations', () => {
       const metrics = metricsCollector.getMetrics();
 
-      expect(metrics.cache.hitRate).toBe(0);
+      expect(metrics.cache.hitRate).toBe('0%');
     });
   });
 

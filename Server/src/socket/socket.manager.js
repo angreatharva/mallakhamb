@@ -133,7 +133,9 @@ class SocketManager {
     });
 
     // Track connection in metrics
-    this.metricsCollector.trackSocketConnection(1);
+    if (this.metricsCollector) {
+      this.metricsCollector.trackSocketConnection(1);
+    }
 
     // Store user connection mapping
     this.connectedUsers.set(socket.userId, socket.id);
@@ -157,7 +159,9 @@ class SocketManager {
     });
 
     // Track disconnection in metrics
-    this.metricsCollector.trackSocketConnection(-1);
+    if (this.metricsCollector) {
+      this.metricsCollector.trackSocketConnection(-1);
+    }
 
     // Remove user connection mapping
     this.connectedUsers.delete(socket.userId);
@@ -185,15 +189,17 @@ class SocketManager {
     for (const [eventName, handler] of this.eventHandlers) {
       socket.on(eventName, async (data) => {
         try {
-          // Track event in metrics
-          this.metricsCollector.trackSocketEvent();
-
           this.logger.debug('Socket event received', {
             eventName,
             socketId: socket.id,
             userId: socket.userId,
             data
           });
+
+          // Track event in metrics
+          if (this.metricsCollector) {
+            this.metricsCollector.trackSocketEvent();
+          }
 
           // Execute handler
           await handler(socket, data);

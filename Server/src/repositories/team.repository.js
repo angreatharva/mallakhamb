@@ -100,7 +100,7 @@ class TeamRepository extends BaseRepository {
     try {
       // Update the player's team field to null
       const Player = require('../../models/Player');
-      const player = await Player.findById(playerId);
+      const player = await Player.findById(playerId).select('team').lean();
       
       if (player && player.team && player.team.toString() === teamId.toString()) {
         await Player.findByIdAndUpdate(playerId, { team: null });

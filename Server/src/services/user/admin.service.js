@@ -18,9 +18,10 @@ class AdminService extends UserService {
    * @param {CoachRepository} coachRepository - Coach repository
    * @param {CompetitionRepository} competitionRepository - Competition repository
    * @param {Logger} logger - Logger instance
+   * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(adminRepository, playerRepository, coachRepository, competitionRepository, logger) {
-    super(adminRepository, logger, 'admin');
+  constructor(adminRepository, playerRepository, coachRepository, competitionRepository, logger, cacheService = null) {
+    super(adminRepository, logger, 'admin', cacheService);
     this.playerRepository = playerRepository;
     this.coachRepository = coachRepository;
     this.competitionRepository = competitionRepository;

@@ -30,6 +30,28 @@ class CompetitionService {
   }
 
   /**
+   * Cache wrap helper — falls back to get/set if cacheService.wrap is not available
+   */
+  async _cacheWrap(key, fn, ttl) {
+    if (this.cacheService && typeof this.cacheService.wrap === 'function') {
+      return this.cacheService.wrap(key, fn, ttl);
+    }
+    // Fall back to get/set pattern
+    if (this.cacheService && typeof this.cacheService.get === 'function') {
+      const cached = this.cacheService.get(key);
+      if (cached !== null && cached !== undefined) {
+        return cached;
+      }
+      const result = await fn();
+      if (typeof this.cacheService.set === 'function') {
+        this.cacheService.set(key, result, ttl);
+      }
+      return result;
+    }
+    return fn();
+  }
+
+  /**
    * Create a new competition
    * @param {Object} competitionData - Competition data
    * @param {string} createdBy - Admin ID creating the competition
@@ -72,7 +94,7 @@ class CompetitionService {
         isDeleted: false
       });
 
-      // Invalidate cache
+      // Invalidate cache - clear all competition-related caches
       this.cacheService.deletePattern('competitions:*');
 
       this.logger.info('Competition created', {
@@ -137,7 +159,7 @@ class CompetitionService {
       // Update competition
       const updated = await this.competitionRepository.updateById(competitionId, allowedUpdates);
 
-      // Invalidate cache
+      // Invalidate cache - clear all competition-related caches
       this.cacheService.delete(`competition:${competitionId}`);
       this.cacheService.deletePattern('competitions:*');
 
@@ -204,7 +226,7 @@ class CompetitionService {
       // Soft delete
       await this.competitionRepository.updateById(competitionId, { isDeleted: true });
 
-      // Invalidate cache
+      // Invalidate cache - clear all competition-related caches
       this.cacheService.delete(`competition:${competitionId}`);
       this.cacheService.deletePattern('competitions:*');
 
@@ -317,47 +339,41 @@ class CompetitionService {
         ];
       }
 
-      // Try cache
-      const cacheKey = `competitions:${JSON.stringify({ criteria, page, limit, sort })}`;
-      const cached = this.cacheService.get(cacheKey);
+      // Try cache with wrap method
+      const cacheKey = `competitions:list:${JSON.stringify({ criteria, page, limit, sort })}`;
+      
+      return await this._cacheWrap(cacheKey, async () => {
+        // Calculate pagination
+        const skip = (page - 1) * limit;
 
-      if (cached) {
-        return cached;
-      }
+        // Fetch competitions and count
+        const [competitions, total] = await Promise.all([
+          this.competitionRepository.find(criteria, {
+            skip,
+            limit,
+            sort,
+            populate: [
+              { path: 'admins', select: 'name email' }
+            ]
+          }),
+          this.competitionRepository.count(criteria)
+        ]);
 
-      // Calculate pagination
-      const skip = (page - 1) * limit;
+        const result = {
+          competitions,
+          total,
+          page,
+          pages: Math.ceil(total / limit)
+        };
 
-      // Fetch competitions and count
-      const [competitions, total] = await Promise.all([
-        this.competitionRepository.find(criteria, {
-          skip,
-          limit,
-          sort,
-          populate: [
-            { path: 'admins', select: 'name email' }
-          ]
-        }),
-        this.competitionRepository.count(criteria)
-      ]);
+        this.logger.debug('Competitions fetched from database', {
+          filters,
+          total,
+          page
+        });
 
-      const result = {
-        competitions,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
-
-      // Cache result
-      this.cacheService.set(cacheKey, result, 300); // 5 minutes
-
-      this.logger.debug('Competitions fetched', {
-        filters,
-        total,
-        page
-      });
-
-      return result;
+        return result;
+      }, 300); // 5 minutes TTL
     } catch (error) {
       this.logger.error('Get competitions error', {
         filters,
@@ -402,7 +418,7 @@ class CompetitionService {
         status: newStatus
       });
 
-      // Invalidate cache
+      // Invalidate cache - clear all competition-related caches
       this.cacheService.delete(`competition:${competitionId}`);
       this.cacheService.deletePattern('competitions:*');
 
@@ -451,14 +467,55 @@ class CompetitionService {
     try {
       const { limit = 10 } = options;
 
-      const competitions = await this.competitionRepository.findUpcoming({
-        limit,
-        populate: [{ path: 'admins', select: 'name email' }]
-      });
+      // Cache upcoming competitions
+      const cacheKey = `competitions:upcoming:${limit}`;
+      
+      return await this._cacheWrap(cacheKey, async () => {
+        const competitions = await this.competitionRepository.findUpcoming({
+          limit,
+          populate: [{ path: 'admins', select: 'name email' }]
+        });
 
-      return competitions;
+        this.logger.debug('Upcoming competitions fetched from database', {
+          count: competitions.length
+        });
+
+        return competitions;
+      }, 300); // 5 minutes TTL
     } catch (error) {
       this.logger.error('Get upcoming competitions error', {
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get active competitions (ongoing)
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} Active competitions
+   */
+  async getActiveCompetitions(options = {}) {
+    try {
+      const { limit = 50 } = options;
+
+      // Cache active competitions with shorter TTL since they're frequently accessed
+      const cacheKey = `competitions:active:${limit}`;
+      
+      return await this._cacheWrap(cacheKey, async () => {
+        const competitions = await this.competitionRepository.findByStatus('ongoing', {
+          limit,
+          populate: [{ path: 'admins', select: 'name email' }]
+        });
+
+        this.logger.debug('Active competitions fetched from database', {
+          count: competitions.length
+        });
+
+        return competitions;
+      }, 180); // 3 minutes TTL (shorter for active competitions)
+    } catch (error) {
+      this.logger.error('Get active competitions error', {
         error: error.message
       });
       throw error;

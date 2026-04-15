@@ -21,6 +21,7 @@ const TransactionRepository = require('../repositories/transaction.repository');
 
 // Import services
 const CacheService = require('../services/cache/cache.service');
+const CacheWarmer = require('../services/cache/cache-warmer');
 const EmailService = require('../services/email/email.service');
 const TokenService = require('../services/auth/token.service');
 const OTPService = require('../services/auth/otp.service');
@@ -35,6 +36,7 @@ const RegistrationService = require('../services/competition/registration.servic
 const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
+const FeatureFlagService = require('../services/feature-flags/feature-flag.service');
 
 // Import controllers
 const CompetitionController = require('../controllers/competition.controller');
@@ -45,11 +47,16 @@ const coachController = require('../controllers/coach.controller');
 // Import infrastructure components
 const HealthMonitor = require('./health-monitor');
 const MetricsCollector = require('./metrics-collector');
+const GracefulShutdownHandler = require('./graceful-shutdown');
+const DatabaseConnection = require('./database/connection');
 
 // Import Socket.IO components
 const SocketManager = require('../socket/socket.manager');
 const ScoringHandler = require('../socket/handlers/scoring.handler');
 const NotificationHandler = require('../socket/handlers/notification.handler');
+
+// Import middleware
+const RequestCoalescingMiddleware = require('../middleware/request-coalescing.middleware');
 
 /**
  * Initialize application infrastructure
@@ -65,6 +72,12 @@ function bootstrap() {
   // Register logger as singleton
   container.register('logger', (c) => new Logger(c.resolve('config')), 'singleton');
 
+  // Register database connection
+  container.register('databaseConnection', (c) => new DatabaseConnection(
+    c.resolve('config'),
+    c.resolve('logger')
+  ), 'singleton');
+
   // Register infrastructure components
   container.register('metricsCollector', (c) => new MetricsCollector(c.resolve('logger')), 'singleton');
   
@@ -72,6 +85,16 @@ function bootstrap() {
     c.resolve('config'),
     c.resolve('logger'),
     c.resolve('emailService')
+  ), 'singleton');
+
+  container.register('gracefulShutdownHandler', (c) => new GracefulShutdownHandler(
+    c.resolve('logger'),
+    c.resolve('config')
+  ), 'singleton');
+
+  // Register middleware
+  container.register('requestCoalescingMiddleware', (c) => new RequestCoalescingMiddleware(
+    c.resolve('logger')
   ), 'singleton');
 
   // Register repositories as singletons with logger injection
@@ -88,6 +111,12 @@ function bootstrap() {
   
   // Cache service
   container.register('cacheService', (c) => new CacheService(
+    c.resolve('config'),
+    c.resolve('logger')
+  ), 'singleton');
+  
+  // Feature flag service
+  container.register('featureFlagService', (c) => new FeatureFlagService(
     c.resolve('config'),
     c.resolve('logger')
   ), 'singleton');
@@ -141,13 +170,15 @@ function bootstrap() {
   container.register('playerService', (c) => new PlayerService(
     c.resolve('playerRepository'),
     c.resolve('teamRepository'),
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('cacheService')
   ), 'singleton');
   
   container.register('coachService', (c) => new CoachService(
     c.resolve('coachRepository'),
     c.resolve('teamRepository'),
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('cacheService')
   ), 'singleton');
   
   container.register('adminService', (c) => new AdminService(
@@ -155,7 +186,8 @@ function bootstrap() {
     c.resolve('playerRepository'),
     c.resolve('coachRepository'),
     c.resolve('competitionRepository'),
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('cacheService')
   ), 'singleton');
   
   // Competition services
@@ -251,6 +283,14 @@ function bootstrap() {
   // Register coach controller (functional module, not a class)
   container.register('coachController', () => coachController, 'singleton');
 
+  // Register cache warmer
+  container.register('cacheWarmer', (c) => new CacheWarmer(
+    c.resolve('competitionService'),
+    null, // userService - not needed for initial warming
+    null, // teamService - not needed for initial warming
+    c.resolve('logger')
+  ), 'singleton');
+
   // Note: Socket.IO components are registered separately via initializeSocketIO()
   // because they require the HTTP server instance which is not available during bootstrap
 
@@ -331,4 +371,22 @@ function initializeSocketIO(httpServer) {
   return socketManager;
 }
 
-module.exports = { bootstrap, initializeSocketIO };
+/**
+ * Warm cache with frequently accessed data
+ * Should be called after application initialization
+ * @returns {Promise<Object>} Warming statistics
+ */
+async function warmCache() {
+  try {
+    const cacheWarmer = container.resolve('cacheWarmer');
+    const stats = await cacheWarmer.warmCache();
+    return stats;
+  } catch (error) {
+    const logger = container.resolve('logger');
+    logger.error('Cache warming failed during startup', { error: error.message });
+    // Don't throw - cache warming failure shouldn't prevent app startup
+    return { errors: [{ type: 'startup', error: error.message }] };
+  }
+}
+
+module.exports = { bootstrap, initializeSocketIO, warmCache };

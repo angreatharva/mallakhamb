@@ -24,14 +24,24 @@ const { startCleanupJobs } = require('./utils/cleanupJobs');
 // Import bootstrap for DI container and Socket.IO initialization
 const { bootstrap, initializeSocketIO } = require('./src/infrastructure/bootstrap');
 
-// Connect to database
-connectDB();
+// Import metrics middleware
+const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('./src/middleware/metrics.middleware');
+
+// Bootstrap application (initialize DI container and services)
+const { container } = bootstrap();
+
+// Connect to database using new DatabaseConnection
+const databaseConnection = container.resolve('databaseConnection');
+databaseConnection.connect().catch(error => {
+  console.error('Failed to connect to database:', error);
+  process.exit(1);
+});
 
 // Start cleanup jobs
 startCleanupJobs();
 
-// Bootstrap application (initialize DI container and services)
-const { container } = bootstrap();
+// Resolve metrics collector for middleware
+const metricsCollector = container.resolve('metricsCollector');
 
 const app = express();
 const server = http.createServer(app);
@@ -146,6 +156,13 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.headers.origin || 'no-origin'}`);
   next();
 });
+
+// Metrics collection middleware - track all requests
+app.use(createMetricsMiddleware(metricsCollector));
+
+// Request coalescing middleware - prevent duplicate concurrent requests
+const requestCoalescingMiddleware = container.resolve('requestCoalescingMiddleware');
+app.use(requestCoalescingMiddleware.middleware());
 
 // Security logging middleware - must be before routes
 app.use(logUnauthorizedAccess);
@@ -275,6 +292,9 @@ if (process.env.NODE_ENV !== 'production') {
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
 
+// Error metrics middleware - track errors before error handler
+app.use(createErrorMetricsMiddleware(metricsCollector));
+
 // Error handling middleware - must be last
 app.use(errorHandler);
 
@@ -300,30 +320,29 @@ if (require.main === module) {
   } catch (error) {
     console.log('⚠️ Ngrok setup failed, continuing without it:', error.message);
   }
+
+    // Register graceful shutdown handler
+    const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
+    
+    gracefulShutdownHandler.register({
+      server: server,
+      socketManager: socketManager,
+      dbConnection: databaseConnection,
+      metricsCollector: metricsCollector
+    });
+    
+    console.log('✅ Graceful shutdown handler registered');
   });
 }
 
-// Graceful shutdown
+// Legacy graceful shutdown handlers (kept for backward compatibility during migration)
+// These will be removed once GracefulShutdownHandler is fully tested
 process.on('SIGINT', async () => {
-  console.log('\nShutting down gracefully...');
-  
-  // Close Socket.IO connections
-  if (socketManager) {
-    socketManager.close();
-  }
-  
-  process.exit(0);
+  console.log('\n⚠️ Legacy SIGINT handler - will be removed after GracefulShutdownHandler is verified');
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\nShutting down gracefully...');
-  
-  // Close Socket.IO connections
-  if (socketManager) {
-    socketManager.close();
-  }
-  
-  process.exit(0);
+  console.log('\n⚠️ Legacy SIGTERM handler - will be removed after GracefulShutdownHandler is verified');
 });
 
 // Export app for testing

@@ -384,8 +384,9 @@ class TeamService {
       // Add player to team
       await this.teamRepository.addPlayer(teamId, playerId);
 
-      // Invalidate cache
+      // Invalidate cache - clear team and roster caches
       this.cacheService.delete(`team:${teamId}`);
+      this.cacheService.delete(`team:${teamId}:roster`);
       this.cacheService.deletePattern(`teams:coach:${coachId}:*`);
       this.cacheService.deletePattern('teams:*');
 
@@ -464,8 +465,9 @@ class TeamService {
       // Remove player from team
       await this.teamRepository.removePlayer(teamId, playerId);
 
-      // Invalidate cache
+      // Invalidate cache - clear team and roster caches
       this.cacheService.delete(`team:${teamId}`);
+      this.cacheService.delete(`team:${teamId}:roster`);
       this.cacheService.deletePattern(`teams:coach:${coachId}:*`);
       this.cacheService.deletePattern('teams:*');
 
@@ -558,6 +560,48 @@ class TeamService {
       this.logger.error('Validate team for competition error', {
         teamId,
         competitionId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get team roster (players) with caching
+   * @param {string} teamId - Team ID
+   * @returns {Promise<Array>} Team players
+   * @throws {NotFoundError} If team not found
+   */
+  async getTeamRoster(teamId) {
+    try {
+      // Try cache first
+      const cacheKey = `team:${teamId}:roster`;
+      
+      return await this.cacheService.wrap(cacheKey, async () => {
+        // Verify team exists
+        const team = await this.teamRepository.findById(teamId);
+
+        if (!team || !team.isActive) {
+          this.logger.warn('Get team roster failed: Team not found or inactive', { teamId });
+          throw new NotFoundError('Team', teamId);
+        }
+
+        // Get team players
+        const players = await this.playerRepository.findByTeam(teamId);
+
+        this.logger.debug('Team roster fetched from database', {
+          teamId,
+          playerCount: players.length
+        });
+
+        return players;
+      }, 300); // 5 minutes TTL
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Get team roster error', {
+        teamId,
         error: error.message
       });
       throw error;

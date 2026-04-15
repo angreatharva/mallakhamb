@@ -16,9 +16,10 @@ class PlayerService extends UserService {
    * @param {PlayerRepository} playerRepository - Player repository
    * @param {TeamRepository} teamRepository - Team repository
    * @param {Logger} logger - Logger instance
+   * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(playerRepository, teamRepository, logger) {
-    super(playerRepository, logger, 'player');
+  constructor(playerRepository, teamRepository, logger, cacheService = null) {
+    super(playerRepository, logger, 'player', cacheService);
     this.teamRepository = teamRepository;
   }
 
