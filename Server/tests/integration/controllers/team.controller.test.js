@@ -20,9 +20,10 @@ const teamRoutes = require('../../../src/routes/team.routes');
 const { errorHandler } = require('../../../src/middleware/error.middleware');
 
 // Mock authentication middleware
-jest.mock('../../../middleware/authMiddleware', () => ({
-  authMiddleware: (req, res, next) => next(),
-  coachAuth: (req, res, next) => next()
+jest.mock('../../../src/middleware/auth.middleware', () => ({
+  __esModule: true,
+  default: (container) => (req, res, next) => next(),
+  requireCoach: (req, res, next) => next()
 }));
 
 // Mock models

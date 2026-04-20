@@ -7,11 +7,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Test coverage
+coverage/
+*.lcov
+
+# Environment and dependencies
 .env
 node_modules/
 dist
 dist-ssr
 *.local
+
+# Old/legacy code (migrated)
+old_config/
 
 # Editor directories and files
 .vscode/*

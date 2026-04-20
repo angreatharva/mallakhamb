@@ -13,6 +13,8 @@ const {
   NotFoundError,
   BusinessRuleError 
 } = require('../../errors');
+const { sanitizeTeamData } = require('../../utils/validation/sanitization.util');
+const EventTypes = require('../../socket/events/event-types');
 
 class TeamService {
   /**
@@ -43,21 +45,24 @@ class TeamService {
    */
   async createTeam(teamData, coachId) {
     try {
+      // Sanitize string inputs
+      const sanitizedData = sanitizeTeamData(teamData);
+
       // Validate team name
-      if (!teamData.name || teamData.name.trim().length === 0) {
+      if (!sanitizedData.name || sanitizedData.name.trim().length === 0) {
         throw new ValidationError('Team name is required');
       }
 
       // Check for duplicate team name for this coach
       const existing = await this.teamRepository.findOne({
-        name: teamData.name,
+        name: sanitizedData.name,
         coach: coachId,
         isActive: true
       });
 
       if (existing) {
         this.logger.warn('Team creation failed: Duplicate team name for coach', {
-          name: teamData.name,
+          name: sanitizedData.name,
           coachId
         });
         throw new ConflictError('Team with this name already exists for this coach');
@@ -65,7 +70,7 @@ class TeamService {
 
       // Create team
       const team = await this.teamRepository.create({
-        ...teamData,
+        ...sanitizedData,
         coach: coachId,
         isActive: true
       });
@@ -82,7 +87,7 @@ class TeamService {
 
       // Emit Socket.IO event for real-time team creation
       if (this.socketManager) {
-        this.socketManager.emitToUser(coachId, 'team_created', {
+        this.socketManager.emitToUser(coachId, EventTypes.TEAM_CREATED, {
           teamId: team._id,
           name: team.name,
           coachId,
@@ -116,6 +121,9 @@ class TeamService {
    */
   async updateTeam(teamId, coachId, updates) {
     try {
+      // Sanitize string inputs
+      const sanitizedUpdates = sanitizeTeamData(updates);
+
       // Find team
       const team = await this.teamRepository.findById(teamId);
 
@@ -131,9 +139,9 @@ class TeamService {
       }
 
       // Check for duplicate name if name is being updated
-      if (updates.name && updates.name !== team.name) {
+      if (sanitizedUpdates.name && sanitizedUpdates.name !== team.name) {
         const existing = await this.teamRepository.findOne({
-          name: updates.name,
+          name: sanitizedUpdates.name,
           coach: coachId,
           isActive: true,
           _id: { $ne: teamId }
@@ -142,14 +150,14 @@ class TeamService {
         if (existing) {
           this.logger.warn('Team update failed: Duplicate team name', {
             teamId,
-            name: updates.name
+            name: sanitizedUpdates.name
           });
           throw new ConflictError('Team with this name already exists for this coach');
         }
       }
 
       // Don't allow updating certain fields
-      const { _id, coach, isActive, createdAt, updatedAt, ...allowedUpdates } = updates;
+      const { _id, coach, isActive, createdAt, updatedAt, ...allowedUpdates } = sanitizedUpdates;
 
       // Update team
       const updated = await this.teamRepository.updateById(teamId, allowedUpdates);
@@ -166,7 +174,7 @@ class TeamService {
 
       // Emit Socket.IO event for real-time team update
       if (this.socketManager) {
-        this.socketManager.emitToUser(coachId, 'team_updated', {
+        this.socketManager.emitToUser(coachId, EventTypes.TEAM_UPDATED, {
           teamId,
           updates: allowedUpdates,
           timestamp: new Date()
@@ -397,7 +405,7 @@ class TeamService {
 
       // Emit Socket.IO event for real-time team roster update
       if (this.socketManager) {
-        this.socketManager.emitToUser(coachId, 'team_player_added', {
+        this.socketManager.emitToUser(coachId, EventTypes.TEAM_PLAYER_ADDED, {
           teamId,
           playerId,
           timestamp: new Date()
@@ -478,7 +486,7 @@ class TeamService {
 
       // Emit Socket.IO event for real-time team roster update
       if (this.socketManager) {
-        this.socketManager.emitToUser(coachId, 'team_player_removed', {
+        this.socketManager.emitToUser(coachId, EventTypes.TEAM_PLAYER_REMOVED, {
           teamId,
           playerId,
           timestamp: new Date()
@@ -606,6 +614,32 @@ class TeamService {
       });
       throw error;
     }
+  }
+
+  async getTeamStats(teamId) {
+    const team = await this.teamRepository.findById(teamId);
+    if (!team || !team.isActive) {
+      return null;
+    }
+
+    const roster = await this.playerRepository.findByTeam(teamId);
+    const byGender = roster.reduce((acc, p) => {
+      const g = (p.gender || '').toLowerCase();
+      if (g === 'male') acc.male += 1;
+      if (g === 'female') acc.female += 1;
+      return acc;
+    }, { male: 0, female: 0 });
+
+    return {
+      teamId,
+      totalPlayers: roster.length,
+      byGender,
+      ageGroups: roster.reduce((acc, p) => {
+        const key = p.ageGroup || 'unknown';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+    };
   }
 }
 

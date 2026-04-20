@@ -56,7 +56,6 @@ class DatabaseConnection {
         
         // Buffer commands when disconnected (useful for reconnection)
         bufferCommands: true,
-        bufferMaxEntries: 0, // Fail fast if disconnected
       };
 
       this.logger.info('Connecting to MongoDB...', {

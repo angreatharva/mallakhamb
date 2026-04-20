@@ -9,192 +9,133 @@
  */
 
 const express = require('express');
-const router = express.Router();
-const container = require('../infrastructure/di-container');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requireAdmin, requireCoach } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const {
   createCompetition,
   updateCompetition,
   getCompetitionById,
   deleteCompetition,
+  updateCompetitionStatus,
   registerTeam,
   addPlayerToTeam,
   startAgeGroup
 } = require('../validators/competition.validator');
 
-// Get controller from DI container
-const getController = () => container.resolve('competitionController');
+function createCompetitionRoutes(container) {
+  const router = express.Router();
+  const authMiddleware = createAuthMiddleware(container);
+  const controller = container.resolve('competitionController');
 
-/**
- * @route   POST /api/competitions
- * @desc    Create a new competition
- * @access  Super Admin only
- */
-router.post(
-  '/',
-  createCompetition(),
-  handleValidationErrors,
-  (req, res, next) => getController().createCompetition(req, res, next)
-);
+  router.post('/', authMiddleware, requireAdmin, createCompetition(), handleValidationErrors, controller.createCompetition);
 
 /**
  * @route   GET /api/competitions
  * @desc    Get all competitions with filtering and pagination
  * @access  Authenticated users
  */
-router.get(
-  '/',
-  (req, res, next) => getController().getAllCompetitions(req, res, next)
-);
+  router.get('/', authMiddleware, controller.getAllCompetitions);
 
 /**
  * @route   GET /api/competitions/upcoming
  * @desc    Get upcoming competitions
  * @access  Public
  */
-router.get(
-  '/upcoming',
-  (req, res, next) => getController().getUpcomingCompetitions(req, res, next)
-);
+  router.get('/upcoming', controller.getUpcomingCompetitions);
 
 /**
  * @route   GET /api/competitions/status/:status
  * @desc    Get competitions by status
  * @access  Authenticated users
  */
-router.get(
-  '/status/:status',
-  (req, res, next) => getController().getCompetitionsByStatus(req, res, next)
-);
+  router.get('/status/:status', authMiddleware, controller.getCompetitionsByStatus);
 
 /**
  * @route   GET /api/competitions/:id
  * @desc    Get competition by ID
  * @access  Authenticated users
  */
-router.get(
-  '/:id',
-  getCompetitionById(),
-  handleValidationErrors,
-  (req, res, next) => getController().getCompetitionById(req, res, next)
-);
+  router.get('/:id', authMiddleware, getCompetitionById(), handleValidationErrors, controller.getCompetitionById);
 
 /**
  * @route   PUT /api/competitions/:id
  * @desc    Update competition
  * @access  Super Admin only
  */
-router.put(
-  '/:id',
-  updateCompetition(),
-  handleValidationErrors,
-  (req, res, next) => getController().updateCompetition(req, res, next)
-);
+  router.put('/:id', authMiddleware, requireAdmin, updateCompetition(), handleValidationErrors, controller.updateCompetition);
 
 /**
  * @route   DELETE /api/competitions/:id
  * @desc    Delete competition
  * @access  Super Admin only
  */
-router.delete(
-  '/:id',
-  deleteCompetition(),
-  handleValidationErrors,
-  (req, res, next) => getController().deleteCompetition(req, res, next)
-);
+  router.delete('/:id', authMiddleware, requireAdmin, deleteCompetition(), handleValidationErrors, controller.deleteCompetition);
 
 /**
  * @route   PATCH /api/competitions/:id/status
  * @desc    Update competition status
  * @access  Admin only
  */
-router.patch(
-  '/:id/status',
-  (req, res, next) => getController().updateCompetitionStatus(req, res, next)
-);
+  router.patch('/:id/status', authMiddleware, requireAdmin, updateCompetitionStatus(), handleValidationErrors, controller.updateCompetitionStatus);
 
 /**
  * @route   POST /api/competitions/:competitionId/register
  * @desc    Register team for competition
  * @access  Coach only
  */
-router.post(
-  '/:competitionId/register',
-  registerTeam(),
-  handleValidationErrors,
-  (req, res, next) => getController().registerTeam(req, res, next)
-);
+  router.post('/:competitionId/register', authMiddleware, requireCoach, registerTeam(), handleValidationErrors, controller.registerTeam);
 
 /**
  * @route   DELETE /api/competitions/:competitionId/register/:teamId
  * @desc    Unregister team from competition
  * @access  Coach only
  */
-router.delete(
-  '/:competitionId/register/:teamId',
-  (req, res, next) => getController().unregisterTeam(req, res, next)
-);
+  router.delete('/:competitionId/register/:teamId', authMiddleware, requireCoach, controller.unregisterTeam);
 
 /**
  * @route   POST /api/competitions/:competitionId/teams/:teamId/players
  * @desc    Add player to competition team
  * @access  Coach only
  */
-router.post(
-  '/:competitionId/teams/:teamId/players',
-  addPlayerToTeam(),
-  handleValidationErrors,
-  (req, res, next) => getController().addPlayerToTeam(req, res, next)
-);
+  router.post('/:competitionId/teams/:teamId/players', authMiddleware, requireCoach, addPlayerToTeam(), handleValidationErrors, controller.addPlayerToTeam);
 
 /**
  * @route   DELETE /api/competitions/:competitionId/teams/:teamId/players/:playerId
  * @desc    Remove player from competition team
  * @access  Coach only
  */
-router.delete(
-  '/:competitionId/teams/:teamId/players/:playerId',
-  (req, res, next) => getController().removePlayerFromTeam(req, res, next)
-);
+  router.delete('/:competitionId/teams/:teamId/players/:playerId', authMiddleware, requireCoach, controller.removePlayerFromTeam);
 
 /**
  * @route   GET /api/competitions/:competitionId/teams/:teamId
  * @desc    Get team registration details
  * @access  Authenticated users
  */
-router.get(
-  '/:competitionId/teams/:teamId',
-  (req, res, next) => getController().getTeamRegistration(req, res, next)
-);
+  router.get('/:competitionId/teams/:teamId', authMiddleware, controller.getTeamRegistration);
 
 /**
  * @route   GET /api/competitions/:competitionId/registrations
  * @desc    Get all registrations for a competition
  * @access  Admin only
  */
-router.get(
-  '/:competitionId/registrations',
-  (req, res, next) => getController().getCompetitionRegistrations(req, res, next)
-);
+  router.get('/:competitionId/registrations', authMiddleware, requireAdmin, controller.getCompetitionRegistrations);
 
 /**
  * @route   POST /api/competitions/:id/admins
  * @desc    Assign admin to competition
  * @access  Super Admin only
  */
-router.post(
-  '/:id/admins',
-  (req, res, next) => getController().assignAdmin(req, res, next)
-);
+  router.post('/:id/admins', authMiddleware, requireAdmin, controller.assignAdmin);
 
 /**
  * @route   DELETE /api/competitions/:id/admins/:adminId
  * @desc    Remove admin from competition
  * @access  Super Admin only
  */
-router.delete(
-  '/:id/admins/:adminId',
-  (req, res, next) => getController().removeAdmin(req, res, next)
-);
+  router.delete('/:id/admins/:adminId', authMiddleware, requireAdmin, controller.removeAdmin);
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createCompetitionRoutes;

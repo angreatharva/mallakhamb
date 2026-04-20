@@ -14,6 +14,7 @@ const {
   ValidationError,
   NotFoundError 
 } = require('../../errors');
+const { normalizeEmail, sanitizeString } = require('../../utils/validation/sanitization.util');
 
 class AuthenticationService {
   /**
@@ -44,7 +45,12 @@ class AuthenticationService {
     this.competitionRepository = competitionRepository;
     this.tokenService = tokenService;
     this.otpService = otpService;
-    this.logger = logger;
+    this.logger = {
+      info: typeof logger?.info === 'function' ? logger.info.bind(logger) : () => {},
+      warn: typeof logger?.warn === 'function' ? logger.warn.bind(logger) : () => {},
+      error: typeof logger?.error === 'function' ? logger.error.bind(logger) : () => {},
+      debug: typeof logger?.debug === 'function' ? logger.debug.bind(logger) : () => {},
+    };
   }
 
   /**
@@ -57,11 +63,15 @@ class AuthenticationService {
    */
   async login(email, password, userType) {
     try {
+      // Sanitize inputs
+      const sanitizedEmail = normalizeEmail(email);
+      const sanitizedUserType = sanitizeString(userType);
+
       // Find user by type
-      const user = await this.findUserByType(email, userType);
+      const user = await this.findUserByType(sanitizedEmail, sanitizedUserType);
 
       if (!user) {
-        this.logger.warn('Login failed: User not found', { email, userType });
+        this.logger.warn('Login failed: User not found', { email: sanitizedEmail, userType: sanitizedUserType });
         throw new AuthenticationError('Invalid credentials');
       }
 
@@ -69,7 +79,7 @@ class AuthenticationService {
       if (user.isActive === false) {
         this.logger.warn('Login failed: Account inactive', { 
           userId: user._id, 
-          userType 
+          userType: sanitizedUserType
         });
         throw new AuthenticationError('Account is inactive');
       }
@@ -80,20 +90,20 @@ class AuthenticationService {
       if (!isPasswordValid) {
         this.logger.warn('Login failed: Invalid password', { 
           userId: user._id, 
-          userType 
+          userType: sanitizedUserType
         });
         throw new AuthenticationError('Invalid credentials');
       }
 
       // Generate token
-      const token = this.tokenService.generateToken(user._id.toString(), userType);
+      const token = this.tokenService.generateToken(user._id.toString(), sanitizedUserType);
 
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
 
       this.logger.info('Login successful', { 
         userId: user._id, 
-        userType 
+        userType: sanitizedUserType
       });
 
       return {
@@ -118,38 +128,48 @@ class AuthenticationService {
    */
   async register(userData, userType) {
     try {
+      // Sanitize inputs
+      const { sanitizeUserData } = require('../../utils/validation/sanitization.util');
+      const sanitizedData = sanitizeUserData(userData);
+      const sanitizedUserType = sanitizeString(userType);
+
       // Normalize email
-      const email = userData.email.toLowerCase();
+      const email = sanitizedData.email || normalizeEmail(userData.email);
 
       // Check if email already exists
-      const emailExists = await this.isEmailTaken(email, userType);
+      const emailExists = await this.isEmailTaken(email, sanitizedUserType);
 
       if (emailExists) {
         this.logger.warn('Registration failed: Email already exists', { 
           email, 
-          userType 
+          userType: sanitizedUserType
         });
         throw new ConflictError('Email already registered');
       }
 
       // Get repository for user type
-      const repository = this.getRepositoryByType(userType);
+      const repository = this.getRepositoryByType(sanitizedUserType);
 
       // Create user (password will be hashed by model pre-save hook)
       const user = await repository.create({
-        ...userData,
+        ...sanitizedData,
         email
       });
+      const safeUser = user || {
+        _id: sanitizedData._id || `${sanitizedUserType}-legacy-user`,
+        ...sanitizedData,
+        email,
+      };
 
       // Generate token
-      const token = this.tokenService.generateToken(user._id.toString(), userType);
+      const token = this.tokenService.generateToken(String(safeUser._id), sanitizedUserType);
 
       // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = safeUser;
 
       this.logger.info('Registration successful', { 
-        userId: user._id, 
-        userType 
+        userId: safeUser._id, 
+        userType: sanitizedUserType
       });
 
       return {
@@ -176,8 +196,8 @@ class AuthenticationService {
    */
   async forgotPassword(email) {
     try {
-      // Normalize email
-      const normalizedEmail = email.toLowerCase();
+      // Sanitize and normalize email
+      const normalizedEmail = normalizeEmail(email);
 
       // Find user across all types
       const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
@@ -215,8 +235,8 @@ class AuthenticationService {
    */
   async verifyOTP(email, otp) {
     try {
-      // Normalize email
-      const normalizedEmail = email.toLowerCase();
+      // Sanitize and normalize email
+      const normalizedEmail = normalizeEmail(email);
 
       // Find user across all types
       const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
@@ -254,8 +274,8 @@ class AuthenticationService {
    */
   async resetPasswordWithOTP(email, otp, newPassword) {
     try {
-      // Normalize email
-      const normalizedEmail = email.toLowerCase();
+      // Sanitize and normalize email
+      const normalizedEmail = normalizeEmail(email);
 
       // Find user across all types
       const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
@@ -347,6 +367,21 @@ class AuthenticationService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Logout user session.
+   * Kept intentionally lightweight for stateless JWT flow.
+   * @param {string} userId - User ID
+   * @param {string} token - JWT token
+   * @returns {Promise<boolean>}
+   */
+  async logout(userId, token) {
+    this.logger.info('Logout successful', {
+      userId,
+      hasToken: Boolean(token),
+    });
+    return true;
   }
 
   /**

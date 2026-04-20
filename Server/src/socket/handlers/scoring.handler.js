@@ -17,11 +17,12 @@ class ScoringHandler {
    * @param {AuthorizationService} authorizationService - Authorization service
    * @param {Logger} logger - Logger instance
    */
-  constructor(socketManager, scoringService, authorizationService, logger) {
+  constructor(socketManager, scoringService, authorizationService, logger, judgeService = null) {
     this.socketManager = socketManager;
     this.scoringService = scoringService;
     this.authorizationService = authorizationService;
     this.logger = logger;
+    this.judgeService = judgeService;
   }
 
   /**
@@ -44,6 +45,12 @@ class ScoringHandler {
     this.socketManager.registerEventHandler(
       EventTypes.SCORE_UPDATE,
       this.handleScoreUpdate.bind(this)
+    );
+
+    // Register score update request handler (for updating existing scores)
+    this.socketManager.registerEventHandler(
+      EventTypes.SCORE_UPDATE_REQUEST,
+      this.handleScoreUpdateRequest.bind(this)
     );
 
     // Register scores saved handler
@@ -130,7 +137,7 @@ class ScoringHandler {
       throw new Error('Only judges can update scores');
     }
 
-    const { roomId, playerId, judgeType, score } = data;
+    const { roomId, playerId, teamId, judgeType, score, notes } = data;
 
     // Validate required fields
     if (!roomId || !playerId || !judgeType || score === undefined) {
@@ -150,7 +157,52 @@ class ScoringHandler {
       throw new Error('Not authorized to score in this competition');
     }
 
-    // Broadcast score update to all users in the room except sender
+    // If teamId is provided, save the score via JudgeService
+    if (teamId) {
+      try {
+        if (!this.judgeService) {
+          throw new Error('Judge service is not configured');
+        }
+
+        const savedScore = await this.judgeService.saveIndividualScore(socket.userId, {
+          playerId,
+          teamId,
+          competitionId,
+          score,
+          notes
+        });
+
+        // Emit confirmation to judge
+        socket.emit(EventTypes.SCORE_SAVED, {
+          scoreId: savedScore._id,
+          playerId,
+          teamId,
+          score: savedScore.score
+        });
+
+        this.logger.info('Score saved via Socket.IO', {
+          roomId,
+          playerId,
+          teamId,
+          judgeId: socket.userId,
+          score
+        });
+
+        return; // Score saved, event already broadcasted by service
+      } catch (error) {
+        this.logger.error('Socket.IO score save error', {
+          roomId,
+          playerId,
+          error: error.message
+        });
+        socket.emit(EventTypes.SCORE_ERROR, {
+          message: error.message
+        });
+        return;
+      }
+    }
+
+    // Broadcast score update to all users in the room except sender (real-time preview)
     socket.to(roomId).emit(EventTypes.SCORE_UPDATED, {
       playerId,
       judgeType,
@@ -216,6 +268,56 @@ class ScoringHandler {
       savedBy: socket.userId,
       savedByType: socket.userType
     });
+  }
+
+  /**
+   * Handle score update request (for updating existing scores)
+   * @param {Socket} socket - Socket.IO socket instance
+   * @param {Object} data - Event data { scoreId, updates }
+   */
+  async handleScoreUpdateRequest(socket, data) {
+    // Validate user is a judge
+    if (socket.userType !== 'judge') {
+      throw new Error('Only judges can update scores');
+    }
+
+    const { scoreId, updates } = data;
+
+    // Validate required fields
+    if (!scoreId || !updates) {
+      throw new Error('Missing required fields: scoreId, updates');
+    }
+
+    try {
+      if (!this.judgeService) {
+        throw new Error('Judge service is not configured');
+      }
+
+      const updatedScore = await this.judgeService.updateIndividualScore(
+        socket.userId,
+        scoreId,
+        updates
+      );
+
+      // Emit confirmation to judge
+      socket.emit(EventTypes.SCORE_UPDATE_SUCCESS, {
+        scoreId,
+        score: updatedScore
+      });
+
+      this.logger.info('Score updated via Socket.IO', {
+        scoreId,
+        judgeId: socket.userId
+      });
+    } catch (error) {
+      this.logger.error('Socket.IO score update error', {
+        scoreId,
+        error: error.message
+      });
+      socket.emit(EventTypes.SCORE_ERROR, {
+        message: error.message
+      });
+    }
   }
 }
 

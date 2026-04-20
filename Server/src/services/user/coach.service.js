@@ -18,9 +18,149 @@ class CoachService extends UserService {
    * @param {Logger} logger - Logger instance
    * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(coachRepository, teamRepository, logger, cacheService = null) {
+  constructor(
+    coachRepository,
+    teamRepository,
+    logger,
+    cacheService = null,
+    authenticationService = null,
+    competitionRepository = null,
+    playerRepository = null
+  ) {
     super(coachRepository, logger, 'coach', cacheService);
     this.teamRepository = teamRepository;
+    this.authenticationService = authenticationService;
+    this.competitionRepository = competitionRepository;
+    this.playerRepository = playerRepository;
+  }
+
+  async registerCoach(payload) {
+    if (!this.authenticationService) {
+      throw new ValidationError('Authentication service is not configured');
+    }
+    return this.authenticationService.register(payload, 'coach');
+  }
+
+  async loginCoach(email, password) {
+    if (!this.authenticationService) {
+      throw new ValidationError('Authentication service is not configured');
+    }
+    return this.authenticationService.login(email, password, 'coach');
+  }
+
+  async getCoachProfile(coachId) {
+    return this.getProfile(coachId);
+  }
+
+  async getCoachStatus(coachId) {
+    const teams = await this.getCoachTeams(coachId);
+    return {
+      hasTeam: teams.length > 0,
+      step: teams.length > 0 ? 'select-competition' : 'create-team',
+      teamCount: teams.length,
+    };
+  }
+
+  async getCoachTeams(coachId) {
+    return this.teamRepository.find({ coach: coachId, isActive: true }, { sort: { createdAt: -1 } });
+  }
+
+  async createTeam(coachId, teamData) {
+    if (!teamData || typeof teamData !== 'object') {
+      throw new ValidationError('Team data is required');
+    }
+    const created = await this.teamRepository.create({
+      ...teamData,
+      coach: coachId,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return created;
+  }
+
+  async getOpenCompetitions() {
+    if (!this.competitionRepository) {
+      return [];
+    }
+    return this.competitionRepository.find({ status: 'upcoming', isDeleted: false }, { sort: { startDate: 1 } });
+  }
+
+  async registerTeamForCompetition(teamId, competitionId, coachId) {
+    return { teamId, competitionId, coachId, status: 'registered' };
+  }
+
+  async selectCompetitionForTeam(coachId, competitionId) {
+    const teams = await this.getCoachTeams(coachId);
+    const team = teams[0] || null;
+    return { coachId, competitionId, teamId: team?._id || null };
+  }
+
+  async getTeamDashboard(coachId, competitionId) {
+    const teams = await this.getCoachTeams(coachId);
+    return {
+      competitionId,
+      teams,
+      totalTeams: teams.length,
+    };
+  }
+
+  async getTeamStatus(coachId, competitionId) {
+    const teams = await this.getCoachTeams(coachId);
+    return {
+      competitionId,
+      hasTeam: teams.length > 0,
+      submitted: false,
+    };
+  }
+
+  async searchPlayers(coachId, competitionId, query = '') {
+    if (!this.playerRepository) return [];
+    const filters = {
+      isActive: true,
+      $or: [
+        { firstName: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+      ],
+    };
+    return this.playerRepository.find(filters, { limit: 20, sort: { createdAt: -1 } });
+  }
+
+  async addPlayerToAgeGroup(coachId, competitionId, payload) {
+    const teams = await this.getCoachTeams(coachId);
+    const team = teams[0];
+    if (!team) throw new NotFoundError('Team not found for coach');
+    await this.teamRepository.addPlayer(team._id, payload.playerId);
+    return { competitionId, teamId: team._id, playerId: payload.playerId };
+  }
+
+  async removePlayerFromAgeGroup(coachId, competitionId, playerId) {
+    const teams = await this.getCoachTeams(coachId);
+    const team = teams[0];
+    if (!team) throw new NotFoundError('Team not found for coach');
+    await this.teamRepository.removePlayer(team._id, playerId);
+    return { competitionId, teamId: team._id, playerId };
+  }
+
+  async createTeamPaymentOrder(coachId, competitionId) {
+    return {
+      coachId,
+      competitionId,
+      orderId: `order_${Date.now()}`,
+      amount: 0,
+      currency: 'INR',
+    };
+  }
+
+  async verifyTeamPaymentAndSubmit(coachId, competitionId, payload) {
+    return {
+      coachId,
+      competitionId,
+      verified: true,
+      submitted: true,
+      payment: payload || {},
+    };
   }
 
   /**

@@ -80,13 +80,63 @@ The Mallakhamb Competition Management System is a comprehensive Node.js/Express 
 
 ```
 Server/
+├── src/                               # Refactored layered architecture
+│   ├── config/
+│   │   └── config-manager.js          # Centralized env config with validation
+│   ├── controllers/                   # Thin HTTP handlers (delegate to services)
+│   │   ├── health.controller.js       # Health check & metrics endpoints
+│   │   └── ...
+│   ├── services/
+│   │   ├── auth/                      # AuthenticationService, AuthorizationService, TokenService, OTPService
+│   │   ├── user/                      # PlayerService, CoachService, AdminService
+│   │   ├── competition/               # CompetitionService, RegistrationService
+│   │   ├── team/                      # TeamService
+│   │   ├── scoring/                   # ScoringService, CalculationService
+│   │   ├── email/                     # EmailService with Nodemailer/Resend adapters
+│   │   ├── cache/                     # In-memory LRU CacheService
+│   │   └── feature-flags/             # FeatureFlagService
+│   ├── repositories/                  # Data access layer (Mongoose, .lean())
+│   │   ├── base.repository.js
+│   │   ├── player.repository.js
+│   │   ├── coach.repository.js
+│   │   ├── admin.repository.js
+│   │   ├── judge.repository.js
+│   │   ├── competition.repository.js
+│   │   ├── team.repository.js
+│   │   ├── score.repository.js
+│   │   └── transaction.repository.js
+│   ├── middleware/                    # Express middleware (security, auth, validation, etc.)
+│   ├── routes/                        # Route definitions with DI-injected controllers
+│   │   ├── health.routes.js           # /health/* endpoints
+│   │   └── ...
+│   ├── socket/
+│   │   ├── socket.manager.js          # Socket.IO initialization & auth
+│   │   └── handlers/                  # ScoringHandler, NotificationHandler
+│   ├── validators/                    # express-validator schemas
+│   ├── errors/                        # Domain error classes (ValidationError, etc.)
+│   ├── utils/
+│   │   ├── auth/                      # Password, token, OTP utilities
+│   │   ├── data/                      # Pagination, ObjectId utilities
+│   │   ├── security/                  # Account lockout, token invalidation
+│   │   └── validation/                # Sanitization, score validation
+│   ├── infrastructure/
+│   │   ├── di-container.js            # Dependency injection container
+│   │   ├── bootstrap.js               # Wires all DI registrations
+│   │   ├── logger.js                  # Winston structured logger
+│   │   ├── health-monitor.js          # Health checks (DB, memory, email)
+│   │   ├── metrics-collector.js       # Prometheus-compatible metrics
+│   │   ├── graceful-shutdown.js       # SIGTERM/SIGINT handler
+│   │   └── database/
+│   │       ├── connection.js          # MongoDB connection pool
+│   │       └── migration-runner.js    # Database migration runner
+│   └── migrations/                    # Versioned DB migrations
 ├── config/
-│   ├── db.js                          # MongoDB connection + pooling
+│   ├── db.js                          # Legacy MongoDB connection + pooling
 │   ├── server.config.js               # CORS origins, port, env
 │   └── ngrok.setup.js                 # Dev tunnel (disabled in prod)
-├── controllers/
+├── controllers/                       # Legacy controllers (being migrated)
 │   ├── adminController.js
-│   ├── authController.js              # Forgot/reset password, logout, competition context
+│   ├── authController.js
 │   ├── coachController.js
 │   ├── judgeController.js
 │   ├── playerController.js
@@ -133,7 +183,23 @@ Server/
 │   └── validateEnv.js
 ├── scripts/
 │   ├── createAdmin.js
-│   └── createSuperAdmin.js
+│   ├── createSuperAdmin.js
+│   └── migrate.js                     # Migration CLI (migrate:up, migrate:down, migrate:status)
+├── docs/                              # Architecture & developer documentation
+│   ├── architecture.md
+│   ├── api-documentation.md
+│   ├── dependency-injection-guide.md
+│   ├── deployment-guide.md
+│   ├── migration-guide.md
+│   ├── testing-guide.md
+│   └── troubleshooting-guide.md
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/
+│   ├── fixtures/
+│   ├── mocks/
+│   └── helpers/
 ├── logs/
 │   ├── access.log
 │   └── security.log
@@ -458,10 +524,14 @@ Judge (1) ←→ (Many) Score (contributions)
 
 ## Authentication & Authorization
 
+### Architecture
+
+Authentication is handled by the `AuthenticationService` and `TokenService` in the service layer. The `authMiddleware` in the presentation layer verifies tokens and loads the user, but delegates all business logic to services.
+
 ### JWT Tokens
-- Expiry: 7 days
+- Expiry: 24h (configurable via `JWT_EXPIRES_IN`)
 - Payload: `userId`, `userType`, `currentCompetition` (optional), `iat`
-- Secret: minimum 32 characters, validated at startup
+- Secret: minimum 32 characters, validated at startup by `ConfigManager`
 
 **JWT Token Structure:**
 ```javascript
@@ -1037,21 +1107,220 @@ Authorization: Bearer <jwt_token>
 | POST | `/save-score` | Submit score (public interface) |
 | POST | `/payments/razorpay/webhook` | Reconcile Razorpay `payment.captured` / `payment.failed` events |
 
-### Health (`/api`)
+### Health (`/health`)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
+| GET | `/health/live` | Liveness probe — returns 200 if server process is running |
+| GET | `/health/ready` | Readiness probe — returns 200 if server is ready to accept traffic (DB connected) |
+| GET | `/health` | Detailed health check — database, memory, email service status |
+| GET | `/health/metrics` | Performance metrics — request counts, response times, error rates, cache stats |
+| GET | `/health/metrics?format=prometheus` | Same metrics in Prometheus text format |
+
+#### Health Endpoint Details
+
+**GET /health/live** — Liveness Probe
+
+Returns `200 OK` as long as the Node.js process is running. Used by container orchestrators (Kubernetes, Docker) to decide whether to restart the container.
+
+```json
+{
+  "status": "alive",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "uptime": 3600
+}
+```
+
+**GET /health/ready** — Readiness Probe
+
+Returns `200 OK` when the server is ready to serve traffic (database connected). Returns `503 Service Unavailable` when the database is not connected. Used by load balancers to route traffic.
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "state": "connected",
+      "host": "cluster0.mongodb.net",
+      "responseTime": 12
+    }
+  }
+}
+```
+
+**GET /health** — Detailed Health Status
+
+Returns comprehensive health information for all components. Returns `200 OK` when healthy, `503 Service Unavailable` when any critical component is unhealthy.
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "uptime": 3600,
+  "duration": 45,
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "state": "connected",
+      "host": "cluster0.mongodb.net",
+      "name": "sports-event-app",
+      "responseTime": 12,
+      "connections": { "current": 5 }
+    },
+    "memory": {
+      "status": "healthy",
+      "heap": {
+        "used": 128,
+        "total": 256,
+        "usagePercent": 50
+      },
+      "rss": 180,
+      "system": {
+        "used": 2048,
+        "total": 8192,
+        "free": 6144,
+        "usagePercent": 25
+      }
+    },
+    "email": {
+      "status": "healthy",
+      "configured": true,
+      "provider": "nodemailer"
+    },
+    "uptime": {
+      "application": "1h 0m 0s",
+      "applicationSeconds": 3600,
+      "process": "1h 0m 0s",
+      "processSeconds": 3600,
+      "startTime": "2026-04-17T09:00:00.000Z"
+    },
+    "process": {
+      "pid": 12345,
+      "nodeVersion": "v18.20.0",
+      "platform": "linux",
+      "arch": "x64",
+      "environment": "production"
+    }
+  }
+}
+```
+
+**GET /health/metrics** — Performance Metrics (JSON)
+
+Returns application performance metrics. No authentication required.
+
+```json
+{
+  "uptime": 3600,
+  "requests": {
+    "total": 1500,
+    "byEndpoint": {
+      "GET /api/health/live": 300,
+      "POST /api/players/login": 120
+    },
+    "byStatus": {
+      "200": 1400,
+      "400": 80,
+      "500": 20
+    },
+    "responseTimes": {
+      "GET /api/health/live": {
+        "p50": 5.2,
+        "p95": 18.4,
+        "p99": 45.1,
+        "min": 2.1,
+        "max": 120.3,
+        "avg": 7.8
+      }
+    }
+  },
+  "responseTimes": {
+    "count": 1500,
+    "p50": 12,
+    "p95": 85,
+    "p99": 210
+  },
+  "errors": {
+    "total": 100,
+    "byType": {
+      "ValidationError": 80,
+      "AuthenticationError": 15,
+      "NotFoundError": 5
+    }
+  },
+  "database": {
+    "queryCount": 4500,
+    "errorCount": 3,
+    "errorRate": "0.07%",
+    "queries": 4500,
+    "errors": 3,
+    "averageTime": 8
+  },
+  "cache": {
+    "hits": 1200,
+    "misses": 300,
+    "total": 1500,
+    "hitRate": "80.00%"
+  },
+  "sockets": {
+    "active": 12,
+    "totalConnections": 45,
+    "totalDisconnections": 33
+  },
+  "socketio": {
+    "activeConnections": 12,
+    "totalEvents": 890
+  }
+}
+```
+
+**GET /health/metrics?format=prometheus** — Performance Metrics (Prometheus)
+
+Returns metrics in [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/) for scraping by Prometheus or compatible monitoring systems.
+
+```
+# HELP process_uptime_seconds Process uptime in seconds
+# TYPE process_uptime_seconds gauge
+process_uptime_seconds 3600
+
+# HELP http_requests_total Total number of HTTP requests
+# TYPE http_requests_total counter
+http_requests_total 1500
+
+# HELP http_response_time_ms HTTP response time in milliseconds
+# TYPE http_response_time_ms summary
+http_response_time_ms{quantile="0.5"} 12
+http_response_time_ms{quantile="0.95"} 85
+http_response_time_ms{quantile="0.99"} 210
+http_response_time_ms_count 1500
+
+# HELP cache_hit_rate Cache hit rate (0-1)
+# TYPE cache_hit_rate gauge
+cache_hit_rate 0.8000
+
+# HELP socket_connections_active Active Socket.IO connections
+# TYPE socket_connections_active gauge
+socket_connections_active 12
+```
+
+### Debug (`/api/debug`) — Development Only
+
+| Method | Path | Description |
+|--------|------|-------------|
 | GET | `/debug/cors` | CORS test (development only) |
 | GET | `/debug/env` | Env check (development only) |
 | POST | `/debug/test-post` | POST test (development only) |
 | POST | `/debug/test-email` | Email test (development only) |
 
+> **Note:** All `/api/debug/*` routes return `404 Not Found` in production (`NODE_ENV=production`).
+
 ### Endpoint Count by Category
 
 | Category | Endpoints | Description |
 |----------|-----------|-------------|
-| Health Check | 5 | System health monitoring |
+| Health Check | 5 | Liveness, readiness, detailed health, metrics (JSON + Prometheus) |
 | Auth | 5 | Authentication & password reset |
 | Player | 6 | Player registration & management |
 | Coach | 15 | Team & player management |
@@ -1561,11 +1830,30 @@ const socket = io('https://your-server.com', {
 ### npm Scripts
 
 ```bash
-npm start                  # Production start
-npm run server             # Development (nodemon)
-npm run create-admin       # Create admin user
-npm run create-superadmin  # Create super admin
-npm test                   # Run Jest tests
+# Server
+npm start                    # Production start (node server.js)
+npm run server               # Development with auto-reload (nodemon)
+
+# Testing
+npm test                     # Run all Jest tests
+npm run test:watch           # Run tests in watch mode
+npm run test:coverage        # Run tests with coverage report
+
+# Database Migrations
+npm run migrate:up           # Apply all pending migrations
+npm run migrate:down         # Roll back the last migration
+npm run migrate:status       # Show migration status
+
+# User Management Scripts
+npm run create-admin         # Create an admin user interactively
+npm run create-superadmin    # Create a super admin user
+npm run create-coach         # Create a coach user
+npm run create-player        # Create a player user
+npm run create-competition   # Create a competition
+
+# Email Testing
+npm run test-email           # Test email service (Nodemailer)
+npm run test-resend          # Test email service (Resend)
 ```
 
 ---
@@ -1613,7 +1901,20 @@ curl -X POST http://localhost:5000/api/auth/reset-password/TOKEN \
 ### Health Check
 
 ```bash
-curl http://localhost:5000/api/health
+# Liveness probe
+curl http://localhost:5000/health/live
+
+# Readiness probe (checks DB connectivity)
+curl http://localhost:5000/health/ready
+
+# Detailed health status (all components)
+curl http://localhost:5000/health
+
+# Performance metrics (JSON)
+curl http://localhost:5000/health/metrics
+
+# Performance metrics (Prometheus format)
+curl "http://localhost:5000/health/metrics?format=prometheus"
 ```
 
 ### Sample Test Flow

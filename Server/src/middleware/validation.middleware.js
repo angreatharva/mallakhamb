@@ -38,6 +38,11 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
+const validate = (rules = []) => {
+  return [...rules, handleValidationErrors];
+};
+
 module.exports = {
-  handleValidationErrors
+  handleValidationErrors,
+  validate
 };

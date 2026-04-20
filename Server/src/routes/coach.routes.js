@@ -16,28 +16,10 @@
 
 const express = require('express');
 const { body } = require('express-validator');
-const { authMiddleware, coachAuth } = require('../../middleware/authMiddleware');
-const { validateCompetitionContext } = require('../../middleware/competitionContextMiddleware');
-
-// Import legacy controller (will be refactored in future tasks)
-const {
-  registerCoach,
-  loginCoach,
-  getCoachProfile,
-  getCoachStatus,
-  createTeam,
-  getCoachTeams,
-  getOpenCompetitions,
-  registerTeamForCompetition,
-  selectCompetitionForTeam,
-  getTeamDashboard,
-  searchPlayers,
-  addPlayerToAgeGroup,
-  removePlayerFromAgeGroup,
-  createTeamPaymentOrder,
-  verifyTeamPaymentAndSubmit,
-  getTeamStatus
-} = require('../../controllers/coachController');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requireCoach } = require('../middleware/auth.middleware');
+const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
 
 /**
  * Initialize coach routes with dependencies from DI container
@@ -47,6 +29,9 @@ const {
  */
 function createCoachRoutes(container) {
   const router = express.Router();
+  const authMiddleware = createAuthMiddleware(container);
+  const coachAuth = requireCoach;
+  const coachController = container.resolve('coachController');
 
   // Validation middleware
   const registerValidation = [
@@ -82,28 +67,28 @@ function createCoachRoutes(container) {
    * @desc    Register new coach
    * @access  Public
    */
-  router.post('/register', registerValidation, registerCoach);
+  router.post('/register', registerValidation, handleValidationErrors, coachController.registerCoach);
 
   /**
    * @route   POST /api/coaches/login
    * @desc    Coach login
    * @access  Public
    */
-  router.post('/login', loginValidation, loginCoach);
+  router.post('/login', loginValidation, handleValidationErrors, coachController.loginCoach);
 
   /**
    * @route   GET /api/coaches/profile
    * @desc    Get coach profile
    * @access  Authenticated coaches
    */
-  router.get('/profile', authMiddleware, coachAuth, getCoachProfile);
+  router.get('/profile', authMiddleware, coachAuth, coachController.getCoachProfile);
 
   /**
    * @route   GET /api/coaches/status
    * @desc    Get coach status
    * @access  Authenticated coaches
    */
-  router.get('/status', authMiddleware, coachAuth, getCoachStatus);
+  router.get('/status', authMiddleware, coachAuth, coachController.getCoachStatus);
 
   /**
    * @route   POST /api/coaches/team
@@ -111,7 +96,7 @@ function createCoachRoutes(container) {
    * @access  Authenticated coaches
    * @note    No competition context needed
    */
-  router.post('/team', authMiddleware, coachAuth, createTeamValidation, createTeam);
+  router.post('/team', authMiddleware, coachAuth, createTeamValidation, handleValidationErrors, coachController.createTeam);
 
   /**
    * @route   GET /api/coaches/teams
@@ -119,21 +104,21 @@ function createCoachRoutes(container) {
    * @access  Authenticated coaches
    * @note    No competition context needed
    */
-  router.get('/teams', authMiddleware, coachAuth, getCoachTeams);
+  router.get('/teams', authMiddleware, coachAuth, coachController.getCoachTeams);
 
   /**
    * @route   GET /api/coaches/competitions/open
    * @desc    Get open competitions
    * @access  Authenticated coaches
    */
-  router.get('/competitions/open', authMiddleware, coachAuth, getOpenCompetitions);
+  router.get('/competitions/open', authMiddleware, coachAuth, coachController.getOpenCompetitions);
 
   /**
    * @route   POST /api/coaches/select-competition
    * @desc    Select competition for team
    * @access  Authenticated coaches
    */
-  router.post('/select-competition', authMiddleware, coachAuth, selectCompetitionForTeam);
+  router.post('/select-competition', authMiddleware, coachAuth, coachController.selectCompetitionForTeam);
 
   /**
    * @route   POST /api/coaches/team/:teamId/register-competition
@@ -144,7 +129,7 @@ function createCoachRoutes(container) {
     '/team/:teamId/register-competition',
     authMiddleware,
     coachAuth,
-    registerTeamForCompetition
+    coachController.registerTeamForCompetition
   );
 
   /**
@@ -158,7 +143,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    getTeamStatus
+    coachController.getTeamStatus
   );
 
   /**
@@ -172,7 +157,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    getTeamDashboard
+    coachController.getTeamDashboard
   );
 
   /**
@@ -186,7 +171,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    searchPlayers
+    coachController.searchPlayers
   );
 
   /**
@@ -201,7 +186,8 @@ function createCoachRoutes(container) {
     coachAuth,
     validateCompetitionContext,
     addPlayerValidation,
-    addPlayerToAgeGroup
+    handleValidationErrors,
+    coachController.addPlayerToAgeGroup
   );
 
   /**
@@ -215,7 +201,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    removePlayerFromAgeGroup
+    coachController.removePlayerFromAgeGroup
   );
 
   /**
@@ -229,7 +215,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    createTeamPaymentOrder
+    coachController.createTeamPaymentOrder
   );
 
   /**
@@ -243,7 +229,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
-    verifyTeamPaymentAndSubmit
+    coachController.verifyTeamPaymentAndSubmit
   );
 
   return router;

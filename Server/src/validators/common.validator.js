@@ -257,6 +257,7 @@ const array = (field, options = {}) => {
 
 module.exports = {
   objectId,
+  mongoId: objectId,
   email,
   password,
   pagination,

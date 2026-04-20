@@ -12,22 +12,13 @@
  */
 
 const express = require('express');
-const { body } = require('express-validator');
-const { authMiddleware, playerAuth } = require('../../middleware/authMiddleware');
-const { validateCompetitionContext } = require('../../middleware/competitionContextMiddleware');
-const { handleExpressValidationErrors } = require('../../middleware/errorHandler');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requirePlayer } = require('../middleware/auth.middleware');
+const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
 const playerValidators = require('../validators/player.validator');
 const { email } = require('../validators/common.validator');
-
-// Import legacy controller (will be refactored in future tasks)
-const {
-  registerPlayer,
-  loginPlayer,
-  getPlayerProfile,
-  getPlayerTeam,
-  joinTeam,
-  getAvailableTeams
-} = require('../../controllers/playerController');
+const { body } = require('express-validator');
 
 /**
  * Initialize player routes with dependencies from DI container
@@ -37,17 +28,10 @@ const {
  */
 function createPlayerRoutes(container) {
   const router = express.Router();
-
-  // Simple login validation for player-specific endpoint
-  const loginValidation = () => {
-    return [
-      email('email'),
-      body('password')
-        .trim()
-        .notEmpty()
-        .withMessage('Password is required')
-    ];
-  };
+  const authMiddleware = createAuthMiddleware(container);
+  const playerAuth = requirePlayer;
+  const playerController = container.resolve('playerController');
+  const loginValidation = () => [email('email'), body('password').trim().notEmpty().withMessage('Password is required')];
 
   /**
    * @route   POST /api/players/register
@@ -57,8 +41,8 @@ function createPlayerRoutes(container) {
   router.post(
     '/register',
     playerValidators.createPlayer(),
-    handleExpressValidationErrors,
-    registerPlayer
+    handleValidationErrors,
+    playerController.registerPlayer
   );
 
   /**
@@ -69,8 +53,8 @@ function createPlayerRoutes(container) {
   router.post(
     '/login',
     loginValidation(),
-    handleExpressValidationErrors,
-    loginPlayer
+    handleValidationErrors,
+    playerController.loginPlayer
   );
 
   /**
@@ -78,7 +62,7 @@ function createPlayerRoutes(container) {
    * @desc    Get player profile
    * @access  Authenticated players
    */
-  router.get('/profile', authMiddleware, playerAuth, getPlayerProfile);
+  router.get('/profile', authMiddleware, playerAuth, playerController.getPlayerProfile);
 
   /**
    * @route   GET /api/players/teams
@@ -86,7 +70,7 @@ function createPlayerRoutes(container) {
    * @access  Authenticated players
    * @note    No competition context required
    */
-  router.get('/teams', authMiddleware, playerAuth, getAvailableTeams);
+  router.get('/teams', authMiddleware, playerAuth, playerController.getAvailableTeams);
 
   /**
    * @route   GET /api/players/team
@@ -99,7 +83,7 @@ function createPlayerRoutes(container) {
     authMiddleware,
     playerAuth,
     validateCompetitionContext,
-    getPlayerTeam
+    playerController.getPlayerTeam
   );
 
   /**
@@ -113,8 +97,8 @@ function createPlayerRoutes(container) {
     authMiddleware,
     playerAuth,
     playerValidators.joinTeam(),
-    handleExpressValidationErrors,
-    joinTeam
+    handleValidationErrors,
+    playerController.joinTeam
   );
 
   return router;

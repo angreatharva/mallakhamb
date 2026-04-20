@@ -10,16 +10,14 @@ const compression = require('compression');
 // Load environment variables FIRST
 dotenv.config();
 
-// Validate environment variables before proceeding
-const { validateEnvironment } = require('./utils/validateEnv');
-validateEnvironment();
+// Import new infrastructure components
+const config = require('./src/config/config-manager');
 
-const connectDB = require('./config/db');
-const setupNgrok = require('./config/ngrok.setup');
-const config = require('./config/server.config');
-const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-const { logUnauthorizedAccess } = require('./middleware/securityLogger');
-const { startCleanupJobs } = require('./utils/cleanupJobs');
+// Load and validate configuration at startup
+config.load();
+
+// Import error middleware from new structure
+const { errorHandler, notFoundHandler } = require('./src/middleware/error.middleware');
 
 // Import bootstrap for DI container and Socket.IO initialization
 const { bootstrap, initializeSocketIO } = require('./src/infrastructure/bootstrap');
@@ -37,9 +35,6 @@ databaseConnection.connect().catch(error => {
   process.exit(1);
 });
 
-// Start cleanup jobs
-startCleanupJobs();
-
 // Resolve metrics collector for middleware
 const metricsCollector = container.resolve('metricsCollector');
 
@@ -47,32 +42,28 @@ const app = express();
 const server = http.createServer(app);
 
 // Trust proxy - Required for Render and other reverse proxies
-// This allows Express to correctly identify client IPs from X-Forwarded-For header
 app.set('trust proxy', 1);
 
 // Initialize Socket.IO using the new SocketManager
 const socketManager = initializeSocketIO(server);
 const io = socketManager.getIO();
 
-// Make io available to routes for backward compatibility
+// Make io available to routes
 app.set('io', io);
 
-// Get allowed origins once at startup
-const allowedOrigins = config.getAllowedOrigins();
+// Get allowed origins from config
+const allowedOrigins = config.get('cors.allowedOrigins');
 
-// Simplified CORS configuration that works reliably
+// CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // In production, require origin header
     if (!origin) {
       if (process.env.NODE_ENV === 'production') {
         return callback(new Error('Origin header required'));
       }
-      // Allow no-origin in development (for testing tools like Postman)
       return callback(null, true);
     }
     
-    // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -82,23 +73,20 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  // Include custom headers used by the frontend (like competition context)
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'x-competition-id'],
   optionsSuccessStatus: 200
 };
 
 // Security Middleware
-// 1. Helmet for security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for API server
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// 2. Response compression
 app.use(compression());
 
-// 3. HTTPS enforcement in production
+// HTTPS enforcement in production
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
     if (req.header('x-forwarded-proto') !== 'https') {
@@ -108,10 +96,9 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// 3. CORS configuration
 app.use(cors(corsOptions));
 
-// Additional CORS headers middleware to ensure headers are always set
+// Additional CORS headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -123,8 +110,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 4. Request size limits (reduced from 10mb to 1mb for security)
-// Store raw JSON body for webhook signature verification.
+// Request size limits
 app.use(express.json({
   limit: '1mb',
   verify: (req, _res, buf) => {
@@ -133,7 +119,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 6. NoSQL injection protection
+// NoSQL injection protection
 app.use(mongoSanitize({
   replaceWith: '_',
   onSanitize: ({ req, key }) => {
@@ -141,83 +127,39 @@ app.use(mongoSanitize({
   }
 }));
 
-// 7. Strict rate limiter for authentication endpoints (login, register, password reset)
+// Rate limiter for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window per IP
+  max: 5,
   message: 'Too many authentication attempts, please try again after 15 minutes',
-  skipSuccessfulRequests: true, // Don't count successful requests
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false
 });
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.headers.origin || 'no-origin'}`);
   next();
 });
 
-// Metrics collection middleware - track all requests
+// Metrics collection middleware
 app.use(createMetricsMiddleware(metricsCollector));
 
-// Request coalescing middleware - prevent duplicate concurrent requests
+// Request coalescing middleware
 const requestCoalescingMiddleware = container.resolve('requestCoalescingMiddleware');
 app.use(requestCoalescingMiddleware.middleware());
 
-// Security logging middleware - must be before routes
-app.use(logUnauthorizedAccess);
+const { loadRoutes } = require('./src/routes');
+loadRoutes(app, container, { authLimiter });
 
-// Health check routes (before other routes for quick access)
-app.use('/api', require('./routes/healthRoutes'));
-
-// Routes with rate limiting on authentication endpoints only
-app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
-
-// Player routes with rate limiting on login/register
-const playerRoutes = require('./routes/playerRoutes');
-app.post('/api/players/register', authLimiter, playerRoutes);
-app.post('/api/players/login', authLimiter, playerRoutes);
-app.use('/api/players', playerRoutes);
-
-// Coach routes with rate limiting on login/register
-const coachRoutes = require('./routes/coachRoutes');
-app.post('/api/coaches/register', authLimiter, coachRoutes);
-app.post('/api/coaches/login', authLimiter, coachRoutes);
-app.use('/api/coaches', coachRoutes);
-
-// Admin routes with rate limiting on login/register
-const adminRoutes = require('./routes/adminRoutes');
-app.post('/api/admin/register', authLimiter, adminRoutes);
-app.post('/api/admin/login', authLimiter, adminRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Super Admin routes with rate limiting on login
-const superAdminRoutes = require('./routes/superAdminRoutes');
-app.post('/api/superadmin/login', authLimiter, superAdminRoutes);
-app.use('/api/superadmin', superAdminRoutes);
-
-// Judge routes with rate limiting on login
-const judgeRoutes = require('./routes/judgeRoutes');
-app.post('/api/judge/login', authLimiter, judgeRoutes);
-app.use('/api/judge', judgeRoutes);
-
-// Other routes without rate limiting
-app.use('/api/teams', require('./routes/teamRoutes'));
-app.use('/api/public', require('./routes/publicRoutes'));
-
-// Legacy health check endpoint (kept for backward compatibility)
-app.get('/api/health-legacy', (req, res) => {
-  res.json({ message: 'Sports Event API is running!', timestamp: new Date().toISOString() });
-});
-
-// Debug endpoints (only available in non-production environments)
+// Debug endpoints (development only)
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/debug/cors', (req, res) => {
-    console.log('🔍 Debug CORS request from origin:', req.headers.origin);
     res.json({ 
       message: 'CORS test successful',
       origin: req.headers.origin,
-      allowedOrigins: config.getAllowedOrigins(),
+      allowedOrigins: config.get('cors.allowedOrigins'),
       timestamp: new Date().toISOString() 
     });
   });
@@ -226,60 +168,38 @@ if (process.env.NODE_ENV !== 'production') {
     res.json({
       NODE_ENV: process.env.NODE_ENV,
       CLIENT_URL: process.env.CLIENT_URL,
-      RENDER_FRONTEND_URL: process.env.RENDER_FRONTEND_URL,
-      allowedOrigins: config.getAllowedOrigins(),
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  app.post('/api/debug/test-post', (req, res) => {
-    console.log('🔍 Test POST request received:', req.body);
-    console.log('🔍 Origin:', req.headers.origin);
-    res.json({
-      message: 'POST request successful',
-      body: req.body,
-      origin: req.headers.origin,
+      allowedOrigins: config.get('cors.allowedOrigins'),
       timestamp: new Date().toISOString()
     });
   });
 
   app.post('/api/debug/test-email', async (req, res) => {
-    const { sendEmail, testEmailConnectivity } = require('./utils/emailService');
-    
-    console.log('🔍 Test email request received');
+    const emailService = container.resolve('emailService');
     
     try {
       const testEmail = req.body.email || 'test@example.com';
+      const isHealthy = await emailService.checkHealth();
       
-      // First test connectivity
-      console.log('🧪 Testing email connectivity...');
-      const connectivityTest = await testEmailConnectivity();
-      
-      // Then try sending email
-      console.log('📧 Attempting to send test email...');
-      const result = await sendEmail(
-        testEmail,
-        'Test Email - Mallakhamb Competition',
-        `
+      const result = await emailService.sendEmail({
+        to: testEmail,
+        subject: 'Test Email - Mallakhamb Competition',
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #2563eb;">Test Email</h1>
           <p>This is a test email from the Mallakhamb Competition system.</p>
           <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-          <p><strong>Environment:</strong> ${process.env.NODE_ENV || 'development'}</p>
           <p>If you received this email, the email service is working correctly!</p>
         </div>
         `
-      );
+      });
       
       res.json({
         message: 'Email test completed',
-        connectivityTest: connectivityTest,
+        connectivityTest: { healthy: isHealthy },
         emailSent: result,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Test email error:', error);
       res.status(500).json({
         message: 'Email test failed',
         error: error.message,
@@ -289,37 +209,24 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// 404 handler - must be after all routes
+// 404 handler
 app.use(notFoundHandler);
 
-// Error metrics middleware - track errors before error handler
+// Error metrics middleware
 app.use(createErrorMetricsMiddleware(metricsCollector));
 
-// Error handling middleware - must be last
+// Error handling middleware
 app.use(errorHandler);
 
-const PORT = config.port;
+const PORT = config.get('server.port');
 
-// Only start server if not being required for testing
+// Start server
 if (require.main === module) {
-  server.listen(PORT, async () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Socket.IO server running`);
-    console.log(`Environment: ${config.nodeEnv}`);
-    console.log('🔗 CORS allowed origins:', config.getAllowedOrigins());
-    
-    // Setup ngrok tunnel only in development
-    try {
-      const ngrokUrl = await setupNgrok();
-      
-      if (ngrokUrl) {
-        console.log('✅ Ngrok tunnel established successfully');
-      } else {
-      console.log('🚀 Running without ngrok (production mode or disabled)');
-    }
-  } catch (error) {
-    console.log('⚠️ Ngrok setup failed, continuing without it:', error.message);
-  }
+    console.log(`Environment: ${config.get('server.nodeEnv')}`);
+    console.log('🔗 CORS allowed origins:', config.get('cors.allowedOrigins'));
 
     // Register graceful shutdown handler
     const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
@@ -334,16 +241,6 @@ if (require.main === module) {
     console.log('✅ Graceful shutdown handler registered');
   });
 }
-
-// Legacy graceful shutdown handlers (kept for backward compatibility during migration)
-// These will be removed once GracefulShutdownHandler is fully tested
-process.on('SIGINT', async () => {
-  console.log('\n⚠️ Legacy SIGINT handler - will be removed after GracefulShutdownHandler is verified');
-});
-
-process.on('SIGTERM', async () => {
-  console.log('\n⚠️ Legacy SIGTERM handler - will be removed after GracefulShutdownHandler is verified');
-});
 
 // Export app for testing
 module.exports = app;

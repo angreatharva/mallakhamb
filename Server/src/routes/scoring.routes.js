@@ -12,20 +12,11 @@
  */
 
 const express = require('express');
-const { authMiddleware } = require('../../middleware/authMiddleware');
-const { handleExpressValidationErrors } = require('../../middleware/errorHandler');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requireAdmin, requireJudge } = require('../middleware/auth.middleware');
+const { asyncHandler } = require('../middleware/error.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
 const scoringValidators = require('../validators/scoring.validator');
-
-// Import legacy controller (will be refactored in future tasks)
-const {
-  submitScore,
-  updateScore,
-  deleteScore,
-  getScoreById,
-  getScoresByCompetition,
-  lockScore,
-  unlockScore
-} = require('../../controllers/scoringController');
 
 /**
  * Initialize scoring routes with dependencies from DI container
@@ -35,8 +26,9 @@ const {
  */
 function createScoringRoutes(container) {
   const router = express.Router();
+  const authMiddleware = createAuthMiddleware(container);
+  const scoringService = container.resolve('scoringService');
 
-  // All scoring routes require authentication
   router.use(authMiddleware);
 
   /**
@@ -47,8 +39,12 @@ function createScoringRoutes(container) {
   router.post(
     '/',
     scoringValidators.submitScore(),
-    handleExpressValidationErrors,
-    submitScore
+    handleValidationErrors,
+    requireJudge,
+    asyncHandler(async (req, res) => {
+      const score = await scoringService.submitScore(req.body);
+      res.status(201).json({ success: true, data: score });
+    })
   );
 
   /**
@@ -59,8 +55,11 @@ function createScoringRoutes(container) {
   router.get(
     '/:scoreId',
     scoringValidators.getScoreById(),
-    handleExpressValidationErrors,
-    getScoreById
+    handleValidationErrors,
+    asyncHandler(async (req, res) => {
+      const score = await scoringService.getScoreById(req.params.scoreId);
+      res.json({ success: true, data: score });
+    })
   );
 
   /**
@@ -71,8 +70,12 @@ function createScoringRoutes(container) {
   router.put(
     '/:scoreId',
     scoringValidators.updateScore(),
-    handleExpressValidationErrors,
-    updateScore
+    handleValidationErrors,
+    requireJudge,
+    asyncHandler(async (req, res) => {
+      const score = await scoringService.updateScore(req.params.scoreId, req.body);
+      res.json({ success: true, data: score });
+    })
   );
 
   /**
@@ -83,8 +86,12 @@ function createScoringRoutes(container) {
   router.delete(
     '/:scoreId',
     scoringValidators.deleteScore(),
-    handleExpressValidationErrors,
-    deleteScore
+    handleValidationErrors,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
+      await scoringService.deleteScore(req.params.scoreId);
+      res.json({ success: true, message: 'Score deleted successfully' });
+    })
   );
 
   /**
@@ -95,8 +102,11 @@ function createScoringRoutes(container) {
   router.get(
     '/competition/:competitionId',
     scoringValidators.getScoresByCompetition(),
-    handleExpressValidationErrors,
-    getScoresByCompetition
+    handleValidationErrors,
+    asyncHandler(async (req, res) => {
+      const scores = await scoringService.getScoresByCompetition(req.params.competitionId, req.query);
+      res.json({ success: true, data: scores });
+    })
   );
 
   /**
@@ -107,8 +117,12 @@ function createScoringRoutes(container) {
   router.patch(
     '/:scoreId/lock',
     scoringValidators.getScoreById(),
-    handleExpressValidationErrors,
-    lockScore
+    handleValidationErrors,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
+      const score = await scoringService.lockScore(req.params.scoreId);
+      res.json({ success: true, data: score });
+    })
   );
 
   /**
@@ -119,8 +133,12 @@ function createScoringRoutes(container) {
   router.patch(
     '/:scoreId/unlock',
     scoringValidators.getScoreById(),
-    handleExpressValidationErrors,
-    unlockScore
+    handleValidationErrors,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
+      const score = await scoringService.unlockScore(req.params.scoreId);
+      res.json({ success: true, data: score });
+    })
   );
 
   return router;

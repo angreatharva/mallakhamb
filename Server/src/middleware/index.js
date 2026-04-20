@@ -34,8 +34,11 @@ const {
   createCorsMiddleware,
   createIpRateLimitMiddleware,
   createUserRateLimitMiddleware,
+  createAuthRateLimitMiddleware,
   createStrictRateLimit,
-  createRequestSizeLimits
+  createRequestSizeLimits,
+  getRateLimitConfig,
+  RATE_LIMIT_CONFIG
 } = require('./security.middleware');
 const {
   SENSITIVE_OPERATIONS,
@@ -62,6 +65,13 @@ const {
   createFeatureFlagMiddleware,
   attachFeatureFlagChecker
 } = require('./feature-flag.middleware');
+const {
+  csrfTokenHandler,
+  createCsrfMiddleware,
+  generateCsrfToken,
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME
+} = require('./csrf.middleware');
 
 module.exports = {
   // Error handling
@@ -99,8 +109,11 @@ module.exports = {
   createCorsMiddleware,
   createIpRateLimitMiddleware,
   createUserRateLimitMiddleware,
+  createAuthRateLimitMiddleware,
   createStrictRateLimit,
   createRequestSizeLimits,
+  getRateLimitConfig,
+  RATE_LIMIT_CONFIG,
   
   // Audit logging
   SENSITIVE_OPERATIONS,
@@ -125,5 +138,12 @@ module.exports = {
   
   // Feature flags
   createFeatureFlagMiddleware,
-  attachFeatureFlagChecker
+  attachFeatureFlagChecker,
+
+  // CSRF protection
+  csrfTokenHandler,
+  createCsrfMiddleware,
+  generateCsrfToken,
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME
 };

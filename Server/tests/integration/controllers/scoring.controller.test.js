@@ -11,10 +11,9 @@ const request = require('supertest');
 const express = require('express');
 const { bootstrap } = require('../../../src/infrastructure/bootstrap');
 const container = require('../../../src/infrastructure/di-container');
-const scoringController = require('../../../controllers/scoringController');
 const { errorHandler } = require('../../../src/middleware/error.middleware');
-const { handleExpressValidationErrors } = require('../../../middleware/errorHandler');
 const scoringValidators = require('../../../src/validators/scoring.validator');
+const createScoringRoutes = require('../../../src/routes/scoring.routes');
 
 // Mock models
 jest.mock('../../../models/Score');
@@ -25,6 +24,16 @@ jest.mock('../../../models/Judge');
 const Score = require('../../../models/Score');
 const Competition = require('../../../models/Competition');
 const Player = require('../../../models/Player');
+
+// Mock validation middleware
+const handleExpressValidationErrors = (req, res, next) => {
+  const { validationResult } = require('express-validator');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
 describe('Scoring Controller API Tests', () => {
   let app;
@@ -46,14 +55,8 @@ describe('Scoring Controller API Tests', () => {
     app = express();
     app.use(express.json());
     
-    // Setup routes
-    app.post('/api/scores', mockAuth, scoringValidators.submitScore(), handleExpressValidationErrors, scoringController.submitScore);
-    app.get('/api/scores/:scoreId', mockAuth, scoringValidators.getScoreById(), handleExpressValidationErrors, scoringController.getScoreById);
-    app.put('/api/scores/:scoreId', mockAuth, scoringValidators.updateScore(), handleExpressValidationErrors, scoringController.updateScore);
-    app.delete('/api/scores/:scoreId', mockAuth, scoringValidators.deleteScore(), handleExpressValidationErrors, scoringController.deleteScore);
-    app.get('/api/scores/competition/:competitionId', mockAuth, scoringValidators.getScoresByCompetition(), handleExpressValidationErrors, scoringController.getScoresByCompetition);
-    app.patch('/api/scores/:scoreId/lock', mockAuth, scoringValidators.getScoreById(), handleExpressValidationErrors, scoringController.lockScore);
-    app.patch('/api/scores/:scoreId/unlock', mockAuth, scoringValidators.getScoreById(), handleExpressValidationErrors, scoringController.unlockScore);
+    // Setup routes (src hard-cutover)
+    app.use('/api/scoring', createScoringRoutes(container));
     
     // Error handler
     app.use(errorHandler);
@@ -61,6 +64,11 @@ describe('Scoring Controller API Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  const authHeaders = (role = 'admin') => ({
+    Authorization: 'Bearer test-token',
+    'x-user-type': role,
   });
 
   // Mock authentication middleware
@@ -73,7 +81,7 @@ describe('Scoring Controller API Tests', () => {
     next();
   }
 
-  describe('POST /api/scores', () => {
+  describe('POST /api/scoring', () => {
     const validScoreData = {
       competition: '507f1f77bcf86cd799439011',
       teamId: '507f1f77bcf86cd799439012',
@@ -115,13 +123,13 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'submitScore').mockResolvedValue(mockScore);
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(validScoreData);
 
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('message', 'Score submitted successfully');
-      expect(response.body.score).toHaveProperty('_id', 'score123');
+      expect(response.body.data).toHaveProperty('_id', 'score123');
       expect(scoringService.submitScore).toHaveBeenCalledWith(validScoreData);
     });
 
@@ -133,7 +141,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -147,7 +156,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -161,7 +171,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -175,7 +186,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -201,7 +213,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -228,7 +241,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -242,7 +256,8 @@ describe('Scoring Controller API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -256,7 +271,8 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .post('/api/scores')
+        .post('/api/scoring')
+        .set(authHeaders('judge'))
         .send(validScoreData);
 
       expect(response.status).toBe(404);
@@ -264,7 +280,7 @@ describe('Scoring Controller API Tests', () => {
     });
   });
 
-  describe('GET /api/scores/:scoreId', () => {
+  describe('GET /api/scoring/:scoreId', () => {
     it('should get score by ID successfully', async () => {
       const mockScore = {
         _id: 'score123',
@@ -289,17 +305,19 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoreById').mockResolvedValue(mockScore);
 
       const response = await request(app)
-        .get('/api/scores/507f1f77bcf86cd799439011');
+        .get('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body.score).toHaveProperty('_id', 'score123');
+      expect(response.body.data).toHaveProperty('_id', 'score123');
       expect(scoringService.getScoreById).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
     });
 
     it('should reject invalid score ID format', async () => {
       const response = await request(app)
-        .get('/api/scores/invalid-id');
+        .get('/api/scoring/invalid-id')
+        .set(authHeaders());
 
       expect(response.status).toBe(400);
       expect(scoringService.getScoreById).not.toHaveBeenCalled();
@@ -312,14 +330,15 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .get('/api/scores/507f1f77bcf86cd799439011');
+        .get('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders());
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
     });
   });
 
-  describe('PUT /api/scores/:scoreId', () => {
+  describe('PUT /api/scoring/:scoreId', () => {
     it('should update score successfully', async () => {
       const updates = {
         timeKeeper: 'Updated Timekeeper',
@@ -336,19 +355,20 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'updateScore').mockResolvedValue(mockUpdatedScore);
 
       const response = await request(app)
-        .put('/api/scores/507f1f77bcf86cd799439011')
+        .put('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('judge'))
         .send(updates);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('message', 'Score updated successfully');
-      expect(response.body.score).toHaveProperty('timeKeeper', 'Updated Timekeeper');
+      expect(response.body.data).toHaveProperty('timeKeeper', 'Updated Timekeeper');
       expect(scoringService.updateScore).toHaveBeenCalledWith('507f1f77bcf86cd799439011', updates);
     });
 
     it('should reject invalid score ID format', async () => {
       const response = await request(app)
-        .put('/api/scores/invalid-id')
+        .put('/api/scoring/invalid-id')
+        .set(authHeaders('judge'))
         .send({ remarks: 'Updated' });
 
       expect(response.status).toBe(400);
@@ -362,7 +382,8 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .put('/api/scores/507f1f77bcf86cd799439011')
+        .put('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('judge'))
         .send({ remarks: 'Updated' });
 
       expect(response.status).toBe(422);
@@ -397,7 +418,8 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'updateScore').mockResolvedValue(mockUpdatedScore);
 
       const response = await request(app)
-        .put('/api/scores/507f1f77bcf86cd799439011')
+        .put('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('judge'))
         .send(updates);
 
       expect(response.status).toBe(200);
@@ -406,22 +428,23 @@ describe('Scoring Controller API Tests', () => {
     });
   });
 
-  describe('DELETE /api/scores/:scoreId', () => {
+  describe('DELETE /api/scoring/:scoreId', () => {
     it('should delete score successfully', async () => {
       jest.spyOn(scoringService, 'deleteScore').mockResolvedValue(true);
 
       const response = await request(app)
-        .delete('/api/scores/507f1f77bcf86cd799439011');
+        .delete('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('message', 'Score deleted successfully');
       expect(scoringService.deleteScore).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
     });
 
     it('should reject invalid score ID format', async () => {
       const response = await request(app)
-        .delete('/api/scores/invalid-id');
+        .delete('/api/scoring/invalid-id')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(400);
       expect(scoringService.deleteScore).not.toHaveBeenCalled();
@@ -434,7 +457,8 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .delete('/api/scores/507f1f77bcf86cd799439011');
+        .delete('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(422);
       expect(response.body.success).toBe(false);
@@ -447,14 +471,15 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .delete('/api/scores/507f1f77bcf86cd799439011');
+        .delete('/api/scoring/507f1f77bcf86cd799439011')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
     });
   });
 
-  describe('GET /api/scores/competition/:competitionId', () => {
+  describe('GET /api/scoring/competition/:competitionId', () => {
     it('should get scores by competition successfully', async () => {
       const mockScores = [
         {
@@ -480,12 +505,12 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoresByCompetition').mockResolvedValue(mockScores);
 
       const response = await request(app)
-        .get('/api/scores/competition/507f1f77bcf86cd799439011');
+        .get('/api/scoring/competition/507f1f77bcf86cd799439011')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('count', 2);
-      expect(response.body.scores).toHaveLength(2);
+      expect(response.body.data).toHaveLength(2);
       expect(scoringService.getScoresByCompetition).toHaveBeenCalledWith('507f1f77bcf86cd799439011', {});
     });
 
@@ -503,10 +528,11 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoresByCompetition').mockResolvedValue(mockScores);
 
       const response = await request(app)
-        .get('/api/scores/competition/507f1f77bcf86cd799439011?gender=Male');
+        .get('/api/scoring/competition/507f1f77bcf86cd799439011?gender=Male')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
-      expect(response.body.scores).toHaveLength(1);
+      expect(response.body.data).toHaveLength(1);
       expect(scoringService.getScoresByCompetition).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439011',
         { gender: 'Male' }
@@ -527,10 +553,11 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoresByCompetition').mockResolvedValue(mockScores);
 
       const response = await request(app)
-        .get('/api/scores/competition/507f1f77bcf86cd799439011?ageGroup=Under14');
+        .get('/api/scoring/competition/507f1f77bcf86cd799439011?ageGroup=Under14')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
-      expect(response.body.scores).toHaveLength(1);
+      expect(response.body.data).toHaveLength(1);
       expect(scoringService.getScoresByCompetition).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439011',
         { ageGroup: 'Under14' }
@@ -551,10 +578,11 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoresByCompetition').mockResolvedValue(mockScores);
 
       const response = await request(app)
-        .get('/api/scores/competition/507f1f77bcf86cd799439011?competitionType=Competition%20I');
+        .get('/api/scoring/competition/507f1f77bcf86cd799439011?competitionType=Competition%20I')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
-      expect(response.body.scores).toHaveLength(1);
+      expect(response.body.data).toHaveLength(1);
       expect(scoringService.getScoresByCompetition).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439011',
         { competitionType: 'Competition I' }
@@ -567,10 +595,11 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'getScoresByCompetition').mockResolvedValue(mockScores);
 
       const response = await request(app)
-        .get('/api/scores/competition/507f1f77bcf86cd799439011?gender=Male&ageGroup=Under14&competitionType=Competition%20I');
+        .get('/api/scoring/competition/507f1f77bcf86cd799439011?gender=Male&ageGroup=Under14&competitionType=Competition%20I')
+        .set(authHeaders());
 
       expect(response.status).toBe(200);
-      expect(response.body.scores).toHaveLength(0);
+      expect(response.body.data).toHaveLength(0);
       expect(scoringService.getScoresByCompetition).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439011',
         { 
@@ -583,14 +612,15 @@ describe('Scoring Controller API Tests', () => {
 
     it('should reject invalid competition ID format', async () => {
       const response = await request(app)
-        .get('/api/scores/competition/invalid-id');
+        .get('/api/scoring/competition/invalid-id')
+        .set(authHeaders());
 
       expect(response.status).toBe(400);
       expect(scoringService.getScoresByCompetition).not.toHaveBeenCalled();
     });
   });
 
-  describe('PATCH /api/scores/:scoreId/lock', () => {
+  describe('PATCH /api/scoring/:scoreId/lock', () => {
     it('should lock score successfully', async () => {
       const mockLockedScore = {
         _id: 'score123',
@@ -601,18 +631,19 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'lockScore').mockResolvedValue(mockLockedScore);
 
       const response = await request(app)
-        .patch('/api/scores/507f1f77bcf86cd799439011/lock');
+        .patch('/api/scoring/507f1f77bcf86cd799439011/lock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('message', 'Score locked successfully');
-      expect(response.body.score).toHaveProperty('isLocked', true);
+      expect(response.body.data).toHaveProperty('isLocked', true);
       expect(scoringService.lockScore).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
     });
 
     it('should reject invalid score ID format', async () => {
       const response = await request(app)
-        .patch('/api/scores/invalid-id/lock');
+        .patch('/api/scoring/invalid-id/lock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(400);
       expect(scoringService.lockScore).not.toHaveBeenCalled();
@@ -625,14 +656,15 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .patch('/api/scores/507f1f77bcf86cd799439011/lock');
+        .patch('/api/scoring/507f1f77bcf86cd799439011/lock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
     });
   });
 
-  describe('PATCH /api/scores/:scoreId/unlock', () => {
+  describe('PATCH /api/scoring/:scoreId/unlock', () => {
     it('should unlock score successfully', async () => {
       const mockUnlockedScore = {
         _id: 'score123',
@@ -643,18 +675,19 @@ describe('Scoring Controller API Tests', () => {
       jest.spyOn(scoringService, 'unlockScore').mockResolvedValue(mockUnlockedScore);
 
       const response = await request(app)
-        .patch('/api/scores/507f1f77bcf86cd799439011/unlock');
+        .patch('/api/scoring/507f1f77bcf86cd799439011/unlock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('message', 'Score unlocked successfully');
-      expect(response.body.score).toHaveProperty('isLocked', false);
+      expect(response.body.data).toHaveProperty('isLocked', false);
       expect(scoringService.unlockScore).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
     });
 
     it('should reject invalid score ID format', async () => {
       const response = await request(app)
-        .patch('/api/scores/invalid-id/unlock');
+        .patch('/api/scoring/invalid-id/unlock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(400);
       expect(scoringService.unlockScore).not.toHaveBeenCalled();
@@ -667,7 +700,8 @@ describe('Scoring Controller API Tests', () => {
       );
 
       const response = await request(app)
-        .patch('/api/scores/507f1f77bcf86cd799439011/unlock');
+        .patch('/api/scoring/507f1f77bcf86cd799439011/unlock')
+        .set(authHeaders('admin'));
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);

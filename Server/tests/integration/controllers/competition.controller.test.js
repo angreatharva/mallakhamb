@@ -15,7 +15,7 @@ process.env.EMAIL_FROM = 'test@example.com';
 process.env.NODE_ENV = 'test';
 
 const { bootstrap } = require('../../../src/infrastructure/bootstrap');
-const competitionRoutes = require('../../../src/routes/competition.routes');
+const createCompetitionRoutes = require('../../../src/routes/competition.routes');
 const { errorHandler } = require('../../../src/middleware/error.middleware');
 
 // Mock models
@@ -36,6 +36,10 @@ describe('Competition Controller Integration Tests', () => {
   let container;
   let competitionService;
   let registrationService;
+  const authed = (role = 'admin') => ({
+    Authorization: 'Bearer test-token',
+    'x-user-type': role,
+  });
 
   beforeAll(() => {
     // Bootstrap the application
@@ -67,7 +71,7 @@ describe('Competition Controller Integration Tests', () => {
       next();
     });
     
-    app.use('/api/competitions', competitionRoutes);
+    app.use('/api/competitions', createCompetitionRoutes(container));
     app.use(errorHandler);
 
     // Get services from container
@@ -113,11 +117,11 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/competitions')
+        .set(authed('admin'))
         .send(competitionData);
 
       expect(response.status).toBe(201);
-      expect(response.body.message).toBe('Competition created successfully');
-      expect(response.body.competition).toMatchObject({
+      expect(response.body.data).toMatchObject({
         _id: 'comp123',
         name: competitionData.name,
         level: competitionData.level
@@ -141,6 +145,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/competitions')
+        .set(authed('admin'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -163,6 +168,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/competitions')
+        .set(authed('admin'))
         .send(competitionData);
 
       expect(response.status).toBe(409); // Conflict status for duplicate
@@ -186,12 +192,12 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'getCompetitions').mockResolvedValue(mockResult);
 
       const response = await request(app)
-        .get('/api/competitions');
+        .get('/api/competitions')
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competitions retrieved successfully');
-      expect(response.body.competitions).toHaveLength(2);
-      expect(response.body.total).toBe(2);
+      expect(response.body.data.competitions).toHaveLength(2);
+      expect(response.body.data.total).toBe(2);
       expect(competitionService.getCompetitions).toHaveBeenCalledWith(
         {},
         expect.objectContaining({
@@ -215,6 +221,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions')
+        .set(authed())
         .query({ status: 'upcoming' });
 
       expect(response.status).toBe(200);
@@ -238,6 +245,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions')
+        .set(authed())
         .query({ year: 2024, level: 'national' });
 
       expect(response.status).toBe(200);
@@ -264,6 +272,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions')
+        .set(authed())
         .query({ search: 'National' });
 
       expect(response.status).toBe(200);
@@ -285,6 +294,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions')
+        .set(authed())
         .query({ page: 2, limit: 10 });
 
       expect(response.status).toBe(200);
@@ -311,20 +321,22 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'getCompetitionById').mockResolvedValue(mockCompetition);
 
       const response = await request(app)
-        .get(`/api/competitions/${validId}`);
+        .get(`/api/competitions/${validId}`)
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competition retrieved successfully');
-      expect(response.body.competition).toMatchObject(mockCompetition);
+      expect(response.body.data).toMatchObject(mockCompetition);
       expect(competitionService.getCompetitionById).toHaveBeenCalledWith(validId);
     });
 
     it('should return 404 for non-existent competition', async () => {
       const validId = validObjectId();
-      jest.spyOn(competitionService, 'getCompetitionById').mockResolvedValue(null);
+      const NotFoundError = require('../../../src/errors/not-found.error');
+      jest.spyOn(competitionService, 'getCompetitionById').mockRejectedValue(new NotFoundError('Competition', validId));
 
       const response = await request(app)
-        .get(`/api/competitions/${validId}`);
+        .get(`/api/competitions/${validId}`)
+        .set(authed());
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
@@ -333,7 +345,8 @@ describe('Competition Controller Integration Tests', () => {
 
     it('should return 400 for invalid ObjectId', async () => {
       const response = await request(app)
-        .get('/api/competitions/invalid-id');
+        .get('/api/competitions/invalid-id')
+        .set(authed());
 
       expect(response.status).toBe(400);
     });
@@ -358,20 +371,22 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .put(`/api/competitions/${validId}`)
+        .set(authed('admin'))
         .send(updates);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competition updated successfully');
-      expect(response.body.competition.name).toBe(updates.name);
+      expect(response.body.data.name).toBe(updates.name);
       expect(competitionService.updateCompetition).toHaveBeenCalledWith(validId, updates);
     });
 
     it('should return 404 for non-existent competition', async () => {
       const validId = validObjectId();
-      jest.spyOn(competitionService, 'updateCompetition').mockResolvedValue(null);
+      const NotFoundError = require('../../../src/errors/not-found.error');
+      jest.spyOn(competitionService, 'updateCompetition').mockRejectedValue(new NotFoundError('Competition', validId));
 
       const response = await request(app)
         .put(`/api/competitions/${validId}`)
+        .set(authed('admin'))
         .send({ name: 'Updated Name' });
 
       expect(response.status).toBe(404);
@@ -388,6 +403,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .put(`/api/competitions/${validId}`)
+        .set(authed('admin'))
         .send(invalidUpdates);
 
       expect(response.status).toBe(400);
@@ -400,16 +416,17 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'deleteCompetition').mockResolvedValue(true);
 
       const response = await request(app)
-        .delete(`/api/competitions/${validId}`);
+        .delete(`/api/competitions/${validId}`)
+        .set(authed('admin'));
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competition deleted successfully');
       expect(competitionService.deleteCompetition).toHaveBeenCalledWith(validId);
     });
 
     it('should return 400 for invalid ObjectId', async () => {
       const response = await request(app)
-        .delete('/api/competitions/invalid-id');
+        .delete('/api/competitions/invalid-id')
+        .set(authed('admin'));
 
       expect(response.status).toBe(400);
     });
@@ -428,11 +445,11 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .patch(`/api/competitions/${validId}/status`)
+        .set(authed('admin'))
         .send({ status: 'ongoing' });
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competition status updated successfully');
-      expect(response.body.competition.status).toBe('ongoing');
+      expect(response.body.data.status).toBe('ongoing');
       expect(competitionService.updateCompetitionStatus).toHaveBeenCalledWith(validId, 'ongoing');
     });
 
@@ -440,11 +457,11 @@ describe('Competition Controller Integration Tests', () => {
       const validId = validObjectId();
       const response = await request(app)
         .patch(`/api/competitions/${validId}/status`)
+        .set(authed('admin'))
         .send({});
 
       expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toBeDefined();
+      expect(response.body).toHaveProperty('errors');
     });
   });
 
@@ -461,9 +478,7 @@ describe('Competition Controller Integration Tests', () => {
         .get('/api/competitions/upcoming');
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Upcoming competitions retrieved successfully');
-      expect(response.body.competitions).toHaveLength(2);
-      expect(response.body.count).toBe(2);
+      expect(response.body.data.competitions).toHaveLength(2);
     });
 
     it('should support limit parameter', async () => {
@@ -498,10 +513,10 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'getCompetitionsByStatus').mockResolvedValue(mockResult);
 
       const response = await request(app)
-        .get('/api/competitions/status/ongoing');
+        .get('/api/competitions/status/ongoing')
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('ongoing competitions retrieved successfully');
       expect(competitionService.getCompetitionsByStatus).toHaveBeenCalledWith(
         'ongoing',
         expect.any(Object)
@@ -530,10 +545,12 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post(`/api/competitions/${validCompId}/register`)
+        .set(authed('coach'))
         .send(registrationData);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Team registered successfully');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('data');
       expect(registrationService.registerTeam).toHaveBeenCalledWith(
         validCompId,
         validTeamId,
@@ -550,6 +567,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post(`/api/competitions/${validCompId}/register`)
+        .set(authed('coach'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -564,10 +582,11 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(registrationService, 'unregisterTeam').mockResolvedValue(true);
 
       const response = await request(app)
-        .delete(`/api/competitions/${validCompId}/register/${validTeamId}`);
+        .delete(`/api/competitions/${validCompId}/register/${validTeamId}`)
+        .set(authed('coach'));
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Team unregistered successfully');
+      expect(response.body).toHaveProperty('success', true);
       expect(registrationService.unregisterTeam).toHaveBeenCalledWith(
         validCompId,
         validTeamId,
@@ -598,6 +617,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post(`/api/competitions/${validCompId}/teams/${validTeamId}/players`)
+        .set(authed('coach'))
         .send(playerData);
 
       expect(response.status).toBe(200);
@@ -623,6 +643,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .post(`/api/competitions/${validCompId}/teams/${validTeamId}/players`)
+        .set(authed('coach'))
         .send(invalidData);
 
       expect(response.status).toBe(400);
@@ -634,7 +655,8 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(registrationService, 'removePlayerFromRegistration').mockResolvedValue(true);
 
       const response = await request(app)
-        .delete('/api/competitions/comp123/teams/team123/players/player123');
+        .delete('/api/competitions/comp123/teams/team123/players/player123')
+        .set(authed('coach'));
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Player removed from team successfully');
@@ -661,21 +683,24 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(registrationService, 'getTeamRegistration').mockResolvedValue(mockRegistration);
 
       const response = await request(app)
-        .get(`/api/competitions/${validCompId}/teams/${validTeamId}`);
+        .get(`/api/competitions/${validCompId}/teams/${validTeamId}`)
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Team registration retrieved successfully');
-      expect(response.body.registration).toMatchObject(mockRegistration);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toMatchObject(mockRegistration);
     });
 
     it('should return 404 for non-existent registration', async () => {
       const validCompId = validObjectId();
       const validTeamId = validObjectId();
       
-      jest.spyOn(registrationService, 'getTeamRegistration').mockResolvedValue(null);
+      const NotFoundError = require('../../../src/errors/not-found.error');
+      jest.spyOn(registrationService, 'getTeamRegistration').mockRejectedValue(new NotFoundError('Registration', `${validCompId}:${validTeamId}`));
 
       const response = await request(app)
-        .get(`/api/competitions/${validCompId}/teams/${validTeamId}`);
+        .get(`/api/competitions/${validCompId}/teams/${validTeamId}`)
+        .set(authed());
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
@@ -693,12 +718,13 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(registrationService, 'getCompetitionRegistrations').mockResolvedValue(mockRegistrations);
 
       const response = await request(app)
-        .get('/api/competitions/comp123/registrations');
+        .get('/api/competitions/comp123/registrations')
+        .set(authed('admin'));
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Competition registrations retrieved successfully');
-      expect(response.body.registrations).toHaveLength(2);
-      expect(response.body.count).toBe(2);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data.registrations).toHaveLength(2);
+      expect(response.body.data.count).toBe(2);
     });
 
     it('should filter registrations by status', async () => {
@@ -710,6 +736,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions/comp123/registrations')
+        .set(authed('admin'))
         .query({ status: 'registered' });
 
       expect(response.status).toBe(200);
@@ -728,6 +755,7 @@ describe('Competition Controller Integration Tests', () => {
 
       const response = await request(app)
         .get('/api/competitions/comp123/registrations')
+        .set(authed('admin'))
         .query({ ageGroup: 'Under14', gender: 'Male' });
 
       expect(response.status).toBe(200);
@@ -742,7 +770,7 @@ describe('Competition Controller Integration Tests', () => {
   });
 
   describe('Backward Compatibility', () => {
-    it('should maintain identical response format for getAllCompetitions', async () => {
+    it('should return the canonical response format for getAllCompetitions', async () => {
       const mockResult = {
         competitions: [
           { _id: 'comp1', name: 'Competition 1' }
@@ -755,17 +783,18 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'getCompetitions').mockResolvedValue(mockResult);
 
       const response = await request(app)
-        .get('/api/competitions');
+        .get('/api/competitions')
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body).toHaveProperty('competitions');
-      expect(response.body).toHaveProperty('total');
-      expect(response.body).toHaveProperty('page');
-      expect(response.body).toHaveProperty('pages');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('competitions');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('pages');
     });
 
-    it('should maintain identical response format for getCompetitionById', async () => {
+    it('should return the canonical response format for getCompetitionById', async () => {
       const validId = validObjectId();
       const mockCompetition = {
         _id: validId,
@@ -775,19 +804,22 @@ describe('Competition Controller Integration Tests', () => {
       jest.spyOn(competitionService, 'getCompetitionById').mockResolvedValue(mockCompetition);
 
       const response = await request(app)
-        .get(`/api/competitions/${validId}`);
+        .get(`/api/competitions/${validId}`)
+        .set(authed());
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body).toHaveProperty('competition');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('data');
     });
 
     it('should maintain identical error response format', async () => {
       const validId = validObjectId();
-      jest.spyOn(competitionService, 'getCompetitionById').mockResolvedValue(null);
+      const NotFoundError = require('../../../src/errors/not-found.error');
+      jest.spyOn(competitionService, 'getCompetitionById').mockRejectedValue(new NotFoundError('Competition', validId));
 
       const response = await request(app)
-        .get(`/api/competitions/${validId}`);
+        .get(`/api/competitions/${validId}`)
+        .set(authed());
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);

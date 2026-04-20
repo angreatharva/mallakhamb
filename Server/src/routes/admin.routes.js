@@ -2,12 +2,13 @@
  * Admin Routes
  * 
  * Defines routes for admin operations:
- * - Registration and login
  * - Dashboard and statistics
- * - Team and player management
- * - Score management
+ * - Team management
+ * - Player management
  * - Judge management
- * - Competition management
+ * - Score management
+ * - Age group management
+ * - Transaction management
  * 
  * Requirements: 14.1, 14.2, 14.3, 14.8
  * 
@@ -15,35 +16,10 @@
  */
 
 const express = require('express');
-const { body, validationResult } = require('express-validator');
-const { authMiddleware, adminAuth } = require('../../middleware/authMiddleware');
-const { validateCompetitionContext } = require('../../middleware/competitionContextMiddleware');
-
-// Import legacy controller (will be refactored in future tasks)
-const {
-  registerAdmin,
-  loginAdmin,
-  getAdminProfile,
-  getDashboardStats,
-  getAllTeams,
-  getTeamDetails,
-  addScore,
-  getTeamScores,
-  getIndividualScores,
-  getAllPlayers,
-  getSubmittedTeams,
-  saveJudges,
-  getJudges,
-  createSingleJudge,
-  updateJudge,
-  saveScores,
-  unlockScores,
-  getTeamRankings,
-  getAllJudgesSummary,
-  startAgeGroup,
-  deleteJudge,
-  getTransactions
-} = require('../../controllers/adminController');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requireAdmin } = require('../middleware/auth.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
+const adminValidator = require('../validators/admin.validator');
 
 /**
  * Initialize admin routes with dependencies from DI container
@@ -53,300 +29,445 @@ const {
  */
 function createAdminRoutes(container) {
   const router = express.Router();
+  
+  // Get middleware from container
+  const authMiddleware = createAuthMiddleware(container);
+  const authorize = requireAdmin;
+  
+  // Get controller from DI container
+  const adminController = container.resolve('adminController');
 
-  // Validation error handler
-  const handleValidationErrors = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-    next();
-  };
-
-  // Validation middleware
-  const registerValidation = [
-    body('name').trim().notEmpty().withMessage('Name is required'),
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password')
-      .isLength({ min: 8 })
-      .withMessage('Password must be at least 8 characters long')
-  ];
-
-  const loginValidation = [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required')
-  ];
-
-  const addScoreValidation = [
-    body('playerId').isMongoId().withMessage('Valid player ID is required'),
-    body('teamId').isMongoId().withMessage('Valid team ID is required'),
-    body('ageGroup')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
-      .withMessage('Valid age group is required'),
-    body('gender')
-      .isIn(['Male', 'Female'])
-      .withMessage('Gender must be either Male or Female'),
-    body('score')
-      .isNumeric()
-      .withMessage('Score must be a number')
-      .isFloat({ min: 0 })
-      .withMessage('Score must be a positive number'),
-    body('event').trim().notEmpty().withMessage('Event name is required')
-  ];
-
-  const saveJudgesValidation = [
-    body('gender')
-      .isIn(['Male', 'Female'])
-      .withMessage('Gender must be either Male or Female'),
-    body('ageGroup')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
-      .withMessage('Valid age group is required'),
-    body('judges')
-      .isArray({ min: 5, max: 5 })
-      .withMessage('Exactly 5 judges must be provided')
-  ];
-
-  const updateJudgeValidation = [
-    body('name')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge name is required'),
-    body('username')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge username is required'),
-    body('password')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge password is required')
-  ];
-
-  const createSingleJudgeValidation = [
-    body('gender')
-      .isIn(['Male', 'Female'])
-      .withMessage('Gender must be either Male or Female'),
-    body('ageGroup')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
-      .withMessage('Valid age group is required'),
-    body('judgeNo')
-      .isInt({ min: 1, max: 5 })
-      .withMessage('Judge number must be between 1 and 5'),
-    body('judgeType')
-      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'])
-      .withMessage('Valid judge type is required'),
-    body('name')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge name is required'),
-    body('username')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge username is required'),
-    body('password')
-      .trim()
-      .notEmpty()
-      .withMessage('Judge password is required')
-  ];
+  // ==================== Dashboard & Statistics ====================
 
   /**
-   * @route   POST /api/admin/register
-   * @desc    Register new admin
-   * @access  Public
-   */
-  router.post('/register', registerValidation, handleValidationErrors, registerAdmin);
-
-  /**
-   * @route   POST /api/admin/login
-   * @desc    Admin login
-   * @access  Public
-   */
-  router.post('/login', loginValidation, handleValidationErrors, loginAdmin);
-
-  /**
-   * @route   GET /api/admin/profile
-   * @desc    Get admin profile
-   * @access  Authenticated admins
-   */
-  router.get('/profile', authMiddleware, adminAuth, getAdminProfile);
-
-  /**
-   * @route   GET /api/admin/dashboard
+   * @route   GET /api/admin/dashboard/stats
    * @desc    Get dashboard statistics
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @access  Admin, SuperAdmin
    */
-  router.get('/dashboard', authMiddleware, adminAuth, validateCompetitionContext, getDashboardStats);
+  router.get(
+    '/dashboard/stats',
+    authMiddleware,
+    authorize,
+    adminController.getDashboardStats
+  );
 
-  // ============================================================
-  // TEAM ROUTES (require competition context)
-  // ============================================================
+  /**
+   * @route   GET /api/admin/dashboard/competition/:competitionId
+   * @desc    Get competition overview
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/dashboard/competition/:competitionId',
+    authMiddleware,
+    authorize,
+    adminController.getCompetitionOverview
+  );
+
+  /**
+   * @route   GET /api/admin/system/health
+   * @desc    Get system health status
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/system/health',
+    authMiddleware,
+    authorize,
+    adminController.getSystemHealth
+  );
+
+  // ==================== Team Management ====================
+
+  /**
+   * @route   GET /api/admin/teams/submitted
+   * @desc    Get submitted teams
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/teams/submitted',
+    authMiddleware,
+    authorize,
+    adminController.getSubmittedTeams
+  );
 
   /**
    * @route   GET /api/admin/teams
-   * @desc    Get all teams in competition
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @desc    Get all teams with filters and pagination
+   * @access  Admin, SuperAdmin
    */
-  router.get('/teams', authMiddleware, adminAuth, validateCompetitionContext, getAllTeams);
+  router.get(
+    '/teams',
+    authMiddleware,
+    authorize,
+    adminValidator.getAllTeams(),
+    handleValidationErrors,
+    adminController.getAllTeams
+  );
 
   /**
    * @route   GET /api/admin/teams/:teamId
    * @desc    Get team details
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @access  Admin, SuperAdmin
    */
-  router.get('/teams/:teamId', authMiddleware, adminAuth, validateCompetitionContext, getTeamDetails);
+  router.get(
+    '/teams/:teamId',
+    authMiddleware,
+    authorize,
+    adminValidator.getTeamDetails(),
+    handleValidationErrors,
+    adminController.getTeamDetails
+  );
 
   /**
-   * @route   GET /api/admin/submitted-teams
-   * @desc    Get submitted teams
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   PUT /api/admin/teams/:teamId/approve
+   * @desc    Approve team
+   * @access  Admin, SuperAdmin
    */
-  router.get('/submitted-teams', authMiddleware, adminAuth, validateCompetitionContext, getSubmittedTeams);
+  router.put(
+    '/teams/:teamId/approve',
+    authMiddleware,
+    authorize,
+    adminValidator.approveTeam(),
+    handleValidationErrors,
+    adminController.approveTeam
+  );
 
-  // ============================================================
-  // PLAYER ROUTES (require competition context)
-  // ============================================================
+  /**
+   * @route   PUT /api/admin/teams/:teamId/reject
+   * @desc    Reject team
+   * @access  Admin, SuperAdmin
+   */
+  router.put(
+    '/teams/:teamId/reject',
+    authMiddleware,
+    authorize,
+    adminValidator.rejectTeam(),
+    handleValidationErrors,
+    adminController.rejectTeam
+  );
+
+  // ==================== Player Management ====================
 
   /**
    * @route   GET /api/admin/players
-   * @desc    Get all players in competition
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @desc    Get all players with filters and pagination
+   * @access  Admin, SuperAdmin
    */
-  router.get('/players', authMiddleware, adminAuth, validateCompetitionContext, getAllPlayers);
-
-  // ============================================================
-  // TRANSACTION ROUTES (require competition context)
-  // ============================================================
+  router.get(
+    '/players',
+    authMiddleware,
+    authorize,
+    adminValidator.getAllPlayers(),
+    handleValidationErrors,
+    adminController.getAllPlayers
+  );
 
   /**
-   * @route   GET /api/admin/transactions
-   * @desc    Get all transactions
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   GET /api/admin/players/:playerId
+   * @desc    Get player details
+   * @access  Admin, SuperAdmin
    */
-  router.get('/transactions', authMiddleware, adminAuth, validateCompetitionContext, getTransactions);
-
-  // ============================================================
-  // SCORE ROUTES (require competition context)
-  // ============================================================
+  router.get(
+    '/players/:playerId',
+    authMiddleware,
+    authorize,
+    adminValidator.getPlayerDetails(),
+    handleValidationErrors,
+    adminController.getPlayerDetails
+  );
 
   /**
-   * @route   POST /api/admin/scores
-   * @desc    Add score for player
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   PUT /api/admin/players/:playerId/status
+   * @desc    Update player status
+   * @access  Admin, SuperAdmin
    */
-  router.post('/scores', authMiddleware, adminAuth, validateCompetitionContext, addScoreValidation, addScore);
+  router.put(
+    '/players/:playerId/status',
+    authMiddleware,
+    authorize,
+    adminValidator.updatePlayerStatus(),
+    handleValidationErrors,
+    adminController.updatePlayerStatus
+  );
 
   /**
-   * @route   POST /api/admin/scores/save
-   * @desc    Save scores
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   PUT /api/admin/players/:playerId/team
+   * @desc    Assign player to team
+   * @access  Admin, SuperAdmin
    */
-  router.post('/scores/save', authMiddleware, adminAuth, validateCompetitionContext, saveScores);
+  router.put(
+    '/players/:playerId/team',
+    authMiddleware,
+    authorize,
+    adminValidator.assignPlayerToTeam(),
+    handleValidationErrors,
+    adminController.assignPlayerToTeam
+  );
+
+  // ==================== Judge Management ====================
 
   /**
-   * @route   PUT /api/admin/scores/:scoreId/unlock
-   * @desc    Unlock score for editing
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   POST /api/admin/judges/bulk
+   * @desc    Bulk save judges
+   * @access  Admin, SuperAdmin
    */
-  router.put('/scores/:scoreId/unlock', authMiddleware, adminAuth, validateCompetitionContext, unlockScores);
-
-  /**
-   * @route   GET /api/admin/scores/teams
-   * @desc    Get team scores
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.get('/scores/teams', authMiddleware, adminAuth, validateCompetitionContext, getTeamScores);
-
-  /**
-   * @route   GET /api/admin/scores/individual
-   * @desc    Get individual scores
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.get('/scores/individual', authMiddleware, adminAuth, validateCompetitionContext, getIndividualScores);
-
-  /**
-   * @route   GET /api/admin/scores/team-rankings
-   * @desc    Get team rankings
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.get('/scores/team-rankings', authMiddleware, adminAuth, validateCompetitionContext, getTeamRankings);
-
-  // ============================================================
-  // JUDGE ROUTES (require competition context)
-  // ============================================================
-
-  /**
-   * @route   POST /api/admin/judges
-   * @desc    Save judges for age group
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.post('/judges', authMiddleware, adminAuth, validateCompetitionContext, saveJudgesValidation, handleValidationErrors, saveJudges);
-
-  /**
-   * @route   POST /api/admin/judges/single
-   * @desc    Create single judge
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.post('/judges/single', authMiddleware, adminAuth, validateCompetitionContext, createSingleJudgeValidation, handleValidationErrors, createSingleJudge);
-
-  /**
-   * @route   GET /api/admin/judges
-   * @desc    Get judges for age group
-   * @access  Authenticated admins
-   * @note    Requires competition context
-   */
-  router.get('/judges', authMiddleware, adminAuth, validateCompetitionContext, getJudges);
+  router.post(
+    '/judges/bulk',
+    authMiddleware,
+    authorize,
+    adminValidator.saveJudges(),
+    handleValidationErrors,
+    adminController.saveJudges
+  );
 
   /**
    * @route   GET /api/admin/judges/summary
    * @desc    Get all judges summary
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @access  Admin, SuperAdmin
    */
-  router.get('/judges/summary', authMiddleware, adminAuth, validateCompetitionContext, getAllJudgesSummary);
+  router.get(
+    '/judges/summary',
+    authMiddleware,
+    authorize,
+    adminController.getAllJudgesSummary
+  );
+
+  /**
+   * @route   GET /api/admin/judges
+   * @desc    Get all judges for competition
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/judges',
+    authMiddleware,
+    authorize,
+    adminController.getJudges
+  );
+
+  /**
+   * @route   POST /api/admin/judges
+   * @desc    Create single judge
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/judges',
+    authMiddleware,
+    authorize,
+    adminValidator.createSingleJudge(),
+    handleValidationErrors,
+    adminController.createSingleJudge
+  );
 
   /**
    * @route   PUT /api/admin/judges/:judgeId
    * @desc    Update judge
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @access  Admin, SuperAdmin
    */
-  router.put('/judges/:judgeId', authMiddleware, adminAuth, validateCompetitionContext, updateJudgeValidation, handleValidationErrors, updateJudge);
+  router.put(
+    '/judges/:judgeId',
+    authMiddleware,
+    authorize,
+    adminValidator.updateJudge(),
+    handleValidationErrors,
+    adminController.updateJudge
+  );
 
   /**
    * @route   DELETE /api/admin/judges/:judgeId
    * @desc    Delete judge
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @access  Admin, SuperAdmin
    */
-  router.delete('/judges/:judgeId', authMiddleware, adminAuth, validateCompetitionContext, deleteJudge);
+  router.delete(
+    '/judges/:judgeId',
+    authMiddleware,
+    authorize,
+    adminValidator.deleteJudge(),
+    handleValidationErrors,
+    adminController.deleteJudge
+  );
 
-  // ============================================================
-  // COMPETITION MANAGEMENT ROUTES
-  // ============================================================
+  // ==================== Score Management ====================
 
   /**
-   * @route   POST /api/admin/competition/age-group/start
-   * @desc    Start age group competition
-   * @access  Authenticated admins
-   * @note    Requires competition context
+   * @route   PUT /api/admin/scores/unlock
+   * @desc    Unlock scores for editing
+   * @access  Admin, SuperAdmin
    */
-  router.post('/competition/age-group/start', authMiddleware, adminAuth, validateCompetitionContext, startAgeGroup);
+  router.put(
+    '/scores/unlock',
+    authMiddleware,
+    authorize,
+    adminValidator.unlockScores(),
+    handleValidationErrors,
+    adminController.unlockScores
+  );
+
+  /**
+   * @route   PUT /api/admin/scores/lock
+   * @desc    Lock scores
+   * @access  Admin, SuperAdmin
+   */
+  router.put(
+    '/scores/lock',
+    authMiddleware,
+    authorize,
+    adminValidator.lockScores(),
+    handleValidationErrors,
+    adminController.lockScores
+  );
+
+  /**
+   * @route   GET /api/admin/scores/team
+   * @desc    Get team scores
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/scores/team',
+    authMiddleware,
+    authorize,
+    adminValidator.getTeamScores(),
+    handleValidationErrors,
+    adminController.getTeamScores
+  );
+
+  /**
+   * @route   GET /api/admin/scores/individual
+   * @desc    Get individual scores
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/scores/individual',
+    authMiddleware,
+    authorize,
+    adminValidator.getIndividualScores(),
+    handleValidationErrors,
+    adminController.getIndividualScores
+  );
+
+  /**
+   * @route   GET /api/admin/rankings/team
+   * @desc    Get team rankings
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/rankings/team',
+    authMiddleware,
+    authorize,
+    adminValidator.getTeamRankings(),
+    handleValidationErrors,
+    adminController.getTeamRankings
+  );
+
+  /**
+   * @route   GET /api/admin/rankings/individual
+   * @desc    Get individual rankings
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/rankings/individual',
+    authMiddleware,
+    authorize,
+    adminValidator.getIndividualRankings(),
+    handleValidationErrors,
+    adminController.getIndividualRankings
+  );
+
+  /**
+   * @route   POST /api/admin/scores/recalculate
+   * @desc    Recalculate scores
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/scores/recalculate',
+    authMiddleware,
+    authorize,
+    adminValidator.recalculateScores(),
+    handleValidationErrors,
+    adminController.recalculateScores
+  );
+
+  // ==================== Age Group Management ====================
+
+  /**
+   * @route   POST /api/admin/age-groups/:ageGroup/start
+   * @desc    Start age group
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/age-groups/:ageGroup/start',
+    authMiddleware,
+    authorize,
+    adminValidator.startAgeGroup(),
+    handleValidationErrors,
+    adminController.startAgeGroup
+  );
+
+  /**
+   * @route   POST /api/admin/age-groups/:ageGroup/end
+   * @desc    End age group
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/age-groups/:ageGroup/end',
+    authMiddleware,
+    authorize,
+    adminValidator.endAgeGroup(),
+    handleValidationErrors,
+    adminController.endAgeGroup
+  );
+
+  /**
+   * @route   GET /api/admin/age-groups/status
+   * @desc    Get age group status
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/age-groups/status',
+    authMiddleware,
+    authorize,
+    adminController.getAgeGroupStatus
+  );
+
+  // ==================== Transaction Management ====================
+
+  /**
+   * @route   GET /api/admin/transactions/summary
+   * @desc    Get payment summary
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/transactions/summary',
+    authMiddleware,
+    authorize,
+    adminController.getPaymentSummary
+  );
+
+  /**
+   * @route   GET /api/admin/transactions
+   * @desc    Get transactions with filters and pagination
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/transactions',
+    authMiddleware,
+    authorize,
+    adminValidator.getTransactions(),
+    handleValidationErrors,
+    adminController.getTransactions
+  );
+
+  /**
+   * @route   GET /api/admin/transactions/:transactionId
+   * @desc    Get transaction details
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/transactions/:transactionId',
+    authMiddleware,
+    authorize,
+    adminValidator.getTransactionDetails(),
+    handleValidationErrors,
+    adminController.getTransactionDetails
+  );
 
   return router;
 }

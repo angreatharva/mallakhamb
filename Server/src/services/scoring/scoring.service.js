@@ -12,6 +12,7 @@ const {
   NotFoundError,
   BusinessRuleError 
 } = require('../../errors');
+const EventTypes = require('../../socket/events/event-types');
 
 class ScoringService {
   /**
@@ -84,7 +85,7 @@ class ScoringService {
       if (this.socketManager) {
         this.socketManager.emitToRoom(
           `competition:${scoreData.competition}`,
-          'score_submitted',
+          EventTypes.SCORE_SUBMITTED,
           {
             scoreId: score._id,
             competitionId: scoreData.competition,
@@ -157,7 +158,7 @@ class ScoringService {
       if (this.socketManager) {
         this.socketManager.emitToRoom(
           `competition:${score.competition}`,
-          'score_updated',
+          EventTypes.SCORE_UPDATED,
           {
             scoreId,
             competitionId: score.competition,
@@ -215,7 +216,7 @@ class ScoringService {
       if (this.socketManager) {
         this.socketManager.emitToRoom(
           `competition:${score.competition}`,
-          'score_deleted',
+          EventTypes.SCORE_DELETED,
           {
             scoreId,
             competitionId: score.competition,

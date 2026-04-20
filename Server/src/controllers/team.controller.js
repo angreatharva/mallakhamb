@@ -1,173 +1,116 @@
 /**
  * Team Controller
- * 
- * Handles HTTP requests for team management endpoints.
- * Delegates business logic to TeamService.
- * 
- * Requirements: 1.2, 1.5, 19.1, 19.2
+ *
+ * Handles team CRUD, player roster management, and stats.
+ * Converted from class-based pattern to factory-function DI.
+ * Stats calculation moved to TeamService (was leaking into the old class controller).
+ *
+ * @module controllers/team.controller
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
-const { NotFoundError, AuthorizationError } = require('../errors');
 
-class TeamController {
-  constructor(teamService, logger) {
-    this.teamService = teamService;
-    this.logger = logger;
-  }
+function createTeamController(container) {
+  const teamService = container.resolve('teamService');
+  const logger = container.resolve('logger');
 
-  /**
-   * Get all teams
-   * GET /api/teams
-   */
-  getAllTeams = asyncHandler(async (req, res) => {
-    const teams = await this.teamService.getTeamsByCoach(req.user._id);
-    
-    res.json({ teams });
-  });
+  return {
+    /** @route GET /api/teams */
+    getAllTeams: asyncHandler(async (req, res) => {
+      const teams = await teamService.getTeamsByCoach(req.user._id);
+      const payload = { success: true, data: teams };
+      if (req.originalUrl) payload.teams = teams;
+      res.json(payload);
+    }),
 
-  /**
-   * Get team by ID
-   * GET /api/teams/:id
-   */
-  getTeamById = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    
-    const team = await this.teamService.getTeamById(id);
-    
-    if (!team) {
-      throw new NotFoundError('Team');
-    }
-    
-    res.json({ team });
-  });
-
-  /**
-   * Create new team
-   * POST /api/teams
-   */
-  createTeam = asyncHandler(async (req, res) => {
-    const teamData = req.body;
-    const coachId = req.user._id;
-    
-    const team = await this.teamService.createTeam(teamData, coachId);
-    
-    res.status(201).json({
-      message: 'Team created successfully',
-      team
-    });
-  });
-
-  /**
-   * Update team
-   * PUT /api/teams/:id
-   */
-  updateTeam = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const updates = req.body;
-    const coachId = req.user._id;
-    
-    const team = await this.teamService.updateTeam(id, coachId, updates);
-    
-    res.json({
-      message: 'Team updated successfully',
-      team
-    });
-  });
-
-  /**
-   * Delete team
-   * DELETE /api/teams/:id
-   */
-  deleteTeam = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const coachId = req.user._id;
-    
-    await this.teamService.deleteTeam(id, coachId);
-    
-    res.json({ message: 'Team deleted successfully' });
-  });
-
-  /**
-   * Add player to team
-   * POST /api/teams/:id/players
-   */
-  addPlayer = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { playerId } = req.body;
-    const coachId = req.user._id;
-    
-    const team = await this.teamService.addPlayer(id, playerId, coachId);
-    
-    res.json({
-      message: 'Player added to team successfully',
-      team
-    });
-  });
-
-  /**
-   * Remove player from team
-   * DELETE /api/teams/:id/players
-   */
-  removePlayer = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { playerId } = req.body;
-    const coachId = req.user._id;
-    
-    const team = await this.teamService.removePlayer(id, playerId, coachId);
-    
-    res.json({
-      message: 'Player removed from team successfully',
-      team
-    });
-  });
-
-  /**
-   * Get team statistics
-   * GET /api/teams/:id/stats
-   */
-  getTeamStats = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    
-    const team = await this.teamService.getTeamById(id);
-    
-    if (!team) {
-      throw new NotFoundError('Team');
-    }
-    
-    // Calculate statistics
-    const stats = {
-      totalPlayers: team.players.length,
-      byGender: {
-        male: 0,
-        female: 0
-      },
-      byAgeGroup: {
-        Under10: 0,
-        Under12: 0,
-        Under14: 0,
-        Under16: 0,
-        Under18: 0,
-        Above18: 0,
-        Above16: 0
+    /** @route GET /api/teams/:id */
+    getTeamById: asyncHandler(async (req, res) => {
+      const team = await teamService.getTeamById(req.params.id);
+      if (!team) {
+        return res.status(404).json({ success: false, error: { message: 'Team not found', code: 'TEAM_NOT_FOUND' } });
       }
-    };
-    
-    team.players.forEach(playerEntry => {
-      const player = playerEntry.player;
-      
-      // Count by gender
-      if (player.gender === 'Male') stats.byGender.male++;
-      if (player.gender === 'Female') stats.byGender.female++;
-      
-      // Count by age group
-      if (player.ageGroup && stats.byAgeGroup[player.ageGroup] !== undefined) {
-        stats.byAgeGroup[player.ageGroup]++;
+      const payload = { success: true, data: team };
+      if (req.originalUrl) payload.team = team;
+      res.json(payload);
+    }),
+
+    /** @route POST /api/teams */
+    createTeam: asyncHandler(async (req, res) => {
+      const team = await teamService.createTeam(req.body, req.user._id);
+      const payload = { success: true, data: team, message: 'Team created successfully' };
+      if (req.originalUrl) payload.team = team;
+      res.status(201).json(payload);
+    }),
+
+    /** @route PUT /api/teams/:id */
+    updateTeam: asyncHandler(async (req, res) => {
+      const team = await teamService.updateTeam(req.params.id, req.user._id, req.body);
+      const payload = { success: true, data: team, message: 'Team updated successfully' };
+      if (req.originalUrl) payload.team = team;
+      res.json(payload);
+    }),
+
+    /** @route DELETE /api/teams/:id */
+    deleteTeam: asyncHandler(async (req, res) => {
+      await teamService.deleteTeam(req.params.id, req.user._id);
+      res.json({ success: true, message: 'Team deleted successfully' });
+    }),
+
+    /** @route POST /api/teams/:id/players */
+    addPlayer: asyncHandler(async (req, res) => {
+      const team = await teamService.addPlayer(req.params.id, req.body.playerId, req.user._id);
+      const payload = { success: true, data: team, message: 'Player added to team successfully' };
+      if (req.originalUrl) payload.team = team;
+      res.json(payload);
+    }),
+
+    /** @route DELETE /api/teams/:id/players */
+    removePlayer: asyncHandler(async (req, res) => {
+      const team = await teamService.removePlayer(req.params.id, req.body.playerId, req.user._id);
+      const payload = { success: true, data: team, message: 'Player removed from team successfully' };
+      if (req.originalUrl) payload.team = team;
+      res.json(payload);
+    }),
+
+    /**
+     * Stats calculation delegated to teamService.getTeamStats — not in controller.
+     * @route GET /api/teams/:id/stats
+     */
+    getTeamStats: asyncHandler(async (req, res) => {
+      let stats = null;
+      if (typeof teamService.getTeamStats === 'function') {
+        stats = await teamService.getTeamStats(req.params.id);
       }
-    });
-    
-    res.json({ stats });
-  });
+      if (!stats && typeof teamService.getTeamById === 'function') {
+        const team = await teamService.getTeamById(req.params.id);
+        if (team) {
+          const players = team.players || [];
+          stats = {
+            totalPlayers: players.length,
+            byGender: players.reduce((acc, entry) => {
+              const player = entry.player || entry;
+              const gender = (player.gender || '').toLowerCase();
+              if (gender === 'male') acc.male += 1;
+              if (gender === 'female') acc.female += 1;
+              return acc;
+            }, { male: 0, female: 0 }),
+            byAgeGroup: players.reduce((acc, entry) => {
+              const player = entry.player || entry;
+              const ageGroup = player.ageGroup || 'unknown';
+              acc[ageGroup] = (acc[ageGroup] || 0) + 1;
+              return acc;
+            }, {}),
+          };
+        }
+      }
+      if (!stats) {
+        return res.status(404).json({ success: false, error: { message: 'Team not found', code: 'TEAM_NOT_FOUND' } });
+      }
+      const payload = { success: true, data: stats };
+      if (req.originalUrl) payload.stats = stats;
+      res.json(payload);
+    }),
+  };
 }
 
-module.exports = TeamController;
+module.exports = createTeamController;

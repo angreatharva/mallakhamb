@@ -13,6 +13,8 @@ const {
   NotFoundError,
   BusinessRuleError 
 } = require('../../errors');
+const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
+const EventTypes = require('../../socket/events/event-types');
 
 class CompetitionService {
   /**
@@ -61,32 +63,35 @@ class CompetitionService {
    */
   async createCompetition(competitionData, createdBy) {
     try {
+      // Sanitize string inputs
+      const sanitizedData = sanitizeCompetitionData(competitionData);
+
       // Validate dates
-      this.validateDates(competitionData.startDate, competitionData.endDate);
+      this.validateDates(sanitizedData.startDate, sanitizedData.endDate);
 
       // Check for duplicate competition (same name, year, place)
       const existing = await this.competitionRepository.findOne({
-        name: competitionData.name,
-        year: competitionData.year,
-        place: competitionData.place,
+        name: sanitizedData.name,
+        year: sanitizedData.year,
+        place: sanitizedData.place,
         isDeleted: false
       });
 
       if (existing) {
         this.logger.warn('Competition creation failed: Duplicate competition', {
-          name: competitionData.name,
-          year: competitionData.year,
-          place: competitionData.place
+          name: sanitizedData.name,
+          year: sanitizedData.year,
+          place: sanitizedData.place
         });
         throw new ConflictError('Competition with same name, year, and place already exists');
       }
 
       // Set initial status based on start date
-      const status = this.determineStatus(competitionData.startDate, competitionData.endDate);
+      const status = this.determineStatus(sanitizedData.startDate, sanitizedData.endDate);
 
       // Create competition
       const competition = await this.competitionRepository.create({
-        ...competitionData,
+        ...sanitizedData,
         status,
         createdBy,
         admins: [createdBy],
@@ -105,7 +110,7 @@ class CompetitionService {
 
       // Emit Socket.IO event for real-time competition creation
       if (this.socketManager) {
-        this.socketManager.broadcast('competition_created', {
+        this.socketManager.broadcast(EventTypes.COMPETITION_CREATED, {
           competitionId: competition._id,
           name: competition.name,
           status: competition.status,
@@ -138,6 +143,9 @@ class CompetitionService {
    */
   async updateCompetition(competitionId, updates) {
     try {
+      // Sanitize string inputs
+      const sanitizedUpdates = sanitizeCompetitionData(updates);
+
       // Find competition
       const competition = await this.competitionRepository.findById(competitionId);
 
@@ -147,14 +155,14 @@ class CompetitionService {
       }
 
       // Validate dates if being updated
-      if (updates.startDate || updates.endDate) {
-        const startDate = updates.startDate || competition.startDate;
-        const endDate = updates.endDate || competition.endDate;
+      if (sanitizedUpdates.startDate || sanitizedUpdates.endDate) {
+        const startDate = sanitizedUpdates.startDate || competition.startDate;
+        const endDate = sanitizedUpdates.endDate || competition.endDate;
         this.validateDates(startDate, endDate);
       }
 
       // Don't allow updating certain fields
-      const { _id, createdBy, registeredTeams, isDeleted, ...allowedUpdates } = updates;
+      const { _id, createdBy, registeredTeams, isDeleted, ...allowedUpdates } = sanitizedUpdates;
 
       // Update competition
       const updated = await this.competitionRepository.updateById(competitionId, allowedUpdates);
@@ -172,7 +180,7 @@ class CompetitionService {
       if (this.socketManager) {
         this.socketManager.emitToRoom(
           `competition:${competitionId}`,
-          'competition_updated',
+          EventTypes.COMPETITION_UPDATED,
           {
             competitionId,
             updates: allowedUpdates,
@@ -432,7 +440,7 @@ class CompetitionService {
       if (this.socketManager) {
         this.socketManager.emitToRoom(
           `competition:${competitionId}`,
-          'competition_status_updated',
+          EventTypes.COMPETITION_STATUS_UPDATED,
           {
             competitionId,
             oldStatus: competition.status,

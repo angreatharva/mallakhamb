@@ -6,6 +6,7 @@
 
 const HealthMonitor = require('./health-monitor');
 const mongoose = require('mongoose');
+const os = require('os');
 
 // Mock mongoose
 jest.mock('mongoose', () => ({
@@ -99,16 +100,25 @@ describe('HealthMonitor', () => {
 
       // Mock memory to ensure healthy state
       const originalMemoryUsage = process.memoryUsage;
+      const originalTotalmem = os.totalmem;
+      const originalFreemem = os.freemem;
+      
       process.memoryUsage = jest.fn().mockReturnValue({
         heapUsed: 100 * 1024 * 1024,  // 100MB
         heapTotal: 500 * 1024 * 1024, // 500MB (20% usage)
         rss: 200 * 1024 * 1024,
         external: 10 * 1024 * 1024
       });
+      
+      // Mock system memory to be healthy (50% usage)
+      os.totalmem = jest.fn().mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
+      os.freemem = jest.fn().mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
 
       const health = await healthMonitor.checkHealth();
 
       process.memoryUsage = originalMemoryUsage;
+      os.totalmem = originalTotalmem;
+      os.freemem = originalFreemem;
 
       expect(health.status).toBe('healthy');
       expect(health).toHaveProperty('timestamp');
@@ -192,12 +202,19 @@ describe('HealthMonitor', () => {
   describe('checkMemory', () => {
     it('should return healthy status when memory usage is normal', () => {
       const originalMemoryUsage = process.memoryUsage;
+      const originalTotalmem = os.totalmem;
+      const originalFreemem = os.freemem;
+      
       process.memoryUsage = jest.fn().mockReturnValue({
         heapUsed: 100 * 1024 * 1024, // 100MB
         heapTotal: 200 * 1024 * 1024, // 200MB
         rss: 250 * 1024 * 1024, // 250MB
         external: 10 * 1024 * 1024 // 10MB
       });
+      
+      // Mock system memory to be healthy (50% usage)
+      os.totalmem = jest.fn().mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
+      os.freemem = jest.fn().mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
 
       const status = healthMonitor.checkMemory();
 
@@ -209,6 +226,8 @@ describe('HealthMonitor', () => {
       expect(status.percentage).toBeLessThan(100);
 
       process.memoryUsage = originalMemoryUsage;
+      os.totalmem = originalTotalmem;
+      os.freemem = originalFreemem;
     });
 
     it('should return warning status when memory usage is high', () => {

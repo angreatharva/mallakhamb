@@ -152,9 +152,9 @@ describe('Caching Integration', () => {
 
       userService = new UserService(
         mockUserRepository,
-        cacheService,
         mockLogger,
-        'player'
+        'player',
+        cacheService
       );
     });
 

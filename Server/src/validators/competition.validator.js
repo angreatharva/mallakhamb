@@ -287,11 +287,27 @@ const startAgeGroup = () => {
   ];
 };
 
+/**
+ * Validate update competition status
+ */
+const updateCompetitionStatus = () => {
+  return [
+    objectId('id', 'param'),
+    body('status')
+      .trim()
+      .notEmpty()
+      .withMessage('Status is required')
+      .isIn(['upcoming', 'ongoing', 'completed'])
+      .withMessage('Status must be upcoming, ongoing, or completed'),
+  ];
+};
+
 module.exports = {
   createCompetition,
   updateCompetition,
   getCompetitionById,
   deleteCompetition,
+  updateCompetitionStatus,
   registerTeam,
   addPlayerToTeam,
   startAgeGroup

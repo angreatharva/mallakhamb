@@ -12,20 +12,9 @@
  */
 
 const express = require('express');
-const { authMiddleware } = require('../../middleware/authMiddleware');
-const { handleExpressValidationErrors } = require('../../middleware/errorHandler');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
 const authValidators = require('../validators/auth.validator');
-
-// Import legacy controller (will be refactored in future tasks)
-const {
-  forgotPassword,
-  verifyOTP,
-  resetPasswordWithOTP,
-  resetPassword,
-  setCompetition,
-  getAssignedCompetitions,
-  logout
-} = require('../../controllers/authController');
 
 /**
  * Initialize authentication routes with dependencies from DI container
@@ -35,6 +24,11 @@ const {
  */
 function createAuthRoutes(container) {
   const router = express.Router();
+  
+  // Create auth middleware instance from container
+  const authMiddleware = createAuthMiddleware(container);
+  
+  const authController = container.resolve('authController');
 
   /**
    * @route   POST /api/auth/forgot-password
@@ -44,8 +38,8 @@ function createAuthRoutes(container) {
   router.post(
     '/forgot-password',
     authValidators.forgotPassword(),
-    handleExpressValidationErrors,
-    forgotPassword
+    handleValidationErrors,
+    authController.forgotPassword
   );
 
   /**
@@ -56,8 +50,8 @@ function createAuthRoutes(container) {
   router.post(
     '/verify-otp',
     authValidators.verifyOTP(),
-    handleExpressValidationErrors,
-    verifyOTP
+    handleValidationErrors,
+    authController.verifyOTP
   );
 
   /**
@@ -68,8 +62,8 @@ function createAuthRoutes(container) {
   router.post(
     '/reset-password-otp',
     authValidators.resetPassword(),
-    handleExpressValidationErrors,
-    resetPasswordWithOTP
+    handleValidationErrors,
+    authController.resetPasswordWithOTP
   );
 
   /**
@@ -77,30 +71,31 @@ function createAuthRoutes(container) {
    * @desc    Reset password using URL token (legacy method)
    * @access  Public
    */
-  router.post('/reset-password/:token', resetPassword);
+  router.post('/reset-password/:token', authController.resetPassword);
 
   /**
    * @route   POST /api/auth/set-competition
    * @desc    Set competition context for user session
    * @access  Authenticated users
    */
-  router.post('/set-competition', authMiddleware, setCompetition);
+  router.post('/set-competition', authMiddleware, authController.setCompetition);
 
   /**
    * @route   GET /api/auth/competitions/assigned
    * @desc    Get competitions assigned to user
    * @access  Authenticated users
    */
-  router.get('/competitions/assigned', authMiddleware, getAssignedCompetitions);
+  router.get('/competitions/assigned', authMiddleware, authController.getAssignedCompetitions);
 
   /**
    * @route   POST /api/auth/logout
    * @desc    Logout user
    * @access  Authenticated users
    */
-  router.post('/logout', authMiddleware, logout);
+  router.post('/logout', authMiddleware, authController.logout);
 
   return router;
 }
 
 module.exports = createAuthRoutes;
+module.exports.createAuthRoutes = createAuthRoutes;

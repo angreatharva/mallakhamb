@@ -3,12 +3,20 @@
  * 
  * Handles JWT token generation, verification, and refresh operations.
  * Uses ConfigManager for JWT configuration.
+ * Implements token rotation for long-lived sessions (Requirement 17.7).
  * 
- * Requirements: 1.5, 1.8
+ * Requirements: 1.5, 1.8, 17.7
  */
 
 const jwt = require('jsonwebtoken');
 const { AuthenticationError } = require('../../errors');
+
+/**
+ * Token rotation threshold in milliseconds.
+ * Tokens older than this will be rotated on use.
+ * Default: 12 hours (half of the 24h expiry).
+ */
+const TOKEN_ROTATION_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 class TokenService {
   /**
@@ -23,6 +31,7 @@ class TokenService {
 
   /**
    * Generate JWT token for user
+   * Includes `iat` (issued-at) claim for rotation tracking.
    * @param {string} userId - User ID
    * @param {string} userType - User type (player, coach, admin, judge)
    * @param {string} competitionId - Optional competition context
@@ -34,6 +43,7 @@ class TokenService {
         userId,
         userType,
         ...(competitionId && { competitionId })
+        // jwt.sign automatically adds `iat` (issued-at) claim
       };
 
       const secret = this.config.get('jwt.secret');
@@ -85,7 +95,7 @@ class TokenService {
 
   /**
    * Refresh JWT token
-   * Generates a new token with the same payload but extended expiration
+   * Generates a new token with the same payload but extended expiration.
    * @param {string} token - Current JWT token
    * @returns {string} New JWT token
    * @throws {AuthenticationError} If token is invalid
@@ -109,6 +119,46 @@ class TokenService {
       this.logger.error('Token refresh failed', { error: error.message });
       throw error;
     }
+  }
+
+  /**
+   * Check whether a token should be rotated.
+   * A token should be rotated when it is older than TOKEN_ROTATION_THRESHOLD_MS.
+   * @param {Object} decoded - Decoded JWT payload (must contain `iat`)
+   * @returns {boolean} True if the token should be rotated
+   */
+  shouldRotateToken(decoded) {
+    if (!decoded || !decoded.iat) {
+      return false;
+    }
+    const issuedAtMs = decoded.iat * 1000; // `iat` is in seconds
+    const ageMs = Date.now() - issuedAtMs;
+    return ageMs >= TOKEN_ROTATION_THRESHOLD_MS;
+  }
+
+  /**
+   * Rotate a token if it is old enough.
+   * Returns the new token if rotation occurred, or null if not needed.
+   * @param {Object} decoded - Already-verified decoded JWT payload
+   * @returns {string|null} New token string, or null if rotation not needed
+   */
+  rotateTokenIfNeeded(decoded) {
+    if (!this.shouldRotateToken(decoded)) {
+      return null;
+    }
+
+    const newToken = this.generateToken(
+      decoded.userId,
+      decoded.userType,
+      decoded.competitionId || null
+    );
+
+    this.logger.info('Token rotated (age threshold reached)', {
+      userId: decoded.userId,
+      userType: decoded.userType
+    });
+
+    return newToken;
   }
 
   /**

@@ -14,6 +14,7 @@ const {
   AuthenticationError,
   ConflictError 
 } = require('../../errors');
+const { sanitizeUserData, normalizeEmail } = require('../../utils/validation/sanitization.util');
 
 class UserService {
   /**
@@ -90,6 +91,9 @@ class UserService {
    */
   async updateProfile(userId, updates) {
     try {
+      // Sanitize string inputs before processing
+      const sanitizedUpdates = sanitizeUserData(updates);
+
       // Check if user exists
       const user = await this.repository.findById(userId);
 
@@ -102,11 +106,11 @@ class UserService {
       }
 
       // Prevent updating sensitive fields
-      const { password, resetPasswordToken, resetPasswordExpires, ...allowedUpdates } = updates;
+      const { password, resetPasswordToken, resetPasswordExpires, ...allowedUpdates } = sanitizedUpdates;
 
       // If email is being updated, check if it's already taken
       if (allowedUpdates.email && allowedUpdates.email !== user.email) {
-        const normalizedEmail = allowedUpdates.email.toLowerCase();
+        const normalizedEmail = normalizeEmail(allowedUpdates.email);
         const emailTaken = await this.repository.isEmailTaken(normalizedEmail, userId);
 
         if (emailTaken) {

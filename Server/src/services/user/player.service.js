@@ -18,9 +18,46 @@ class PlayerService extends UserService {
    * @param {Logger} logger - Logger instance
    * @param {CacheService|null} cacheService - Cache service (optional)
    */
-  constructor(playerRepository, teamRepository, logger, cacheService = null) {
+  constructor(
+    playerRepository,
+    teamRepository,
+    logger,
+    cacheService = null,
+    authenticationService = null
+  ) {
     super(playerRepository, logger, 'player', cacheService);
     this.teamRepository = teamRepository;
+    this.authenticationService = authenticationService;
+  }
+
+  async registerPlayer(payload) {
+    if (!this.authenticationService) {
+      throw new ValidationError('Authentication service is not configured');
+    }
+    return this.authenticationService.register(payload, 'player');
+  }
+
+  async loginPlayer(email, password) {
+    if (!this.authenticationService) {
+      throw new ValidationError('Authentication service is not configured');
+    }
+    return this.authenticationService.login(email, password, 'player');
+  }
+
+  async getPlayerProfile(playerId) {
+    return this.getProfile(playerId);
+  }
+
+  async getPlayerTeam(playerId, competitionId) {
+    const player = await this.repository.findById(playerId, { populate: 'team' });
+    if (!player) {
+      throw new NotFoundError('Player not found');
+    }
+    return { competitionId, team: player.team || null };
+  }
+
+  async getAvailableTeams() {
+    return this.teamRepository.find({ isActive: true }, { sort: { createdAt: -1 }, limit: 50 });
   }
 
   /**

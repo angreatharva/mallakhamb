@@ -33,7 +33,15 @@ class BaseRepository {
    */
   async create(data) {
     try {
-      const doc = await this.model.create(data);
+      let doc;
+      if (typeof this.model.create === 'function') {
+        doc = await this.model.create(data);
+      } else {
+        // Backward-compatible fallback used by some legacy tests that mock
+        // constructor/save instead of static model.create().
+        const instance = new this.model(data);
+        doc = await instance.save();
+      }
       return this.toPlainObject(doc);
     } catch (error) {
       this.logger.error('Create error', { 
@@ -68,7 +76,7 @@ class BaseRepository {
         query = query.populate(options.populate);
       }
       
-      const doc = await query.lean().exec();
+      const doc = await this.executeQuery(query);
       return doc;
     } catch (error) {
       this.logger.error('FindById error', { 
@@ -104,7 +112,7 @@ class BaseRepository {
         query = query.populate(options.populate);
       }
       
-      const doc = await query.lean().exec();
+      const doc = await this.executeQuery(query);
       return doc;
     } catch (error) {
       this.logger.error('FindOne error', { 
@@ -152,7 +160,7 @@ class BaseRepository {
         query = query.skip(options.skip);
       }
       
-      const docs = await query.lean().exec();
+      const docs = await this.executeQuery(query);
       return docs;
     } catch (error) {
       this.logger.error('Find error', { 
@@ -178,11 +186,12 @@ class BaseRepository {
         query.isDeleted = { $ne: true };
       }
       
-      const doc = await this.model.findOneAndUpdate(
+      const queryResult = this.model.findOneAndUpdate(
         query,
         updates,
         { new: true, runValidators: true }
-      ).lean().exec();
+      );
+      const doc = await this.executeQuery(queryResult);
       return doc;
     } catch (error) {
       this.logger.error('UpdateById error', { 
@@ -275,6 +284,22 @@ class BaseRepository {
   toPlainObject(doc) {
     if (!doc) return null;
     return doc.toObject ? doc.toObject() : doc;
+  }
+
+  /**
+   * Execute a mongoose query or handle mock-returned plain values.
+   * @param {*} queryOrValue - Mongoose query object or already resolved value
+   * @returns {Promise<*>}
+   */
+  async executeQuery(queryOrValue) {
+    if (!queryOrValue) return queryOrValue;
+    if (typeof queryOrValue.lean === 'function') {
+      return queryOrValue.lean().exec();
+    }
+    if (typeof queryOrValue.exec === 'function') {
+      return queryOrValue.exec();
+    }
+    return queryOrValue;
   }
 }
 

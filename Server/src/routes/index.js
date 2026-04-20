@@ -12,17 +12,20 @@
  */
 
 const express = require('express');
-const container = require('../infrastructure/di-container');
-
-// Import refactored route modules
 const createHealthRoutes = require('./health.routes');
 const createAuthRoutes = require('./auth.routes');
 const createPlayerRoutes = require('./player.routes');
 const createCoachRoutes = require('./coach.routes');
 const createAdminRoutes = require('./admin.routes');
-const competitionRoutes = require('./competition.routes');
-const teamRoutes = require('./team.routes');
+const createCompetitionRoutes = require('./competition.routes');
+const createTeamRoutes = require('./team.routes');
 const createScoringRoutes = require('./scoring.routes');
+const createJudgeRoutes = require('./judge.routes');
+const createSuperAdminRoutes = require('./super-admin.routes');
+const createPaymentRoutes = require('./payment.routes');
+
+// CSRF token endpoint
+const { csrfTokenHandler } = require('../middleware/csrf.middleware');
 
 /**
  * Load and register all application routes
@@ -44,7 +47,7 @@ const createScoringRoutes = require('./scoring.routes');
  * @param {Function} options.authLimiter - Rate limiter for authentication endpoints
  * @returns {void}
  */
-function loadRoutes(app, options = {}) {
+function loadRoutes(app, container, options = {}) {
   const { authLimiter } = options;
 
   // ============================================================
@@ -53,6 +56,13 @@ function loadRoutes(app, options = {}) {
   // These should be registered first for quick access by load balancers
   const healthRouter = createHealthRoutes(container);
   app.use('/api/health', healthRouter);
+
+  // ============================================================
+  // CSRF TOKEN ENDPOINT (Requirement 17.3)
+  // ============================================================
+  // Clients that use cookie-based sessions can fetch a CSRF token here.
+  // Bearer-token (JWT) clients are automatically exempt from CSRF checks.
+  app.get('/api/csrf-token', csrfTokenHandler);
 
   // ============================================================
   // AUTHENTICATION ROUTES (with rate limiting)
@@ -101,10 +111,8 @@ function loadRoutes(app, options = {}) {
   }
   app.use('/api/admin', adminRouter);
 
-  // Legacy routes (to be migrated in future tasks)
-  const superAdminRoutes = require('../../routes/superAdminRoutes');
-  const judgeRoutes = require('../../routes/judgeRoutes');
-  
+  const superAdminRoutes = createSuperAdminRoutes(container);
+  const judgeRoutes = createJudgeRoutes(container);
   if (authLimiter) {
     const superAdminAuthRouter = express.Router();
     superAdminAuthRouter.post('/login', authLimiter);
@@ -115,29 +123,20 @@ function loadRoutes(app, options = {}) {
     app.use('/api/judge', judgeAuthRouter);
   }
   
-  app.use('/api/superadmin', superAdminRoutes);
+  app.use('/api/super-admin', superAdminRoutes);
   app.use('/api/judge', judgeRoutes);
 
   // ============================================================
   // COMPETITION ROUTES
   // ============================================================
-  app.use('/api/competitions', competitionRoutes);
+  app.use('/api/competitions', createCompetitionRoutes(container));
 
   // ============================================================
   // TEAM ROUTES
   // ============================================================
-  app.use('/api/teams', teamRoutes);
-
-  // ============================================================
-  // SCORING ROUTES
-  // ============================================================
-  const scoringRouter = createScoringRoutes(container);
-  app.use('/api/scoring', scoringRouter);
-
-  // ============================================================
-  // PUBLIC ROUTES (legacy)
-  // ============================================================
-  app.use('/api/public', require('../../routes/publicRoutes'));
+  app.use('/api/teams', createTeamRoutes(container));
+  app.use('/api/scoring', createScoringRoutes(container));
+  app.use('/api/webhooks', createPaymentRoutes(container));
 
   // ============================================================
   // LEGACY ENDPOINTS (backward compatibility)
@@ -162,12 +161,11 @@ function getRouteGroups() {
     players: '/api/players',
     coaches: '/api/coaches',
     admin: '/api/admin',
-    superadmin: '/api/superadmin',
+    superadmin: '/api/super-admin',
     judge: '/api/judge',
     competitions: '/api/competitions',
     teams: '/api/teams',
-    scoring: '/api/scoring',
-    public: '/api/public'
+    scoring: '/api/scoring'
   };
 }
 
