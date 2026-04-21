@@ -158,6 +158,7 @@ function getRouteGroups() {
   return {
     health: '/api/health',
     auth: '/api/auth',
+    public: '/api/csrf-token',
     players: '/api/players',
     coaches: '/api/coaches',
     admin: '/api/admin',
@@ -165,7 +166,8 @@ function getRouteGroups() {
     judge: '/api/judge',
     competitions: '/api/competitions',
     teams: '/api/teams',
-    scoring: '/api/scoring'
+    scoring: '/api/scoring',
+    webhooks: '/api/webhooks'
   };
 }
 

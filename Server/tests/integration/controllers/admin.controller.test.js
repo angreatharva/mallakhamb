@@ -73,7 +73,7 @@ describe('Admin Routes (hard cutover)', () => {
           };
         }
 
-        return {};
+      return {};
       }),
     };
 

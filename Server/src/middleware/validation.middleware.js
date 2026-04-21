@@ -23,16 +23,11 @@ const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => ({
-      field: error.param,
-      message: error.msg,
-      value: error.value
-    }));
-
-    return res.status(400).json({
-      message: 'Validation error',
-      errors: errorMessages
-    });
+    const details = {};
+    for (const err of errors.array()) {
+      details[err.param] = err.msg;
+    }
+    return next(new ValidationError('Validation error', details));
   }
 
   next();

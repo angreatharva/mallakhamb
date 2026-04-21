@@ -345,24 +345,23 @@ describe('Bootstrap Module', () => {
     test('should register competitionController', () => {
       const controller = container.resolve('competitionController');
       expect(controller).toBeDefined();
-      expect(controller.competitionService).toBeDefined();
-      expect(controller.registrationService).toBeDefined();
-      expect(controller.logger).toBeDefined();
+      expect(typeof controller.createCompetition).toBe('function');
+      expect(typeof controller.getAllCompetitions).toBe('function');
+      expect(typeof controller.getCompetitionById).toBe('function');
     });
 
     test('should register teamController', () => {
       const controller = container.resolve('teamController');
       expect(controller).toBeDefined();
-      expect(controller.teamService).toBeDefined();
-      expect(controller.logger).toBeDefined();
+      expect(typeof controller.createTeam).toBe('function');
+      expect(typeof controller.getAllTeams).toBe('function');
     });
 
     test('should register healthController', () => {
       const controller = container.resolve('healthController');
       expect(controller).toBeDefined();
-      expect(controller.healthMonitor).toBeDefined();
-      expect(controller.metricsCollector).toBeDefined();
-      expect(controller.logger).toBeDefined();
+      expect(typeof controller.health).toBe('function');
+      expect(typeof controller.metrics).toBe('function');
     });
 
     test('should register coachController', () => {

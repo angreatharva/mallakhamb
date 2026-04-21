@@ -238,7 +238,7 @@ NGROK_AUTH_TOKEN=
 ```
 
 ### Validation
-`utils/validateEnv.js` runs at startup before any other initialization. Missing required vars or a `JWT_SECRET` shorter than 32 characters causes immediate `process.exit(1)`.
+`src/config/config-manager.js` runs configuration validation at startup. Missing required vars or a `JWT_SECRET` shorter than 32 characters causes immediate failure.
 
 ### Email Service Setup
 
@@ -250,7 +250,7 @@ NGROK_AUTH_TOKEN=
 **Resend Alternative (Recommended):**
 - Sign up at resend.com
 - Configure RESEND_API_KEY in .env
-- See `utils/resendService.js` and `EMAIL_README.md`
+- See `src/services/email/` (Resend adapter) and `Server/docs/deployment-guide.md`
 
 ---
 
@@ -731,7 +731,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ### 5. Admin Manages Competition
 
 **Step 1: Admin Login**
-- Endpoint: `POST /api/admin/login`
+- Endpoint: `POST /api/auth/admin/login`
 - Returns: JWT token
 
 **Step 2: Select Competition**
@@ -740,11 +740,11 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 - Sets competition context in JWT
 
 **Step 3: View Dashboard**
-- Endpoint: `GET /api/admin/dashboard`
+- Endpoint: `GET /api/admin/dashboard/stats`
 - Shows: Total teams, players, judges
 
 **Step 4: View Submitted Teams**
-- Endpoint: `GET /api/admin/submitted-teams?gender=Male&ageGroup=U14`
+- Endpoint: `GET /api/admin/teams/submitted`
 - Filters by gender and age group
 - Shows teams ready for competition
 
@@ -766,7 +766,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ```json
 {
   "gender": "Male",
-  "ageGroup": "U14",
+  "ageGroup": "Under14",
   "competitionTypes": ["competition_1", "competition_2"],
   "judges": [
     {
@@ -781,7 +781,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ```
 
 **Step 6: Start Age Group Competition**
-- Endpoint: `POST /api/admin/competition/age-group/start`
+- Endpoint: `POST /api/admin/age-groups/:ageGroup/start`
 - Required: gender, ageGroup, competitionType
 - Validates: Minimum 3 judges assigned
 - Locks judge assignments (cannot modify after start)
@@ -1675,17 +1675,17 @@ Body: { password: "NewPassword123!" }
 | # | Issue | Severity | Status | File(s) |
 |---|-------|----------|--------|---------|
 | 1 | Missing rate limiting | Critical | ✅ Fixed | `server.js` |
-| 2 | NoSQL injection in query params | Critical | ✅ Fixed | `server.js`, `utils/sanitization.js`, `controllers/adminController.js` |
+| 2 | NoSQL injection in query params | Critical | ✅ Fixed | `server.js`, `src/utils/validation/sanitization.util.js`, `src/validators/*` |
 | 3 | Insecure CORS (no origin allowed) | Critical | ✅ Fixed | `server.js`, `config/server.config.js` |
 | 4 | Missing security headers | High | ✅ Fixed | `server.js` |
 | 5 | HTTPS not enforced in production | High | ✅ Fixed | `server.js` |
 | 6 | Debug endpoints exposed in production | High | ✅ Fixed | `server.js` |
 | 7 | Socket.IO unauthenticated | High | ✅ Fixed | `server.js` |
 | 8 | Sensitive data in logs (no PII redaction) | High | ✅ Fixed | `utils/logger.js` |
-| 9 | Password reset token reusable | High | ✅ Fixed | `utils/passwordResetTracking.js`, `controllers/authController.js` |
-| 10 | Token not invalidated on logout | Medium | ✅ Fixed | `utils/tokenInvalidation.js`, `middleware/authMiddleware.js`, `controllers/authController.js` |
-| 11 | No account lockout on login | Medium | ✅ Fixed | `utils/accountLockout.js`, all login controllers |
-| 12 | Password min length too short (8) | Medium | ✅ Fixed | `utils/passwordValidation.js` |
+| 9 | Password reset token reusable | High | ✅ Fixed | `src/services/auth/*`, `src/controllers/auth.controller.js` |
+| 10 | Token not invalidated on logout | Medium | ✅ Fixed | `src/utils/security/token-invalidation.util.js`, `src/middleware/auth.middleware.js` |
+| 11 | No account lockout on login | Medium | ✅ Fixed | `src/utils/security/account-lockout.util.js`, `src/controllers/*` login flows |
+| 12 | Password min length too short (8) | Medium | ✅ Fixed | `src/utils/auth/password.util.js` |
 | 13 | Bcrypt salt rounds too low (10) | Medium-High | ✅ Fixed | All models |
 | 14 | Missing email indexes on user models | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js` |
 | 15 | No database connection pooling | Medium | ✅ Fixed | `config/db.js` |
@@ -1695,7 +1695,7 @@ Body: { password: "NewPassword123!" }
 | 19 | Hardcoded production URL in code | Medium | ✅ Fixed | `config/server.config.js` |
 | 20 | Email credentials in plain env vars | High | ⚠️ Acknowledged — production hardening |
 | 21 | Duplicate Socket.IO initialization (crash) | Critical | ✅ Fixed | `server.js` |
-| 22 | Premature `module.exports` in controllers | Critical | ✅ Fixed | `controllers/authController.js`, `controllers/judgeController.js` |
+| 22 | Premature `module.exports` in controllers | Critical | ✅ Fixed | `src/controllers/*` |
 | 23 | Password `minlength` schema inconsistency | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js`, `routes/authRoutes.js` |
 | 24 | Pagination missing on list endpoints | Medium | ⚠️ Add when needed at scale |
 
@@ -1708,9 +1708,9 @@ Body: { password: "NewPassword123!" }
 
 **2. NoSQL Injection Protection**
 - `express-mongo-sanitize` strips `$` and `.` from all user input globally
-- `utils/sanitization.js` whitelist validation:
+- `src/utils/validation/sanitization.util.js` whitelist validation:
   - `VALID_GENDERS`: `['Male', 'Female']`
-  - `VALID_AGE_GROUPS`: `['U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18']`
+  - `VALID_AGE_GROUPS`: `['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']`
   - `VALID_COMPETITION_TYPES`: `['Competition I', 'Competition II', 'Competition III']`
   - `VALID_COMPETITION_STATUSES`: `['upcoming', 'ongoing', 'completed']`
 - `getSubmittedTeams` and `getJudges` validate all enum query params against whitelists
@@ -1745,16 +1745,16 @@ logger.security('Failed login', { email, ip }); // password fields auto-redacted
 `utils/passwordResetTracking.js` — in-memory `usedTokens` Map. Token checked with `isTokenUsed()` before processing, marked with `markTokenAsUsed()` before `user.save()` (prevents race condition). Hourly cleanup of tokens older than 24 hours.
 
 **10. Token Invalidation on Logout**
-`utils/tokenInvalidation.js` — `recordLogout(userId)` called on logout. `isTokenLoggedOut(userId, tokenIssuedAt)` checked in `authMiddleware` on every request. Tokens issued before logout timestamp rejected with `TOKEN_INVALIDATED_LOGOUT`.
+`src/utils/security/token-invalidation.util.js` — token invalidation is checked in `src/middleware/auth.middleware.js` on authenticated requests. Tokens issued before logout timestamp are rejected with `TOKEN_INVALIDATED_LOGOUT`.
 
 **11. Account Lockout**
-`utils/accountLockout.js` — in-memory Map. 5 failed attempts → 15-minute lockout. Applied to all 5 login endpoints (Player, Coach, Admin, SuperAdmin, Judge). Returns remaining lockout time in error response.
+`src/utils/security/account-lockout.util.js` — in-memory Map. 5 failed attempts → 15-minute lockout. Applied to login endpoints (Player, Coach, Admin, SuperAdmin, Judge). Returns remaining lockout time in error response.
 
 **12 & 13. Password Requirements + Bcrypt Rounds**
-- `utils/passwordValidation.js`: `minLength = 12`, uppercase + lowercase + numbers + special chars required
+- `src/utils/auth/password.util.js`: password policy enforcement
 - All models: `bcrypt.genSalt(12)` (was 10)
 - All user models: `minlength: 12` in schema (was 6)
-- `routes/authRoutes.js`: reset password validation `min: 12` (was 6)
+- `src/routes/auth.routes.js`: reset password validation aligned to policy
 
 **14. Email Indexes**
 ```javascript
@@ -1954,8 +1954,15 @@ curl -X POST http://localhost:5000/api/superadmin/competitions \
 
 ```json
 {
-  "message": "Error description",
-  "errors": ["Detail 1", "Detail 2"]
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "code": "ERROR_CODE",
+    "correlationId": "request-id-if-available",
+    "details": {
+      "fieldName": "field-specific message"
+    }
+  }
 }
 ```
 
@@ -1983,37 +1990,57 @@ curl -X POST http://localhost:5000/api/superadmin/competitions \
 **Authentication Errors:**
 ```json
 {
-  "message": "Invalid credentials"
+  "success": false,
+  "error": {
+    "message": "Invalid credentials",
+    "code": "AUTHENTICATION_FAILED",
+    "correlationId": "..."
+  }
 }
 ```
 
 **Account Lockout:**
 ```json
 {
-  "message": "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.",
-  "remainingTime": 15
+  "success": false,
+  "error": {
+    "message": "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.",
+    "code": "ACCOUNT_LOCKED",
+    "correlationId": "...",
+    "details": {
+      "remainingTime": 15
+    }
+  }
 }
 ```
 
 **Validation Errors:**
 ```json
 {
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Please enter a valid email"
+  "success": false,
+  "error": {
+    "message": "Validation error",
+    "code": "VALIDATION_ERROR",
+    "correlationId": "...",
+    "details": {
+      "email": "Please enter a valid email"
     }
-  ]
+  }
 }
 ```
 
 **Authorization Errors:**
 ```json
 {
-  "error": "Access Denied",
-  "message": "You do not have access to this competition",
-  "competitionId": "507f1f77bcf86cd799439011"
+  "success": false,
+  "error": {
+    "message": "You do not have access to this competition",
+    "code": "ACCESS_DENIED",
+    "correlationId": "...",
+    "details": {
+      "competitionId": "507f1f77bcf86cd799439011"
+    }
+  }
 }
 ```
 

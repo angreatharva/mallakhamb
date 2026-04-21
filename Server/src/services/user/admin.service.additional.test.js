@@ -42,13 +42,20 @@ describe('AdminService - additional coverage', () => {
       error: jest.fn()
     };
 
-    adminService = new AdminService(
-      mockAdminRepository,
-      mockPlayerRepository,
-      mockCoachRepository,
-      mockCompetitionRepository,
-      mockLogger
-    );
+    adminService = new AdminService({
+      adminRepository: mockAdminRepository,
+      playerRepository: mockPlayerRepository,
+      coachRepository: mockCoachRepository,
+      competitionRepository: mockCompetitionRepository,
+      teamRepository: { find: jest.fn(), count: jest.fn(), findById: jest.fn(), updateById: jest.fn() },
+      judgeRepository: { find: jest.fn(), count: jest.fn(), findById: jest.fn(), updateById: jest.fn() },
+      scoreRepository: { find: jest.fn(), count: jest.fn(), findById: jest.fn(), updateById: jest.fn() },
+      transactionRepository: { find: jest.fn(), count: jest.fn(), findById: jest.fn(), updateById: jest.fn() },
+      calculationService: { calculateRankings: jest.fn() },
+      socketManager: { emitToUser: jest.fn(), emitToRoom: jest.fn(), broadcast: jest.fn() },
+      cacheService: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
+      logger: mockLogger,
+    });
   });
 
   afterEach(() => {

@@ -461,7 +461,9 @@ describe('Competition Controller Integration Tests', () => {
         .send({});
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('errors');
+      expect(response.body).toHaveProperty('success', false);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toHaveProperty('code');
     });
   });
 
