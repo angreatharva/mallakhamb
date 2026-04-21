@@ -23,6 +23,7 @@ const createScoringRoutes = require('./scoring.routes');
 const createJudgeRoutes = require('./judge.routes');
 const createSuperAdminRoutes = require('./super-admin.routes');
 const createPaymentRoutes = require('./payment.routes');
+const createPublicRoutes = require('./public.routes');
 
 // CSRF token endpoint
 const { csrfTokenHandler } = require('../middleware/csrf.middleware');
@@ -124,7 +125,14 @@ function loadRoutes(app, container, options = {}) {
   }
   
   app.use('/api/super-admin', superAdminRoutes);
+  app.use('/api/superadmin', superAdminRoutes);
   app.use('/api/judge', judgeRoutes);
+
+  // ============================================================
+  // PUBLIC ROUTES (no authentication required)
+  // ============================================================
+  const publicRouter = createPublicRoutes(container);
+  app.use('/api/public', publicRouter);
 
   // ============================================================
   // COMPETITION ROUTES

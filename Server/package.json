@@ -52,6 +52,7 @@
   "devDependencies": {
     "@ngrok/ngrok": "^1.7.0",
     "@types/jest": "^30.0.0",
+    "fast-check": "^4.7.0",
     "jest": "^30.2.0",
     "nodemon": "^3.0.2",
     "supertest": "^7.2.2"
@@ -62,7 +63,9 @@
       "/node_modules/"
     ],
     "testTimeout": 30000,
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
     "maxWorkers": 1
   }
 }

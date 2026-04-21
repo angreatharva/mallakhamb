@@ -26,6 +26,8 @@ describe('Admin Routes (hard cutover)', () => {
 
         if (name === 'adminController') {
           return {
+            registerAdmin: (req, res) => res.status(201).json({ success: true, data: { user: { _id: 'admin1' }, token: 'jwt-token' } }),
+            loginAdmin: (req, res) => res.json({ success: true, data: { user: { _id: 'admin1' }, token: 'jwt-token' } }),
             getDashboardStats: (req, res) => res.json({ success: true, data: { ok: true } }),
             getCompetitionOverview: (req, res) =>
               res.json({ success: true, data: { competitionId: req.params.competitionId } }),
@@ -105,9 +107,18 @@ describe('Admin Routes (hard cutover)', () => {
     expect(res.body.data).toHaveProperty('ok', true);
   });
 
-  it('does not expose legacy auth endpoints under /api/admin', async () => {
-    const res = await request(app).post('/api/admin/register').send({ email: 'x@y.com', password: 'pw' });
-    expect(res.status).toBe(404);
+  it('exposes admin registration endpoint', async () => {
+    const res = await request(app).post('/api/admin/register').send({ email: 'admin@example.com', password: 'SecurePass123', name: 'Admin' });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('success', true);
+    expect(res.body.data).toHaveProperty('token');
+  });
+
+  it('exposes admin login endpoint', async () => {
+    const res = await request(app).post('/api/admin/login').send({ email: 'admin@example.com', password: 'SecurePass123' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('success', true);
+    expect(res.body.data).toHaveProperty('token');
   });
 });
 

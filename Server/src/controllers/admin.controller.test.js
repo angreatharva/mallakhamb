@@ -8,6 +8,8 @@ const createAdminController = require('../controllers/admin.controller');
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const buildService = (overrides = {}) => ({
+  registerAdmin: jest.fn(),
+  loginAdmin: jest.fn(),
   getDashboardStats: jest.fn(),
   getCompetitionOverview: jest.fn(),
   getSystemHealth: jest.fn(),
@@ -64,6 +66,25 @@ const req = (overrides = {}) => ({ user: { _id: 'admin1' }, competitionId: 'comp
 describe('admin.controller', () => {
   let svc, ctrl;
   beforeEach(() => { jest.clearAllMocks(); svc = buildService(); ctrl = createAdminController(buildContainer(svc)); });
+
+  it('registerAdmin — delegates and returns 201', async () => {
+    const result = { user: { _id: 'admin1', email: 'admin@example.com' }, token: 'jwt-token' };
+    svc.registerAdmin.mockResolvedValue(result);
+    const r = res();
+    await ctrl.registerAdmin(req({ body: { email: 'admin@example.com', password: 'SecurePass123', name: 'Admin' } }), r, next());
+    expect(svc.registerAdmin).toHaveBeenCalledWith({ email: 'admin@example.com', password: 'SecurePass123', name: 'Admin' });
+    expect(r.status).toHaveBeenCalledWith(201);
+    expect(r.json).toHaveBeenCalledWith({ success: true, data: result });
+  });
+
+  it('loginAdmin — delegates and returns data', async () => {
+    const result = { user: { _id: 'admin1', email: 'admin@example.com' }, token: 'jwt-token' };
+    svc.loginAdmin.mockResolvedValue(result);
+    const r = res();
+    await ctrl.loginAdmin(req({ body: { email: 'admin@example.com', password: 'SecurePass123' } }), r, next());
+    expect(svc.loginAdmin).toHaveBeenCalledWith('admin@example.com', 'SecurePass123');
+    expect(r.json).toHaveBeenCalledWith({ success: true, data: result });
+  });
 
   it('getDashboardStats — delegates and returns data', async () => {
     svc.getDashboardStats.mockResolvedValue({ total: 5 });

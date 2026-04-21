@@ -132,6 +132,7 @@ function bootstrap() {
     socketManager: null,
     logger: c.resolve('logger'),
     cacheService: c.resolve('cacheService'),
+    authenticationService: c.resolve('authenticationService'),
   }), 'singleton');
   container.register('superAdminService', (c) => new SuperAdminService({
     authenticationService: c.resolve('authenticationService'),

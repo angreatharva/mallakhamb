@@ -37,6 +37,22 @@ function createAdminRoutes(container) {
   // Get controller from DI container
   const adminController = container.resolve('adminController');
 
+  // ==================== Public Authentication Routes ====================
+
+  /**
+   * @route   POST /api/admin/register
+   * @desc    Register a new admin
+   * @access  Public
+   */
+  router.post('/register', adminController.registerAdmin);
+
+  /**
+   * @route   POST /api/admin/login
+   * @desc    Login an admin
+   * @access  Public
+   */
+  router.post('/login', adminController.loginAdmin);
+
   // ==================== Dashboard & Statistics ====================
 
   /**

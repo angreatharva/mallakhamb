@@ -19,6 +19,21 @@ function createAdminController(container) {
   const logger = container.resolve('logger');
 
   return {
+    // ==================== Authentication ====================
+
+    /** @route POST /api/admin/register */
+    registerAdmin: asyncHandler(async (req, res) => {
+      const result = await adminService.registerAdmin(req.body);
+      res.status(201).json({ success: true, data: result });
+    }),
+
+    /** @route POST /api/admin/login */
+    loginAdmin: asyncHandler(async (req, res) => {
+      const { email, password } = req.body;
+      const result = await adminService.loginAdmin(email, password);
+      res.json({ success: true, data: result });
+    }),
+
     // ==================== Dashboard & Statistics ====================
 
     /** @route GET /api/admin/dashboard/stats */

@@ -27,6 +27,61 @@ class AdminService extends UserService {
     this.transactionRepository = dependencies.transactionRepository;
     this.calculationService = dependencies.calculationService;
     this.socketManager = dependencies.socketManager;
+    this.authenticationService = dependencies.authenticationService;
+  }
+
+  /**
+   * Register a new admin
+   * @param {Object} data - Admin registration data
+   * @returns {Promise<Object>} { user, token }
+   * @throws {ConflictError} If email already exists
+   * @throws {ValidationError} If validation fails
+   */
+  async registerAdmin(data) {
+    try {
+      // Delegate to AuthenticationService
+      const result = await this.authenticationService.register(data, 'admin');
+      
+      this.logger.info('Admin registered successfully', { 
+        adminId: result.user._id 
+      });
+      
+      return result;
+    } catch (error) {
+      // Re-throw domain errors unchanged
+      this.logger.error('Admin registration error', { 
+        email: data.email, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Login an admin
+   * @param {string} email - Admin email
+   * @param {string} password - Admin password
+   * @returns {Promise<Object>} { user, token }
+   * @throws {AuthenticationError} If credentials are invalid
+   */
+  async loginAdmin(email, password) {
+    try {
+      // Delegate to AuthenticationService
+      const result = await this.authenticationService.login(email, password, 'admin');
+      
+      this.logger.info('Admin logged in successfully', { 
+        adminId: result.user._id 
+      });
+      
+      return result;
+    } catch (error) {
+      // Re-throw AuthenticationError and lockout errors unchanged
+      this.logger.error('Admin login error', { 
+        email, 
+        error: error.message 
+      });
+      throw error;
+    }
   }
 
   /**

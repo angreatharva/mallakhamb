@@ -23,6 +23,7 @@ describe('AdminService', () => {
   let mockSocketManager;
   let mockLogger;
   let mockCacheService;
+  let mockAuthenticationService;
 
   beforeEach(() => {
     // Create mock repositories
@@ -100,6 +101,11 @@ describe('AdminService', () => {
       delete: jest.fn()
     };
 
+    mockAuthenticationService = {
+      register: jest.fn(),
+      login: jest.fn()
+    };
+
     // Create service instance with dependencies object
     adminService = new AdminService({
       adminRepository: mockAdminRepository,
@@ -113,12 +119,128 @@ describe('AdminService', () => {
       calculationService: mockCalculationService,
       socketManager: mockSocketManager,
       logger: mockLogger,
-      cacheService: mockCacheService
+      cacheService: mockCacheService,
+      authenticationService: mockAuthenticationService
     });
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('registerAdmin', () => {
+    it('should register admin successfully', async () => {
+      const adminData = {
+        email: 'admin@example.com',
+        password: 'SecurePass123',
+        name: 'Admin User'
+      };
+
+      const mockResult = {
+        user: {
+          _id: 'admin123',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'admin'
+        },
+        token: 'jwt-token-123'
+      };
+
+      mockAuthenticationService.register.mockResolvedValue(mockResult);
+
+      const result = await adminService.registerAdmin(adminData);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthenticationService.register).toHaveBeenCalledWith(adminData, 'admin');
+      expect(mockLogger.info).toHaveBeenCalledWith('Admin registered successfully', {
+        adminId: 'admin123'
+      });
+    });
+
+    it('should re-throw ConflictError for duplicate email', async () => {
+      const adminData = {
+        email: 'admin@example.com',
+        password: 'SecurePass123',
+        name: 'Admin User'
+      };
+
+      const { ConflictError } = require('../../errors');
+      const error = new ConflictError('Email already registered');
+
+      mockAuthenticationService.register.mockRejectedValue(error);
+
+      await expect(adminService.registerAdmin(adminData)).rejects.toThrow(ConflictError);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should re-throw ValidationError for weak password', async () => {
+      const adminData = {
+        email: 'admin@example.com',
+        password: 'weak',
+        name: 'Admin User'
+      };
+
+      const { ValidationError } = require('../../errors');
+      const error = new ValidationError('Password does not meet requirements');
+
+      mockAuthenticationService.register.mockRejectedValue(error);
+
+      await expect(adminService.registerAdmin(adminData)).rejects.toThrow(ValidationError);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('loginAdmin', () => {
+    it('should login admin successfully', async () => {
+      const email = 'admin@example.com';
+      const password = 'SecurePass123';
+
+      const mockResult = {
+        user: {
+          _id: 'admin123',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'admin'
+        },
+        token: 'jwt-token-123'
+      };
+
+      mockAuthenticationService.login.mockResolvedValue(mockResult);
+
+      const result = await adminService.loginAdmin(email, password);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthenticationService.login).toHaveBeenCalledWith(email, password, 'admin');
+      expect(mockLogger.info).toHaveBeenCalledWith('Admin logged in successfully', {
+        adminId: 'admin123'
+      });
+    });
+
+    it('should re-throw AuthenticationError for invalid credentials', async () => {
+      const email = 'admin@example.com';
+      const password = 'wrongpassword';
+
+      const { AuthenticationError } = require('../../errors');
+      const error = new AuthenticationError('Invalid credentials');
+
+      mockAuthenticationService.login.mockRejectedValue(error);
+
+      await expect(adminService.loginAdmin(email, password)).rejects.toThrow(AuthenticationError);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should re-throw lockout errors', async () => {
+      const email = 'admin@example.com';
+      const password = 'SecurePass123';
+
+      const { AuthenticationError } = require('../../errors');
+      const error = new AuthenticationError('Account locked due to too many failed attempts');
+
+      mockAuthenticationService.login.mockRejectedValue(error);
+
+      await expect(adminService.loginAdmin(email, password)).rejects.toThrow(AuthenticationError);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 
   describe('getProfile', () => {
