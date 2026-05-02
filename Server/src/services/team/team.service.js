@@ -276,7 +276,7 @@ class TeamService {
       // Fetch from database
       const team = await this.teamRepository.findById(teamId, {
         populate: [
-          { path: 'coach', select: 'firstName lastName email' }
+          { path: 'coach', select: 'name firstName lastName email' }
         ]
       });
 
@@ -285,10 +285,41 @@ class TeamService {
         throw new NotFoundError('Team', teamId);
       }
 
-      // Cache result
-      this.cacheService.set(cacheKey, team, 300); // 5 minutes
+      // Get players for this team (players reference teams, not the other way around)
+      const players = await this.playerRepository.find({ team: teamId });
 
-      return team;
+      // Build comprehensive team response similar to admin service
+      const teamWithDetails = {
+        _id: team._id,
+        name: team.name,
+        coach: team.coach ? {
+          _id: team.coach._id,
+          name: team.coach.name,
+          firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
+          lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
+          email: team.coach.email
+        } : null,
+        players: players.map(p => ({
+          _id: p._id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          email: p.email,
+          ageGroup: p.ageGroup,
+          gender: p.gender,
+          dateOfBirth: p.dateOfBirth,
+          isActive: p.isActive
+        })),
+        playerCount: players.length,
+        description: team.description,
+        isActive: team.isActive,
+        createdAt: team.createdAt,
+        updatedAt: team.updatedAt
+      };
+
+      // Cache result
+      this.cacheService.set(cacheKey, teamWithDetails, 300); // 5 minutes
+
+      return teamWithDetails;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;

@@ -18,6 +18,7 @@ const { ValidationError } = require('../errors');
  */
 const validateCompetitionContext = (req, res, next) => {
   // Check if competition ID is in user object (from token)
+  // Priority: token > header > body > query
   const competitionId = req.user?.currentCompetition || 
                         req.headers['x-competition-id'] ||
                         req.body?.competitionId ||

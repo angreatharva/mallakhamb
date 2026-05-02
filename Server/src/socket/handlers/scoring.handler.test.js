@@ -120,8 +120,8 @@ describe('ScoringHandler', () => {
       expect(mockSocket.emit).toHaveBeenCalledWith(EventTypes.ROOM_JOINED, expect.any(Object));
     });
 
-    it('should allow coach to join scoring room', async () => {
-      mockSocket.userType = 'coach';
+    it('should allow superadmin to join scoring room', async () => {
+      mockSocket.userType = 'superadmin';
       mockSocketManager.joinRoom.mockResolvedValue(true);
 
       await scoringHandler.handleJoinScoringRoom(mockSocket, {
@@ -130,6 +130,30 @@ describe('ScoringHandler', () => {
 
       expect(mockSocketManager.joinRoom).toHaveBeenCalled();
       expect(mockSocket.emit).toHaveBeenCalledWith(EventTypes.ROOM_JOINED, expect.any(Object));
+    });
+
+    it('should reject player from joining scoring room', async () => {
+      mockSocket.userType = 'player';
+      mockSocketManager.joinRoom.mockResolvedValue(false);
+
+      await scoringHandler.handleJoinScoringRoom(mockSocket, {
+        roomId: 'comp-456_male_u12_individual'
+      });
+
+      expect(mockSocketManager.joinRoom).toHaveBeenCalled();
+      expect(mockSocket.emit).not.toHaveBeenCalled();
+    });
+
+    it('should reject spectator from joining scoring room', async () => {
+      mockSocket.userType = 'spectator';
+      mockSocketManager.joinRoom.mockResolvedValue(false);
+
+      await scoringHandler.handleJoinScoringRoom(mockSocket, {
+        roomId: 'comp-456_male_u12_individual'
+      });
+
+      expect(mockSocketManager.joinRoom).toHaveBeenCalled();
+      expect(mockSocket.emit).not.toHaveBeenCalled();
     });
 
     it('should throw error if room ID is missing', async () => {

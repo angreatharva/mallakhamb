@@ -14,13 +14,16 @@ const { email, mongoId } = require('./common.validator');
  */
 const login = () => {
   return [
-    email('email'),
+    body('username')
+      .trim()
+      .notEmpty()
+      .withMessage('Username is required')
+      .isLength({ min: 3, max: 50 })
+      .withMessage('Username must be between 3 and 50 characters'),
     body('password')
       .trim()
       .notEmpty()
-      .withMessage('Password is required'),
-    mongoId('competitionId', 'body')
-      .withMessage('Valid competition ID is required')
+      .withMessage('Password is required')
   ];
 };
 

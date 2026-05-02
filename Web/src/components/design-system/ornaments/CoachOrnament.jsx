@@ -16,7 +16,7 @@ import { DESIGN_TOKENS } from '../../../styles/tokens';
  * 
  * @example
  * <CoachOrnament size="lg" />
- * <CoachOrnament color="#22C55E" />
+ * <CoachOrnament color="#FF6B00" />
  */
 const CoachOrnament = ({ size = 'md', color }) => {
   const reduced = useReducedMotion();

@@ -128,7 +128,7 @@ describe('Token Helper Functions', () => {
 
     it('should return correct color for "coach" role', () => {
       const color = getRoleColor('coach');
-      expect(color).toBe('#22C55E');
+      expect(color).toBe('#FF6B00');
       expect(color).toBe(DESIGN_TOKENS.colors.roles.coach);
     });
 
@@ -200,7 +200,7 @@ describe('Token Helper Functions', () => {
 
     it('should return rgba color with 9% opacity for "coach" role', () => {
       const bgColor = getRoleBg('coach');
-      expect(bgColor).toBe('rgba(34, 197, 94, 0.09)');
+      expect(bgColor).toBe('rgba(255, 107, 0, 0.09)');
     });
 
     it('should return rgba color with 9% opacity for "player" role', () => {

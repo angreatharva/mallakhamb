@@ -51,13 +51,106 @@ class PlayerService extends UserService {
   async getPlayerTeam(playerId, competitionId) {
     const player = await this.repository.findById(playerId, { populate: 'team' });
     if (!player) {
-      throw new NotFoundError('Player not found');
+      throw new NotFoundError('Player');
     }
     return { competitionId, team: player.team || null };
   }
 
   async getAvailableTeams() {
-    return this.teamRepository.find({ isActive: true }, { sort: { createdAt: -1 }, limit: 50 });
+    return this.teamRepository.find(
+      { isActive: true }, 
+      { 
+        sort: { createdAt: -1 }, 
+        limit: 50,
+        populate: 'coach' // Populate coach information
+      }
+    );
+  }
+
+  /**
+   * Join a team (assign player to team)
+   * @param {string} playerId - Player ID
+   * @param {string} teamId - Team ID
+   * @param {string} competitionId - Competition ID (optional for now)
+   * @returns {Promise<Object>} Result with token and team info
+   */
+  async joinTeam(playerId, teamId, competitionId = null) {
+    try {
+      // Check if player exists
+      const player = await this.repository.findById(playerId);
+      if (!player) {
+        this.logger.warn('Join team failed: Player not found', { playerId });
+        throw new NotFoundError('Player');
+      }
+
+      // Check if team exists
+      const team = await this.teamRepository.findById(teamId);
+      if (!team) {
+        this.logger.warn('Join team failed: Team not found', { teamId });
+        throw new NotFoundError('Team');
+      }
+
+      // Update player's team
+      const updatedPlayer = await this.repository.updateById(playerId, { team: teamId });
+      if (!updatedPlayer) {
+        throw new Error('Failed to update player team');
+      }
+
+      // Generate new token with team context if authentication service is available
+      let token = null;
+      if (this.authenticationService) {
+        try {
+          // Create a new token with updated user data
+          const tokenData = await this.authenticationService.generateToken({
+            _id: updatedPlayer._id,
+            email: updatedPlayer.email,
+            team: teamId,
+            competitionId: competitionId
+          }, 'player');
+          token = tokenData.token;
+        } catch (error) {
+          this.logger.warn('Failed to generate new token after joining team', { 
+            playerId, 
+            teamId, 
+            error: error.message 
+          });
+          // Continue without token - not critical for the join operation
+        }
+      }
+
+      this.logger.info('Player joined team successfully', { 
+        playerId, 
+        teamId, 
+        competitionId 
+      });
+
+      return {
+        token,
+        team: {
+          id: teamId,
+          name: team.name,
+          description: team.description
+        },
+        player: {
+          id: updatedPlayer._id,
+          firstName: updatedPlayer.firstName,
+          lastName: updatedPlayer.lastName,
+          email: updatedPlayer.email,
+          team: teamId
+        }
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Join team error', { 
+        playerId, 
+        teamId, 
+        competitionId, 
+        error: error.message 
+      });
+      throw error;
+    }
   }
 
   /**
@@ -74,7 +167,7 @@ class PlayerService extends UserService {
 
       if (!player) {
         this.logger.warn('Get player profile failed: Player not found', { playerId });
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       // Remove password from response
@@ -110,7 +203,7 @@ class PlayerService extends UserService {
 
       if (!player) {
         this.logger.warn('Assign to team failed: Player not found', { playerId });
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       // Check if player is already in a team
@@ -127,7 +220,7 @@ class PlayerService extends UserService {
 
       if (!team) {
         this.logger.warn('Assign to team failed: Team not found', { teamId });
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
 
       // Validate player eligibility for team (age group and gender)
@@ -190,7 +283,7 @@ class PlayerService extends UserService {
 
       if (!player) {
         this.logger.warn('Remove from team failed: Player not found', { playerId });
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       // Check if player is in a team
@@ -318,3 +411,4 @@ class PlayerService extends UserService {
 }
 
 module.exports = PlayerService;
+

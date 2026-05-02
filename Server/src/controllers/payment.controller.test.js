@@ -62,7 +62,7 @@ describe('payment.controller', () => {
 
   describe('reconcileRazorpayWebhook', () => {
     it('passes rawBody, signature, and parsed body to service', async () => {
-      svc.reconcileWebhook.mockResolvedValue(undefined);
+      svc.reconcileWebhook.mockResolvedValue({ processed: true });
 
       const req = buildWebhookReq({ event: 'payment.captured', signature: 'valid_sig' });
       const r = res();
@@ -83,7 +83,7 @@ describe('payment.controller', () => {
     });
 
     it('returns 200 for payment.failed event when service resolves', async () => {
-      svc.reconcileWebhook.mockResolvedValue(undefined);
+      svc.reconcileWebhook.mockResolvedValue({ processed: true });
 
       const req = buildWebhookReq({ event: 'payment.failed' });
       const r = res();
@@ -91,6 +91,34 @@ describe('payment.controller', () => {
       await ctrl.reconcileRazorpayWebhook(req, r, next());
 
       expect(r.status).toHaveBeenCalledWith(200);
+    });
+
+    it('returns 200 with ignored message when event is ignored', async () => {
+      svc.reconcileWebhook.mockResolvedValue({ processed: false, message: 'Webhook event ignored' });
+
+      const req = buildWebhookReq({ event: 'payment.refunded' });
+      const r = res();
+
+      await ctrl.reconcileRazorpayWebhook(req, r, next());
+
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(r.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: 'Webhook event ignored' })
+      );
+    });
+
+    it('returns 200 with no matching order message when order not found', async () => {
+      svc.reconcileWebhook.mockResolvedValue({ processed: false, message: 'No matching order found' });
+
+      const req = buildWebhookReq({ orderId: 'nonexistent_order' });
+      const r = res();
+
+      await ctrl.reconcileRazorpayWebhook(req, r, next());
+
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(r.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: 'No matching order found' })
+      );
     });
 
     it('calls next(error) when service rejects for invalid signature', async () => {
@@ -136,7 +164,7 @@ describe('payment.controller', () => {
     });
 
     it('extracts signature from correct header', async () => {
-      svc.reconcileWebhook.mockResolvedValue(undefined);
+      svc.reconcileWebhook.mockResolvedValue({ processed: true });
 
       const req = buildWebhookReq({ signature: 'sha256_abc' });
       const r = res();

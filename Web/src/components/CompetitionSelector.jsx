@@ -53,7 +53,7 @@ const CompetitionSelector = ({ userType }) => {
 
   const handleNewRegistration = () => {
     setIsOpen(false);
-    if (userType === 'player') navigate('/player/select-team');
+    if (userType === 'player') navigate('/player/select-competition');
     else if (userType === 'coach') navigate('/coach/select-competition');
   };
 
@@ -70,7 +70,9 @@ const CompetitionSelector = ({ userType }) => {
 
   if (isLoading) return null;
   if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1)) return null;
-  if ((userType === 'player' || userType === 'coach') && (!assignedCompetitions || assignedCompetitions.length === 0)) return null;
+  // For coaches, always show the selector (even with 0 competitions) so they can register for new ones
+  // For players, hide if no competitions
+  if (userType === 'player' && (!assignedCompetitions || assignedCompetitions.length === 0)) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -96,7 +98,7 @@ const CompetitionSelector = ({ userType }) => {
           <span className="text-xs font-semibold text-white truncate w-full">
             {currentCompetition
               ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
-              : 'Select'}
+              : (userType === 'coach' ? 'Select Competition' : 'Select')}
           </span>
         </div>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -123,7 +125,9 @@ const CompetitionSelector = ({ userType }) => {
             {/* Header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>
-                Switch Competition
+                {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0) 
+                  ? 'Select Competition' 
+                  : 'Switch Competition'}
               </p>
             </div>
 
@@ -230,7 +234,9 @@ const CompetitionSelector = ({ userType }) => {
                 >
                   <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>Register for New Competition</p>
+                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
+                      {userType === 'coach' ? 'Sign up for new competition' : 'Register for New Competition'}
+                    </p>
                     <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
                       {userType === 'player' ? 'Join a team for a new competition' : 'Register your team'}
                     </p>

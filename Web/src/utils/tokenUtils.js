@@ -31,5 +31,5 @@ export const getTokenData = (token) => {
 
 export const getCompetitionIdFromToken = (token) => {
   const data = getTokenData(token);
-  return data?.currentCompetition || null;
+  return data?.competitionId || null;
 };

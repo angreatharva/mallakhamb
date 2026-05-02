@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
   ChevronDown, Save, Users
@@ -9,6 +9,7 @@ import { superAdminAPI } from '../../services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import Dropdown from '../../components/Dropdown';
+import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -253,7 +254,7 @@ const SuperAdminManagement = () => {
   const [showAdminManagementModal, setShowAdminManagementModal] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
 
-  // Player form
+  // Player form - removed, now using AddPlayerForm component
   const [playerFormData, setPlayerFormData] = useState({
     name: '', email: '', password: '', phone: '', dateOfBirth: '',
     gender: { value: 'Male', label: 'Male' }, teamId: null, competitionId: null, paymentStatus: { value: 'pending', label: 'Pending' }
@@ -273,22 +274,52 @@ const SuperAdminManagement = () => {
     try {
       if (activeSection === 'admins') {
         const r = await superAdminAPI.getAllAdmins();
-        setAdmins(r.data.admins);
+        // Handle nested response structure
+        const responseData = r.data.data || r.data;
+        const adminsArray = Array.isArray(responseData) ? responseData : (responseData.admins || []);
+        setAdmins(adminsArray);
       } else if (activeSection === 'coaches') {
         const r = await superAdminAPI.getAllCoaches();
-        setCoaches(r.data.coaches);
+        // Handle nested response structure
+        const responseData = r.data.data || r.data;
+        const coachesArray = Array.isArray(responseData) ? responseData : (responseData.coaches || []);
+        setCoaches(coachesArray);
       } else if (activeSection === 'competitions') {
         const [cr, ar] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllAdmins()]);
-        setCompetitions(cr.data.competitions);
-        setAdmins(ar.data.admins);
+        // Handle nested response structures
+        const compData = cr.data.data || cr.data;
+        const adminData = ar.data.data || ar.data;
+        const competitionsArray = Array.isArray(compData) ? compData : (compData.competitions || []);
+        const adminsArray = Array.isArray(adminData) ? adminData : (adminData.admins || []);
+        setCompetitions(competitionsArray);
+        setAdmins(adminsArray);
       } else if (activeSection === 'addPlayer') {
-        const [cr, tr] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllTeams()]);
-        setCompetitions(cr.data.competitions);
-        setTeams(tr.data.teams || []);
+        const cr = await superAdminAPI.getAllCompetitions();
+        // Handle nested response structures
+        const compData = cr.data.data || cr.data;
+        const competitionsArray = Array.isArray(compData) ? compData : (compData.competitions || []);
+        setCompetitions(competitionsArray);
+        // Don't fetch teams initially - they will be fetched when competition is selected
+        setTeams([]);
       }
     } catch { toast.error('Failed to load data'); }
     finally { setLoading(false); }
   };
+
+  // Function to fetch teams based on competition selection
+  const fetchTeamsByCompetition = useCallback(async (competitionId) => {
+    try {
+      const params = competitionId ? { competition: competitionId } : {};
+      const tr = await superAdminAPI.getAllTeams(params);
+      const teamData = tr.data.data || tr.data;
+      const teamsArray = Array.isArray(teamData) ? teamData : (teamData.teams || []);
+      setTeams(teamsArray);
+      return teamsArray;
+    } catch (error) {
+      toast.error('Failed to load teams');
+      return [];
+    }
+  }, []);
 
   // ─── Admin CRUD ────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
@@ -432,7 +463,9 @@ const SuperAdminManagement = () => {
       await superAdminAPI.assignAdminToCompetition(selectedCompetition._id, { adminId });
       toast.success('Admin assigned');
       const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(r.data.competition);
+      // Handle nested response structure
+      const responseData = r.data.data || r.data;
+      setSelectedCompetition(responseData.competition || responseData);
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to assign admin'); }
   };
@@ -443,30 +476,26 @@ const SuperAdminManagement = () => {
       await superAdminAPI.removeAdminFromCompetition(selectedCompetition._id, adminId);
       toast.success('Admin removed');
       const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(r.data.competition);
+      // Handle nested response structure
+      const responseData = r.data.data || r.data;
+      setSelectedCompetition(responseData.competition || responseData);
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove admin'); }
   };
 
   // ─── Add Player ────────────────────────────────────────────────────────────
-  const handleAddPlayer = async (e) => {
-    e.preventDefault();
-    if (!playerFormData.competitionId) { toast.error('Select a competition'); return; }
-    if (!playerFormData.teamId) { toast.error('Select a team'); return; }
-    try {
-      await superAdminAPI.addPlayerToTeam({ 
-        ...playerFormData, 
-        gender: playerFormData.gender.value,
-        team: playerFormData.teamId.value, 
-        competition: playerFormData.competitionId.value,
-        paymentStatus: playerFormData.paymentStatus.value
-      });
-      toast.success('Player added');
-      setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } });
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add player'); }
+  // Removed - now handled by AddPlayerForm component
+  const handlePlayerAdded = (playerData) => {
+    // Show success message
+    toast.success(`Player added successfully!`);
+    
+    // Refresh teams list for the competition that was used
+    if (activeSection === 'addPlayer' && playerData?.competitionId) {
+      fetchTeamsByCompetition(playerData.competitionId);
+    }
   };
 
-  const filteredAdmins = admins.filter(a => a.role !== 'super_admin').filter(a => {
+  const filteredAdmins = (admins || []).filter(a => a.role !== 'super_admin').filter(a => {
     if (!adminSearchQuery) return true;
     const q = adminSearchQuery.toLowerCase();
     return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
@@ -599,7 +628,9 @@ const SuperAdminManagement = () => {
                 <UserPlus className="w-4 h-4" /> Add Admin
               </DarkBtn>
             </div>
-            {loading ? <LoadingState /> : (
+            {loading ? <LoadingState /> : admins.length === 0 ? (
+              <EmptyState icon={Shield} title="No admins yet" desc="Create your first admin to get started." />
+            ) : (
               <DarkTable headers={['Name','Email','Role','Status','Actions']}>
                 {admins.map((admin, i) => (
                   <DarkTr key={admin._id} delay={i * 0.03}>
@@ -642,7 +673,9 @@ const SuperAdminManagement = () => {
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
               <h2 className="text-2xl font-black text-white">Coaches</h2>
             </div>
-            {loading ? <LoadingState /> : (
+            {loading ? <LoadingState /> : coaches.length === 0 ? (
+              <EmptyState icon={UserCheck} title="No coaches yet" desc="Coaches will appear here once registered." />
+            ) : (
               <DarkTable headers={['Name','Email','Phone','Status','Actions']}>
                 {coaches.map((coach, i) => (
                   <DarkTr key={coach._id} delay={i * 0.03}>
@@ -673,69 +706,12 @@ const SuperAdminManagement = () => {
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
               <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
             </div>
-            <form onSubmit={handleAddPlayer} className="max-w-2xl space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DarkInput label="Player Name" required placeholder="Full name" value={playerFormData.name}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, name: e.target.value })} />
-                <DarkInput label="Email" required type="email" placeholder="email@example.com" value={playerFormData.email}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, email: e.target.value })} />
-                <DarkInput label="Password" required type="password" placeholder="Min 6 characters" minLength={6} value={playerFormData.password}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, password: e.target.value })} />
-                <DarkInput label="Phone" type="tel" placeholder="Phone number" value={playerFormData.phone}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })} />
-                <DarkInput label="Date of Birth" required type="date" value={playerFormData.dateOfBirth}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })} />
-                <Dropdown 
-                  label="Gender" 
-                  options={[
-                    { value: 'Male', label: 'Male' },
-                    { value: 'Female', label: 'Female' }
-                  ]}
-                  value={playerFormData.gender}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, gender: option })}
-                  placeholder="Select gender"
-                />
-                <Dropdown 
-                  label="Competition" 
-                  options={competitions.map(c => ({
-                    value: c._id,
-                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
-                  }))}
-                  value={playerFormData.competitionId}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, competitionId: option, teamId: null })}
-                  placeholder="Select Competition"
-                />
-                <Dropdown 
-                  label="Team" 
-                  options={teams
-                    .filter(t => playerFormData.competitionId && (t.competition?._id === playerFormData.competitionId.value || t.competitionId === playerFormData.competitionId.value))
-                    .map(t => ({ value: t._id, label: t.team?.name || t.name || 'Unnamed Team' }))}
-                  value={playerFormData.teamId}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, teamId: option })}
-                  placeholder="Select Team"
-                  disabled={!playerFormData.competitionId}
-                />
-                <Dropdown 
-                  label="Payment Status" 
-                  options={[
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'completed', label: 'Completed' },
-                    { value: 'failed', label: 'Failed' }
-                  ]}
-                  value={playerFormData.paymentStatus}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, paymentStatus: option })}
-                  placeholder="Select payment status"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <DarkBtn type="button" variant="ghost" onClick={() => setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } })}>
-                  Reset
-                </DarkBtn>
-                <DarkBtn type="submit" variant="primary">
-                  <UserPlus className="w-4 h-4" /> Add Player
-                </DarkBtn>
-              </div>
-            </form>
+            <AddPlayerForm 
+              teams={teams} 
+              competitions={competitions} 
+              onSuccess={handlePlayerAdded}
+              onFetchTeams={fetchTeamsByCompetition}
+            />
           </DarkCard>
         </FadeIn>
       )}
@@ -963,7 +939,7 @@ const SuperAdminManagement = () => {
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {admins.filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
+                {(admins || []).filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
                   <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
                     style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>

@@ -19,7 +19,7 @@ export const DESIGN_TOKENS = {
     roles: {
       admin: '#8B5CF6',       // Purple (WCAG AA compliant)
       superadmin: '#F5A623',  // Gold (WCAG AA compliant)
-      coach: '#22C55E',       // Green (WCAG AA compliant)
+      coach: '#FF6B00',       // Orange/Saffron (WCAG AA compliant)
       player: '#FF6B00',      // Saffron (WCAG AA compliant)
       judge: '#8B5CF6',       // Purple (WCAG AA compliant)
       public: '#3B82F6',      // Blue (WCAG AA compliant)

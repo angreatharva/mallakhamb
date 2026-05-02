@@ -12,6 +12,7 @@ import { logger } from '../../utils/logger';
 import { secureStorage } from '../../utils/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
+import ScoreCalculationDisplay from '../../components/admin/ScoreCalculationDisplay';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -34,6 +35,7 @@ const AdminScoring = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [ageGroupStarted, setAgeGroupStarted] = useState(false);
     const [competitionType, setCompetitionType] = useState('Competition I');
+    const [calculatedScores, setCalculatedScores] = useState([]);
 
     useEffect(() => {
         const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
@@ -64,6 +66,20 @@ const AdminScoring = () => {
         newSocket.on('connect_error', (error) => {
             setIsConnected(false);
             logger.error('Admin socket connection error:', error);
+            // Handle authorization errors (Requirement 4.6)
+            if (error.message && (error.message.includes('authorization') || error.message.includes('Unauthorized'))) {
+                toast.error('Not authorized to access scoring room');
+                navigate(`${routePrefix}/dashboard`);
+            }
+        });
+        
+        // Handle room join authorization errors (Requirement 4.2)
+        newSocket.on('error', (error) => {
+            logger.error('Socket error:', error);
+            if (error.message === 'Not authorized to join this room') {
+                toast.error('You do not have permission to access this scoring room');
+                navigate(`${routePrefix}/dashboard/scores`);
+            }
         });
         return () => newSocket.disconnect();
     }, [selectedGender, selectedAgeGroup, selectedCompetitionType, routePrefix]);
@@ -86,9 +102,34 @@ const AdminScoring = () => {
                 fetchScoringData();
             }
         };
+        
+        // Handle score update authorization errors (Requirement 4.3)
+        const handleScoreUpdateError = (error) => {
+            logger.error('Score update error:', error);
+            if (error.message === 'Only judges can update scores') {
+                toast.error('Only judges can submit scores');
+            }
+        };
+        
+        // Handle scores saved authorization errors (Requirement 4.4)
+        const handleScoresSavedError = (error) => {
+            logger.error('Scores saved error:', error);
+            if (error.message === 'Unauthorized to save scores') {
+                toast.error('You do not have permission to save scores');
+            }
+        };
+        
         socket.on('score_updated', handleScoreUpdate);
         socket.on('scores_saved_notification', handleScoresSaved);
-        return () => { socket.off('score_updated', handleScoreUpdate); socket.off('scores_saved_notification', handleScoresSaved); };
+        socket.on('score_update_error', handleScoreUpdateError);
+        socket.on('scores_saved_error', handleScoresSavedError);
+        
+        return () => { 
+            socket.off('score_updated', handleScoreUpdate); 
+            socket.off('scores_saved_notification', handleScoresSaved); 
+            socket.off('score_update_error', handleScoreUpdateError);
+            socket.off('scores_saved_error', handleScoresSavedError);
+        };
     }, [socket, players, isLocked]);
 
     useEffect(() => {
@@ -140,6 +181,12 @@ const AdminScoring = () => {
             if (existingScore.scorer) setScorer(existingScore.scorer);
             if (existingScore.remarks) setRemarks(existingScore.remarks);
             if (existingScore.competitionType) setCompetitionType(existingScore.competitionType);
+            
+            // Load calculated scores if available
+            if (existingScore.playerScores && Array.isArray(existingScore.playerScores)) {
+                setCalculatedScores(existingScore.playerScores);
+            }
+            
             existingScore.playerScores.forEach(ps => {
                 let targetId = ps.playerId && existingScores[ps.playerId] ? ps.playerId : currentPlayers.find(p => p.name === ps.playerName)?.id;
                 if (targetId && existingScores[targetId]) {
@@ -155,6 +202,7 @@ const AdminScoring = () => {
             setScores(initialScores);
             setIsLocked(false);
             setExistingScoreId(null);
+            setCalculatedScores([]);
         }
     };
 
@@ -196,15 +244,43 @@ const AdminScoring = () => {
                 judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, username: j.username }))
             };
             const response = await api.saveScores(scoringData);
-            setIsLocked(shouldLock);
-            setExistingScoreId(response.data.scoreId || response.data._id);
-            toast.success(shouldLock ? '🎉 Scores saved and locked!' : 'Scores saved as draft.', { duration: 3000 });
+            
+            // Extract calculated scores from backend response (Requirement 5.1, 5.2)
+            const { scoreId, isLocked: responseLocked, playerScores: calculatedPlayerScores } = response.data;
+            
+            // Update local state with calculated values
+            setCalculatedScores(calculatedPlayerScores || []);
+            setIsLocked(responseLocked);
+            setExistingScoreId(scoreId);
+            
+            // Display success message with calculation info
+            toast.success(
+                responseLocked 
+                    ? '🎉 Scores saved and locked! Calculations complete.' 
+                    : 'Scores saved as draft with automatic calculations.',
+                { duration: 3000 }
+            );
+            
+            // Show calculation summary for players with base score applied
+            if (calculatedPlayerScores && Array.isArray(calculatedPlayerScores)) {
+                calculatedPlayerScores.forEach(ps => {
+                    if (ps.baseScoreApplied) {
+                        toast.info(
+                            `${ps.playerName}: Base score applied (tolerance: ±${ps.toleranceUsed?.toFixed(2) || '0.00'})`,
+                            { duration: 4000 }
+                        );
+                    }
+                });
+            }
+            
             if (socket && selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
-                socket.emit('scores_saved', { teamId: selectedTeam._id, roomId: `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`, isLocked: shouldLock });
+                socket.emit('scores_saved', { teamId: selectedTeam._id, roomId: `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`, isLocked: responseLocked });
             }
         } catch (error) {
             logger.error('Error saving scores:', error);
-            toast.error('Failed to save scores');
+            // Handle calculation errors gracefully (Requirement 5.7)
+            const errorMessage = error.response?.data?.message || 'Failed to save scores';
+            toast.error(errorMessage);
         }
     };
 
@@ -373,6 +449,32 @@ const AdminScoring = () => {
                 ) : (
                     <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                         <p className="text-white/40">No players found for this category.</p>
+                    </div>
+                )}
+
+                {/* Calculated Scores Display (Requirement 5.6) */}
+                {calculatedScores.length > 0 && (
+                    <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-xs font-bold tracking-widest uppercase flex items-center gap-2" style={{ color: ADMIN_COLORS.green }}>
+                                <Trophy className="w-3.5 h-3.5" /> Calculated Scores
+                            </p>
+                            {isLocked && (
+                                <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
+                                    style={{ background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red }}>
+                                    <Lock className="w-3 h-3" />
+                                    Locked
+                                </span>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {calculatedScores.map((playerScore, index) => (
+                                <ScoreCalculationDisplay 
+                                    key={playerScore.playerId || index} 
+                                    playerScore={playerScore} 
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 

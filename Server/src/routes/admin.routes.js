@@ -18,6 +18,7 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/auth.middleware');
+const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
 
@@ -56,6 +57,19 @@ function createAdminRoutes(container) {
   // ==================== Dashboard & Statistics ====================
 
   /**
+   * @route   GET /api/admin/dashboard
+   * @desc    Get dashboard (alias for /dashboard/stats)
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/dashboard',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    adminController.getDashboardStats
+  );
+
+  /**
    * @route   GET /api/admin/dashboard/stats
    * @desc    Get dashboard statistics
    * @access  Admin, SuperAdmin
@@ -64,6 +78,7 @@ function createAdminRoutes(container) {
     '/dashboard/stats',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getDashboardStats
   );
 
@@ -102,6 +117,7 @@ function createAdminRoutes(container) {
     '/teams/submitted',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getSubmittedTeams
   );
 
@@ -114,6 +130,7 @@ function createAdminRoutes(container) {
     '/teams',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getAllTeams(),
     handleValidationErrors,
     adminController.getAllTeams
@@ -172,6 +189,7 @@ function createAdminRoutes(container) {
     '/players',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getAllPlayers(),
     handleValidationErrors,
     adminController.getAllPlayers
@@ -230,6 +248,7 @@ function createAdminRoutes(container) {
     '/judges/bulk',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.saveJudges(),
     handleValidationErrors,
     adminController.saveJudges
@@ -244,6 +263,7 @@ function createAdminRoutes(container) {
     '/judges/summary',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getAllJudgesSummary
   );
 
@@ -256,6 +276,7 @@ function createAdminRoutes(container) {
     '/judges',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getJudges
   );
 
@@ -296,6 +317,7 @@ function createAdminRoutes(container) {
     '/judges/:judgeId',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.deleteJudge(),
     handleValidationErrors,
     adminController.deleteJudge
@@ -312,6 +334,7 @@ function createAdminRoutes(container) {
     '/scores/unlock',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.unlockScores(),
     handleValidationErrors,
     adminController.unlockScores
@@ -326,6 +349,7 @@ function createAdminRoutes(container) {
     '/scores/lock',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.lockScores(),
     handleValidationErrors,
     adminController.lockScores
@@ -340,6 +364,7 @@ function createAdminRoutes(container) {
     '/scores/team',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getTeamScores(),
     handleValidationErrors,
     adminController.getTeamScores
@@ -354,9 +379,23 @@ function createAdminRoutes(container) {
     '/scores/individual',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getIndividualScores(),
     handleValidationErrors,
     adminController.getIndividualScores
+  );
+
+  /**
+   * @route   POST /api/admin/scores/save
+   * @desc    Save scores for a team
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/scores/save',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    adminController.saveScores
   );
 
   /**
@@ -368,6 +407,22 @@ function createAdminRoutes(container) {
     '/rankings/team',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
+    adminValidator.getTeamRankings(),
+    handleValidationErrors,
+    adminController.getTeamRankings
+  );
+
+  /**
+   * @route   GET /api/admin/scores/team-rankings
+   * @desc    Get team rankings (alias for /rankings/team)
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/scores/team-rankings',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
     adminValidator.getTeamRankings(),
     handleValidationErrors,
     adminController.getTeamRankings
@@ -382,6 +437,7 @@ function createAdminRoutes(container) {
     '/rankings/individual',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getIndividualRankings(),
     handleValidationErrors,
     adminController.getIndividualRankings
@@ -396,6 +452,7 @@ function createAdminRoutes(container) {
     '/scores/recalculate',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.recalculateScores(),
     handleValidationErrors,
     adminController.recalculateScores
@@ -412,6 +469,7 @@ function createAdminRoutes(container) {
     '/age-groups/:ageGroup/start',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.startAgeGroup(),
     handleValidationErrors,
     adminController.startAgeGroup
@@ -426,6 +484,7 @@ function createAdminRoutes(container) {
     '/age-groups/:ageGroup/end',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.endAgeGroup(),
     handleValidationErrors,
     adminController.endAgeGroup
@@ -440,6 +499,7 @@ function createAdminRoutes(container) {
     '/age-groups/status',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getAgeGroupStatus
   );
 
@@ -454,6 +514,7 @@ function createAdminRoutes(container) {
     '/transactions/summary',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminController.getPaymentSummary
   );
 
@@ -466,6 +527,7 @@ function createAdminRoutes(container) {
     '/transactions',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getTransactions(),
     handleValidationErrors,
     adminController.getTransactions
@@ -480,6 +542,7 @@ function createAdminRoutes(container) {
     '/transactions/:transactionId',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.getTransactionDetails(),
     handleValidationErrors,
     adminController.getTransactionDetails

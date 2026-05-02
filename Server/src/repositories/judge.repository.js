@@ -34,6 +34,20 @@ class JudgeRepository extends BaseRepository {
   }
 
   /**
+   * Find judge by username (case-insensitive)
+   * @param {string} username - Judge username
+   * @returns {Promise<Object|null>} Judge document or null
+   */
+  async findByUsername(username) {
+    try {
+      return await this.findOne({ username: username.toLowerCase() });
+    } catch (error) {
+      this.logger.error('JudgeRepository.findByUsername error', { username, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
    * Find active judges
    * @param {Object} options - Query options (select, populate, sort, limit, skip)
    * @returns {Promise<Array>} Array of active judges

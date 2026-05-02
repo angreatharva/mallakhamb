@@ -80,7 +80,14 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/teams/submitted */
     getSubmittedTeams: asyncHandler(async (req, res) => {
-      const teams = await adminService.getSubmittedTeams(req.competitionId);
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const filters = {};
+      
+      if (req.query.gender) filters.gender = req.query.gender;
+      if (req.query.ageGroup) filters.ageGroup = req.query.ageGroup;
+      
+      const teams = await adminService.getSubmittedTeams(competitionId, filters);
       res.json({ success: true, data: teams });
     }),
 
@@ -139,8 +146,18 @@ function createAdminController(container) {
 
     /** @route POST /api/admin/judges/bulk */
     saveJudges: asyncHandler(async (req, res) => {
+      const { gender, ageGroup, competitionTypes, judges, competition } = req.body;
+      // For super-admin requests, competitionId comes from body; for admin it's on req
+      const competitionId = req.competitionId || competition;
+      // Merge top-level fields into each judge so the model has all required fields
+      const enrichedJudges = (judges || []).map(j => ({
+        ...j,
+        gender,
+        ageGroup,
+        competitionTypes,
+      }));
       const result = await adminService.saveJudges(
-        req.competitionId, req.body.judges, req.user._id
+        competitionId, enrichedJudges, req.user._id
       );
       res.json({
         success: true,
@@ -151,7 +168,9 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/judges */
     getJudges: asyncHandler(async (req, res) => {
-      const judges = await adminService.getJudges(req.competitionId);
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const { gender, ageGroup, competitionTypes } = req.query;
+      const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes });
       res.json({ success: true, data: judges });
     }),
 
@@ -177,7 +196,9 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/judges/summary */
     getAllJudgesSummary: asyncHandler(async (req, res) => {
-      const summary = await adminService.getAllJudgesSummary(req.competitionId);
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const summary = await adminService.getAllJudgesSummary(competitionId);
       res.json({ success: true, data: summary });
     }),
 
@@ -207,7 +228,13 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/scores/individual */
     getIndividualScores: asyncHandler(async (req, res) => {
-      const scores = await adminService.getIndividualScores(req.competitionId, req.query.ageGroup);
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const scores = await adminService.getIndividualScores(
+        competitionId, 
+        req.query.ageGroup, 
+        req.query.gender
+      );
       res.json({ success: true, data: scores });
     }),
 
@@ -219,11 +246,26 @@ function createAdminController(container) {
       res.json({ success: true, data: result });
     }),
 
+    /** @route POST /api/admin/scores/save */
+    saveScores: asyncHandler(async (req, res) => {
+      const result = await adminService.saveScores({ 
+        ...req.body, 
+        competitionId: req.competitionId 
+      });
+      res.json({ success: true, data: result });
+    }),
+
     // ==================== Rankings ====================
 
     /** @route GET /api/admin/rankings/team */
     getTeamRankings: asyncHandler(async (req, res) => {
-      const rankings = await adminService.getTeamRankings(req.competitionId, req.query.ageGroup);
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const rankings = await adminService.getTeamRankings(
+        competitionId, 
+        req.query.ageGroup, 
+        req.query.gender
+      );
       res.json({ success: true, data: rankings });
     }),
 

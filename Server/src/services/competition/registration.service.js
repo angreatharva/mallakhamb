@@ -161,7 +161,7 @@ class RegistrationService {
           competitionId,
           teamId
         });
-        throw new NotFoundError('Registration not found');
+        throw new NotFoundError('Registration');
       }
 
       // Validate coach owns the team
@@ -254,7 +254,7 @@ class RegistrationService {
       );
 
       if (!registration) {
-        throw new NotFoundError('Team registration not found');
+        throw new NotFoundError('Team registration');
       }
 
       // Validate age group and gender are valid for this competition
@@ -337,7 +337,7 @@ class RegistrationService {
       );
 
       if (!registration) {
-        throw new NotFoundError('Team registration not found');
+        throw new NotFoundError('Team registration');
       }
 
       // Check if registration is already submitted
@@ -402,7 +402,7 @@ class RegistrationService {
       );
 
       if (!registration) {
-        throw new NotFoundError('Team registration not found');
+        throw new NotFoundError('Team registration');
       }
 
       // Validate updates
@@ -491,7 +491,7 @@ class RegistrationService {
       );
 
       if (!registration) {
-        throw new NotFoundError('Team registration not found');
+        throw new NotFoundError('Team registration');
       }
 
       return registration;
@@ -597,3 +597,4 @@ class RegistrationService {
 }
 
 module.exports = RegistrationService;
+

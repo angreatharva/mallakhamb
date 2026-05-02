@@ -125,6 +125,16 @@ class RequestCoalescingMiddleware {
         return originalJson(data);
       };
 
+      // Store the original next function to intercept errors
+      const originalNext = next;
+      const errorAwareNext = (error) => {
+        if (error) {
+          // Reject the promise so coalesced requests also receive the error
+          rejectPromise(error);
+        }
+        originalNext(error);
+      };
+
       // Store the request promise and metadata
       this.inFlightRequests.set(requestKey, requestPromise);
       this.requestMetadata.set(requestKey, {
@@ -158,8 +168,8 @@ class RequestCoalescingMiddleware {
           this.requestMetadata.delete(requestKey);
         });
 
-      // Continue with the request
-      next();
+      // Continue with the request using error-aware next
+      errorAwareNext();
     };
   }
 

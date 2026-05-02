@@ -15,6 +15,7 @@ import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
 import axios from 'axios';
 import apiConfig from '../../utils/apiConfig';
+import AccountLockoutMessage from '../../components/AccountLockoutMessage';
 
 // Import design system components
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -241,6 +242,33 @@ const UnifiedLoginInner = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
+  const [lockoutEndTime, setLockoutEndTime] = useState(null);
+  const [rateLimitEndTime, setRateLimitEndTime] = useState(null);
+  
+  // Clear lockout/rate limit when timer expires
+  useEffect(() => {
+    if (lockoutEndTime) {
+      const checkLockout = setInterval(() => {
+        if (new Date() >= lockoutEndTime) {
+          setLockoutEndTime(null);
+          clearInterval(checkLockout);
+        }
+      }, 1000);
+      return () => clearInterval(checkLockout);
+    }
+  }, [lockoutEndTime]);
+  
+  useEffect(() => {
+    if (rateLimitEndTime) {
+      const checkRateLimit = setInterval(() => {
+        if (new Date() >= rateLimitEndTime) {
+          setRateLimitEndTime(null);
+          clearInterval(checkRateLimit);
+        }
+      }, 1000);
+      return () => clearInterval(checkRateLimit);
+    }
+  }, [rateLimitEndTime]);
   
   const { register, handleSubmit, formState: { errors }, setError } = useForm();
   const { checkRateLimit, recordAttempt, reset } = useRateLimit(5, 60000);
@@ -264,34 +292,8 @@ const UnifiedLoginInner = () => {
   // Redirect if already logged in (but not during active login process)
   useEffect(() => {
     if (user && userType === role && !showCompetitionSelection && !loading) {
-      // For coaches, check their status before redirecting
-      if (role === 'coach') {
-        const checkCoachStatus = async () => {
-          try {
-            const response = await coachAPI.getStatus();
-            const { step } = response.data;
-            
-            const coachRedirectPaths = {
-              'create-team': '/coach/create-team',
-              'select-competition': '/coach/select-competition',
-              'add-players': '/coach/select-competition', // Has team and competition
-            };
-            
-            const targetPath = coachRedirectPaths[step] || '/coach/select-competition';
-            
-            if (location.pathname !== targetPath) {
-              navigate(targetPath);
-            }
-          } catch (error) {
-            console.error('Failed to check coach status:', error);
-            // Fallback to select-competition on error
-            if (location.pathname !== '/coach/select-competition') {
-              navigate('/coach/select-competition');
-            }
-          }
-        };
-        
-        checkCoachStatus();
+      // For coaches and players, always let them choose competition - don't auto-redirect
+      if (role === 'coach' || role === 'player') {
         return;
       }
       
@@ -299,7 +301,6 @@ const UnifiedLoginInner = () => {
       const redirectPaths = {
         admin: '/admin/dashboard',
         superadmin: '/superadmin/dashboard',
-        player: user.team ? '/player/dashboard' : '/player/select-team',
         judge: '/judge/scoring',
       };
       const targetPath = redirectPaths[role] || '/';
@@ -344,10 +345,39 @@ const UnifiedLoginInner = () => {
           },
           { headers: apiConfig.getHeaders() }
         );
-        secureStorage.setItem('judge_token', response.data.token);
-        secureStorage.setItem('judge_user', JSON.stringify(response.data.judge));
-        login(response.data.judge, response.data.token, 'judge');
-        toast.success(`Welcome ${response.data.judge.name}!`);
+        
+        console.log('Judge login response:', response.data);
+        const { token, judge, competition } = response.data.data;
+        console.log('Destructured data:', { token: !!token, judge: !!judge, competition: !!competition });
+        
+        // Validate that we got the required data
+        if (!token || !judge) {
+          throw new Error('Invalid login response: missing token or judge data');
+        }
+        
+        // Extract competition context from judge profile
+        const competitionId = competition?._id;
+        const competitionName = competition?.name;
+        
+        // Store token and user data
+        secureStorage.setItem('judge_token', token);
+        secureStorage.setItem('judge_user', JSON.stringify(judge));
+        
+        // Store competition context
+        if (competitionId) {
+          secureStorage.setItem('judge_competition_id', competitionId);
+          logger.log('Judge competition context stored:', competitionId);
+        }
+        
+        login(judge, token, 'judge');
+        
+        // Display success message with competition details
+        if (competitionName) {
+          toast.success(`Welcome ${judge.name}! Assigned to ${competitionName}`);
+        } else {
+          toast.success(`Welcome ${judge.name}!`);
+        }
+        
         reset();
         navigate('/judge/scoring');
         return;
@@ -356,7 +386,11 @@ const UnifiedLoginInner = () => {
       // Other roles use API service
       const apiService = getAPIService();
       response = await apiService.login(validation.data);
-      const { token } = response.data;
+      
+      // Handle nested response structure: {success: true, data: {user, token}}
+      const responseData = response.data.data || response.data;
+      const { token } = responseData;
+      
       const userDataKeyByRole = {
         admin: 'admin',
         superadmin: 'admin',
@@ -364,7 +398,8 @@ const UnifiedLoginInner = () => {
         player: 'player',
       };
       const expectedUserKey = userDataKeyByRole[role];
-      const userData = response.data[expectedUserKey] || response.data.user || response.data.profile;
+      const userData = responseData[expectedUserKey] || responseData.user || responseData.profile;
+      
       if (!token || !userData) {
         throw new Error('Invalid login response');
       }
@@ -378,19 +413,15 @@ const UnifiedLoginInner = () => {
       reset();
       
       // Handle post-login navigation
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'superadmin') {
         setShowCompetitionSelection(true);
       } else if (role === 'coach') {
-        try {
-          const statusResponse = await coachAPI.getStatus();
-          const { step } = statusResponse.data;
-          navigate(step === 'create-team' ? '/coach/create-team' : '/coach/select-competition');
-        } catch {
-          navigate('/coach/select-competition');
-        }
+        // Coach always goes to competition selection after login
+        navigate('/coach/select-competition');
       } else if (role === 'player') {
+        // Player always goes to competition selection after login (same as coach)
         setTimeout(() => {
-          navigate(userData.team ? '/player/dashboard' : '/player/select-team');
+          navigate('/player/select-competition');
         }, 100);
       } else {
         // Add small delay for state to update before navigation
@@ -401,17 +432,38 @@ const UnifiedLoginInner = () => {
     } catch (error) {
       recordAttempt();
       logger.error(`${role} login error:`, error);
+      
+      // Handle account lockout errors
+      if (error.response?.data?.message?.toLowerCase().includes('locked') || 
+          error.response?.data?.message?.toLowerCase().includes('lockout')) {
+        const lockoutDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
+        const endTime = new Date(Date.now() + lockoutDuration);
+        setLockoutEndTime(endTime);
+        toast.error('Account locked due to failed attempts. Try again in 15 minutes.');
+        return;
+      }
+      
+      // Handle rate limiting errors (429 status)
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.data?.retryAfter || 900; // Default 15 minutes in seconds
+        const endTime = new Date(Date.now() + retryAfter * 1000);
+        setRateLimitEndTime(endTime);
+        const minutes = Math.ceil(retryAfter / 60);
+        toast.error(`Too many login attempts. Please wait ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+        return;
+      }
+      
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
   
-  // Show competition selection for admin
-  if (showCompetitionSelection && role === 'admin') {
+  // Show competition selection for admin and superadmin
+  if (showCompetitionSelection && (role === 'admin' || role === 'superadmin')) {
     return (
-      <CompetitionProvider userType="admin">
-        <CompetitionSelectionScreen userType="admin" onCompetitionSelected={() => {}} />
+      <CompetitionProvider userType={role}>
+        <CompetitionSelectionScreen userType={role} onCompetitionSelected={() => {}} />
       </CompetitionProvider>
     );
   }
@@ -532,6 +584,22 @@ const UnifiedLoginInner = () => {
             <motion.div className="space-y-4"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
               
+              {/* Account Lockout Message */}
+              {lockoutEndTime && (
+                <AccountLockoutMessage 
+                  lockoutEndTime={lockoutEndTime} 
+                  primaryColor={theme.colors.primary}
+                />
+              )}
+              
+              {/* Rate Limit Message */}
+              {rateLimitEndTime && !lockoutEndTime && (
+                <AccountLockoutMessage 
+                  lockoutEndTime={rateLimitEndTime} 
+                  primaryColor={theme.colors.primary}
+                />
+              )}
+              
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
                   style={{ color: `${theme.colors.primary}90` }} 
@@ -599,7 +667,7 @@ const UnifiedLoginInner = () => {
               
               <ThemedButton
                 type="submit"
-                disabled={loading}
+                disabled={loading || lockoutEndTime !== null || rateLimitEndTime !== null}
                 loading={loading}
                 className="w-full mt-2"
               >

@@ -116,8 +116,17 @@ const Scores = () => {
     if (isSuperAdmin) {
       setLoadingCompetitions(true);
       superAdminAPI.getAllCompetitions()
-        .then(res => setCompetitions(res.data.competitions || []))
-        .catch(() => toast.error('Failed to load competitions'))
+        .then(res => {
+          // Handle nested response structure: {success: true, data: [competitions array]}
+          const responseData = res.data.data || res.data;
+          const competitionsArray = Array.isArray(responseData) ? responseData : (responseData.competitions || []);
+          setCompetitions(competitionsArray);
+          logger.info('Fetched competitions for scores:', competitionsArray);
+        })
+        .catch((error) => {
+          logger.error('Failed to load competitions:', error);
+          toast.error('Failed to load competitions');
+        })
         .finally(() => setLoadingCompetitions(false));
     }
   }, [isSuperAdmin]);
@@ -147,12 +156,20 @@ const Scores = () => {
     try {
       const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getSubmittedTeams(params);
-      setSubmittedTeams(response.data.teams);
+      // Handle response structure: {success: true, data: teams array}
+      const teams = response.data.data || response.data;
+      setSubmittedTeams(Array.isArray(teams) ? teams : []);
+      
       const summaryResponse = await api.getAllJudgesSummary();
-      const ageGroupInfo = summaryResponse.data.summary.find(item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value);
+      // Handle response structure: {success: true, data: {summary: [...], ...}}
+      const summaryData = summaryResponse.data.data || summaryResponse.data;
+      const summaryArray = summaryData.summary || [];
+      const ageGroupInfo = summaryArray.find(item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value);
       setAgeGroupStarted(ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false);
     } catch (error) {
+      logger.error('Failed to load submitted teams:', error);
       toast.error('Failed to load submitted teams');
+      setSubmittedTeams([]);
     } finally {
       setLoading(false);
     }

@@ -40,20 +40,19 @@ class JudgeService extends UserService {
 
   /**
    * Authenticate judge with competition context
-   * @param {string} email - Judge username/email
+   * @param {string} username - Judge username
    * @param {string} password - Judge password
-   * @param {string} competitionId - Competition ID
    * @returns {Promise<Object>} { judge, token, competition }
    * @throws {AuthenticationError} If credentials invalid
    * @throws {AuthorizationError} If not assigned to competition
    */
-  async loginJudge(email, password, competitionId) {
+  async loginJudge(username, password) {
     try {
-      // Find judge by email/username
-      const judge = await this.judgeRepository.findByEmail(email);
+      // Find judge by username (case-insensitive)
+      const judge = await this.judgeRepository.findByUsername(username.toLowerCase());
       
       if (!judge) {
-        this.logger.warn('Judge login failed: Judge not found', { email });
+        this.logger.warn('Judge login failed: Judge not found', { username });
         throw new AuthenticationError('Invalid credentials');
       }
 
@@ -61,7 +60,7 @@ class JudgeService extends UserService {
       if (!judge.isActive) {
         this.logger.warn('Judge login failed: Account inactive', { 
           judgeId: judge._id, 
-          email 
+          username 
         });
         throw new AuthenticationError('Account is inactive');
       }
@@ -72,33 +71,26 @@ class JudgeService extends UserService {
       if (!isPasswordValid) {
         this.logger.warn('Judge login failed: Invalid password', { 
           judgeId: judge._id, 
-          email 
+          username 
         });
         throw new AuthenticationError('Invalid credentials');
       }
 
-      // Verify competition assignment
-      if (judge.competition.toString() !== competitionId.toString()) {
-        this.logger.warn('Judge login failed: Not assigned to competition', {
-          judgeId: judge._id,
-          requestedCompetition: competitionId,
-          assignedCompetition: judge.competition
-        });
-        throw new AuthorizationError('Not assigned to this competition');
-      }
+      // Use judge's assigned competition
+      const competitionId = judge.competition;
 
       // Get competition details
       const competition = await this.competitionRepository.findById(competitionId);
       
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Generate token with competition context
       const token = this.tokenService.generateToken(
         judge._id, 
         'judge', 
-        { competitionId }
+        competitionId
       );
 
       this.logger.info('Judge logged in successfully', { 
@@ -137,8 +129,7 @@ class JudgeService extends UserService {
         throw error;
       }
       this.logger.error('Judge login error', { 
-        email, 
-        competitionId, 
+        username, 
         error: error.message 
       });
       throw error;
@@ -157,7 +148,7 @@ class JudgeService extends UserService {
       });
 
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Remove password from response
@@ -199,7 +190,7 @@ class JudgeService extends UserService {
       );
 
       if (!updatedJudge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Remove password from response
@@ -240,7 +231,7 @@ class JudgeService extends UserService {
       });
 
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Return as array for consistency (judge has single competition)
@@ -268,7 +259,7 @@ class JudgeService extends UserService {
       const judge = await this.judgeRepository.findById(judgeId);
       
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Verify assignment
@@ -279,7 +270,7 @@ class JudgeService extends UserService {
       const competition = await this.competitionRepository.findById(competitionId);
       
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Generate new token with competition context
@@ -316,7 +307,7 @@ class JudgeService extends UserService {
       const judge = await this.judgeRepository.findById(judgeId);
       
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Verify access
@@ -327,7 +318,7 @@ class JudgeService extends UserService {
       const competition = await this.competitionRepository.findById(competitionId);
       
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       return competition;
@@ -356,7 +347,7 @@ class JudgeService extends UserService {
       const judge = await this.judgeRepository.findById(judgeId);
       
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       // Use judge's assigned age group if not provided
@@ -374,13 +365,17 @@ class JudgeService extends UserService {
         gender: judge.gender,
         isSubmitted: true
       }, {
-        populate: 'players coach',
-        select: 'name ageGroup gender players coach isSubmitted'
+        populate: 'coach',
+        select: 'name ageGroup gender coach isSubmitted'
       });
 
-      // Add scoring status for each team
+      // Fetch players for each team and add scoring status
       const teamsWithStatus = await Promise.all(
         teams.map(async (team) => {
+          // Fetch players for this team
+          const Player = require('../../models/Player');
+          const players = await Player.find({ team: team._id }).lean();
+          
           const scoredPlayers = await this.scoreRepository.count({
             team: team._id,
             judge: judgeId
@@ -392,9 +387,10 @@ class JudgeService extends UserService {
             ageGroup: team.ageGroup,
             gender: team.gender,
             coach: team.coach,
-            totalPlayers: team.players.length,
+            players,
+            totalPlayers: players.length,
             scoredPlayers,
-            scoringComplete: scoredPlayers === team.players.length
+            scoringComplete: scoredPlayers === players.length
           };
         })
       );
@@ -425,16 +421,20 @@ class JudgeService extends UserService {
       const judge = await this.judgeRepository.findById(judgeId);
       
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       const team = await this.teamRepository.findById(teamId, {
-        populate: 'players coach competition'
+        populate: 'coach competition'
       });
 
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
+
+      // Fetch players for this team
+      const Player = require('../../models/Player');
+      const players = await Player.find({ team: teamId }).lean();
 
       // Verify judge can score this team (age group and gender match)
       if (team.ageGroup !== judge.ageGroup || team.gender !== judge.gender) {
@@ -510,13 +510,13 @@ class JudgeService extends UserService {
       const player = await this.playerRepository.findById(playerId);
       
       if (!player) {
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       const team = await this.teamRepository.findById(teamId);
       
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
 
       // Check if judge assigned to this age group and gender
@@ -609,7 +609,7 @@ class JudgeService extends UserService {
       const score = await this.scoreRepository.findById(scoreId);
       
       if (!score) {
-        throw new NotFoundError('Score not found');
+        throw new NotFoundError('Score');
       }
 
       // Verify ownership
@@ -702,3 +702,4 @@ class JudgeService extends UserService {
 }
 
 module.exports = JudgeService;
+

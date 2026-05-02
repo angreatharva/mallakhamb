@@ -20,39 +20,55 @@ const createCoach = async () => {
         console.log('✅ Connected to MongoDB');
 
         const name = 'Atharva Angre';
-        const email = 'atharvaangre02@gmail.com';
-        const password = 'Atharva@02';
+        const email = 'coach@gmail.com'; // Lowercase for consistency
+        const password = 'Coach@2026';
 
         // Check if coach already exists
-        const existingCoach = await Coach.findOne({ email: email });
+        const existingCoach = await Coach.findOne({ email: email.toLowerCase() });
         if (existingCoach) {
             console.log('⚠️  Coach user already exists!');
             console.log('Coach Details:');
             console.log(`- Name: ${existingCoach.name}`);
-            console.log(`- Email: ${email}`);
+            console.log(`- Email: ${existingCoach.email}`);
             console.log(`- Active: ${existingCoach.isActive}`);
             console.log(`- Team: ${existingCoach.team || 'Not assigned'}`);
+            console.log('\n💡 To test the onboarding flow:');
+            console.log('   1. Delete this coach from the database');
+            console.log('   2. Register a new coach through the UI');
+            console.log('   3. Or use a different email address');
             await mongoose.disconnect();
             process.exit(0);
         }
 
-        // Create coach user
+        // Create coach user WITHOUT a team
+        // This allows testing the complete onboarding flow:
+        // Login → Create Team → Select Competition → Dashboard
         const coach = new Coach({
             name: name,
-            email: email,
+            email: email.toLowerCase(),
             password: password,
+            team: null, // No team initially - coach will create one
             isActive: true
         });
 
         await coach.save();
         console.log('✅ Coach user created successfully!');
-        console.log('Coach Credentials:');
-        console.log(`- Email: ${email}`);
+        console.log('\nCoach Credentials:');
+        console.log(`- Email: ${email.toLowerCase()}`);
         console.log(`- Password: ${password}`);
         console.log(`- Name: ${name}`);
+        console.log(`- Team: Not assigned (will create during onboarding)`);
+        console.log('\n📋 Next Steps:');
+        console.log('   1. Login at: http://localhost:5173/coach/login');
+        console.log('   2. You will be redirected to: Select Competition');
+        console.log('   3. Create a team when prompted');
+        console.log('   4. Select a competition');
+        console.log('   5. Access the dashboard');
+        console.log('\n💡 Note: Coach will go through competition selection on every login');
+        console.log('   This allows switching between competitions.');
 
         await mongoose.disconnect();
-        console.log('✅ Disconnected from MongoDB');
+        console.log('\n✅ Disconnected from MongoDB');
         process.exit(0);
     } catch (error) {
         console.error('❌ Error creating coach:', error.message);

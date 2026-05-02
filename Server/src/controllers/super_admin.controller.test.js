@@ -32,6 +32,7 @@ const buildService = (overrides = {}) => ({
   getSystemStats: jest.fn(),
   getSuperAdminDashboard: jest.fn(),
   getTransactions: jest.fn(),
+  addPlayer: jest.fn(),
   ...overrides,
 });
 
@@ -257,6 +258,43 @@ describe('super_admin.controller', () => {
       await ctrl.getTransactions(req({ query: { competitionId: 'c1' } }), r, next());
 
       expect(svc.getTransactions).toHaveBeenCalledWith('c1');
+    });
+  });
+
+  // ── Player management ────────────────────────────────────────────────────────
+
+  describe('addPlayer', () => {
+    it('returns 201 with player data', async () => {
+      const playerData = {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        dateOfBirth: '2010-01-01',
+        gender: 'Male',
+        teamId: 'team123',
+        competitionId: 'comp123',
+        password: 'SecurePass123'
+      };
+
+      const expectedResult = {
+        id: 'player123',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        team: 'team123'
+      };
+
+      svc.addPlayer.mockResolvedValue(expectedResult);
+      const r = res();
+
+      await ctrl.addPlayer(req({ body: playerData }), r, next());
+
+      expect(svc.addPlayer).toHaveBeenCalledWith(playerData, 'superadmin1');
+      expect(r.status).toHaveBeenCalledWith(201);
+      expect(r.json).toHaveBeenCalledWith({
+        success: true,
+        data: expectedResult
+      });
     });
   });
 });

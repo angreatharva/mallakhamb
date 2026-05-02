@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: './.env' });
 
 // Import models
 const Admin = require('../models/Admin');

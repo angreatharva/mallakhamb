@@ -100,7 +100,7 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
-  container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository')), 'singleton');
+  container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository')), 'singleton');
 
   container.register('playerService', (c) => new PlayerService(
     c.resolve('playerRepository'),
@@ -116,7 +116,8 @@ function bootstrap() {
     c.resolve('cacheService'),
     c.resolve('authenticationService'),
     c.resolve('competitionRepository'),
-    c.resolve('playerRepository')
+    c.resolve('playerRepository'),
+    c.resolve('config')
   ), 'singleton');
   container.register('calculationService', (c) => new CalculationService(c.resolve('logger')), 'singleton');
   container.register('adminService', (c) => new AdminService({
@@ -142,6 +143,7 @@ function bootstrap() {
     judgeRepository: c.resolve('judgeRepository'),
     competitionRepository: c.resolve('competitionRepository'),
     transactionRepository: c.resolve('transactionRepository'),
+    playerRepository: c.resolve('playerRepository'),
     logger: c.resolve('logger'),
   }), 'singleton');
   container.register('judgeService', (c) => {

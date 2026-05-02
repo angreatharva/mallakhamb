@@ -15,7 +15,7 @@ const createCompetition = async () => {
         }
 
         console.log('🔗 Connecting to MongoDB...');
-        
+
         // Connect to database (using same DB as main app)
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('✅ Connected to MongoDB');
@@ -29,6 +29,7 @@ const createCompetition = async () => {
             startDate: new Date('2026-06-01'),
             endDate: new Date('2026-06-05'),
             description: 'Annual state-level Mallakhamb competition',
+            status: 'upcoming', // Explicitly set to upcoming so coaches can register
             competitionTypes: ['competition_1', 'competition_2', 'competition_3'],
             ageGroups: [
                 { gender: 'Male', ageGroup: 'Under10' },
@@ -69,22 +70,22 @@ const createCompetition = async () => {
         }
 
         // Find admin to assign (optional - can be assigned later)
-        const admin = await Admin.findOne({ role: 'admin' });
+        const admin = await Admin.findOne({ email: 'admin@gmail.com' });
+
         if (admin) {
             competitionData.admins = [admin._id];
             competitionData.createdBy = admin._id;
             console.log(`📝 Found admin to assign: ${admin.name} (${admin.email})`);
         } else {
-            console.log('⚠️  No admin found - competition will be created without admin assignment');
-            console.log('💡 You can assign admins later using the Super Admin dashboard');
+            console.log('⚠️ Admin with email admin@gmail.com not found');
         }
 
         // Create competition
         const competition = new Competition(competitionData);
-        
-        // Set initial status based on dates
-        competition.setInitialStatus();
-        
+
+        // Status is already set to 'upcoming' in competitionData
+        // No need to call setInitialStatus() which might override it
+
         await competition.save();
 
         console.log('✅ Competition created successfully!');

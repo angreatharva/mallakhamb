@@ -75,8 +75,29 @@ function createSuperAdminController(container) {
 
     /** @route GET /api/super-admin/teams */
     getAllTeams: asyncHandler(async (req, res) => {
-      const teams = await superAdminService.getAllTeams();
+      const { gender, ageGroup, competition } = req.query;
+      const filters = {};
+      
+      if (gender) filters.gender = gender;
+      if (ageGroup) filters.ageGroup = ageGroup;
+      if (competition) filters.competition = competition;
+      
+      const teams = await superAdminService.getAllTeams(filters);
       res.json({ success: true, data: teams });
+    }),
+
+    /** @route GET /api/super-admin/teams/:teamId */
+    getTeamDetails: asyncHandler(async (req, res) => {
+      const adminService = container.resolve('adminService');
+      const { gender, ageGroup, competition } = req.query;
+      const filters = {};
+      
+      if (gender) filters.gender = gender;
+      if (ageGroup) filters.ageGroup = ageGroup;
+      if (competition) filters.competition = competition;
+      
+      const team = await adminService.getTeamDetails(req.params.teamId, filters);
+      res.json({ success: true, data: team });
     }),
 
     /** @route DELETE /api/super-admin/teams/:teamId */
@@ -159,6 +180,12 @@ function createSuperAdminController(container) {
     getTransactions: asyncHandler(async (req, res) => {
       const transactions = await superAdminService.getTransactions(req.query.competitionId);
       res.json({ success: true, data: transactions });
+    }),
+
+    /** @route POST /api/super-admin/players/add */
+    addPlayer: asyncHandler(async (req, res) => {
+      const player = await superAdminService.addPlayer(req.body, req.user._id);
+      res.status(201).json({ success: true, data: player });
     }),
   };
 }

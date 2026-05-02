@@ -86,7 +86,7 @@ describe('Backward Compatibility', () => {
   describe('New Design Tokens Work Correctly', () => {
     it('should access role colors from DESIGN_TOKENS', () => {
       expect(DESIGN_TOKENS.colors.roles.admin).toBe('#8B5CF6');
-      expect(DESIGN_TOKENS.colors.roles.coach).toBe('#22C55E');
+      expect(DESIGN_TOKENS.colors.roles.coach).toBe('#FF6B00');
       expect(DESIGN_TOKENS.colors.roles.player).toBe('#FF6B00');
     });
 

@@ -100,26 +100,32 @@ const TeamModal = ({ team, onClose }) => (
             <div className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Team Information</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-white/40">Coach: </span><span className="text-white">{team.coach?.name || 'No coach assigned'}</span></div>
+                <div><span className="text-white/40">Coach: </span><span className="text-white">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
                 {team.coach?.email && <div><span className="text-white/40">Email: </span><span className="text-white">{team.coach.email}</span></div>}
                 {team.coach?.phone && <div><span className="text-white/40">Phone: </span><span className="text-white">{team.coach.phone}</span></div>}
                 <div><span className="text-white/40">Players: </span><span className="text-white font-bold">{team.players?.length || 0}</span></div>
                 {team.createdAt && <div><span className="text-white/40">Registered: </span><span className="text-white">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
+                {team.description && <div className="md:col-span-2"><span className="text-white/40">Description: </span><span className="text-white">{team.description}</span></div>}
+                <div><span className="text-white/40">Status: </span><span className="text-white">{team.isActive ? 'Active' : 'Inactive'}</span></div>
+                <div><span className="text-white/40">Player Count: </span><span className="text-white font-bold">{team.playerCount || team.players?.length || 0}</span></div>
               </div>
             </div>
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Players ({team.players?.length || 0})</p>
               {team.players?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {team.players.map((entry, i) => (
+                  {team.players.map((player, i) => (
                     <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                      <p className="font-bold text-white text-sm">{entry.player.firstName} {entry.player.lastName}</p>
+                      <p className="font-bold text-white text-sm">{player.firstName} {player.lastName}</p>
                       <div className="mt-2 space-y-1 text-xs text-white/50">
-                        <p>Gender: <span className="text-white/70">{entry.player.gender}</span></p>
-                        <p>Age Group: <span className="text-white/70">{entry.ageGroup || 'Not assigned'}</span></p>
-                        {entry.player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(entry.player.dateOfBirth).toLocaleDateString()}</span></p>}
+                        <p>Gender: <span className="text-white/70">{player.gender}</span></p>
+                        <p>Age Group: <span className="text-white/70">{player.ageGroup || 'Not assigned'}</span></p>
+                        {player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(player.dateOfBirth).toLocaleDateString()}</span></p>}
+                        {player.email && <p>Email: <span className="text-white/70">{player.email}</span></p>}
                       </div>
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Active</span>
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+                        {player.isActive ? 'Active' : 'Inactive'}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -166,7 +172,12 @@ const Teams = () => {
     if (isSuperAdmin) {
       setLoadingCompetitions(true);
       superAdminAPI.getAllCompetitions()
-        .then(res => setCompetitions(res.data.competitions || []))
+        .then(res => {
+          // Handle nested response structure: {success: true, data: [competitions array]}
+          const responseData = res.data.data || res.data;
+          const competitionsArray = Array.isArray(responseData) ? responseData : (responseData.competitions || []);
+          setCompetitions(competitionsArray);
+        })
         .catch(() => toast.error('Failed to load competitions'))
         .finally(() => setLoadingCompetitions(false));
     }
@@ -188,8 +199,11 @@ const Teams = () => {
     try {
       const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getAllTeams(params);
-      setTeams(response.data.teams);
-      toast.success(`Loaded ${response.data.teams.length} teams`);
+      // Handle nested response structure
+      const responseData = response.data.data || response.data;
+      const teamsArray = Array.isArray(responseData) ? responseData : (responseData.teams || []);
+      setTeams(teamsArray);
+      toast.success(`Loaded ${teamsArray.length} teams`);
     } catch (error) {
       toast.error('Failed to load teams');
       logger.error('Error fetching teams:', error);
@@ -200,10 +214,19 @@ const Teams = () => {
 
   const fetchTeamDetails = async (teamId) => {
     try {
-      const response = await api.getTeamDetails(teamId);
-      setSelectedTeam(response.data.team);
+      // Pass the same filters that are currently applied to maintain consistency
+      const params = {};
+      if (selectedGender) params.gender = selectedGender.value;
+      if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
+      if (isSuperAdmin && selectedCompetition) params.competition = selectedCompetition.value;
+      
+      const response = await api.getTeamDetails(teamId, params);
+      // Handle nested response structure: response.data.data.team
+      const teamData = response.data.data || response.data;
+      setSelectedTeam(teamData.team || teamData);
     } catch (error) {
       toast.error('Failed to load team details');
+      logger.error('Error fetching team details:', error);
     }
   };
 

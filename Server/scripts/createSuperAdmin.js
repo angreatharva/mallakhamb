@@ -25,8 +25,8 @@ const createSuperAdmin = async () => {
     // Super Admin credentials
     const superAdminData = {
       name: 'Atharva Angre',
-      email: 'angreatharva08@gmail.com',
-      password: 'Atharva@08',
+      email: 'Superadmin@gmail.com',
+      password: 'Superadmin@2026',
       role: 'super_admin',
       isActive: true
     };

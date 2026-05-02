@@ -35,11 +35,11 @@ describe('judge.controller', () => {
   let svc, ctrl;
   beforeEach(() => { jest.clearAllMocks(); svc = buildService(); ctrl = createJudgeController(buildContainer(svc)); });
 
-  it('login — passes email, password, competitionId', async () => {
+  it('login — passes username, password', async () => {
     svc.loginJudge.mockResolvedValue({ token: 'tok', judge: {} });
     const r = res();
-    await ctrl.login(req({ body: { email: 'j@b.com', password: 'pw', competitionId: 'c1' } }), r, next());
-    expect(svc.loginJudge).toHaveBeenCalledWith('j@b.com', 'pw', 'c1');
+    await ctrl.login(req({ body: { username: 'testjudge', password: 'pw' } }), r, next());
+    expect(svc.loginJudge).toHaveBeenCalledWith('testjudge', 'pw');
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 

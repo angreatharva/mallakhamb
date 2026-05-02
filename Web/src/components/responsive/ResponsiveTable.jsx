@@ -365,14 +365,15 @@ export const ResponsiveTeamTable = ({
     </div>
   );
 
+  // Remove ResponsiveContainer wrapper to match parent container width
   return (
-    <ResponsiveContainer className={className} {...props}>
+    <div className={className} {...props}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 14 }}>
         {teams.length === 0 ? <EmptyState message="No teams found" /> : teams.map(team => (
           <TeamCard key={team._id} team={team} compact={isMobile} />
         ))}
       </div>
-    </ResponsiveContainer>
+    </div>
   );
 };
 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
+import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { playerAPI } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { CompetitionProvider } from '../../contexts/CompetitionContext';
+import { CompetitionProvider, useCompetition } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import { logger } from '../../utils/logger';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
@@ -68,18 +68,54 @@ const AGE_GROUP_MAP = {
 
 // ─── PlayerDashboard ──────────────────────────────────────────────────────────
 const PlayerDashboard = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading } = useCompetition();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
-  const { logout } = useAuth();
   useReducedMotion(); // Initialize for accessibility
+
+  // Handle competition selection from URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const competitionIdFromUrl = urlParams.get('competitionId');
+    
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
+      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
+      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
+        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
+        switchCompetition(competitionIdFromUrl).then(() => {
+          // Remove the URL parameter after successfully setting the competition
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('competitionId');
+          window.history.replaceState({}, '', newUrl);
+        }).catch(error => {
+          logger.error('Failed to set competition from URL:', error);
+        });
+        return;
+      }
+    }
+  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition]);
 
   useEffect(() => {
     fetchPlayerProfile();
   }, []);
+
+  // Redirect to competition selection if no competition is set
+  useEffect(() => {
+    // Wait for competition context to finish loading
+    if (competitionLoading) return;
+    
+    // If no current competition and no assigned competitions, redirect to selection
+    if (!currentCompetition && (!assignedCompetitions || assignedCompetitions.length === 0)) {
+      logger.info('No competition context, redirecting to competition selection');
+      navigate('/player/select-competition', { replace: true });
+    }
+  }, [currentCompetition, assignedCompetitions, competitionLoading, navigate]);
 
   useEffect(() => {
     if (player && !player.team) fetchTeams();
@@ -88,15 +124,36 @@ const PlayerDashboard = () => {
   const fetchPlayerProfile = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
+      // Always load profile first (stable source for player identity fields)
+      const profileResponse = await playerAPI.getProfile();
+      const profileData = profileResponse.data?.data || profileResponse.data || {};
+
+      // Then try to enrich with competition-scoped team data.
       try {
         const teamResponse = await playerAPI.getTeam();
-        setPlayer({ ...teamResponse.data.player, team: teamResponse.data.team, teamStatus: teamResponse.data.teamStatus });
-      } catch {
-        const response = await playerAPI.getProfile();
-        setPlayer({ ...response.data.player, teamStatus: 'Not assigned' });
+        const teamPayload = teamResponse.data?.data || teamResponse.data || {};
+        const resolvedTeam = teamPayload.team || null;
+        const hasTeam = !!(resolvedTeam && (resolvedTeam._id || resolvedTeam.id));
+
+        setPlayer({
+          ...profileData,
+          team: resolvedTeam || profileData.team || null,
+          teamStatus: teamPayload.teamStatus || (hasTeam ? 'Assigned' : 'Not assigned'),
+        });
+      } catch (teamError) {
+        logger.info('Team fetch failed, using profile fallback:', teamError.response?.data?.message);
+        const hasTeam = profileData.team && profileData.team._id;
+        setPlayer({ 
+          ...profileData, 
+          teamStatus: hasTeam ? 'Assigned' : 'Not assigned',
+        });
       }
     } catch (error) {
       logger.error('Failed to fetch player profile:', error);
+      // Don't show error toast if it's just a competition context issue
+      if (error.response?.data?.code !== 'COMPETITION_CONTEXT_REQUIRED') {
+        toast.error('Failed to load profile');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,7 +163,9 @@ const PlayerDashboard = () => {
     setTeamsLoading(true);
     try {
       const response = await playerAPI.getTeams();
-      setTeams(response.data.teams.map((t) => ({ value: t._id, label: t.name })));
+      const payload = response.data?.data ?? response.data?.teams ?? response.data ?? [];
+      const teamsList = Array.isArray(payload) ? payload : [];
+      setTeams(teamsList.map((t) => ({ value: t._id || t.id, label: t.name })));
     } catch {
       toast.error('Failed to load teams');
     } finally {
@@ -146,38 +205,7 @@ const PlayerDashboard = () => {
 
   return (
     <div className="min-h-dvh" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Top bar */}
-      <div className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
-        <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: `${COLORS.saffron}18` }}>
-              <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-tight">
-                {player?.firstName} {player?.lastName}
-              </p>
-              <p className="text-white/35 text-xs">Player Dashboard</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => fetchPlayerProfile(true)} disabled={loading}
-              className="p-2 rounded-xl text-white/45 hover:text-white hover:bg-white/5 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Refresh data">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={logout}
-              className="p-2 rounded-xl text-white/45 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Logout">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8 pt-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
         {/* Competition context */}
         <CompetitionProvider userType="player">
           <CompetitionDisplay className="mb-0" />
@@ -200,6 +228,15 @@ const PlayerDashboard = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => fetchPlayerProfile(true)}
+                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+                  title="Refresh player data"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
                 <StatusBadge status={player?.teamStatus} />
               </div>
             </div>

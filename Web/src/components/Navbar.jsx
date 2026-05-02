@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, User, Trophy, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,7 @@ const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 const Navbar = ({ user, userType, onLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   useReducedMotion();
@@ -50,6 +51,7 @@ const Navbar = ({ user, userType, onLogout }) => {
     { to: '/coach/login', label: 'Coach' },
     { to: '/admin/login', label: 'Admin' },
   ] : [];
+  const showCompetitionSelector = Boolean(userType) && location.pathname.endsWith('/dashboard');
 
   return (
     <motion.nav
@@ -84,7 +86,7 @@ const Navbar = ({ user, userType, onLogout }) => {
         <div className="hidden lg:flex items-center gap-2">
           {user ? (
             <>
-              {userType && <CompetitionSelector userType={userType} />}
+              {showCompetitionSelector && <CompetitionSelector userType={userType} />}
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
                 style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
@@ -178,7 +180,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                         <p className="text-white/40 text-xs capitalize">{userType || 'User'}</p>
                       </div>
                     </div>
-                    {userType && (
+                    {showCompetitionSelector && (
                       <div className="mb-2">
                         <CompetitionSelector userType={userType} />
                       </div>

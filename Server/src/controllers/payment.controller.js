@@ -24,9 +24,16 @@ function createPaymentController(container) {
     reconcileRazorpayWebhook: asyncHandler(async (req, res, next) => {
       try {
         const signature = req.headers['x-razorpay-signature'];
-        await paymentService.reconcileWebhook(req.rawBody, signature, req.body);
-        res.status(200).json({ success: true, message: 'Webhook processed successfully.' });
+        const result = await paymentService.reconcileWebhook(req.rawBody, signature, req.body);
+        
+        // Map service return values to HTTP responses
+        if (result.message === 'Webhook event ignored' || result.message === 'No matching order found') {
+          res.status(200).json({ success: true, message: result.message });
+        } else {
+          res.status(200).json({ success: true, message: 'Webhook processed successfully.' });
+        }
       } catch (error) {
+        // AuthenticationError (invalid signature) propagates to error middleware (HTTP 400)
         next(error);
       }
     }),

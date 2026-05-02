@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
+import { coachAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { logger } from '../utils/logger';
+import { secureStorage } from '../utils/secureStorage';
 import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
 } from 'lucide-react';
@@ -45,9 +47,11 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
   const status = statusConfig[competition.status] || statusConfig.completed;
   const StatusIcon = status.Icon;
 
+  const CardIcon = Trophy;
+
   return (
     <motion.button
-      onClick={() => onSelect(competition._id)}
+      onClick={() => onSelect(competition._id || competition.id)}
       disabled={disabled}
       className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 focus:outline-none group"
       style={{
@@ -80,12 +84,13 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: isSelected ? `${COLORS.saffron}20` : 'rgba(255,255,255,0.06)' }}>
-              <Trophy className="w-5 h-5" style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+              <CardIcon className="w-5 h-5" style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-white font-bold text-sm leading-tight">
                 {competition.name} {competition.year || ''}
               </h3>
+              
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                 {competition.place && (
                   <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -105,16 +110,18 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
 
           {/* Status + check */}
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-              style={{ background: `${status.color}15`, color: status.color, border: `1px solid ${status.color}30` }}>
-              {competition.status === 'ongoing' && (
-                <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: status.color }}
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.2, repeat: Infinity }} />
-              )}
-              {status.label}
-            </span>
+            {competition.status && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                style={{ background: `${status.color}15`, color: status.color, border: `1px solid ${status.color}30` }}>
+                {competition.status === 'ongoing' && (
+                  <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ background: status.color }}
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1.2, repeat: Infinity }} />
+                )}
+                {status.label}
+              </span>
+            )}
             {isSelected && (
               <motion.div
                 className="w-6 h-6 rounded-full flex items-center justify-center"
@@ -136,6 +143,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
           </div>
         )}
 
+        {/* Description */}
         {competition.description && (
           <p className="mt-2 text-xs leading-relaxed line-clamp-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
             {competition.description}
@@ -153,13 +161,78 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [coachCompetitions, setCoachCompetitions] = useState([]);
+  const [coachTeam, setCoachTeam] = useState(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState(null);
   useReducedMotion();
 
+  // Coach-specific data fetching
   useEffect(() => {
-    if (!isLoading && assignedCompetitions?.length === 1) {
-      handleAutoSelect(assignedCompetitions[0]._id);
+    if (userType === 'coach') {
+      fetchCoachData();
     }
-  }, [isLoading, assignedCompetitions]);
+  }, [userType]);
+
+  const fetchCoachData = async () => {
+    try {
+      setCoachLoading(true);
+      setCoachError(null);
+
+      // Fetch coach's teams first
+      const teamsResponse = await coachAPI.getTeams();
+      const teams = Array.isArray(teamsResponse.data) 
+        ? teamsResponse.data 
+        : (teamsResponse.data?.data || []);
+      
+      if (teams.length === 0) {
+        setCoachError('Please create a team first before selecting a competition.');
+        setCoachCompetitions([]);
+        setCoachTeam(null);
+        return;
+      }
+      
+      // Set the first team
+      const team = teams[0];
+      setCoachTeam(team);
+      
+      // Fetch open competitions
+      const competitionsResponse = await coachAPI.getOpenCompetitions();
+      const competitions = Array.isArray(competitionsResponse.data)
+        ? competitionsResponse.data
+        : (competitionsResponse.data?.data || []);
+      
+      setCoachCompetitions(competitions);
+      
+      if (competitions.length === 0) {
+        logger.warn('[Competition Selection] No competitions available');
+      }
+    } catch (err) {
+      logger.error(`[Competition Selection] Error loading coach data:`, err);
+      const errorMessage = err.response?.data?.message ||
+        err.message ||
+        'Failed to load competitions';
+      setCoachError(errorMessage);
+      toast.error(errorMessage);
+      setCoachCompetitions([]);
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  // Use appropriate data based on user type
+  const competitions = userType === 'coach' ? coachCompetitions : 
+                     assignedCompetitions;
+  const loading = userType === 'coach' ? coachLoading : 
+                 isLoading;
+  const error = userType === 'coach' ? coachError : 
+               null;
+
+  useEffect(() => {
+    if (!loading && competitions?.length === 1 && userType !== 'coach' && userType !== 'player') {
+      handleAutoSelect(competitions[0]._id);
+    }
+  }, [loading, competitions, userType]);
 
   const handleAutoSelect = async (competitionId) => {
     try {
@@ -175,15 +248,65 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   };
 
   const handleCompetitionSelect = async () => {
-    if (!selectedCompetition) { toast.error('Please select a competition'); return; }
+    if (!selectedCompetition) { 
+      const itemType = 'competition';
+      toast.error(`Please select a ${itemType}`); 
+      return; 
+    }
+    
     try {
       setIsSelecting(true);
-      await switchCompetition(selectedCompetition);
+      
+      if (userType === 'coach') {
+        // Coach-specific flow: register team for competition
+        if (!coachTeam) {
+          toast.error('No team found. Please create a team first.');
+          setIsSelecting(false);
+          return;
+        }
+        
+        await coachAPI.registerTeamForCompetition(coachTeam._id || coachTeam.id, selectedCompetition);
+
+        // Set competition context
+        const token = secureStorage.getItem('coach_token');
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const authResponse = await fetch(
+          `${apiUrl}/auth/set-competition`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ competitionId: selectedCompetition }),
+          }
+        );
+
+        if (!authResponse.ok) {
+          const errorData = await authResponse.json();
+          throw new Error(errorData.message || 'Failed to set competition context');
+        }
+
+        const authData = await authResponse.json();
+        const newToken = authData.data?.token || authData.token;
+        if (newToken) {
+          secureStorage.setItem('coach_token', newToken);
+        }
+        toast.success('Team registered for competition successfully!');
+      } else {
+        // Admin/Superadmin flow: just switch competition
+        await switchCompetition(selectedCompetition);
+      }
+      
       if (onCompetitionSelected) onCompetitionSelected(selectedCompetition);
+      await new Promise(resolve => setTimeout(resolve, 300));
       navigateToDashboard();
     } catch (error) {
       logger.error('Failed to select competition:', error);
-      toast.error('Failed to select competition');
+      const errorMsg = error.response?.data?.message ||
+        error.message ||
+        `Failed to ${userType === 'coach' ? 'register team' : 'select competition'}`;
+      toast.error(errorMsg);
       setIsSelecting(false);
     }
   };
@@ -196,12 +319,20 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       player: '/player/dashboard',
       judge: '/judge',
     };
-    navigate(routes[userType] || '/');
+    
+    // Pass the selected competition ID as a URL parameter to ensure immediate loading
+    const basePath = routes[userType] || '/';
+    
+    const pathWithCompetition = selectedCompetition
+      ? `${basePath}?competitionId=${selectedCompetition}`
+      : basePath;
+    navigate(pathWithCompetition);
   };
 
-  const filteredCompetitions = assignedCompetitions?.filter((c) => {
+  const filteredCompetitions = competitions?.filter((c) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    
     return (
       c.name?.toLowerCase().includes(q) ||
       c.place?.toLowerCase().includes(q) ||
@@ -212,7 +343,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   });
 
   // ── Loading ──
-  if (isLoading || isSelecting) {
+  if (loading || isSelecting) {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
@@ -232,8 +363,44 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     );
   }
 
+  // ── Error ──
+  if (error) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
+        <FadeIn className="text-center max-w-sm w-full">
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <Trophy className="w-10 h-10 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-3">Error</h2>
+          <p className="text-red-200 text-sm leading-relaxed mb-8">
+            {error}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => userType === 'coach' ? fetchCoachData() : window.location.reload()}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+            >
+              Try Again
+            </button>
+            {userType === 'coach' && error.includes('create a team') && (
+              <button
+                onClick={() => navigate('/coach/create-team')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+                style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+              >
+                Create Team
+              </button>
+            )}
+          </div>
+        </FadeIn>
+      </div>
+    );
+  }
+
   // ── Empty ──
-  if (!assignedCompetitions || assignedCompetitions.length === 0) {
+  if (!competitions || competitions.length === 0) {
     return (
       <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
         <FadeIn className="text-center max-w-sm w-full">
@@ -243,7 +410,10 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           </div>
           <h2 className="text-2xl font-black text-white mb-3">No Competitions</h2>
           <p className="text-white/40 text-sm leading-relaxed mb-8">
-            You are not assigned to any competitions yet. Please contact your administrator.
+            {userType === 'coach' 
+              ? 'No open competitions are available right now. Please check back later.'
+              : 'You are not assigned to any competitions yet. Please contact your administrator.'
+            }
           </p>
           <button
             onClick={() => navigate('/')}
@@ -288,7 +458,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           </FadeIn>
 
           {/* Search */}
-          {assignedCompetitions.length > 3 && (
+          {competitions.length > 3 && (
             <FadeIn delay={0.1} className="mb-6">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
@@ -330,7 +500,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                 className="text-center py-16"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               >
-                <p className="text-white/30 text-sm">No competitions found for "{searchQuery}"</p>
+                <p className="text-white/30 text-sm">
+                  No competitions found for "{searchQuery}"
+                </p>
                 <button onClick={() => setSearchQuery('')}
                   className="mt-2 text-xs font-semibold transition-colors"
                   style={{ color: COLORS.saffronLight }}>
@@ -345,9 +517,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               >
                 {filteredCompetitions?.map((competition, i) => (
                   <CompetitionCard
-                    key={competition._id}
+                    key={competition._id || competition.id}
                     competition={competition}
-                    isSelected={selectedCompetition === competition._id}
+                    isSelected={selectedCompetition === (competition._id || competition.id)}
                     onSelect={setSelectedCompetition}
                     disabled={isSelecting}
                     index={i}
@@ -372,21 +544,23 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               whileHover={selectedCompetition && !isSelecting ? { scale: 1.02, brightness: 1.1 } : {}}
               whileTap={selectedCompetition && !isSelecting ? { scale: 0.97 } : {}}
             >
-              {isSelecting ? (
-                <>
-                  <motion.div
-                    className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                  />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  Continue to Dashboard
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </>
-              )}
+              <>
+                {isSelecting ? (
+                  <>
+                    <motion.div
+                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    />
+                    {userType === 'coach' ? 'Registering...' : 'Loading...'}
+                  </>
+                ) : (
+                  <>
+                    {userType === 'coach' ? 'Register Team & Continue' : 'Continue to Dashboard'}
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </>
+                )}
+              </>
             </motion.button>
           </FadeIn>
         </div>

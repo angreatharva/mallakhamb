@@ -71,7 +71,7 @@ const AdminTransactions = () => {
   const fetchCompetitions = async () => {
     try {
       const response = await superAdminAPI.getAllCompetitions();
-      setCompetitions(response.data.competitions || []);
+      setCompetitions(response.data.data || []);
     } catch (error) {
       logger.error('Failed to load competitions:', error);
       toast.error('Failed to load competitions');
@@ -84,7 +84,9 @@ const AdminTransactions = () => {
       const params = {};
       if (isSuperAdmin && competitionId) params.competitionId = competitionId;
       const response = await api.getTransactions(params);
-      setTransactions(response.data.transactions || []);
+      // superadmin returns data as array; admin returns {transactions, total, ...}
+      const txData = response.data.data;
+      setTransactions(Array.isArray(txData) ? txData : (txData?.transactions || []));
     } catch (error) {
       logger.error('Failed to load transactions:', error);
       toast.error(error.response?.data?.message || 'Failed to load transactions');

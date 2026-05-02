@@ -66,6 +66,17 @@ function createPlayerController(container) {
       const teams = await playerService.getAvailableTeams(competitionId);
       res.json({ success: true, data: teams });
     }),
+
+    /**
+     * Get open competitions available for players to join
+     * @route GET /api/players/competitions/open
+     */
+    getOpenCompetitions: asyncHandler(async (req, res) => {
+      // Reuse the coach service method since it's the same logic
+      const competitionService = container.resolve('competitionService');
+      const competitions = await competitionService.getOpenCompetitions();
+      res.json({ success: true, data: competitions });
+    }),
   };
 }
 

@@ -61,8 +61,7 @@ function createAuthController(container) {
       const { competitionId } = req.body;
       const result = await authenticationService.setCompetitionContext(
         req.user._id,
-        req.user.userType,
-        req.user,
+        req.userType,
         competitionId
       );
       res.json({ success: true, data: result });
@@ -72,8 +71,7 @@ function createAuthController(container) {
     getAssignedCompetitions: asyncHandler(async (req, res) => {
       const competitions = await authenticationService.getAssignedCompetitions(
         req.user._id,
-        req.user.userType,
-        req.user
+        req.userType
       );
       res.json({ success: true, data: { competitions, count: competitions.length } });
     }),

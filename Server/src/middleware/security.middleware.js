@@ -63,13 +63,28 @@ function createHelmetMiddleware(container) {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: [
+          "'self'", 
+          "'unsafe-inline'", 
+          "'unsafe-eval'",
+          'https://checkout.razorpay.com',
+          'https://cdn.razorpay.com'
+        ],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          'https://api.razorpay.com',
+          'https://checkout.razorpay.com',
+          'https://lumberjack.razorpay.com'
+        ],
+        fontSrc: ["'self'", 'data:'],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"]
+        frameSrc: [
+          "'self'",
+          'https://api.razorpay.com',
+          'https://checkout.razorpay.com'
+        ]
       }
     },
     // Strict Transport Security (HTTPS only)

@@ -550,6 +550,43 @@ class CompetitionService {
   }
 
   /**
+   * Get open competitions (upcoming and ongoing) available for registration
+   * Used by coaches and players to see which competitions they can join
+   * @returns {Promise<Array>} Open competitions
+   */
+  async getOpenCompetitions() {
+    try {
+      // Cache open competitions
+      const cacheKey = 'competitions:open';
+      
+      return await this._cacheWrap(cacheKey, async () => {
+        // Get competitions that are upcoming or ongoing
+        const competitions = await this.competitionRepository.find(
+          {
+            isDeleted: false,
+            status: { $in: ['upcoming', 'ongoing'] }
+          },
+          {
+            sort: { startDate: 1 }, // Sort by start date ascending
+            populate: [{ path: 'admins', select: 'name email' }]
+          }
+        );
+
+        this.logger.debug('Open competitions fetched from database', {
+          count: competitions.length
+        });
+
+        return competitions;
+      }, 300); // 5 minutes TTL
+    } catch (error) {
+      this.logger.error('Get open competitions error', {
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Validate dates
    * @param {Date} startDate - Start date
    * @param {Date} endDate - End date

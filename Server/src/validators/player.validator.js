@@ -181,13 +181,14 @@ const joinTeam = () => {
         return true;
       }),
     body('competitionId')
+      .optional() // Make competitionId optional for now
       .trim()
-      .notEmpty()
-      .withMessage('Competition ID is required')
       .custom((value) => {
-        const mongoose = require('mongoose');
-        if (!mongoose.Types.ObjectId.isValid(value)) {
-          throw new Error('Invalid competition ID format');
+        if (value) { // Only validate if provided
+          const mongoose = require('mongoose');
+          if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('Invalid competition ID format');
+          }
         }
         return true;
       })

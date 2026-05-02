@@ -18,7 +18,10 @@
     "test-resend": "node test-resend-services.js",
     "migrate:up": "node scripts/migrate.js up",
     "migrate:down": "node scripts/migrate.js down",
-    "migrate:status": "node scripts/migrate.js status"
+    "migrate:status": "node scripts/migrate.js status",
+    "test:coach-flow": "node tests/coach-onboarding-flow.test.js",
+    "setup:test": "node scripts/setupTestEnvironment.js",
+    "cleanup:test": "node scripts/cleanupTestCoaches.js"
   },
   "keywords": [
     "sports",
@@ -55,6 +58,7 @@
     "fast-check": "^4.7.0",
     "jest": "^30.2.0",
     "nodemon": "^3.0.2",
+    "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2"
   },
   "jest": {

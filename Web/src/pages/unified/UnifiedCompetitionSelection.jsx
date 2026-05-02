@@ -41,33 +41,33 @@ const detectRoleFromPath = (pathname) => {
 const getRoleConfig = (role) => {
   const configs = {
     coach: {
-      title: 'Competition',
-      subtitle: 'Selection',
-      description: 'Select a competition to register your team.',
-      accessLabel: 'Coach Competition Selection',
+      titlePrefix: 'Choose Your',
+      titleHighlight: 'Arena',
+      description: 'Select a competition to continue to your dashboard',
+      accessLabel: 'Competition Selection',
       stepLabel: 'Select Competition',
       itemLabel: 'Competition',
       buttonText: 'Register Team & Continue',
       background: HexMesh,
       icon: Trophy,
-      color: '#22C55E', // Green for coach
-      colorLight: '#86EFAC',
-      colorDark: '#16A34A',
-      colorBg: '#22C55E18',
-      colorBorder: '#22C55E40',
-      colorGlow: '#22C55E15',
+      color: '#FF6B00', // Orange/Saffron for coach (matching superadmin style)
+      colorLight: '#FF8C38',
+      colorDark: '#CC5500',
+      colorBg: '#FF6B0018',
+      colorBorder: '#FF6B0040',
+      colorGlow: '#FF6B0015',
       dashboardPath: '/coach/dashboard',
     },
     player: {
-      title: 'Team',
-      subtitle: 'Selection',
-      description: 'Select a team to join and compete.',
-      accessLabel: 'Player Team Selection',
-      stepLabel: 'Select Team',
-      itemLabel: 'Team',
-      buttonText: 'Join Team & Continue',
+      titlePrefix: 'Choose Your',
+      titleHighlight: 'Arena',
+      description: 'Select a competition to continue to your dashboard',
+      accessLabel: 'Competition Selection',
+      stepLabel: 'Select Competition',
+      itemLabel: 'Competition',
+      buttonText: 'Register Team & Continue',
       background: RadialBurst,
-      icon: Users,
+      icon: Trophy,
       color: '#F97316', // Saffron for player
       colorLight: '#FDBA74',
       colorDark: '#EA580C',
@@ -114,10 +114,12 @@ const UnifiedCompetitionSelectionInner = () => {
     }
   }, [role]);
 
-  // Fetch data on mount
+  // Clear error when coachTeam is set
   useEffect(() => {
-    fetchData();
-  }, [role]);
+    if (coachTeam) {
+      setError(null);
+    }
+  }, [coachTeam]);
 
   /**
    * Fetch competitions (coach) or teams (player) from API.
@@ -125,43 +127,92 @@ const UnifiedCompetitionSelectionInner = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
 
       if (role === 'coach') {
-        // Fetch coach's teams first to get the team ID
+        // Fetch coach's teams first
         const teamsResponse = await coachAPI.getTeams();
-        const teams = teamsResponse.data.teams || [];
         
-        // Find the first team without a competition or the first team
-        const availableTeam = teams.find(t => !t.competitions || t.competitions.length === 0) || teams[0];
+        logger.log('[Competition Selection] Teams API response:', teamsResponse);
         
-        if (!availableTeam) {
+        // API returns { data: { success: true, data: [...] } }
+        // So we need teamsResponse.data.data or just teamsResponse.data depending on axios config
+        const teams = Array.isArray(teamsResponse.data) 
+          ? teamsResponse.data 
+          : (teamsResponse.data?.data || []);
+        
+        logger.log('[Competition Selection] Parsed teams array:', teams);
+        
+        if (teams.length === 0) {
+          logger.warn('[Competition Selection] No teams found');
           setError('Please create a team first before selecting a competition.');
-          setLoading(false);
+          setItems([]);
+          setCoachTeam(null);
           return;
         }
         
-        setCoachTeam(availableTeam);
+        // Set the first team
+        const team = teams[0];
+        setCoachTeam(team);
+        setError(null); // Clear error since we have a team
+        logger.log('[Competition Selection] Team set:', team);
         
         // Fetch open competitions
-        const response = await coachAPI.getOpenCompetitions();
-        setItems(response.data.competitions || []);
-      } else {
-        const response = await playerAPI.getTeams();
-        setItems(response.data.teams || []);
+        const competitionsResponse = await coachAPI.getOpenCompetitions();
+        
+        logger.log('[Competition Selection] Competitions API response:', competitionsResponse);
+        
+        // Same parsing logic
+        const competitions = Array.isArray(competitionsResponse.data)
+          ? competitionsResponse.data
+          : (competitionsResponse.data?.data || []);
+        
+        logger.log('[Competition Selection] Parsed competitions array:', competitions);
+        logger.log('[Competition Selection] Number of competitions:', competitions.length);
+        
+        setItems(competitions);
+        
+        if (competitions.length === 0) {
+          logger.warn('[Competition Selection] No competitions available');
+        }
+      } else if (role === 'player') {
+        // Player flow - fetch open competitions (same as coach)
+        const competitionsResponse = await playerAPI.getOpenCompetitions();
+        
+        logger.log('[Competition Selection] Player competitions API response:', competitionsResponse);
+        
+        const competitions = Array.isArray(competitionsResponse.data)
+          ? competitionsResponse.data
+          : (competitionsResponse.data?.data || []);
+        
+        logger.log('[Competition Selection] Parsed competitions array:', competitions);
+        
+        setItems(competitions);
+        
+        if (competitions.length === 0) {
+          logger.warn('[Competition Selection] No competitions available');
+        }
       }
     } catch (err) {
-      logger.error(`Failed to load ${role} data:`, err);
-      setError(
-        err.response?.data?.message ||
+      logger.error(`[Competition Selection] Error loading ${role} data:`, err);
+      const errorMessage = err.response?.data?.message ||
         err.message ||
-        `Failed to load ${config.itemLabel.toLowerCase()}s`
-      );
-      toast.error(error || `Failed to load ${config.itemLabel.toLowerCase()}s`);
+        `Failed to load ${config.itemLabel.toLowerCase()}s`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setItems([]);
     } finally {
       setLoading(false);
     }
   }, [role, config.itemLabel]);
+
+  // Fetch data on mount and when returning from team creation
+  useEffect(() => {
+    // Clear error and items on mount to avoid stale data
+    setError(null);
+    setItems([]);
+    setCoachTeam(null);
+    fetchData();
+  }, [fetchData, location.pathname]);
 
   /**
    * Handle selection/join action.
@@ -182,7 +233,7 @@ const UnifiedCompetitionSelectionInner = () => {
           return;
         }
         
-        await coachAPI.registerTeamForCompetition(coachTeam.id, selectedItem.id);
+        await coachAPI.registerTeamForCompetition(coachTeam._id || coachTeam.id, selectedItem._id || selectedItem.id);
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
@@ -195,7 +246,7 @@ const UnifiedCompetitionSelectionInner = () => {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ competitionId: selectedItem.id }),
+            body: JSON.stringify({ competitionId: selectedItem._id || selectedItem.id }),
           }
         );
 
@@ -205,35 +256,54 @@ const UnifiedCompetitionSelectionInner = () => {
         }
 
         const authData = await authResponse.json();
-        secureStorage.setItem('coach_token', authData.token);
+        const newToken = authData.data?.token || authData.token;
+        if (newToken) {
+          secureStorage.setItem('coach_token', newToken);
+        }
         toast.success('Team registered for competition successfully!');
-      } else {
-        // Player: join team
-        const response = await playerAPI.updateTeam({
-          teamId: selectedItem._id || selectedItem.id,
-          competitionId: selectedItem.competitionId,
-        });
-
-        const { token, team } = response.data;
-
-        if (token) {
-          secureStorage.setItem('player_token', token);
-
-          const userData = secureStorage.getItem('player_user');
-          if (userData) {
-            const user = JSON.parse(userData);
-            user.team = team?.id || selectedItem._id || selectedItem.id;
-            secureStorage.setItem('player_user', JSON.stringify(user));
-            login(user, token, 'player');
+      } else if (role === 'player') {
+        // Player: join competition (similar to coach flow)
+        // For now, we'll use the same set-competition endpoint
+        // The backend should handle creating/joining a team for the player
+        
+        const playerToken = secureStorage.getItem('player_token');
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        
+        // Set competition context for player
+        const authResponse = await fetch(
+          `${apiUrl}/auth/set-competition`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${playerToken}`,
+            },
+            body: JSON.stringify({ competitionId: selectedItem._id || selectedItem.id }),
           }
+        );
+
+        if (!authResponse.ok) {
+          const errorData = await authResponse.json();
+          throw new Error(errorData.message || 'Failed to set competition context');
         }
 
-        toast.success('Team joined successfully!');
+        const authData = await authResponse.json();
+        const newToken = authData.data?.token || authData.token;
+        if (newToken) {
+          secureStorage.setItem('player_token', newToken);
+        }
+
+        toast.success('Competition selected successfully!');
       }
 
-      // Navigate to dashboard
+      // Navigate to dashboard with competition parameter
       setTimeout(() => {
-        navigate(config.dashboardPath);
+        const competitionId = selectedItem._id || selectedItem.id;
+        if (role === 'coach' || role === 'player') {
+          navigate(`${config.dashboardPath}?competitionId=${competitionId}`);
+        } else {
+          navigate(config.dashboardPath);
+        }
       }, 100);
     } catch (err) {
       logger.error(`${role} selection error:`, err);
@@ -254,20 +324,10 @@ const UnifiedCompetitionSelectionInner = () => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
 
-    if (role === 'coach') {
-      return [item.name, item.place, item.level, item.status, item.description].some(
-        (v) => v?.toLowerCase().includes(q)
-      );
-    } else {
-      // Player: search by team name, coach name, competition name, description
-      const coachName = typeof item.coach === 'string' 
-        ? item.coach 
-        : `${item.coach?.firstName || ''} ${item.coach?.lastName || ''}`.trim();
-      
-      return [item.name, coachName, item.competitionName, item.description].some((v) =>
-        v?.toLowerCase().includes(q)
-      );
-    }
+    // Both coach and player now search competitions
+    return [item.name, item.place, item.level, item.status, item.description].some(
+      (v) => v?.toLowerCase().includes(q)
+    );
   });
 
   /**
@@ -382,7 +442,7 @@ const UnifiedCompetitionSelectionInner = () => {
             {config.accessLabel}
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-white mb-3">
-            Select Your <span style={{ color: config.color }}>{config.title}</span>
+            {config.titlePrefix} <span style={{ color: config.color }}>{config.titleHighlight}</span>
           </h1>
           <p className="text-white/45 text-sm">{config.description}</p>
         </motion.div>
@@ -401,12 +461,25 @@ const UnifiedCompetitionSelectionInner = () => {
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1">
               <p className="text-red-200 text-sm">{error}</p>
-              <button
-                onClick={fetchData}
-                className="mt-2 text-xs text-red-300 hover:text-red-200 transition-colors underline"
-              >
-                Try again
-              </button>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={fetchData}
+                  className="text-xs text-red-300 hover:text-red-200 transition-colors underline"
+                >
+                  Try again
+                </button>
+                {role === 'coach' && error.includes('create a team') && (
+                  <button
+                    onClick={() => navigate('/coach/create-team')}
+                    className="px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors"
+                    style={{
+                      background: `linear-gradient(135deg, ${config.color}, ${config.colorDark})`,
+                    }}
+                  >
+                    Create New Team
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -534,72 +607,78 @@ const UnifiedCompetitionSelectionInner = () => {
                     whileTap={submitting ? {} : { scale: 0.99 }}
                     aria-pressed={selectedItem?.id === item.id || selectedItem?._id === item._id}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-white font-bold">{item.name}</p>
-
-                        {/* Coach competition details */}
-                        {role === 'coach' && (
-                          <>
-                            {item.place && (
-                              <div className="flex items-center gap-2 text-white/45 text-xs mt-2">
-                                <MapPin className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
-                                <span>{item.place}</span>
-                                {item.level && (
-                                  <>
-                                    <span>·</span>
-                                    <span className="capitalize">{item.level}</span>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                            {item.startDate && item.endDate && (
-                              <div className="flex items-center gap-2 text-white/45 text-xs mt-1">
-                                <Calendar className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
-                                <span>
-                                  {new Date(item.startDate).toLocaleDateString()} –{' '}
-                                  {new Date(item.endDate).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            {item.status && (
-                              <span
-                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold mt-2"
-                                style={getStatusStyle(item.status)}
-                              >
-                                {item.status}
-                              </span>
-                            )}
-                          </>
-                        )}
-
-                        {/* Player team details */}
-                        {role === 'player' && (
-                          <>
-                            {item.coach && (
-                              <p className="text-white/40 text-sm mt-1">
-                                Coach: {typeof item.coach === 'string' ? item.coach : `${item.coach.firstName || ''} ${item.coach.lastName || ''}`.trim()}
-                              </p>
-                            )}
-                            {item.competitionName && (
-                              <p className="text-white/40 text-sm">Competition: {item.competitionName}</p>
-                            )}
-                            {item.description && (
-                              <p className="text-white/40 text-xs mt-1 line-clamp-1">{item.description}</p>
-                            )}
-                          </>
-                        )}
+                    <div className="flex items-start gap-4">
+                      {/* Trophy icon - gray when unselected, colored when selected */}
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ 
+                          background: (selectedItem?.id === item.id || selectedItem?._id === item._id)
+                            ? `${config.color}15`
+                            : 'rgba(255,255,255,0.05)',
+                          border: (selectedItem?.id === item.id || selectedItem?._id === item._id)
+                            ? `1px solid ${config.color}30`
+                            : '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        <Trophy 
+                          className="w-6 h-6" 
+                          style={{ 
+                            color: (selectedItem?.id === item.id || selectedItem?._id === item._id)
+                              ? config.color
+                              : 'rgba(255,255,255,0.3)'
+                          }} 
+                          aria-hidden="true" 
+                        />
                       </div>
 
-                      {/* Selection indicator */}
-                      {(selectedItem?.id === item.id || selectedItem?._id === item._id) && (
-                        <CheckCircle
-                          className="w-5 h-5 flex-shrink-0 ml-3"
-                          style={{ color: config.color }}
-                          aria-hidden="true"
-                        />
-                      )}
+                      {/* Competition details */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-bold">{item.name}</p>
+
+                        {/* Competition details (same for both coach and player) */}
+                        {item.place && (
+                          <div className="flex items-center gap-2 text-white/45 text-xs mt-2">
+                            <MapPin className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                            <span>{item.place}</span>
+                            {item.level && (
+                              <>
+                                <span>·</span>
+                                <span className="capitalize">{item.level}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {item.startDate && item.endDate && (
+                          <div className="flex items-center gap-2 text-white/45 text-xs mt-1">
+                            <Calendar className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                            <span>
+                              {new Date(item.startDate).toLocaleDateString()} –{' '}
+                              {new Date(item.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        {item.status && (
+                          <span
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold mt-2"
+                            style={getStatusStyle(item.status)}
+                          >
+                            {item.status}
+                          </span>
+                        )}
+                        {item.description && (
+                          <p className="text-white/40 text-xs mt-2 line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Selection indicator - absolute positioned in top-right corner */}
+                    {(selectedItem?.id === item.id || selectedItem?._id === item._id) && (
+                      <CheckCircle
+                        className="w-6 h-6 absolute top-4 right-4"
+                        style={{ color: config.color }}
+                        aria-hidden="true"
+                      />
+                    )}
                   </motion.button>
                 ))}
               </AnimatePresence>

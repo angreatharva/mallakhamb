@@ -336,7 +336,7 @@ class AuthenticationService {
         this.logger.warn('Competition context failed: Competition not found', { 
           competitionId 
         });
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // TODO: Validate user has access to competition
@@ -364,6 +364,81 @@ class AuthenticationService {
         userType, 
         competitionId, 
         error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get competitions assigned to a user.
+   * - admin/super_admin: competitions array on the user document
+   * - judge: single competition field on the user document
+   * - player/coach: no direct competition assignment, returns empty array
+   * @param {string} userId - User ID
+   * @param {string} userType - User type
+   * @returns {Promise<Array>} Array of competition documents
+   */
+  async getAssignedCompetitions(userId, userType) {
+    try {
+      const repository = this.getRepositoryByType(userType);
+      const user = await repository.findById(userId);
+
+      if (!user) {
+        throw new NotFoundError('User');
+      }
+
+      const type = userType.toLowerCase();
+
+      if (type === 'admin' || type === 'super_admin') {
+        // super_admin: fetch all competitions
+        if (user.role === 'super_admin') {
+          return await this.competitionRepository.find({});
+        }
+        // admin: fetch competitions by their assigned IDs
+        const ids = (user.competitions || []).map(id => id.toString());
+        if (ids.length === 0) return [];
+        return await this.competitionRepository.find({ _id: { $in: ids } });
+      }
+
+      if (type === 'judge') {
+        // Judge has a single competition field
+        if (!user.competition) return [];
+        const competition = await this.competitionRepository.findById(user.competition);
+        return competition ? [competition] : [];
+      }
+
+      if (type === 'coach') {
+        // Coach: fetch competitions where they have registered teams
+        const competitions = await this.competitionRepository.find({
+          'registeredTeams.coach': userId,
+          'registeredTeams.isActive': true
+        });
+        return competitions || [];
+      }
+
+      if (type === 'player') {
+        // Player: fetch competitions through their team
+        // First get the player's team
+        if (!user.team) return [];
+        
+        // Find competitions where the player's team is registered
+        const competitions = await this.competitionRepository.find({
+          'registeredTeams.team': user.team,
+          'registeredTeams.isActive': true
+        });
+        return competitions || [];
+      }
+
+      // Unknown user type
+      return [];
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Get assigned competitions error', {
+        userId,
+        userType,
+        error: error.message,
       });
       throw error;
     }
@@ -512,3 +587,4 @@ class AuthenticationService {
 }
 
 module.exports = AuthenticationService;
+

@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle } from 'lucide-react';
+import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle, LogOut, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { coachAPI } from '../../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
 import Dropdown from '../../components/Dropdown';
-import { CompetitionProvider } from '../../contexts/CompetitionContext';
+import { CompetitionProvider, useCompetition } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
+import CompetitionSelector from '../../components/CompetitionSelector';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
 import BHALogo from '../../assets/BHA.png';
+import { secureStorage } from '../../utils/secureStorage';
+import { logger } from '../../utils/logger';
 
 const CoachDashboard = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading } = useCompetition();
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +29,69 @@ const CoachDashboard = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
+  const [showSubmitWarning, setShowSubmitWarning] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState(null);
   useReducedMotion(); // Initialize for accessibility
+
+  // Load user data
+  useEffect(() => {
+    const userData = secureStorage.getItem('coach_user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        logger.error('Failed to parse user data:', e);
+      }
+    }
+  }, []);
+
+  // Handle competition selection from URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const competitionIdFromUrl = urlParams.get('competitionId');
+    
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
+      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
+      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
+        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
+        switchCompetition(competitionIdFromUrl).then(() => {
+          // Remove the URL parameter after successfully setting the competition
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('competitionId');
+          window.history.replaceState({}, '', newUrl);
+        }).catch(error => {
+          logger.error('Failed to set competition from URL:', error);
+        });
+        return;
+      }
+    }
+  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition]);
+
+  // Redirect to competition selection if no competition is set
+  useEffect(() => {
+    // Wait for competition context to finish loading
+    if (competitionLoading) return;
+    
+    // If no current competition and no assigned competitions, redirect to selection
+    if (!currentCompetition && (!assignedCompetitions || assignedCompetitions.length === 0)) {
+      logger.info('No competition context, redirecting to competition selection');
+      navigate('/coach/select-competition', { replace: true });
+    }
+  }, [currentCompetition, assignedCompetitions, competitionLoading, navigate]);
+
+  // Scroll handler for navbar
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const handleLogout = () => {
+    secureStorage.removeItem('coach_token');
+    secureStorage.removeItem('coach_user');
+    navigate('/coach/login');
+  };
 
   const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];
   const ageGroupLimits = {
@@ -66,8 +135,29 @@ const CoachDashboard = () => {
   const fetchTeamDashboard = async () => {
     try {
       const response = await coachAPI.getDashboard();
-      setTeam(response.data.team);
-    } catch { toast.error('Failed to load team dashboard'); }
+      console.log('Dashboard full response:', response);
+      console.log('response.data:', response.data);
+      console.log('response.data.data:', response.data?.data);
+      console.log('response.data.data.team:', response.data?.data?.team);
+      console.log('response.data.team:', response.data?.team);
+      
+      // Try multiple possible structures
+      let teamData = null;
+      
+      if (response.data?.data?.team !== undefined) {
+        teamData = response.data.data.team;
+        console.log('Using response.data.data.team');
+      } else if (response.data?.team !== undefined) {
+        teamData = response.data.team;
+        console.log('Using response.data.team');
+      }
+      
+      console.log('Final team data:', teamData);
+      setTeam(teamData);
+    } catch (error) { 
+      console.error('Failed to load team dashboard:', error);
+      toast.error('Failed to load team dashboard'); 
+    }
     finally { setLoading(false); }
   };
 
@@ -76,7 +166,9 @@ const CoachDashboard = () => {
     setSearchLoading(true);
     try {
       const response = await coachAPI.searchPlayers(query);
-      setPlayers(response.data.players);
+      // API returns: { success: true, data: [...players] }
+      const playersData = response.data?.data || [];
+      setPlayers(playersData);
     } catch { toast.error('Failed to search players'); }
     finally { setSearchLoading(false); }
   };
@@ -149,7 +241,64 @@ const CoachDashboard = () => {
   if (!team) {
     return (
       <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <div className="max-w-4xl mx-auto px-4 py-10">
+        {/* Navbar */}
+        <motion.nav
+          className="fixed top-0 left-0 right-0 z-50"
+          style={{
+            background: scrolled ? 'rgba(10,10,10,0.94)' : 'rgba(10,10,10,0.75)',
+            backdropFilter: 'blur(20px)',
+            borderBottom: `1px solid ${scrolled ? COLORS.darkBorder : 'transparent'}`,
+            transition: 'background 0.3s, border-color 0.3s',
+          }}
+          initial={{ y: -80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <motion.div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                whileHover={{ scale: 1.08, rotate: 5 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              >
+                <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
+              </motion.div>
+              <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
+                Mallakhamb<span style={{ color: COLORS.saffron }}>India</span>
+              </span>
+            </div>
+
+            {/* Right: Competition Selector + User info + Logout */}
+            <div className="flex items-center gap-2">
+              <CompetitionSelector userType="coach" />
+              {user && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+                  style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center"
+                    style={{ background: `${COLORS.saffron}20` }}>
+                    <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
+                  </div>
+                  <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
+                </div>
+              )}
+              <motion.button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
+                style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
+                whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
+                whileTap={{ scale: 0.96 }}
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" aria-hidden="true" />
+                Logout
+              </motion.button>
+            </div>
+          </div>
+        </motion.nav>
+
+        <div className="max-w-4xl mx-auto px-4 py-10 pt-24">
           <CompetitionProvider userType="coach">
             <CompetitionDisplay className="mb-8" />
           </CompetitionProvider>
@@ -212,7 +361,64 @@ const CoachDashboard = () => {
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+      {/* Navbar */}
+      <motion.nav
+        className="fixed top-0 left-0 right-0 z-50"
+        style={{
+          background: scrolled ? 'rgba(10,10,10,0.94)' : 'rgba(10,10,10,0.75)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${scrolled ? COLORS.darkBorder : 'transparent'}`,
+          transition: 'background 0.3s, border-color 0.3s',
+        }}
+        initial={{ y: -80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <motion.div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+              whileHover={{ scale: 1.08, rotate: 5 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
+              <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
+            </motion.div>
+            <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
+              Mallakhamb<span style={{ color: COLORS.saffron }}>India</span>
+            </span>
+          </div>
+
+          {/* Right: Competition Selector + User info + Logout */}
+          <div className="flex items-center gap-2">
+            <CompetitionSelector userType="coach" />
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+                style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center"
+                  style={{ background: `${COLORS.saffron}20` }}>
+                  <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
+                </div>
+                <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
+              </div>
+            )}
+            <motion.button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
+              whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
+              whileTap={{ scale: 0.96 }}
+              aria-label="Logout"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              Logout
+            </motion.button>
+          </div>
+        </div>
+      </motion.nav>
+
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 pt-24">
         <CompetitionProvider userType="coach">
           <CompetitionDisplay className="mb-8" />
         </CompetitionProvider>
@@ -236,20 +442,45 @@ const CoachDashboard = () => {
                 <motion.button onClick={() => setShowAddPlayer(true)}
                   disabled={team?.isSubmitted}
                   className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
+                  style={{ background: 'linear-gradient(135deg, #FF6B00, #CC5500)' }}
                   whileHover={team?.isSubmitted ? {} : { scale: 1.02 }}
                   whileTap={team?.isSubmitted ? {} : { scale: 0.98 }}>
                   <UserPlus className="w-4 h-4" aria-hidden="true" />
                   Add Player
                 </motion.button>
-                <motion.button onClick={() => setShowTeamSummary(true)}
-                  disabled={!team?.players?.length || team?.isSubmitted}
-                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
-                  whileHover={(!team?.players?.length || team?.isSubmitted) ? {} : { scale: 1.02 }}
-                  whileTap={(!team?.players?.length || team?.isSubmitted) ? {} : { scale: 0.98 }}>
-                  <Trophy className="w-4 h-4" aria-hidden="true" />
-                  {team?.isSubmitted ? 'Team Submitted' : 'Submit Team'}
+                <motion.button 
+                  onClick={() => {
+                    if (team?.isSubmitted) {
+                      toast.error('Team already submitted. Contact admin to make changes.');
+                      return;
+                    }
+                    if (!team?.players?.length) {
+                      toast.error('Please add at least one player before submitting.');
+                      return;
+                    }
+                    setShowTeamSummary(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200"
+                  style={{ 
+                    background: team?.isSubmitted 
+                      ? 'rgba(255,255,255,0.1)' 
+                      : `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`,
+                    opacity: team?.isSubmitted ? 0.6 : 1,
+                    cursor: team?.isSubmitted ? 'not-allowed' : 'pointer'
+                  }}
+                  whileHover={team?.isSubmitted ? {} : { scale: 1.02 }}
+                  whileTap={team?.isSubmitted ? {} : { scale: 0.98 }}>
+                  {team?.isSubmitted ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" aria-hidden="true" />
+                      Team Submitted
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-4 h-4" aria-hidden="true" />
+                      Submit Team
+                    </>
+                  )}
                 </motion.button>
               </div>
             </div>
@@ -390,12 +621,73 @@ const CoachDashboard = () => {
                       Team Already Submitted
                     </div>
                   ) : (
-                    <button onClick={() => { setShowTeamSummary(false); window.location.href = '/coach/payment'; }}
+                    <button 
+                      onClick={() => {
+                        setShowTeamSummary(false);
+                        setShowSubmitWarning(true);
+                      }}
                       className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px]"
                       style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
                       Proceed to Payment
                     </button>
                   )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Submit Warning Modal */}
+      <AnimatePresence>
+        {showSubmitWarning && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowSubmitWarning(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border"
+              style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+                  <Trophy className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Submit Team for Competition?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,153,0,0.1)', border: '1px solid rgba(255,153,0,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Important:</strong> Once you complete the payment and submit your team, it will be <strong>locked</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      You will <strong>not be able to add or remove players</strong> after submission. To make any changes, you'll need to contact the admin.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl" style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                    <p className="text-xs text-center" style={{ color: COLORS.saffronLight }}>
+                      Please review your team carefully before proceeding
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => {
+                      setShowSubmitWarning(false);
+                      navigate('/coach/payment');
+                    }}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+                    style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+                    I Understand, Proceed to Payment
+                  </button>
+                  <button 
+                    onClick={() => setShowSubmitWarning(false)}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -495,7 +787,7 @@ const CoachDashboard = () => {
                       <button onClick={handleAddPlayer}
                         disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender}
                         className="flex-1 py-3 rounded-xl font-bold text-white min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
+                        style={{ background: 'linear-gradient(135deg, #FF6B00, #CC5500)' }}>
                         Add Player
                       </button>
                     </div>

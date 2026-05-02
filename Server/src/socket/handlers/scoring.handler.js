@@ -76,21 +76,7 @@ class ScoringHandler {
 
     // Validate room access
     const validator = async (socket, roomId) => {
-      // Room ID format: competitionId_gender_ageGroup_competitionType
-      const competitionId = roomId.split('_')[0];
-
-      // Judges, admins, and superadmins can join any room in their competition
-      if (['judge', 'admin', 'superadmin'].includes(socket.userType)) {
-        // Optionally validate competition access
-        return true;
-      }
-
-      // Coaches and players can view but not interact
-      if (['coach', 'player'].includes(socket.userType)) {
-        return true;
-      }
-
-      return false;
+      return ['judge', 'admin', 'superadmin'].includes(socket.userType);
     };
 
     // Join the room with validation

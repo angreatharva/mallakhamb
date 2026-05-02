@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, Trophy, Users } from 'lucide-react';
@@ -9,22 +9,73 @@ import { COLORS, GradientText, useReducedMotion } from '../public/Home';
 
 const CoachCreateTeam = () => {
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const { register, handleSubmit, formState: { errors } } = useForm();
+
+  // Check if coach already has a team and should skip this page
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const response = await coachAPI.getStatus();
+        
+        // Handle nested response structure
+        const statusData = response.data?.data || response.data;
+        const { hasTeam, step } = statusData;
+        
+        console.log('[Create Team] Full response:', response.data);
+        console.log('[Create Team] Status data:', statusData);
+        console.log('[Create Team] Status check:', { hasTeam, step });
+        
+        // If coach has team, redirect to select competition
+        // (Coach can always select a different competition)
+        if (hasTeam && step === 'select-competition') {
+          console.log('[Create Team] Redirecting to select-competition - already has team');
+          navigate('/coach/select-competition', { replace: true });
+          return; // Don't set checkingStatus to false, keep showing loading
+        }
+        
+        // Otherwise, coach needs to create a team, show the form
+        console.log('[Create Team] Showing create team form');
+        setCheckingStatus(false);
+      } catch (error) {
+        console.error('[Create Team] Failed to check coach status:', error);
+        // On error, allow them to stay on this page
+        setCheckingStatus(false);
+      }
+    };
+    
+    checkStatus();
+  }, [navigate]);
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
       await coachAPI.createTeam(data);
       toast.success('Team created successfully! Now register it for a competition.');
-      navigate('/coach/select-competition');
+      // Small delay to ensure the team is available in the backend
+      setTimeout(() => {
+        navigate('/coach/select-competition', { state: { teamCreated: true } });
+      }, 500);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create team');
-    } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking status
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
+            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }} />
+          <p className="text-white/45 text-sm">Checking your status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden"

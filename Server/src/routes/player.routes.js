@@ -73,6 +73,14 @@ function createPlayerRoutes(container) {
   router.get('/teams', authMiddleware, playerAuth, playerController.getAvailableTeams);
 
   /**
+   * @route   GET /api/players/competitions/open
+   * @desc    Get open competitions available for players
+   * @access  Authenticated players
+   * @note    No competition context required
+   */
+  router.get('/competitions/open', authMiddleware, playerAuth, playerController.getOpenCompetitions);
+
+  /**
    * @route   GET /api/players/team
    * @desc    Get player's current team
    * @access  Authenticated players

@@ -186,7 +186,15 @@ const Judges = () => {
   const [loadingCompetitions, setLoadingCompetitions] = useState(false);
 
   const getAvailableCompetitionTypes = () => {
-    if (isSuperAdmin) return ['competition_1', 'competition_2', 'competition_3'];
+    if (isSuperAdmin && selectedCompetition) {
+      // For super admin with selected competition, get types from that competition
+      const comp = competitions.find(c => c._id === selectedCompetition.value);
+      return comp?.competitionTypes || [];
+    }
+    if (isSuperAdmin) {
+      // For super admin without selected competition, return empty (they must select one)
+      return [];
+    }
     if (currentCompetition?.competitionTypes) return currentCompetition.competitionTypes;
     return [];
   };
@@ -217,7 +225,8 @@ const Judges = () => {
 
   const getCompetitionTypeOptions = () => {
     const order = ['competition_1', 'competition_2', 'competition_3'];
-    return order.filter(t => availableCompetitionTypes.includes(t)).map(t => ({
+    const types = availableCompetitionTypes || [];
+    return order.filter(t => types.includes(t)).map(t => ({
       value: t,
       label: t === 'competition_1' ? 'Competition I - Team Championship' : t === 'competition_2' ? 'Competition II - All Round Individual' : 'Competition III - Apparatus Championship'
     }));
@@ -228,7 +237,12 @@ const Judges = () => {
     if (isSuperAdmin) {
       setLoadingCompetitions(true);
       superAdminAPI.getAllCompetitions()
-        .then(res => setCompetitions(res.data.competitions || []))
+        .then(res => {
+          // Handle nested response structure: {success: true, data: [competitions array]}
+          const responseData = res.data.data || res.data;
+          const competitionsArray = Array.isArray(responseData) ? responseData : (responseData.competitions || []);
+          setCompetitions(competitionsArray);
+        })
         .catch(() => toast.error('Failed to load competitions'))
         .finally(() => setLoadingCompetitions(false));
     }
@@ -237,11 +251,12 @@ const Judges = () => {
   useEffect(() => { setSelectedGender(null); setSelectedAgeGroup(null); setJudges([]); setJudgesExistForSelection(false); }, [selectedCompetition]);
 
   useEffect(() => {
-    if (availableCompetitionTypes.length > 0 && !selectedCompetitionType) {
-      const def = availableCompetitionTypes.includes('competition_1') ? 'competition_1' : availableCompetitionTypes[0];
+    const types = availableCompetitionTypes || [];
+    if (types.length > 0 && !selectedCompetitionType) {
+      const def = types.includes('competition_1') ? 'competition_1' : types[0];
       setSelectedCompetitionType({ value: def, label: getCompetitionTypeOptions().find(o => o.value === def)?.label || def });
     }
-  }, [availableCompetitionTypes.length]);
+  }, [availableCompetitionTypes?.length, selectedCompetition]);
 
   useEffect(() => {
     if (selectedGender) { setSelectedAgeGroup(null); setJudgesExistForSelection(false); setCheckingExistingJudges(false); setLoadingJudges(false); if (judgeType === 'list') setJudges([]); }
@@ -276,6 +291,21 @@ const Judges = () => {
     return `${prefix}_${initials}`;
   };
 
+  // Ensure the judge list always shows all 5 slots, filling in empty placeholders for missing ones
+  const JUDGE_SLOTS = [
+    { judgeNo: 1, judgeType: 'Senior Judge' },
+    { judgeNo: 2, judgeType: 'Judge 1' },
+    { judgeNo: 3, judgeType: 'Judge 2' },
+    { judgeNo: 4, judgeType: 'Judge 3' },
+    { judgeNo: 5, judgeType: 'Judge 4' },
+  ];
+  const padToFiveSlots = (apiJudges) => {
+    return JUDGE_SLOTS.map(slot => {
+      const found = apiJudges.find(j => j.judgeNo === slot.judgeNo);
+      return found || { ...slot, name: '', username: '', isEmpty: true };
+    });
+  };
+
   const generatePassword = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -287,7 +317,7 @@ const Judges = () => {
     try {
       const params = { gender: gender.value, ageGroup: ageGroup.value, competitionTypes: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getJudges(params);
-      return response.data.judges.filter(j => j._id && !j.isEmpty && j.name?.trim()).length > 0;
+      return (response.data.data || []).filter(j => j._id && !j.isEmpty && j.name?.trim()).length > 0;
     } catch { return false; }
   };
 
@@ -297,7 +327,6 @@ const Judges = () => {
     try {
       const judgesExist = await checkForExistingJudges(selectedGender, ageGroupOption);
       setJudgesExistForSelection(judgesExist);
-      if (judgesExist && judgeType === 'add') { toast.error(`Judges already exist for ${selectedGender.label} - ${ageGroupOption.label}. Switch to "Judge List".`); return; }
       setSelectedAgeGroup(ageGroupOption);
       if (judgeType === 'list' && selectedGender && ageGroupOption) await fetchJudgesWithParams(selectedGender.value, ageGroupOption.value);
     } finally { setCheckingExistingJudges(false); }
@@ -313,7 +342,7 @@ const Judges = () => {
       if (selectedCompetitionType) params.competitionTypes = selectedCompetitionType.value;
       if (isSuperAdmin && selectedCompetition) params.competitionId = selectedCompetition.value;
       const response = await api.getJudges(params);
-      setJudges(response.data.judges);
+      setJudges(padToFiveSlots(response.data.data || []));
     } catch { toast.error('Failed to load judges'); } finally { setLoadingJudges(false); }
   }, [selectedCompetitionType, selectedGender, selectedAgeGroup, selectedCompetition, api]);
 
@@ -323,9 +352,9 @@ const Judges = () => {
     try {
       const params = { gender, ageGroup, competitionTypes: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.getJudges(params);
-      setJudges(response.data.judges);
+      setJudges(padToFiveSlots(response.data.data || []));
       const summaryResponse = await api.getAllJudgesSummary();
-      const info = summaryResponse.data.summary.find(item => item.gender === gender && item.ageGroup === ageGroup);
+      const info = (summaryResponse.data.data?.summary || []).find(item => item.gender === gender && item.ageGroup === ageGroup);
       setAgeGroupStarted(info?.isStarted || false);
     } catch { toast.error('Failed to load judges'); } finally { setLoadingJudges(false); }
   };
@@ -347,7 +376,7 @@ const Judges = () => {
       const cleanedJudges = judgeFormData.map(j => ({ judgeNo: j.judgeNo, judgeType: j.judgeType, name: j.name.trim(), username: j.username.trim(), password: j.password.trim() }));
       const judgesData = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionTypes: [selectedCompetitionType.value], judges: cleanedJudges, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
       const response = await api.saveJudges(judgesData);
-      toast.success(`Judge panel created! ${response.data.filledSlots} judges added.`);
+      toast.success(`Judge panel created! ${response.data.data.created.length} judges added.`);
       setJudgeFormData([
         { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
         { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
@@ -459,7 +488,7 @@ const Judges = () => {
                 <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
                   Competition Type <span style={{ color: ADMIN_COLORS.red }}>*</span>
                 </label>
-                {availableCompetitionTypes.length === 0 ? (
+                {!availableCompetitionTypes || availableCompetitionTypes.length === 0 ? (
                   <div className="p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
                     <p className="text-sm" style={{ color: ADMIN_COLORS.gold }}>No competition types available. Contact super admin.</p>
                   </div>

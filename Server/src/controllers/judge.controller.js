@@ -19,8 +19,8 @@ function createJudgeController(container) {
 
     /** @route POST /api/judge/login */
     login: asyncHandler(async (req, res) => {
-      const { email, password, competitionId } = req.body;
-      const result = await judgeService.loginJudge(email, password, competitionId);
+      const { username, password } = req.body;
+      const result = await judgeService.loginJudge(username, password);
       res.json({ success: true, data: result, message: 'Login successful' });
     }),
 

@@ -23,6 +23,7 @@ describe('JudgeService', () => {
     mockDependencies = {
       judgeRepository: {
         findByEmail: jest.fn(),
+        findByUsername: jest.fn(),
         findById: jest.fn(),
         updateById: jest.fn()
       },
@@ -68,7 +69,7 @@ describe('JudgeService', () => {
       const mockJudge = {
         _id: 'judge123',
         name: 'Test Judge',
-        username: 'judge@test.com',
+        username: 'testjudge',
         password: await bcrypt.hash('password123', 12),
         isActive: true,
         competition: 'comp123',
@@ -89,11 +90,11 @@ describe('JudgeService', () => {
         status: 'ongoing'
       };
 
-      mockDependencies.judgeRepository.findByEmail.mockResolvedValue(mockJudge);
+      mockDependencies.judgeRepository.findByUsername = jest.fn().mockResolvedValue(mockJudge);
       mockDependencies.competitionRepository.findById.mockResolvedValue(mockCompetition);
       mockDependencies.tokenService.generateToken.mockReturnValue('mock-token');
 
-      const result = await judgeService.loginJudge('judge@test.com', 'password123', 'comp123');
+      const result = await judgeService.loginJudge('testjudge', 'password123');
 
       expect(result).toHaveProperty('judge');
       expect(result).toHaveProperty('token', 'mock-token');
@@ -108,56 +109,43 @@ describe('JudgeService', () => {
     });
 
     it('should throw AuthenticationError if judge not found', async () => {
-      mockDependencies.judgeRepository.findByEmail.mockResolvedValue(null);
+      mockDependencies.judgeRepository.findByUsername = jest.fn().mockResolvedValue(null);
 
       await expect(
-        judgeService.loginJudge('invalid@test.com', 'password123', 'comp123')
+        judgeService.loginJudge('invalidusername', 'password123')
       ).rejects.toThrow(AuthenticationError);
     });
 
     it('should throw AuthenticationError if password is invalid', async () => {
       const mockJudge = {
         _id: 'judge123',
+        username: 'testjudge',
         password: await bcrypt.hash('password123', 12),
         isActive: true,
         competition: 'comp123'
       };
 
-      mockDependencies.judgeRepository.findByEmail.mockResolvedValue(mockJudge);
+      mockDependencies.judgeRepository.findByUsername = jest.fn().mockResolvedValue(mockJudge);
 
       await expect(
-        judgeService.loginJudge('judge@test.com', 'wrongpassword', 'comp123')
+        judgeService.loginJudge('testjudge', 'wrongpassword')
       ).rejects.toThrow(AuthenticationError);
     });
 
     it('should throw AuthenticationError if account is inactive', async () => {
       const mockJudge = {
         _id: 'judge123',
+        username: 'testjudge',
         password: await bcrypt.hash('password123', 12),
         isActive: false,
         competition: 'comp123'
       };
 
-      mockDependencies.judgeRepository.findByEmail.mockResolvedValue(mockJudge);
+      mockDependencies.judgeRepository.findByUsername = jest.fn().mockResolvedValue(mockJudge);
 
       await expect(
-        judgeService.loginJudge('judge@test.com', 'password123', 'comp123')
+        judgeService.loginJudge('testjudge', 'password123')
       ).rejects.toThrow(AuthenticationError);
-    });
-
-    it('should throw AuthorizationError if not assigned to competition', async () => {
-      const mockJudge = {
-        _id: 'judge123',
-        password: await bcrypt.hash('password123', 12),
-        isActive: true,
-        competition: 'comp456' // Different competition
-      };
-
-      mockDependencies.judgeRepository.findByEmail.mockResolvedValue(mockJudge);
-
-      await expect(
-        judgeService.loginJudge('judge@test.com', 'password123', 'comp123')
-      ).rejects.toThrow(AuthorizationError);
     });
   });
 

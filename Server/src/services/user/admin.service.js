@@ -98,7 +98,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Get admin profile failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Remove password from response
@@ -134,7 +134,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Assign competition failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Super admins have access to all competitions, no need to assign
@@ -150,7 +150,7 @@ class AdminService extends UserService {
 
       if (!competition) {
         this.logger.warn('Assign competition failed: Competition not found', { competitionId });
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Check if competition is already assigned
@@ -205,7 +205,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Remove competition failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Super admins have access to all competitions
@@ -266,7 +266,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Check access failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Super admins have access to all competitions
@@ -320,7 +320,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Get all users failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       const skip = (page - 1) * limit;
@@ -387,7 +387,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Activate user failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Get appropriate repository
@@ -445,7 +445,7 @@ class AdminService extends UserService {
 
       if (!admin) {
         this.logger.warn('Deactivate user failed: Admin not found', { adminId });
-        throw new NotFoundError('Admin not found');
+        throw new NotFoundError('Admin');
       }
 
       // Get appropriate repository
@@ -530,29 +530,47 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
-      const [totalTeams, totalPlayers, totalJudges, totalScores] = await Promise.all([
-        this.teamRepository.count({ competition: competitionId }),
-        this.playerRepository.count({ competition: competitionId }),
-        this.judgeRepository.count({ competition: competitionId, isActive: true }),
-        this.scoreRepository.count({ competition: competitionId })
-      ]);
+      // Derive team/player counts from the embedded registeredTeams array
+      const registeredTeams = competition.registeredTeams || [];
+      const activeTeams = registeredTeams.filter(rt => rt.isActive !== false);
 
-      const submittedTeams = await this.teamRepository.count({
-        competition: competitionId,
-        isSubmitted: true
-      });
+      // All players across all active registered teams
+      const allPlayers = activeTeams.flatMap(rt => rt.players || []);
+
+      const malePlayers = allPlayers.filter(p => p.gender === 'Male');
+      const femalePlayers = allPlayers.filter(p => p.gender === 'Female');
+
+      // Teams that have at least one male player vs at least one female player
+      const boysTeams = activeTeams.filter(rt =>
+        (rt.players || []).some(p => p.gender === 'Male')
+      ).length;
+      const girlsTeams = activeTeams.filter(rt =>
+        (rt.players || []).some(p => p.gender === 'Female')
+      ).length;
+
+      const totalTeams = activeTeams.length;
+      const totalParticipants = allPlayers.length;
+      const totalBoys = malePlayers.length;
+      const totalGirls = femalePlayers.length;
+      const submittedTeams = activeTeams.filter(rt => rt.isSubmitted).length;
+
+      // Judge count still needs a DB query
+      const totalJudges = await this.judgeRepository.count({ competition: competitionId, isActive: true });
 
       this.logger.info('Dashboard stats retrieved', { competitionId });
 
       return {
         totalTeams,
-        totalPlayers,
-        totalJudges,
-        totalScores,
+        totalParticipants,
+        boysTeams,
+        girlsTeams,
+        totalBoys,
+        totalGirls,
         submittedTeams,
+        totalJudges,
         competition: {
           name: competition.name,
           startDate: competition.startDate,
@@ -582,7 +600,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Get registration status by age group
@@ -692,23 +710,59 @@ class AdminService extends UserService {
   async getAllTeams(competitionId, filters = {}, pagination = {}) {
     try {
       const { page = 1, limit = 10 } = pagination;
-      const criteria = { competition: competitionId, ...filters };
+      
+      // Separate team-level filters from player-level filters
+      const { ageGroup, gender, ...teamFilters } = filters;
+      const criteria = { competition: competitionId, ...teamFilters };
 
+      // First, get all teams for the competition
+      const allTeams = await this.teamRepository.find(criteria, { 
+        sort: { createdAt: -1 },
+        populate: ['coach']
+      });
+
+      // Fetch players for each team and apply player-level filters
+      const teamsWithFilteredPlayers = await Promise.all(
+        allTeams.map(async (team) => {
+          let players = await this.playerRepository.find({ team: team._id });
+          
+          // Apply player-level filters
+          if (ageGroup) {
+            players = players.filter(player => player.ageGroup === ageGroup);
+          }
+          if (gender) {
+            players = players.filter(player => player.gender === gender);
+          }
+          
+          return {
+            ...team,
+            players,
+            playerCount: players.length
+          };
+        })
+      );
+
+      // Filter out teams that have no players matching the criteria
+      const filteredTeams = teamsWithFilteredPlayers.filter(team => {
+        // If no player filters are applied, include all teams
+        if (!ageGroup && !gender) return true;
+        // If player filters are applied, only include teams with matching players
+        return team.players.length > 0;
+      });
+
+      // Apply pagination to filtered results
+      const total = filteredTeams.length;
       const skip = (page - 1) * limit;
-      const [teams, total] = await Promise.all([
-        this.teamRepository.find(criteria, { 
-          skip, 
-          limit, 
-          sort: { createdAt: -1 },
-          populate: ['coach', 'players']
-        }),
-        this.teamRepository.count(criteria)
-      ]);
+      const paginatedTeams = filteredTeams.slice(skip, skip + limit);
 
-      this.logger.info('All teams retrieved', { competitionId, total });
+      this.logger.info('All teams retrieved with filters', { 
+        competitionId, 
+        total, 
+        filters: { ageGroup, gender, ...teamFilters }
+      });
 
       return {
-        teams,
+        teams: paginatedTeams,
         total,
         page,
         pages: Math.ceil(total / limit)
@@ -725,17 +779,61 @@ class AdminService extends UserService {
   /**
    * Get team details with players, coach, payment status, and scores
    * @param {string} teamId - Team ID
+   * @param {Object} filters - Optional filters (gender, ageGroup, competition)
    * @returns {Promise<Object>} Team details
    * @throws {NotFoundError} If team not found
    */
-  async getTeamDetails(teamId) {
+  async getTeamDetails(teamId, filters = {}) {
     try {
       const team = await this.teamRepository.findById(teamId, {
-        populate: ['coach', 'players', 'competition']
+        populate: ['coach']
       });
 
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
+      }
+
+      // Get players for this team (players reference teams, not the other way around)
+      let players = await this.playerRepository.find({ team: teamId });
+
+      // If competition filter is provided, we need to get age groups from competition's registeredTeams
+      if (filters.competition) {
+        const competition = await this.competitionRepository.findById(filters.competition);
+        if (competition) {
+          const registeredTeam = competition.registeredTeams.find(
+            rt => rt.team.toString() === teamId
+          );
+          
+          if (registeredTeam) {
+            // Get only players that are registered in this competition
+            const registeredPlayerIds = registeredTeam.players.map(rp => rp.player.toString());
+            players = players.filter(player => registeredPlayerIds.includes(player._id.toString()));
+            
+            // Update player data with competition-specific age groups and gender
+            players = players.map(player => {
+              const registeredPlayer = registeredTeam.players.find(
+                rp => rp.player.toString() === player._id.toString()
+              );
+              return {
+                ...player,
+                ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
+                gender: registeredPlayer?.gender || player.gender
+              };
+            });
+          } else {
+            // Team not registered in this competition
+            players = [];
+          }
+        }
+      }
+
+      // Apply gender and ageGroup filters after getting competition-specific data
+      if (filters.gender || filters.ageGroup) {
+        players = players.filter(player => {
+          const matchesGender = !filters.gender || player.gender === filters.gender;
+          const matchesAgeGroup = !filters.ageGroup || player.ageGroup === filters.ageGroup;
+          return matchesGender && matchesAgeGroup;
+        });
       }
 
       // Get payment status
@@ -752,7 +850,32 @@ class AdminService extends UserService {
       this.logger.info('Team details retrieved', { teamId });
 
       return {
-        team,
+        team: {
+          _id: team._id,
+          name: team.name,
+          coach: team.coach ? {
+            _id: team.coach._id,
+            name: team.coach.name,
+            firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
+            lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
+            email: team.coach.email
+          } : null,
+          players: players.map(p => ({
+            _id: p._id,
+            firstName: p.firstName,
+            lastName: p.lastName,
+            email: p.email,
+            ageGroup: p.ageGroup,
+            gender: p.gender,
+            dateOfBirth: p.dateOfBirth,
+            isActive: p.isActive
+          })),
+          playerCount: players.length,
+          description: team.description,
+          isActive: team.isActive,
+          createdAt: team.createdAt,
+          updatedAt: team.updatedAt
+        },
         paymentStatus: transaction ? 'paid' : 'pending',
         transaction,
         scores
@@ -774,22 +897,63 @@ class AdminService extends UserService {
    * @param {string} competitionId - Competition ID
    * @returns {Promise<Array>} Array of submitted teams
    */
-  async getSubmittedTeams(competitionId) {
+  async getSubmittedTeams(competitionId, filters = {}) {
     try {
-      const teams = await this.teamRepository.find({
-        competition: competitionId,
-        isSubmitted: true
-      }, {
-        populate: ['coach', 'players'],
-        sort: { submittedAt: -1 }
+      // Query the Competition model to get registered teams
+      const competition = await this.competitionRepository.findById(competitionId, {
+        populate: [
+          {
+            path: 'registeredTeams.team',
+            populate: { path: 'coach' }
+          },
+          {
+            path: 'registeredTeams.players.player'
+          }
+        ]
       });
+
+      if (!competition) {
+        this.logger.warn('Competition not found', { competitionId });
+        return [];
+      }
+
+      // Filter submitted teams
+      let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted);
+
+      // Apply additional filters if provided
+      if (filters.gender || filters.ageGroup) {
+        submittedTeams = submittedTeams.filter(regTeam => {
+          // Check if any player in the team matches the filters
+          return regTeam.players.some(playerEntry => {
+            const matchesGender = !filters.gender || playerEntry.gender === filters.gender;
+            const matchesAgeGroup = !filters.ageGroup || playerEntry.ageGroup === filters.ageGroup;
+            return matchesGender && matchesAgeGroup;
+          });
+        });
+      }
+
+      // Transform to expected format
+      const teamsWithPlayers = submittedTeams.map(regTeam => ({
+        _id: regTeam.team._id,
+        name: regTeam.team.name,
+        coach: regTeam.coach,
+        isSubmitted: regTeam.isSubmitted,
+        submittedAt: regTeam.submittedAt,
+        paymentStatus: regTeam.paymentStatus,
+        players: regTeam.players.map(playerEntry => ({
+          ...playerEntry.player.toObject(),
+          ageGroup: playerEntry.ageGroup,
+          gender: playerEntry.gender
+        }))
+      }));
 
       this.logger.info('Submitted teams retrieved', { 
         competitionId, 
-        count: teams.length 
+        count: teamsWithPlayers.length,
+        filters 
       });
 
-      return teams;
+      return teamsWithPlayers;
     } catch (error) {
       this.logger.error('Get submitted teams error', { 
         competitionId, 
@@ -811,7 +975,7 @@ class AdminService extends UserService {
     try {
       const team = await this.teamRepository.findById(teamId);
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
 
       if (team.status === 'approved') {
@@ -860,7 +1024,7 @@ class AdminService extends UserService {
     try {
       const team = await this.teamRepository.findById(teamId);
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
 
       const updatedTeam = await this.teamRepository.updateById(teamId, {
@@ -950,7 +1114,7 @@ class AdminService extends UserService {
       });
 
       if (!player) {
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       // Get scores
@@ -989,7 +1153,7 @@ class AdminService extends UserService {
     try {
       const player = await this.playerRepository.findById(playerId);
       if (!player) {
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
 
       const updatedPlayer = await this.playerRepository.updateById(playerId, {
@@ -1041,10 +1205,10 @@ class AdminService extends UserService {
       ]);
 
       if (!player) {
-        throw new NotFoundError('Player not found');
+        throw new NotFoundError('Player');
       }
       if (!team) {
-        throw new NotFoundError('Team not found');
+        throw new NotFoundError('Team');
       }
 
       // Validate eligibility (age group and gender match)
@@ -1096,20 +1260,25 @@ class AdminService extends UserService {
 
       for (const judgeData of judges) {
         try {
-          const existing = await this.judgeRepository.findByEmail(judgeData.username || judgeData.email);
+          const lookupKey = judgeData.username || judgeData.email;
+          const existing = lookupKey ? await this.judgeRepository.findByEmail(lookupKey) : null;
+
+          // Determine if judge should be active based on having complete data
+          const hasCompleteData = !!(judgeData.name && judgeData.username && judgeData.password);
+          const judgeDataWithStatus = {
+            ...judgeData,
+            competition: competitionId,
+            isActive: hasCompleteData
+          };
 
           if (existing) {
             // Update existing judge
-            const updated = await this.judgeRepository.updateById(existing._id, {
-              ...judgeData,
-              competition: competitionId
-            });
+            const updated = await this.judgeRepository.updateById(existing._id, judgeDataWithStatus);
             results.updated.push(updated);
           } else {
             // Create new judge
             const created = await this.judgeRepository.create({
-              ...judgeData,
-              competition: competitionId,
+              ...judgeDataWithStatus,
               createdBy: adminId
             });
             results.created.push(created);
@@ -1146,11 +1315,14 @@ class AdminService extends UserService {
    * @param {string} competitionId - Competition ID
    * @returns {Promise<Array>} Array of judges
    */
-  async getJudges(competitionId) {
+  async getJudges(competitionId, filters = {}) {
     try {
-      const judges = await this.judgeRepository.find({
-        competition: competitionId
-      }, {
+      const query = { competition: competitionId };
+      if (filters.gender) query.gender = filters.gender;
+      if (filters.ageGroup) query.ageGroup = filters.ageGroup;
+      if (filters.competitionTypes) query.competitionTypes = filters.competitionTypes;
+
+      const judges = await this.judgeRepository.find(query, {
         sort: { createdAt: -1 }
       });
 
@@ -1207,7 +1379,7 @@ class AdminService extends UserService {
     try {
       const judge = await this.judgeRepository.findById(judgeId);
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       const updatedJudge = await this.judgeRepository.updateById(judgeId, {
@@ -1243,7 +1415,7 @@ class AdminService extends UserService {
     try {
       const judge = await this.judgeRepository.findById(judgeId);
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
 
       const deletedJudge = await this.judgeRepository.updateById(judgeId, {
@@ -1270,21 +1442,34 @@ class AdminService extends UserService {
 
   /**
    * Get all judges summary
-   * @returns {Promise<Object>} Judges summary
+   * @param {string} competitionId - Competition ID
+   * @returns {Promise<Object>} Judges summary with age group breakdown
    */
-  async getAllJudgesSummary() {
+  async getAllJudgesSummary(competitionId) {
     try {
+      const compId = competitionId || this.competitionId;
+      const competition = await this.competitionRepository.findById(compId);
+      if (!competition) {
+        return { summary: [], totalJudges: 0, activeJudges: 0, byCompetition: {} };
+      }
+
       const [totalJudges, activeJudges] = await Promise.all([
-        this.judgeRepository.count({}),
-        this.judgeRepository.count({ isActive: true })
+        this.judgeRepository.count({ competition: compId }),
+        this.judgeRepository.count({ competition: compId, isActive: true })
       ]);
 
-      // Get judges by competition
-      const judges = await this.judgeRepository.find({}, {
+      // Get all judges for this competition
+      const judges = await this.judgeRepository.find(
+        { competition: compId },
+        { select: 'name email gender ageGroup competitionTypes isActive' }
+      );
+
+      // Get judges by competition for backward compatibility
+      const allJudges = await this.judgeRepository.find({}, {
         select: 'competition'
       });
 
-      const byCompetition = judges.reduce((acc, judge) => {
+      const byCompetition = allJudges.reduce((acc, judge) => {
         const compId = judge.competition?.toString();
         if (compId) {
           acc[compId] = (acc[compId] || 0) + 1;
@@ -1292,9 +1477,90 @@ class AdminService extends UserService {
         return acc;
       }, {});
 
-      this.logger.info('Judges summary retrieved');
+      // Build summary array grouped by gender and age group
+      const summaryMap = new Map();
+
+      // Initialize with all age groups from competition
+      competition.ageGroups?.forEach(ag => {
+        const key = `${ag.gender}_${ag.ageGroup}`;
+        summaryMap.set(key, {
+          gender: ag.gender,
+          ageGroup: ag.ageGroup,
+          competitionTypes: {}
+        });
+
+        // Initialize competition types from competition
+        competition.competitionTypes?.forEach(ct => {
+          summaryMap.get(key).competitionTypes[ct] = {
+            judges: [],
+            hasMinimumJudges: false,
+            isStarted: false
+          };
+        });
+      });
+
+      // Add judges to their respective age groups and competition types
+      judges.forEach(judge => {
+        if (!judge.gender || !judge.ageGroup) return;
+
+        const key = `${judge.gender}_${judge.ageGroup}`;
+        if (!summaryMap.has(key)) {
+          summaryMap.set(key, {
+            gender: judge.gender,
+            ageGroup: judge.ageGroup,
+            competitionTypes: {}
+          });
+        }
+
+        const entry = summaryMap.get(key);
+
+        // Add judge to each competition type they're assigned to
+        judge.competitionTypes?.forEach(ct => {
+          if (!entry.competitionTypes[ct]) {
+            entry.competitionTypes[ct] = {
+              judges: [],
+              hasMinimumJudges: false,
+              isStarted: false
+            };
+          }
+
+          entry.competitionTypes[ct].judges.push({
+            _id: judge._id,
+            name: judge.name,
+            email: judge.email
+          });
+        });
+      });
+
+      // Check if competition types are started and have minimum judges
+      competition.startedAgeGroups?.forEach(started => {
+        const key = `${started.gender}_${started.ageGroup}`;
+        if (summaryMap.has(key)) {
+          const entry = summaryMap.get(key);
+          if (entry.competitionTypes[started.competitionType]) {
+            entry.competitionTypes[started.competitionType].isStarted = true;
+          }
+        }
+      });
+
+      // Update hasMinimumJudges flag (minimum 3 judges required)
+      summaryMap.forEach(entry => {
+        Object.keys(entry.competitionTypes).forEach(ct => {
+          const judgeCount = entry.competitionTypes[ct].judges.length;
+          entry.competitionTypes[ct].hasMinimumJudges = judgeCount >= 3;
+        });
+      });
+
+      const summary = Array.from(summaryMap.values());
+
+      this.logger.info('Judges summary retrieved', { 
+        totalJudges, 
+        activeJudges, 
+        summaryCount: summary.length 
+      });
 
       return {
+        summary,
         totalJudges,
         activeJudges,
         byCompetition
@@ -1321,10 +1587,10 @@ class AdminService extends UserService {
       ]);
 
       if (!judge) {
-        throw new NotFoundError('Judge not found');
+        throw new NotFoundError('Judge');
       }
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       const updatedJudge = await this.judgeRepository.updateById(judgeId, {
@@ -1362,53 +1628,72 @@ class AdminService extends UserService {
    * @param {string} adminId - Admin ID
    * @returns {Promise<Object>} { saved, errors }
    */
-  async saveScores(scores, adminId) {
+  async saveScores(scoreData) {
     try {
-      const results = {
-        saved: [],
-        errors: []
-      };
-
-      for (const scoreData of scores) {
-        try {
-          // Validate score data
-          if (!scoreData.competition || !scoreData.team) {
-            throw new ValidationError('Competition and team are required');
-          }
-
-          const score = await this.scoreRepository.create({
-            ...scoreData,
-            createdBy: adminId
-          });
-
-          results.saved.push(score);
-
-          // Emit Socket.IO event
-          if (this.socketManager) {
-            this.socketManager.emitToRoom(
-              `competition_${scoreData.competition}`,
-              EventTypes.SCORE_SAVED_REST,
-              { scoreId: score._id, teamId: scoreData.team }
-            );
-          }
-        } catch (error) {
-          results.errors.push({
-            score: scoreData,
-            error: error.message
-          });
-        }
+      // Validate required fields
+      const requiredFields = ['teamId', 'gender', 'ageGroup', 'playerScores'];
+      const missingFields = requiredFields.filter(field => !scoreData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      this.logger.info('Scores saved', {
-        saved: results.saved.length,
-        errors: results.errors.length,
-        adminId
+      // Process each player score through calculation service
+      const processedPlayerScores = [];
+      for (const playerScore of scoreData.playerScores) {
+        const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore);
+        processedPlayerScores.push(calculatedScore);
+      }
+
+      // Prepare score document data
+      const scoreDocData = {
+        competition: scoreData.competitionId,
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        competitionType: scoreData.competitionType || 'Competition I',
+        playerScores: processedPlayerScores,
+        judgeDetails: scoreData.judgeDetails || {},
+        timeKeeper: scoreData.timeKeeper || '',
+        scorer: scoreData.scorer || '',
+        remarks: scoreData.remarks || '',
+        isLocked: scoreData.isLocked || false
+      };
+
+      // Implement upsert logic - find existing score record
+      const existingScore = await this.scoreRepository.findOne({
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        competition: scoreData.competitionId
       });
 
-      return results;
+      let savedScore;
+      if (existingScore) {
+        // Update existing record
+        savedScore = await this.scoreRepository.updateById(existingScore._id, scoreDocData);
+      } else {
+        // Create new record
+        savedScore = await this.scoreRepository.create(scoreDocData);
+      }
+
+      this.logger.info('Scores saved successfully', {
+        scoreId: savedScore._id,
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        isUpdate: !!existingScore
+      });
+
+      // Return proper response format
+      return {
+        scoreId: savedScore._id,
+        isLocked: savedScore.isLocked,
+        playerScores: savedScore.playerScores
+      };
     } catch (error) {
       this.logger.error('Save scores error', { 
-        adminId, 
+        scoreData, 
         error: error.message 
       });
       throw error;
@@ -1426,7 +1711,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Update scores to unlocked state
@@ -1470,7 +1755,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Update scores to locked state
@@ -1509,40 +1794,73 @@ class AdminService extends UserService {
    * @param {string} ageGroup - Age group
    * @returns {Promise<Array>} Teams with aggregated scores
    */
-  async getTeamScores(competitionId, ageGroup) {
+  async getTeamScores(competitionId, ageGroup, gender) {
     try {
-      const teams = await this.teamRepository.find({
-        competition: competitionId,
-        ageGroup
-      }, {
-        populate: ['players']
+      // Query the Competition model to get registered teams
+      const competition = await this.competitionRepository.findById(competitionId, {
+        populate: [
+          {
+            path: 'registeredTeams.team',
+            populate: { path: 'coach' }
+          },
+          {
+            path: 'registeredTeams.players.player'
+          }
+        ]
       });
 
+      if (!competition) {
+        this.logger.warn('Competition not found', { competitionId });
+        return [];
+      }
+
+      // Filter teams by age group and gender if provided
+      let filteredTeams = competition.registeredTeams;
+      
+      if (ageGroup || gender) {
+        filteredTeams = filteredTeams.filter(regTeam => {
+          return regTeam.players.some(playerEntry => {
+            const matchesAgeGroup = !ageGroup || playerEntry.ageGroup === ageGroup;
+            const matchesGender = !gender || playerEntry.gender === gender;
+            return matchesAgeGroup && matchesGender;
+          });
+        });
+      }
+
       const teamsWithScores = await Promise.all(
-        teams.map(async (team) => {
+        filteredTeams.map(async (regTeam) => {
+          // Get scores for this team
           const scores = await this.scoreRepository.find({
             competition: competitionId,
-            team: team._id
+            team: regTeam.team._id
           });
 
           const playerScores = scores.flatMap(s => s.playerScores || []);
           const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
 
           return {
-            ...team,
+            _id: regTeam.team._id,
+            name: regTeam.team.name,
+            coach: regTeam.coach,
+            players: regTeam.players.map(playerEntry => ({
+              ...playerEntry.player.toObject(),
+              ageGroup: playerEntry.ageGroup,
+              gender: playerEntry.gender
+            })),
             scores: playerScores,
             totalScore
           };
         })
       );
 
-      this.logger.info('Team scores retrieved', { competitionId, ageGroup });
+      this.logger.info('Team scores retrieved', { competitionId, ageGroup, gender });
 
       return teamsWithScores;
     } catch (error) {
       this.logger.error('Get team scores error', { 
         competitionId, 
         ageGroup, 
+        gender,
         error: error.message 
       });
       throw error;
@@ -1555,12 +1873,17 @@ class AdminService extends UserService {
    * @param {string} ageGroup - Age group
    * @returns {Promise<Array>} Players with individual scores
    */
-  async getIndividualScores(competitionId, ageGroup) {
+  async getIndividualScores(competitionId, ageGroup, gender) {
     try {
-      const scores = await this.scoreRepository.find({
-        competition: competitionId,
-        ageGroup
-      });
+      // Build query filters
+      const query = { competition: competitionId };
+      
+      // Only add ageGroup filter if provided
+      if (ageGroup) {
+        query.ageGroup = ageGroup;
+      }
+
+      const scores = await this.scoreRepository.find(query);
 
       const playerScoresMap = new Map();
 
@@ -1568,10 +1891,17 @@ class AdminService extends UserService {
         (scoreDoc.playerScores || []).forEach(ps => {
           const playerId = ps.playerId?.toString();
           if (playerId) {
+            // Apply gender filter if provided
+            if (gender && ps.playerGender && ps.playerGender !== gender) {
+              return; // Skip this player score
+            }
+            
             if (!playerScoresMap.has(playerId)) {
               playerScoresMap.set(playerId, {
                 playerId: ps.playerId,
                 playerName: ps.playerName,
+                playerGender: ps.playerGender,
+                playerAgeGroup: ps.playerAgeGroup,
                 scores: []
               });
             }
@@ -1585,6 +1915,7 @@ class AdminService extends UserService {
       this.logger.info('Individual scores retrieved', { 
         competitionId, 
         ageGroup, 
+        gender,
         count: individualScores.length 
       });
 
@@ -1593,6 +1924,7 @@ class AdminService extends UserService {
       this.logger.error('Get individual scores error', { 
         competitionId, 
         ageGroup, 
+        gender,
         error: error.message 
       });
       throw error;
@@ -1605,9 +1937,9 @@ class AdminService extends UserService {
    * @param {string} ageGroup - Age group
    * @returns {Promise<Array>} Team rankings
    */
-  async getTeamRankings(competitionId, ageGroup) {
+  async getTeamRankings(competitionId, ageGroup, gender) {
     try {
-      const teamsWithScores = await this.getTeamScores(competitionId, ageGroup);
+      const teamsWithScores = await this.getTeamScores(competitionId, ageGroup, gender);
 
       // Calculate rankings using CalculationService
       const rankings = this.calculationService.calculateRankings(
@@ -1620,6 +1952,7 @@ class AdminService extends UserService {
       this.logger.info('Team rankings calculated', { 
         competitionId, 
         ageGroup, 
+        gender,
         count: rankings.length 
       });
 
@@ -1628,6 +1961,7 @@ class AdminService extends UserService {
       this.logger.error('Get team rankings error', { 
         competitionId, 
         ageGroup, 
+        gender,
         error: error.message 
       });
       throw error;
@@ -1743,7 +2077,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Update age group status
@@ -1751,7 +2085,7 @@ class AdminService extends UserService {
       const ageGroupIndex = ageGroups.findIndex(ag => ag.name === ageGroup);
 
       if (ageGroupIndex === -1) {
-        throw new NotFoundError('Age group not found');
+        throw new NotFoundError('Age group');
       }
 
       ageGroups[ageGroupIndex].status = 'started';
@@ -1797,7 +2131,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Update age group status
@@ -1805,7 +2139,7 @@ class AdminService extends UserService {
       const ageGroupIndex = ageGroups.findIndex(ag => ag.name === ageGroup);
 
       if (ageGroupIndex === -1) {
-        throw new NotFoundError('Age group not found');
+        throw new NotFoundError('Age group');
       }
 
       ageGroups[ageGroupIndex].status = 'ended';
@@ -1852,7 +2186,7 @@ class AdminService extends UserService {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       const ageGroups = competition.ageGroups || [];
@@ -1925,7 +2259,7 @@ class AdminService extends UserService {
       });
 
       if (!transaction) {
-        throw new NotFoundError('Transaction not found');
+        throw new NotFoundError('Transaction');
       }
 
       this.logger.info('Transaction details retrieved', { transactionId });
@@ -2022,17 +2356,27 @@ class AdminService extends UserService {
       const teams = await this.teamRepository.find(
         { competition: competitionId, isPublic: true },
         { 
-          populate: ['players'],
           select: '-coach -paymentStatus -notes'
         }
       );
 
+      // Fetch players for each team (players reference teams, not the other way around)
+      const teamsWithPlayers = await Promise.all(
+        teams.map(async (team) => {
+          const players = await this.playerRepository.find({ team: team._id });
+          return {
+            ...team,
+            players
+          };
+        })
+      );
+
       this.logger.info('Public teams retrieved', { 
         competitionId, 
-        count: teams.length 
+        count: teamsWithPlayers.length 
       });
 
-      return teams;
+      return teamsWithPlayers;
     } catch (error) {
       this.logger.error('Get public teams error', { 
         competitionId, 

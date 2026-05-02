@@ -80,7 +80,14 @@ const CoachPayment = () => {
   const fetchTeamData = async () => {
     try {
       const response = await coachAPI.getDashboard();
-      setTeam(response.data.team);
+      // API returns: { success: true, data: { team: {...}, competitionId, totalTeams } }
+      const teamData = response.data?.data?.team || response.data?.team;
+      setTeam(teamData);
+      
+      // Check if team is already submitted
+      if (teamData?.isSubmitted) {
+        setPaymentComplete(true);
+      }
     } catch {
       toast.error('Failed to load team data');
       navigate('/coach/dashboard');
@@ -101,7 +108,9 @@ const CoachPayment = () => {
       }
 
       const orderResponse = await coachAPI.createPaymentOrder();
-      const { order, razorpayKeyId, team: orderTeam } = orderResponse.data;
+      // API returns: { success: true, data: { order, razorpayKeyId, team } }
+      const responseData = orderResponse.data?.data || orderResponse.data;
+      const { order, razorpayKeyId, team: orderTeam } = responseData;
 
       if (!order?.id || !razorpayKeyId) {
         setProcessing(false);
@@ -121,6 +130,8 @@ const CoachPayment = () => {
             await coachAPI.verifyPaymentAndSubmit(response);
             setPaymentComplete(true);
             toast.success('Payment successful! Team submitted for competition.');
+            // Refresh team data to get updated submission status
+            await fetchTeamData();
           } catch {
             toast.error('Payment verification failed. Please contact support with your payment reference.');
           } finally {
@@ -138,6 +149,39 @@ const CoachPayment = () => {
         theme: {
           color: COLORS.saffron,
         },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: 'All payment methods',
+                instruments: [
+                  {
+                    method: 'upi'
+                  },
+                  {
+                    method: 'card'
+                  },
+                  {
+                    method: 'netbanking'
+                  },
+                  {
+                    method: 'wallet'
+                  }
+                ]
+              }
+            },
+            sequence: ['block.banks'],
+            preferences: {
+              show_default_blocks: true
+            }
+          }
+        }
       };
 
       if (!window.Razorpay) {
@@ -172,6 +216,8 @@ const CoachPayment = () => {
   }
 
   if (paymentComplete) {
+    const isAlreadySubmitted = team?.isSubmitted && team?.paymentStatus === 'completed';
+    
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
         <motion.div className="w-full max-w-md text-center"
@@ -180,15 +226,31 @@ const CoachPayment = () => {
           <div className="rounded-3xl border p-10"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <motion.div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ background: '#22C55E18', border: '2px solid #22C55E40' }}
+              style={{ background: isAlreadySubmitted ? `${COLORS.saffron}18` : '#22C55E18', border: `2px solid ${isAlreadySubmitted ? `${COLORS.saffron}40` : '#22C55E40'}` }}
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}>
-              <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+              {isAlreadySubmitted ? (
+                <Lock className="w-10 h-10" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              ) : (
+                <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+              )}
             </motion.div>
-            <h2 className="text-2xl font-black text-white mb-3">Payment Successful!</h2>
-            <p className="text-white/45 mb-8 leading-relaxed">
-              Your team "{team?.name}" has been successfully submitted for the competition.
+            <h2 className="text-2xl font-black text-white mb-3">
+              {isAlreadySubmitted ? 'Team Already Submitted' : 'Payment Successful!'}
+            </h2>
+            <p className="text-white/45 mb-4 leading-relaxed">
+              {isAlreadySubmitted 
+                ? `Your team "${team?.name}" has already been submitted for the competition.`
+                : `Your team "${team?.name}" has been successfully submitted for the competition.`
+              }
             </p>
+            {isAlreadySubmitted && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                <p className="text-white/60 text-sm">
+                  To make any changes to your team, please contact the admin.
+                </p>
+              </div>
+            )}
             <button onClick={() => navigate('/coach/dashboard')}
               className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
               style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>

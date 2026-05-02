@@ -202,6 +202,9 @@ describe('UnifiedCompetitionSelection', () => {
 
   describe('Role Detection', () => {
     it('should detect coach role from /coach/select-competition path', async () => {
+      api.coachAPI.getTeams.mockResolvedValue({
+        data: { teams: mockTeams },
+      });
       api.coachAPI.getOpenCompetitions.mockResolvedValue({
         data: { competitions: mockCompetitions },
       });
@@ -226,6 +229,9 @@ describe('UnifiedCompetitionSelection', () => {
     });
 
     it('should call correct API for coach role', async () => {
+      api.coachAPI.getTeams.mockResolvedValue({
+        data: { teams: mockTeams },
+      });
       api.coachAPI.getOpenCompetitions.mockResolvedValue({
         data: { competitions: [] },
       });
@@ -233,6 +239,7 @@ describe('UnifiedCompetitionSelection', () => {
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
+        expect(api.coachAPI.getTeams).toHaveBeenCalledTimes(1);
         expect(api.coachAPI.getOpenCompetitions).toHaveBeenCalledTimes(1);
         expect(api.playerAPI.getTeams).not.toHaveBeenCalled();
       });
@@ -267,6 +274,9 @@ describe('UnifiedCompetitionSelection', () => {
       });
 
       it('should fetch competitions on mount', async () => {
+        api.coachAPI.getTeams.mockResolvedValue({
+          data: { teams: mockTeams },
+        });
         api.coachAPI.getOpenCompetitions.mockResolvedValue({
           data: { competitions: mockCompetitions },
         });
@@ -279,6 +289,9 @@ describe('UnifiedCompetitionSelection', () => {
       });
 
       it('should handle empty competitions list', async () => {
+        api.coachAPI.getTeams.mockResolvedValue({
+          data: { teams: mockTeams },
+        });
         api.coachAPI.getOpenCompetitions.mockResolvedValue({
           data: { competitions: [] },
         });
@@ -291,6 +304,9 @@ describe('UnifiedCompetitionSelection', () => {
       });
 
       it('should display loading state initially', () => {
+        api.coachAPI.getTeams.mockImplementation(
+          () => new Promise(() => {}) // Never resolves
+        );
         api.coachAPI.getOpenCompetitions.mockImplementation(
           () => new Promise(() => {}) // Never resolves
         );
@@ -359,8 +375,14 @@ describe('UnifiedCompetitionSelection', () => {
       });
 
       it('should verify registerTeamForCompetition API exists', async () => {
+        api.coachAPI.getTeams.mockResolvedValue({
+          data: { teams: mockTeams },
+        });
         api.coachAPI.registerTeamForCompetition.mockResolvedValue({
           data: { success: true },
+        });
+        api.coachAPI.getOpenCompetitions.mockResolvedValue({
+          data: { competitions: mockCompetitions },
         });
 
         renderWithRouter('/coach/select-competition');
@@ -408,6 +430,9 @@ describe('UnifiedCompetitionSelection', () => {
 
   describe('Error Handling', () => {
     it('should handle coach API failure', async () => {
+      api.coachAPI.getTeams.mockRejectedValue({
+        response: { data: { message: 'Failed to fetch teams' } },
+      });
       api.coachAPI.getOpenCompetitions.mockRejectedValue({
         response: { data: { message: 'Failed to fetch competitions' } },
       });
@@ -415,7 +440,7 @@ describe('UnifiedCompetitionSelection', () => {
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
-        expect(api.coachAPI.getOpenCompetitions).toHaveBeenCalled();
+        expect(api.coachAPI.getTeams).toHaveBeenCalled();
       });
     });
 
@@ -432,6 +457,9 @@ describe('UnifiedCompetitionSelection', () => {
     });
 
     it('should handle network errors gracefully', async () => {
+      api.coachAPI.getTeams.mockRejectedValue(
+        new Error('Network error')
+      );
       api.coachAPI.getOpenCompetitions.mockRejectedValue(
         new Error('Network error')
       );
@@ -439,11 +467,16 @@ describe('UnifiedCompetitionSelection', () => {
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
-        expect(api.coachAPI.getOpenCompetitions).toHaveBeenCalled();
+        expect(api.coachAPI.getTeams).toHaveBeenCalled();
       });
     });
 
     it('should allow retrying after error', async () => {
+      api.coachAPI.getTeams
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce({
+          data: { teams: mockTeams },
+        });
       api.coachAPI.getOpenCompetitions
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
@@ -453,7 +486,7 @@ describe('UnifiedCompetitionSelection', () => {
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
-        expect(api.coachAPI.getOpenCompetitions).toHaveBeenCalledTimes(1);
+        expect(api.coachAPI.getTeams).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -476,6 +509,13 @@ describe('UnifiedCompetitionSelection', () => {
     });
 
     it('should render with proper structure', async () => {
+      api.coachAPI.getTeams.mockResolvedValue({
+        data: { teams: mockTeams },
+      });
+      api.coachAPI.getOpenCompetitions.mockResolvedValue({
+        data: { competitions: mockCompetitions },
+      });
+
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
@@ -505,6 +545,9 @@ describe('UnifiedCompetitionSelection', () => {
         return null;
       });
 
+      api.coachAPI.getTeams.mockResolvedValue({
+        data: { teams: mockTeams },
+      });
       api.coachAPI.getOpenCompetitions.mockResolvedValue({
         data: { competitions: mockCompetitions },
       });
@@ -557,6 +600,13 @@ describe('UnifiedCompetitionSelection', () => {
     });
 
     it('should have logout functionality', async () => {
+      api.coachAPI.getTeams.mockResolvedValue({
+        data: { teams: mockTeams },
+      });
+      api.coachAPI.getOpenCompetitions.mockResolvedValue({
+        data: { competitions: mockCompetitions },
+      });
+
       renderWithRouter('/coach/select-competition');
 
       await waitFor(() => {
@@ -597,6 +647,13 @@ describe('UnifiedCompetitionSelection', () => {
       });
 
       it('should have coach dashboard path configured', async () => {
+        api.coachAPI.getTeams.mockResolvedValue({
+          data: { teams: mockTeams },
+        });
+        api.coachAPI.getOpenCompetitions.mockResolvedValue({
+          data: { competitions: mockCompetitions },
+        });
+
         renderWithRouter('/coach/select-competition');
 
         await waitFor(() => {

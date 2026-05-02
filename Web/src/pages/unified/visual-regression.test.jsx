@@ -177,7 +177,7 @@ describe('Unified Pages Visual Regression', () => {
       
       expect(Object.keys(visualElements).length).toBe(5);
       expect(visualElements.admin.color).toBe('#8B5CF6');
-      expect(visualElements.coach.color).toBe('#22C55E');
+      expect(visualElements.coach.color).toBe('#FF6B00');
     });
   });
 });

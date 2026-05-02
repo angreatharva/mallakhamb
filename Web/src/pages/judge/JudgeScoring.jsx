@@ -266,7 +266,38 @@ const JudgeScoring = () => {
     });
     newSocket.on('connect_error', (error) => {
       logger.error('Socket connection error:', error);
-      toast.error('Failed to connect to server');
+      // Handle authorization errors (Requirement 4.6)
+      if (error.message && (error.message.includes('authorization') || error.message.includes('Unauthorized'))) {
+        toast.error('Not authorized to access scoring room');
+        navigate('/judge/dashboard');
+      } else {
+        toast.error('Failed to connect to server');
+      }
+    });
+    
+    // Handle room join authorization errors (Requirement 4.2)
+    newSocket.on('error', (error) => {
+      logger.error('Socket error:', error);
+      if (error.message === 'Not authorized to join this room') {
+        toast.error('You do not have permission to access this scoring room');
+        navigate('/judge/scores');
+      }
+    });
+    
+    // Handle score update authorization errors (Requirement 4.3)
+    newSocket.on('score_update_error', (error) => {
+      logger.error('Score update error:', error);
+      if (error.message === 'Only judges can update scores') {
+        toast.error('Only judges can submit scores');
+      }
+    });
+    
+    // Handle scores saved authorization errors (Requirement 4.4)
+    newSocket.on('scores_saved_error', (error) => {
+      logger.error('Scores saved error:', error);
+      if (error.message === 'Unauthorized to save scores') {
+        toast.error('You do not have permission to save scores');
+      }
     });
     return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
   }, [judgeInfo, selectedCompetitionType]);
@@ -292,7 +323,7 @@ const JudgeScoring = () => {
         params: { gender: judgeInfo.gender, ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType },
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
       });
-      setTeams(response.data.teams || []);
+      setTeams(response.data.data || []);
       setSelectedTeam(null); setSelectedPlayer(null); setPlayers([]);
     } catch (error) {
       logger.error('Error fetching teams:', error);

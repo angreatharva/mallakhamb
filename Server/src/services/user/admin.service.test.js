@@ -70,7 +70,9 @@ describe('AdminService', () => {
       find: jest.fn(),
       updateById: jest.fn(),
       count: jest.fn(),
-      updateMany: jest.fn()
+      updateMany: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn()
     };
 
     mockTransactionRepository = {
@@ -927,6 +929,183 @@ describe('AdminService', () => {
       expect(mockScoreRepository.updateById).toHaveBeenCalled();
       expect(mockCalculationService.calculateCompletePlayerScore).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalled();
+    });
+  });
+
+  describe('saveScores', () => {
+    it('should save scores successfully for new record', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competitionId: 'comp123',
+        playerScores: [
+          {
+            playerId: 'player1',
+            playerName: 'John Doe',
+            judgeScores: {
+              seniorJudge: 9.0,
+              judge1: 8.5,
+              judge2: 8.7,
+              judge3: 8.6,
+              judge4: 8.8
+            }
+          }
+        ]
+      };
+
+      const calculatedPlayerScore = {
+        ...scoreData.playerScores[0],
+        executionAverage: 8.65,
+        baseScoreApplied: false,
+        toleranceUsed: 0.5,
+        averageMarks: 8.65,
+        finalScore: 8.65
+      };
+
+      const savedScore = {
+        _id: 'score123',
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competition: 'comp123',
+        playerScores: [calculatedPlayerScore],
+        isLocked: false
+      };
+
+      mockScoreRepository.findOne.mockResolvedValue(null); // No existing record
+      mockCalculationService.calculateCompletePlayerScore.mockResolvedValue(calculatedPlayerScore);
+      mockScoreRepository.create.mockResolvedValue(savedScore);
+
+      const result = await adminService.saveScores(scoreData);
+
+      expect(result.scoreId).toBe('score123');
+      expect(result.isLocked).toBe(false);
+      expect(result.playerScores).toHaveLength(1);
+      expect(mockScoreRepository.findOne).toHaveBeenCalledWith({
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competition: 'comp123'
+      });
+      expect(mockCalculationService.calculateCompletePlayerScore).toHaveBeenCalledWith(scoreData.playerScores[0]);
+      expect(mockScoreRepository.create).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalled();
+    });
+
+    it('should update existing score record (upsert)', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competitionId: 'comp123',
+        playerScores: [
+          {
+            playerId: 'player1',
+            playerName: 'John Doe',
+            judgeScores: {
+              seniorJudge: 9.0,
+              judge1: 8.5,
+              judge2: 8.7,
+              judge3: 8.6,
+              judge4: 8.8
+            }
+          }
+        ]
+      };
+
+      const existingScore = {
+        _id: 'score123',
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competition: 'comp123'
+      };
+
+      const calculatedPlayerScore = {
+        ...scoreData.playerScores[0],
+        executionAverage: 8.65,
+        baseScoreApplied: false,
+        toleranceUsed: 0.5,
+        averageMarks: 8.65,
+        finalScore: 8.65
+      };
+
+      const updatedScore = {
+        ...existingScore,
+        playerScores: [calculatedPlayerScore],
+        isLocked: false
+      };
+
+      mockScoreRepository.findOne.mockResolvedValue(existingScore);
+      mockCalculationService.calculateCompletePlayerScore.mockResolvedValue(calculatedPlayerScore);
+      mockScoreRepository.updateById.mockResolvedValue(updatedScore);
+
+      const result = await adminService.saveScores(scoreData);
+
+      expect(result.scoreId).toBe('score123');
+      expect(result.isLocked).toBe(false);
+      expect(mockScoreRepository.updateById).toHaveBeenCalledWith('score123', expect.any(Object));
+      expect(mockScoreRepository.create).not.toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalled();
+    });
+
+    it('should throw ValidationError for missing required fields', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        gender: 'Male',
+        // Missing ageGroup and playerScores
+        competitionId: 'comp123'
+      };
+
+      await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
+      expect(mockScoreRepository.findOne).not.toHaveBeenCalled();
+      expect(mockCalculationService.calculateCompletePlayerScore).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationError for missing teamId', async () => {
+      const scoreData = {
+        gender: 'Male',
+        ageGroup: 'Under14',
+        playerScores: [],
+        competitionId: 'comp123'
+      };
+
+      await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw ValidationError for missing gender', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        ageGroup: 'Under14',
+        playerScores: [],
+        competitionId: 'comp123'
+      };
+
+      await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
+    });
+
+    it('should throw ValidationError for missing ageGroup', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        gender: 'Male',
+        playerScores: [],
+        competitionId: 'comp123'
+      };
+
+      await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
+    });
+
+    it('should throw ValidationError for missing playerScores', async () => {
+      const scoreData = {
+        teamId: 'team123',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        competitionId: 'comp123'
+      };
+
+      await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
     });
   });
 });

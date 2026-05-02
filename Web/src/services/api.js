@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 import apiConfig from '../utils/apiConfig.js';
 import { isTokenExpired, getCompetitionIdFromToken } from '../utils/tokenUtils.js';
 import { secureStorage } from '../utils/secureStorage.js';
@@ -111,7 +112,7 @@ api.interceptors.response.use(
 
       window.location.href = '/';
     } else if (error.response?.status === 403) {
-      // Handle competition context errors
+      // Handle competition context errors (Requirement 9.2)
       const errorMessage = error.response?.data?.message || '';
       
       if (errorMessage.includes('competition') || errorMessage.includes('Competition')) {
@@ -119,14 +120,26 @@ api.interceptors.response.use(
         
         if (currentType) {
           const token = getToken(currentType);
+          
+          // Check if user is superadmin from token
+          let isSuperAdmin = false;
           if (token) {
-            logger.warn('Competition context invalid, redirecting to login for re-selection');
+            try {
+              const decoded = jwtDecode(token);
+              isSuperAdmin = decoded.role === 'superadmin';
+            } catch (err) {
+              logger.error('Error decoding token:', err);
+            }
           }
 
-          // Super admin routes can legitimately operate without explicit competition context.
-          // Avoid forcing a login redirect for these users on competition-related 403s.
-          if (currentType !== 'superadmin') {
+          // Avoid redirecting superadmin users on competition context errors
+          // Super admin routes can legitimately operate without explicit competition context
+          if (!isSuperAdmin) {
+            logger.warn('Competition context invalid, redirecting non-superadmin user to competition selection');
+            // Redirect to competition selection or login
             window.location.href = `/${currentType}/login`;
+          } else {
+            logger.warn('Competition context error for superadmin, but not redirecting');
           }
         }
       }
@@ -144,6 +157,7 @@ export const playerAPI = {
   // Join a team in the current competition
   updateTeam: (data) => api.post('/players/team/join', data),
   getTeams: () => api.get('/players/teams'),
+  getOpenCompetitions: () => api.get('/players/competitions/open'),
 };
 
 // Coach API
@@ -205,14 +219,14 @@ const createAdminAPI = (basePath = '/admin') => ({
   getProfile: () => api.get(`${basePath}/profile`),
   getDashboard: () => api.get(`${basePath}/dashboard`),
   getAllTeams: (params) => api.get(`${basePath}/teams`, { params }),
-  getTeamDetails: (teamId) => api.get(`${basePath}/teams/${teamId}`),
+  getTeamDetails: (teamId, params) => api.get(`${basePath}/teams/${teamId}`, { params }),
   getAllPlayers: (params) => api.get(`${basePath}/players`, { params }),
   addScore: (data) => api.post(`${basePath}/scores`, data),
   getTeamScores: (params) => api.get(`${basePath}/scores/teams`, { params }),
   getIndividualScores: (params) => api.get(`${basePath}/scores/individual`, { params }),
   getTeamRankings: (params) => api.get(`${basePath}/scores/team-rankings`, { params }),
   getSubmittedTeams: (params) => api.get(`${basePath}/submitted-teams`, { params }),
-  saveJudges: (data) => api.post(`${basePath}/judges`, data),
+  saveJudges: (data) => api.post(`${basePath}/judges/bulk`, data),
   getJudges: (params) => api.get(`${basePath}/judges`, { params }),
   getAllJudgesSummary: () => api.get(`${basePath}/judges/summary`),
   updateJudge: (judgeId, data) => api.put(`${basePath}/judges/${judgeId}`, data),
@@ -233,7 +247,7 @@ export const superAdminAPI = {
   // Override getDashboard to support query params
   getDashboard: (params) => api.get('/superadmin/dashboard', { params }),
   // Super Admin specific endpoints
-  getSystemStats: () => api.get('/superadmin/system-stats'),
+  getSystemStats: () => api.get('/superadmin/stats'),
   getAllAdmins: () => api.get('/superadmin/admins'),
   createAdmin: (data) => api.post('/superadmin/admins', data),
   updateAdmin: (adminId, data) => api.put(`/superadmin/admins/${adminId}`, data),
@@ -252,6 +266,7 @@ export const superAdminAPI = {
   removeAdminFromCompetition: (id, adminId) => api.delete(`/superadmin/competitions/${id}/admins/${adminId}`),
   // Team and Player management
   getAllTeams: (params) => api.get('/superadmin/teams', { params }),
+  getTeamDetails: (teamId, params) => api.get(`/superadmin/teams/${teamId}`, { params }),
   addPlayerToTeam: (data) => api.post('/superadmin/players/add', data)
 };
 

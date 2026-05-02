@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { secureStorage } from './utils/secureStorage';
 import { apiCache } from './utils/apiCache';
 import { logger } from './utils/logger';
+import CompetitionSelectionScreen from './components/CompetitionSelectionScreen';
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import('./pages/public/Home'));
@@ -20,10 +21,10 @@ const PlayerDashboard = lazy(() => import('./pages/player/PlayerDashboard'));
 const CoachLogin = lazy(() => import('./pages/coach/CoachLogin'));
 const CoachRegister = lazy(() => import('./pages/coach/CoachRegister'));
 const CoachCreateTeam = lazy(() => import('./pages/coach/CoachCreateTeam'));
-const CoachSelectCompetition = lazy(() => import('./pages/coach/CoachSelectCompetition'));
 const CoachDashboard = lazy(() => import('./pages/coach/CoachDashboard'));
 const CoachPayment = lazy(() => import('./pages/coach/CoachPayment'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminRegister = lazy(() => import('./pages/admin/AdminRegister'));
 const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
@@ -195,7 +196,7 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
-  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition' || location.pathname === '/player/select-team';
+  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition' || location.pathname === '/player/select-competition';
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
@@ -222,10 +223,20 @@ function AppContent() {
 
             {/* Protected Player Routes */}
             <Route
+              path="/player/select-competition"
+              element={
+                <ProtectedRoute requiredUserType="player">
+                  <CompetitionProvider userType="player">
+                    <CompetitionSelectionScreen userType="player" onCompetitionSelected={() => {}} />
+                  </CompetitionProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/player/select-team"
               element={
                 <ProtectedRoute requiredUserType="player">
-                  <UnifiedCompetitionSelection />
+                  <Navigate to="/player/select-competition" replace />
                 </ProtectedRoute>
               }
             />
@@ -256,7 +267,9 @@ function AppContent() {
               path="/coach/select-competition"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <UnifiedCompetitionSelection />
+                  <CompetitionProvider userType="coach">
+                    <CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />
+                  </CompetitionProvider>
                 </ProtectedRoute>
               }
             />
@@ -280,15 +293,16 @@ function AppContent() {
             {/* Admin Routes */}
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/register" element={<AdminRegister />} />
 
             {/* Protected Admin Routes */}
             <Route
               path="/admin/dashboard"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <CompetitionProvider userType="admin">
+                  <RouteContext.Provider value={{ routePrefix: "/admin", storagePrefix: "admin" }}>
                     <AdminDashboard />
-                  </CompetitionProvider>
+                  </RouteContext.Provider>
                 </ProtectedRoute>
               }
             />
@@ -296,9 +310,9 @@ function AppContent() {
               path="/admin/dashboard/:tab"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <CompetitionProvider userType="admin">
+                  <RouteContext.Provider value={{ routePrefix: "/admin", storagePrefix: "admin" }}>
                     <AdminDashboard />
-                  </CompetitionProvider>
+                  </RouteContext.Provider>
                 </ProtectedRoute>
               }
             />
@@ -306,7 +320,9 @@ function AppContent() {
               path="/admin/teams"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <AdminTeams />
+                  <RouteContext.Provider value={{ routePrefix: "/admin", storagePrefix: "admin" }}>
+                    <AdminTeams />
+                  </RouteContext.Provider>
                 </ProtectedRoute>
               }
             />
@@ -314,7 +330,9 @@ function AppContent() {
               path="/admin/scoring"
               element={
                 <ProtectedRoute requiredUserType="admin">
-                  <AdminScoring />
+                  <RouteContext.Provider value={{ routePrefix: "/admin", storagePrefix: "admin" }}>
+                    <AdminScoring />
+                  </RouteContext.Provider>
                 </ProtectedRoute>
               }
             />

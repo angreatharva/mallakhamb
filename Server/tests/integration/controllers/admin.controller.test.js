@@ -62,6 +62,7 @@ describe('Admin Routes (hard cutover)', () => {
             getTeamRankings: (req, res) => res.json({ success: true, data: [] }),
             getIndividualRankings: (req, res) => res.json({ success: true, data: [] }),
             recalculateScores: (req, res) => res.json({ success: true, data: { recalculated: true, ageGroup: req.body.ageGroup } }),
+            saveScores: (req, res) => res.json({ success: true, data: { scoreId: 'score123', isLocked: false, playerScores: [] } }),
 
             startAgeGroup: (req, res) => res.json({ success: true, data: { started: true, ageGroup: req.params.ageGroup } }),
             endAgeGroup: (req, res) => res.json({ success: true, data: { ended: true, ageGroup: req.params.ageGroup } }),

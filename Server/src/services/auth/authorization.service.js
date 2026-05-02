@@ -172,7 +172,7 @@ class AuthorizationService {
         this.logger.warn('Competition access check failed: Competition not found', { 
           competitionId 
         });
-        throw new NotFoundError('Competition not found');
+        throw new NotFoundError('Competition');
       }
 
       // Get user
@@ -453,3 +453,4 @@ class AuthorizationService {
 }
 
 module.exports = AuthorizationService;
+

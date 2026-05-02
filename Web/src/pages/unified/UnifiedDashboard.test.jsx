@@ -127,18 +127,10 @@ describe('UnifiedDashboard', () => {
       }),
       getSystemStats: vi.fn().mockResolvedValue({
         data: {
-          stats: {
-            users: {
-              totalAdmins: 5,
-              totalCoaches: 20,
-              totalPlayers: 150,
-            },
-            content: {
-              totalTeams: 25,
-              totalCompetitions: 3,
-              totalJudges: 15,
-            },
-          },
+          admins: 5,
+          coaches: 20,
+          teams: 25,
+          competitions: 3,
         },
       }),
       getAllCompetitions: vi.fn().mockResolvedValue({
@@ -251,8 +243,8 @@ describe('UnifiedDashboard', () => {
       });
 
       await waitFor(() => {
-        const select = screen.getByLabelText('Filter by competition');
-        expect(select).toBeInTheDocument();
+        // Look for the dropdown by its placeholder text
+        expect(screen.getByText('All Competitions')).toBeInTheDocument();
       });
     });
 
