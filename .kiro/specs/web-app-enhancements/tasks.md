@@ -352,6 +352,236 @@ This implementation plan breaks down the comprehensive web application enhanceme
   - Verified Storybook static docs build after adding Storybook-safe PWA plugin guard in `vite.config.js` (`npm run build-storybook` now succeeds), and verified pre-commit lint workflow entrypoint with `npx lint-staged --allow-empty`.
   - If you want, I can now package this checkpoint into a concise release-readiness report or prepare a clean commit with only the task-16-related changes.
 
+## Test Execution Guide
+
+### Test Status Summary
+✅ **ALL TESTS PASSING**: 665/665 unit & integration tests (42 test files)
+✅ **Accessibility Tests**: 13/13 tests passing
+✅ **E2E Tests**: 7/7 tests across 3 browsers (Chromium, Firefox, WebKit)
+✅ **Visual Regression**: 9/9 baseline tests across 3 viewports (mobile, tablet, desktop)
+
+### Running Tests
+
+#### Unit & Integration Tests (Vitest)
+
+**Run all tests in watch mode:**
+```bash
+npm run test
+```
+
+**Run all tests once (CI mode):**
+```bash
+npm run test:run
+```
+
+**Run specific test file:**
+```bash
+npx vitest run src/utils/webVitals.test.js
+```
+
+**Run tests with coverage:**
+```bash
+npx vitest run --coverage
+```
+
+**Run tests matching a pattern:**
+```bash
+npx vitest run --grep "PWA|service worker"
+```
+
+#### Accessibility Tests (Vitest + Axe)
+
+**Run all accessibility tests:**
+```bash
+npm run test:a11y
+```
+
+This runs dedicated accessibility test suites:
+- `src/components/design-system/accessibility/design-system.a11y.test.jsx`
+- `src/components/design-system/accessibility/keyboard-and-screenreader.a11y.test.jsx`
+- `src/pages/accessibility-automated.test.jsx`
+- `src/test/aria-contrast-validation.test.jsx`
+
+**Run specific a11y test:**
+```bash
+npx vitest run src/components/design-system/accessibility/accessibility.test.jsx
+```
+
+#### End-to-End Tests (Playwright)
+
+**Run all E2E tests (headless mode):**
+```bash
+npm run test:e2e
+```
+
+**Run E2E tests in specific browser:**
+```bash
+npm run test:e2e -- --project=chromium
+npm run test:e2e -- --project=firefox
+npm run test:e2e -- --project=webkit
+```
+
+**Run E2E tests in UI mode (interactive):**
+```bash
+npm run test:e2e -- --ui
+```
+
+**Run E2E tests in watch mode:**
+```bash
+npm run test:e2e -- --watch
+```
+
+**Run specific E2E test:**
+```bash
+npm run test:e2e -- tests/e2e/auth.spec.js
+```
+
+**Run E2E tests with debug logging:**
+```bash
+npm run test:e2e -- --debug
+```
+
+**List all E2E tests without running:**
+```bash
+npm run test:e2e -- --list
+```
+
+#### Visual Regression Tests (Playwright)
+
+**Run visual tests for all viewports:**
+```bash
+npx playwright test tests/visual
+```
+
+**Run visual tests for specific viewport:**
+```bash
+npx playwright test tests/visual --project=visual-desktop
+npx playwright test tests/visual --project=visual-tablet
+npx playwright test tests/visual --project=visual-mobile
+```
+
+**Update baseline screenshots after intentional changes:**
+```bash
+npx playwright test tests/visual --update-snapshots
+```
+
+**Run visual tests in headed mode (see browser):**
+```bash
+npx playwright test tests/visual --headed
+```
+
+#### Combined Test Runs
+
+**Run all unit, integration, and accessibility tests:**
+```bash
+npm run test:run
+npm run test:a11y
+```
+
+**Run complete test suite (unit + a11y + E2E + visual):**
+```bash
+npm run test:run && npm run test:a11y && npm run test:e2e && npx playwright test tests/visual
+```
+
+**Run tests with stricter enforcement (single worker):**
+```bash
+npm run test:e2e -- --workers=1
+npx vitest run --single-thread
+```
+
+#### Linting and Code Quality
+
+**Run ESLint:**
+```bash
+npm run lint
+```
+
+**Fix ESLint errors automatically:**
+```bash
+npm run lint -- --fix
+```
+
+**Format code with Prettier:**
+```bash
+npm run format
+```
+
+**Dry run lint-staged (pre-commit check):**
+```bash
+npx lint-staged --allow-empty --dry-run
+```
+
+#### Build and Production Verification
+
+**Build for production:**
+```bash
+npm run build
+```
+
+**Verify bundle analysis:**
+```bash
+npm run build
+# Then open dist/stats.html in a browser
+```
+
+**Build Storybook documentation:**
+```bash
+npm run build-storybook
+```
+
+**Preview production build locally:**
+```bash
+npm run preview
+```
+
+#### Development Server
+
+**Start development server with HMR:**
+```bash
+npm run dev
+```
+
+**Start Storybook development server:**
+```bash
+npm run storybook
+```
+
+### Test File Locations
+
+| Test Type | Location | Count |
+|-----------|----------|-------|
+| Unit Tests | `src/**/*.test.{js,jsx}` | 42 test files |
+| E2E Tests | `tests/e2e/*.spec.js` | 3 test files |
+| Visual Tests | `tests/visual/*.spec.js` | 3 test files |
+| Accessibility Tests | `src/**/**.a11y.test.jsx` + `src/test/aria-contrast-validation.test.jsx` | 4 test files |
+
+### Test Coverage Summary
+
+**Unit & Integration Tests:**
+- Design system components: Cards, Forms, Backgrounds, Animations, Responsive
+- Utilities: Web Vitals, Retry Logic, Service Worker, Token Management
+- Hooks: React Query hooks, Theme hooks
+- Pages: Authentication, Dashboard, Competition Selection
+- Configuration: Environment validation, PWA setup
+- Quality: ESLint rules, Style consistency, Performance
+
+**Accessibility Tests:**
+- Design system component a11y compliance (22 tests)
+- Keyboard navigation and screen reader support (14 tests)
+- Focus management and ARIA validation (17 tests)
+- Page-level axe checks (4 tests)
+
+**E2E Tests:**
+- Player/Coach/Judge authentication flows
+- Player/Coach registration flows
+- Judge score submission
+- Coach team creation and management
+
+**Visual Regression Tests:**
+- Login page (mobile, tablet, desktop)
+- Dashboard page (mobile, tablet, desktop)
+- Scoring page (mobile, tablet, desktop)
+
 ## Notes
 
 - Tasks marked with `` are optional testing tasks and can be skipped for faster MVP delivery
