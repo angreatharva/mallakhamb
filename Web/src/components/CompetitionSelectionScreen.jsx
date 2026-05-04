@@ -186,15 +186,15 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
         : (teamsResponse.data?.data || []);
       
       if (teams.length === 0) {
-        setCoachError('Please create a team first before selecting a competition.');
-        setCoachCompetitions([]);
-        setCoachTeam(null);
+        toast.error('Please create a team first before selecting a competition.');
+        navigate('/coach/create-team');
         return;
       }
       
       // Set the first team
       const team = teams[0];
       setCoachTeam(team);
+      setCoachError(null); // Clear any previous errors
       
       // Fetch open competitions
       const competitionsResponse = await coachAPI.getOpenCompetitions();
@@ -256,6 +256,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     
     try {
       setIsSelecting(true);
+      logger.log('[Competition Selection] Starting competition selection process');
       
       if (userType === 'coach') {
         // Coach-specific flow: register team for competition
@@ -265,11 +266,13 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           return;
         }
         
+        logger.log('[Competition Selection] Registering team for competition');
         await coachAPI.registerTeamForCompetition(coachTeam._id || coachTeam.id, selectedCompetition);
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        logger.log('[Competition Selection] Setting competition context');
         const authResponse = await fetch(
           `${apiUrl}/auth/set-competition`,
           {
@@ -299,6 +302,8 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       }
       
       if (onCompetitionSelected) onCompetitionSelected(selectedCompetition);
+      
+      logger.log('[Competition Selection] About to navigate to dashboard');
       await new Promise(resolve => setTimeout(resolve, 300));
       navigateToDashboard();
     } catch (error) {
@@ -326,6 +331,8 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     const pathWithCompetition = selectedCompetition
       ? `${basePath}?competitionId=${selectedCompetition}`
       : basePath;
+    
+    logger.log('[Competition Selection] Navigating to:', pathWithCompetition);
     navigate(pathWithCompetition);
   };
 

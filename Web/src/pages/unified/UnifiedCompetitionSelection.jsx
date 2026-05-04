@@ -143,10 +143,10 @@ const UnifiedCompetitionSelectionInner = () => {
         logger.log('[Competition Selection] Parsed teams array:', teams);
         
         if (teams.length === 0) {
-          logger.warn('[Competition Selection] No teams found');
-          setError('Please create a team first before selecting a competition.');
-          setItems([]);
-          setCoachTeam(null);
+          logger.warn('[Competition Selection] No teams found - redirecting to create team');
+          // Automatically redirect to create team page
+          toast.error('Please create a team first before selecting a competition.');
+          navigate('/coach/create-team');
           return;
         }
         
@@ -203,7 +203,7 @@ const UnifiedCompetitionSelectionInner = () => {
     } finally {
       setLoading(false);
     }
-  }, [role, config.itemLabel]);
+  }, [role, config.itemLabel, navigate]);
 
   // Fetch data on mount and when returning from team creation
   useEffect(() => {

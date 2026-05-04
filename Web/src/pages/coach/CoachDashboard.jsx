@@ -73,12 +73,13 @@ const CoachDashboard = () => {
     // Wait for competition context to finish loading
     if (competitionLoading) return;
     
-    // If no current competition and no assigned competitions, redirect to selection
-    if (!currentCompetition && (!assignedCompetitions || assignedCompetitions.length === 0)) {
+    // If no current competition, redirect to selection
+    // Note: For coaches, assignedCompetitions might be empty since they register for open competitions
+    if (!currentCompetition) {
       logger.info('No competition context, redirecting to competition selection');
       navigate('/coach/select-competition', { replace: true });
     }
-  }, [currentCompetition, assignedCompetitions, competitionLoading, navigate]);
+  }, [currentCompetition, competitionLoading, navigate]);
 
   // Scroll handler for navbar
   useEffect(() => {
