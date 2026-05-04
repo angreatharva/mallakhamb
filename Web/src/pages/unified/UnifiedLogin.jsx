@@ -413,8 +413,14 @@ const UnifiedLoginInner = () => {
       reset();
       
       // Handle post-login navigation
-      if (role === 'admin' || role === 'superadmin') {
+      if (role === 'admin') {
+        // Admin needs to select competition
         setShowCompetitionSelection(true);
+      } else if (role === 'superadmin') {
+        // Superadmin goes directly to dashboard without competition selection
+        setTimeout(() => {
+          navigate('/superadmin/dashboard');
+        }, 100);
       } else if (role === 'coach') {
         // Coach always goes to competition selection after login
         navigate('/coach/select-competition');
@@ -459,8 +465,8 @@ const UnifiedLoginInner = () => {
     }
   };
   
-  // Show competition selection for admin and superadmin
-  if (showCompetitionSelection && (role === 'admin' || role === 'superadmin')) {
+  // Show competition selection for admin only (superadmin goes directly to dashboard)
+  if (showCompetitionSelection && role === 'admin') {
     return (
       <CompetitionProvider userType={role}>
         <CompetitionSelectionScreen userType={role} onCompetitionSelected={() => {}} />
