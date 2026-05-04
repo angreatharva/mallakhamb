@@ -88,6 +88,13 @@ const createCompetition = async () => {
 
         await competition.save();
 
+        // Update admin's competitions array if admin was assigned
+        if (admin) {
+            admin.competitions.push(competition._id);
+            await admin.save();
+            console.log(`✅ Updated admin's competitions array`);
+        }
+
         console.log('✅ Competition created successfully!');
         console.log('\nCompetition Details:');
         console.log(`- Name: ${competition.name}`);
