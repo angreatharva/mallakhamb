@@ -98,8 +98,9 @@ class AuthenticationService {
       // Generate token
       const token = this.tokenService.generateToken(user._id.toString(), sanitizedUserType);
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      // Convert Mongoose document to plain object and remove password
+      const userObject = user.toObject ? user.toObject() : { ...user };
+      const { password: _, ...userWithoutPassword } = userObject;
 
       this.logger.info('Login successful', { 
         userId: user._id, 
