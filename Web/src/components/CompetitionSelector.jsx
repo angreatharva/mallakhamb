@@ -23,6 +23,16 @@ const CompetitionSelector = ({ userType }) => {
   const dropdownRef = useRef(null);
   const reduced = useReducedMotion();
 
+  // Log when currentCompetition changes
+  useEffect(() => {
+    logger.info('CompetitionSelector: currentCompetition changed', {
+      hasCompetition: !!currentCompetition,
+      competitionId: currentCompetition?._id,
+      competitionName: currentCompetition?.name,
+      userType
+    });
+  }, [currentCompetition, userType]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
@@ -53,8 +63,9 @@ const CompetitionSelector = ({ userType }) => {
 
   const handleNewRegistration = () => {
     setIsOpen(false);
-    if (userType === 'player') navigate('/player/select-competition');
-    else if (userType === 'coach') navigate('/coach/select-competition');
+    // Only coaches can register for new competitions
+    // Players join teams, which are already registered in competitions
+    if (userType === 'coach') navigate('/coach/select-competition');
   };
 
   const filteredCompetitions = assignedCompetitions?.filter((c) => {
@@ -68,17 +79,20 @@ const CompetitionSelector = ({ userType }) => {
     );
   });
 
-  if (isLoading) return null;
+  // Don't show selector in certain conditions
   if (userType === 'admin' && (!assignedCompetitions || assignedCompetitions.length <= 1)) return null;
   // For coaches, always show the selector (even with 0 competitions) so they can register for new ones
   // For players, hide if no competitions
   if (userType === 'player' && (!assignedCompetitions || assignedCompetitions.length === 0)) return null;
 
+  // Show loading state inside the button instead of hiding the entire component
+  const isLoadingOrSwitching = isLoading || isSwitching;
+
   return (
     <div className="relative" ref={dropdownRef}>
       <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={isSwitching}
+        onClick={() => !isLoadingOrSwitching && setIsOpen(!isOpen)}
+        disabled={isLoadingOrSwitching}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
         style={{
           background: isOpen ? `${COLORS.saffron}10` : 'rgba(255,255,255,0.05)',
@@ -223,8 +237,8 @@ const CompetitionSelector = ({ userType }) => {
               )}
             </div>
 
-            {/* Register new */}
-            {(userType === 'player' || userType === 'coach') && (
+            {/* Register new - only for coaches */}
+            {userType === 'coach' && (
               <div className="border-t" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <motion.button
                   onClick={handleNewRegistration}
@@ -235,10 +249,10 @@ const CompetitionSelector = ({ userType }) => {
                   <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
                   <div>
                     <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
-                      {userType === 'coach' ? 'Sign up for new competition' : 'Register for New Competition'}
+                      Sign up for new competition
                     </p>
                     <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {userType === 'player' ? 'Join a team for a new competition' : 'Register your team'}
+                      Register your team
                     </p>
                   </div>
                 </motion.button>

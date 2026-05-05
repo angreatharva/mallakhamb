@@ -425,10 +425,25 @@ const UnifiedLoginInner = () => {
         // Coach always goes to competition selection after login
         navigate('/coach/select-competition');
       } else if (role === 'player') {
-        // Player always goes to competition selection after login (same as coach)
-        setTimeout(() => {
-          navigate('/player/select-competition');
-        }, 100);
+        // Player: check if they have a team assigned
+        // Team can be either a string ID or an object with _id
+        const hasTeam = userData.team && (
+          typeof userData.team === 'string' ? userData.team : 
+          (userData.team._id || userData.team.id)
+        );
+        
+        if (hasTeam) {
+          const teamId = typeof userData.team === 'string' ? userData.team : (userData.team._id || userData.team.id);
+          logger.info('Player has team, redirecting to dashboard', { teamId });
+          setTimeout(() => {
+            navigate('/player/dashboard');
+          }, 100);
+        } else {
+          logger.info('Player has no team, redirecting to team selection');
+          setTimeout(() => {
+            navigate('/player/select-team');
+          }, 100);
+        }
       } else {
         // Add small delay for state to update before navigation
         setTimeout(() => {

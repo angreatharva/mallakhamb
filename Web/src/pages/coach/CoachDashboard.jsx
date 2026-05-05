@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { coachAPI } from '../../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
 import Dropdown from '../../components/Dropdown';
-import { CompetitionProvider, useCompetition } from '../../contexts/CompetitionContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import CompetitionSelector from '../../components/CompetitionSelector';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
@@ -73,13 +73,33 @@ const CoachDashboard = () => {
     // Wait for competition context to finish loading
     if (competitionLoading) return;
     
-    // If no current competition, redirect to selection
-    // Note: For coaches, assignedCompetitions might be empty since they register for open competitions
+    // Check if we have a competitionId in the URL (coming from selection page)
+    const urlParams = new URLSearchParams(location.search);
+    const competitionIdFromUrl = urlParams.get('competitionId');
+    
+    // If we have a competitionId in URL, give more time for the context to load
+    // The CompetitionProvider should pick up the competition from localStorage
+    if (competitionIdFromUrl) {
+      // Check if the competition is already set
+      if (currentCompetition && currentCompetition._id === competitionIdFromUrl) {
+        // Competition is set, remove URL parameter
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('competitionId');
+        window.history.replaceState({}, '', newUrl);
+        return;
+      }
+      
+      // Still waiting for competition to be set
+      logger.info('Competition ID in URL, waiting for context to load', { competitionIdFromUrl });
+      return;
+    }
+    
+    // If no current competition and no URL parameter, redirect to selection
     if (!currentCompetition) {
       logger.info('No competition context, redirecting to competition selection');
       navigate('/coach/select-competition', { replace: true });
     }
-  }, [currentCompetition, competitionLoading, navigate]);
+  }, [currentCompetition, competitionLoading, navigate, location.search]);
 
   // Scroll handler for navbar
   useEffect(() => {
@@ -300,9 +320,7 @@ const CoachDashboard = () => {
         </motion.nav>
 
         <div className="max-w-4xl mx-auto px-4 py-10 pt-24">
-          <CompetitionProvider userType="coach">
-            <CompetitionDisplay className="mb-8" />
-          </CompetitionProvider>
+          <CompetitionDisplay className="mb-8" />
           <div className="rounded-3xl border p-12 text-center"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
@@ -420,9 +438,7 @@ const CoachDashboard = () => {
       </motion.nav>
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 pt-24">
-        <CompetitionProvider userType="coach">
-          <CompetitionDisplay className="mb-8" />
-        </CompetitionProvider>
+        <CompetitionDisplay className="mb-8" />
 
         {/* Header card */}
         <FadeIn className="mb-6">

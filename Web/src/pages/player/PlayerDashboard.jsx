@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { playerAPI } from '../../services/api';
-import { CompetitionProvider, useCompetition } from '../../contexts/CompetitionContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import { logger } from '../../utils/logger';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
@@ -77,6 +77,7 @@ const PlayerDashboard = () => {
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
+  const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   useReducedMotion(); // Initialize for accessibility
 
   // Handle competition selection from URL parameter
@@ -105,17 +106,35 @@ const PlayerDashboard = () => {
     fetchPlayerProfile();
   }, []);
 
-  // Redirect to competition selection if no competition is set
+  // Show modal if multiple competitions and no current competition selected
   useEffect(() => {
-    // Wait for competition context to finish loading
-    if (competitionLoading) return;
+    // Wait for competitions to load
+    if (competitionLoading || !assignedCompetitions) return;
+
+    const competitionCount = assignedCompetitions.length;
     
-    // If no current competition and no assigned competitions, redirect to selection
-    if (!currentCompetition && (!assignedCompetitions || assignedCompetitions.length === 0)) {
-      logger.info('No competition context, redirecting to competition selection');
-      navigate('/player/select-competition', { replace: true });
+    // If 2+ competitions and no current competition, show modal
+    if (competitionCount > 1 && !currentCompetition) {
+      logger.info('Multiple competitions found, showing selection modal', { count: competitionCount });
+      setShowCompetitionModal(true);
     }
-  }, [currentCompetition, assignedCompetitions, competitionLoading, navigate]);
+  }, [competitionLoading, assignedCompetitions, currentCompetition]);
+
+  // Redirect to team selection if player has no team
+  useEffect(() => {
+    if (!loading && player) {
+      // Team can be null, undefined, or a string ID, or an object
+      const hasTeam = player.team && (
+        typeof player.team === 'string' ? player.team : 
+        (player.team._id || player.team.id)
+      );
+      
+      if (!hasTeam) {
+        logger.info('Player has no team, redirecting to team selection');
+        navigate('/player/select-team', { replace: true });
+      }
+    }
+  }, [loading, player, navigate]);
 
   useEffect(() => {
     if (player && !player.team) fetchTeams();
@@ -207,9 +226,18 @@ const PlayerDashboard = () => {
     <div className="min-h-dvh" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
         {/* Competition context */}
-        <CompetitionProvider userType="player">
+        {assignedCompetitions && assignedCompetitions.length > 0 ? (
           <CompetitionDisplay className="mb-0" />
-        </CompetitionProvider>
+        ) : (
+          <FadeIn>
+            <div className="rounded-2xl border p-4 text-center"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <p className="text-white/40 text-sm">
+                No competitions assigned yet. Your coach will add you to competitions.
+              </p>
+            </div>
+          </FadeIn>
+        )}
 
         {/* Welcome banner */}
         <FadeIn>
@@ -339,6 +367,103 @@ const PlayerDashboard = () => {
           </FadeIn>
         </div>
       </div>
+
+      {/* Competition Selection Modal */}
+      <AnimatePresence>
+        {showCompetitionModal && assignedCompetitions && assignedCompetitions.length > 1 && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.8)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              // Don't allow closing by clicking backdrop - force selection
+              e.stopPropagation();
+            }}
+          >
+            <motion.div
+              className="w-full max-w-2xl rounded-3xl border p-6 md:p-8"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                  style={{ background: `${COLORS.saffron}15` }}>
+                  <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+                </div>
+                <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
+                <p className="text-white/45 text-sm">
+                  You're registered for multiple competitions. Please select one to continue.
+                </p>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {assignedCompetitions.map((competition) => (
+                  <motion.button
+                    key={competition._id}
+                    onClick={async () => {
+                      try {
+                        logger.info('Modal: Selecting competition', { 
+                          competitionId: competition._id, 
+                          competitionName: competition.name 
+                        });
+                        await switchCompetition(competition._id);
+                        logger.info('Modal: Competition switched successfully');
+                        setShowCompetitionModal(false);
+                        toast.success(`Selected ${competition.name}`);
+                      } catch (error) {
+                        logger.error('Modal: Failed to select competition', error);
+                        toast.error('Failed to select competition');
+                      }
+                    }}
+                    className="w-full text-left p-4 rounded-xl border transition-all"
+                    style={{ 
+                      background: COLORS.dark,
+                      borderColor: COLORS.darkBorderSubtle 
+                    }}
+                    whileHover={{ 
+                      borderColor: `${COLORS.saffron}40`,
+                      boxShadow: `0 0 20px ${COLORS.saffron}10` 
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${COLORS.saffron}15` }}>
+                        <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold text-base mb-1 truncate">
+                          {competition.name}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
+                          {competition.place && <span>{competition.place}</span>}
+                          {competition.level && (
+                            <>
+                              <span>•</span>
+                              <span className="capitalize">{competition.level}</span>
+                            </>
+                          )}
+                          {competition.year && (
+                            <>
+                              <span>•</span>
+                              <span>{competition.year}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

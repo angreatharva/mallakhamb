@@ -17,6 +17,7 @@ const Home = lazy(() => import('./pages/public/Home'));
 const PlayerLogin = lazy(() => import('./pages/player/PlayerLogin'));
 const PlayerRegister = lazy(() => import('./pages/player/PlayerRegister'));
 const PlayerSelectTeam = lazy(() => import('./pages/player/PlayerSelectTeam'));
+const PlayerTeamSelection = lazy(() => import('./pages/player/PlayerTeamSelection'));
 const PlayerDashboard = lazy(() => import('./pages/player/PlayerDashboard'));
 const CoachLogin = lazy(() => import('./pages/coach/CoachLogin'));
 const CoachRegister = lazy(() => import('./pages/coach/CoachRegister'));
@@ -196,7 +197,7 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
-  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition' || location.pathname === '/player/select-competition';
+  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition';
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
@@ -223,20 +224,10 @@ function AppContent() {
 
             {/* Protected Player Routes */}
             <Route
-              path="/player/select-competition"
-              element={
-                <ProtectedRoute requiredUserType="player">
-                  <CompetitionProvider userType="player">
-                    <CompetitionSelectionScreen userType="player" onCompetitionSelected={() => {}} />
-                  </CompetitionProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/player/select-team"
               element={
                 <ProtectedRoute requiredUserType="player">
-                  <Navigate to="/player/select-competition" replace />
+                  <PlayerTeamSelection />
                 </ProtectedRoute>
               }
             />
@@ -277,7 +268,9 @@ function AppContent() {
               path="/coach/dashboard"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <CoachDashboard />
+                  <CompetitionProvider userType="coach">
+                    <CoachDashboard />
+                  </CompetitionProvider>
                 </ProtectedRoute>
               }
             />

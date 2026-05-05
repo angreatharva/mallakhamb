@@ -192,8 +192,34 @@ export const CompetitionProvider = ({ children, userType }) => {
             setCurrentCompetition(match);
           }
         } else {
-          // No competition in token — clear it
-          setCurrentCompetition(null);
+          // No competition in token
+          // AUTO-SELECT: If exactly 1 competition, select it automatically
+          if (competitions.length === 1) {
+            const competition = competitions[0];
+            logger.info('Auto-selecting single competition', { 
+              competitionId: competition._id, 
+              competitionName: competition.name,
+              userType 
+            });
+            setCurrentCompetition(competition);
+            
+            // Update token with competition context
+            try {
+              const response = await axios.post(
+                `${apiConfig.getBaseUrl()}/auth/set-competition`,
+                { competitionId: competition._id },
+                { headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() } }
+              );
+              const newToken = response.data.data?.token || response.data.token;
+              secureStorage.setItem(`${userType}_token`, newToken);
+              logger.info('Competition auto-selected and token updated', { competitionId: competition._id });
+            } catch (err) {
+              logger.error('Failed to update token after auto-select:', err);
+            }
+          } else {
+            // Multiple or no competitions - clear current
+            setCurrentCompetition(null);
+          }
         }
       } catch (err) {
         if (isMounted) {

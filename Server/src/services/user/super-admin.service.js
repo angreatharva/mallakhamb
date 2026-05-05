@@ -181,18 +181,25 @@ class SuperAdminService {
   async deleteJudge(judgeId) { return this.judgeRepository.deleteById(judgeId); }
 
   async createCompetition(payload, adminId) {
-    // Create competition with admin assigned
+    // Use admins from payload if provided, otherwise default to the creator
+    const assignedAdmins = payload.admins && payload.admins.length > 0 
+      ? payload.admins 
+      : [adminId];
+    
+    // Create competition with assigned admins
     const competition = await this.competitionRepository.create({ 
       ...payload, 
       createdBy: adminId, 
-      admins: [adminId] 
+      admins: assignedAdmins 
     });
     
-    // Update admin's competitions array (bidirectional relationship)
-    const admin = await this.adminRepository.findById(adminId);
-    if (admin) {
-      const adminCompetitions = Array.from(new Set([...(admin.competitions || []).map(String), String(competition._id)]));
-      await this.adminRepository.updateById(adminId, { competitions: adminCompetitions });
+    // Update competitions array for all assigned admins (bidirectional relationship)
+    for (const assignedAdminId of assignedAdmins) {
+      const admin = await this.adminRepository.findById(assignedAdminId);
+      if (admin) {
+        const adminCompetitions = Array.from(new Set([...(admin.competitions || []).map(String), String(competition._id)]));
+        await this.adminRepository.updateById(assignedAdminId, { competitions: adminCompetitions });
+      }
     }
     
     return competition;

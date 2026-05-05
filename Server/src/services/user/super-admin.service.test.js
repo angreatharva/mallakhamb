@@ -31,6 +31,7 @@ describe('SuperAdminService', () => {
     mockAdminRepository = {
       find: jest.fn(),
       count: jest.fn(),
+      findById: jest.fn(),
       updateById: jest.fn(),
       deleteById: jest.fn()
     };
@@ -408,6 +409,192 @@ describe('SuperAdminService', () => {
         coaches: 10,
         teams: 15,
         competitions: 3
+      });
+    });
+  });
+
+  describe('createCompetition', () => {
+    const superAdminId = 'superadmin123';
+    const competitionData = {
+      name: 'National Championship',
+      level: 'national',
+      place: 'Mumbai',
+      year: 2026,
+      startDate: '2026-06-01',
+      endDate: '2026-06-05'
+    };
+
+    it('should create competition with admins from payload', async () => {
+      const adminIds = ['admin1', 'admin2'];
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: adminIds,
+        createdBy: superAdminId
+      };
+
+      const mockAdmin1 = { _id: 'admin1', competitions: [] };
+      const mockAdmin2 = { _id: 'admin2', competitions: ['comp999'] };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById
+        .mockResolvedValueOnce(mockAdmin1)
+        .mockResolvedValueOnce(mockAdmin2);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(
+        { ...competitionData, admins: adminIds },
+        superAdminId
+      );
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockCompetitionRepository.create).toHaveBeenCalledWith({
+        ...competitionData,
+        admins: adminIds,
+        createdBy: superAdminId
+      });
+      expect(mockAdminRepository.findById).toHaveBeenCalledWith('admin1');
+      expect(mockAdminRepository.findById).toHaveBeenCalledWith('admin2');
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin1', {
+        competitions: ['comp123']
+      });
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin2', {
+        competitions: ['comp999', 'comp123']
+      });
+    });
+
+    it('should default to creator as admin when no admins provided', async () => {
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: [superAdminId],
+        createdBy: superAdminId
+      };
+
+      const mockAdmin = { _id: superAdminId, competitions: [] };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById.mockResolvedValue(mockAdmin);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(competitionData, superAdminId);
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockCompetitionRepository.create).toHaveBeenCalledWith({
+        ...competitionData,
+        admins: [superAdminId],
+        createdBy: superAdminId
+      });
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith(superAdminId, {
+        competitions: ['comp123']
+      });
+    });
+
+    it('should default to creator when admins array is empty', async () => {
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: [superAdminId],
+        createdBy: superAdminId
+      };
+
+      const mockAdmin = { _id: superAdminId, competitions: [] };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById.mockResolvedValue(mockAdmin);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(
+        { ...competitionData, admins: [] },
+        superAdminId
+      );
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockCompetitionRepository.create).toHaveBeenCalledWith({
+        ...competitionData,
+        admins: [superAdminId],
+        createdBy: superAdminId
+      });
+    });
+
+    it('should handle admin without existing competitions', async () => {
+      const adminIds = ['admin1'];
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: adminIds,
+        createdBy: superAdminId
+      };
+
+      const mockAdmin = { _id: 'admin1', competitions: undefined };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById.mockResolvedValue(mockAdmin);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(
+        { ...competitionData, admins: adminIds },
+        superAdminId
+      );
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin1', {
+        competitions: ['comp123']
+      });
+    });
+
+    it('should skip updating admin if admin not found', async () => {
+      const adminIds = ['admin1', 'nonexistent'];
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: adminIds,
+        createdBy: superAdminId
+      };
+
+      const mockAdmin1 = { _id: 'admin1', competitions: [] };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById
+        .mockResolvedValueOnce(mockAdmin1)
+        .mockResolvedValueOnce(null);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(
+        { ...competitionData, admins: adminIds },
+        superAdminId
+      );
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockAdminRepository.updateById).toHaveBeenCalledTimes(1);
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin1', {
+        competitions: ['comp123']
+      });
+    });
+
+    it('should avoid duplicate competition IDs in admin competitions array', async () => {
+      const adminIds = ['admin1'];
+      const mockCompetition = {
+        _id: 'comp123',
+        ...competitionData,
+        admins: adminIds,
+        createdBy: superAdminId
+      };
+
+      const mockAdmin = { _id: 'admin1', competitions: ['comp123', 'comp999'] };
+
+      mockCompetitionRepository.create.mockResolvedValue(mockCompetition);
+      mockAdminRepository.findById.mockResolvedValue(mockAdmin);
+      mockAdminRepository.updateById.mockResolvedValue({});
+
+      const result = await superAdminService.createCompetition(
+        { ...competitionData, admins: adminIds },
+        superAdminId
+      );
+
+      expect(result).toEqual(mockCompetition);
+      expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin1', {
+        competitions: ['comp123', 'comp999']
       });
     });
   });

@@ -260,6 +260,10 @@ const UnifiedCompetitionSelectionInner = () => {
         if (newToken) {
           secureStorage.setItem('coach_token', newToken);
         }
+        
+        // Store the selected competition in localStorage so CompetitionProvider can load it immediately
+        secureStorage.setItem('coach_current_competition', JSON.stringify(selectedItem));
+        
         toast.success('Team registered for competition successfully!');
       } else if (role === 'player') {
         // Player: join competition (similar to coach flow)
@@ -292,11 +296,15 @@ const UnifiedCompetitionSelectionInner = () => {
         if (newToken) {
           secureStorage.setItem('player_token', newToken);
         }
+        
+        // Store the selected competition in localStorage so CompetitionProvider can load it immediately
+        secureStorage.setItem('player_current_competition', JSON.stringify(selectedItem));
 
         toast.success('Competition selected successfully!');
       }
 
       // Navigate to dashboard with competition parameter
+      // Use a longer delay to ensure token is properly stored and ready
       setTimeout(() => {
         const competitionId = selectedItem._id || selectedItem.id;
         if (role === 'coach' || role === 'player') {
@@ -304,7 +312,7 @@ const UnifiedCompetitionSelectionInner = () => {
         } else {
           navigate(config.dashboardPath);
         }
-      }, 100);
+      }, 300);
     } catch (err) {
       logger.error(`${role} selection error:`, err);
       const errorMsg =

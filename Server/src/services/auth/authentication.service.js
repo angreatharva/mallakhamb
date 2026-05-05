@@ -418,13 +418,16 @@ class AuthenticationService {
       }
 
       if (type === 'player') {
-        // Player: fetch competitions through their team
+        // Player: fetch competitions where they are actually added to the team roster
         // First get the player's team
         if (!user.team) return [];
         
-        // Find competitions where the player's team is registered
+        // Find competitions where:
+        // 1. The player's team is registered
+        // 2. The player is in the team's players array
         const competitions = await this.competitionRepository.find({
           'registeredTeams.team': user.team,
+          'registeredTeams.players.player': userId,
           'registeredTeams.isActive': true
         });
         return competitions || [];
