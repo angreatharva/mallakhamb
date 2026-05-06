@@ -378,14 +378,33 @@ class CoachService extends UserService {
 
   async searchPlayers(coachId, competitionId, query = '') {
     if (!this.playerRepository) return [];
+    
+    // Get coach's teams to filter players by team
+    const teams = await this.getCoachTeams(coachId);
+    if (teams.length === 0) {
+      this.logger?.info?.('No teams found for coach, returning empty player list', { coachId });
+      return [];
+    }
+    
+    // Get the team ID (assuming coach has one team for now)
+    const teamId = teams[0]._id;
+    
     const filters = {
       isActive: true,
+      team: teamId, // Only show players assigned to this coach's team
       $or: [
         { firstName: { $regex: query, $options: 'i' } },
         { lastName: { $regex: query, $options: 'i' } },
         { email: { $regex: query, $options: 'i' } },
       ],
     };
+    
+    this.logger?.info?.('Searching players for team', { 
+      coachId, 
+      teamId: teamId.toString(), 
+      query 
+    });
+    
     return this.playerRepository.find(filters, { limit: 20, sort: { createdAt: -1 } });
   }
 

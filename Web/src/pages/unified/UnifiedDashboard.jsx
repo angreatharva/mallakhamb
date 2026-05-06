@@ -257,7 +257,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       // Other tabs don't need loading state
       setLoading(false);
     }
-  }, [activeTab, selectedCompetition, isSuperAdmin, currentCompetition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedCompetition, isSuperAdmin, currentCompetition?._id]);
 
   const fetchCompetitions = async () => {
     try {
@@ -308,6 +309,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     }
 
     setLoading(true);
+    // Clear previous stats to show loading state
+    setStats(null);
     try {
       logger.info('Fetching admin dashboard data', { competitionId: currentCompetition._id });
       const response = await adminAPI.getDashboard();
@@ -330,10 +333,19 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   };
 
   const fetchJudgesSummary = async () => {
+    if (!currentCompetition) {
+      logger.warn('fetchJudgesSummary called without currentCompetition');
+      return;
+    }
+    
     setLoadingJudgesSummary(true);
+    // Clear previous summary to show loading state
+    setJudgesSummary([]);
     try {
+      logger.info('Fetching judges summary', { competitionId: currentCompetition._id });
       const response = await api.getAllJudgesSummary();
       setJudgesSummary(response.data.summary || []);
+      logger.info('Judges summary loaded successfully', { count: response.data.summary?.length || 0 });
     } catch (error) {
       logger.error('Failed to fetch judges summary:', error);
     } finally {

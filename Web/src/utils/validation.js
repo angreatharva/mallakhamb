@@ -110,7 +110,6 @@ export const coachRegisterSchema = z.object({
   phone: phoneSchema,
   password: passwordSchema,
   confirmPassword: z.string(),
-  organization: z.string().max(200, 'Organization name is too long').optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],

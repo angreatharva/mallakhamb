@@ -24,8 +24,7 @@ const testCoach = {
   name: 'Test Coach Flow',
   email: `testcoach${Date.now()}@test.com`,
   password: 'TestPass123!',
-  phone: '1234567890',
-  organization: 'Test Org'
+  phone: '1234567890'
 };
 
 const testTeam = {

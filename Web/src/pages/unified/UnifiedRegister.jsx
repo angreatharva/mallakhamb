@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
-  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Building, Calendar,
+  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
   UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -139,15 +139,6 @@ const COACH_FIELDS = [
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
     rules: { required: 'Phone number is required' },
-  },
-  {
-    name: 'organization',
-    label: 'Organization',
-    type: 'text',
-    icon: Building,
-    placeholder: 'Your club or organization (optional)',
-    autoComplete: 'organization',
-    rules: {},
   },
 ];
 
