@@ -6,7 +6,7 @@
  * 2. Create Admin
  * 3. Create Competition (SuperAdmin)
  * 4. Assign Admin to Competition
- * 5. Create Judge
+ * 5. Create Judges
  * 6. Create Coach
  * 7. Create Team (Coach)
  * 8. Register Team to Competition (Coach)
@@ -14,6 +14,8 @@
  * 10. Join Team (Players)
  * 11. Add Players to Competition Registration (Coach)
  * 12. Submit Team (Coach with payment simulation)
+ * 13. Create Transaction (Team Submission Payment)
+ * 14. Create Scores (Judge Scoring)
  * 
  * Usage: npm run populate-db
  */
@@ -28,6 +30,8 @@ const Competition = require('../models/Competition');
 const Judge = require('../models/Judge');
 const Player = require('../models/Player');
 const Team = require('../models/Team');
+const Transaction = require('../models/Transaction');
+const Score = require('../models/Score');
 
 // Configuration
 const CONFIG = {
@@ -309,8 +313,30 @@ async function populateDatabase() {
 
     // Step 12: Submit Team (with payment simulation)
     log.step('STEP 12: Submitting Team with Payment');
-    await submitTeam(competition._id, team._id, players.length);
+    const paymentData = await submitTeam(competition._id, team._id, players.length);
     log.info('Team submitted with payment completed');
+
+    // Step 13: Create Transaction (Team Submission Payment)
+    log.step('STEP 13: Creating Transaction Record');
+    const transaction = await createTransaction(competition._id, team._id, coach._id, paymentData);
+    log.info('Transaction record created', {
+      id: transaction._id,
+      type: transaction.type,
+      amount: transaction.amount,
+      status: transaction.paymentStatus
+    });
+
+    // Step 14: Create Scores (Judge Scoring)
+    log.step('STEP 14: Creating Score Records');
+    const scores = await createScores(competition._id, team._id, players);
+    log.info(`Created ${scores.length} score records`, {
+      scores: scores.map(s => ({
+        id: s._id,
+        gender: s.gender,
+        ageGroup: s.ageGroup,
+        playerCount: s.playerScores.length
+      }))
+    });
 
     // Summary
     log.step('DATABASE POPULATION COMPLETED SUCCESSFULLY');
@@ -323,6 +349,8 @@ async function populateDatabase() {
     console.log(`   - Team: ${team.name}`);
     console.log(`   - Players: ${players.length} created and registered`);
     console.log(`   - Team Status: Submitted with payment completed`);
+    console.log(`   - Transactions: ${transaction ? 1 : 0} created`);
+    console.log(`   - Scores: ${scores.length} records created`);
     console.log('\n🔐 Login Credentials:');
     console.log(`   SuperAdmin: ${superAdmin.email} / ${CONFIG.superAdmin.password}`);
     console.log(`   Admin: ${admin.email} / ${CONFIG.admin.password}`);
@@ -621,6 +649,179 @@ async function submitTeam(competitionId, teamId, playerCount) {
   registeredTeam.paymentVerifiedAt = new Date();
 
   await competition.save();
+
+  return {
+    amount: paymentAmount,
+    paymentOrderId: registeredTeam.paymentOrderId,
+    paymentId: registeredTeam.paymentId,
+    paymentGateway: registeredTeam.paymentGateway
+  };
+}
+
+/**
+ * Create Transaction Record
+ */
+async function createTransaction(competitionId, teamId, coachId, paymentData) {
+  const existing = await Transaction.findOne({
+    competition: competitionId,
+    team: teamId,
+    type: 'team_submission'
+  });
+
+  if (existing) {
+    log.warn('Transaction already exists, using existing one');
+    return existing;
+  }
+
+  const transaction = new Transaction({
+    competition: competitionId,
+    team: teamId,
+    coach: coachId,
+    source: 'coach',
+    type: 'team_submission',
+    amount: paymentData.amount,
+    paymentStatus: 'completed',
+    description: `Team submission payment for competition`,
+    metadata: {
+      paymentOrderId: paymentData.paymentOrderId,
+      paymentId: paymentData.paymentId,
+      paymentGateway: paymentData.paymentGateway
+    }
+  });
+
+  await transaction.save();
+  return transaction;
+}
+
+/**
+ * Create Score Records
+ */
+async function createScores(competitionId, teamId, players) {
+  const scores = [];
+
+  // Group players by gender and ageGroup
+  const playerGroups = {};
+  
+  for (const player of players) {
+    const key = `${player.gender}_${player.ageGroup}`;
+    if (!playerGroups[key]) {
+      playerGroups[key] = {
+        gender: player.gender,
+        ageGroup: player.ageGroup,
+        players: []
+      };
+    }
+    playerGroups[key].players.push(player);
+  }
+
+  // Create score records for each group
+  for (const [key, group] of Object.entries(playerGroups)) {
+    const existing = await Score.findOne({
+      competition: competitionId,
+      teamId: teamId,
+      gender: group.gender,
+      ageGroup: group.ageGroup
+    });
+
+    if (existing) {
+      log.warn(`Score record for ${group.gender} ${group.ageGroup} already exists, skipping`);
+      scores.push(existing);
+      continue;
+    }
+
+    // Create player scores with sample data
+    const playerScores = group.players.map(player => {
+      // Generate random scores between 7.0 and 9.5
+      const seniorJudge = parseFloat((Math.random() * 2.5 + 7.0).toFixed(2));
+      const judge1 = parseFloat((Math.random() * 2.5 + 7.0).toFixed(2));
+      const judge2 = parseFloat((Math.random() * 2.5 + 7.0).toFixed(2));
+      const judge3 = parseFloat((Math.random() * 2.5 + 7.0).toFixed(2));
+      const judge4 = parseFloat((Math.random() * 2.5 + 7.0).toFixed(2));
+
+      // Calculate execution average (remove highest and lowest from J1-J4)
+      const executionScores = [judge1, judge2, judge3, judge4].sort((a, b) => a - b);
+      const executionAverage = parseFloat(
+        ((executionScores[1] + executionScores[2]) / 2).toFixed(2)
+      );
+
+      // Calculate difficulty scores
+      const aClass = parseFloat((Math.random() * 1.5 + 1.0).toFixed(2));
+      const bClass = parseFloat((Math.random() * 1.0 + 0.5).toFixed(2));
+      const cClass = parseFloat((Math.random() * 0.5 + 0.2).toFixed(2));
+      const difficultyTotal = parseFloat((aClass + bClass + cClass).toFixed(2));
+
+      // Random time between 60-90 seconds
+      const timeSeconds = Math.floor(Math.random() * 30 + 60);
+      const timeMinutes = Math.floor(timeSeconds / 60);
+      const timeRemainder = timeSeconds % 60;
+      const time = `${timeMinutes.toString().padStart(2, '0')}:${timeRemainder.toString().padStart(2, '0')}`;
+
+      // Time deduction (0.1 per second over 90 seconds)
+      const deduction = timeSeconds > 90 ? parseFloat(((timeSeconds - 90) * 0.1).toFixed(2)) : 0;
+
+      // Calculate final score
+      const averageMarks = executionAverage;
+      const finalScore = parseFloat((averageMarks - deduction).toFixed(2));
+
+      return {
+        playerId: player._id,
+        playerName: `${player.firstName} ${player.lastName}`,
+        time: time,
+        judgeScores: {
+          seniorJudge,
+          judge1,
+          judge2,
+          judge3,
+          judge4
+        },
+        scoreBreakdown: {
+          difficulty: {
+            aClass,
+            bClass,
+            cClass,
+            total: difficultyTotal
+          },
+          combination: {
+            fullApparatusUtilization: true,
+            rightLeftExecution: true,
+            forwardBackwardFlexibility: true,
+            minimumElementCount: true,
+            total: 1.60
+          },
+          execution: executionAverage,
+          originality: parseFloat((Math.random() * 0.5 + 0.3).toFixed(2))
+        },
+        executionAverage,
+        baseScore: 0,
+        baseScoreApplied: false,
+        toleranceUsed: 0.5,
+        averageMarks,
+        deduction,
+        otherDeduction: 0,
+        finalScore,
+        tieBreakRank: null,
+        tieBreakNotes: ''
+      };
+    });
+
+    const score = new Score({
+      competition: competitionId,
+      teamId: teamId,
+      gender: group.gender,
+      ageGroup: group.ageGroup,
+      competitionType: 'Competition I',
+      timeKeeper: 'System',
+      scorer: 'System',
+      remarks: 'Auto-generated scores for testing',
+      isLocked: false,
+      playerScores: playerScores
+    });
+
+    await score.save();
+    scores.push(score);
+  }
+
+  return scores;
 }
 
 // Run the script
