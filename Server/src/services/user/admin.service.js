@@ -710,50 +710,116 @@ class AdminService extends UserService {
   async getAllTeams(competitionId, filters = {}, pagination = {}) {
     try {
       const { page = 1, limit = 10 } = pagination;
-      
-      // Separate team-level filters from player-level filters
       const { ageGroup, gender, ...teamFilters } = filters;
-      const criteria = { competition: competitionId, ...teamFilters };
 
-      // First, get all teams for the competition
-      const allTeams = await this.teamRepository.find(criteria, { 
-        sort: { createdAt: -1 },
-        populate: ['coach']
-      });
+      // Get competition with registered teams
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition || !competition.registeredTeams) {
+        this.logger.info('No competition or registered teams found', { competitionId });
+        return {
+          teams: [],
+          total: 0,
+          page,
+          pages: 0
+        };
+      }
 
-      // Fetch players for each team and apply player-level filters
-      const teamsWithFilteredPlayers = await Promise.all(
-        allTeams.map(async (team) => {
-          let players = await this.playerRepository.find({ team: team._id });
-          
-          // Apply player-level filters
-          if (ageGroup) {
-            players = players.filter(player => player.ageGroup === ageGroup);
+      // Filter registered teams by active status
+      let filteredRegisteredTeams = competition.registeredTeams.filter(rt => rt.isActive);
+
+      // Apply player-level filters (gender/ageGroup)
+      if (gender || ageGroup) {
+        filteredRegisteredTeams = filteredRegisteredTeams.filter(rt => {
+          // Check if any player in the team matches the gender/ageGroup filter
+          return rt.players.some(p => {
+            const matchesGender = !gender || p.gender === gender;
+            const matchesAgeGroup = !ageGroup || p.ageGroup === ageGroup;
+            return matchesGender && matchesAgeGroup;
+          });
+        });
+      }
+
+      // Get team IDs
+      const teamIds = filteredRegisteredTeams.map(rt => rt.team);
+
+      if (teamIds.length === 0) {
+        this.logger.info('No teams match the filters', { competitionId, filters });
+        return {
+          teams: [],
+          total: 0,
+          page,
+          pages: 0
+        };
+      }
+
+      // Fetch actual team documents with coach populated
+      const teams = await this.teamRepository.find(
+        { _id: { $in: teamIds }, ...teamFilters },
+        { 
+          sort: { createdAt: -1 },
+          populate: 'coach'
+        }
+      );
+
+      // Build response with players from registeredTeams
+      const teamsWithPlayers = await Promise.all(
+        teams.map(async (team) => {
+          const registeredTeam = filteredRegisteredTeams.find(
+            rt => rt.team.toString() === team._id.toString()
+          );
+
+          // Get player details
+          const playerIds = registeredTeam.players.map(p => p.player);
+          const players = await this.playerRepository.find({ _id: { $in: playerIds } });
+
+          // Map players with age groups from registered team data
+          let playersWithAgeGroups = players.map(player => {
+            const registeredPlayer = registeredTeam.players.find(
+              rp => rp.player.toString() === player._id.toString()
+            );
+            return {
+              _id: player._id,
+              firstName: player.firstName,
+              lastName: player.lastName,
+              email: player.email,
+              ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
+              gender: registeredPlayer?.gender || player.gender
+            };
+          });
+
+          // Apply gender and ageGroup filters to the players list
+          if (gender || ageGroup) {
+            playersWithAgeGroups = playersWithAgeGroups.filter(player => {
+              const matchesGender = !gender || player.gender === gender;
+              const matchesAgeGroup = !ageGroup || player.ageGroup === ageGroup;
+              return matchesGender && matchesAgeGroup;
+            });
           }
-          if (gender) {
-            players = players.filter(player => player.gender === gender);
-          }
-          
+
           return {
-            ...team,
-            players,
-            playerCount: players.length
+            _id: team._id,
+            name: team.name,
+            coach: team.coach ? {
+              _id: team.coach._id,
+              name: team.coach.name,
+              email: team.coach.email
+            } : null,
+            playerCount: playersWithAgeGroups.length,
+            players: playersWithAgeGroups,
+            description: team.description,
+            isActive: team.isActive,
+            isSubmitted: registeredTeam.isSubmitted,
+            paymentStatus: registeredTeam.paymentStatus,
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt
           };
         })
       );
 
-      // Filter out teams that have no players matching the criteria
-      const filteredTeams = teamsWithFilteredPlayers.filter(team => {
-        // If no player filters are applied, include all teams
-        if (!ageGroup && !gender) return true;
-        // If player filters are applied, only include teams with matching players
-        return team.players.length > 0;
-      });
-
-      // Apply pagination to filtered results
-      const total = filteredTeams.length;
+      // Apply pagination
+      const total = teamsWithPlayers.length;
       const skip = (page - 1) * limit;
-      const paginatedTeams = filteredTeams.slice(skip, skip + limit);
+      const paginatedTeams = teamsWithPlayers.slice(skip, skip + limit);
 
       this.logger.info('All teams retrieved with filters', { 
         competitionId, 

@@ -31,3 +31,7 @@ old_config/
 *.njsproj
 *.sln
 *.sw?
+
+
+#scripts
+scripts/

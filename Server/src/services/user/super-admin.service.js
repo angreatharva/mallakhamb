@@ -347,12 +347,17 @@ class SuperAdminService {
       // Get stats for all competitions
       const allCompetitions = await this.competitionRepository.find({});
       
-      let totalTeams = 0;
+      // Use Sets to track unique teams and players across all competitions
+      const uniqueTeamIds = new Set();
+      const uniquePlayerIds = new Set();
       let boysTeams = 0;
       let girlsTeams = 0;
       let totalBoys = 0;
       let totalGirls = 0;
       let activeCompetitions = 0;
+      
+      // Track which teams have boys/girls to avoid double counting
+      const teamGenderMap = new Map(); // teamId -> { hasBoys: boolean, hasGirls: boolean }
       
       for (const competition of allCompetitions) {
         if (competition.isActive) activeCompetitions++;
@@ -380,11 +385,16 @@ class SuperAdminService {
         });
         
         activeTeams.forEach(rt => {
-          totalTeams++;
+          const teamId = rt.team.toString();
+          uniqueTeamIds.add(teamId);
           
           const teamPlayers = rt.players.map(p => {
-            const player = playerMap.get(p.player.toString());
+            const playerId = p.player.toString();
+            uniquePlayerIds.add(playerId);
+            
+            const player = playerMap.get(playerId);
             return {
+              id: playerId,
               gender: p.gender || player?.gender,
               ageGroup: p.ageGroup || player?.ageGroup
             };
@@ -393,19 +403,35 @@ class SuperAdminService {
           const hasBoys = teamPlayers.some(p => p.gender === 'Male');
           const hasGirls = teamPlayers.some(p => p.gender === 'Female');
           
-          if (hasBoys) boysTeams++;
-          if (hasGirls) girlsTeams++;
-          
-          teamPlayers.forEach(p => {
-            if (p.gender === 'Male') totalBoys++;
-            if (p.gender === 'Female') totalGirls++;
-          });
+          // Track team gender composition (update if team appears in multiple competitions)
+          if (!teamGenderMap.has(teamId)) {
+            teamGenderMap.set(teamId, { hasBoys: false, hasGirls: false });
+          }
+          const teamGender = teamGenderMap.get(teamId);
+          if (hasBoys) teamGender.hasBoys = true;
+          if (hasGirls) teamGender.hasGirls = true;
         });
       }
       
+      // Count boys/girls teams based on unique teams
+      teamGenderMap.forEach(({ hasBoys, hasGirls }) => {
+        if (hasBoys) boysTeams++;
+        if (hasGirls) girlsTeams++;
+      });
+      
+      // Count total boys and girls from unique players
+      const allUniquePlayers = await this.playerRepository.find({ 
+        _id: { $in: Array.from(uniquePlayerIds) } 
+      });
+      
+      allUniquePlayers.forEach(player => {
+        if (player.gender === 'Male') totalBoys++;
+        if (player.gender === 'Female') totalGirls++;
+      });
+      
       competitionStats = {
-        totalTeams,
-        totalParticipants: totalBoys + totalGirls,
+        totalTeams: uniqueTeamIds.size,
+        totalParticipants: allUniquePlayers.length,
         boysTeams,
         girlsTeams,
         totalBoys,

@@ -244,6 +244,7 @@ const UnifiedLoginInner = () => {
   const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
   const [lockoutEndTime, setLockoutEndTime] = useState(null);
   const [rateLimitEndTime, setRateLimitEndTime] = useState(null);
+  const [loginError, setLoginError] = useState(null);
   
   // Clear lockout/rate limit when timer expires
   useEffect(() => {
@@ -272,6 +273,13 @@ const UnifiedLoginInner = () => {
   
   const { register, handleSubmit, formState: { errors }, setError } = useForm();
   const { checkRateLimit, recordAttempt, reset } = useRateLimit(5, 60000);
+  
+  // Clear login error when user starts typing
+  useEffect(() => {
+    if (loginError) {
+      setLoginError(null);
+    }
+  }, [location.pathname]); // Clear error when navigating between login pages
   
   // Detect role from path
   const role = detectRoleFromPath(location.pathname);
@@ -314,10 +322,15 @@ const UnifiedLoginInner = () => {
   
   // Handle form submission
   const onSubmit = async (data) => {
+    // Clear any previous login errors
+    setLoginError(null);
+    
     // Check rate limit
     const { allowed, waitTime } = checkRateLimit();
     if (!allowed) {
-      toast.error(`Too many login attempts. Please wait ${waitTime} seconds.`);
+      const errorMsg = `Too many login attempts. Please wait ${waitTime} seconds.`;
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
     
@@ -460,7 +473,9 @@ const UnifiedLoginInner = () => {
         const lockoutDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
         const endTime = new Date(Date.now() + lockoutDuration);
         setLockoutEndTime(endTime);
-        toast.error('Account locked due to failed attempts. Try again in 15 minutes.');
+        const errorMsg = 'Account locked due to failed attempts. Try again in 15 minutes.';
+        setLoginError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
       
@@ -470,11 +485,18 @@ const UnifiedLoginInner = () => {
         const endTime = new Date(Date.now() + retryAfter * 1000);
         setRateLimitEndTime(endTime);
         const minutes = Math.ceil(retryAfter / 60);
-        toast.error(`Too many login attempts. Please wait ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+        const errorMsg = `Too many login attempts. Please wait ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+        setLoginError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
       
-      toast.error(error.response?.data?.message || 'Login failed');
+      // Handle invalid credentials or other login errors
+      const errorMsg = error.response?.data?.message || 'Incorrect credentials. Please try again with correct credentials.';
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
+      
+      // DO NOT navigate away - stay on login page
     } finally {
       setLoading(false);
     }
@@ -604,6 +626,39 @@ const UnifiedLoginInner = () => {
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <motion.div className="space-y-4"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              
+              {/* Login Error Message */}
+              <AnimatePresence>
+                {loginError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="rounded-lg p-4 border"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      borderColor: 'rgba(239, 68, 68, 0.3)',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="w-5 h-5" style={{ color: '#EF4444' }} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>
+                          Login Failed
+                        </h3>
+                        <p className="text-sm" style={{ color: 'rgba(239, 68, 68, 0.9)' }}>
+                          {loginError}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {/* Account Lockout Message */}
               {lockoutEndTime && (

@@ -14,6 +14,7 @@
     "create-coach": "node scripts/createCoach.js",
     "create-player": "node scripts/createPlayer.js",
     "create-competition": "node scripts/createCompetition.js",
+    "populate-db": "node scripts/populateDatabase.js",
     "test-email": "node test-email-services.js",
     "test-resend": "node test-resend-services.js",
     "migrate:up": "node scripts/migrate.js up",
