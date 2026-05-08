@@ -26,7 +26,8 @@ class CoachService extends UserService {
     authenticationService = null,
     competitionRepository = null,
     playerRepository = null,
-    config = null
+    config = null,
+    transactionRepository = null
   ) {
     super(coachRepository, logger, 'coach', cacheService);
     this.teamRepository = teamRepository;
@@ -34,6 +35,7 @@ class CoachService extends UserService {
     this.competitionRepository = competitionRepository;
     this.playerRepository = playerRepository;
     this.config = config;
+    this.transactionRepository = transactionRepository;
   }
 
   async registerCoach(payload) {
@@ -652,6 +654,11 @@ class CoachService extends UserService {
 
   async verifyTeamPaymentAndSubmit(coachId, competitionId, payload) {
     try {
+      // Validate payload
+      if (!payload?.razorpay_order_id || !payload?.razorpay_payment_id || !payload?.razorpay_signature) {
+        throw new ValidationError('Missing required payment details');
+      }
+
       // Get competition and find registered team
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
@@ -681,7 +688,121 @@ class CoachService extends UserService {
         };
       }
 
-      // Update team submission status
+      // CRITICAL: Verify Razorpay payment signature server-side
+      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
+      if (!razorpayKeySecret) {
+        this.logger?.error?.('Razorpay key secret not configured');
+        throw new ValidationError('Payment verification failed: Configuration error');
+      }
+
+      const crypto = require('crypto');
+      const generatedSignature = crypto
+        .createHmac('sha256', razorpayKeySecret)
+        .update(`${payload.razorpay_order_id}|${payload.razorpay_payment_id}`)
+        .digest('hex');
+
+      // Use timing-safe comparison
+      const generatedBuffer = Buffer.from(generatedSignature);
+      const receivedBuffer = Buffer.from(payload.razorpay_signature);
+
+      if (generatedBuffer.length !== receivedBuffer.length || 
+          !crypto.timingSafeEqual(generatedBuffer, receivedBuffer)) {
+        this.logger?.error?.('Payment signature verification failed', {
+          coachId,
+          competitionId,
+          orderId: payload.razorpay_order_id,
+          paymentId: payload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Invalid signature');
+      }
+
+      // Verify payment status with Razorpay API
+      const Razorpay = require('razorpay');
+      const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
+      
+      if (!razorpayKeyId) {
+        throw new ValidationError('Payment verification failed: Configuration error');
+      }
+
+      const razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret
+      });
+
+      let paymentDetails;
+      try {
+        paymentDetails = await razorpay.payments.fetch(payload.razorpay_payment_id);
+      } catch (error) {
+        this.logger?.error?.('Failed to fetch payment details from Razorpay', {
+          error: error.message,
+          paymentId: payload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Unable to verify payment status');
+      }
+
+      // Check payment status
+      if (paymentDetails.status !== 'captured' && paymentDetails.status !== 'authorized') {
+        this.logger?.error?.('Payment not successful', {
+          paymentId: payload.razorpay_payment_id,
+          status: paymentDetails.status,
+          orderId: payload.razorpay_order_id
+        });
+        
+        // Create failed transaction record
+        if (this.transactionRepository) {
+          await this.transactionRepository.create([{
+            source: 'coach',
+            type: 'team_submission',
+            amount: paymentDetails.amount / 100,
+            competition: competitionId,
+            team: registeredTeam.team,
+            coach: coachId,
+            paymentStatus: 'failed',
+            description: `Payment failed for team submission`,
+            metadata: {
+              razorpay_order_id: payload.razorpay_order_id,
+              razorpay_payment_id: payload.razorpay_payment_id,
+              razorpay_status: paymentDetails.status,
+              error_code: paymentDetails.error_code,
+              error_description: paymentDetails.error_description,
+              failedAt: new Date()
+            }
+          }]);
+        }
+
+        throw new ValidationError(`Payment ${paymentDetails.status}. Please try again or contact support.`);
+      }
+
+      // Verify order ID matches
+      if (paymentDetails.order_id !== payload.razorpay_order_id) {
+        this.logger?.error?.('Order ID mismatch', {
+          expected: payload.razorpay_order_id,
+          received: paymentDetails.order_id
+        });
+        throw new ValidationError('Payment verification failed: Order mismatch');
+      }
+
+      // Get team details to calculate amount
+      const team = await this.teamRepository.findById(registeredTeam.team);
+      if (!team) {
+        throw new NotFoundError('Team not found');
+      }
+
+      // Calculate expected amount (₹500 base + ₹100 per player)
+      const playerCount = team.players?.length || 0;
+      const expectedAmount = (500 + (playerCount * 100)) * 100; // Convert to paise
+
+      // Verify payment amount
+      if (paymentDetails.amount !== expectedAmount) {
+        this.logger?.error?.('Payment amount mismatch', {
+          expected: expectedAmount,
+          received: paymentDetails.amount,
+          paymentId: payload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Amount mismatch');
+      }
+
+      // All verifications passed - Update team submission status
       await this.competitionRepository.updateById(
         competitionId,
         {
@@ -693,15 +814,52 @@ class CoachService extends UserService {
             [`registeredTeams.${registeredTeamIndex}.paymentOrderId`]: payload.razorpay_order_id,
             [`registeredTeams.${registeredTeamIndex}.paymentSignature`]: payload.razorpay_signature,
             [`registeredTeams.${registeredTeamIndex}.paymentVerifiedAt`]: new Date(),
+            [`registeredTeams.${registeredTeamIndex}.paymentAmount`]: paymentDetails.amount,
+            [`registeredTeams.${registeredTeamIndex}.paymentMethod`]: paymentDetails.method,
           }
         }
       );
 
-      this.logger?.info?.('Team submitted successfully', { 
+      // Create Transaction record
+      if (this.transactionRepository) {
+        const transactionData = {
+          source: 'coach',
+          type: 'team_submission',
+          amount: paymentDetails.amount / 100, // Convert paise to rupees
+          competition: competitionId,
+          team: registeredTeam.team,
+          coach: coachId,
+          paymentStatus: 'completed',
+          description: `Team ${team.name} submitted by coach for competition`,
+          metadata: {
+            razorpay_order_id: payload.razorpay_order_id,
+            razorpay_payment_id: payload.razorpay_payment_id,
+            razorpay_signature: payload.razorpay_signature,
+            razorpay_status: paymentDetails.status,
+            payment_method: paymentDetails.method,
+            playerCount: playerCount,
+            submittedAt: new Date(),
+            verified: true
+          }
+        };
+
+        await this.transactionRepository.create([transactionData]);
+
+        this.logger?.info?.('Transaction record created', {
+          coachId,
+          competitionId,
+          teamId: registeredTeam.team,
+          amount: paymentDetails.amount / 100,
+          paymentId: payload.razorpay_payment_id
+        });
+      }
+
+      this.logger?.info?.('Team submitted successfully with verified payment', { 
         coachId, 
         competitionId,
         teamId: registeredTeam.team,
-        paymentId: payload.razorpay_payment_id
+        paymentId: payload.razorpay_payment_id,
+        status: paymentDetails.status
       });
 
       return {

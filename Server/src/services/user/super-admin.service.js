@@ -453,7 +453,17 @@ class SuperAdminService {
     return this.transactionRepository.find(criteria, {
       sort: { createdAt: -1 },
       limit: 200,
-      populate: ['competition', 'team', 'coach']
+      populate: [
+        {
+          path: 'competition',
+          populate: {
+            path: 'registeredTeams.players.player',
+            select: 'firstName lastName name gender'
+          }
+        },
+        'team',
+        'coach'
+      ]
     });
   }
 

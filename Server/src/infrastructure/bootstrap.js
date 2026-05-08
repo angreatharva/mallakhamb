@@ -117,7 +117,8 @@ function bootstrap() {
     c.resolve('authenticationService'),
     c.resolve('competitionRepository'),
     c.resolve('playerRepository'),
-    c.resolve('config')
+    c.resolve('config'),
+    c.resolve('transactionRepository')
   ), 'singleton');
   container.register('calculationService', (c) => new CalculationService(c.resolve('logger')), 'singleton');
   container.register('adminService', (c) => new AdminService({

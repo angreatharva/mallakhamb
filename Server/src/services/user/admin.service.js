@@ -2293,7 +2293,17 @@ class AdminService extends UserService {
           skip, 
           limit, 
           sort: { createdAt: -1 },
-          populate: ['team', 'coach']
+          populate: [
+            {
+              path: 'competition',
+              populate: {
+                path: 'registeredTeams.players.player',
+                select: 'firstName lastName name gender'
+              }
+            },
+            'team',
+            'coach'
+          ]
         }),
         this.transactionRepository.count(filters)
       ]);

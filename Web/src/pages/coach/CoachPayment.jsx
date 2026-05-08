@@ -125,15 +125,29 @@ const CoachPayment = () => {
         name: 'Mallakhamb Competition',
         description: `Registration for ${orderTeam?.name || team?.name || 'Team'}`,
         order_id: order.id,
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 900, // 15 minutes in seconds
         handler: async (response) => {
           try {
+            setProcessing(true);
             await coachAPI.verifyPaymentAndSubmit(response);
             setPaymentComplete(true);
             toast.success('Payment successful! Team submitted for competition.');
             // Refresh team data to get updated submission status
             await fetchTeamData();
-          } catch {
-            toast.error('Payment verification failed. Please contact support with your payment reference.');
+          } catch (error) {
+            const errorMessage = error?.response?.data?.message || 'Payment verification failed. Please contact support with your payment reference.';
+            toast.error(errorMessage);
+            
+            // Log error for debugging
+            logger.error('Payment verification failed:', {
+              error: errorMessage,
+              paymentId: response?.razorpay_payment_id,
+              orderId: response?.razorpay_order_id
+            });
           } finally {
             setProcessing(false);
           }
@@ -141,7 +155,13 @@ const CoachPayment = () => {
         modal: {
           ondismiss: () => {
             setProcessing(false);
+            toast.error('Payment cancelled. Please try again when ready.');
+            logger.info('Payment modal dismissed by user');
           },
+          escape: true,
+          backdropclose: false,
+          confirm_close: true,
+          animation: true,
         },
         prefill: {
           name: orderTeam?.name || team?.name || '',
