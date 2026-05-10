@@ -253,7 +253,7 @@ const JudgeScoring = () => {
       if (judgeInfo && selectedCompetitionType) {
         const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
         if (joinedRoomRef.current !== roomId) {
-          newSocket.emit('join_scoring_room', roomId);
+          newSocket.emit('join_scoring_room', { roomId });
           joinedRoomRef.current = roomId;
           logger.info(`Joined scoring room: ${roomId}`);
         }
@@ -306,7 +306,7 @@ const JudgeScoring = () => {
     if (!socket?.connected || !judgeInfo || !selectedCompetitionType) return;
     const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
     if (joinedRoomRef.current !== roomId) {
-      socket.emit('join_scoring_room', roomId);
+      socket.emit('join_scoring_room', { roomId });
       joinedRoomRef.current = roomId;
     }
   }, [socket, judgeInfo, selectedCompetitionType]);
@@ -320,7 +320,12 @@ const JudgeScoring = () => {
       setLoading(true);
       const token = secureStorage.getItem('judge_token');
       const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params: { gender: judgeInfo.gender, ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType },
+        params: { 
+          competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+          gender: judgeInfo.gender, 
+          ageGroup: judgeInfo.ageGroup, 
+          competitionType: selectedCompetitionType 
+        },
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
       });
       setTeams(response.data.data || []);
@@ -390,6 +395,7 @@ const JudgeScoring = () => {
         judgeType: judgeInfo.judgeType, score: parseFloat(finalScore),
         teamId: selectedTeam._id, gender: judgeInfo.gender,
         ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
+        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         breakdown: { difficulty: scores.difficulty, combination: scores.combination, execution: parseFloat(scores.execution || 0), originality: parseFloat(scores.originality || 0) }
       };
       await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {

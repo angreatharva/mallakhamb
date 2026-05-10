@@ -461,12 +461,12 @@ function createAdminRoutes(container) {
   // ==================== Age Group Management ====================
 
   /**
-   * @route   POST /api/admin/age-groups/:ageGroup/start
-   * @desc    Start age group
+   * @route   POST /api/admin/age-groups/start
+   * @desc    Start age group competition type
    * @access  Admin, SuperAdmin
    */
   router.post(
-    '/age-groups/:ageGroup/start',
+    '/age-groups/start',
     authMiddleware,
     authorize,
     validateCompetitionContext,

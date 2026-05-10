@@ -220,7 +220,9 @@ export const ResponsiveScoringTable = ({
 
               {/* Time */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <label style={{ fontSize: 12, color: textSecondary }}>Time</label>
+                <label style={{ fontSize: 12, color: textSecondary }}>
+                  Time <span style={{ color: '#EF4444' }}>*</span>
+                </label>
                 <ScoreInput playerId={player.id} field="time" placeholder="00:00" type="text" />
               </div>
 
@@ -270,7 +272,7 @@ export const ResponsiveScoringTable = ({
             <tr style={{ background: elevated }}>
               {['Participant', 'Time', ...judges.map(j => j.judgeType), 'Average', 'Deduction', 'Other Ded.', 'Final Score'].map((h, i) => (
                 <th key={i} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
-                  {h}
+                  {h === 'Time' ? <>{h} <span style={{ color: '#EF4444' }}>*</span></> : h}
                 </th>
               ))}
             </tr>

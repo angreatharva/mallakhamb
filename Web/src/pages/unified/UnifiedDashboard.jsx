@@ -344,8 +344,11 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     try {
       logger.info('Fetching judges summary', { competitionId: currentCompetition._id });
       const response = await api.getAllJudgesSummary();
-      setJudgesSummary(response.data.summary || []);
-      logger.info('Judges summary loaded successfully', { count: response.data.summary?.length || 0 });
+      // Handle nested response structure: {success: true, data: {summary: [...], totalJudges: 3, ...}}
+      const responseData = response.data.data || response.data;
+      const summary = responseData.summary || [];
+      setJudgesSummary(summary);
+      logger.info('Judges summary loaded successfully', { count: summary.length });
     } catch (error) {
       logger.error('Failed to fetch judges summary:', error);
     } finally {

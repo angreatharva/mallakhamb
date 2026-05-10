@@ -782,14 +782,16 @@ class CoachService extends UserService {
         throw new ValidationError('Payment verification failed: Order mismatch');
       }
 
-      // Get team details to calculate amount
+      // Get team details for transaction record
       const team = await this.teamRepository.findById(registeredTeam.team);
       if (!team) {
         throw new NotFoundError('Team not found');
       }
 
       // Calculate expected amount (₹500 base + ₹100 per player)
-      const playerCount = team.players?.length || 0;
+      // Use registeredTeam.players (players registered for this competition)
+      // NOT team.players (all players in the team)
+      const playerCount = registeredTeam.players?.length || 0;
       const expectedAmount = (500 + (playerCount * 100)) * 100; // Convert to paise
 
       // Verify payment amount

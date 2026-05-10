@@ -18,6 +18,7 @@ function createSuperAdminRoutes(container) {
   router.get('/coaches', controller.getAllCoaches);
   router.put('/coaches/:coachId/status', controller.updateCoachStatus);
   router.get('/teams', controller.getAllTeams);
+  router.get('/teams/submitted', container.resolve('adminController').getSubmittedTeams);
   router.get('/teams/:teamId', controller.getTeamDetails);
   router.delete('/teams/:teamId', controller.deleteTeam);
   router.delete('/judges/:judgeId', controller.deleteJudge);
@@ -35,10 +36,16 @@ function createSuperAdminRoutes(container) {
   // Score and ranking routes (reuse admin controller methods)
   const adminController = container.resolve('adminController');
   router.get('/submitted-teams', adminController.getSubmittedTeams);
+  router.get('/scores/team', adminController.getTeamScores);
   router.get('/scores/individual', adminController.getIndividualScores);
   router.get('/scores/team-rankings', adminController.getTeamRankings);
+  router.post('/scores/save', adminController.saveScores);
+  router.put('/scores/:scoreId/unlock', adminController.unlockScores);
+  router.put('/scores/:scoreId/lock', adminController.lockScores);
+  router.post('/scores/recalculate', adminController.recalculateScores);
   router.get('/judges/summary', adminController.getAllJudgesSummary);
   router.post('/competition/age-group/start', adminController.startAgeGroup);
+  router.post('/age-groups/start', adminController.startAgeGroup);
   
   // Judge management routes (reuse admin controller methods)
   router.get('/judges', adminController.getJudges);

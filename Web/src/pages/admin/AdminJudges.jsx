@@ -533,9 +533,10 @@ const Judges = () => {
                                 <DarkInput placeholder="Auto-generated username" value={judge.username}
                                   onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)} />
                                 <div className="flex gap-2">
-                                  <DarkInput placeholder="Password" value={judge.password}
-                                    onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)}
-                                    className="flex-1" />
+                                  <div className="flex-1">
+                                    <DarkInput placeholder="Password" value={judge.password}
+                                      onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)} />
+                                  </div>
                                   <DarkBtn size="sm" variant="ghost" onClick={() => handleJudgeFormChange(index, 'password', generatePassword())}>Gen</DarkBtn>
                                 </div>
                               </div>

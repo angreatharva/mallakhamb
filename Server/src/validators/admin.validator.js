@@ -177,35 +177,50 @@ const assignPlayerToTeam = () => {
  */
 const saveJudges = () => {
   return [
-    array('judges', { minLength: 1, maxLength: 50 }),
+    body('gender')
+      .trim()
+      .notEmpty()
+      .withMessage('Gender is required')
+      .isIn(['Male', 'Female'])
+      .withMessage('Invalid gender'),
+    body('ageGroup')
+      .trim()
+      .notEmpty()
+      .withMessage('Age group is required')
+      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .withMessage('Invalid age group'),
+    body('competitionTypes')
+      .isArray({ min: 1 })
+      .withMessage('At least one competition type is required'),
+    body('competitionTypes.*')
+      .isIn(['competition_1', 'competition_2', 'competition_3'])
+      .withMessage('Invalid competition type'),
+    body('competition')
+      .optional()
+      .isMongoId()
+      .withMessage('Invalid competition ID'),
+    array('judges', { minLength: 1, maxLength: 5 }),
+    body('judges.*.judgeNo')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Judge number must be between 1 and 5'),
+    body('judges.*.judgeType')
+      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'])
+      .withMessage('Invalid judge type'),
     body('judges.*.name')
       .trim()
-      .notEmpty()
-      .withMessage('Judge name is required')
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Judge name must be between 2 and 100 characters')
-      .escape(),
-    body('judges.*.email')
+      .customSanitizer(value => value || '')
+      .isLength({ max: 100 })
+      .withMessage('Judge name must not exceed 100 characters'),
+    body('judges.*.username')
       .trim()
-      .notEmpty()
-      .withMessage('Judge email is required')
-      .isEmail()
-      .withMessage('Invalid email format')
-      .normalizeEmail()
-      .toLowerCase(),
-    body('judges.*.phone')
-      .optional()
-      .trim()
-      .matches(/^[0-9]{10}$/)
-      .withMessage('Phone must be 10 digits'),
-    body('judges.*.assignedAgeGroups')
-      .optional()
-      .isArray()
-      .withMessage('Assigned age groups must be an array'),
-    body('judges.*.assignedAgeGroups.*')
-      .optional()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
-      .withMessage('Invalid age group in assignedAgeGroups')
+      .customSanitizer(value => value || '')
+      .toLowerCase()
+      .isLength({ max: 50 })
+      .withMessage('Username must not exceed 50 characters'),
+    body('judges.*.password')
+      .customSanitizer(value => value || '')
+      .isLength({ max: 100 })
+      .withMessage('Password must not exceed 100 characters')
   ];
 };
 
@@ -214,35 +229,46 @@ const saveJudges = () => {
  */
 const createSingleJudge = () => {
   return [
+    body('gender')
+      .trim()
+      .notEmpty()
+      .withMessage('Gender is required')
+      .isIn(['Male', 'Female'])
+      .withMessage('Invalid gender'),
+    body('ageGroup')
+      .trim()
+      .notEmpty()
+      .withMessage('Age group is required')
+      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .withMessage('Invalid age group'),
+    body('judgeNo')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Judge number must be between 1 and 5'),
+    body('judgeType')
+      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'])
+      .withMessage('Invalid judge type'),
     body('name')
       .trim()
       .notEmpty()
       .withMessage('Name is required')
       .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters')
-      .escape(),
-    body('email')
+      .withMessage('Name must be between 2 and 100 characters'),
+    body('username')
       .trim()
       .notEmpty()
-      .withMessage('Email is required')
-      .isEmail()
-      .withMessage('Invalid email format')
-      .normalizeEmail()
-      .toLowerCase(),
-    password('password'),
-    body('phone')
+      .withMessage('Username is required')
+      .toLowerCase()
+      .isLength({ min: 2, max: 50 })
+      .withMessage('Username must be between 2 and 50 characters'),
+    body('password')
+      .notEmpty()
+      .withMessage('Password is required')
+      .isLength({ min: 6, max: 100 })
+      .withMessage('Password must be between 6 and 100 characters'),
+    body('competition')
       .optional()
-      .trim()
-      .matches(/^[0-9]{10}$/)
-      .withMessage('Phone must be 10 digits'),
-    body('assignedAgeGroups')
-      .optional()
-      .isArray()
-      .withMessage('Assigned age groups must be an array'),
-    body('assignedAgeGroups.*')
-      .optional()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
-      .withMessage('Invalid age group in assignedAgeGroups')
+      .isMongoId()
+      .withMessage('Invalid competition ID')
   ];
 };
 
@@ -256,28 +282,17 @@ const updateJudge = () => {
       .optional()
       .trim()
       .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters')
-      .escape(),
-    body('email')
+      .withMessage('Name must be between 2 and 100 characters'),
+    body('username')
       .optional()
       .trim()
-      .isEmail()
-      .withMessage('Invalid email format')
-      .normalizeEmail()
-      .toLowerCase(),
-    body('phone')
+      .toLowerCase()
+      .isLength({ min: 2, max: 50 })
+      .withMessage('Username must be between 2 and 50 characters'),
+    body('password')
       .optional()
-      .trim()
-      .matches(/^[0-9]{10}$/)
-      .withMessage('Phone must be 10 digits'),
-    body('assignedAgeGroups')
-      .optional()
-      .isArray()
-      .withMessage('Assigned age groups must be an array'),
-    body('assignedAgeGroups.*')
-      .optional()
-      .isIn(AGE_GROUPS)
-      .withMessage('Invalid age group in assignedAgeGroups'),
+      .isLength({ min: 6, max: 100 })
+      .withMessage('Password must be between 6 and 100 characters'),
     body('isActive')
       .optional()
       .isBoolean()
@@ -466,12 +481,24 @@ const recalculateScores = () => {
  */
 const startAgeGroup = () => {
   return [
-    param('ageGroup')
+    body('gender')
+      .trim()
+      .notEmpty()
+      .withMessage('Gender is required')
+      .isIn(['Male', 'Female'])
+      .withMessage('Invalid gender'),
+    body('ageGroup')
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
       .isIn(AGE_GROUPS)
-      .withMessage('Invalid age group')
+      .withMessage('Invalid age group'),
+    body('competitionType')
+      .trim()
+      .notEmpty()
+      .withMessage('Competition type is required')
+      .isIn(['competition_1', 'competition_2', 'competition_3'])
+      .withMessage('Invalid competition type')
   ];
 };
 

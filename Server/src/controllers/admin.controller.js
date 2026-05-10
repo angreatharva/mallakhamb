@@ -204,12 +204,35 @@ function createAdminController(container) {
 
     // ==================== Score Management ====================
 
-    /** @route PUT /api/admin/scores/unlock */
+    /** @route PUT /api/admin/scores/:scoreId/unlock */
     unlockScores: asyncHandler(async (req, res) => {
-      const result = await adminService.unlockScores(
-        req.competitionId, req.body.ageGroup, req.user._id
-      );
-      res.json({ success: true, data: result });
+      const { scoreId } = req.params;
+      
+      // Find the score document to get competition and ageGroup
+      const Score = require('../../models/Score');
+      const scoreDoc = await Score.findById(scoreId);
+      
+      if (!scoreDoc) {
+        return res.status(404).json({ 
+          success: false, 
+          error: { message: 'Score document not found', code: 'NOT_FOUND' }
+        });
+      }
+      
+      // Simply update the isLocked field to false
+      scoreDoc.isLocked = false;
+      scoreDoc.unlockedBy = req.user._id;
+      scoreDoc.unlockedAt = new Date();
+      await scoreDoc.save();
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          message: 'Score unlocked successfully',
+          scoreId: scoreDoc._id,
+          isLocked: scoreDoc.isLocked
+        } 
+      });
     }),
 
     /** @route PUT /api/admin/scores/lock */
@@ -222,7 +245,9 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/scores/team */
     getTeamScores: asyncHandler(async (req, res) => {
-      const scores = await adminService.getTeamScores(req.competitionId, req.query.ageGroup);
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const scores = await adminService.getTeamScores(competitionId, req.query.ageGroup, req.query.gender);
       res.json({ success: true, data: scores });
     }),
 
@@ -248,9 +273,66 @@ function createAdminController(container) {
 
     /** @route POST /api/admin/scores/save */
     saveScores: asyncHandler(async (req, res) => {
+      // Handle both judge individual score submissions and admin bulk submissions
+      let scoreData = { ...req.body };
+      
+      // Map competition type from frontend format to database format
+      const competitionTypeMap = {
+        'competition_1': 'Competition I',
+        'competition_2': 'Competition II',
+        'competition_3': 'Competition III'
+      };
+      
+      if (scoreData.competitionType && competitionTypeMap[scoreData.competitionType]) {
+        scoreData.competitionType = competitionTypeMap[scoreData.competitionType];
+      }
+      
+      // If this is a judge submitting a single score (has playerId, judgeType, score)
+      // convert it to the bulk format expected by saveScores
+      if (req.body.playerId && req.body.judgeType && req.body.score !== undefined && !req.body.playerScores) {
+        // This is a single judge score submission - convert to bulk format
+        const judgeFieldMap = {
+          'Senior Judge': 'seniorJudge',
+          'Judge 1': 'judge1',
+          'Judge 2': 'judge2',
+          'Judge 3': 'judge3',
+          'Judge 4': 'judge4'
+        };
+        
+        const judgeField = judgeFieldMap[req.body.judgeType];
+        
+        // Create a single player score entry
+        scoreData.playerScores = [{
+          playerId: req.body.playerId,
+          playerName: req.body.playerName,
+          judgeScores: {
+            [judgeField]: req.body.score
+          },
+          breakdown: req.body.breakdown || {}
+        }];
+        
+        // Ensure required fields are present
+        if (!scoreData.teamId) scoreData.teamId = req.body.teamId;
+        if (!scoreData.gender) scoreData.gender = req.body.gender;
+        if (!scoreData.ageGroup) scoreData.ageGroup = req.body.ageGroup;
+      }
+      
+      // Handle both admin routes (with req.competitionId) and superadmin routes (with body/query params)
+      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId;
+      
+      if (!competitionId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Competition ID is required',
+            code: 'VALIDATION_ERROR'
+          }
+        });
+      }
+      
       const result = await adminService.saveScores({ 
-        ...req.body, 
-        competitionId: req.competitionId 
+        ...scoreData, 
+        competitionId 
       });
       res.json({ success: true, data: result });
     }),
@@ -279,10 +361,11 @@ function createAdminController(container) {
 
     // ==================== Age Group Management ====================
 
-    /** @route POST /api/admin/age-groups/:ageGroup/start */
+    /** @route POST /api/admin/age-groups/start */
     startAgeGroup: asyncHandler(async (req, res) => {
+      const { gender, ageGroup, competitionType } = req.body;
       const result = await adminService.startAgeGroup(
-        req.competitionId, req.params.ageGroup, req.user._id
+        req.competitionId, gender, ageGroup, competitionType, req.user._id
       );
       res.json({ success: true, data: result });
     }),

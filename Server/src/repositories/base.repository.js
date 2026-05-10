@@ -180,6 +180,21 @@ class BaseRepository {
    */
   async updateById(id, updates) {
     try {
+      // If password is being updated, use save() to trigger pre-save hooks
+      if (updates.password !== undefined) {
+        const doc = await this.model.findById(id);
+        if (!doc) return null;
+        
+        // Apply updates to document
+        Object.assign(doc, updates);
+        
+        // Save will trigger pre-save hooks (including password hashing)
+        await doc.save();
+        
+        return this.toPlainObject(doc);
+      }
+      
+      // For non-password updates, use findOneAndUpdate for better performance
       // Build query with soft delete filter if applicable
       const query = { _id: id };
       if (this.model.schema.paths.isDeleted) {
@@ -188,7 +203,7 @@ class BaseRepository {
       
       const queryResult = this.model.findOneAndUpdate(
         query,
-        updates,
+        { $set: updates },
         { new: true, runValidators: true }
       );
       const doc = await this.executeQuery(queryResult);

@@ -1006,11 +1006,15 @@ class AdminService extends UserService {
         isSubmitted: regTeam.isSubmitted,
         submittedAt: regTeam.submittedAt,
         paymentStatus: regTeam.paymentStatus,
-        players: regTeam.players.map(playerEntry => ({
-          ...playerEntry.player.toObject(),
-          ageGroup: playerEntry.ageGroup,
-          gender: playerEntry.gender
-        }))
+        players: regTeam.players.map(playerEntry => {
+          // Handle both Mongoose documents and plain objects
+          const playerData = playerEntry.player?.toObject ? playerEntry.player.toObject() : playerEntry.player;
+          return {
+            player: playerData,
+            ageGroup: playerEntry.ageGroup,
+            gender: playerEntry.gender
+          };
+        })
       }));
 
       this.logger.info('Submitted teams retrieved', { 
@@ -1520,8 +1524,8 @@ class AdminService extends UserService {
       }
 
       const [totalJudges, activeJudges] = await Promise.all([
-        this.judgeRepository.count({ competition: compId }),
-        this.judgeRepository.count({ competition: compId, isActive: true })
+        this.judgeRepository.count({ competition: compId, name: { $ne: '', $exists: true } }),
+        this.judgeRepository.count({ competition: compId, isActive: true, name: { $ne: '', $exists: true } })
       ]);
 
       // Get all judges for this competition
@@ -1568,6 +1572,8 @@ class AdminService extends UserService {
       // Add judges to their respective age groups and competition types
       judges.forEach(judge => {
         if (!judge.gender || !judge.ageGroup) return;
+        // Skip judges with empty names
+        if (!judge.name || !judge.name.trim()) return;
 
         const key = `${judge.gender}_${judge.ageGroup}`;
         if (!summaryMap.has(key)) {
@@ -1736,6 +1742,39 @@ class AdminService extends UserService {
 
       let savedScore;
       if (existingScore) {
+        // Merge player scores if updating
+        // For each incoming player score, merge with existing player score if it exists
+        const mergedPlayerScores = [...existingScore.playerScores];
+        
+        for (const incomingPlayerScore of processedPlayerScores) {
+          const existingPlayerIndex = mergedPlayerScores.findIndex(
+            ps => ps.playerId?.toString() === incomingPlayerScore.playerId?.toString()
+          );
+          
+          if (existingPlayerIndex >= 0) {
+            // Merge judge scores - keep existing scores and add/update new ones
+            const existingPlayerScore = mergedPlayerScores[existingPlayerIndex];
+            mergedPlayerScores[existingPlayerIndex] = {
+              ...existingPlayerScore,
+              ...incomingPlayerScore,
+              judgeScores: {
+                ...existingPlayerScore.judgeScores,
+                ...incomingPlayerScore.judgeScores
+              },
+              // Update other fields only if provided
+              time: incomingPlayerScore.time || existingPlayerScore.time,
+              deduction: incomingPlayerScore.deduction !== undefined ? incomingPlayerScore.deduction : existingPlayerScore.deduction,
+              otherDeduction: incomingPlayerScore.otherDeduction !== undefined ? incomingPlayerScore.otherDeduction : existingPlayerScore.otherDeduction,
+              breakdown: incomingPlayerScore.breakdown || existingPlayerScore.breakdown
+            };
+          } else {
+            // New player score
+            mergedPlayerScores.push(incomingPlayerScore);
+          }
+        }
+        
+        scoreDocData.playerScores = mergedPlayerScores;
+        
         // Update existing record
         savedScore = await this.scoreRepository.updateById(existingScore._id, scoreDocData);
       } else {
@@ -1750,6 +1789,53 @@ class AdminService extends UserService {
         ageGroup: scoreData.ageGroup,
         isUpdate: !!existingScore
       });
+
+      // Emit socket event for real-time updates
+      if (this.socketManager && scoreData.gender && scoreData.ageGroup && scoreData.competitionType) {
+        // Map competition type back to frontend format for room ID
+        const competitionTypeRoomMap = {
+          'Competition I': 'competition_1',
+          'Competition II': 'competition_2',
+          'Competition III': 'competition_3'
+        };
+        const competitionTypeForRoom = competitionTypeRoomMap[scoreData.competitionType] || 'competition_1';
+        
+        const roomId = `scoring_${scoreData.gender}_${scoreData.ageGroup}_${competitionTypeForRoom}`;
+        
+        // Emit score update for each player score
+        for (const playerScore of processedPlayerScores) {
+          // Determine which judge field was updated
+          const judgeScores = playerScore.judgeScores || {};
+          const judgeTypeMap = {
+            seniorJudge: 'Senior Judge',
+            judge1: 'Judge 1',
+            judge2: 'Judge 2',
+            judge3: 'Judge 3',
+            judge4: 'Judge 4'
+          };
+          
+          // Emit for each judge score that was provided
+          for (const [field, judgeType] of Object.entries(judgeTypeMap)) {
+            if (judgeScores[field] !== undefined && judgeScores[field] !== 0) {
+              this.socketManager.emitToRoom(roomId, 'score_updated', {
+                playerId: playerScore.playerId,
+                playerName: playerScore.playerName,
+                judgeType: judgeType,
+                score: judgeScores[field],
+                teamId: scoreData.teamId,
+                gender: scoreData.gender,
+                ageGroup: scoreData.ageGroup,
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        }
+        
+        this.logger.info('Socket events emitted for score updates', {
+          roomId,
+          playerCount: processedPlayerScores.length
+        });
+      }
 
       // Return proper response format
       return {
@@ -1895,26 +1981,50 @@ class AdminService extends UserService {
 
       const teamsWithScores = await Promise.all(
         filteredTeams.map(async (regTeam) => {
-          // Get scores for this team
-          const scores = await this.scoreRepository.find({
+          // Get scores for this team - filter by gender and ageGroup to get the correct score document
+          const scoreQuery = {
             competition: competitionId,
-            team: regTeam.team._id
-          });
+            teamId: regTeam.team._id
+          };
+          if (gender) scoreQuery.gender = gender;
+          if (ageGroup) scoreQuery.ageGroup = ageGroup;
+          
+          const scores = await this.scoreRepository.find(scoreQuery);
 
           const playerScores = scores.flatMap(s => s.playerScores || []);
           const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
+          
+          // Get the most recent score document for metadata (isLocked, timeKeeper, etc.)
+          const latestScoreDoc = scores.length > 0 ? scores.sort((a, b) => 
+            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+          )[0] : null;
 
           return {
             _id: regTeam.team._id,
             name: regTeam.team.name,
             coach: regTeam.coach,
-            players: regTeam.players.map(playerEntry => ({
-              ...playerEntry.player.toObject(),
-              ageGroup: playerEntry.ageGroup,
-              gender: playerEntry.gender
-            })),
+            players: regTeam.players.map(playerEntry => {
+              // Handle both Mongoose documents and plain objects
+              const playerData = playerEntry.player?.toObject ? playerEntry.player.toObject() : playerEntry.player;
+              return {
+                ...playerData,
+                ageGroup: playerEntry.ageGroup,
+                gender: playerEntry.gender
+              };
+            }),
             scores: playerScores,
-            totalScore
+            totalScore,
+            // Include score document metadata
+            scoreMetadata: latestScoreDoc ? {
+              _id: latestScoreDoc._id,
+              isLocked: latestScoreDoc.isLocked,
+              timeKeeper: latestScoreDoc.timeKeeper,
+              scorer: latestScoreDoc.scorer,
+              remarks: latestScoreDoc.remarks,
+              competitionType: latestScoreDoc.competitionType,
+              createdAt: latestScoreDoc.createdAt,
+              updatedAt: latestScoreDoc.updatedAt
+            } : null
           };
         })
       );
@@ -2133,52 +2243,85 @@ class AdminService extends UserService {
   // ==================== Age Group Management ====================
 
   /**
-   * Start an age group
+   * Start an age group competition type
    * @param {string} competitionId - Competition ID
+   * @param {string} gender - Gender (Male/Female)
    * @param {string} ageGroup - Age group
+   * @param {string} competitionType - Competition type (competition_1, competition_2, competition_3)
    * @param {string} adminId - Admin ID
    * @returns {Promise<Object>} Success message
    */
-  async startAgeGroup(competitionId, ageGroup, adminId) {
+  async startAgeGroup(competitionId, gender, ageGroup, competitionType, adminId) {
     try {
       const competition = await this.competitionRepository.findById(competitionId);
       if (!competition) {
         throw new NotFoundError('Competition');
       }
 
-      // Update age group status
-      const ageGroups = competition.ageGroups || [];
-      const ageGroupIndex = ageGroups.findIndex(ag => ag.name === ageGroup);
+      // Check if this age group exists in the competition
+      const ageGroupExists = competition.ageGroups?.some(
+        ag => ag.gender === gender && ag.ageGroup === ageGroup
+      );
 
-      if (ageGroupIndex === -1) {
-        throw new NotFoundError('Age group');
+      if (!ageGroupExists) {
+        throw new NotFoundError(`Age group ${gender} ${ageGroup} not found in competition`);
       }
 
-      ageGroups[ageGroupIndex].status = 'started';
-      ageGroups[ageGroupIndex].startedAt = new Date();
-      ageGroups[ageGroupIndex].startedBy = adminId;
+      // Check if already started
+      const alreadyStarted = competition.startedAgeGroups?.some(
+        started => started.gender === gender && 
+                   started.ageGroup === ageGroup && 
+                   started.competitionType === competitionType
+      );
 
-      await this.competitionRepository.updateById(competitionId, {
-        ageGroups
+      if (alreadyStarted) {
+        throw new ValidationError(`${competitionType} for ${gender} ${ageGroup} has already been started`);
+      }
+
+      // Add to startedAgeGroups array
+      if (!competition.startedAgeGroups) {
+        competition.startedAgeGroups = [];
+      }
+
+      competition.startedAgeGroups.push({
+        gender,
+        ageGroup,
+        competitionType,
+        startedAt: new Date()
       });
 
-      this.logger.info('Age group started', { competitionId, ageGroup, adminId });
+      await competition.save();
+
+      this.logger.info('Competition type started', { 
+        competitionId, 
+        gender, 
+        ageGroup, 
+        competitionType, 
+        adminId 
+      });
 
       // Emit Socket.IO event
       if (this.socketManager) {
         this.socketManager.emitToRoom(`competition_${competitionId}`, EventTypes.AGE_GROUP_STARTED, {
-          ageGroup
+          gender,
+          ageGroup,
+          competitionType
         });
       }
 
-      return { success: true, message: `Age group ${ageGroup} started` };
+      return { 
+        success: true, 
+        message: `${competitionType} for ${gender} ${ageGroup} started successfully` 
+      };
     } catch (error) {
-      if (error instanceof NotFoundError) {
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
         throw error;
       }
       this.logger.error('Start age group error', { 
         competitionId, 
+        gender,
         ageGroup, 
+        competitionType,
         adminId, 
         error: error.message 
       });
