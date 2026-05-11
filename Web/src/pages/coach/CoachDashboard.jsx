@@ -126,7 +126,11 @@ const CoachDashboard = () => {
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
 
-  useEffect(() => { fetchTeamDashboard(); }, []);
+  useEffect(() => { 
+    if (currentCompetition) {
+      fetchTeamDashboard(); 
+    }
+  }, [currentCompetition?._id]);
   useEffect(() => { if (selectedGender && selectedPlayerData) setSelectedAgeGroup(null); }, [selectedGender, selectedPlayerData]);
 
   const calculateAge = (dob) => {

@@ -69,6 +69,11 @@ function createCoachController(container) {
 
     /** @route GET /api/coach/team/dashboard */
     getTeamDashboard: asyncHandler(async (req, res) => {
+      logger.info('getTeamDashboard controller called', {
+        userId: req.user._id.toString(),
+        competitionId: req.competitionId?.toString(),
+        userType: req.userType
+      });
       const dashboard = await coachService.getTeamDashboard(req.user._id, req.competitionId);
       res.json({ success: true, data: dashboard });
     }),

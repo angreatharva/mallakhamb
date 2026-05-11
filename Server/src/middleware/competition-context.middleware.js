@@ -24,6 +24,19 @@ const validateCompetitionContext = (req, res, next) => {
                         req.body?.competitionId ||
                         req.query?.competitionId;
 
+  // Log for debugging
+  console.log('[CompetitionContext] Validating competition context:', {
+    userId: req.user?._id,
+    userType: req.userType,
+    competitionIdFromToken: req.user?.currentCompetition,
+    competitionIdFromHeader: req.headers['x-competition-id'],
+    competitionIdFromBody: req.body?.competitionId,
+    competitionIdFromQuery: req.query?.competitionId,
+    finalCompetitionId: competitionId,
+    path: req.path,
+    method: req.method
+  });
+
   if (!competitionId) {
     return res.status(400).json({
       success: false,

@@ -267,7 +267,13 @@ export const superAdminAPI = {
   // Team and Player management
   getAllTeams: (params) => api.get('/superadmin/teams', { params }),
   getTeamDetails: (teamId, params) => api.get(`/superadmin/teams/${teamId}`, { params }),
-  addPlayerToTeam: (data) => api.post('/superadmin/players/add', data)
+  addPlayerToTeam: (data) => api.post('/superadmin/players/add', data),
+  // Player payment methods
+  createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
+  verifyPlayerPaymentAndAdd: (data) => {
+    clearCachePattern('/superadmin');
+    return api.post('/superadmin/players/payment/verify', data);
+  },
 };
 
 // Auth API

@@ -38,7 +38,19 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/dashboard/stats */
     getDashboardStats: asyncHandler(async (req, res) => {
+      console.log('[AdminController] getDashboardStats called:', {
+        userId: req.user?._id,
+        userType: req.userType,
+        competitionId: req.competitionId,
+        path: req.path,
+        method: req.method
+      });
       const stats = await adminService.getDashboardStats(req.competitionId);
+      console.log('[AdminController] getDashboardStats response:', {
+        competitionId: req.competitionId,
+        competitionName: stats.competition?.name,
+        totalTeams: stats.totalTeams
+      });
       res.json({ success: true, data: stats });
     }),
 

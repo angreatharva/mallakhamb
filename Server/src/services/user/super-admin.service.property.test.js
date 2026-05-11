@@ -34,6 +34,10 @@ describe('SuperAdminService Property Tests', () => {
     mockTransactionRepository = { find: jest.fn(), create: jest.fn() };
     mockPlayerRepository = { findOne: jest.fn(), create: jest.fn() };
     mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    const mockCompetitionService = { deleteCompetition: jest.fn() };
+    const mockConfig = {
+      get: jest.fn(() => ''),
+    };
 
     // Mock MongoDB session
     mockSession = {
@@ -52,9 +56,11 @@ describe('SuperAdminService Property Tests', () => {
       teamRepository: mockTeamRepository,
       judgeRepository: mockJudgeRepository,
       competitionRepository: mockCompetitionRepository,
+      competitionService: mockCompetitionService,
       transactionRepository: mockTransactionRepository,
       playerRepository: mockPlayerRepository,
-      logger: mockLogger
+      logger: mockLogger,
+      config: mockConfig,
     });
   });
 
@@ -63,17 +69,24 @@ describe('SuperAdminService Property Tests', () => {
     jest.restoreAllMocks();
   });
 
-  // Helper to create valid player data arbitrary
-  const createPlayerDataArb = () => fc.record({
-    firstName: fc.string({ minLength: 1, maxLength: 50 }),
-    lastName: fc.string({ minLength: 1, maxLength: 50 }),
-    email: fc.emailAddress(),
-    dateOfBirth: fc.constantFrom('2010-01-01', '2008-06-15', '2012-03-20', '2009-11-30'),
-    gender: fc.constantFrom('Male', 'Female'),
-    teamId: fc.string({ minLength: 24, maxLength: 24 }), // MongoDB ObjectId length
-    competitionId: fc.string({ minLength: 24, maxLength: 24 }),
-    password: fc.string({ minLength: 8, maxLength: 50 })
-  });
+  // Helper to create valid player data arbitrary (gender/ageGroup match mock competition ageGroups)
+  const createPlayerDataArb = () =>
+    fc.constantFrom(
+      { gender: 'Male', ageGroup: 'Under18' },
+      { gender: 'Female', ageGroup: 'Under16' }
+    ).chain(({ gender, ageGroup }) =>
+      fc.record({
+        firstName: fc.string({ minLength: 1, maxLength: 50 }),
+        lastName: fc.string({ minLength: 1, maxLength: 50 }),
+        email: fc.emailAddress(),
+        dateOfBirth: fc.constantFrom('2010-01-01', '2008-06-15', '2012-03-20', '2009-11-30'),
+        gender: fc.constant(gender),
+        ageGroup: fc.constant(ageGroup),
+        teamId: fc.string({ minLength: 24, maxLength: 24 }),
+        competitionId: fc.string({ minLength: 24, maxLength: 24 }),
+        password: fc.string({ minLength: 8, maxLength: 50 })
+      })
+    );
 
   // Feature: old-config-migration, Property 18: Super-admin player add is atomic
   describe('Property 18: Super-admin player add is atomic', () => {
@@ -89,6 +102,10 @@ describe('SuperAdminService Property Tests', () => {
             name: 'Test Competition',
             registeredTeams: [
               { team: playerData.teamId, _id: 'regteam123' }
+            ],
+            ageGroups: [
+              { gender: 'Male', ageGroup: 'Under18' },
+              { gender: 'Female', ageGroup: 'Under16' }
             ]
           };
 
@@ -102,6 +119,7 @@ describe('SuperAdminService Property Tests', () => {
 
           // Setup mocks for successful validation
           mockCompetitionRepository.findById.mockResolvedValue(mockCompetition);
+          mockCompetitionRepository.updateById.mockResolvedValue(mockCompetition);
           mockPlayerRepository.findOne.mockResolvedValue(null); // No existing player
           mockPlayerRepository.create.mockResolvedValue([mockPlayer]);
           
@@ -137,11 +155,16 @@ describe('SuperAdminService Property Tests', () => {
             name: 'Test Competition',
             registeredTeams: [
               { team: playerData.teamId, _id: 'regteam123' }
+            ],
+            ageGroups: [
+              { gender: 'Male', ageGroup: 'Under18' },
+              { gender: 'Female', ageGroup: 'Under16' }
             ]
           };
 
           // Setup mocks for successful validation
           mockCompetitionRepository.findById.mockResolvedValue(mockCompetition);
+          mockCompetitionRepository.updateById.mockResolvedValue(mockCompetition);
           mockPlayerRepository.findOne.mockResolvedValue(null); // No existing player
           
           // Simulate player creation failure
@@ -180,6 +203,10 @@ describe('SuperAdminService Property Tests', () => {
             name: 'Test Competition',
             registeredTeams: [
               { team: playerData.teamId, _id: 'regteam123' }
+            ],
+            ageGroups: [
+              { gender: 'Male', ageGroup: 'Under18' },
+              { gender: 'Female', ageGroup: 'Under16' }
             ]
           };
 
@@ -204,6 +231,8 @@ describe('SuperAdminService Property Tests', () => {
           mockPlayerRepository.create.mockResolvedValue([mockPlayer]);
           mockTransactionRepository.create.mockResolvedValue([mockTransaction]);
 
+          mockCompetitionRepository.updateById.mockResolvedValue(mockCompetition);
+
           // Execute
           const result = await superAdminService.addPlayer(playerData, superAdminId);
 
@@ -216,7 +245,7 @@ describe('SuperAdminService Property Tests', () => {
             team: playerData.teamId,
             player: 'player123',
             paymentStatus: 'completed',
-            description: `Player ${playerData.firstName} ${playerData.lastName} added by super admin`
+            description: `Player ${playerData.firstName} ${playerData.lastName} added by super admin to ${playerData.ageGroup} ${playerData.gender}`
           }], { session: mockSession });
 
           // Verify the transaction metadata requirements

@@ -22,6 +22,7 @@ const CompetitionDisplay = ({ className = '' }) => {
 
   return (
     <motion.div
+      key={currentCompetition._id}
       className={`relative rounded-2xl border overflow-hidden ${className}`}
       style={{
         background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.02))`,

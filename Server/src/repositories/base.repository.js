@@ -201,9 +201,15 @@ class BaseRepository {
         query.isDeleted = { $ne: true };
       }
       
+      // Check if updates contain MongoDB operators (like $push, $pull, $set, etc.)
+      const hasOperators = Object.keys(updates).some(key => key.startsWith('$'));
+      
+      // If updates contain operators, use them directly; otherwise wrap in $set
+      const updateQuery = hasOperators ? updates : { $set: updates };
+      
       const queryResult = this.model.findOneAndUpdate(
         query,
-        { $set: updates },
+        updateQuery,
         { new: true, runValidators: true }
       );
       const doc = await this.executeQuery(queryResult);

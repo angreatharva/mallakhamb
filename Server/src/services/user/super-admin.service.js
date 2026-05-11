@@ -1,5 +1,6 @@
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
+const { calculatePlayerAdditionAmount } = require('../../config/payment.config');
 
 class SuperAdminService {
   constructor({
@@ -9,9 +10,11 @@ class SuperAdminService {
     teamRepository,
     judgeRepository,
     competitionRepository,
+    competitionService,
     transactionRepository,
     playerRepository,
     logger,
+    config,
   }) {
     this.authenticationService = authenticationService;
     this.adminRepository = adminRepository;
@@ -19,9 +22,27 @@ class SuperAdminService {
     this.teamRepository = teamRepository;
     this.judgeRepository = judgeRepository;
     this.competitionRepository = competitionRepository;
+    this.competitionService = competitionService;
     this.transactionRepository = transactionRepository;
     this.playerRepository = playerRepository;
     this.logger = logger;
+    this.config = config;
+  }
+
+  /**
+   * Find a competition registration row by team document id or by registration subdocument _id.
+   */
+  _findRegisteredTeam(competition, teamId) {
+    if (!competition?.registeredTeams?.length || !teamId) return undefined;
+    return competition.registeredTeams.find(
+      (rt) => rt.team?.toString() === teamId || rt._id?.toString() === teamId
+    );
+  }
+
+  /** Team document id to store on Player / transactions (registration may be keyed by subdoc _id). */
+  _canonicalTeamId(registeredTeam, requestedTeamId) {
+    if (registeredTeam?.team) return registeredTeam.team.toString();
+    return requestedTeamId;
   }
 
   async loginSuperAdmin(email, password) {
@@ -205,7 +226,7 @@ class SuperAdminService {
     return competition;
   }
   async getAllCompetitions() { 
-    return this.competitionRepository.find({}, { 
+    return this.competitionRepository.find({ isDeleted: false }, { 
       sort: { createdAt: -1 },
       populate: { path: 'admins', select: 'name email role isActive' }
     }); 
@@ -218,7 +239,9 @@ class SuperAdminService {
   }
   
   async updateCompetition(id, payload) { return this.competitionRepository.updateById(id, payload); }
-  async deleteCompetition(id) { return this.competitionRepository.updateById(id, { isDeleted: true }); }
+  async deleteCompetition(id) {
+    return this.competitionService.deleteCompetition(id);
+  }
 
   async assignAdminToCompetition(id, adminId) {
     const competition = await this.competitionRepository.findById(id);
@@ -345,7 +368,7 @@ class SuperAdminService {
       };
     } else {
       // Get stats for all competitions
-      const allCompetitions = await this.competitionRepository.find({});
+      const allCompetitions = await this.competitionRepository.find({ isDeleted: false });
       
       // Use Sets to track unique teams and players across all competitions
       const uniqueTeamIds = new Set();
@@ -467,6 +490,268 @@ class SuperAdminService {
     });
   }
 
+  /**
+   * Create payment order for adding a player
+   * @param {string} superAdminId - Super admin ID
+   * @param {Object} playerData - Player data including teamId, competitionId
+   * @returns {Promise<Object>} Payment order details
+   */
+  async createPlayerPaymentOrder(superAdminId, playerData) {
+    try {
+      const { teamId, competitionId, firstName, lastName } = playerData;
+
+      // Validate competition exists
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition) {
+        throw new NotFoundError('Competition not found');
+      }
+
+      // Validate team belongs to competition
+      const registeredTeam = this._findRegisteredTeam(competition, teamId);
+
+      if (!registeredTeam) {
+        throw new NotFoundError('Team not registered for this competition');
+      }
+
+      const canonicalTeamId = this._canonicalTeamId(registeredTeam, teamId);
+
+      // Get team details
+      const team = await this.teamRepository.findById(canonicalTeamId);
+      if (!team) {
+        throw new NotFoundError('Team not found');
+      }
+
+      // Calculate payment amount using centralized config
+      const amount = calculatePlayerAdditionAmount();
+
+      // Get Razorpay credentials from config
+      const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
+      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
+
+      if (!razorpayKeyId || !razorpayKeySecret) {
+        this.logger?.error?.('Razorpay credentials not configured', {
+          hasKeyId: !!razorpayKeyId,
+          hasKeySecret: !!razorpayKeySecret
+        });
+        throw new ValidationError('Razorpay credentials are not configured');
+      }
+
+      // Create Razorpay instance
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret
+      });
+
+      this.logger?.info?.('Creating Razorpay order for player addition', {
+        amount,
+        teamId: team._id.toString(),
+        competitionId
+      });
+
+      // Create Razorpay order
+      const shortTeamId = team._id.toString().slice(-8);
+      const timestamp = Date.now().toString().slice(-8);
+      const receipt = `rcpt_${shortTeamId}_${timestamp}`;
+      
+      const razorpayOrder = await razorpay.orders.create({
+        amount: amount * 100, // Razorpay expects amount in paise
+        currency: 'INR',
+        receipt: receipt,
+        notes: {
+          superAdminId: superAdminId.toString(),
+          competitionId: competitionId.toString(),
+          teamId: team._id.toString(),
+          teamName: team.name,
+          playerName: `${firstName} ${lastName}`,
+          type: 'player_addition'
+        }
+      });
+
+      this.logger?.info?.('Razorpay order created successfully for player addition', {
+        superAdminId,
+        competitionId,
+        orderId: razorpayOrder.id,
+        amount
+      });
+
+      return {
+        order: {
+          id: razorpayOrder.id,
+          amount,
+          currency: 'INR'
+        },
+        razorpayKeyId,
+        team: {
+          _id: team._id,
+          name: team.name
+        },
+        playerData: {
+          firstName,
+          lastName
+        }
+      };
+    } catch (error) {
+      this.logger?.error?.('Error creating payment order for player addition', {
+        error: error.message,
+        stack: error.stack,
+        razorpayError: error.error,
+        statusCode: error.statusCode
+      });
+      
+      // Handle Razorpay-specific errors
+      if (error.error && error.error.description) {
+        throw new ValidationError(error.error.description);
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Verify payment and add player to team
+   * @param {string} superAdminId - Super admin ID
+   * @param {Object} playerData - Player data
+   * @param {Object} paymentPayload - Razorpay payment details
+   * @returns {Promise<Object>} Created player details
+   */
+  async verifyPaymentAndAddPlayer(superAdminId, playerData, paymentPayload) {
+    try {
+      // Validate payment payload
+      if (!paymentPayload?.razorpay_order_id || !paymentPayload?.razorpay_payment_id || !paymentPayload?.razorpay_signature) {
+        throw new ValidationError('Missing required payment details');
+      }
+
+      // CRITICAL: Verify Razorpay payment signature server-side
+      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
+      if (!razorpayKeySecret) {
+        this.logger?.error?.('Razorpay key secret not configured');
+        throw new ValidationError('Payment verification failed: Configuration error');
+      }
+
+      const crypto = require('crypto');
+      const generatedSignature = crypto
+        .createHmac('sha256', razorpayKeySecret)
+        .update(`${paymentPayload.razorpay_order_id}|${paymentPayload.razorpay_payment_id}`)
+        .digest('hex');
+
+      // Use timing-safe comparison
+      const generatedBuffer = Buffer.from(generatedSignature);
+      const receivedBuffer = Buffer.from(paymentPayload.razorpay_signature);
+
+      if (generatedBuffer.length !== receivedBuffer.length || 
+          !crypto.timingSafeEqual(generatedBuffer, receivedBuffer)) {
+        this.logger?.error?.('Payment signature verification failed', {
+          superAdminId,
+          orderId: paymentPayload.razorpay_order_id,
+          paymentId: paymentPayload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Invalid signature');
+      }
+
+      // Verify payment status with Razorpay API
+      const Razorpay = require('razorpay');
+      const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
+      
+      if (!razorpayKeyId) {
+        throw new ValidationError('Payment verification failed: Configuration error');
+      }
+
+      const razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret
+      });
+
+      let paymentDetails;
+      try {
+        paymentDetails = await razorpay.payments.fetch(paymentPayload.razorpay_payment_id);
+      } catch (error) {
+        this.logger?.error?.('Failed to fetch payment details from Razorpay', {
+          error: error.message,
+          paymentId: paymentPayload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Unable to verify payment status');
+      }
+
+      // Check payment status
+      if (paymentDetails.status !== 'captured' && paymentDetails.status !== 'authorized') {
+        this.logger?.error?.('Payment not successful', {
+          paymentId: paymentPayload.razorpay_payment_id,
+          status: paymentDetails.status,
+          orderId: paymentPayload.razorpay_order_id
+        });
+        
+        throw new ValidationError(`Payment ${paymentDetails.status}. Please try again or contact support.`);
+      }
+
+      // Verify order ID matches
+      if (paymentDetails.order_id !== paymentPayload.razorpay_order_id) {
+        this.logger?.error?.('Order ID mismatch', {
+          expected: paymentPayload.razorpay_order_id,
+          received: paymentDetails.order_id
+        });
+        throw new ValidationError('Payment verification failed: Order mismatch');
+      }
+
+      // Verify payment amount
+      const expectedAmount = calculatePlayerAdditionAmount() * 100; // Convert to paise
+      if (paymentDetails.amount !== expectedAmount) {
+        this.logger?.error?.('Payment amount mismatch', {
+          expected: expectedAmount,
+          received: paymentDetails.amount,
+          paymentId: paymentPayload.razorpay_payment_id
+        });
+        throw new ValidationError('Payment verification failed: Amount mismatch');
+      }
+
+      // All verifications passed - Add player
+      const player = await this.addPlayer(playerData, superAdminId);
+
+      // Update transaction with payment details
+      const transaction = await this.transactionRepository.findOne({
+        player: player.id,
+        competition: playerData.competitionId,
+        team: playerData.teamId
+      });
+
+      if (transaction) {
+        await this.transactionRepository.updateById(transaction._id, {
+          amount: paymentDetails.amount / 100, // Convert paise to rupees
+          paymentStatus: 'completed',
+          metadata: {
+            razorpay_order_id: paymentPayload.razorpay_order_id,
+            razorpay_payment_id: paymentPayload.razorpay_payment_id,
+            razorpay_signature: paymentPayload.razorpay_signature,
+            razorpay_status: paymentDetails.status,
+            payment_method: paymentDetails.method,
+            verifiedAt: new Date(),
+            verified: true
+          }
+        });
+      }
+
+      this.logger?.info?.('Player added successfully with verified payment', { 
+        superAdminId, 
+        playerId: player.id,
+        paymentId: paymentPayload.razorpay_payment_id,
+        status: paymentDetails.status
+      });
+
+      return {
+        ...player,
+        verified: true,
+        payment: paymentPayload
+      };
+    } catch (error) {
+      this.logger?.error?.('Error verifying payment and adding player', {
+        error: error.message,
+        stack: error.stack,
+        superAdminId
+      });
+      throw error;
+    }
+  }
+
   async addPlayer({ firstName, lastName, email, dateOfBirth, gender, ageGroup, teamId, competitionId, password }, superAdminId) {
     // Verify teamId belongs to competitionId
     const competition = await this.competitionRepository.findById(competitionId);
@@ -474,16 +759,16 @@ class SuperAdminService {
       throw new ValidationError('Competition not found');
     }
 
-    const teamBelongsToCompetition = competition.registeredTeams?.some(
-      rt => rt.team?.toString() === teamId || rt._id?.toString() === teamId
-    );
-    
-    if (!teamBelongsToCompetition) {
+    const registeredTeam = this._findRegisteredTeam(competition, teamId);
+
+    if (!registeredTeam) {
       throw new ValidationError('Team does not belong to the specified competition');
     }
 
+    const canonicalTeamId = this._canonicalTeamId(registeredTeam, teamId);
+
     // Validate age group is available for the competition
-    const validAgeGroup = competition.ageGroups?.some(
+    const validAgeGroup = (competition.ageGroups || []).some(
       ag => ag.gender === gender && ag.ageGroup === ageGroup
     );
     
@@ -510,7 +795,7 @@ class SuperAdminService {
         dateOfBirth,
         gender,
         ageGroup, // Add age group to player document
-        team: teamId,
+        team: canonicalTeamId,
         password
       };
 
@@ -521,31 +806,23 @@ class SuperAdminService {
       // and the competition.registeredTeams.players array
 
       // Add player to the competition's registered team
-      const registeredTeam = competition.registeredTeams.find(
-        rt => rt.team?.toString() === teamId
+      if (!registeredTeam.players) {
+        registeredTeam.players = [];
+      }
+      const playerExists = registeredTeam.players.some(
+        p => p.player?.toString() === player._id.toString()
       );
-      
-      if (registeredTeam) {
-        // Check if player is already in the registered team
-        const playerExists = registeredTeam.players.some(
-          p => p.player?.toString() === player._id.toString()
-        );
-        
-        if (!playerExists) {
-          // Add player to the registered team's players array
-          registeredTeam.players.push({
-            player: player._id,
-            ageGroup: ageGroup,
-            gender: gender
-          });
-          
-          // Save the updated competition
-          await this.competitionRepository.updateById(competitionId, {
-            registeredTeams: competition.registeredTeams
-          }, { session });
-        }
-      } else {
-        throw new ValidationError('Registered team not found in competition');
+
+      if (!playerExists) {
+        registeredTeam.players.push({
+          player: player._id,
+          ageGroup: ageGroup,
+          gender: gender
+        });
+
+        await this.competitionRepository.updateById(competitionId, {
+          registeredTeams: competition.registeredTeams
+        }, { session });
       }
 
       // Create Transaction document
@@ -554,7 +831,7 @@ class SuperAdminService {
         type: 'player_add',
         amount: 0,
         competition: competitionId,
-        team: teamId,
+        team: canonicalTeamId,
         player: player._id,
         paymentStatus: 'completed',
         description: `Player ${firstName} ${lastName} added by super admin to ${ageGroup} ${gender}`
@@ -570,7 +847,7 @@ class SuperAdminService {
         firstName: player.firstName,
         lastName: player.lastName,
         email: player.email,
-        team: teamId,
+        team: canonicalTeamId,
         ageGroup: ageGroup,
         gender: gender
       };

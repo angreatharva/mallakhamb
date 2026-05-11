@@ -15,6 +15,7 @@ const {
 } = require('../../errors');
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
 const EventTypes = require('../../socket/events/event-types');
+const Admin = require('../../../models/Admin');
 
 class CompetitionService {
   /**
@@ -232,7 +233,17 @@ class CompetitionService {
       }
 
       // Soft delete
-      await this.competitionRepository.updateById(competitionId, { isDeleted: true });
+      const updated = await this.competitionRepository.updateById(competitionId, { isDeleted: true });
+      if (!updated) {
+        this.logger.warn('Competition delete failed: update matched no document', { competitionId });
+        throw new NotFoundError('Competition', competitionId);
+      }
+
+      // Remove this competition from every admin's assignments (bidirectional cleanup)
+      await Admin.updateMany(
+        { competitions: competitionId },
+        { $pull: { competitions: competitionId } }
+      );
 
       // Invalidate cache - clear all competition-related caches
       this.cacheService.delete(`competition:${competitionId}`);

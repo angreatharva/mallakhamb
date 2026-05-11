@@ -68,10 +68,72 @@ export const CompetitionProvider = ({ children, userType }) => {
     return decoded?.competitionId || null;
   }, [getToken]);
 
+  /** Re-read on each render so effects re-run when JWT competitionId changes (e.g. after registration). */
+  const competitionIdInToken = getCompetitionFromToken();
+
+  /**
+   * Merge assigned list + current selection from token.
+   * If the API list is briefly missing the JWT competition (e.g. right after register), use stored full object.
+   */
+  const finalizeAssignmentsFromApi = useCallback(
+    (apiCompetitions) => {
+      const competitionId = getCompetitionFromToken();
+      let list = Array.isArray(apiCompetitions) ? [...apiCompetitions] : [];
+
+      if (competitionId && !list.some((c) => c._id === competitionId)) {
+        const stored = getStoredCompetition(userType);
+        if (stored?._id === competitionId) {
+          list.push(stored);
+          logger.info('finalizeAssignmentsFromApi: Merged stored competition into assigned list', {
+            competitionId,
+          });
+        }
+      }
+
+      setAssignedCompetitions(list);
+
+      if (competitionId) {
+        const match = list.find((c) => c._id === competitionId);
+        if (match) {
+          setCurrentCompetition(match);
+        } else {
+          logger.warn('Competition from token not found in assigned list after merge', {
+            competitionId,
+            availableIds: list.map((c) => c._id),
+          });
+          setCurrentCompetition(null);
+        }
+      }
+    },
+    [userType, getCompetitionFromToken]
+  );
+
+  /** Immediately add a competition to the dropdown and select it (e.g. after register + set-competition). */
+  const mergeAssignedAndSelectCompetition = useCallback(
+    (competition) => {
+      const id = competition?._id || competition?.id;
+      if (!userType || !id) return;
+      const normalized = { ...competition, _id: id };
+      setAssignedCompetitions((prev) => {
+        const base = Array.isArray(prev) ? prev : [];
+        if (base.some((c) => c._id === id || c.id === id)) return base;
+        return [...base, normalized];
+      });
+      setCurrentCompetition(normalized);
+      secureStorage.setItem(`${userType}_current_competition`, JSON.stringify(normalized));
+    },
+    [userType]
+  );
+
   // Fetch assigned competitions for the user (callable for manual refresh)
   const fetchAssignedCompetitions = useCallback(async () => {
     const token = getToken();
-    if (!userType || !token || userType === 'judge') return;
+    if (!userType || !token || userType === 'judge') {
+      logger.warn('fetchAssignedCompetitions: Skipping fetch', { userType, hasToken: !!token });
+      return;
+    }
+
+    logger.info('fetchAssignedCompetitions: Starting fetch', { userType });
 
     try {
       setIsLoading(true);
@@ -82,19 +144,21 @@ export const CompetitionProvider = ({ children, userType }) => {
       );
       const responseData = response.data.data || response.data;
       const competitions = responseData.competitions || [];
-      setAssignedCompetitions(competitions);
-      const competitionId = getCompetitionFromToken();
-      if (competitionId) {
-        const match = competitions.find((c) => c._id === competitionId);
-        if (match) setCurrentCompetition(match);
-      }
+      
+      logger.info('fetchAssignedCompetitions: Competitions fetched', {
+        count: competitions.length,
+        competitionIds: competitions.map(c => c._id),
+        competitionNames: competitions.map(c => c.name)
+      });
+      
+      finalizeAssignmentsFromApi(competitions);
     } catch (err) {
       logger.error('Failed to fetch assigned competitions:', err);
       setError(err.response?.data?.message || 'Failed to load competitions');
     } finally {
       setIsLoading(false);
     }
-  }, [userType, getToken, getCompetitionFromToken]);
+  }, [userType, getToken, getCompetitionFromToken, finalizeAssignmentsFromApi]);
 
   // Switch to a different competition
   const switchCompetition = useCallback(async (competitionId) => {
@@ -109,18 +173,26 @@ export const CompetitionProvider = ({ children, userType }) => {
       setIsLoading(true);
       setError(null);
 
-      // Find the competition in the assigned list first
-      const competition = assignedCompetitions.find((c) => c._id === competitionId);
+      let competition = assignedCompetitions.find((c) => c._id === competitionId);
+      if (!competition && currentCompetition?._id === competitionId) {
+        competition = currentCompetition;
+      }
+      if (!competition && userType) {
+        const stored = getStoredCompetition(userType);
+        if (stored?._id === competitionId) competition = stored;
+      }
       if (!competition) {
         throw new Error('Competition not found in assigned competitions');
       }
 
-      // Update state IMMEDIATELY (optimistic update)
-      setCurrentCompetition(competition);
-      secureStorage.setItem(`${userType}_current_competition`, JSON.stringify(competition));
-      logger.info('Competition set optimistically', { competitionId, competitionName: competition.name });
+      logger.info('switchCompetition: Starting switch', { 
+        competitionId, 
+        competitionName: competition.name,
+        currentCompetitionId: currentCompetition?._id,
+        currentCompetitionName: currentCompetition?.name
+      });
 
-      // Then make the API call to update the token
+      // Make the API call to update the token FIRST (before optimistic update)
       const response = await axios.post(
         `${apiConfig.getBaseUrl()}/auth/set-competition`,
         { competitionId },
@@ -130,19 +202,21 @@ export const CompetitionProvider = ({ children, userType }) => {
       // Persist new token (now contains competitionId in payload)
       const newToken = response.data.data?.token || response.data.token;
       secureStorage.setItem(`${userType}_token`, newToken);
+      logger.info('Competition switched successfully - token updated', { competitionId, competitionName: competition.name });
 
-      logger.info('Competition switched successfully', { competitionId, competitionName: competition.name });
+      // NOW update state (this will trigger useEffect in components)
+      setCurrentCompetition(competition);
+      secureStorage.setItem(`${userType}_current_competition`, JSON.stringify(competition));
+      logger.info('Competition state updated', { competitionId, competitionName: competition.name });
     } catch (err) {
       logger.error('Failed to switch competition:', err);
-      // Revert optimistic update on error
-      const storedCompetition = getStoredCompetition(userType);
-      setCurrentCompetition(storedCompetition);
+      // Don't revert anything since we didn't do optimistic update
       setError(err.response?.data?.message || 'Failed to switch competition');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, [userType, getToken, assignedCompetitions, isLoading, getStoredCompetition]);
+  }, [userType, getToken, assignedCompetitions, isLoading, currentCompetition]);
 
   // Clear competition context (for logout)
   const clearCompetitionContext = useCallback(() => {
@@ -168,6 +242,12 @@ export const CompetitionProvider = ({ children, userType }) => {
       // Read competitionId from the token right away so the navbar doesn't
       // flash "Select" while the network request is in flight.
       const pendingCompetitionId = getCompetitionFromToken();
+      
+      logger.info('CompetitionProvider: Loading competitions', {
+        userType,
+        pendingCompetitionId,
+        hasToken: !!getToken()
+      });
 
       try {
         setIsLoading(true);
@@ -182,18 +262,16 @@ export const CompetitionProvider = ({ children, userType }) => {
 
         const responseData = response.data.data || response.data;
         const competitions = responseData.competitions || [];
-        setAssignedCompetitions(competitions);
+        
+        logger.info('CompetitionProvider: Competitions loaded', {
+          count: competitions.length,
+          competitionIds: competitions.map(c => c._id)
+        });
+        
+        finalizeAssignmentsFromApi(competitions);
 
-        // Restore the full competition object using the ID from the token.
-        // Only update if we found a match — don't wipe an already-set value.
-        if (pendingCompetitionId) {
-          const match = competitions.find((c) => c._id === pendingCompetitionId);
-          if (match) {
-            setCurrentCompetition(match);
-          }
-        } else {
-          // No competition in token
-          // AUTO-SELECT: If exactly 1 competition, select it automatically
+        // No competition in JWT: auto-select when exactly one assigned
+        if (!getCompetitionFromToken()) {
           if (competitions.length === 1) {
             const competition = competitions[0];
             logger.info('Auto-selecting single competition', { 
@@ -203,7 +281,6 @@ export const CompetitionProvider = ({ children, userType }) => {
             });
             setCurrentCompetition(competition);
             
-            // Update token with competition context
             try {
               const response = await axios.post(
                 `${apiConfig.getBaseUrl()}/auth/set-competition`,
@@ -217,7 +294,6 @@ export const CompetitionProvider = ({ children, userType }) => {
               logger.error('Failed to update token after auto-select:', err);
             }
           } else {
-            // Multiple or no competitions - clear current
             setCurrentCompetition(null);
           }
         }
@@ -233,7 +309,7 @@ export const CompetitionProvider = ({ children, userType }) => {
 
     loadCompetitions();
     return () => { isMounted = false; };
-  }, [userType, getToken, getCompetitionFromToken]);
+  }, [userType, competitionIdInToken, getToken, getCompetitionFromToken, finalizeAssignmentsFromApi]);
 
   const value = {
     currentCompetition,
@@ -242,6 +318,7 @@ export const CompetitionProvider = ({ children, userType }) => {
     error,
     switchCompetition,
     fetchAssignedCompetitions,
+    mergeAssignedAndSelectCompetition,
     clearCompetitionContext,
   };
 

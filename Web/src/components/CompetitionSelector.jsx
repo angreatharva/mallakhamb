@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '../contexts/CompetitionContext';
 import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { logger } from '../utils/logger';
 import { COLORS, useReducedMotion } from '../pages/public/Home';
 
@@ -29,9 +30,11 @@ const CompetitionSelector = ({ userType }) => {
       hasCompetition: !!currentCompetition,
       competitionId: currentCompetition?._id,
       competitionName: currentCompetition?.name,
-      userType
+      competitionYear: currentCompetition?.year,
+      userType,
+      assignedCount: assignedCompetitions?.length
     });
-  }, [currentCompetition, userType]);
+  }, [currentCompetition, userType, assignedCompetitions]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -49,13 +52,33 @@ const CompetitionSelector = ({ userType }) => {
   }, [isOpen]);
 
   const handleSwitch = async (competitionId) => {
-    if (competitionId === currentCompetition?._id) { setIsOpen(false); return; }
+    if (competitionId === currentCompetition?._id) { 
+      logger.info('Competition already selected, closing dropdown', { competitionId });
+      setIsOpen(false); 
+      return; 
+    }
+    
+    const targetCompetition = assignedCompetitions?.find(c => c._id === competitionId);
+    logger.info('Switching competition', { 
+      from: currentCompetition?._id, 
+      to: competitionId,
+      fromName: currentCompetition?.name,
+      toName: targetCompetition?.name
+    });
+    
     try {
       setIsSwitching(true);
       await switchCompetition(competitionId);
+      logger.info('Competition switched successfully', { competitionId });
       setIsOpen(false);
+      
+      // Show success toast
+      if (targetCompetition) {
+        toast.success(`Switched to ${targetCompetition.name}${targetCompetition.year ? ` ${targetCompetition.year}` : ''}`);
+      }
     } catch (error) {
       logger.error('Failed to switch competition:', error);
+      toast.error('Failed to switch competition. Please try again.');
     } finally {
       setIsSwitching(false);
     }
@@ -89,7 +112,7 @@ const CompetitionSelector = ({ userType }) => {
   const isLoadingOrSwitching = isLoading || isSwitching;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} key={`${currentCompetition?._id || 'no-competition'}-${assignedCompetitions?.length || 0}`}>
       <motion.button
         onClick={() => !isLoadingOrSwitching && setIsOpen(!isOpen)}
         disabled={isLoadingOrSwitching}
@@ -109,7 +132,7 @@ const CompetitionSelector = ({ userType }) => {
           <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Competition
           </span>
-          <span className="text-xs font-semibold text-white truncate w-full">
+          <span className="text-xs font-semibold text-white truncate w-full" key={currentCompetition?._id}>
             {currentCompetition
               ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
               : (userType === 'coach' ? 'Select Competition' : 'Select')}

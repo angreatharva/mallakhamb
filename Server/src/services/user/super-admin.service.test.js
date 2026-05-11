@@ -19,7 +19,9 @@ describe('SuperAdminService', () => {
   let mockTransactionRepository;
   let mockPlayerRepository;
   let mockLogger;
+  let mockConfig;
   let mockSession;
+  let mockCompetitionService;
 
   beforeEach(() => {
     // Create mock repositories
@@ -67,6 +69,7 @@ describe('SuperAdminService', () => {
     };
 
     mockPlayerRepository = {
+      find: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn()
     };
@@ -76,6 +79,18 @@ describe('SuperAdminService', () => {
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn()
+    };
+
+    mockConfig = {
+      get: jest.fn((path) => {
+        if (path === 'razorpay.keyId') return 'rzp_test_mock';
+        if (path === 'razorpay.keySecret') return 'mock_secret';
+        return '';
+      })
+    };
+
+    mockCompetitionService = {
+      deleteCompetition: jest.fn()
     };
 
     // Mock MongoDB session
@@ -97,9 +112,11 @@ describe('SuperAdminService', () => {
       teamRepository: mockTeamRepository,
       judgeRepository: mockJudgeRepository,
       competitionRepository: mockCompetitionRepository,
+      competitionService: mockCompetitionService,
       transactionRepository: mockTransactionRepository,
       playerRepository: mockPlayerRepository,
-      logger: mockLogger
+      logger: mockLogger,
+      config: mockConfig
     });
   });
 
@@ -596,6 +613,64 @@ describe('SuperAdminService', () => {
       expect(mockAdminRepository.updateById).toHaveBeenCalledWith('admin1', {
         competitions: ['comp123', 'comp999']
       });
+    });
+  });
+
+  describe('getAllCompetitions', () => {
+    it('should filter out deleted competitions', async () => {
+      const mockCompetitions = [
+        { _id: 'comp1', name: 'Competition 1', isDeleted: false },
+        { _id: 'comp2', name: 'Competition 2', isDeleted: false }
+      ];
+
+      mockCompetitionRepository.find.mockResolvedValue(mockCompetitions);
+
+      const result = await superAdminService.getAllCompetitions();
+
+      expect(mockCompetitionRepository.find).toHaveBeenCalledWith(
+        { isDeleted: false },
+        expect.objectContaining({
+          sort: { createdAt: -1 },
+          populate: { path: 'admins', select: 'name email role isActive' }
+        })
+      );
+      expect(result).toEqual(mockCompetitions);
+    });
+  });
+
+  describe('getSuperAdminDashboard', () => {
+    it('should filter out deleted competitions when getting aggregated stats', async () => {
+      const mockCompetitions = [
+        {
+          _id: 'comp1',
+          status: 'active',
+          isDeleted: false,
+          registeredTeams: [
+            {
+              team: 'team1',
+              players: [{ player: 'player1' }]
+            }
+          ]
+        }
+      ];
+
+      mockCompetitionRepository.find.mockResolvedValue(mockCompetitions);
+      mockPlayerRepository.find.mockResolvedValue([
+        { _id: 'player1', gender: 'Male' }
+      ]);
+
+      await superAdminService.getSuperAdminDashboard();
+
+      expect(mockCompetitionRepository.find).toHaveBeenCalledWith({ isDeleted: false });
+    });
+  });
+
+  describe('deleteCompetition', () => {
+    it('should delegate to competitionService', async () => {
+      mockCompetitionService.deleteCompetition.mockResolvedValue(true);
+      const result = await superAdminService.deleteCompetition('comp123');
+      expect(mockCompetitionService.deleteCompetition).toHaveBeenCalledWith('comp123');
+      expect(result).toBe(true);
     });
   });
 });

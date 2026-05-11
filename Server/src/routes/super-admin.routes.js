@@ -10,6 +10,8 @@ function createSuperAdminRoutes(container) {
   router.post('/login', controller.loginSuperAdmin);
 
   router.use(auth, requireSuperAdmin);
+  router.post('/players/payment/create', controller.createPlayerPaymentOrder);
+  router.post('/players/payment/verify', controller.verifyPlayerPaymentAndAdd);
   router.post('/players/add', controller.addPlayer);
   router.get('/admins', controller.getAllAdmins);
   router.post('/admins', controller.createAdmin);

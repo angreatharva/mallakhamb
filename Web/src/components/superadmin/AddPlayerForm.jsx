@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { superAdminAPI } from '../../services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import Dropdown from '../Dropdown';
 import { logger } from '../../utils/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
+
+/** Keep in sync with SuperAdminAddPlayerPayment.jsx */
+const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
 
 // ─── Dark Input Component ─────────────────────────────────────────────────────
 const DarkInput = ({ label, required, error, hint, id, ...props }) => (
@@ -142,6 +145,7 @@ const PasswordRequirements = ({ password }) => {
  * @param {Function} props.onFetchTeams - Callback function to fetch teams based on competition selection
  */
 const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
+  const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors }, watch, setError, reset } = useForm();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -296,7 +300,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     
     setLoading(true);
     try {
-      const response = await superAdminAPI.addPlayerToTeam({
+      const playerData = {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -305,44 +309,21 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         ageGroup: selectedAgeGroup.value,
         teamId: selectedTeam.value,
         competitionId: selectedCompetition.value,
-        password: data.password
-      });
-      
-      // Show success message with player details
-      const playerData = response.data?.data || response.data;
-      toast.success(`Player ${data.firstName} ${data.lastName} added successfully to ${selectedTeam.label}!`, {
-        duration: 4000,
-        icon: '✅'
-      });
-      
-      // Reset form
-      reset();
-      setSelectedGender(null);
-      setSelectedTeam(null);
-      setSelectedCompetition(null);
-      setSelectedAgeGroup(null);
-      
-      // Call success callback with competition info
-      if (onSuccess) {
-        onSuccess({
-          ...playerData,
-          competitionId: selectedCompetition.value
-        });
-      }
+        password: data.password,
+      };
+
+      const checkoutPayload = {
+        playerData,
+        teamLabel: selectedTeam.label,
+        competitionLabel: selectedCompetition.label,
+      };
+
+      sessionStorage.setItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutPayload));
+      toast.success('Continue to secure payment to complete registration.', { duration: 3500 });
+      navigate('/superadmin/add-player-payment');
     } catch (error) {
-      logger.error('Error adding player:', error);
-      
-      // Handle specific error cases
-      if (error.response?.data?.message?.includes('email already exists') || 
-          error.response?.data?.message?.includes('Email already registered')) {
-        toast.error('Player email already exists. Please use a different email.');
-      } else if (error.response?.data?.message?.includes('Team not found')) {
-        toast.error('Team not found in the specified competition. Please select a valid team.');
-      } else if (error.response?.status === 429) {
-        toast.error('Too many requests. Please wait a moment and try again.');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to add player. Please try again.');
-      }
+      logger.error('Error starting player checkout:', error);
+      toast.error(error.response?.data?.message || 'Could not start checkout. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -561,11 +542,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200 pr-12"
+            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
             style={{ 
               background: 'rgba(255,255,255,0.04)', 
               border: `1px solid ${errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
-              padding: '0.625rem 0.875rem' 
+              padding: '0.625rem 3rem 0.625rem 0.875rem',
+              minHeight: '44px',
+              height: '44px'
             }}
             onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
             onBlur={(e) => { e.target.style.borderColor = errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -577,13 +560,21 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            style={{
+              right: '0.5rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '32px',
+              height: '32px',
+              padding: '0'
+            }}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff className="w-4 h-4 text-white/25" />
+              <EyeOff className="w-4 h-4 text-white/40" />
             ) : (
-              <Eye className="w-4 h-4 text-white/25" />
+              <Eye className="w-4 h-4 text-white/40" />
             )}
           </button>
         </div>
@@ -610,11 +601,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200 pr-12"
+            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
             style={{ 
               background: 'rgba(255,255,255,0.04)', 
               border: `1px solid ${errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
-              padding: '0.625rem 0.875rem' 
+              padding: '0.625rem 3rem 0.625rem 0.875rem',
+              minHeight: '44px',
+              height: '44px'
             }}
             onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
             onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -626,13 +619,21 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            style={{
+              right: '0.5rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '32px',
+              height: '32px',
+              padding: '0'
+            }}
             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
             {showConfirmPassword ? (
-              <EyeOff className="w-4 h-4 text-white/25" />
+              <EyeOff className="w-4 h-4 text-white/40" />
             ) : (
-              <Eye className="w-4 h-4 text-white/25" />
+              <Eye className="w-4 h-4 text-white/40" />
             )}
           </button>
         </div>
@@ -667,7 +668,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
               />
-              Adding Player...
+              Opening payment…
             </>
           ) : (
             <>

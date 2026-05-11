@@ -29,6 +29,7 @@ const AdminRegister = lazy(() => import('./pages/admin/AdminRegister'));
 const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+const SuperAdminAddPlayerPayment = lazy(() => import('./pages/superadmin/SuperAdminAddPlayerPayment'));
 const AdminTeams = lazy(() => import('./pages/admin/AdminTeams'));
 const AdminScoring = lazy(() => import('./pages/admin/AdminScoring'));
 const JudgeLogin = lazy(() => import('./pages/judge/JudgeLogin'));
@@ -258,9 +259,7 @@ function AppContent() {
               path="/coach/select-competition"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <CompetitionProvider userType="coach">
-                    <CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />
-                  </CompetitionProvider>
+                  <CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />
                 </ProtectedRoute>
               }
             />
@@ -268,9 +267,7 @@ function AppContent() {
               path="/coach/dashboard"
               element={
                 <ProtectedRoute requiredUserType="coach">
-                  <CompetitionProvider userType="coach">
-                    <CoachDashboard />
-                  </CompetitionProvider>
+                  <CoachDashboard />
                 </ProtectedRoute>
               }
             />
@@ -363,6 +360,16 @@ function AppContent() {
                 <ProtectedRoute requiredUserType="superadmin">
                   <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
                     <SuperAdminDashboard />
+                  </RouteContext.Provider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/add-player-payment"
+              element={
+                <ProtectedRoute requiredUserType="superadmin">
+                  <RouteContext.Provider value={{ routePrefix: "/superadmin", storagePrefix: "superadmin" }}>
+                    <SuperAdminAddPlayerPayment />
                   </RouteContext.Provider>
                 </ProtectedRoute>
               }

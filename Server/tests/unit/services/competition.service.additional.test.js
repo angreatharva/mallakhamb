@@ -8,6 +8,10 @@
  * Requirements: 15.1, 15.6
  */
 
+jest.mock('../../../models/Admin', () => ({
+  updateMany: jest.fn().mockResolvedValue({ acknowledged: true })
+}));
+
 const CompetitionService = require('../../../src/services/competition/competition.service');
 const {
   ValidationError,

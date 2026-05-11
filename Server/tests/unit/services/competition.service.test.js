@@ -5,6 +5,10 @@
  * Requirements: 15.1, 15.6
  */
 
+jest.mock('../../../models/Admin', () => ({
+  updateMany: jest.fn().mockResolvedValue({ acknowledged: true, modifiedCount: 1 })
+}));
+
 const CompetitionService = require('../../../src/services/competition/competition.service');
 const { 
   ValidationError, 
@@ -12,6 +16,7 @@ const {
   NotFoundError,
   BusinessRuleError 
 } = require('../../../src/errors');
+const Admin = require('../../../models/Admin');
 
 describe('CompetitionService', () => {
   let competitionService;
@@ -62,6 +67,8 @@ describe('CompetitionService', () => {
       mockSocketManager,
       mockLogger
     );
+
+    Admin.updateMany.mockClear();
   });
 
   describe('createCompetition', () => {
@@ -253,6 +260,10 @@ describe('CompetitionService', () => {
       expect(mockCompetitionRepo.updateById).toHaveBeenCalledWith('comp123', {
         isDeleted: true
       });
+      expect(Admin.updateMany).toHaveBeenCalledWith(
+        { competitions: 'comp123' },
+        { $pull: { competitions: 'comp123' } }
+      );
       expect(mockCacheService.delete).toHaveBeenCalledWith('competition:comp123');
     });
 
@@ -286,6 +297,20 @@ describe('CompetitionService', () => {
       await expect(
         competitionService.deleteCompetition('comp123')
       ).rejects.toThrow(BusinessRuleError);
+    });
+
+    it('should throw NotFoundError when soft delete matches no document', async () => {
+      mockCompetitionRepo.findById.mockResolvedValue({
+        _id: 'comp123',
+        status: 'upcoming',
+        isDeleted: false
+      });
+      mockCompetitionRepo.updateById.mockResolvedValue(null);
+
+      await expect(
+        competitionService.deleteCompetition('comp123')
+      ).rejects.toThrow(NotFoundError);
+      expect(Admin.updateMany).not.toHaveBeenCalled();
     });
   });
 

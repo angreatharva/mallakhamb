@@ -182,6 +182,21 @@ function createSuperAdminController(container) {
       res.json({ success: true, data: transactions });
     }),
 
+    // ==================== Player Management with Payment ====================
+
+    /** @route POST /api/super-admin/players/payment/create */
+    createPlayerPaymentOrder: asyncHandler(async (req, res) => {
+      const orderData = await superAdminService.createPlayerPaymentOrder(req.user._id, req.body);
+      res.json({ success: true, data: orderData });
+    }),
+
+    /** @route POST /api/super-admin/players/payment/verify */
+    verifyPlayerPaymentAndAdd: asyncHandler(async (req, res) => {
+      const { playerData, payment } = req.body;
+      const player = await superAdminService.verifyPaymentAndAddPlayer(req.user._id, playerData, payment);
+      res.status(201).json({ success: true, data: player, message: 'Player added successfully with payment verification.' });
+    }),
+
     /** @route POST /api/super-admin/players/add */
     addPlayer: asyncHandler(async (req, res) => {
       const player = await superAdminService.addPlayer(req.body, req.user._id);

@@ -9,6 +9,7 @@
 
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
+const { calculateTeamPaymentAmount } = require('../../config/payment.config');
 
 class CoachService extends UserService {
   /**
@@ -228,8 +229,11 @@ class CoachService extends UserService {
     
     this.logger?.info?.('getTeamDashboard called', { 
       coachId: coachId.toString(), 
+      coachIdType: typeof coachId,
+      coachIdConstructor: coachId.constructor.name,
       competitionId: competitionId.toString(),
-      teamsCount: teams.length 
+      teamsCount: teams.length,
+      teamIds: teams.map(t => t._id.toString())
     });
     
     if (teams.length === 0) {
@@ -268,7 +272,9 @@ class CoachService extends UserService {
       registeredTeamsCount: competition.registeredTeams.length,
       registeredTeams: competition.registeredTeams.map(rt => ({
         teamId: rt.team.toString(),
-        coachId: rt.coach.toString()
+        coachId: rt.coach.toString(),
+        coachIdType: typeof rt.coach,
+        coachIdConstructor: rt.coach.constructor?.name
       }))
     });
     
@@ -277,6 +283,21 @@ class CoachService extends UserService {
       rt => {
         const rtCoachId = rt.coach._id ? rt.coach._id.toString() : rt.coach.toString();
         const searchCoachId = coachId._id ? coachId._id.toString() : coachId.toString();
+        
+        this.logger?.info?.('Comparing coach IDs', {
+          rtCoachId,
+          searchCoachId,
+          rtCoachIdLength: rtCoachId.length,
+          searchCoachIdLength: searchCoachId.length,
+          matches: rtCoachId === searchCoachId,
+          strictEquals: rtCoachId === searchCoachId,
+          looseEquals: rtCoachId == searchCoachId,
+          rtCoachType: typeof rt.coach,
+          searchCoachType: typeof coachId,
+          rtCoachIdCharCodes: Array.from(rtCoachId).map(c => c.charCodeAt(0)),
+          searchCoachIdCharCodes: Array.from(searchCoachId).map(c => c.charCodeAt(0))
+        });
+        
         return rtCoachId === searchCoachId;
       }
     );
@@ -566,9 +587,9 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate payment amount: ₹500 base + ₹100 per player
+      // Calculate payment amount using centralized config
       const playerCount = registeredTeam.players?.length || 0;
-      const amount = 500 + (playerCount * 100);
+      const amount = calculateTeamPaymentAmount(playerCount);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -788,11 +809,11 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate expected amount (₹500 base + ₹100 per player)
+      // Calculate expected amount using centralized config
       // Use registeredTeam.players (players registered for this competition)
       // NOT team.players (all players in the team)
       const playerCount = registeredTeam.players?.length || 0;
-      const expectedAmount = (500 + (playerCount * 100)) * 100; // Convert to paise
+      const expectedAmount = calculateTeamPaymentAmount(playerCount) * 100; // Convert to paise
 
       // Verify payment amount
       if (paymentDetails.amount !== expectedAmount) {

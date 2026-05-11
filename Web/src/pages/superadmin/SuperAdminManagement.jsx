@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
   ChevronDown, Save, Users
@@ -234,6 +235,7 @@ const SuperAdminManagement = () => {
   const [competitions, setCompetitions] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addPlayerFormKey, setAddPlayerFormKey] = useState(0);
 
   // Admin modal
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
@@ -253,6 +255,18 @@ const SuperAdminManagement = () => {
   // Admin management modal
   const [showAdminManagementModal, setShowAdminManagementModal] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
+
+  // Delete competition confirmation modal
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [competitionToDelete, setCompetitionToDelete] = useState(null);
+
+  // Remove admin confirmation modal
+  const [showRemoveAdminConfirmation, setShowRemoveAdminConfirmation] = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState(null);
+
+  // Delete admin confirmation modal
+  const [showDeleteAdminConfirmation, setShowDeleteAdminConfirmation] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState(null);
 
   // Player form - removed, now using AddPlayerForm component
   const [playerFormData, setPlayerFormData] = useState({
@@ -321,6 +335,14 @@ const SuperAdminManagement = () => {
     }
   }, []);
 
+  const location = useLocation();
+  useEffect(() => {
+    const competitionId = location.state?.superadminPlayerAddedCompetitionId;
+    if (!competitionId || activeSection !== 'addPlayer') return;
+    fetchTeamsByCompetition(competitionId);
+    setAddPlayerFormKey((k) => k + 1);
+  }, [location.state, activeSection, fetchTeamsByCompetition]);
+
   // ─── Admin CRUD ────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
     e.preventDefault();
@@ -345,9 +367,21 @@ const SuperAdminManagement = () => {
   };
 
   const handleDeleteAdmin = async (id) => {
-    if (!window.confirm('Delete this admin?')) return;
-    try { await superAdminAPI.deleteAdmin(id); toast.success('Admin deleted'); fetchData(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete admin'); }
+    try { 
+      await superAdminAPI.deleteAdmin(id); 
+      toast.success('Admin deleted'); 
+      setShowDeleteAdminConfirmation(false);
+      setAdminToDelete(null);
+      fetchData(); 
+    }
+    catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete admin'); 
+    }
+  };
+
+  const openDeleteAdminConfirmation = (admin) => {
+    setAdminToDelete(admin);
+    setShowDeleteAdminConfirmation(true);
   };
 
   const openEditModal = (admin) => {
@@ -429,9 +463,21 @@ const SuperAdminManagement = () => {
   };
 
   const handleDeleteCompetition = async (id) => {
-    if (!window.confirm('Delete this competition? This cannot be undone.')) return;
-    try { await superAdminAPI.deleteCompetition(id); toast.success('Competition deleted'); fetchData(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete competition'); }
+    try { 
+      await superAdminAPI.deleteCompetition(id); 
+      toast.success('Competition deleted'); 
+      setShowDeleteConfirmation(false);
+      setCompetitionToDelete(null);
+      fetchData(); 
+    }
+    catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete competition'); 
+    }
+  };
+
+  const openDeleteConfirmation = (comp) => {
+    setCompetitionToDelete(comp);
+    setShowDeleteConfirmation(true);
   };
 
   const toggleCompetitionType = (type) => setCompetitionFormData(prev => ({
@@ -471,7 +517,6 @@ const SuperAdminManagement = () => {
   };
 
   const handleRemoveAdmin = async (adminId) => {
-    if (!window.confirm('Remove this admin from the competition?')) return;
     try {
       await superAdminAPI.removeAdminFromCompetition(selectedCompetition._id, adminId);
       toast.success('Admin removed');
@@ -479,8 +524,17 @@ const SuperAdminManagement = () => {
       // Handle nested response structure
       const responseData = r.data.data || r.data;
       setSelectedCompetition(responseData.competition || responseData);
+      setShowRemoveAdminConfirmation(false);
+      setAdminToRemove(null);
       fetchData();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove admin'); }
+    } catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to remove admin'); 
+    }
+  };
+
+  const openRemoveAdminConfirmation = (admin) => {
+    setAdminToRemove(admin);
+    setShowRemoveAdminConfirmation(true);
   };
 
   // ─── Add Player ────────────────────────────────────────────────────────────
@@ -599,7 +653,7 @@ const SuperAdminManagement = () => {
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
-                        <motion.button onClick={() => handleDeleteCompetition(comp._id)}
+                        <motion.button onClick={() => openDeleteConfirmation(comp)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.red }} title="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
@@ -650,7 +704,7 @@ const SuperAdminManagement = () => {
                           style={{ color: ADMIN_COLORS.blue }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
-                        <motion.button onClick={() => handleDeleteAdmin(admin._id)}
+                        <motion.button onClick={() => openDeleteAdminConfirmation(admin)}
                           className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.red }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
@@ -707,6 +761,7 @@ const SuperAdminManagement = () => {
               <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
             </div>
             <AddPlayerForm 
+              key={addPlayerFormKey}
               teams={teams} 
               competitions={competitions} 
               onSuccess={handlePlayerAdded}
@@ -928,7 +983,7 @@ const SuperAdminManagement = () => {
                         <p className="text-sm font-bold text-white">{admin.name}</p>
                         <p className="text-xs text-white/40">{admin.email}</p>
                       </div>
-                      <DarkBtn size="sm" variant="danger" onClick={() => handleRemoveAdmin(admin._id)}>
+                      <DarkBtn size="sm" variant="danger" onClick={() => openRemoveAdminConfirmation(admin)}>
                         <Trash2 className="w-3.5 h-3.5" /> Remove
                       </DarkBtn>
                     </div>
@@ -956,6 +1011,198 @@ const SuperAdminManagement = () => {
           </div>
         )}
       </DarkModal>
+
+      {/* Delete Competition Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirmation && competitionToDelete && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowDeleteConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Delete Competition?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to delete:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {competitionToDelete.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {competitionToDelete.place} • {new Date(competitionToDelete.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      All associated data including <strong>teams, players, scores, and registrations</strong> will be permanently deleted.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleDeleteCompetition(competitionToDelete._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Delete Competition
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteConfirmation(false);
+                      setCompetitionToDelete(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Remove Admin Confirmation Modal */}
+      <AnimatePresence>
+        {showRemoveAdminConfirmation && adminToRemove && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowRemoveAdminConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <UserX className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Remove Admin?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This admin will lose access to this competition.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to remove:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {adminToRemove.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {adminToRemove.email}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      From competition: <strong>{selectedCompetition?.name}</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleRemoveAdmin(adminToRemove._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Remove Admin
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowRemoveAdminConfirmation(false);
+                      setAdminToRemove(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Admin Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAdminConfirmation && adminToDelete && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowDeleteAdminConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Delete Admin Account?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to delete:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {adminToDelete.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {adminToDelete.email}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      This admin will be <strong>permanently removed</strong> from the system and lose access to all competitions.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleDeleteAdmin(adminToDelete._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Delete Admin
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteAdminConfirmation(false);
+                      setAdminToDelete(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

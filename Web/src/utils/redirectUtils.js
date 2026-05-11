@@ -31,6 +31,7 @@ const ALLOWED_PATHS = [
   '/judge/scoring-old',
   '/superadmin/login',
   '/superadmin/dashboard',
+  '/superadmin/add-player-payment',
   '/superadmin/scoring',
   '/superadmin/management',
   '/superadmin/system-stats',

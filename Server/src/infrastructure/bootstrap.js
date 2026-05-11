@@ -136,6 +136,12 @@ function bootstrap() {
     cacheService: c.resolve('cacheService'),
     authenticationService: c.resolve('authenticationService'),
   }), 'singleton');
+  container.register('competitionService', (c) => new CompetitionService(
+    c.resolve('competitionRepository'),
+    c.resolve('cacheService'),
+    null,
+    c.resolve('logger')
+  ), 'singleton');
   container.register('superAdminService', (c) => new SuperAdminService({
     authenticationService: c.resolve('authenticationService'),
     adminRepository: c.resolve('adminRepository'),
@@ -143,9 +149,11 @@ function bootstrap() {
     teamRepository: c.resolve('teamRepository'),
     judgeRepository: c.resolve('judgeRepository'),
     competitionRepository: c.resolve('competitionRepository'),
+    competitionService: c.resolve('competitionService'),
     transactionRepository: c.resolve('transactionRepository'),
     playerRepository: c.resolve('playerRepository'),
     logger: c.resolve('logger'),
+    config: c.resolve('config'),
   }), 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
@@ -161,12 +169,6 @@ function bootstrap() {
       cacheService: c.resolve('cacheService'),
     });
   }, 'singleton');
-  container.register('competitionService', (c) => new CompetitionService(
-    c.resolve('competitionRepository'),
-    c.resolve('cacheService'),
-    null,
-    c.resolve('logger')
-  ), 'singleton');
   container.register('registrationService', (c) => new RegistrationService(
     c.resolve('competitionRepository'),
     c.resolve('teamRepository'),

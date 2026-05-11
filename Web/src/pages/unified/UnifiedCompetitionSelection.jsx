@@ -9,6 +9,7 @@ import { coachAPI, playerAPI } from '../../services/api';
 import { secureStorage } from '../../utils/secureStorage';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 
 // Design system
@@ -87,6 +88,7 @@ const UnifiedCompetitionSelectionInner = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { fetchAssignedCompetitions, mergeAssignedAndSelectCompetition } = useCompetition();
   const theme = useTheme();
   const reduced = useReducedMotion();
 
@@ -257,14 +259,24 @@ const UnifiedCompetitionSelectionInner = () => {
 
         const authData = await authResponse.json();
         const newToken = authData.data?.token || authData.token;
+        const competitionFromResponse = authData.data?.competition || authData.competition;
+        
         if (newToken) {
           secureStorage.setItem('coach_token', newToken);
         }
         
-        // Store the selected competition in localStorage so CompetitionProvider can load it immediately
-        secureStorage.setItem('coach_current_competition', JSON.stringify(selectedItem));
-        
+        // Store the competition from the response (which has the full data including registeredTeams)
+        const competitionForContext = competitionFromResponse || selectedItem;
+        if (competitionForContext && (competitionForContext._id || competitionForContext.id)) {
+          mergeAssignedAndSelectCompetition(competitionForContext);
+        }
+        await fetchAssignedCompetitions();
+
         toast.success('Team registered for competition successfully!');
+
+        const competitionId = selectedItem._id || selectedItem.id;
+        navigate(`${config.dashboardPath}?competitionId=${competitionId}`);
+        return;
       } else if (role === 'player') {
         // Player: join competition (similar to coach flow)
         // For now, we'll use the same set-competition endpoint
@@ -301,18 +313,24 @@ const UnifiedCompetitionSelectionInner = () => {
         secureStorage.setItem('player_current_competition', JSON.stringify(selectedItem));
 
         toast.success('Competition selected successfully!');
+        
+        // Do a full page reload to ensure all state is fresh
+        const competitionId = selectedItem._id || selectedItem.id;
+        window.location.href = `${config.dashboardPath}?competitionId=${competitionId}`;
+        return; // Exit early since we're doing a full page reload
       }
 
+      // For admin/superadmin, use React Router navigation (no reload needed)
       // Navigate to dashboard with competition parameter
-      // Use a longer delay to ensure token is properly stored and ready
       setTimeout(() => {
         const competitionId = selectedItem._id || selectedItem.id;
         if (role === 'coach' || role === 'player') {
+          // This code won't be reached for coach/player due to early return above
           navigate(`${config.dashboardPath}?competitionId=${competitionId}`);
         } else {
           navigate(config.dashboardPath);
         }
-      }, 300);
+      }, 500);
     } catch (err) {
       logger.error(`${role} selection error:`, err);
       const errorMsg =
@@ -323,7 +341,16 @@ const UnifiedCompetitionSelectionInner = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedItem, role, config.dashboardPath, navigate, login]);
+  }, [
+    selectedItem,
+    role,
+    config.dashboardPath,
+    navigate,
+    login,
+    coachTeam,
+    fetchAssignedCompetitions,
+    mergeAssignedAndSelectCompetition,
+  ]);
 
   /**
    * Filter items based on search query.

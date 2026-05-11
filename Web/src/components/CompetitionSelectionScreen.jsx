@@ -157,7 +157,13 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const navigate = useNavigate();
-  const { assignedCompetitions, switchCompetition, isLoading } = useCompetition();
+  const {
+    assignedCompetitions,
+    switchCompetition,
+    isLoading,
+    mergeAssignedAndSelectCompetition,
+    fetchAssignedCompetitions,
+  } = useCompetition();
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -292,9 +298,17 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
 
         const authData = await authResponse.json();
         const newToken = authData.data?.token || authData.token;
+        const competitionFromResponse = authData.data?.competition || authData.competition;
         if (newToken) {
           secureStorage.setItem('coach_token', newToken);
         }
+        const competitionForContext =
+          competitionFromResponse ||
+          coachCompetitions.find((c) => (c._id || c.id) === selectedCompetition);
+        if (competitionForContext && (competitionForContext._id || competitionForContext.id)) {
+          mergeAssignedAndSelectCompetition(competitionForContext);
+        }
+        await fetchAssignedCompetitions();
         toast.success('Team registered for competition successfully!');
       } else {
         // Admin/Superadmin flow: just switch competition
