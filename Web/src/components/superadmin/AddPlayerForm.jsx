@@ -8,6 +8,7 @@ import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import Dropdown from '../Dropdown';
 import { logger } from '../../utils/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
+import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
 
 /** Keep in sync with SuperAdminAddPlayerPayment.jsx */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -313,6 +314,14 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     
     setLoading(true);
     try {
+      const selectedCompetitionDoc = competitions.find(c => c._id === selectedCompetition.value);
+      const competitionPlayerFee = getCompetitionPlayerFeeRupees(selectedCompetitionDoc);
+      if (competitionPlayerFee === null) {
+        toast.error('This competition has no valid per-player fee. Edit the competition under Competitions and set the fee.');
+        setLoading(false);
+        return;
+      }
+
       const playerData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -329,6 +338,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         playerData,
         teamLabel: selectedTeam.label,
         competitionLabel: selectedCompetition.label,
+        competitionPlayerFee,
       };
 
       sessionStorage.setItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutPayload));
@@ -514,6 +524,22 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             placeholder="Select competition"
             error={!selectedCompetition && errors.competition}
           />
+          {selectedCompetition && (() => {
+            const doc = competitions.find((c) => c._id === selectedCompetition.value);
+            const fee = getCompetitionPlayerFeeRupees(doc);
+            if (fee === null) {
+              return (
+                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: ADMIN_COLORS.red, background: 'rgba(239,68,68,0.08)', border: `1px solid ${ADMIN_COLORS.red}40` }}>
+                  This competition has no valid per-player fee. Open Competitions, edit this competition, and set the fee.
+                </p>
+              );
+            }
+            return (
+              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                Fee for this competition: <span className="font-bold text-white">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
+              </p>
+            );
+          })()}
         </div>
         
         {/* Team */}

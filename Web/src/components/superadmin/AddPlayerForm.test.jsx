@@ -72,12 +72,14 @@ const mockCompetitions = [
     name: 'State Championship',
     year: 2024,
     place: 'Mumbai',
+    playerFee: 250,
   },
   {
     _id: 'comp2',
     name: 'National Championship',
     year: 2024,
     place: 'Delhi',
+    playerFee: 300,
   },
 ];
 

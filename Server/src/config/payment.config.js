@@ -1,51 +1,52 @@
 /**
  * Payment Configuration
- * 
- * Centralized payment configuration for the application.
- * This configuration is shared across all payment flows (coach team submission, super admin player addition, etc.)
- * 
- * To update payment amounts, modify the values in this file only.
+ *
+ * Amounts are always derived from each competition's `playerFee` (per player, INR).
+ * There is no global base fee or default player rate.
  */
 
+const { ValidationError } = require('../errors');
+
 const PAYMENT_CONFIG = {
-  /**
-   * Base fee for team registration (in INR)
-   * This is the minimum amount charged for team registration
-   */
-  TEAM_BASE_FEE: 500,
-
-  /**
-   * Fee per player (in INR)
-   * This amount is charged for each player added to a team
-   */
-  PLAYER_FEE: 100,
-
-  /**
-   * Currency code
-   */
   CURRENCY: 'INR',
-
-  /**
-   * Payment gateway provider
-   */
   PROVIDER: 'razorpay',
 };
 
-/**
- * Calculate payment amount for team submission
- * @param {number} playerCount - Number of players in the team
- * @returns {number} Total amount in INR
- */
-function calculateTeamPaymentAmount(playerCount) {
-  return PAYMENT_CONFIG.TEAM_BASE_FEE + (playerCount * PAYMENT_CONFIG.PLAYER_FEE);
+function requireCompetitionPlayerFeePerPlayer(competitionPlayerFee) {
+  if (competitionPlayerFee === null || competitionPlayerFee === undefined || competitionPlayerFee === '') {
+    throw new ValidationError(
+      'This competition does not have a valid per-player fee. Set it when creating or editing the competition.'
+    );
+  }
+  const n = typeof competitionPlayerFee === 'number' ? competitionPlayerFee : Number(competitionPlayerFee);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new ValidationError(
+      'This competition does not have a valid per-player fee. Set it when creating or editing the competition.'
+    );
+  }
+  return n;
 }
 
 /**
- * Calculate payment amount for adding a single player
- * @returns {number} Amount in INR
+ * Total for team submission: player count × competition per-player fee (no base fee).
+ * @param {number} playerCount
+ * @param {number} competitionPlayerFee - From competition.playerFee
+ * @returns {number} Total INR
  */
-function calculatePlayerAdditionAmount() {
-  return PAYMENT_CONFIG.PLAYER_FEE;
+function calculateTeamPaymentAmount(playerCount, competitionPlayerFee) {
+  const fee = requireCompetitionPlayerFeePerPlayer(competitionPlayerFee);
+  const count = Number(playerCount);
+  const c = Number.isFinite(count) && count >= 0 ? count : 0;
+  return c * fee;
+}
+
+/**
+ * Single player addition: one × competition per-player fee.
+ * @param {number} competitionPlayerFee - From competition.playerFee
+ * @returns {number} INR
+ */
+function calculatePlayerAdditionAmount(competitionPlayerFee) {
+  return requireCompetitionPlayerFeePerPlayer(competitionPlayerFee);
 }
 
 /**

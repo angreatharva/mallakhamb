@@ -15,6 +15,7 @@ const {
   NotFoundError 
 } = require('../../errors');
 const { normalizeEmail, sanitizeString } = require('../../utils/validation/sanitization.util');
+const { recordLogout } = require('../../utils/security/token-invalidation.util');
 
 class AuthenticationService {
   /**
@@ -456,6 +457,9 @@ class AuthenticationService {
    * @returns {Promise<boolean>}
    */
   async logout(userId, token) {
+    if (userId != null) {
+      recordLogout(userId.toString());
+    }
     this.logger.info('Logout successful', {
       userId,
       hasToken: Boolean(token),

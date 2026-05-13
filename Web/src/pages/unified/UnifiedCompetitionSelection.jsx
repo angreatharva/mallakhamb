@@ -87,8 +87,8 @@ const getRoleConfig = (role) => {
 const UnifiedCompetitionSelectionInner = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { fetchAssignedCompetitions, mergeAssignedAndSelectCompetition } = useCompetition();
+  const { login, logout } = useAuth();
+  const { fetchAssignedCompetitions, mergeAssignedAndSelectCompetition, clearCompetitionContext } = useCompetition();
   const theme = useTheme();
   const reduced = useReducedMotion();
 
@@ -441,9 +441,9 @@ const UnifiedCompetitionSelectionInner = () => {
               </div>
             )}
             <button
-              onClick={() => {
-                secureStorage.removeItem(`${role}_token`);
-                secureStorage.removeItem(`${role}_user`);
+              onClick={async () => {
+                clearCompetitionContext?.();
+                await logout();
                 navigate(`/${role}/login`);
               }}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-white/50 hover:text-white/80 transition-colors min-h-[44px]"

@@ -7,6 +7,7 @@ import { coachAPI } from '../../services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
 import Dropdown from '../../components/Dropdown';
 import { useCompetition } from '../../contexts/CompetitionContext';
+import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import CompetitionSelector from '../../components/CompetitionSelector';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
@@ -17,7 +18,8 @@ import { logger } from '../../utils/logger';
 const CoachDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading, clearCompetitionContext } = useCompetition();
+  const { logout } = useAuth();
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,9 +110,9 @@ const CoachDashboard = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const handleLogout = () => {
-    secureStorage.removeItem('coach_token');
-    secureStorage.removeItem('coach_user');
+  const handleLogout = async () => {
+    clearCompetitionContext?.();
+    await logout();
     navigate('/coach/login');
   };
 

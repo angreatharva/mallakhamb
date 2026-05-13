@@ -9,6 +9,7 @@
  */
 
 const { AuthenticationError } = require('../errors');
+const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 
 /**
  * Create authentication middleware
@@ -69,6 +70,27 @@ function createAuthMiddleware(container) {
             message: error.message || 'Token is not valid',
             code: error.code || 'INVALID_TOKEN'
           }
+        });
+      }
+
+      if (
+        decoded.userId != null &&
+        typeof decoded.iat === 'number' &&
+        isTokenLoggedOut(String(decoded.userId), decoded.iat)
+      ) {
+        logger.warn('Authentication failed: Token invalidated after logout', {
+          userId: decoded.userId,
+          path: req.path,
+          method: req.method,
+          ip: req.ip,
+        });
+        return res.status(401).json({
+          success: false,
+          message: 'Session ended. Please log in again.',
+          error: {
+            message: 'Session ended. Please log in again.',
+            code: 'TOKEN_INVALIDATED_LOGOUT',
+          },
         });
       }
 

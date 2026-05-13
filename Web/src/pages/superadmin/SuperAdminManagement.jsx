@@ -11,6 +11,7 @@ import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import Dropdown from '../../components/Dropdown';
 import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
+import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -249,7 +250,7 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: []
+    description: '', admins: [], ageGroups: [], playerFee: ''
   });
 
   // Admin management modal
@@ -405,7 +406,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: []
+    description: '', admins: [], ageGroups: [], playerFee: ''
   });
 
   const openCompetitionModal = (comp = null) => {
@@ -424,7 +425,7 @@ const SuperAdminManagement = () => {
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
-        ageGroups: comp.ageGroups || []
+        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : ''
       });
     } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
@@ -436,11 +437,21 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
     if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
+      toast.error('Enter a per-player fee (INR) for this competition');
+      return;
+    }
+    const playerFee = Number(competitionFormData.playerFee);
+    if (!Number.isFinite(playerFee) || playerFee < 0) {
+      toast.error('Enter a valid per-player fee (INR) for this competition');
+      return;
+    }
     try {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
         level: competitionFormData.level.value,
-        year: competitionFormData.year.value
+        year: competitionFormData.year.value,
+        playerFee
       });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
@@ -450,12 +461,22 @@ const SuperAdminManagement = () => {
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
+      toast.error('Enter a per-player fee (INR) for this competition');
+      return;
+    }
+    const playerFee = Number(competitionFormData.playerFee);
+    if (!Number.isFinite(playerFee) || playerFee < 0) {
+      toast.error('Enter a valid per-player fee (INR) for this competition');
+      return;
+    }
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
         name: competitionFormData.name, level: competitionFormData.level.value,
         competitionTypes: competitionFormData.competitionTypes, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
-        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups
+        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
+        playerFee
       });
       toast.success('Competition updated');
       setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
@@ -602,7 +623,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : competitions.length === 0 ? (
               <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
             ) : (
-              <DarkTable headers={['Name','Types','Level','Place','Dates','Status','Admins','Actions']}>
+              <DarkTable headers={['Name','Types','Level','Place','Per player','Dates','Status','Admins','Actions']}>
                 {competitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
                     <Td className="font-bold text-white">{comp.name}</Td>
@@ -623,6 +644,12 @@ const SuperAdminManagement = () => {
                       </span>
                     </Td>
                     <Td>{comp.place}</Td>
+                    <Td className="text-sm font-semibold text-white/80">
+                      {(() => {
+                        const rupees = getCompetitionPlayerFeeRupees(comp);
+                        return rupees !== null ? `₹${rupees.toLocaleString()}` : '—';
+                      })()}
+                    </Td>
                     <Td className="text-xs">
                       {new Date(comp.startDate).toLocaleDateString()} – {new Date(comp.endDate).toLocaleDateString()}
                     </Td>
@@ -864,6 +891,27 @@ const SuperAdminManagement = () => {
           <DarkInput label="End Date" required type="date" value={competitionFormData.endDate}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, endDate: e.target.value })} />
         </div>
+
+        {/* Player Fee */}
+        <DarkInput 
+          label="Per-player fee (₹)" 
+          required 
+          type="number" 
+          min="0"
+          step="1"
+          placeholder="e.g. 500" 
+          value={competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined ? '' : competitionFormData.playerFee}
+          hint="This competition only — total is players × this amount (no separate base fee)."
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === '') {
+              setCompetitionFormData({ ...competitionFormData, playerFee: '' });
+              return;
+            }
+            const n = Number(raw);
+            setCompetitionFormData({ ...competitionFormData, playerFee: Number.isFinite(n) ? n : '' });
+          }} 
+        />
 
         {/* Competition Types */}
         <div>

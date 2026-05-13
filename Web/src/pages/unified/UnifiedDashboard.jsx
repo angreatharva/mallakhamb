@@ -10,6 +10,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '../../services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
+import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import CompetitionSelector from '../../components/CompetitionSelector';
 import Dropdown from '../../components/Dropdown';
@@ -151,7 +152,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
 
-  const { currentCompetition, assignedCompetitions, switchCompetition } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, clearCompetitionContext } = useCompetition();
+  const { logout } = useAuth();
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
 
@@ -377,9 +379,9 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(`${storagePrefix}_token`);
-    localStorage.removeItem(`${storagePrefix}_user`);
+  const handleLogout = async () => {
+    clearCompetitionContext?.();
+    await logout();
     navigate(`${routePrefix}/login`);
   };
 

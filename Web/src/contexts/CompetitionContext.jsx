@@ -226,6 +226,17 @@ export const CompetitionProvider = ({ children, userType }) => {
     if (userType) secureStorage.removeItem(`${userType}_current_competition`);
   }, [userType]);
 
+  // When auth user type clears (logout), drop in-memory competition state so
+  // a new login does not inherit the previous session's selection.
+  useEffect(() => {
+    if (!userType) {
+      setCurrentCompetition(null);
+      setAssignedCompetitions([]);
+      setError(null);
+      setIsLoading(false);
+    }
+  }, [userType]);
+
   // Load competitions on mount and when userType changes.
   // Also restores currentCompetition from the token synchronously so the
   // navbar shows the right value immediately without waiting for the fetch.

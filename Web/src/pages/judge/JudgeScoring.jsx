@@ -11,6 +11,8 @@ import axios from 'axios';
 import apiConfig from '../../utils/apiConfig';
 import { logger } from '../../utils/logger';
 import { secureStorage } from '../../utils/secureStorage';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
@@ -186,6 +188,8 @@ const CheckRow = ({ checked, onChange, label }) => (
 //  Main component 
 const JudgeScoring = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -413,9 +417,9 @@ const JudgeScoring = () => {
     } finally { setSubmitting(false); }
   };
 
-  const handleLogout = () => {
-    secureStorage.removeItem('judge_token');
-    secureStorage.removeItem('judge_user');
+  const handleLogout = async () => {
+    clearCompetitionContext?.();
+    await logout();
     toast.success('Logged out successfully');
     navigate('/judge/login');
   };

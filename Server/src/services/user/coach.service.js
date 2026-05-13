@@ -384,7 +384,12 @@ class CoachService extends UserService {
         isSubmitted: registeredTeam.isSubmitted,
         paymentStatus: registeredTeam.paymentStatus,
         paymentAmount: registeredTeam.paymentAmount,
-        submittedAt: registeredTeam.submittedAt
+        submittedAt: registeredTeam.submittedAt,
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          playerFee: competition.playerFee
+        }
       },
       totalTeams: teams.length,
     };
@@ -587,9 +592,9 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate payment amount using centralized config
+      // Calculate payment amount using centralized config with competition-specific player fee
       const playerCount = registeredTeam.players?.length || 0;
-      const amount = calculateTeamPaymentAmount(playerCount);
+      const amount = calculateTeamPaymentAmount(playerCount, competition.playerFee);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -809,11 +814,11 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate expected amount using centralized config
+      // Calculate expected amount using centralized config with competition-specific player fee
       // Use registeredTeam.players (players registered for this competition)
       // NOT team.players (all players in the team)
       const playerCount = registeredTeam.players?.length || 0;
-      const expectedAmount = calculateTeamPaymentAmount(playerCount) * 100; // Convert to paise
+      const expectedAmount = calculateTeamPaymentAmount(playerCount, competition.playerFee) * 100; // Convert to paise
 
       // Verify payment amount
       if (paymentDetails.amount !== expectedAmount) {

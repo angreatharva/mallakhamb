@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '../../services/api';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
+import { logger } from '../../utils/logger';
+import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
 
 const CoachPayment = () => {
   const navigate = useNavigate();
@@ -218,9 +220,13 @@ const CoachPayment = () => {
     }
   };
 
+  const playerFeePerPlayer = getCompetitionPlayerFeeRupees(team?.competition);
+  const feeConfigured = playerFeePerPlayer !== null;
+
   const calculateTotal = () => {
     const count = team?.players?.length || 0;
-    return 500 + count * 100;
+    if (!feeConfigured) return 0;
+    return count * playerFeePerPlayer;
   };
 
   if (loading) {
@@ -282,6 +288,25 @@ const CoachPayment = () => {
     );
   }
 
+  if (team && !feeConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
+        <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
+          <h1 className="text-xl font-black text-white mb-3">Per-player fee not set</h1>
+          <p className="text-white/50 text-sm mb-6 leading-relaxed">
+            This competition does not have a valid per-player registration fee. Ask a super admin to edit the competition and set the fee, then try again.
+          </p>
+          <button type="button" onClick={() => navigate('/coach/dashboard')}
+            className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {!reduced && (
@@ -305,6 +330,9 @@ const CoachPayment = () => {
             </p>
             <h1 className="text-3xl font-black text-white">Team Payment</h1>
             <p className="text-white/40 text-sm mt-1">Complete your team registration for the competition</p>
+            {team?.competition?.name && (
+              <p className="text-white/55 text-sm mt-2 font-medium">{team.competition.name}</p>
+            )}
           </div>
         </FadeIn>
 
@@ -359,19 +387,15 @@ const CoachPayment = () => {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment Details</h2>
-                  <p className="text-white/40 text-xs">Registration fees</p>
+                  <p className="text-white/40 text-xs">Per-player fee for this competition (no base fee)</p>
                 </div>
               </div>
 
               {/* Fee breakdown */}
               <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Base Registration Fee</span>
-                  <span className="text-white">₹500</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Per Player ({team?.players?.length || 0} × ₹100)</span>
-                  <span className="text-white">₹{((team?.players?.length || 0) * 100).toLocaleString()}</span>
+                  <span className="text-white/50">Per player ({team?.players?.length || 0} × ₹{playerFeePerPlayer?.toLocaleString()})</span>
+                  <span className="text-white">₹{((team?.players?.length || 0) * playerFeePerPlayer).toLocaleString()}</span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total Amount</span>

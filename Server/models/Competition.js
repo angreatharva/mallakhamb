@@ -147,6 +147,11 @@ const competitionSchema = new mongoose.Schema({
       required: true
     }
   }],
+  playerFee: {
+    type: Number,
+    required: [true, 'Player fee is required'],
+    min: [0, 'Player fee cannot be negative']
+  },
   startedAgeGroups: [{
     gender: {
       type: String,

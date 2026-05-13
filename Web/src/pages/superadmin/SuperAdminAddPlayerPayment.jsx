@@ -6,12 +6,10 @@ import toast from 'react-hot-toast';
 import { superAdminAPI } from '../../services/api';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
 import { logger } from '../../utils/logger';
+import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
-
-/** Mirrors Server/src/config/payment.config.js PLAYER_FEE */
-const PLAYER_ADDITION_FEE_INR = 100;
 
 const loadRazorpayScript = () => new Promise((resolve) => {
   if (window.Razorpay) {
@@ -94,6 +92,13 @@ const SuperAdminAddPlayerPayment = () => {
       if (!parsed?.playerData?.teamId || !parsed?.playerData?.competitionId) {
         sessionStorage.removeItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY);
         toast.error('Invalid checkout session.');
+        navigate(managementPath, { replace: true });
+        return;
+      }
+      const sessionFee = getCompetitionPlayerFeeRupees({ playerFee: parsed?.competitionPlayerFee });
+      if (sessionFee === null) {
+        sessionStorage.removeItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY);
+        toast.error('Checkout is missing a valid competition per-player fee. Start again from Add Player.');
         navigate(managementPath, { replace: true });
         return;
       }
@@ -289,7 +294,16 @@ const SuperAdminAddPlayerPayment = () => {
     );
   }
 
+  if (!checkout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
+        <p className="text-white/45 text-sm">Redirecting…</p>
+      </div>
+    );
+  }
+
   const pd = checkout?.playerData;
+  const playerFee = getCompetitionPlayerFeeRupees({ playerFee: checkout.competitionPlayerFee }) ?? 0;
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -374,7 +388,7 @@ const SuperAdminAddPlayerPayment = () => {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment details</h2>
-                  <p className="text-white/40 text-xs">Per-player fee (same basis as coach dashboard)</p>
+                  <p className="text-white/40 text-xs">This competition&apos;s per-player fee (no base fee)</p>
                 </div>
               </div>
 
@@ -383,13 +397,13 @@ const SuperAdminAddPlayerPayment = () => {
                 style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
               >
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Player addition fee</span>
-                  <span className="text-white">₹{PLAYER_ADDITION_FEE_INR.toLocaleString()}</span>
+                  <span className="text-white/50">Per-player registration (this competition)</span>
+                  <span className="text-white">₹{playerFee.toLocaleString()}</span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total</span>
                   <span className="font-black text-lg" style={{ color: COLORS.saffron }}>
-                    ₹{PLAYER_ADDITION_FEE_INR.toLocaleString()}
+                    ₹{playerFee.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -419,7 +433,7 @@ const SuperAdminAddPlayerPayment = () => {
                   ) : (
                     <>
                       <CreditCard className="w-4 h-4" aria-hidden="true" />
-                      Pay ₹{PLAYER_ADDITION_FEE_INR.toLocaleString()}
+                      Pay ₹{playerFee.toLocaleString()}
                     </>
                   )}
                 </motion.button>

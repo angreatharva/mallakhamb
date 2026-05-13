@@ -202,14 +202,21 @@ class SuperAdminService {
   async deleteJudge(judgeId) { return this.judgeRepository.deleteById(judgeId); }
 
   async createCompetition(payload, adminId) {
+    const rawFee = payload.playerFee;
+    const playerFee = typeof rawFee === 'number' ? rawFee : Number(rawFee);
+    if (!Number.isFinite(playerFee) || playerFee < 0) {
+      throw new ValidationError('A valid per-player fee (INR) is required for each competition');
+    }
+    const body = { ...payload, playerFee };
+
     // Use admins from payload if provided, otherwise default to the creator
-    const assignedAdmins = payload.admins && payload.admins.length > 0 
-      ? payload.admins 
+    const assignedAdmins = body.admins && body.admins.length > 0 
+      ? body.admins 
       : [adminId];
     
     // Create competition with assigned admins
     const competition = await this.competitionRepository.create({ 
-      ...payload, 
+      ...body, 
       createdBy: adminId, 
       admins: assignedAdmins 
     });
@@ -238,7 +245,17 @@ class SuperAdminService {
     }); 
   }
   
-  async updateCompetition(id, payload) { return this.competitionRepository.updateById(id, payload); }
+  async updateCompetition(id, payload) {
+    if (Object.prototype.hasOwnProperty.call(payload, 'playerFee')) {
+      const rawFee = payload.playerFee;
+      const playerFee = typeof rawFee === 'number' ? rawFee : Number(rawFee);
+      if (!Number.isFinite(playerFee) || playerFee < 0) {
+        throw new ValidationError('A valid per-player fee (INR) is required for each competition');
+      }
+      return this.competitionRepository.updateById(id, { ...payload, playerFee });
+    }
+    return this.competitionRepository.updateById(id, payload);
+  }
   async deleteCompetition(id) {
     return this.competitionService.deleteCompetition(id);
   }
@@ -521,8 +538,8 @@ class SuperAdminService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate payment amount using centralized config
-      const amount = calculatePlayerAdditionAmount();
+      // Calculate payment amount using centralized config with competition-specific player fee
+      const amount = calculatePlayerAdditionAmount(competition.playerFee);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -693,13 +710,20 @@ class SuperAdminService {
         throw new ValidationError('Payment verification failed: Order mismatch');
       }
 
-      // Verify payment amount
-      const expectedAmount = calculatePlayerAdditionAmount() * 100; // Convert to paise
+      // Get competition to use competition-specific player fee
+      const competition = await this.competitionRepository.findById(playerData.competitionId);
+      if (!competition) {
+        throw new NotFoundError('Competition not found');
+      }
+
+      // Verify payment amount with competition-specific player fee
+      const expectedAmount = calculatePlayerAdditionAmount(competition.playerFee) * 100; // Convert to paise
       if (paymentDetails.amount !== expectedAmount) {
         this.logger?.error?.('Payment amount mismatch', {
           expected: expectedAmount,
           received: paymentDetails.amount,
-          paymentId: paymentPayload.razorpay_payment_id
+          paymentId: paymentPayload.razorpay_payment_id,
+          competitionPlayerFee: competition.playerFee
         });
         throw new ValidationError('Payment verification failed: Amount mismatch');
       }
