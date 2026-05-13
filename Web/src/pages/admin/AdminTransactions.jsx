@@ -182,7 +182,8 @@ const AdminTransactions = () => {
                     const competitionLabel = tx.competition
                       ? `${tx.competition.name}${tx.competition.year ? ` (${tx.competition.year})` : ''}${tx.competition.place ? ` — ${tx.competition.place}` : ''}`
                       : '-';
-                    const coachName = tx.coach?.name || '-';
+                    // Get coach name from coach field or metadata (for super admin added players)
+                    const coachName = tx.coach?.name || tx.metadata?.coachName || '-';
                     
                     // Extract Razorpay IDs from metadata
                     const razorpayOrderId = tx.metadata?.razorpay_order_id || '-';

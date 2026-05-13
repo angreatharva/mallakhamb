@@ -715,10 +715,13 @@ class SuperAdminService {
       });
 
       if (transaction) {
+        // Preserve existing metadata (like coachName) and add payment details
+        const existingMetadata = transaction.metadata || {};
         await this.transactionRepository.updateById(transaction._id, {
           amount: paymentDetails.amount / 100, // Convert paise to rupees
           paymentStatus: 'completed',
           metadata: {
+            ...existingMetadata, // Preserve coach name and other metadata
             razorpay_order_id: paymentPayload.razorpay_order_id,
             razorpay_payment_id: paymentPayload.razorpay_payment_id,
             razorpay_signature: paymentPayload.razorpay_signature,
@@ -766,6 +769,12 @@ class SuperAdminService {
     }
 
     const canonicalTeamId = this._canonicalTeamId(registeredTeam, teamId);
+
+    // Fetch team with coach populated to get coach name for transaction
+    const teamWithCoach = await this.teamRepository.findById(canonicalTeamId, {
+      populate: { path: 'coach', select: 'name' }
+    });
+    const coachName = teamWithCoach?.coach?.name || 'Unknown Coach';
 
     // Validate age group is available for the competition
     const validAgeGroup = (competition.ageGroups || []).some(
@@ -825,16 +834,22 @@ class SuperAdminService {
         }, { session });
       }
 
-      // Create Transaction document
+      // Create Transaction document with coach name and coach reference
       const transactionData = {
         source: 'superadmin',
         type: 'player_add',
         amount: 0,
         competition: competitionId,
         team: canonicalTeamId,
+        coach: teamWithCoach?.coach?._id, // Add coach reference
         player: player._id,
         paymentStatus: 'completed',
-        description: `Player ${firstName} ${lastName} added by super admin to ${ageGroup} ${gender}`
+        description: `Player ${firstName} ${lastName} added by super admin to ${ageGroup} ${gender}`,
+        metadata: {
+          coachName: coachName,
+          addedBy: 'Super Admin',
+          teamName: teamWithCoach?.name || 'Unknown Team'
+        }
       };
 
       await this.transactionRepository.create([transactionData], { session });

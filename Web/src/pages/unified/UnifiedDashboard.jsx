@@ -418,7 +418,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       </div>
 
       {/* Judges Assignment Status */}
-      {currentCompetition && (
+      
+      {/*currentCompetition && (
         <FadeIn delay={0.1}>
           <div className="rounded-2xl border p-6"
             style={{ background: theme.colors.card, borderColor: theme.colors.border }}>
@@ -440,7 +441,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Boys */}
+                //Boys
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Mars className="w-4 h-4" style={{ color: '#3B82F6' }} />
@@ -457,7 +458,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       ))}
                   </div>
                 </div>
-                {/* Girls */}
+                //Girls
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Venus className="w-4 h-4" style={{ color: '#EC4899' }} />
@@ -478,7 +479,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             )}
           </div>
         </FadeIn>
-      )}
+      )*/}
+
     </div>
   );
 

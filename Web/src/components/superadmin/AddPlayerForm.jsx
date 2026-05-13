@@ -186,20 +186,34 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
   const getAvailableAgeGroups = (gender, playerAge) => {
     if (!playerAge || !competitionAgeGroups.length) return [];
     
+    // Add age limits to each age group
     const ageGroups = competitionAgeGroups.map(ag => ({ ...ag, ...ageGroupLimits[ag.value] }));
-    const sorted = [...ageGroups].sort((a, b) => {
-      if (a.value.startsWith('Under') && b.value.startsWith('Under')) return a.maxAge - b.maxAge;
-      if (a.value.startsWith('Above') && b.value.startsWith('Above')) return a.minAge - b.minAge;
-      return a.value.startsWith('Under') ? -1 : 1;
+    
+    // Filter age groups where the player is eligible
+    // A player can play in ANY category where they meet the age requirement
+    const eligibleGroups = ageGroups.filter(ag => {
+      if (ag.value.startsWith('Under')) {
+        // For "Under" categories, player age must be <= maxAge
+        return playerAge <= ag.maxAge;
+      } else if (ag.value.startsWith('Above')) {
+        // For "Above" categories, player can play regardless of age
+        // (they can play up in higher age categories)
+        return true;
+      }
+      return false;
     });
     
-    let idx = -1;
-    for (let i = 0; i < sorted.length; i++) {
-      const g = sorted[i];
-      if (g.value.startsWith('Under') && playerAge <= g.maxAge) { idx = i; break; }
-      if (g.value.startsWith('Above') && playerAge >= g.minAge) { idx = i; break; }
-    }
-    return idx >= 0 ? sorted.slice(idx) : sorted;
+    // Sort the eligible groups: Under categories first (by maxAge), then Above categories (by minAge)
+    return eligibleGroups.sort((a, b) => {
+      if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
+        return a.maxAge - b.maxAge;
+      }
+      if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
+        return a.minAge - b.minAge;
+      }
+      // Under categories come before Above categories
+      return a.value.startsWith('Under') ? -1 : 1;
+    });
   };
   
   // Watch date of birth to calculate age and reset age group
@@ -275,14 +289,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     if (playerAge !== null && selectedAgeGroup) {
       const ageGroup = ageGroupLimits[selectedAgeGroup.value];
       if (ageGroup) {
+        // For "Under" categories, player must be at or below the max age
         if (selectedAgeGroup.value.startsWith('Under') && playerAge > ageGroup.maxAge) {
-          toast.error(`Player is ${playerAge} years old and cannot play in ${selectedAgeGroup.label} (max: ${ageGroup.maxAge})`);
+          toast.error(`Player is ${playerAge} years old and cannot play in ${selectedAgeGroup.label} (max age: ${ageGroup.maxAge})`);
           return;
         }
-        if (selectedAgeGroup.value.startsWith('Above') && playerAge < ageGroup.minAge) {
-          toast.error(`Player is ${playerAge} years old and cannot play in ${selectedAgeGroup.label} (min: ${ageGroup.minAge})`);
-          return;
-        }
+        // For "Above" categories, players can always play up (no minimum age restriction for playing up)
+        // This allows younger players to compete in higher age categories
       }
     }
     
