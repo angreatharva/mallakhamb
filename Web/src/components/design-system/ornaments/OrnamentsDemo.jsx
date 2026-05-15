@@ -90,9 +90,9 @@ const OrnamentsDemo = () => {
             </p>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <CoachOrnament color="#FF6B00" />
+            <CoachOrnament color="#22C55E" />
             <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>
-              Coach Orange
+              Coach Green
             </p>
           </div>
         </div>
@@ -226,7 +226,7 @@ import { ShieldOrnament, CoachOrnament, GradientText } from './ornaments';
 
 // With custom colors
 <ShieldOrnament color="#8B5CF6" />
-<CoachOrnament color="#FF6B00" />
+<CoachOrnament color="#22C55E" />
 
 // GradientText with custom colors
 <GradientText colors={['#FF6B00', '#F5A623', '#FF8C38']}>

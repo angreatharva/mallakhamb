@@ -419,9 +419,8 @@ const JudgeScoring = () => {
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
-    await logout();
+    await logout(navigate);
     toast.success('Logged out successfully');
-    navigate('/judge/login');
   };
 
   if (!judgeInfo) return null;

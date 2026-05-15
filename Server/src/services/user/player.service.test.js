@@ -13,6 +13,7 @@ describe('PlayerService', () => {
   let playerService;
   let mockPlayerRepository;
   let mockTeamRepository;
+  let mockCompetitionRepository;
   let mockLogger;
 
   beforeEach(() => {
@@ -30,6 +31,10 @@ describe('PlayerService', () => {
       findById: jest.fn()
     };
 
+    mockCompetitionRepository = {
+      find: jest.fn()
+    };
+
     // Create mock logger
     mockLogger = {
       info: jest.fn(),
@@ -38,11 +43,121 @@ describe('PlayerService', () => {
     };
 
     // Create service instance
-    playerService = new PlayerService(mockPlayerRepository, mockTeamRepository, mockLogger);
+    playerService = new PlayerService(
+      mockPlayerRepository, 
+      mockTeamRepository, 
+      mockLogger, 
+      null, // cacheService
+      null, // authenticationService
+      mockCompetitionRepository
+    );
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('getPlayerProfile', () => {
+    it('should return player profile with age group from competition when ageGroup is null', async () => {
+      const mockPlayer = {
+        _id: 'player123',
+        email: 'player@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        ageGroup: null,
+        password: 'hashedpassword',
+        team: {
+          _id: 'team123',
+          name: 'Team A'
+        }
+      };
+
+      const mockCompetitions = [
+        {
+          _id: 'comp123',
+          registeredTeams: [
+            {
+              team: 'team123',
+              isActive: true,
+              players: [
+                {
+                  player: 'player123',
+                  ageGroup: 'Above18',
+                  gender: 'Male'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      mockPlayerRepository.findById.mockResolvedValue(mockPlayer);
+      mockCompetitionRepository.find.mockResolvedValue(mockCompetitions);
+
+      const result = await playerService.getPlayerProfile('player123');
+
+      expect(result.firstName).toBe('John');
+      expect(result.ageGroup).toBe('Above18');
+      expect(result.password).toBeUndefined();
+      expect(mockCompetitionRepository.find).toHaveBeenCalledWith({
+        'registeredTeams.players.player': 'player123',
+        'registeredTeams.isActive': true
+      });
+    });
+
+    it('should return player profile without modifying ageGroup if already set', async () => {
+      const mockPlayer = {
+        _id: 'player123',
+        email: 'player@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        ageGroup: 'Under16',
+        password: 'hashedpassword',
+        team: {
+          _id: 'team123',
+          name: 'Team A'
+        }
+      };
+
+      mockPlayerRepository.findById.mockResolvedValue(mockPlayer);
+
+      const result = await playerService.getPlayerProfile('player123');
+
+      expect(result.firstName).toBe('John');
+      expect(result.ageGroup).toBe('Under16');
+      expect(result.password).toBeUndefined();
+      expect(mockCompetitionRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('should handle competition repository not available gracefully', async () => {
+      const mockPlayer = {
+        _id: 'player123',
+        email: 'player@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        ageGroup: null,
+        password: 'hashedpassword',
+        team: {
+          _id: 'team123',
+          name: 'Team A'
+        }
+      };
+
+      // Create service without competition repository
+      const serviceWithoutCompRepo = new PlayerService(
+        mockPlayerRepository, 
+        mockTeamRepository, 
+        mockLogger
+      );
+
+      mockPlayerRepository.findById.mockResolvedValue(mockPlayer);
+
+      const result = await serviceWithoutCompRepo.getPlayerProfile('player123');
+
+      expect(result.firstName).toBe('John');
+      expect(result.ageGroup).toBeNull();
+      expect(result.password).toBeUndefined();
+    });
   });
 
   describe('getProfile', () => {

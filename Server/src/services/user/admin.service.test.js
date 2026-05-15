@@ -1108,4 +1108,5 @@ describe('AdminService', () => {
       await expect(adminService.saveScores(scoreData)).rejects.toThrow(ValidationError);
     });
   });
+
 });

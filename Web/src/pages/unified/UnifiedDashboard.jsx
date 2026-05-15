@@ -381,8 +381,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
-    await logout();
-    navigate(`${routePrefix}/login`);
+    await logout(navigate);
   };
 
   const handleTabNav = (tabId) => {

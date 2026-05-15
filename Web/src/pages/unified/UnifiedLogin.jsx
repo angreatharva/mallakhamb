@@ -69,164 +69,93 @@ const detectRoleFromPath = (pathname) => {
  * @returns {Object} Configuration object with UI elements, icons, and navigation paths
  */
 const getRoleConfig = (role) => {
-  const configs = {
+  // Unified ornament component - same design for all roles, only color changes
+  const UnifiedOrnament = ({ color }) => (
+    <motion.div className="relative flex items-center justify-center"
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
+      <motion.div className="absolute w-24 h-24 rounded-full border"
+        style={{ borderColor: `${color}30` }}
+        animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+      <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, ${color}20, ${color}15)`,
+          border: `1px solid ${color}40`,
+          boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+        }}>
+        {/* Role-specific icon but same size and positioning */}
+        {role === 'admin' && <Shield className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'superadmin' && <Crown className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'player' && <User className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'judge' && <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+      </div>
+    </motion.div>
+  );
+
+  // Role-specific content but unified structure
+  const roleContent = {
     admin: {
       title: 'Admin',
       subtitle: 'Portal',
       description: 'Manage competitions, teams, judges, and scoring operations.',
       accessLabel: 'Admin Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Manage competitions and operations',
-      buttonText: 'Access Dashboard',
-      ornament: ShieldOrnament,
-      background: HexGrid,
-      icon: Shield,
-      features: [
-        { icon: BarChart2, label: 'Scores' },
-        { icon: Users, label: 'Teams' },
-        { icon: Settings, label: 'Manage' },
-      ],
-      usesEmail: true,
-      registerLink: null,
-      forgotPasswordLink: '/forgot-password',
     },
     superadmin: {
-      title: 'Supreme',
-      subtitle: 'Command',
+      title: 'Super Admin',
+      subtitle: 'Portal',
       description: 'Full sovereign access to all competitions, administrators, and platform systems.',
-      accessLabel: 'Restricted Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Super Administrator credentials required',
-      buttonText: 'Enter Command Center',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <Crown className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: RadialBurst,
-      icon: Crown,
-      features: [
-        { icon: Star, label: 'All Access' },
-        { icon: Zap, label: 'Real-time' },
-        { icon: Crown, label: 'Sovereign' },
-      ],
-      usesEmail: true,
-      registerLink: null,
-      forgotPasswordLink: '/forgot-password',
+      accessLabel: 'Super Admin Access',
     },
     coach: {
       title: 'Coach',
       subtitle: 'Portal',
       description: 'Manage your team, handle registrations, and guide your athletes to victory.',
       accessLabel: 'Coach Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Enter your coach credentials',
-      buttonText: 'Sign In',
-      ornament: CoachOrnament,
-      background: HexMesh,
-      icon: UserCheck,
-      features: [
-        { icon: Users, label: 'Manage' },
-        { icon: Trophy, label: 'Compete' },
-        { icon: Layers, label: 'Organize' },
-      ],
-      usesEmail: true,
-      registerLink: '/coach/register',
-      forgotPasswordLink: '/forgot-password',
     },
     player: {
-      title: 'Athlete',
+      title: 'Player',
       subtitle: 'Portal',
       description: 'Register, join your team, and compete in the ancient art of Mallakhamb.',
       accessLabel: 'Player Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Enter your athlete credentials',
-      buttonText: 'Sign In',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <User className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: DiagonalBurst,
-      icon: User,
-      features: [
-        { icon: Flame, label: 'Compete' },
-        { icon: Dumbbell, label: 'Train' },
-        { icon: Star, label: 'Excel' },
-      ],
-      usesEmail: true,
-      registerLink: '/player/register',
-      forgotPasswordLink: '/forgot-password',
     },
     judge: {
       title: 'Judge',
       subtitle: 'Portal',
       description: 'Score performances with precision. Your judgment shapes the competition.',
       accessLabel: 'Judge Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Credentials provided by the administrator',
-      buttonText: 'Sign In',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: Constellation,
-      icon: Scale,
-      features: [
-        { icon: Scale, label: 'Score' },
-        { icon: Gavel, label: 'Judge' },
-        { icon: BookOpen, label: 'Review' },
-      ],
-      usesEmail: false,
-      registerLink: null,
-      forgotPasswordLink: null,
     },
   };
-  
-  return configs[role] || configs.admin;
+
+  const content = roleContent[role] || roleContent.admin;
+
+  // Unified configuration - same for all roles except content and colors
+  return {
+    title: content.title,
+    subtitle: content.subtitle,
+    description: content.description,
+    accessLabel: content.accessLabel,
+    formTitle: 'Sign In',
+    formSubtitle: 'Enter your credentials to continue',
+    buttonText: 'Sign In',
+    ornament: UnifiedOrnament,
+    background: HexGrid, // Same background for all
+    icon: role === 'admin' ? Shield : 
+          role === 'superadmin' ? Crown :
+          role === 'coach' ? UserCheck :
+          role === 'player' ? User :
+          role === 'judge' ? Scale : Shield,
+    features: [
+      { icon: BarChart2, label: 'Secure' },
+      { icon: Users, label: 'Reliable' },
+      { icon: Settings, label: 'Modern' },
+    ], // Same features for all
+    usesEmail: role !== 'judge', // Only judge uses username
+    registerLink: (role === 'coach' || role === 'player') ? `/${role}/register` : null,
+    forgotPasswordLink: role !== 'judge' ? '/forgot-password' : null,
+  };
 };
 
 /**

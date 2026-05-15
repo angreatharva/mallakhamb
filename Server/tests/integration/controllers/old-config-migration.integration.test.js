@@ -27,6 +27,7 @@ describe('Old-Config Migration Integration Tests', () => {
   let app;
   let container;
   let mockAdminController;
+  let mockPublicController;
   let mockJudgeController;
   let mockSuperAdminController;
   let mockPaymentController;
@@ -67,15 +68,6 @@ describe('Old-Config Migration Integration Tests', () => {
           } 
         })
       ),
-      getPublicCompetitions: jest.fn((req, res) => 
-        res.json({ 
-          success: true, 
-          data: [
-            { _id: 'comp1', name: 'Competition 1', status: 'active' },
-            { _id: 'comp2', name: 'Competition 2', status: 'upcoming' }
-          ] 
-        })
-      ),
       getJudges: jest.fn((req, res) => 
         res.json({ 
           success: true, 
@@ -89,22 +81,6 @@ describe('Old-Config Migration Integration Tests', () => {
           success: true, 
           data: [
             { _id: 'team1', name: 'Team Alpha', isSubmitted: true }
-          ] 
-        })
-      ),
-      getPublicTeams: jest.fn((req, res) => 
-        res.json({ 
-          success: true, 
-          data: [
-            { _id: 'team1', name: 'Team Alpha' }
-          ] 
-        })
-      ),
-      getPublicScores: jest.fn((req, res) => 
-        res.json({ 
-          success: true, 
-          data: [
-            { teamId: 'team1', finalScore: 85.5 }
           ] 
         })
       ),
@@ -137,8 +113,32 @@ describe('Old-Config Migration Integration Tests', () => {
       startAgeGroup: jest.fn((req, res) => res.json({ success: true, data: {} })),
       endAgeGroup: jest.fn((req, res) => res.json({ success: true, data: {} })),
       getAgeGroupStatus: jest.fn((req, res) => res.json({ success: true, data: [] })),
-      getPublicRankings: jest.fn((req, res) => res.json({ success: true, data: [] })),
       getPaymentSummary: jest.fn((req, res) => res.json({ success: true, data: {} })),
+    };
+
+    mockPublicController = {
+      getPublicCompetitions: jest.fn((req, res) =>
+        res.json({
+          success: true,
+          data: [
+            { _id: 'comp1', name: 'Competition 1', status: 'active' },
+            { _id: 'comp2', name: 'Competition 2', status: 'upcoming' },
+          ],
+        })
+      ),
+      getPublicTeams: jest.fn((req, res) =>
+        res.json({
+          success: true,
+          data: [{ _id: 'team1', name: 'Team Alpha' }],
+        })
+      ),
+      getPublicScores: jest.fn((req, res) =>
+        res.json({
+          success: true,
+          data: [{ teamId: 'team1', finalScore: 85.5 }],
+        })
+      ),
+      getPublicRankings: jest.fn((req, res) => res.json({ success: true, data: [] })),
     };
 
     mockJudgeController = {
@@ -226,6 +226,7 @@ describe('Old-Config Migration Integration Tests', () => {
     container = {
       resolve: jest.fn((name) => {
         if (name === 'adminController') return mockAdminController;
+        if (name === 'publicController') return mockPublicController;
         if (name === 'judgeController') return mockJudgeController;
         if (name === 'superAdminController') return mockSuperAdminController;
         if (name === 'paymentController') return mockPaymentController;
@@ -383,7 +384,7 @@ describe('Old-Config Migration Integration Tests', () => {
       expect(res.body.data).toBeInstanceOf(Array);
       expect(res.body.data).toHaveLength(2);
       expect(res.body.data[0]).toHaveProperty('name', 'Competition 1');
-      expect(mockAdminController.getPublicCompetitions).toHaveBeenCalled();
+      expect(mockPublicController.getPublicCompetitions).toHaveBeenCalled();
     });
 
     it('GET /api/public/judges → 200 without auth', async () => {
@@ -413,7 +414,7 @@ describe('Old-Config Migration Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('success', true);
       expect(res.body.data).toBeInstanceOf(Array);
-      expect(mockAdminController.getPublicTeams).toHaveBeenCalled();
+      expect(mockPublicController.getPublicTeams).toHaveBeenCalled();
     });
 
     it('GET /api/public/scores → 200 without auth', async () => {
@@ -423,7 +424,7 @@ describe('Old-Config Migration Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('success', true);
       expect(res.body.data).toBeInstanceOf(Array);
-      expect(mockAdminController.getPublicScores).toHaveBeenCalled();
+      expect(mockPublicController.getPublicScores).toHaveBeenCalled();
     });
 
     it('POST /api/public/save-score → 200 without auth', async () => {

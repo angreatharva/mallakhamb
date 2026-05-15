@@ -9,6 +9,7 @@ import { AuthContext } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { secureStorage } from './utils/secureStorage';
 import { apiCache } from './utils/apiCache';
+import apiConfig from './utils/apiConfig';
 import { logger } from './utils/logger';
 import CompetitionSelectionScreen from './components/CompetitionSelectionScreen';
 
@@ -156,8 +157,8 @@ function AppContent() {
     setUserType(type);
   };
 
-  const handleLogout = async () => {
-    const currentType = getCurrentUserTypeFromURL();
+  const handleLogout = async (navigate) => {
+    const currentType = getCurrentUserTypeFromURL() || userType;
     
     try {
       // Call backend logout endpoint if token exists
@@ -166,7 +167,7 @@ function AppContent() {
         : secureStorage.getItem('token');
       
       if (token) {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/logout`, {
+        await fetch(`${apiConfig.getBaseUrl()}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -188,27 +189,47 @@ function AppContent() {
     
     setUser(null);
     setUserType(null);
+    
+    // Redirect to the appropriate login page based on user type
+    if (navigate && currentType) {
+      const loginPaths = {
+        'player': '/player/login',
+        'coach': '/coach/login',
+        'admin': '/admin/login',
+        'superadmin': '/superadmin/login',
+        'judge': '/judge/login'
+      };
+      
+      const loginPath = loginPaths[currentType] || '/';
+      navigate(loginPath);
+    }
   };
 
   if (loading) {
     return <PageLoader />;
   }
 
-  // Check if current route is admin route, home page, public scores, or competition selection pages
+  // Check if current route should hide the navbar
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
   const isCompetitionSelectionPage = location.pathname === '/coach/select-competition';
+  const isLoginPage = location.pathname.includes('/login');
+  const isRegisterPage = location.pathname.includes('/register');
+  const isForgotPasswordPage = location.pathname.includes('/forgot-password') || location.pathname.includes('/reset-password');
+
+  // Hide navbar on these pages
+  const shouldHideNavbar = isAdminRoute || isHomePage || isPublicScores || isCompetitionSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
 
   return (
     <AuthContext.Provider value={{ user, userType, login, logout: handleLogout }}>
       <CompetitionProvider userType={userType}>
         <div className="min-h-screen" style={{ background: '#0a0a0a' }}>
-          {/* Only show main navbar if not on admin routes, home page, public scores, or competition selection pages */}
-          {!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
+          {/* Only show main navbar if not on excluded pages */}
+          {!shouldHideNavbar && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
         {/* Add padding-top when navbar is shown to prevent content overlap */}
-        <div className={!isAdminRoute && !isHomePage && !isPublicScores && !isCompetitionSelectionPage ? 'pt-16' : ''}>
+        <div className={!shouldHideNavbar ? 'pt-16' : ''}>
           <Suspense fallback={<PageLoader />}>
             <Routes>
             {/* Public Routes */}

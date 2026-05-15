@@ -51,12 +51,12 @@ const getRoleConfig = (role) => {
       buttonText: 'Register Team & Continue',
       background: HexMesh,
       icon: Trophy,
-      color: '#FF6B00', // Orange/Saffron for coach (matching superadmin style)
-      colorLight: '#FF8C38',
-      colorDark: '#CC5500',
-      colorBg: '#FF6B0018',
-      colorBorder: '#FF6B0040',
-      colorGlow: '#FF6B0015',
+      color: '#22C55E', // Green for coach (matching role color)
+      colorLight: '#4ADE80',
+      colorDark: '#16A34A',
+      colorBg: '#22C55E18',
+      colorBorder: '#22C55E40',
+      colorGlow: '#22C55E15',
       dashboardPath: '/coach/dashboard',
     },
     player: {
@@ -443,8 +443,7 @@ const UnifiedCompetitionSelectionInner = () => {
             <button
               onClick={async () => {
                 clearCompetitionContext?.();
-                await logout();
-                navigate(`/${role}/login`);
+                await logout(navigate);
               }}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-white/50 hover:text-white/80 transition-colors min-h-[44px]"
               style={{ border: `1px solid ${theme.colors.border}` }}

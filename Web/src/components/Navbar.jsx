@@ -42,8 +42,7 @@ const Navbar = ({ user, userType, onLogout }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userType');
-    onLogout();
-    navigate('/');
+    onLogout(navigate);
   };
 
   const navLinks = !user ? [

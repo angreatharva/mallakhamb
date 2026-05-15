@@ -21,6 +21,7 @@ const AuthorizationService = require('../services/auth/authorization.service');
 const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
 const AdminService = require('../services/user/admin.service');
+const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
 const CompetitionService = require('../services/competition/competition.service');
 const RegistrationService = require('../services/competition/registration.service');
@@ -35,6 +36,7 @@ const createTeamController = require('../controllers/team.controller');
 const HealthController = require('../controllers/health.controller');
 const createCoachController = require('../controllers/coach.controller');
 const createAdminController = require('../controllers/admin.controller');
+const createPublicController = require('../controllers/public.controller');
 const createAuthController = require('../controllers/auth.controller');
 const createPlayerController = require('../controllers/player.controller');
 const createJudgeController = require('../controllers/judge.controller');
@@ -107,7 +109,8 @@ function bootstrap() {
     c.resolve('teamRepository'),
     c.resolve('logger'),
     c.resolve('cacheService'),
-    c.resolve('authenticationService')
+    c.resolve('authenticationService'),
+    c.resolve('competitionRepository')
   ), 'singleton');
   container.register('coachService', (c) => new CoachService(
     c.resolve('coachRepository'),
@@ -135,6 +138,12 @@ function bootstrap() {
     logger: c.resolve('logger'),
     cacheService: c.resolve('cacheService'),
     authenticationService: c.resolve('authenticationService'),
+  }), 'singleton');
+  container.register('publicService', (c) => new PublicService({
+    competitionRepository: c.resolve('competitionRepository'),
+    scoreRepository: c.resolve('scoreRepository'),
+    adminService: c.resolve('adminService'),
+    logger: c.resolve('logger'),
   }), 'singleton');
   container.register('competitionService', (c) => new CompetitionService(
     c.resolve('competitionRepository'),
@@ -197,6 +206,7 @@ function bootstrap() {
   container.register('healthController', (c) => new HealthController(c.resolve('healthMonitor'), c.resolve('metricsCollector'), c.resolve('logger')), 'singleton');
   container.register('coachController', (c) => createCoachController(c), 'singleton');
   container.register('adminController', (c) => createAdminController(c), 'singleton');
+  container.register('publicController', (c) => createPublicController(c), 'singleton');
   container.register('authController', (c) => createAuthController(c), 'singleton');
   container.register('playerController', (c) => createPlayerController(c), 'singleton');
   container.register('judgeController', (c) => createJudgeController(c), 'singleton');

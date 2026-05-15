@@ -72,6 +72,7 @@ function createPublicRoutes(container) {
   const router = express.Router();
 
   const adminController = container.resolve('adminController');
+  const publicController = container.resolve('publicController');
   const paymentController = container.resolve('paymentController');
 
   /**
@@ -79,7 +80,7 @@ function createPublicRoutes(container) {
    * @desc    Get all active competitions (no auth required)
    * @access  Public
    */
-  router.get('/competitions', adminController.getPublicCompetitions);
+  router.get('/competitions', publicController.getPublicCompetitions);
 
   /**
    * @route   GET /api/public/judges
@@ -100,14 +101,14 @@ function createPublicRoutes(container) {
    * @desc    Get public team listings
    * @access  Public
    */
-  router.get('/teams', adminController.getPublicTeams);
+  router.get('/teams', publicController.getPublicTeams);
 
   /**
    * @route   GET /api/public/scores
    * @desc    Get public score data
    * @access  Public
    */
-  router.get('/scores', adminController.getPublicScores);
+  router.get('/scores', publicController.getPublicScores);
 
   /**
    * @route   POST /api/public/save-score

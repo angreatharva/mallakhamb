@@ -7,6 +7,8 @@ import { playerAPI } from '../../services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import CompetitionDisplay from '../../components/CompetitionDisplay';
 import { logger } from '../../utils/logger';
+import { secureStorage } from '../../utils/secureStorage';
+import { getCompetitionIdFromToken } from '../../utils/tokenUtils';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
 import Dropdown from '../../components/Dropdown';
 
@@ -106,6 +108,13 @@ const PlayerDashboard = () => {
     fetchPlayerProfile();
   }, []);
 
+  // `/players/team` requires JWT competition context — refetch after context is set (auto-select, modal, URL).
+  useEffect(() => {
+    if (!currentCompetition?._id) return;
+    fetchPlayerProfile(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when competition id changes only
+  }, [currentCompetition?._id]);
+
   // Show modal if multiple competitions and no current competition selected
   useEffect(() => {
     // Wait for competitions to load
@@ -147,30 +156,42 @@ const PlayerDashboard = () => {
       const profileResponse = await playerAPI.getProfile();
       const profileData = profileResponse.data?.data || profileResponse.data || {};
 
-      // Then try to enrich with competition-scoped team data.
-      try {
-        const teamResponse = await playerAPI.getTeam();
-        const teamPayload = teamResponse.data?.data || teamResponse.data || {};
-        const resolvedTeam = teamPayload.team || null;
-        const hasTeam = !!(resolvedTeam && (resolvedTeam._id || resolvedTeam.id));
+      const token = secureStorage.getItem('player_token');
+      const competitionIdInToken = getCompetitionIdFromToken(token);
 
+      // GET /players/team requires competition in JWT (validateCompetitionContext). Skip until set-competition.
+      if (!competitionIdInToken) {
+        const hasTeam = profileData.team && profileData.team._id;
         setPlayer({
           ...profileData,
-          team: resolvedTeam || profileData.team || null,
-          teamStatus: teamPayload.teamStatus || (hasTeam ? 'Assigned' : 'Not assigned'),
-        });
-      } catch (teamError) {
-        logger.info('Team fetch failed, using profile fallback:', teamError.response?.data?.message);
-        const hasTeam = profileData.team && profileData.team._id;
-        setPlayer({ 
-          ...profileData, 
           teamStatus: hasTeam ? 'Assigned' : 'Not assigned',
         });
+      } else {
+        try {
+          const teamResponse = await playerAPI.getTeam();
+          const teamPayload = teamResponse.data?.data || teamResponse.data || {};
+          const resolvedTeam = teamPayload.team || null;
+          const hasTeam = !!(resolvedTeam && (resolvedTeam._id || resolvedTeam.id));
+
+          setPlayer({
+            ...profileData,
+            team: resolvedTeam || profileData.team || null,
+            teamStatus: teamPayload.teamStatus || (hasTeam ? 'Assigned' : 'Not assigned'),
+          });
+        } catch (teamError) {
+          logger.info('Team fetch failed, using profile fallback:', teamError.response?.data?.error?.message || teamError.response?.data?.message);
+          const hasTeam = profileData.team && profileData.team._id;
+          setPlayer({
+            ...profileData,
+            teamStatus: hasTeam ? 'Assigned' : 'Not assigned',
+          });
+        }
       }
     } catch (error) {
       logger.error('Failed to fetch player profile:', error);
       // Don't show error toast if it's just a competition context issue
-      if (error.response?.data?.code !== 'COMPETITION_CONTEXT_REQUIRED') {
+      const errCode = error.response?.data?.error?.code || error.response?.data?.code;
+      if (errCode !== 'COMPETITION_CONTEXT_REQUIRED') {
         toast.error('Failed to load profile');
       }
     } finally {

@@ -17,19 +17,31 @@ const createPublicRoutes = require('./public.routes');
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Build a mock admin controller where every method is a jest.fn() that
- * responds with 200 { success: true } by default.
+ * Build a mock public controller for score-filter read endpoints.
+ */
+function buildPublicController(overrides = {}) {
+  const handler = (name) =>
+    jest.fn((req, res) => res.status(200).json({ success: true, handler: name }));
+
+  return {
+    getPublicCompetitions: handler('getPublicCompetitions'),
+    getPublicTeams: handler('getPublicTeams'),
+    getPublicScores: handler('getPublicScores'),
+    getPublicRankings: handler('getPublicRankings'),
+    ...overrides,
+  };
+}
+
+/**
+ * Build a mock admin controller for judge/scoring endpoints still on admin routes.
  */
 function buildAdminController(overrides = {}) {
   const handler = (name) =>
     jest.fn((req, res) => res.status(200).json({ success: true, handler: name, competitionId: req.competitionId, user: req.user }));
 
   return {
-    getPublicCompetitions: handler('getPublicCompetitions'),
     getJudges: handler('getJudges'),
     getSubmittedTeams: handler('getSubmittedTeams'),
-    getPublicTeams: handler('getPublicTeams'),
-    getPublicScores: handler('getPublicScores'),
     saveScores: handler('saveScores'),
     ...overrides,
   };
@@ -48,12 +60,13 @@ function buildPaymentController(overrides = {}) {
 }
 
 /**
- * Build a DI container mock that resolves adminController and paymentController.
+ * Build a DI container mock.
  */
-function buildContainer(adminController, paymentController) {
+function buildContainer(adminController, publicController, paymentController) {
   return {
     resolve: (name) => {
       if (name === 'adminController') return adminController;
+      if (name === 'publicController') return publicController;
       if (name === 'paymentController') return paymentController;
       throw new Error(`Unknown service: ${name}`);
     },
@@ -63,10 +76,10 @@ function buildContainer(adminController, paymentController) {
 /**
  * Create a minimal Express app with the public router mounted at /api/public.
  */
-function buildApp(adminController, paymentController) {
+function buildApp(adminController, publicController, paymentController) {
   const app = express();
   app.use(express.json());
-  const container = buildContainer(adminController, paymentController);
+  const container = buildContainer(adminController, publicController, paymentController);
   const publicRouter = createPublicRoutes(container);
   app.use('/api/public', publicRouter);
   return app;
@@ -75,19 +88,20 @@ function buildApp(adminController, paymentController) {
 // ── route delegation tests ────────────────────────────────────────────────────
 
 describe('createPublicRoutes — route delegation', () => {
-  let adminCtrl, paymentCtrl, app;
+  let adminCtrl, publicCtrl, paymentCtrl, app;
 
   beforeEach(() => {
     adminCtrl = buildAdminController();
+    publicCtrl = buildPublicController();
     paymentCtrl = buildPaymentController();
-    app = buildApp(adminCtrl, paymentCtrl);
+    app = buildApp(adminCtrl, publicCtrl, paymentCtrl);
   });
 
-  it('GET /api/public/competitions → adminController.getPublicCompetitions (200)', async () => {
+  it('GET /api/public/competitions → publicController.getPublicCompetitions (200)', async () => {
     const res = await request(app).get('/api/public/competitions');
     expect(res.status).toBe(200);
     expect(res.body.handler).toBe('getPublicCompetitions');
-    expect(adminCtrl.getPublicCompetitions).toHaveBeenCalledTimes(1);
+    expect(publicCtrl.getPublicCompetitions).toHaveBeenCalledTimes(1);
   });
 
   it('GET /api/public/judges → adminController.getJudges (200)', async () => {
@@ -104,18 +118,18 @@ describe('createPublicRoutes — route delegation', () => {
     expect(adminCtrl.getSubmittedTeams).toHaveBeenCalledTimes(1);
   });
 
-  it('GET /api/public/teams → adminController.getPublicTeams (200)', async () => {
+  it('GET /api/public/teams → publicController.getPublicTeams (200)', async () => {
     const res = await request(app).get('/api/public/teams');
     expect(res.status).toBe(200);
     expect(res.body.handler).toBe('getPublicTeams');
-    expect(adminCtrl.getPublicTeams).toHaveBeenCalledTimes(1);
+    expect(publicCtrl.getPublicTeams).toHaveBeenCalledTimes(1);
   });
 
-  it('GET /api/public/scores → adminController.getPublicScores (200)', async () => {
+  it('GET /api/public/scores → publicController.getPublicScores (200)', async () => {
     const res = await request(app).get('/api/public/scores');
     expect(res.status).toBe(200);
     expect(res.body.handler).toBe('getPublicScores');
-    expect(adminCtrl.getPublicScores).toHaveBeenCalledTimes(1);
+    expect(publicCtrl.getPublicScores).toHaveBeenCalledTimes(1);
   });
 
   it('POST /api/public/save-score → adminController.saveScores (200)', async () => {
@@ -140,12 +154,13 @@ describe('createPublicRoutes — route delegation', () => {
 describe('optionalAuth middleware', () => {
   const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-testing-only';
 
-  let adminCtrl, paymentCtrl, app;
+  let adminCtrl, publicCtrl, paymentCtrl, app;
 
   beforeEach(() => {
     adminCtrl = buildAdminController();
+    publicCtrl = buildPublicController();
     paymentCtrl = buildPaymentController();
-    app = buildApp(adminCtrl, paymentCtrl);
+    app = buildApp(adminCtrl, publicCtrl, paymentCtrl);
   });
 
   it('passes through without error when no Authorization header is present', async () => {

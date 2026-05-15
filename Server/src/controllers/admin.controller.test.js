@@ -41,10 +41,6 @@ const buildService = (overrides = {}) => ({
   getTransactions: jest.fn(),
   getTransactionDetails: jest.fn(),
   getPaymentSummary: jest.fn(),
-  getPublicScores: jest.fn(),
-  getPublicTeams: jest.fn(),
-  getPublicCompetitions: jest.fn(),
-  getPublicRankings: jest.fn(),
   ...overrides,
 });
 

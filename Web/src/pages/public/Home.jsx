@@ -134,7 +134,7 @@ export const SaffronButton = ({ children, to, className = '', variant = 'solid',
 // ─── Role data ────────────────────────────────────────────────────────────────
 export const roles = [
   { icon: Users, title: 'Player', loginTo: '/player/login', registerTo: '/player/register', color: COLORS.saffron, desc: 'Register, join a team, and compete.' },
-  { icon: UserCheck, title: 'Team Coach', loginTo: '/coach/login', registerTo: '/coach/register', color: '#FF6B00', desc: 'Manage your team and handle payments.' },
+  { icon: UserCheck, title: 'Team Coach', loginTo: '/coach/login', registerTo: '/coach/register', color: '#22C55E', desc: 'Manage your team and handle payments.' },
   { icon: Shield, title: 'Judge', loginTo: '/judge/login', registerTo: null, color: '#A855F7', desc: 'Score performances and manage results.' },
   { icon: Award, title: 'Admin', loginTo: '/admin/login', registerTo: null, color: '#EF4444', desc: 'Oversee competition operations.' },
 ];

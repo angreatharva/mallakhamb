@@ -577,41 +577,6 @@ const getTransactionDetails = () => {
   ];
 };
 
-// ==================== Public Endpoints ====================
-
-/**
- * Validate get public scores
- */
-const getPublicScores = () => {
-  return [
-    objectId('competitionId', 'param')
-  ];
-};
-
-/**
- * Validate get public teams
- */
-const getPublicTeams = () => {
-  return [
-    objectId('competitionId', 'param')
-  ];
-};
-
-/**
- * Validate get public rankings
- */
-const getPublicRankings = () => {
-  return [
-    objectId('competitionId', 'param'),
-    param('ageGroup')
-      .trim()
-      .notEmpty()
-      .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
-      .withMessage('Invalid age group')
-  ];
-};
-
 module.exports = {
   // Team Management
   getAllTeams,
@@ -649,9 +614,4 @@ module.exports = {
   // Transaction Management
   getTransactions,
   getTransactionDetails,
-  
-  // Public Endpoints
-  getPublicScores,
-  getPublicTeams,
-  getPublicRankings
 };

@@ -426,32 +426,6 @@ function createAdminController(container) {
       res.json({ success: true, data: summary });
     }),
 
-    // ==================== Public Endpoints ====================
-
-    /** @route GET /api/public/scores/:competitionId */
-    getPublicScores: asyncHandler(async (req, res) => {
-      const scores = await adminService.getPublicScores(req.params.competitionId);
-      res.json({ success: true, data: scores });
-    }),
-
-    /** @route GET /api/public/teams/:competitionId */
-    getPublicTeams: asyncHandler(async (req, res) => {
-      const teams = await adminService.getPublicTeams(req.params.competitionId);
-      res.json({ success: true, data: teams });
-    }),
-
-    /** @route GET /api/public/competitions */
-    getPublicCompetitions: asyncHandler(async (req, res) => {
-      const competitions = await adminService.getPublicCompetitions();
-      res.json({ success: true, data: competitions });
-    }),
-
-    /** @route GET /api/public/rankings/:competitionId/:ageGroup */
-    getPublicRankings: asyncHandler(async (req, res) => {
-      const { competitionId, ageGroup } = req.params;
-      const rankings = await adminService.getPublicRankings(competitionId, ageGroup);
-      res.json({ success: true, data: rankings });
-    }),
   };
 }
 

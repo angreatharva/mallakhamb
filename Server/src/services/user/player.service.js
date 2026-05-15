@@ -17,17 +17,21 @@ class PlayerService extends UserService {
    * @param {TeamRepository} teamRepository - Team repository
    * @param {Logger} logger - Logger instance
    * @param {CacheService|null} cacheService - Cache service (optional)
+   * @param {AuthenticationService|null} authenticationService - Authentication service (optional)
+   * @param {CompetitionRepository|null} competitionRepository - Competition repository (optional)
    */
   constructor(
     playerRepository,
     teamRepository,
     logger,
     cacheService = null,
-    authenticationService = null
+    authenticationService = null,
+    competitionRepository = null
   ) {
     super(playerRepository, logger, 'player', cacheService);
     this.teamRepository = teamRepository;
     this.authenticationService = authenticationService;
+    this.competitionRepository = competitionRepository;
   }
 
   async registerPlayer(payload) {
@@ -45,7 +49,48 @@ class PlayerService extends UserService {
   }
 
   async getPlayerProfile(playerId) {
-    return this.getProfile(playerId);
+    const profile = await this.getProfile(playerId);
+    
+    // If ageGroup is null, try to get it from competition registrations
+    if (!profile.ageGroup) {
+      try {
+        // Get competitions where this player is registered
+        const competitionRepository = this.competitionRepository || 
+          (this.authenticationService && this.authenticationService.competitionRepository);
+        
+        if (competitionRepository) {
+          const competitions = await competitionRepository.find({
+            'registeredTeams.players.player': playerId,
+            'registeredTeams.isActive': true
+          });
+          
+          // Find the first competition with this player and extract their age group
+          for (const competition of competitions) {
+            for (const registeredTeam of competition.registeredTeams || []) {
+              if (!registeredTeam.isActive) continue;
+              
+              const playerEntry = (registeredTeam.players || []).find(
+                p => p.player && p.player.toString() === playerId.toString()
+              );
+              
+              if (playerEntry && playerEntry.ageGroup) {
+                profile.ageGroup = playerEntry.ageGroup;
+                break;
+              }
+            }
+            if (profile.ageGroup) break;
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to populate age group from competitions', { 
+          playerId, 
+          error: error.message 
+        });
+        // Continue without age group - not critical
+      }
+    }
+    
+    return profile;
   }
 
   async getPlayerTeam(playerId, competitionId) {

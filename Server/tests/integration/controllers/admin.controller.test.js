@@ -68,10 +68,6 @@ describe('Admin Routes (hard cutover)', () => {
             endAgeGroup: (req, res) => res.json({ success: true, data: { ended: true, ageGroup: req.params.ageGroup } }),
             getAgeGroupStatus: (req, res) => res.json({ success: true, data: [] }),
 
-            getPublicScores: (req, res) => res.json({ success: true, data: [] }),
-            getPublicTeams: (req, res) => res.json({ success: true, data: [] }),
-            getPublicRankings: (req, res) => res.json({ success: true, data: [] }),
-
             getPaymentSummary: (req, res) => res.json({ success: true, data: {} }),
           };
         }

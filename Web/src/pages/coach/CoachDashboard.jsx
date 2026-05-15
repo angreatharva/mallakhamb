@@ -112,8 +112,7 @@ const CoachDashboard = () => {
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
-    await logout();
-    navigate('/coach/login');
+    await logout(navigate);
   };
 
   const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];

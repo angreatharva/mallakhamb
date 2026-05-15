@@ -296,7 +296,8 @@ export const judgeAPI = {
 
 // Public API for viewing scores (no authentication required)
 export const publicAPI = {
-  getTeams: () => publicApi.get('/public/teams'),
+  getCompetitions: () => publicApi.get('/public/competitions'),
+  getTeams: (params) => publicApi.get('/public/teams', { params }),
   getScores: (params) => publicApi.get('/public/scores', { params }),
 };
 
