@@ -42,12 +42,11 @@ const allowedOrigins = config.get('server.corsOrigins') || [];
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow requests with no origin (health checks, server-to-server, curl, etc.)
     if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
-        return callback(new Error('Origin header required'));
-      }
       return callback(null, true);
     }
+    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
