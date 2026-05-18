@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Trophy, Filter, Users, X, Search } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
-import { logger } from '../../utils/logger';
+import { logger } from '@/infrastructure/logger';
 import { ResponsiveTeamFilters } from '../../components/responsive/ResponsiveFilters';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 

@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import apiConfig from '../../../utils/apiConfig';
+import apiConfig from '@/config/api.config';
 
 const BASE_URL = apiConfig.getBaseUrl();
 

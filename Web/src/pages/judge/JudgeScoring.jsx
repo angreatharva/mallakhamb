@@ -8,9 +8,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import apiConfig from '../../utils/apiConfig';
-import { logger } from '../../utils/logger';
-import { secureStorage } from '../../utils/secureStorage';
+import apiConfig from '@/config/api.config';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS, useReducedMotion, FadeIn } from '../public/Home';

@@ -1,9 +1,9 @@
 import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { logger } from '../utils/logger';
-import { COLORS, useReducedMotion } from '../pages/public/Home';
-import { useResponsive } from '../hooks/useResponsive';
+import { logger } from '@/infrastructure/logger';
+import { COLORS, useReducedMotion } from '@/pages/public/Home';
+import { useResponsive } from '@/hooks/useResponsive';
 
 void motion;
 

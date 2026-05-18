@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Filter, X, Search } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
-import { logger } from '../../utils/logger';
+import { logger } from '@/infrastructure/logger';
 import { ResponsiveScoreFilters } from '../../components/responsive/ResponsiveFilters';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 
@@ -176,14 +176,52 @@ const Scores = () => {
   };
 
   const fetchIndividualScores = async () => {
-    if (!selectedGender || !selectedAgeGroup) return;
+    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
     if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
+      const params = { 
+        gender: selectedGender.value, 
+        ageGroup: selectedAgeGroup.value,
+        competitionType: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) 
+      };
       const response = await api.getIndividualScores(params);
-      setScores(response.data.individualScores || []);
-      if (!response.data.individualScores?.length) toast.info('No individual scores found');
+      // Handle response structure: {success: true, data: [...]}
+      const responseData = response.data.data || response.data;
+      const rawScores = Array.isArray(responseData) ? responseData : [];
+      
+      // Transform the data to match the expected structure for ResponsiveIndividualRankings
+      // The API returns players with their scores array, we need to flatten and rank them
+      const transformedScores = [];
+      rawScores.forEach(player => {
+        if (player.scores && Array.isArray(player.scores)) {
+          player.scores.forEach(score => {
+            transformedScores.push({
+              playerId: player.playerId || score.playerId,
+              playerName: player.playerName || score.playerName,
+              teamName: score.teamName || 'Unknown Team',
+              time: score.time,
+              judgeScores: score.judgeScores,
+              averageMarks: score.averageMarks,
+              finalScore: score.finalScore,
+              baseScoreApplied: score.baseScoreApplied,
+              tieBreakNotes: score.tieBreakNotes || '',
+              rank: score.rank
+            });
+          });
+        }
+      });
+      
+      // Sort by final score descending and assign ranks
+      transformedScores.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+      transformedScores.forEach((score, index) => {
+        if (!score.rank) score.rank = index + 1;
+        score.originalRank = index + 1;
+      });
+      
+      setScores(transformedScores);
+      if (!transformedScores.length) toast.info('No individual scores found');
     } catch (error) {
       toast.error('Failed to load individual scores');
       setScores([]);
@@ -193,14 +231,47 @@ const Scores = () => {
   };
 
   const fetchTeamRankings = async () => {
-    if (!selectedGender || !selectedAgeGroup) return;
+    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
     if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
+      const params = { 
+        gender: selectedGender.value, 
+        ageGroup: selectedAgeGroup.value,
+        competitionType: selectedCompetitionType.value,
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) 
+      };
       const response = await api.getTeamRankings(params);
-      setScores(response.data.teamRankings || []);
-      if (!response.data.teamRankings?.length) toast.info('No team rankings found');
+      // Handle response structure: {success: true, data: [...]}
+      const responseData = response.data.data || response.data;
+      const rawTeams = Array.isArray(responseData) ? responseData : [];
+      
+      // Transform the data to match the expected structure for ResponsiveTeamRankings
+      const transformedTeams = rawTeams.map((team, index) => {
+        const playerScores = team.scores || [];
+        const playerCount = playerScores.length;
+        const teamTotalScore = team.totalScore || team.finalScore || 0;
+        const averageTeamScore = playerCount > 0 ? teamTotalScore / playerCount : 0;
+        
+        // Get top 3 players by final score
+        const topPlayerScores = [...playerScores]
+          .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+          .slice(0, 3);
+        
+        return {
+          teamId: team._id,
+          teamName: team.name,
+          playerCount,
+          teamTotalScore,
+          averageTeamScore,
+          topPlayerScores,
+          rank: team.rank || index + 1,
+          originalRank: index + 1
+        };
+      });
+      
+      setScores(transformedTeams);
+      if (!transformedTeams.length) toast.info('No team rankings found');
     } catch (error) {
       toast.error('Failed to load team rankings');
       setScores([]);

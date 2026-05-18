@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { ReceiptIndianRupee, Filter, AlertCircle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
-import { logger } from '../../utils/logger';
+import { logger } from '@/infrastructure/logger';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

@@ -2,9 +2,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, User, Trophy, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCompetition } from '../contexts/CompetitionContext';
-import CompetitionSelector from './CompetitionSelector';
-import { COLORS, useReducedMotion } from '../pages/public/Home';
+import { useCompetition } from '@/contexts/CompetitionContext';
+import CompetitionSelector from '@/components/competition/CompetitionSelector';
+import { COLORS, useReducedMotion } from '@/pages/public/Home';
 
 void motion;
 

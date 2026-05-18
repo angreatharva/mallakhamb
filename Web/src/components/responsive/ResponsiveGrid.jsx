@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
-import { getResponsiveGrid, getResponsiveSpacing } from '../../utils/responsive';
+import { getResponsiveGrid, getResponsiveSpacing } from '@/utils/ui/responsive';
 
 /**
  * ResponsiveGrid component for adaptive layouts

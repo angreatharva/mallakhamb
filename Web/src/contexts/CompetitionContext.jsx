@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import apiConfig from '../utils/apiConfig.js';
-import { getTokenData } from '../utils/tokenUtils.js';
-import { secureStorage } from '../utils/secureStorage.js';
-import { logger } from '../utils/logger.js';
+import apiConfig from '@/config/api.config.js';
+import { getTokenData } from '@/utils/auth/tokenUtils.js';
+import { secureStorage } from '@/utils/auth/secureStorage.js';
+import { logger } from '@/infrastructure/logger.js';
 
 const CompetitionContext = createContext();
 

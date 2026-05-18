@@ -5,9 +5,9 @@ import {
   Users, Zap, AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { coachAPI, playerAPI } from '../../services/api';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { coachAPI, playerAPI } from '@/services/api';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { motion, AnimatePresence, useInView } from 'framer-motion';

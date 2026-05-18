@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Filter, UserPlus, Save, Edit, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
-import { logger } from '../../utils/logger';
-import Dropdown from '../../components/Dropdown';
+import { logger } from '@/infrastructure/logger';
+import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 

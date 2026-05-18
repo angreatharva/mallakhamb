@@ -9,8 +9,8 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 
 // Import design system components
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -20,9 +20,9 @@ import { ShieldOrnament, GradientText } from '../../components/design-system/orn
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // Import API service
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionSelectionScreen from '../../components/CompetitionSelectionScreen';
+import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 
 const EASE = [0.22, 1, 0.36, 1];
 

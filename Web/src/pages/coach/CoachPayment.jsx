@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { coachAPI } from '../../services/api';
+import { coachAPI } from '@/services/api';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
-import { logger } from '../../utils/logger';
-import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
+import { logger } from '@/infrastructure/logger';
+import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 
 const CoachPayment = () => {
   const navigate = useNavigate();

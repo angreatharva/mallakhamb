@@ -98,4 +98,4 @@ export {
   matchesBreakpoint,
   isTouchDevice,
   isHoverDevice,
-} from '../../utils/responsive';
+} from '@/utils/ui/responsive';

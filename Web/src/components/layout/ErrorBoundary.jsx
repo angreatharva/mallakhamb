@@ -1,6 +1,6 @@
 // Error boundary component for graceful error handling
 import React from 'react';
-import { logger } from '../utils/logger';
+import { logger } from '@/infrastructure/logger';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {

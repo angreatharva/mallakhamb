@@ -51,32 +51,29 @@
 
 ## Project Structure
 
+See [architecture.md](./architecture.md) for the full layered layout. Summary:
+
 ```
 Web/
+├── docs/
+├── tests/
 ├── src/
-│   ├── assets/                  # Images (BHA.png, main-home.jpg, Mallakhamb.png)
+│   ├── config/                  # api.config.js
+│   ├── routes/                  # lazy-pages.js, AppRoutes
+│   ├── middleware/              # protected-route.jsx
+│   ├── pages/                   # Role-based views (lazy-loaded)
 │   ├── components/
-│   │   ├── magicui/             # Animated UI (BentoGrid, HyperText, PixelImage, TextReveal)
-│   │   ├── responsive/          # Responsive wrappers (Container, Form, Table, Grid, etc.)
-│   │   ├── CompetitionDisplay.jsx
-│   │   ├── CompetitionSelectionScreen.jsx
-│   │   ├── CompetitionSelector.jsx
-│   │   ├── ConfirmDialog.jsx
-│   │   ├── Dropdown.jsx
-│   │   ├── ErrorBoundary.jsx
-│   │   ├── Navbar.jsx
-│   │   ├── ProtectedRoute.jsx
-│   │   └── SafeText.jsx         # XSS-safe text renderer (DOMPurify)
+│   │   ├── layout/              # Navbar, ErrorBoundary
+│   │   ├── competition/         # CompetitionSelector, etc.
+│   │   ├── auth/                # Dropdown, ConfirmDialog, SafeText
+│   │   ├── design-system/
+│   │   └── responsive/
 │   ├── contexts/
-│   │   ├── CompetitionContext.jsx
-│   │   └── RouteContext.jsx
 │   ├── hooks/
-│   │   ├── useAgeGroups.js
-│   │   ├── useRateLimit.js
-│   │   └── useResponsive.js
-│   ├── pages/                   # 26 page components (lazy-loaded)
-│   ├── services/
-│   │   └── api.js               # Axios instance + all API modules
+│   ├── services/                # api-client + domain *.api.js
+│   ├── validators/
+│   ├── errors/
+│   ├── infrastructure/        # logger
 │   ├── utils/
 │   │   ├── apiCache.js          # In-memory cache (public endpoints only)
 │   │   ├── apiConfig.js         # Base URL from VITE_API_URL

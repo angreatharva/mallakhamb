@@ -8,12 +8,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAuth } from '../../contexts/AuthContext';
-import CompetitionDisplay from '../../components/CompetitionDisplay';
-import CompetitionSelector from '../../components/CompetitionSelector';
-import Dropdown from '../../components/Dropdown';
+import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import CompetitionSelector from '@/components/competition/CompetitionSelector';
+import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useRouteContext } from '../../contexts/RouteContext';
 import AdminTeams from '../admin/AdminTeams';
@@ -22,8 +22,8 @@ import AdminJudges from '../admin/AdminJudges';
 import AdminTransactions from '../admin/AdminTransactions';
 import SuperAdminManagement from '../superadmin/SuperAdminManagement';
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
-import { logger } from '../../utils/logger';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import { logger } from '@/infrastructure/logger';
+import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import BHALogo from '../../assets/BHA.png';
 
 // Design system imports

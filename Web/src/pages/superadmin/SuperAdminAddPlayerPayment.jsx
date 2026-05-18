@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { superAdminAPI } from '../../services/api';
+import { superAdminAPI } from '@/services/api';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
-import { logger } from '../../utils/logger';
-import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
+import { logger } from '@/infrastructure/logger';
+import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';

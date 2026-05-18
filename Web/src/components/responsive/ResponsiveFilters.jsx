@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import Dropdown from '../Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 import { ADMIN_COLORS } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;

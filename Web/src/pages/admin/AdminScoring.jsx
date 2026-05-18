@@ -5,16 +5,16 @@ import { io } from 'socket.io-client';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { logger } from '../../utils/logger';
-import { secureStorage } from '../../utils/secureStorage';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ScoreCalculationDisplay from '../../components/admin/ScoreCalculationDisplay';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import ConfirmDialog from '@/components/auth/ConfirmDialog';
 
 const AdminScoring = () => {
     const location = useLocation();

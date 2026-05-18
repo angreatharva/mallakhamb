@@ -10,12 +10,12 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { useRateLimit } from '../../hooks/useRateLimit';
-import { loginSchema, judgeLoginSchema } from '../../utils/validation';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { loginSchema, judgeLoginSchema } from '@/validators/form.validator';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 import axios from 'axios';
-import apiConfig from '../../utils/apiConfig';
-import AccountLockoutMessage from '../../components/AccountLockoutMessage';
+import apiConfig from '@/config/api.config';
+import AccountLockoutMessage from '@/components/auth/AccountLockoutMessage';
 
 // Import design system components
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -35,9 +35,9 @@ import {
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // Import API services
-import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '../../services/api';
+import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionSelectionScreen from '../../components/CompetitionSelectionScreen';
+import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 
 const EASE = [0.22, 1, 0.36, 1];
 

@@ -1,5 +1,5 @@
 // API Configuration utility - uses VITE_API_URL from .env
-import { logger } from './logger.js';
+import { logger } from '@/infrastructure/logger.js';
 
 class ApiConfig {
   constructor() {

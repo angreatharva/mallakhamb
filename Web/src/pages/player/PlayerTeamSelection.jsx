@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, ArrowRight, Search, CheckCircle2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { playerAPI } from '../../services/api';
-import { logger } from '../../utils/logger';
+import { playerAPI } from '@/services/api';
+import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 
 const COLORS = {

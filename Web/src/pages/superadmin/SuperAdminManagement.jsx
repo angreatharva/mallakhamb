@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { superAdminAPI } from '../../services/api';
+import { superAdminAPI } from '@/services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
-import { getCompetitionPlayerFeeRupees } from '../../utils/competitionFee';
+import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {

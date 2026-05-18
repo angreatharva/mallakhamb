@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
-import { secureStorage } from '../utils/secureStorage';
+import { secureStorage } from '@/utils/auth/secureStorage';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();

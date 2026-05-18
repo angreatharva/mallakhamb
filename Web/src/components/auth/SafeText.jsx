@@ -1,4 +1,4 @@
-import { sanitizeInput } from '../utils/sanitize';
+import { sanitizeInput } from '@/utils/security/sanitize';
 
 /**
  * SafeText component - Displays user-generated content safely

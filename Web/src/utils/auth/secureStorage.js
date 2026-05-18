@@ -1,6 +1,6 @@
 // Simple encrypted storage wrapper for sensitive data
 import CryptoJS from 'crypto-js';
-import { logger } from './logger';
+import { logger } from '@/infrastructure/logger.js';
 
 // Generate a more robust encryption key
 const getEncryptionKey = () => {

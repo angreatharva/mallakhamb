@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCompetition } from '../contexts/CompetitionContext';
-import { coachAPI } from '../services/api';
+import { useCompetition } from '@/contexts/CompetitionContext';
+import { coachAPI } from '@/services/api';
 import toast from 'react-hot-toast';
-import { logger } from '../utils/logger';
-import { secureStorage } from '../utils/secureStorage';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
 import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, useReducedMotion, GradientText, FadeIn } from '../pages/public/Home';
+import { COLORS, useReducedMotion, GradientText, FadeIn } from '@/pages/public/Home';
 
 void motion;
 

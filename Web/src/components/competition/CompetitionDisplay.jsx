@@ -1,9 +1,9 @@
 import React from 'react';
-import { useCompetition } from '../contexts/CompetitionContext';
+import { useCompetition } from '@/contexts/CompetitionContext';
 import { Calendar, MapPin, Trophy, Zap, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import SafeText from './SafeText';
-import { COLORS } from '../pages/public/Home';
+import SafeText from '@/components/auth/SafeText';
+import { COLORS } from '@/pages/public/Home';
 
 void motion;
 

@@ -4,23 +4,24 @@ import { useForm } from 'react-hook-form';
 import {
   ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
   UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
+  BarChart2, Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
-import { HexMesh, RadialBurst } from '../../components/design-system/backgrounds';
+import { HexMesh, RadialBurst, HexGrid } from '../../components/design-system/backgrounds';
 import { CoachOrnament, GradientText } from '../../components/design-system/ornaments';
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // API services
-import { coachAPI, playerAPI } from '../../services/api';
+import { coachAPI, playerAPI } from '@/services/api';
 
 const EASE = [0.22, 1, 0.36, 1];
 

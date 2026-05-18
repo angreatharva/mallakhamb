@@ -3,17 +3,17 @@ import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle, LogOut, User }
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { coachAPI } from '../../services/api';
+import { coachAPI } from '@/services/api';
 import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAuth } from '../../contexts/AuthContext';
-import CompetitionDisplay from '../../components/CompetitionDisplay';
-import CompetitionSelector from '../../components/CompetitionSelector';
+import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
 import BHALogo from '../../assets/BHA.png';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 
 const CoachDashboard = () => {
   const navigate = useNavigate();

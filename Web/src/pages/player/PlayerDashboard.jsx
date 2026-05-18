@@ -3,14 +3,14 @@ import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { playerAPI } from '../../services/api';
+import { playerAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import CompetitionDisplay from '../../components/CompetitionDisplay';
-import { logger } from '../../utils/logger';
-import { secureStorage } from '../../utils/secureStorage';
-import { getCompetitionIdFromToken } from '../../utils/tokenUtils';
+import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (

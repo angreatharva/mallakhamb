@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { logger } from '../utils/logger';
+import { logger } from '@/infrastructure/logger';
 
 /**
  * Unified API call hook with consistent error handling
