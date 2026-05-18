@@ -32,6 +32,8 @@ services:
       - key: RESEND_FROM_EMAIL
         sync: false
       # Frontend URLs for CORS (where requests come from)
+      - key: CORS_ORIGINS
+        value: https://mallakhamb-web.onrender.com
       - key: CLIENT_URL
         value: https://mallakhamb-web.onrender.com
       - key: FRONTEND_URL
