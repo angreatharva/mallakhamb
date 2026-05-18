@@ -8,9 +8,11 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import apiConfig from '../../utils/apiConfig';
-import { logger } from '../../utils/logger';
-import { secureStorage } from '../../utils/secureStorage';
+import apiConfig from '@/config/api.config';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
@@ -186,6 +188,8 @@ const CheckRow = ({ checked, onChange, label }) => (
 //  Main component 
 const JudgeScoring = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -253,7 +257,7 @@ const JudgeScoring = () => {
       if (judgeInfo && selectedCompetitionType) {
         const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
         if (joinedRoomRef.current !== roomId) {
-          newSocket.emit('join_scoring_room', roomId);
+          newSocket.emit('join_scoring_room', { roomId });
           joinedRoomRef.current = roomId;
           logger.info(`Joined scoring room: ${roomId}`);
         }
@@ -266,7 +270,38 @@ const JudgeScoring = () => {
     });
     newSocket.on('connect_error', (error) => {
       logger.error('Socket connection error:', error);
-      toast.error('Failed to connect to server');
+      // Handle authorization errors (Requirement 4.6)
+      if (error.message && (error.message.includes('authorization') || error.message.includes('Unauthorized'))) {
+        toast.error('Not authorized to access scoring room');
+        navigate('/judge/dashboard');
+      } else {
+        toast.error('Failed to connect to server');
+      }
+    });
+    
+    // Handle room join authorization errors (Requirement 4.2)
+    newSocket.on('error', (error) => {
+      logger.error('Socket error:', error);
+      if (error.message === 'Not authorized to join this room') {
+        toast.error('You do not have permission to access this scoring room');
+        navigate('/judge/scores');
+      }
+    });
+    
+    // Handle score update authorization errors (Requirement 4.3)
+    newSocket.on('score_update_error', (error) => {
+      logger.error('Score update error:', error);
+      if (error.message === 'Only judges can update scores') {
+        toast.error('Only judges can submit scores');
+      }
+    });
+    
+    // Handle scores saved authorization errors (Requirement 4.4)
+    newSocket.on('scores_saved_error', (error) => {
+      logger.error('Scores saved error:', error);
+      if (error.message === 'Unauthorized to save scores') {
+        toast.error('You do not have permission to save scores');
+      }
     });
     return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
   }, [judgeInfo, selectedCompetitionType]);
@@ -275,7 +310,7 @@ const JudgeScoring = () => {
     if (!socket?.connected || !judgeInfo || !selectedCompetitionType) return;
     const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
     if (joinedRoomRef.current !== roomId) {
-      socket.emit('join_scoring_room', roomId);
+      socket.emit('join_scoring_room', { roomId });
       joinedRoomRef.current = roomId;
     }
   }, [socket, judgeInfo, selectedCompetitionType]);
@@ -289,10 +324,15 @@ const JudgeScoring = () => {
       setLoading(true);
       const token = secureStorage.getItem('judge_token');
       const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params: { gender: judgeInfo.gender, ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType },
+        params: { 
+          competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+          gender: judgeInfo.gender, 
+          ageGroup: judgeInfo.ageGroup, 
+          competitionType: selectedCompetitionType 
+        },
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
       });
-      setTeams(response.data.teams || []);
+      setTeams(response.data.data || []);
       setSelectedTeam(null); setSelectedPlayer(null); setPlayers([]);
     } catch (error) {
       logger.error('Error fetching teams:', error);
@@ -359,6 +399,7 @@ const JudgeScoring = () => {
         judgeType: judgeInfo.judgeType, score: parseFloat(finalScore),
         teamId: selectedTeam._id, gender: judgeInfo.gender,
         ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
+        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         breakdown: { difficulty: scores.difficulty, combination: scores.combination, execution: parseFloat(scores.execution || 0), originality: parseFloat(scores.originality || 0) }
       };
       await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
@@ -376,11 +417,10 @@ const JudgeScoring = () => {
     } finally { setSubmitting(false); }
   };
 
-  const handleLogout = () => {
-    secureStorage.removeItem('judge_token');
-    secureStorage.removeItem('judge_user');
+  const handleLogout = async () => {
+    clearCompetitionContext?.();
+    await logout(navigate);
     toast.success('Logged out successfully');
-    navigate('/judge/login');
   };
 
   if (!judgeInfo) return null;

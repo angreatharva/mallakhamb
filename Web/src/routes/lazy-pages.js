@@ -1,0 +1,24 @@
+import { lazy } from 'react';
+
+export const Home = lazy(() => import('@/pages/public/Home'));
+export const PlayerLogin = lazy(() => import('@/pages/player/PlayerLogin'));
+export const PlayerTeamSelection = lazy(() => import('@/pages/player/PlayerTeamSelection'));
+export const PlayerDashboard = lazy(() => import('@/pages/player/PlayerDashboard'));
+export const CoachLogin = lazy(() => import('@/pages/coach/CoachLogin'));
+export const CoachCreateTeam = lazy(() => import('@/pages/coach/CoachCreateTeam'));
+export const CoachDashboard = lazy(() => import('@/pages/coach/CoachDashboard'));
+export const CoachPayment = lazy(() => import('@/pages/coach/CoachPayment'));
+export const AdminLogin = lazy(() => import('@/pages/admin/AdminLogin'));
+export const AdminRegister = lazy(() => import('@/pages/admin/AdminRegister'));
+export const SuperAdminLogin = lazy(() => import('@/pages/superadmin/SuperAdminLogin'));
+export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
+export const SuperAdminDashboard = lazy(() => import('@/pages/superadmin/SuperAdminDashboard'));
+export const SuperAdminAddPlayerPayment = lazy(() => import('@/pages/superadmin/SuperAdminAddPlayerPayment'));
+export const AdminTeams = lazy(() => import('@/pages/admin/AdminTeams'));
+export const AdminScoring = lazy(() => import('@/pages/admin/AdminScoring'));
+export const JudgeLogin = lazy(() => import('@/pages/judge/JudgeLogin'));
+export const JudgeScoring = lazy(() => import('@/pages/judge/JudgeScoring'));
+export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword'));
+export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));
+export const PublicScores = lazy(() => import('@/pages/public/PublicScores'));
+export const UnifiedRegister = lazy(() => import('@/pages/unified/UnifiedRegister'));

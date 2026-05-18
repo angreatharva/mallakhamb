@@ -1,8 +1,8 @@
 # Mallakhamb Competition Management System — Complete API Documentation
 
-**Version:** 1.0.0  
-**Last Updated:** March 24, 2026  
-**Status:** ✅ Production Ready — 23/24 Security Issues Resolved
+**Version:** 1.1.0  
+**Last Updated:** April 22, 2026  
+**Status:** ✅ Production Ready — 23/24 Security Issues Resolved + Old-Config Migration Complete
 
 ---
 
@@ -80,13 +80,63 @@ The Mallakhamb Competition Management System is a comprehensive Node.js/Express 
 
 ```
 Server/
+├── src/                               # Refactored layered architecture
+│   ├── config/
+│   │   └── config-manager.js          # Centralized env config with validation
+│   ├── controllers/                   # Thin HTTP handlers (delegate to services)
+│   │   ├── health.controller.js       # Health check & metrics endpoints
+│   │   └── ...
+│   ├── services/
+│   │   ├── auth/                      # AuthenticationService, AuthorizationService, TokenService, OTPService
+│   │   ├── user/                      # PlayerService, CoachService, AdminService
+│   │   ├── competition/               # CompetitionService, RegistrationService
+│   │   ├── team/                      # TeamService
+│   │   ├── scoring/                   # ScoringService, CalculationService
+│   │   ├── email/                     # EmailService with Nodemailer/Resend adapters
+│   │   ├── cache/                     # In-memory LRU CacheService
+│   │   └── feature-flags/             # FeatureFlagService
+│   ├── repositories/                  # Data access layer (Mongoose, .lean())
+│   │   ├── base.repository.js
+│   │   ├── player.repository.js
+│   │   ├── coach.repository.js
+│   │   ├── admin.repository.js
+│   │   ├── judge.repository.js
+│   │   ├── competition.repository.js
+│   │   ├── team.repository.js
+│   │   ├── score.repository.js
+│   │   └── transaction.repository.js
+│   ├── middleware/                    # Express middleware (security, auth, validation, etc.)
+│   ├── routes/                        # Route definitions with DI-injected controllers
+│   │   ├── health.routes.js           # /health/* endpoints
+│   │   └── ...
+│   ├── socket/
+│   │   ├── socket.manager.js          # Socket.IO initialization & auth
+│   │   └── handlers/                  # ScoringHandler, NotificationHandler
+│   ├── validators/                    # express-validator schemas
+│   ├── errors/                        # Domain error classes (ValidationError, etc.)
+│   ├── utils/
+│   │   ├── auth/                      # Password, token, OTP utilities
+│   │   ├── data/                      # Pagination, ObjectId utilities
+│   │   ├── security/                  # Account lockout, token invalidation
+│   │   └── validation/                # Sanitization, score validation
+│   ├── infrastructure/
+│   │   ├── di-container.js            # Dependency injection container
+│   │   ├── bootstrap.js               # Wires all DI registrations
+│   │   ├── logger.js                  # Winston structured logger
+│   │   ├── health-monitor.js          # Health checks (DB, memory, email)
+│   │   ├── metrics-collector.js       # Prometheus-compatible metrics
+│   │   ├── graceful-shutdown.js       # SIGTERM/SIGINT handler
+│   │   └── database/
+│   │       ├── connection.js          # MongoDB connection pool
+│   │       └── migration-runner.js    # Database migration runner
+│   └── migrations/                    # Versioned DB migrations
 ├── config/
-│   ├── db.js                          # MongoDB connection + pooling
+│   ├── db.js                          # Legacy MongoDB connection + pooling
 │   ├── server.config.js               # CORS origins, port, env
 │   └── ngrok.setup.js                 # Dev tunnel (disabled in prod)
-├── controllers/
+├── controllers/                       # Legacy controllers (being migrated)
 │   ├── adminController.js
-│   ├── authController.js              # Forgot/reset password, logout, competition context
+│   ├── authController.js
 │   ├── coachController.js
 │   ├── judgeController.js
 │   ├── playerController.js
@@ -133,7 +183,23 @@ Server/
 │   └── validateEnv.js
 ├── scripts/
 │   ├── createAdmin.js
-│   └── createSuperAdmin.js
+│   ├── createSuperAdmin.js
+│   └── migrate.js                     # Migration CLI (migrate:up, migrate:down, migrate:status)
+├── docs/                              # Architecture & developer documentation
+│   ├── architecture.md
+│   ├── api-documentation.md
+│   ├── dependency-injection-guide.md
+│   ├── deployment-guide.md
+│   ├── migration-guide.md
+│   ├── testing-guide.md
+│   └── troubleshooting-guide.md
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/
+│   ├── fixtures/
+│   ├── mocks/
+│   └── helpers/
 ├── logs/
 │   ├── access.log
 │   └── security.log
@@ -172,7 +238,7 @@ NGROK_AUTH_TOKEN=
 ```
 
 ### Validation
-`utils/validateEnv.js` runs at startup before any other initialization. Missing required vars or a `JWT_SECRET` shorter than 32 characters causes immediate `process.exit(1)`.
+`src/config/config-manager.js` runs configuration validation at startup. Missing required vars or a `JWT_SECRET` shorter than 32 characters causes immediate failure.
 
 ### Email Service Setup
 
@@ -184,7 +250,7 @@ NGROK_AUTH_TOKEN=
 **Resend Alternative (Recommended):**
 - Sign up at resend.com
 - Configure RESEND_API_KEY in .env
-- See `utils/resendService.js` and `EMAIL_README.md`
+- See `src/services/email/` (Resend adapter) and `Server/docs/deployment-guide.md`
 
 ---
 
@@ -458,10 +524,14 @@ Judge (1) ←→ (Many) Score (contributions)
 
 ## Authentication & Authorization
 
+### Architecture
+
+Authentication is handled by the `AuthenticationService` and `TokenService` in the service layer. The `authMiddleware` in the presentation layer verifies tokens and loads the user, but delegates all business logic to services.
+
 ### JWT Tokens
-- Expiry: 7 days
+- Expiry: 24h (configurable via `JWT_EXPIRES_IN`)
 - Payload: `userId`, `userType`, `currentCompetition` (optional), `iat`
-- Secret: minimum 32 characters, validated at startup
+- Secret: minimum 32 characters, validated at startup by `ConfigManager`
 
 **JWT Token Structure:**
 ```javascript
@@ -661,7 +731,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ### 5. Admin Manages Competition
 
 **Step 1: Admin Login**
-- Endpoint: `POST /api/admin/login`
+- Endpoint: `POST /api/auth/admin/login`
 - Returns: JWT token
 
 **Step 2: Select Competition**
@@ -670,11 +740,11 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 - Sets competition context in JWT
 
 **Step 3: View Dashboard**
-- Endpoint: `GET /api/admin/dashboard`
+- Endpoint: `GET /api/admin/dashboard/stats`
 - Shows: Total teams, players, judges
 
 **Step 4: View Submitted Teams**
-- Endpoint: `GET /api/admin/submitted-teams?gender=Male&ageGroup=U14`
+- Endpoint: `GET /api/admin/teams/submitted`
 - Filters by gender and age group
 - Shows teams ready for competition
 
@@ -696,7 +766,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ```json
 {
   "gender": "Male",
-  "ageGroup": "U14",
+  "ageGroup": "Under14",
   "competitionTypes": ["competition_1", "competition_2"],
   "judges": [
     {
@@ -711,7 +781,7 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 ```
 
 **Step 6: Start Age Group Competition**
-- Endpoint: `POST /api/admin/competition/age-group/start`
+- Endpoint: `POST /api/admin/age-groups/:ageGroup/start`
 - Required: gender, ageGroup, competitionType
 - Validates: Minimum 3 judges assigned
 - Locks judge assignments (cannot modify after start)
@@ -968,7 +1038,8 @@ Authorization: Bearer <jwt_token>
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/login` | Login (account lockout enforced) |
+| POST | `/register` | **[NEW]** Register admin account (12+ char password, rate limited) |
+| POST | `/login` | **[UPDATED]** Login with email/password (account lockout enforced, rate limited) |
 | GET | `/profile` | Get profile |
 | GET | `/dashboard` | Dashboard stats |
 | GET | `/teams` | All teams in competition |
@@ -983,7 +1054,7 @@ Authorization: Bearer <jwt_token>
 | DELETE | `/judges/:judgeId` | Delete judge |
 | POST | `/competition/age-group/start` | Start age group competition |
 | GET | `/scores` | Get scores |
-| POST | `/scores/save` | Save complete team scores |
+| POST | `/scores/save` | **[UPDATED]** Save complete team scores with automatic calculation |
 | GET | `/scores/teams` | View team scores |
 | GET | `/scores/individual` | Individual rankings |
 | GET | `/scores/team-rankings` | Team rankings |
@@ -991,6 +1062,8 @@ Authorization: Bearer <jwt_token>
 | GET | `/transactions` | Payment transactions |
 
 ### Super Admin (`/api/superadmin`)
+
+**Note:** The super admin router is now mounted at both `/api/super-admin` (legacy) and `/api/superadmin` (new) for backward compatibility.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -1005,7 +1078,7 @@ Authorization: Bearer <jwt_token>
 | PUT | `/coaches/:coachId/status` | Activate/Deactivate coach |
 | GET | `/teams` | List all teams |
 | DELETE | `/teams/:teamId` | Delete team with scores |
-| POST | `/players/add` | Add player to team |
+| POST | `/players/add` | **[NEW]** Add player to team (atomic with transaction) |
 | GET | `/competitions` | List all competitions |
 | POST | `/competitions` | Create competition |
 | GET | `/competitions/:id` | Get competition |
@@ -1019,7 +1092,7 @@ Authorization: Bearer <jwt_token>
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/login` | Login (account lockout enforced) |
+| POST | `/login` | **[UPDATED]** Login with username/password (account lockout enforced) |
 | GET | `/competitions/assigned` | Assigned competitions |
 | POST | `/set-competition` | Set competition context |
 | GET | `/teams` | Available teams for scoring |
@@ -1027,39 +1100,547 @@ Authorization: Bearer <jwt_token>
 
 ### Public (`/api/public`)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/competitions` | View ongoing competitions |
-| GET | `/scores` | View all scores |
-| GET | `/teams` | View submitted teams |
-| GET | `/submitted-teams` | Filtered submitted teams |
-| GET | `/judges` | View judge assignments |
-| POST | `/save-score` | Submit score (public interface) |
-| POST | `/payments/razorpay/webhook` | Reconcile Razorpay `payment.captured` / `payment.failed` events |
-
-### Health (`/api`)
+**[NEW SECTION]** — Public endpoints accessible without authentication. Optional JWT authentication supported for enhanced features.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
+| GET | `/competitions` | View ongoing competitions (no auth required) |
+| GET | `/judges` | View judge assignments (optional auth for filtering) |
+| GET | `/submitted-teams` | View submitted teams (optional auth for competition context) |
+| GET | `/teams` | View public team listings (no auth required) |
+| GET | `/scores` | View all scores (no auth required) |
+| POST | `/save-score` | Submit score (optional auth for competition context) |
+| POST | `/payments/razorpay/webhook` | Razorpay webhook handler (HMAC-SHA256 verified) |
+
+**Optional Authentication:**
+- Endpoints marked "optional auth" accept JWT tokens in the `Authorization: Bearer <token>` header
+- If a valid token is provided, user and competition context are attached to the request
+- If no token or invalid token, the request proceeds without authentication
+- This allows public access while providing enhanced features for authenticated users
+
+**Webhook Security:**
+- `/payments/razorpay/webhook` verifies HMAC-SHA256 signature using `RAZORPAY_WEBHOOK_SECRET`
+- Handles `payment.captured` and `payment.failed` events
+- Updates team payment status in competition
+- Returns 200 for unknown event types (idempotent)
+- Uses timing-safe comparison to prevent timing attacks
+
+### Health (`/health`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health/live` | Liveness probe — returns 200 if server process is running |
+| GET | `/health/ready` | Readiness probe — returns 200 if server is ready to accept traffic (DB connected) |
+| GET | `/health` | Detailed health check — database, memory, email service status |
+| GET | `/health/metrics` | Performance metrics — request counts, response times, error rates, cache stats |
+| GET | `/health/metrics?format=prometheus` | Same metrics in Prometheus text format |
+
+#### Health Endpoint Details
+
+**GET /health/live** — Liveness Probe
+
+Returns `200 OK` as long as the Node.js process is running. Used by container orchestrators (Kubernetes, Docker) to decide whether to restart the container.
+
+```json
+{
+  "status": "alive",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "uptime": 3600
+}
+```
+
+**GET /health/ready** — Readiness Probe
+
+Returns `200 OK` when the server is ready to serve traffic (database connected). Returns `503 Service Unavailable` when the database is not connected. Used by load balancers to route traffic.
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "state": "connected",
+      "host": "cluster0.mongodb.net",
+      "responseTime": 12
+    }
+  }
+}
+```
+
+**GET /health** — Detailed Health Status
+
+Returns comprehensive health information for all components. Returns `200 OK` when healthy, `503 Service Unavailable` when any critical component is unhealthy.
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-04-17T10:00:00.000Z",
+  "uptime": 3600,
+  "duration": 45,
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "state": "connected",
+      "host": "cluster0.mongodb.net",
+      "name": "sports-event-app",
+      "responseTime": 12,
+      "connections": { "current": 5 }
+    },
+    "memory": {
+      "status": "healthy",
+      "heap": {
+        "used": 128,
+        "total": 256,
+        "usagePercent": 50
+      },
+      "rss": 180,
+      "system": {
+        "used": 2048,
+        "total": 8192,
+        "free": 6144,
+        "usagePercent": 25
+      }
+    },
+    "email": {
+      "status": "healthy",
+      "configured": true,
+      "provider": "nodemailer"
+    },
+    "uptime": {
+      "application": "1h 0m 0s",
+      "applicationSeconds": 3600,
+      "process": "1h 0m 0s",
+      "processSeconds": 3600,
+      "startTime": "2026-04-17T09:00:00.000Z"
+    },
+    "process": {
+      "pid": 12345,
+      "nodeVersion": "v18.20.0",
+      "platform": "linux",
+      "arch": "x64",
+      "environment": "production"
+    }
+  }
+}
+```
+
+**GET /health/metrics** — Performance Metrics (JSON)
+
+Returns application performance metrics. No authentication required.
+
+```json
+{
+  "uptime": 3600,
+  "requests": {
+    "total": 1500,
+    "byEndpoint": {
+      "GET /api/health/live": 300,
+      "POST /api/players/login": 120
+    },
+    "byStatus": {
+      "200": 1400,
+      "400": 80,
+      "500": 20
+    },
+    "responseTimes": {
+      "GET /api/health/live": {
+        "p50": 5.2,
+        "p95": 18.4,
+        "p99": 45.1,
+        "min": 2.1,
+        "max": 120.3,
+        "avg": 7.8
+      }
+    }
+  },
+  "responseTimes": {
+    "count": 1500,
+    "p50": 12,
+    "p95": 85,
+    "p99": 210
+  },
+  "errors": {
+    "total": 100,
+    "byType": {
+      "ValidationError": 80,
+      "AuthenticationError": 15,
+      "NotFoundError": 5
+    }
+  },
+  "database": {
+    "queryCount": 4500,
+    "errorCount": 3,
+    "errorRate": "0.07%",
+    "queries": 4500,
+    "errors": 3,
+    "averageTime": 8
+  },
+  "cache": {
+    "hits": 1200,
+    "misses": 300,
+    "total": 1500,
+    "hitRate": "80.00%"
+  },
+  "sockets": {
+    "active": 12,
+    "totalConnections": 45,
+    "totalDisconnections": 33
+  },
+  "socketio": {
+    "activeConnections": 12,
+    "totalEvents": 890
+  }
+}
+```
+
+**GET /health/metrics?format=prometheus** — Performance Metrics (Prometheus)
+
+Returns metrics in [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/) for scraping by Prometheus or compatible monitoring systems.
+
+```
+# HELP process_uptime_seconds Process uptime in seconds
+# TYPE process_uptime_seconds gauge
+process_uptime_seconds 3600
+
+# HELP http_requests_total Total number of HTTP requests
+# TYPE http_requests_total counter
+http_requests_total 1500
+
+# HELP http_response_time_ms HTTP response time in milliseconds
+# TYPE http_response_time_ms summary
+http_response_time_ms{quantile="0.5"} 12
+http_response_time_ms{quantile="0.95"} 85
+http_response_time_ms{quantile="0.99"} 210
+http_response_time_ms_count 1500
+
+# HELP cache_hit_rate Cache hit rate (0-1)
+# TYPE cache_hit_rate gauge
+cache_hit_rate 0.8000
+
+# HELP socket_connections_active Active Socket.IO connections
+# TYPE socket_connections_active gauge
+socket_connections_active 12
+```
+
+### Debug (`/api/debug`) — Development Only
+
+| Method | Path | Description |
+|--------|------|-------------|
 | GET | `/debug/cors` | CORS test (development only) |
 | GET | `/debug/env` | Env check (development only) |
 | POST | `/debug/test-post` | POST test (development only) |
 | POST | `/debug/test-email` | Email test (development only) |
 
+> **Note:** All `/api/debug/*` routes return `404 Not Found` in production (`NODE_ENV=production`).
+
 ### Endpoint Count by Category
 
 | Category | Endpoints | Description |
 |----------|-----------|-------------|
-| Health Check | 5 | System health monitoring |
+| Health Check | 5 | Liveness, readiness, detailed health, metrics (JSON + Prometheus) |
 | Auth | 5 | Authentication & password reset |
 | Player | 6 | Player registration & management |
 | Coach | 15 | Team & player management |
-| Admin | 21 | Competition management |
-| Super Admin | 20+ | System-wide management |
-| Judge | 5 | Scoring operations |
-| Public | 6 | Public viewing |
-| **Total** | **90+** | Complete API coverage |
+| Admin | 23 | Competition management (includes 2 new auth endpoints) |
+| Super Admin | 21+ | System-wide management (includes new player add endpoint) |
+| Judge | 5 | Scoring operations (updated login) |
+| Public | 7 | Public viewing (new section with 7 endpoints) |
+| **Total** | **95+** | Complete API coverage |
+
+---
+
+## Old-Config Migration Updates
+
+**Migration Date:** April 22, 2026  
+**Status:** ✅ Complete — All tests passing
+
+### Overview
+
+The old-config migration brings remaining functionality from `Server/old-config/` into the new refactored architecture under `Server/src/`. This migration ensures backward compatibility while maintaining the new layered architecture (controllers → services → repositories).
+
+### Key Changes
+
+#### 1. Route Prefix Alignment
+
+**Super Admin Routes:**
+- Added `/api/superadmin` as an alias to `/api/super-admin`
+- Both prefixes now work for backward compatibility
+- Frontend can use either prefix without code changes
+
+**Public Routes:**
+- New `/api/public` router for unauthenticated access
+- 7 public endpoints for viewing competitions, scores, teams, judges
+- Optional authentication support for enhanced features
+- Razorpay webhook handler with HMAC-SHA256 verification
+
+#### 2. Admin Authentication Endpoints
+
+**New Endpoints:**
+- `POST /api/admin/register` — Register admin account
+- `POST /api/admin/login` — Login with email/password
+
+**Features:**
+- 12+ character password requirement
+- Account lockout after 5 failed attempts (15-minute lockout)
+- Rate limiting (5 requests per 15 minutes)
+- JWT token generation with competition context
+- Delegates to `AuthenticationService` for consistency
+
+**Request/Response:**
+```javascript
+// POST /api/admin/register
+{
+  "name": "Admin Name",
+  "email": "admin@example.com",
+  "password": "SecurePass123!"
+}
+
+// Response (201 Created)
+{
+  "success": true,
+  "data": {
+    "token": "jwt_token_here",
+    "admin": {
+      "_id": "admin_id",
+      "name": "Admin Name",
+      "email": "admin@example.com",
+      "role": "admin"
+    }
+  }
+}
+```
+
+#### 3. Judge Login by Username
+
+**Updated Endpoint:**
+- `POST /api/judge/login` now accepts `username` instead of `email`
+
+**Changes:**
+- `JudgeService.loginJudge` updated to use `username` parameter
+- Case-insensitive username lookup via `JudgeRepository.findByUsername`
+- Competition context automatically set in JWT token
+- Response includes full judge profile with competition details
+
+**Request/Response:**
+```javascript
+// POST /api/judge/login
+{
+  "username": "judge1",
+  "password": "SecurePass123!"
+}
+
+// Response (200 OK)
+{
+  "success": true,
+  "data": {
+    "token": "jwt_token_here",
+    "judge": {
+      "_id": "judge_id",
+      "username": "judge1",
+      "judgeType": "Senior Judge",
+      "gender": "Male",
+      "ageGroup": "U14",
+      "competitionTypes": ["competition_1", "competition_2"],
+      "competition": {
+        "id": "competition_id",
+        "name": "Competition Name",
+        "level": "state",
+        "place": "City",
+        "status": "ongoing"
+      }
+    }
+  },
+  "message": "Login successful"
+}
+```
+
+#### 4. Socket.IO Authorization Updates
+
+**Scoring Room Access:**
+- Restricted to judges, admins, and superadmins only
+- Coaches and players can no longer join scoring rooms
+- Authorization check in `ScoringHandler.handleJoinScoringRoom`
+
+**Event Authorization:**
+- `join_scoring_room` — judges, admins, superadmins only
+- `score_update` — judges only
+- `scores_saved` — judges, admins, superadmins only
+
+**Error Messages:**
+- Unauthorized join: "Not authorized to join this room"
+- Non-judge score update: "Only judges can update scores"
+- Unauthorized scores saved: "Unauthorized to save scores"
+
+#### 5. Score Saving with Automatic Calculation
+
+**Updated Endpoint:**
+- `POST /api/admin/scores/save` now includes automatic score calculation
+
+**Features:**
+- Validates required fields (teamId, gender, ageGroup, playerScores)
+- Calculates execution averages, base scores, tolerance, final scores
+- Upserts score records (updates existing or creates new)
+- Delegates to `CalculationService` for all calculations
+- Returns score ID, lock status, and processed player scores
+
+**Calculation Pipeline:**
+```
+1. Execution Average = Average of Judge 1-4 scores
+2. Base Score = Senior Judge score
+3. Tolerance Check = ±0.25 from base score
+4. Average Marks = Calculated with base score tolerance
+5. Final Score = Average Marks - Deduction - Other Deduction
+```
+
+**Request/Response:**
+```javascript
+// POST /api/admin/scores/save
+{
+  "teamId": "team_id",
+  "gender": "Male",
+  "ageGroup": "U14",
+  "competitionType": "competition_1",
+  "competitionId": "competition_id",
+  "playerScores": [
+    {
+      "playerId": "player_id",
+      "playerName": "Player Name",
+      "judgeScores": {
+        "seniorJudge": 9.5,
+        "judge1": 9.2,
+        "judge2": 9.3,
+        "judge3": 9.4,
+        "judge4": 9.1
+      },
+      "deduction": 0.5,
+      "otherDeduction": 0.2
+    }
+  ],
+  "judgeDetails": { ... },
+  "timeKeeper": "Timekeeper Name",
+  "scorer": "Scorer Name",
+  "remarks": "Optional remarks",
+  "isLocked": false
+}
+
+// Response (200 OK)
+{
+  "success": true,
+  "data": {
+    "scoreId": "score_id",
+    "isLocked": false,
+    "playerScores": [
+      {
+        "playerId": "player_id",
+        "playerName": "Player Name",
+        "executionAverage": 9.25,
+        "baseScore": 9.5,
+        "baseScoreApplied": true,
+        "toleranceUsed": 0.25,
+        "averageMarks": 9.5,
+        "finalScore": 8.8,
+        ...
+      }
+    ]
+  }
+}
+```
+
+#### 6. Super Admin Player Add
+
+**New Endpoint:**
+- `POST /api/superadmin/players/add` — Add player directly to team
+
+**Features:**
+- Atomic transaction (player + transaction created together)
+- Validates team belongs to competition
+- Checks player email uniqueness
+- Creates transaction record with `source: 'superadmin'`, `amount: 0`
+- Rolls back both operations if either fails
+
+**Request/Response:**
+```javascript
+// POST /api/superadmin/players/add
+{
+  "firstName": "Player",
+  "lastName": "Name",
+  "email": "player@example.com",
+  "dateOfBirth": "2010-01-01",
+  "gender": "Male",
+  "teamId": "team_id",
+  "competitionId": "competition_id",
+  "password": "SecurePass123!"
+}
+
+// Response (201 Created)
+{
+  "success": true,
+  "data": {
+    "id": "player_id",
+    "firstName": "Player",
+    "lastName": "Name",
+    "email": "player@example.com",
+    "team": "team_id"
+  }
+}
+```
+
+#### 7. Razorpay Webhook Handler
+
+**New Endpoint:**
+- `POST /api/public/payments/razorpay/webhook` — Handle payment events
+
+**Features:**
+- HMAC-SHA256 signature verification using `RAZORPAY_WEBHOOK_SECRET`
+- Timing-safe comparison to prevent timing attacks
+- Handles `payment.captured` and `payment.failed` events
+- Updates team payment status in competition
+- Idempotent (returns 200 for unknown events or missing orders)
+
+**Supported Events:**
+- `payment.captured` → Sets `paymentStatus: 'completed'`
+- `payment.failed` → Sets `paymentStatus: 'failed'`
+- Other events → Returns "Webhook event ignored"
+
+**Security:**
+- Verifies `x-razorpay-signature` header
+- Uses `crypto.timingSafeEqual` for constant-time comparison
+- Validates signature before processing any event
+- Returns 400 for invalid signatures
+
+### Migration Testing
+
+**Test Coverage:**
+- 20 integration tests (12 controller + 8 Socket.IO)
+- All tests passing
+- Property-based tests for correctness properties
+- Unit tests for all new/modified methods
+
+**Test Categories:**
+1. Admin registration and login
+2. Judge login with username
+3. Public routes (7 endpoints)
+4. Socket.IO authorization (scoring rooms, score updates)
+5. Score calculation pipeline
+6. Super admin player add (atomic transactions)
+7. Razorpay webhook handling
+
+### Breaking Changes
+
+**None** — All changes are backward compatible:
+- Old routes still work (e.g., `/api/super-admin`)
+- New routes added as aliases (e.g., `/api/superadmin`)
+- Existing functionality preserved
+- No frontend changes required
+
+### Security Enhancements
+
+1. **Rate Limiting:** Applied to new admin auth endpoints
+2. **Account Lockout:** Enforced on all new login endpoints
+3. **HMAC Verification:** Timing-safe comparison for webhooks
+4. **Password Requirements:** 12+ characters for all new registrations
+5. **Token Invalidation:** Logout and assignment change tracking
 
 ---
 
@@ -1406,17 +1987,17 @@ Body: { password: "NewPassword123!" }
 | # | Issue | Severity | Status | File(s) |
 |---|-------|----------|--------|---------|
 | 1 | Missing rate limiting | Critical | ✅ Fixed | `server.js` |
-| 2 | NoSQL injection in query params | Critical | ✅ Fixed | `server.js`, `utils/sanitization.js`, `controllers/adminController.js` |
+| 2 | NoSQL injection in query params | Critical | ✅ Fixed | `server.js`, `src/utils/validation/sanitization.util.js`, `src/validators/*` |
 | 3 | Insecure CORS (no origin allowed) | Critical | ✅ Fixed | `server.js`, `config/server.config.js` |
 | 4 | Missing security headers | High | ✅ Fixed | `server.js` |
 | 5 | HTTPS not enforced in production | High | ✅ Fixed | `server.js` |
 | 6 | Debug endpoints exposed in production | High | ✅ Fixed | `server.js` |
 | 7 | Socket.IO unauthenticated | High | ✅ Fixed | `server.js` |
 | 8 | Sensitive data in logs (no PII redaction) | High | ✅ Fixed | `utils/logger.js` |
-| 9 | Password reset token reusable | High | ✅ Fixed | `utils/passwordResetTracking.js`, `controllers/authController.js` |
-| 10 | Token not invalidated on logout | Medium | ✅ Fixed | `utils/tokenInvalidation.js`, `middleware/authMiddleware.js`, `controllers/authController.js` |
-| 11 | No account lockout on login | Medium | ✅ Fixed | `utils/accountLockout.js`, all login controllers |
-| 12 | Password min length too short (8) | Medium | ✅ Fixed | `utils/passwordValidation.js` |
+| 9 | Password reset token reusable | High | ✅ Fixed | `src/services/auth/*`, `src/controllers/auth.controller.js` |
+| 10 | Token not invalidated on logout | Medium | ✅ Fixed | `src/utils/security/token-invalidation.util.js`, `src/middleware/auth.middleware.js` |
+| 11 | No account lockout on login | Medium | ✅ Fixed | `src/utils/security/account-lockout.util.js`, `src/controllers/*` login flows |
+| 12 | Password min length too short (8) | Medium | ✅ Fixed | `src/utils/auth/password.util.js` |
 | 13 | Bcrypt salt rounds too low (10) | Medium-High | ✅ Fixed | All models |
 | 14 | Missing email indexes on user models | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js` |
 | 15 | No database connection pooling | Medium | ✅ Fixed | `config/db.js` |
@@ -1426,7 +2007,7 @@ Body: { password: "NewPassword123!" }
 | 19 | Hardcoded production URL in code | Medium | ✅ Fixed | `config/server.config.js` |
 | 20 | Email credentials in plain env vars | High | ⚠️ Acknowledged — production hardening |
 | 21 | Duplicate Socket.IO initialization (crash) | Critical | ✅ Fixed | `server.js` |
-| 22 | Premature `module.exports` in controllers | Critical | ✅ Fixed | `controllers/authController.js`, `controllers/judgeController.js` |
+| 22 | Premature `module.exports` in controllers | Critical | ✅ Fixed | `src/controllers/*` |
 | 23 | Password `minlength` schema inconsistency | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js`, `routes/authRoutes.js` |
 | 24 | Pagination missing on list endpoints | Medium | ⚠️ Add when needed at scale |
 
@@ -1439,9 +2020,9 @@ Body: { password: "NewPassword123!" }
 
 **2. NoSQL Injection Protection**
 - `express-mongo-sanitize` strips `$` and `.` from all user input globally
-- `utils/sanitization.js` whitelist validation:
+- `src/utils/validation/sanitization.util.js` whitelist validation:
   - `VALID_GENDERS`: `['Male', 'Female']`
-  - `VALID_AGE_GROUPS`: `['U10', 'U12', 'U14', 'U16', 'U18', 'Above16', 'Above18']`
+  - `VALID_AGE_GROUPS`: `['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']`
   - `VALID_COMPETITION_TYPES`: `['Competition I', 'Competition II', 'Competition III']`
   - `VALID_COMPETITION_STATUSES`: `['upcoming', 'ongoing', 'completed']`
 - `getSubmittedTeams` and `getJudges` validate all enum query params against whitelists
@@ -1476,16 +2057,16 @@ logger.security('Failed login', { email, ip }); // password fields auto-redacted
 `utils/passwordResetTracking.js` — in-memory `usedTokens` Map. Token checked with `isTokenUsed()` before processing, marked with `markTokenAsUsed()` before `user.save()` (prevents race condition). Hourly cleanup of tokens older than 24 hours.
 
 **10. Token Invalidation on Logout**
-`utils/tokenInvalidation.js` — `recordLogout(userId)` called on logout. `isTokenLoggedOut(userId, tokenIssuedAt)` checked in `authMiddleware` on every request. Tokens issued before logout timestamp rejected with `TOKEN_INVALIDATED_LOGOUT`.
+`src/utils/security/token-invalidation.util.js` — token invalidation is checked in `src/middleware/auth.middleware.js` on authenticated requests. Tokens issued before logout timestamp are rejected with `TOKEN_INVALIDATED_LOGOUT`.
 
 **11. Account Lockout**
-`utils/accountLockout.js` — in-memory Map. 5 failed attempts → 15-minute lockout. Applied to all 5 login endpoints (Player, Coach, Admin, SuperAdmin, Judge). Returns remaining lockout time in error response.
+`src/utils/security/account-lockout.util.js` — in-memory Map. 5 failed attempts → 15-minute lockout. Applied to login endpoints (Player, Coach, Admin, SuperAdmin, Judge). Returns remaining lockout time in error response.
 
 **12 & 13. Password Requirements + Bcrypt Rounds**
-- `utils/passwordValidation.js`: `minLength = 12`, uppercase + lowercase + numbers + special chars required
+- `src/utils/auth/password.util.js`: password policy enforcement
 - All models: `bcrypt.genSalt(12)` (was 10)
 - All user models: `minlength: 12` in schema (was 6)
-- `routes/authRoutes.js`: reset password validation `min: 12` (was 6)
+- `src/routes/auth.routes.js`: reset password validation aligned to policy
 
 **14. Email Indexes**
 ```javascript
@@ -1561,11 +2142,30 @@ const socket = io('https://your-server.com', {
 ### npm Scripts
 
 ```bash
-npm start                  # Production start
-npm run server             # Development (nodemon)
-npm run create-admin       # Create admin user
-npm run create-superadmin  # Create super admin
-npm test                   # Run Jest tests
+# Server
+npm start                    # Production start (node server.js)
+npm run server               # Development with auto-reload (nodemon)
+
+# Testing
+npm test                     # Run all Jest tests
+npm run test:watch           # Run tests in watch mode
+npm run test:coverage        # Run tests with coverage report
+
+# Database Migrations
+npm run migrate:up           # Apply all pending migrations
+npm run migrate:down         # Roll back the last migration
+npm run migrate:status       # Show migration status
+
+# User Management Scripts
+npm run create-admin         # Create an admin user interactively
+npm run create-superadmin    # Create a super admin user
+npm run create-coach         # Create a coach user
+npm run create-player        # Create a player user
+npm run create-competition   # Create a competition
+
+# Email Testing
+npm run test-email           # Test email service (Nodemailer)
+npm run test-resend          # Test email service (Resend)
 ```
 
 ---
@@ -1613,7 +2213,20 @@ curl -X POST http://localhost:5000/api/auth/reset-password/TOKEN \
 ### Health Check
 
 ```bash
-curl http://localhost:5000/api/health
+# Liveness probe
+curl http://localhost:5000/health/live
+
+# Readiness probe (checks DB connectivity)
+curl http://localhost:5000/health/ready
+
+# Detailed health status (all components)
+curl http://localhost:5000/health
+
+# Performance metrics (JSON)
+curl http://localhost:5000/health/metrics
+
+# Performance metrics (Prometheus format)
+curl "http://localhost:5000/health/metrics?format=prometheus"
 ```
 
 ### Sample Test Flow
@@ -1653,8 +2266,15 @@ curl -X POST http://localhost:5000/api/superadmin/competitions \
 
 ```json
 {
-  "message": "Error description",
-  "errors": ["Detail 1", "Detail 2"]
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "code": "ERROR_CODE",
+    "correlationId": "request-id-if-available",
+    "details": {
+      "fieldName": "field-specific message"
+    }
+  }
 }
 ```
 
@@ -1682,37 +2302,57 @@ curl -X POST http://localhost:5000/api/superadmin/competitions \
 **Authentication Errors:**
 ```json
 {
-  "message": "Invalid credentials"
+  "success": false,
+  "error": {
+    "message": "Invalid credentials",
+    "code": "AUTHENTICATION_FAILED",
+    "correlationId": "..."
+  }
 }
 ```
 
 **Account Lockout:**
 ```json
 {
-  "message": "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.",
-  "remainingTime": 15
+  "success": false,
+  "error": {
+    "message": "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.",
+    "code": "ACCOUNT_LOCKED",
+    "correlationId": "...",
+    "details": {
+      "remainingTime": 15
+    }
+  }
 }
 ```
 
 **Validation Errors:**
 ```json
 {
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Please enter a valid email"
+  "success": false,
+  "error": {
+    "message": "Validation error",
+    "code": "VALIDATION_ERROR",
+    "correlationId": "...",
+    "details": {
+      "email": "Please enter a valid email"
     }
-  ]
+  }
 }
 ```
 
 **Authorization Errors:**
 ```json
 {
-  "error": "Access Denied",
-  "message": "You do not have access to this competition",
-  "competitionId": "507f1f77bcf86cd799439011"
+  "success": false,
+  "error": {
+    "message": "You do not have access to this competition",
+    "code": "ACCESS_DENIED",
+    "correlationId": "...",
+    "details": {
+      "competitionId": "507f1f77bcf86cd799439011"
+    }
+  }
 }
 ```
 
@@ -2030,11 +2670,11 @@ For technical support or questions:
 
 ---
 
-**Document Version:** 1.0.0  
-**Last Updated:** March 24, 2026  
-**System Version:** 1.0.0  
-**API Version:** 1.0.0  
-**Status:** ✅ Production Ready — 23/24 Security Issues Resolved
+**Document Version:** 1.1.0  
+**Last Updated:** April 22, 2026  
+**System Version:** 1.1.0  
+**API Version:** 1.1.0  
+**Status:** ✅ Production Ready — 23/24 Security Issues Resolved + Old-Config Migration Complete
 
 ---
 
@@ -2043,6 +2683,7 @@ For technical support or questions:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | March 24, 2026 | Merged COMPLETE_SYSTEM_DOCUMENTATION.md and SERVER_DOCUMENTATION.md into single comprehensive API documentation |
+| 1.1.0 | April 22, 2026 | **Old-Config Migration Update** — Added documentation for migrated endpoints: Admin registration/login, Judge username login, Public routes (7 endpoints), Super admin player add, Razorpay webhook handler, Socket.IO authorization updates, Score calculation pipeline. Updated endpoint counts and added migration section with detailed changes, request/response examples, and security enhancements. |
 
 ---
 

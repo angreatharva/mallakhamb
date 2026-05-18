@@ -756,7 +756,7 @@ const QuoteStrip = () => (
 //  Features Section 
 const features = [
   { icon: Trophy, title: 'Live Scoring', description: 'Real-time score updates as performances happen on the mat. Every point, every moment  live.', href: '/scores', hero: true, accent: COLORS.saffron },
-  { icon: Users, title: 'Team Management', description: 'Coaches manage rosters, assign roles, and track performance.', href: '/coach/login', accent: '#22C55E' },
+  { icon: Users, title: 'Team Management', description: 'Coaches manage rosters, assign roles, and track performance.', href: '/coach/login', accent: '#FF6B00' },
   { icon: Camera, title: 'Event Gallery', description: 'Capture and relive the best moments from every competition.', href: '/gallery', accent: '#A855F7' },
   { icon: Calendar, title: 'Schedule & Rules', description: 'Stay updated with the latest event schedule and competition rules.', href: '/schedule', accent: '#3B82F6' },
   { icon: Zap, title: 'Instant Results', description: 'Rankings update in real-time as judges submit scores.', href: '/scores', accent: COLORS.gold },

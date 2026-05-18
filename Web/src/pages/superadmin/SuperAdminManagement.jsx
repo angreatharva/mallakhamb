@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
   ChevronDown, Save, Users
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { superAdminAPI } from '../../services/api';
+import { superAdminAPI } from '@/services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
+import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
+import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -233,6 +236,7 @@ const SuperAdminManagement = () => {
   const [competitions, setCompetitions] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addPlayerFormKey, setAddPlayerFormKey] = useState(0);
 
   // Admin modal
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
@@ -246,14 +250,26 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: []
+    description: '', admins: [], ageGroups: [], playerFee: ''
   });
 
   // Admin management modal
   const [showAdminManagementModal, setShowAdminManagementModal] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
 
-  // Player form
+  // Delete competition confirmation modal
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [competitionToDelete, setCompetitionToDelete] = useState(null);
+
+  // Remove admin confirmation modal
+  const [showRemoveAdminConfirmation, setShowRemoveAdminConfirmation] = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState(null);
+
+  // Delete admin confirmation modal
+  const [showDeleteAdminConfirmation, setShowDeleteAdminConfirmation] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState(null);
+
+  // Player form - removed, now using AddPlayerForm component
   const [playerFormData, setPlayerFormData] = useState({
     name: '', email: '', password: '', phone: '', dateOfBirth: '',
     gender: { value: 'Male', label: 'Male' }, teamId: null, competitionId: null, paymentStatus: { value: 'pending', label: 'Pending' }
@@ -273,22 +289,60 @@ const SuperAdminManagement = () => {
     try {
       if (activeSection === 'admins') {
         const r = await superAdminAPI.getAllAdmins();
-        setAdmins(r.data.admins);
+        // Handle nested response structure
+        const responseData = r.data.data || r.data;
+        const adminsArray = Array.isArray(responseData) ? responseData : (responseData.admins || []);
+        setAdmins(adminsArray);
       } else if (activeSection === 'coaches') {
         const r = await superAdminAPI.getAllCoaches();
-        setCoaches(r.data.coaches);
+        // Handle nested response structure
+        const responseData = r.data.data || r.data;
+        const coachesArray = Array.isArray(responseData) ? responseData : (responseData.coaches || []);
+        setCoaches(coachesArray);
       } else if (activeSection === 'competitions') {
         const [cr, ar] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllAdmins()]);
-        setCompetitions(cr.data.competitions);
-        setAdmins(ar.data.admins);
+        // Handle nested response structures
+        const compData = cr.data.data || cr.data;
+        const adminData = ar.data.data || ar.data;
+        const competitionsArray = Array.isArray(compData) ? compData : (compData.competitions || []);
+        const adminsArray = Array.isArray(adminData) ? adminData : (adminData.admins || []);
+        setCompetitions(competitionsArray);
+        setAdmins(adminsArray);
       } else if (activeSection === 'addPlayer') {
-        const [cr, tr] = await Promise.all([superAdminAPI.getAllCompetitions(), superAdminAPI.getAllTeams()]);
-        setCompetitions(cr.data.competitions);
-        setTeams(tr.data.teams || []);
+        const cr = await superAdminAPI.getAllCompetitions();
+        // Handle nested response structures
+        const compData = cr.data.data || cr.data;
+        const competitionsArray = Array.isArray(compData) ? compData : (compData.competitions || []);
+        setCompetitions(competitionsArray);
+        // Don't fetch teams initially - they will be fetched when competition is selected
+        setTeams([]);
       }
     } catch { toast.error('Failed to load data'); }
     finally { setLoading(false); }
   };
+
+  // Function to fetch teams based on competition selection
+  const fetchTeamsByCompetition = useCallback(async (competitionId) => {
+    try {
+      const params = competitionId ? { competition: competitionId } : {};
+      const tr = await superAdminAPI.getAllTeams(params);
+      const teamData = tr.data.data || tr.data;
+      const teamsArray = Array.isArray(teamData) ? teamData : (teamData.teams || []);
+      setTeams(teamsArray);
+      return teamsArray;
+    } catch (error) {
+      toast.error('Failed to load teams');
+      return [];
+    }
+  }, []);
+
+  const location = useLocation();
+  useEffect(() => {
+    const competitionId = location.state?.superadminPlayerAddedCompetitionId;
+    if (!competitionId || activeSection !== 'addPlayer') return;
+    fetchTeamsByCompetition(competitionId);
+    setAddPlayerFormKey((k) => k + 1);
+  }, [location.state, activeSection, fetchTeamsByCompetition]);
 
   // ─── Admin CRUD ────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
@@ -314,9 +368,21 @@ const SuperAdminManagement = () => {
   };
 
   const handleDeleteAdmin = async (id) => {
-    if (!window.confirm('Delete this admin?')) return;
-    try { await superAdminAPI.deleteAdmin(id); toast.success('Admin deleted'); fetchData(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete admin'); }
+    try { 
+      await superAdminAPI.deleteAdmin(id); 
+      toast.success('Admin deleted'); 
+      setShowDeleteAdminConfirmation(false);
+      setAdminToDelete(null);
+      fetchData(); 
+    }
+    catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete admin'); 
+    }
+  };
+
+  const openDeleteAdminConfirmation = (admin) => {
+    setAdminToDelete(admin);
+    setShowDeleteAdminConfirmation(true);
   };
 
   const openEditModal = (admin) => {
@@ -340,7 +406,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: []
+    description: '', admins: [], ageGroups: [], playerFee: ''
   });
 
   const openCompetitionModal = (comp = null) => {
@@ -359,7 +425,7 @@ const SuperAdminManagement = () => {
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
-        ageGroups: comp.ageGroups || []
+        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : ''
       });
     } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
@@ -371,11 +437,21 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
     if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
+      toast.error('Enter a per-player fee (INR) for this competition');
+      return;
+    }
+    const playerFee = Number(competitionFormData.playerFee);
+    if (!Number.isFinite(playerFee) || playerFee < 0) {
+      toast.error('Enter a valid per-player fee (INR) for this competition');
+      return;
+    }
     try {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
         level: competitionFormData.level.value,
-        year: competitionFormData.year.value
+        year: competitionFormData.year.value,
+        playerFee
       });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
@@ -385,12 +461,22 @@ const SuperAdminManagement = () => {
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
+      toast.error('Enter a per-player fee (INR) for this competition');
+      return;
+    }
+    const playerFee = Number(competitionFormData.playerFee);
+    if (!Number.isFinite(playerFee) || playerFee < 0) {
+      toast.error('Enter a valid per-player fee (INR) for this competition');
+      return;
+    }
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
         name: competitionFormData.name, level: competitionFormData.level.value,
         competitionTypes: competitionFormData.competitionTypes, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
-        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups
+        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
+        playerFee
       });
       toast.success('Competition updated');
       setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
@@ -398,9 +484,21 @@ const SuperAdminManagement = () => {
   };
 
   const handleDeleteCompetition = async (id) => {
-    if (!window.confirm('Delete this competition? This cannot be undone.')) return;
-    try { await superAdminAPI.deleteCompetition(id); toast.success('Competition deleted'); fetchData(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete competition'); }
+    try { 
+      await superAdminAPI.deleteCompetition(id); 
+      toast.success('Competition deleted'); 
+      setShowDeleteConfirmation(false);
+      setCompetitionToDelete(null);
+      fetchData(); 
+    }
+    catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete competition'); 
+    }
+  };
+
+  const openDeleteConfirmation = (comp) => {
+    setCompetitionToDelete(comp);
+    setShowDeleteConfirmation(true);
   };
 
   const toggleCompetitionType = (type) => setCompetitionFormData(prev => ({
@@ -432,41 +530,47 @@ const SuperAdminManagement = () => {
       await superAdminAPI.assignAdminToCompetition(selectedCompetition._id, { adminId });
       toast.success('Admin assigned');
       const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(r.data.competition);
+      // Handle nested response structure
+      const responseData = r.data.data || r.data;
+      setSelectedCompetition(responseData.competition || responseData);
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to assign admin'); }
   };
 
   const handleRemoveAdmin = async (adminId) => {
-    if (!window.confirm('Remove this admin from the competition?')) return;
     try {
       await superAdminAPI.removeAdminFromCompetition(selectedCompetition._id, adminId);
       toast.success('Admin removed');
       const r = await superAdminAPI.getCompetitionById(selectedCompetition._id);
-      setSelectedCompetition(r.data.competition);
+      // Handle nested response structure
+      const responseData = r.data.data || r.data;
+      setSelectedCompetition(responseData.competition || responseData);
+      setShowRemoveAdminConfirmation(false);
+      setAdminToRemove(null);
       fetchData();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove admin'); }
+    } catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to remove admin'); 
+    }
+  };
+
+  const openRemoveAdminConfirmation = (admin) => {
+    setAdminToRemove(admin);
+    setShowRemoveAdminConfirmation(true);
   };
 
   // ─── Add Player ────────────────────────────────────────────────────────────
-  const handleAddPlayer = async (e) => {
-    e.preventDefault();
-    if (!playerFormData.competitionId) { toast.error('Select a competition'); return; }
-    if (!playerFormData.teamId) { toast.error('Select a team'); return; }
-    try {
-      await superAdminAPI.addPlayerToTeam({ 
-        ...playerFormData, 
-        gender: playerFormData.gender.value,
-        team: playerFormData.teamId.value, 
-        competition: playerFormData.competitionId.value,
-        paymentStatus: playerFormData.paymentStatus.value
-      });
-      toast.success('Player added');
-      setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } });
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add player'); }
+  // Removed - now handled by AddPlayerForm component
+  const handlePlayerAdded = (playerData) => {
+    // Show success message
+    toast.success(`Player added successfully!`);
+    
+    // Refresh teams list for the competition that was used
+    if (activeSection === 'addPlayer' && playerData?.competitionId) {
+      fetchTeamsByCompetition(playerData.competitionId);
+    }
   };
 
-  const filteredAdmins = admins.filter(a => a.role !== 'super_admin').filter(a => {
+  const filteredAdmins = (admins || []).filter(a => a.role !== 'super_admin').filter(a => {
     if (!adminSearchQuery) return true;
     const q = adminSearchQuery.toLowerCase();
     return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
@@ -519,7 +623,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : competitions.length === 0 ? (
               <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
             ) : (
-              <DarkTable headers={['Name','Types','Level','Place','Dates','Status','Admins','Actions']}>
+              <DarkTable headers={['Name','Types','Level','Place','Per player','Dates','Status','Admins','Actions']}>
                 {competitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
                     <Td className="font-bold text-white">{comp.name}</Td>
@@ -540,6 +644,12 @@ const SuperAdminManagement = () => {
                       </span>
                     </Td>
                     <Td>{comp.place}</Td>
+                    <Td className="text-sm font-semibold text-white/80">
+                      {(() => {
+                        const rupees = getCompetitionPlayerFeeRupees(comp);
+                        return rupees !== null ? `₹${rupees.toLocaleString()}` : '—';
+                      })()}
+                    </Td>
                     <Td className="text-xs">
                       {new Date(comp.startDate).toLocaleDateString()} – {new Date(comp.endDate).toLocaleDateString()}
                     </Td>
@@ -570,7 +680,7 @@ const SuperAdminManagement = () => {
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
-                        <motion.button onClick={() => handleDeleteCompetition(comp._id)}
+                        <motion.button onClick={() => openDeleteConfirmation(comp)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.red }} title="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
@@ -599,7 +709,9 @@ const SuperAdminManagement = () => {
                 <UserPlus className="w-4 h-4" /> Add Admin
               </DarkBtn>
             </div>
-            {loading ? <LoadingState /> : (
+            {loading ? <LoadingState /> : admins.length === 0 ? (
+              <EmptyState icon={Shield} title="No admins yet" desc="Create your first admin to get started." />
+            ) : (
               <DarkTable headers={['Name','Email','Role','Status','Actions']}>
                 {admins.map((admin, i) => (
                   <DarkTr key={admin._id} delay={i * 0.03}>
@@ -619,7 +731,7 @@ const SuperAdminManagement = () => {
                           style={{ color: ADMIN_COLORS.blue }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
-                        <motion.button onClick={() => handleDeleteAdmin(admin._id)}
+                        <motion.button onClick={() => openDeleteAdminConfirmation(admin)}
                           className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.red }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
@@ -642,7 +754,9 @@ const SuperAdminManagement = () => {
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
               <h2 className="text-2xl font-black text-white">Coaches</h2>
             </div>
-            {loading ? <LoadingState /> : (
+            {loading ? <LoadingState /> : coaches.length === 0 ? (
+              <EmptyState icon={UserCheck} title="No coaches yet" desc="Coaches will appear here once registered." />
+            ) : (
               <DarkTable headers={['Name','Email','Phone','Status','Actions']}>
                 {coaches.map((coach, i) => (
                   <DarkTr key={coach._id} delay={i * 0.03}>
@@ -673,69 +787,13 @@ const SuperAdminManagement = () => {
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
               <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
             </div>
-            <form onSubmit={handleAddPlayer} className="max-w-2xl space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DarkInput label="Player Name" required placeholder="Full name" value={playerFormData.name}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, name: e.target.value })} />
-                <DarkInput label="Email" required type="email" placeholder="email@example.com" value={playerFormData.email}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, email: e.target.value })} />
-                <DarkInput label="Password" required type="password" placeholder="Min 6 characters" minLength={6} value={playerFormData.password}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, password: e.target.value })} />
-                <DarkInput label="Phone" type="tel" placeholder="Phone number" value={playerFormData.phone}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, phone: e.target.value })} />
-                <DarkInput label="Date of Birth" required type="date" value={playerFormData.dateOfBirth}
-                  onChange={(e) => setPlayerFormData({ ...playerFormData, dateOfBirth: e.target.value })} />
-                <Dropdown 
-                  label="Gender" 
-                  options={[
-                    { value: 'Male', label: 'Male' },
-                    { value: 'Female', label: 'Female' }
-                  ]}
-                  value={playerFormData.gender}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, gender: option })}
-                  placeholder="Select gender"
-                />
-                <Dropdown 
-                  label="Competition" 
-                  options={competitions.map(c => ({
-                    value: c._id,
-                    label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
-                  }))}
-                  value={playerFormData.competitionId}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, competitionId: option, teamId: null })}
-                  placeholder="Select Competition"
-                />
-                <Dropdown 
-                  label="Team" 
-                  options={teams
-                    .filter(t => playerFormData.competitionId && (t.competition?._id === playerFormData.competitionId.value || t.competitionId === playerFormData.competitionId.value))
-                    .map(t => ({ value: t._id, label: t.team?.name || t.name || 'Unnamed Team' }))}
-                  value={playerFormData.teamId}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, teamId: option })}
-                  placeholder="Select Team"
-                  disabled={!playerFormData.competitionId}
-                />
-                <Dropdown 
-                  label="Payment Status" 
-                  options={[
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'completed', label: 'Completed' },
-                    { value: 'failed', label: 'Failed' }
-                  ]}
-                  value={playerFormData.paymentStatus}
-                  onChange={(option) => setPlayerFormData({ ...playerFormData, paymentStatus: option })}
-                  placeholder="Select payment status"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <DarkBtn type="button" variant="ghost" onClick={() => setPlayerFormData({ name:'',email:'',password:'',phone:'',dateOfBirth:'',gender:{ value: 'Male', label: 'Male' },teamId:null,competitionId:null,paymentStatus:{ value: 'pending', label: 'Pending' } })}>
-                  Reset
-                </DarkBtn>
-                <DarkBtn type="submit" variant="primary">
-                  <UserPlus className="w-4 h-4" /> Add Player
-                </DarkBtn>
-              </div>
-            </form>
+            <AddPlayerForm 
+              key={addPlayerFormKey}
+              teams={teams} 
+              competitions={competitions} 
+              onSuccess={handlePlayerAdded}
+              onFetchTeams={fetchTeamsByCompetition}
+            />
           </DarkCard>
         </FadeIn>
       )}
@@ -833,6 +891,27 @@ const SuperAdminManagement = () => {
           <DarkInput label="End Date" required type="date" value={competitionFormData.endDate}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, endDate: e.target.value })} />
         </div>
+
+        {/* Player Fee */}
+        <DarkInput 
+          label="Per-player fee (₹)" 
+          required 
+          type="number" 
+          min="0"
+          step="1"
+          placeholder="e.g. 500" 
+          value={competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined ? '' : competitionFormData.playerFee}
+          hint="This competition only — total is players × this amount (no separate base fee)."
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === '') {
+              setCompetitionFormData({ ...competitionFormData, playerFee: '' });
+              return;
+            }
+            const n = Number(raw);
+            setCompetitionFormData({ ...competitionFormData, playerFee: Number.isFinite(n) ? n : '' });
+          }} 
+        />
 
         {/* Competition Types */}
         <div>
@@ -952,7 +1031,7 @@ const SuperAdminManagement = () => {
                         <p className="text-sm font-bold text-white">{admin.name}</p>
                         <p className="text-xs text-white/40">{admin.email}</p>
                       </div>
-                      <DarkBtn size="sm" variant="danger" onClick={() => handleRemoveAdmin(admin._id)}>
+                      <DarkBtn size="sm" variant="danger" onClick={() => openRemoveAdminConfirmation(admin)}>
                         <Trash2 className="w-3.5 h-3.5" /> Remove
                       </DarkBtn>
                     </div>
@@ -963,7 +1042,7 @@ const SuperAdminManagement = () => {
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {admins.filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
+                {(admins || []).filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
                   <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
                     style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>
@@ -980,6 +1059,198 @@ const SuperAdminManagement = () => {
           </div>
         )}
       </DarkModal>
+
+      {/* Delete Competition Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirmation && competitionToDelete && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowDeleteConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Delete Competition?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to delete:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {competitionToDelete.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {competitionToDelete.place} • {new Date(competitionToDelete.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      All associated data including <strong>teams, players, scores, and registrations</strong> will be permanently deleted.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleDeleteCompetition(competitionToDelete._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Delete Competition
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteConfirmation(false);
+                      setCompetitionToDelete(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Remove Admin Confirmation Modal */}
+      <AnimatePresence>
+        {showRemoveAdminConfirmation && adminToRemove && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowRemoveAdminConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <UserX className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Remove Admin?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This admin will lose access to this competition.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to remove:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {adminToRemove.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {adminToRemove.email}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      From competition: <strong>{selectedCompetition?.name}</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleRemoveAdmin(adminToRemove._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Remove Admin
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowRemoveAdminConfirmation(false);
+                      setAdminToRemove(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Admin Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAdminConfirmation && adminToDelete && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="absolute inset-0" 
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+              onClick={() => setShowDeleteAdminConfirmation(false)} />
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+              <div className="p-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-black text-white text-center mb-3">Delete Admin Account?</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                      You are about to delete:
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      {adminToDelete.name}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1">
+                      {adminToDelete.email}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      This admin will be <strong>permanently removed</strong> from the system and lose access to all competitions.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleDeleteAdmin(adminToDelete._id)}
+                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    Yes, Delete Admin
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteAdminConfirmation(false);
+                      setAdminToDelete(null);
+                    }}
+                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { coachAPI } from '../../services/api';
+import { coachAPI } from '@/services/api';
 import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
+import { logger } from '@/infrastructure/logger';
+import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 
 const CoachPayment = () => {
   const navigate = useNavigate();
@@ -80,7 +82,14 @@ const CoachPayment = () => {
   const fetchTeamData = async () => {
     try {
       const response = await coachAPI.getDashboard();
-      setTeam(response.data.team);
+      // API returns: { success: true, data: { team: {...}, competitionId, totalTeams } }
+      const teamData = response.data?.data?.team || response.data?.team;
+      setTeam(teamData);
+      
+      // Check if team is already submitted
+      if (teamData?.isSubmitted) {
+        setPaymentComplete(true);
+      }
     } catch {
       toast.error('Failed to load team data');
       navigate('/coach/dashboard');
@@ -101,7 +110,9 @@ const CoachPayment = () => {
       }
 
       const orderResponse = await coachAPI.createPaymentOrder();
-      const { order, razorpayKeyId, team: orderTeam } = orderResponse.data;
+      // API returns: { success: true, data: { order, razorpayKeyId, team } }
+      const responseData = orderResponse.data?.data || orderResponse.data;
+      const { order, razorpayKeyId, team: orderTeam } = responseData;
 
       if (!order?.id || !razorpayKeyId) {
         setProcessing(false);
@@ -116,13 +127,29 @@ const CoachPayment = () => {
         name: 'Mallakhamb Competition',
         description: `Registration for ${orderTeam?.name || team?.name || 'Team'}`,
         order_id: order.id,
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 900, // 15 minutes in seconds
         handler: async (response) => {
           try {
+            setProcessing(true);
             await coachAPI.verifyPaymentAndSubmit(response);
             setPaymentComplete(true);
             toast.success('Payment successful! Team submitted for competition.');
-          } catch {
-            toast.error('Payment verification failed. Please contact support with your payment reference.');
+            // Refresh team data to get updated submission status
+            await fetchTeamData();
+          } catch (error) {
+            const errorMessage = error?.response?.data?.message || 'Payment verification failed. Please contact support with your payment reference.';
+            toast.error(errorMessage);
+            
+            // Log error for debugging
+            logger.error('Payment verification failed:', {
+              error: errorMessage,
+              paymentId: response?.razorpay_payment_id,
+              orderId: response?.razorpay_order_id
+            });
           } finally {
             setProcessing(false);
           }
@@ -130,7 +157,13 @@ const CoachPayment = () => {
         modal: {
           ondismiss: () => {
             setProcessing(false);
+            toast.error('Payment cancelled. Please try again when ready.');
+            logger.info('Payment modal dismissed by user');
           },
+          escape: true,
+          backdropclose: false,
+          confirm_close: true,
+          animation: true,
         },
         prefill: {
           name: orderTeam?.name || team?.name || '',
@@ -138,6 +171,39 @@ const CoachPayment = () => {
         theme: {
           color: COLORS.saffron,
         },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: 'All payment methods',
+                instruments: [
+                  {
+                    method: 'upi'
+                  },
+                  {
+                    method: 'card'
+                  },
+                  {
+                    method: 'netbanking'
+                  },
+                  {
+                    method: 'wallet'
+                  }
+                ]
+              }
+            },
+            sequence: ['block.banks'],
+            preferences: {
+              show_default_blocks: true
+            }
+          }
+        }
       };
 
       if (!window.Razorpay) {
@@ -154,9 +220,13 @@ const CoachPayment = () => {
     }
   };
 
+  const playerFeePerPlayer = getCompetitionPlayerFeeRupees(team?.competition);
+  const feeConfigured = playerFeePerPlayer !== null;
+
   const calculateTotal = () => {
     const count = team?.players?.length || 0;
-    return 500 + count * 100;
+    if (!feeConfigured) return 0;
+    return count * playerFeePerPlayer;
   };
 
   if (loading) {
@@ -172,6 +242,8 @@ const CoachPayment = () => {
   }
 
   if (paymentComplete) {
+    const isAlreadySubmitted = team?.isSubmitted && team?.paymentStatus === 'completed';
+    
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
         <motion.div className="w-full max-w-md text-center"
@@ -180,15 +252,31 @@ const CoachPayment = () => {
           <div className="rounded-3xl border p-10"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <motion.div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ background: '#22C55E18', border: '2px solid #22C55E40' }}
+              style={{ background: isAlreadySubmitted ? `${COLORS.saffron}18` : '#22C55E18', border: `2px solid ${isAlreadySubmitted ? `${COLORS.saffron}40` : '#22C55E40'}` }}
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}>
-              <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+              {isAlreadySubmitted ? (
+                <Lock className="w-10 h-10" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              ) : (
+                <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+              )}
             </motion.div>
-            <h2 className="text-2xl font-black text-white mb-3">Payment Successful!</h2>
-            <p className="text-white/45 mb-8 leading-relaxed">
-              Your team "{team?.name}" has been successfully submitted for the competition.
+            <h2 className="text-2xl font-black text-white mb-3">
+              {isAlreadySubmitted ? 'Team Already Submitted' : 'Payment Successful!'}
+            </h2>
+            <p className="text-white/45 mb-4 leading-relaxed">
+              {isAlreadySubmitted 
+                ? `Your team "${team?.name}" has already been submitted for the competition.`
+                : `Your team "${team?.name}" has been successfully submitted for the competition.`
+              }
             </p>
+            {isAlreadySubmitted && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                <p className="text-white/60 text-sm">
+                  To make any changes to your team, please contact the admin.
+                </p>
+              </div>
+            )}
             <button onClick={() => navigate('/coach/dashboard')}
               className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
               style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
@@ -196,6 +284,25 @@ const CoachPayment = () => {
             </button>
           </div>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (team && !feeConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
+        <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
+          <h1 className="text-xl font-black text-white mb-3">Per-player fee not set</h1>
+          <p className="text-white/50 text-sm mb-6 leading-relaxed">
+            This competition does not have a valid per-player registration fee. Ask a super admin to edit the competition and set the fee, then try again.
+          </p>
+          <button type="button" onClick={() => navigate('/coach/dashboard')}
+            className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            Back to Dashboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -223,6 +330,9 @@ const CoachPayment = () => {
             </p>
             <h1 className="text-3xl font-black text-white">Team Payment</h1>
             <p className="text-white/40 text-sm mt-1">Complete your team registration for the competition</p>
+            {team?.competition?.name && (
+              <p className="text-white/55 text-sm mt-2 font-medium">{team.competition.name}</p>
+            )}
           </div>
         </FadeIn>
 
@@ -277,19 +387,15 @@ const CoachPayment = () => {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment Details</h2>
-                  <p className="text-white/40 text-xs">Registration fees</p>
+                  <p className="text-white/40 text-xs">Per-player fee for this competition (no base fee)</p>
                 </div>
               </div>
 
               {/* Fee breakdown */}
               <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Base Registration Fee</span>
-                  <span className="text-white">₹500</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Per Player ({team?.players?.length || 0} × ₹100)</span>
-                  <span className="text-white">₹{((team?.players?.length || 0) * 100).toLocaleString()}</span>
+                  <span className="text-white/50">Per player ({team?.players?.length || 0} × ₹{playerFeePerPlayer?.toLocaleString()})</span>
+                  <span className="text-white">₹{((team?.players?.length || 0) * playerFeePerPlayer).toLocaleString()}</span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total Amount</span>

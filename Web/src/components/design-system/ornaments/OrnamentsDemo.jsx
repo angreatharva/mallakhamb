@@ -131,8 +131,8 @@ const OrnamentsDemo = () => {
           
           <div style={{ textAlign: 'center' }}>
             <h3 style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-              <GradientText colors={['#22C55E', '#4ADE80', '#16A34A']}>
-                Coach Green Gradient
+              <GradientText colors={['#FF6B00', '#FF8C38', '#CC5500']}>
+                Coach Orange Gradient
               </GradientText>
             </h3>
             <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, Lock, Shield, Eye, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { authAPI } from '../../services/api';
+import { authAPI } from '@/services/api';
 import BHALogo from '../../assets/BHA.png';
 
 const COLORS = {

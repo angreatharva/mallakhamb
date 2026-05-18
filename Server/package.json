@@ -6,13 +6,23 @@
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "create-admin": "node scripts/createAdmin.js",
     "create-superadmin": "node scripts/createSuperAdmin.js",
     "create-coach": "node scripts/createCoach.js",
     "create-player": "node scripts/createPlayer.js",
     "create-competition": "node scripts/createCompetition.js",
+    "populate-db": "node scripts/populateDatabase.js",
     "test-email": "node test-email-services.js",
-    "test-resend": "node test-resend-services.js"
+    "test-resend": "node test-resend-services.js",
+    "migrate:up": "node scripts/migrate.js up",
+    "migrate:down": "node scripts/migrate.js down",
+    "migrate:status": "node scripts/migrate.js status",
+    "test:coach-flow": "node tests/coach-onboarding-flow.test.js",
+    "setup:test": "node scripts/setupTestEnvironment.js",
+    "cleanup:test": "node scripts/cleanupTestCoaches.js"
   },
   "keywords": [
     "sports",
@@ -39,13 +49,17 @@
     "nodemailer": "^7.0.12",
     "razorpay": "^2.9.6",
     "resend": "^6.10.0",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.7.4",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.7.0",
     "@types/jest": "^30.0.0",
+    "fast-check": "^4.7.0",
     "jest": "^30.2.0",
     "nodemon": "^3.0.2",
+    "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2"
   },
   "jest": {
@@ -53,6 +67,10 @@
     "coveragePathIgnorePatterns": [
       "/node_modules/"
     ],
-    "testTimeout": 30000
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "maxWorkers": 1
   }
 }

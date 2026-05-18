@@ -18,8 +18,8 @@ import {
   isDesktop,
   isDesktopBaseline,
   setResponsiveCSSProperties,
-} from '../utils/responsive.js';
-import { logger } from '../utils/logger.js';
+} from '@/utils/ui/responsive.js';
+import { logger } from '@/infrastructure/logger.js';
 
 /**
  * Custom hook for responsive state management

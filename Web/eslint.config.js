@@ -40,6 +40,7 @@ export default defineConfig([
     files: [
       '**/*.{test,spec}.{js,jsx}',
       '**/__tests__/**/*.{js,jsx}',
+      'tests/**/*.{js,jsx}',
     ],
     languageOptions: {
       globals: {

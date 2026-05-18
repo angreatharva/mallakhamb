@@ -2,25 +2,26 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
-  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Building, Calendar,
+  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
   UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
+  BarChart2, Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
-import { HexMesh, RadialBurst } from '../../components/design-system/backgrounds';
+import { HexMesh, RadialBurst, HexGrid } from '../../components/design-system/backgrounds';
 import { CoachOrnament, GradientText } from '../../components/design-system/ornaments';
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // API services
-import { coachAPI, playerAPI } from '../../services/api';
+import { coachAPI, playerAPI } from '@/services/api';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -42,69 +43,66 @@ const detectRoleFromPath = (pathname) => {
  * @returns {Object} Configuration object with title, subtitle, description, and form fields
  */
 const getRoleConfig = (role) => {
-  const configs = {
+  // Unified ornament component - same design for all roles, only color changes
+  const UnifiedOrnament = ({ color }) => (
+    <motion.div className="relative flex items-center justify-center"
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
+      <motion.div className="absolute w-24 h-24 rounded-full border"
+        style={{ borderColor: `${color}30` }}
+        animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+      <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, ${color}20, ${color}15)`,
+          border: `1px solid ${color}40`,
+          boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+        }}>
+        {/* Role-specific icon but same size and positioning */}
+        {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'player' && <UserPlus className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+      </div>
+    </motion.div>
+  );
+
+  // Role-specific content but unified structure
+  const roleContent = {
     coach: {
       title: 'Coach',
       subtitle: 'Registration',
       description: 'Create your coach account to manage your team and compete.',
       accessLabel: 'Coach Registration',
-      formTitle: 'Create Account',
-      formSubtitle: 'Register as a coach',
-      buttonText: 'Create Account',
-      ornament: CoachOrnament,
-      background: HexMesh,
-      icon: UserCheck,
-      features: [
-        { icon: Users, label: 'Manage' },
-        { icon: Trophy, label: 'Compete' },
-        { icon: Layers, label: 'Organize' },
-      ],
-      loginLink: '/coach/login',
     },
     player: {
-      title: 'Athlete',
+      title: 'Player',
       subtitle: 'Registration',
       description: 'Register as a player, join your team, and compete in Mallakhamb.',
       accessLabel: 'Player Registration',
-      formTitle: 'Create Account',
-      formSubtitle: 'Register as a player',
-      buttonText: 'Create Account',
-      ornament: ({ color }) => (
-        <motion.div
-          className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}
-        >
-          <motion.div
-            className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <div
-            className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}
-          >
-            <UserPlus className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: RadialBurst,
-      icon: UserPlus,
-      features: [
-        { icon: Flame, label: 'Compete' },
-        { icon: Dumbbell, label: 'Train' },
-        { icon: Star, label: 'Excel' },
-      ],
-      loginLink: '/player/login',
     },
   };
-  return configs[role] || configs.coach;
+
+  const content = roleContent[role] || roleContent.coach;
+
+  // Unified configuration - same for all roles except content and colors
+  return {
+    title: content.title,
+    subtitle: content.subtitle,
+    description: content.description,
+    accessLabel: content.accessLabel,
+    formTitle: 'Create Account',
+    formSubtitle: 'Enter your details to register',
+    buttonText: 'Create Account',
+    ornament: UnifiedOrnament,
+    background: HexGrid, // Same background for all
+    icon: role === 'coach' ? UserCheck : UserPlus,
+    features: [
+      { icon: BarChart2, label: 'Secure' },
+      { icon: Users, label: 'Reliable' },
+      { icon: Settings, label: 'Modern' },
+    ], // Same features for all
+    loginLink: `/${role}/login`,
+  };
 };
 
 // ─── Field definitions ────────────────────────────────────────────────────────
@@ -139,15 +137,6 @@ const COACH_FIELDS = [
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
     rules: { required: 'Phone number is required' },
-  },
-  {
-    name: 'organization',
-    label: 'Organization',
-    type: 'text',
-    icon: Building,
-    placeholder: 'Your club or organization (optional)',
-    autoComplete: 'organization',
-    rules: {},
   },
 ];
 

@@ -111,20 +111,43 @@ Each user type has their own login page:
 
 ### For Coaches
 
-#### Step 1: Register and Create Team
+#### Step 1: Register
 1. Go to `/coach/register`
-2. Fill in your details (name, email, password)
-3. After registration, create your team:
-   - Team name
-   - Team description
-4. One coach can manage one team
+2. Fill in your details:
+   - Full Name
+   - Email Address
+   - Phone Number
+   - Organization (optional)
+   - Password (minimum 6 characters)
+   - Confirm Password
+3. Click "Create Account"
+4. You'll be automatically logged in and redirected to create your team
 
-#### Step 2: Register for Competition
+#### Step 2: Login (For Returning Coaches)
+1. Go to `/coach/login`
+2. Enter your email and password
+3. Click "Sign In"
+4. Based on your status, you'll be redirected to:
+   - Create Team page (if you have no teams)
+   - Select Competition page (if you have multiple teams)
+   - Dashboard (if you have exactly one team)
+
+#### Step 3: Create Team
+1. After registration or login, you'll see the "Create Your Team" page
+2. Fill in team details:
+   - Team Name
+   - Team Description
+3. Click "Create Team"
+4. You'll be redirected to select a competition
+5. **Note:** One coach can manage many teams
+
+#### Step 4: Register for Competition
 1. View available competitions
 2. Select a competition to participate in
 3. Register your team for that competition
+4. You'll be redirected to your dashboard
 
-#### Step 3: Add Players to Your Team
+#### Step 5: Add Players to Your Team
 1. Go to your dashboard
 2. Search for registered players
 3. Add players to specific age groups:
@@ -132,7 +155,7 @@ Each user type has their own login page:
    - **Girls:** Under 10, Under 12, Under 14, Under 16, Above 16
 4. The system automatically checks if the player's age matches the group
 
-#### Step 4: Submit Your Team
+#### Step 6: Submit Your Team
 1. Review your team roster
 2. Click "Submit Team"
 3. Payment is calculated:
@@ -321,7 +344,7 @@ Anyone can view:
 ## Important Rules and Restrictions
 
 ### For Coaches
-- One coach can create only ONE team
+- One coach can create and manage MANY teams
 - Cannot modify team after submission
 - Must have competition selected to add players
 - Payment required before team becomes visible to judges
@@ -454,7 +477,7 @@ Anyone can view:
 A: No, age groups are automatically calculated from your date of birth and cannot be changed.
 
 **Q: Can a coach manage multiple teams?**  
-A: No, one coach can create and manage only one team.
+A: Yes, one coach can create and manage many teams.
 
 **Q: What happens if I forget my password?**  
 A: Use the "Forgot Password" link on the login page. You'll receive an email with reset instructions.

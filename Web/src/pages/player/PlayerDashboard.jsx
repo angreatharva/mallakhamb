@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Users, Calendar, Award, User, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
+import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { playerAPI } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionDisplay from '../../components/CompetitionDisplay';
-import { logger } from '../../utils/logger';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { playerAPI } from '@/services/api';
+import { useCompetition } from '../../contexts/CompetitionContext';
+import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import { logger } from '@/infrastructure/logger';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
 import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
-import Dropdown from '../../components/Dropdown';
+import Dropdown from '@/components/auth/Dropdown';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
@@ -68,18 +70,80 @@ const AGE_GROUP_MAP = {
 
 // ─── PlayerDashboard ──────────────────────────────────────────────────────────
 const PlayerDashboard = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading } = useCompetition();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
-  const { logout } = useAuth();
+  const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   useReducedMotion(); // Initialize for accessibility
+
+  // Handle competition selection from URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const competitionIdFromUrl = urlParams.get('competitionId');
+    
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
+      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
+      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
+        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
+        switchCompetition(competitionIdFromUrl).then(() => {
+          // Remove the URL parameter after successfully setting the competition
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('competitionId');
+          window.history.replaceState({}, '', newUrl);
+        }).catch(error => {
+          logger.error('Failed to set competition from URL:', error);
+        });
+        return;
+      }
+    }
+  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition]);
 
   useEffect(() => {
     fetchPlayerProfile();
   }, []);
+
+  // `/players/team` requires JWT competition context — refetch after context is set (auto-select, modal, URL).
+  useEffect(() => {
+    if (!currentCompetition?._id) return;
+    fetchPlayerProfile(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when competition id changes only
+  }, [currentCompetition?._id]);
+
+  // Show modal if multiple competitions and no current competition selected
+  useEffect(() => {
+    // Wait for competitions to load
+    if (competitionLoading || !assignedCompetitions) return;
+
+    const competitionCount = assignedCompetitions.length;
+    
+    // If 2+ competitions and no current competition, show modal
+    if (competitionCount > 1 && !currentCompetition) {
+      logger.info('Multiple competitions found, showing selection modal', { count: competitionCount });
+      setShowCompetitionModal(true);
+    }
+  }, [competitionLoading, assignedCompetitions, currentCompetition]);
+
+  // Redirect to team selection if player has no team
+  useEffect(() => {
+    if (!loading && player) {
+      // Team can be null, undefined, or a string ID, or an object
+      const hasTeam = player.team && (
+        typeof player.team === 'string' ? player.team : 
+        (player.team._id || player.team.id)
+      );
+      
+      if (!hasTeam) {
+        logger.info('Player has no team, redirecting to team selection');
+        navigate('/player/select-team', { replace: true });
+      }
+    }
+  }, [loading, player, navigate]);
 
   useEffect(() => {
     if (player && !player.team) fetchTeams();
@@ -88,15 +152,48 @@ const PlayerDashboard = () => {
   const fetchPlayerProfile = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      try {
-        const teamResponse = await playerAPI.getTeam();
-        setPlayer({ ...teamResponse.data.player, team: teamResponse.data.team, teamStatus: teamResponse.data.teamStatus });
-      } catch {
-        const response = await playerAPI.getProfile();
-        setPlayer({ ...response.data.player, teamStatus: 'Not assigned' });
+      // Always load profile first (stable source for player identity fields)
+      const profileResponse = await playerAPI.getProfile();
+      const profileData = profileResponse.data?.data || profileResponse.data || {};
+
+      const token = secureStorage.getItem('player_token');
+      const competitionIdInToken = getCompetitionIdFromToken(token);
+
+      // GET /players/team requires competition in JWT (validateCompetitionContext). Skip until set-competition.
+      if (!competitionIdInToken) {
+        const hasTeam = profileData.team && profileData.team._id;
+        setPlayer({
+          ...profileData,
+          teamStatus: hasTeam ? 'Assigned' : 'Not assigned',
+        });
+      } else {
+        try {
+          const teamResponse = await playerAPI.getTeam();
+          const teamPayload = teamResponse.data?.data || teamResponse.data || {};
+          const resolvedTeam = teamPayload.team || null;
+          const hasTeam = !!(resolvedTeam && (resolvedTeam._id || resolvedTeam.id));
+
+          setPlayer({
+            ...profileData,
+            team: resolvedTeam || profileData.team || null,
+            teamStatus: teamPayload.teamStatus || (hasTeam ? 'Assigned' : 'Not assigned'),
+          });
+        } catch (teamError) {
+          logger.info('Team fetch failed, using profile fallback:', teamError.response?.data?.error?.message || teamError.response?.data?.message);
+          const hasTeam = profileData.team && profileData.team._id;
+          setPlayer({
+            ...profileData,
+            teamStatus: hasTeam ? 'Assigned' : 'Not assigned',
+          });
+        }
       }
     } catch (error) {
       logger.error('Failed to fetch player profile:', error);
+      // Don't show error toast if it's just a competition context issue
+      const errCode = error.response?.data?.error?.code || error.response?.data?.code;
+      if (errCode !== 'COMPETITION_CONTEXT_REQUIRED') {
+        toast.error('Failed to load profile');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,7 +203,9 @@ const PlayerDashboard = () => {
     setTeamsLoading(true);
     try {
       const response = await playerAPI.getTeams();
-      setTeams(response.data.teams.map((t) => ({ value: t._id, label: t.name })));
+      const payload = response.data?.data ?? response.data?.teams ?? response.data ?? [];
+      const teamsList = Array.isArray(payload) ? payload : [];
+      setTeams(teamsList.map((t) => ({ value: t._id || t.id, label: t.name })));
     } catch {
       toast.error('Failed to load teams');
     } finally {
@@ -146,42 +245,20 @@ const PlayerDashboard = () => {
 
   return (
     <div className="min-h-dvh" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Top bar */}
-      <div className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
-        <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: `${COLORS.saffron}18` }}>
-              <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-tight">
-                {player?.firstName} {player?.lastName}
-              </p>
-              <p className="text-white/35 text-xs">Player Dashboard</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => fetchPlayerProfile(true)} disabled={loading}
-              className="p-2 rounded-xl text-white/45 hover:text-white hover:bg-white/5 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Refresh data">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={logout}
-              className="p-2 rounded-xl text-white/45 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Logout">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8 pt-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
         {/* Competition context */}
-        <CompetitionProvider userType="player">
+        {assignedCompetitions && assignedCompetitions.length > 0 ? (
           <CompetitionDisplay className="mb-0" />
-        </CompetitionProvider>
+        ) : (
+          <FadeIn>
+            <div className="rounded-2xl border p-4 text-center"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+              <p className="text-white/40 text-sm">
+                No competitions assigned yet. Your coach will add you to competitions.
+              </p>
+            </div>
+          </FadeIn>
+        )}
 
         {/* Welcome banner */}
         <FadeIn>
@@ -200,6 +277,15 @@ const PlayerDashboard = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => fetchPlayerProfile(true)}
+                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+                  title="Refresh player data"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
                 <StatusBadge status={player?.teamStatus} />
               </div>
             </div>
@@ -302,6 +388,103 @@ const PlayerDashboard = () => {
           </FadeIn>
         </div>
       </div>
+
+      {/* Competition Selection Modal */}
+      <AnimatePresence>
+        {showCompetitionModal && assignedCompetitions && assignedCompetitions.length > 1 && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.8)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              // Don't allow closing by clicking backdrop - force selection
+              e.stopPropagation();
+            }}
+          >
+            <motion.div
+              className="w-full max-w-2xl rounded-3xl border p-6 md:p-8"
+              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                  style={{ background: `${COLORS.saffron}15` }}>
+                  <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+                </div>
+                <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
+                <p className="text-white/45 text-sm">
+                  You're registered for multiple competitions. Please select one to continue.
+                </p>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {assignedCompetitions.map((competition) => (
+                  <motion.button
+                    key={competition._id}
+                    onClick={async () => {
+                      try {
+                        logger.info('Modal: Selecting competition', { 
+                          competitionId: competition._id, 
+                          competitionName: competition.name 
+                        });
+                        await switchCompetition(competition._id);
+                        logger.info('Modal: Competition switched successfully');
+                        setShowCompetitionModal(false);
+                        toast.success(`Selected ${competition.name}`);
+                      } catch (error) {
+                        logger.error('Modal: Failed to select competition', error);
+                        toast.error('Failed to select competition');
+                      }
+                    }}
+                    className="w-full text-left p-4 rounded-xl border transition-all"
+                    style={{ 
+                      background: COLORS.dark,
+                      borderColor: COLORS.darkBorderSubtle 
+                    }}
+                    whileHover={{ 
+                      borderColor: `${COLORS.saffron}40`,
+                      boxShadow: `0 0 20px ${COLORS.saffron}10` 
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${COLORS.saffron}15` }}>
+                        <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold text-base mb-1 truncate">
+                          {competition.name}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
+                          {competition.place && <span>{competition.place}</span>}
+                          {competition.level && (
+                            <>
+                              <span>•</span>
+                              <span className="capitalize">{competition.level}</span>
+                            </>
+                          )}
+                          {competition.year && (
+                            <>
+                              <span>•</span>
+                              <span>{competition.year}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

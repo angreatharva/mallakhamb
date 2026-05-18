@@ -124,7 +124,7 @@ export const ThemedInput = forwardRef(({
           className={clsx(
             // Base styles
             'w-full rounded-lg',
-            'bg-white/5 backdrop-blur-sm',
+            'bg-white/5',
             'text-white placeholder:text-white/45',
             'border transition-all duration-200',
             'outline-none',

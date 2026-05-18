@@ -10,11 +10,12 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { useRateLimit } from '../../hooks/useRateLimit';
-import { loginSchema, judgeLoginSchema } from '../../utils/validation';
-import { secureStorage } from '../../utils/secureStorage';
-import { logger } from '../../utils/logger';
+import { loginSchema, judgeLoginSchema } from '@/validators/form.validator';
+import { secureStorage } from '@/utils/auth/secureStorage';
+import { logger } from '@/infrastructure/logger';
 import axios from 'axios';
-import apiConfig from '../../utils/apiConfig';
+import apiConfig from '@/config/api.config';
+import AccountLockoutMessage from '@/components/auth/AccountLockoutMessage';
 
 // Import design system components
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
@@ -34,9 +35,9 @@ import {
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // Import API services
-import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '../../services/api';
+import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionSelectionScreen from '../../components/CompetitionSelectionScreen';
+import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -68,164 +69,93 @@ const detectRoleFromPath = (pathname) => {
  * @returns {Object} Configuration object with UI elements, icons, and navigation paths
  */
 const getRoleConfig = (role) => {
-  const configs = {
+  // Unified ornament component - same design for all roles, only color changes
+  const UnifiedOrnament = ({ color }) => (
+    <motion.div className="relative flex items-center justify-center"
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
+      <motion.div className="absolute w-24 h-24 rounded-full border"
+        style={{ borderColor: `${color}30` }}
+        animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+      <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, ${color}20, ${color}15)`,
+          border: `1px solid ${color}40`,
+          boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+        }}>
+        {/* Role-specific icon but same size and positioning */}
+        {role === 'admin' && <Shield className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'superadmin' && <Crown className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'player' && <User className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'judge' && <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+      </div>
+    </motion.div>
+  );
+
+  // Role-specific content but unified structure
+  const roleContent = {
     admin: {
       title: 'Admin',
       subtitle: 'Portal',
       description: 'Manage competitions, teams, judges, and scoring operations.',
       accessLabel: 'Admin Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Manage competitions and operations',
-      buttonText: 'Access Dashboard',
-      ornament: ShieldOrnament,
-      background: HexGrid,
-      icon: Shield,
-      features: [
-        { icon: BarChart2, label: 'Scores' },
-        { icon: Users, label: 'Teams' },
-        { icon: Settings, label: 'Manage' },
-      ],
-      usesEmail: true,
-      registerLink: null,
-      forgotPasswordLink: '/forgot-password',
     },
     superadmin: {
-      title: 'Supreme',
-      subtitle: 'Command',
+      title: 'Super Admin',
+      subtitle: 'Portal',
       description: 'Full sovereign access to all competitions, administrators, and platform systems.',
-      accessLabel: 'Restricted Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Super Administrator credentials required',
-      buttonText: 'Enter Command Center',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <Crown className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: RadialBurst,
-      icon: Crown,
-      features: [
-        { icon: Star, label: 'All Access' },
-        { icon: Zap, label: 'Real-time' },
-        { icon: Crown, label: 'Sovereign' },
-      ],
-      usesEmail: true,
-      registerLink: null,
-      forgotPasswordLink: '/forgot-password',
+      accessLabel: 'Super Admin Access',
     },
     coach: {
       title: 'Coach',
       subtitle: 'Portal',
       description: 'Manage your team, handle registrations, and guide your athletes to victory.',
       accessLabel: 'Coach Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Enter your coach credentials',
-      buttonText: 'Sign In',
-      ornament: CoachOrnament,
-      background: HexMesh,
-      icon: UserCheck,
-      features: [
-        { icon: Users, label: 'Manage' },
-        { icon: Trophy, label: 'Compete' },
-        { icon: Layers, label: 'Organize' },
-      ],
-      usesEmail: true,
-      registerLink: '/coach/register',
-      forgotPasswordLink: '/forgot-password',
     },
     player: {
-      title: 'Athlete',
+      title: 'Player',
       subtitle: 'Portal',
       description: 'Register, join your team, and compete in the ancient art of Mallakhamb.',
       accessLabel: 'Player Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Enter your athlete credentials',
-      buttonText: 'Sign In',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <User className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: DiagonalBurst,
-      icon: User,
-      features: [
-        { icon: Flame, label: 'Compete' },
-        { icon: Dumbbell, label: 'Train' },
-        { icon: Star, label: 'Excel' },
-      ],
-      usesEmail: true,
-      registerLink: '/player/register',
-      forgotPasswordLink: '/forgot-password',
     },
     judge: {
       title: 'Judge',
       subtitle: 'Portal',
       description: 'Score performances with precision. Your judgment shapes the competition.',
       accessLabel: 'Judge Access',
-      formTitle: 'Sign In',
-      formSubtitle: 'Credentials provided by the administrator',
-      buttonText: 'Sign In',
-      ornament: ({ color }) => (
-        <motion.div className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-          <motion.div className="absolute w-24 h-24 rounded-full border"
-            style={{ borderColor: `${color}30` }}
-            animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }} />
-          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-              border: `1px solid ${color}40`,
-              boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}>
-            <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />
-          </div>
-        </motion.div>
-      ),
-      background: Constellation,
-      icon: Scale,
-      features: [
-        { icon: Scale, label: 'Score' },
-        { icon: Gavel, label: 'Judge' },
-        { icon: BookOpen, label: 'Review' },
-      ],
-      usesEmail: false,
-      registerLink: null,
-      forgotPasswordLink: null,
     },
   };
-  
-  return configs[role] || configs.admin;
+
+  const content = roleContent[role] || roleContent.admin;
+
+  // Unified configuration - same for all roles except content and colors
+  return {
+    title: content.title,
+    subtitle: content.subtitle,
+    description: content.description,
+    accessLabel: content.accessLabel,
+    formTitle: 'Sign In',
+    formSubtitle: 'Enter your credentials to continue',
+    buttonText: 'Sign In',
+    ornament: UnifiedOrnament,
+    background: HexGrid, // Same background for all
+    icon: role === 'admin' ? Shield : 
+          role === 'superadmin' ? Crown :
+          role === 'coach' ? UserCheck :
+          role === 'player' ? User :
+          role === 'judge' ? Scale : Shield,
+    features: [
+      { icon: BarChart2, label: 'Secure' },
+      { icon: Users, label: 'Reliable' },
+      { icon: Settings, label: 'Modern' },
+    ], // Same features for all
+    usesEmail: role !== 'judge', // Only judge uses username
+    registerLink: (role === 'coach' || role === 'player') ? `/${role}/register` : null,
+    forgotPasswordLink: role !== 'judge' ? '/forgot-password' : null,
+  };
 };
 
 /**
@@ -241,9 +171,44 @@ const UnifiedLoginInner = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
+  const [lockoutEndTime, setLockoutEndTime] = useState(null);
+  const [rateLimitEndTime, setRateLimitEndTime] = useState(null);
+  const [loginError, setLoginError] = useState(null);
+  
+  // Clear lockout/rate limit when timer expires
+  useEffect(() => {
+    if (lockoutEndTime) {
+      const checkLockout = setInterval(() => {
+        if (new Date() >= lockoutEndTime) {
+          setLockoutEndTime(null);
+          clearInterval(checkLockout);
+        }
+      }, 1000);
+      return () => clearInterval(checkLockout);
+    }
+  }, [lockoutEndTime]);
+  
+  useEffect(() => {
+    if (rateLimitEndTime) {
+      const checkRateLimit = setInterval(() => {
+        if (new Date() >= rateLimitEndTime) {
+          setRateLimitEndTime(null);
+          clearInterval(checkRateLimit);
+        }
+      }, 1000);
+      return () => clearInterval(checkRateLimit);
+    }
+  }, [rateLimitEndTime]);
   
   const { register, handleSubmit, formState: { errors }, setError } = useForm();
   const { checkRateLimit, recordAttempt, reset } = useRateLimit(5, 60000);
+  
+  // Clear login error when user starts typing
+  useEffect(() => {
+    if (loginError) {
+      setLoginError(null);
+    }
+  }, [location.pathname]); // Clear error when navigating between login pages
   
   // Detect role from path
   const role = detectRoleFromPath(location.pathname);
@@ -264,11 +229,15 @@ const UnifiedLoginInner = () => {
   // Redirect if already logged in (but not during active login process)
   useEffect(() => {
     if (user && userType === role && !showCompetitionSelection && !loading) {
+      // For coaches and players, always let them choose competition - don't auto-redirect
+      if (role === 'coach' || role === 'player') {
+        return;
+      }
+      
+      // For other roles, use standard redirect logic
       const redirectPaths = {
         admin: '/admin/dashboard',
         superadmin: '/superadmin/dashboard',
-        coach: '/coach/select-competition',
-        player: user.team ? '/player/dashboard' : '/player/select-team',
         judge: '/judge/scoring',
       };
       const targetPath = redirectPaths[role] || '/';
@@ -282,10 +251,15 @@ const UnifiedLoginInner = () => {
   
   // Handle form submission
   const onSubmit = async (data) => {
+    // Clear any previous login errors
+    setLoginError(null);
+    
     // Check rate limit
     const { allowed, waitTime } = checkRateLimit();
     if (!allowed) {
-      toast.error(`Too many login attempts. Please wait ${waitTime} seconds.`);
+      const errorMsg = `Too many login attempts. Please wait ${waitTime} seconds.`;
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
     
@@ -313,10 +287,39 @@ const UnifiedLoginInner = () => {
           },
           { headers: apiConfig.getHeaders() }
         );
-        secureStorage.setItem('judge_token', response.data.token);
-        secureStorage.setItem('judge_user', JSON.stringify(response.data.judge));
-        login(response.data.judge, response.data.token, 'judge');
-        toast.success(`Welcome ${response.data.judge.name}!`);
+        
+        console.log('Judge login response:', response.data);
+        const { token, judge, competition } = response.data.data;
+        console.log('Destructured data:', { token: !!token, judge: !!judge, competition: !!competition });
+        
+        // Validate that we got the required data
+        if (!token || !judge) {
+          throw new Error('Invalid login response: missing token or judge data');
+        }
+        
+        // Extract competition context from judge profile
+        const competitionId = competition?._id;
+        const competitionName = competition?.name;
+        
+        // Store token and user data
+        secureStorage.setItem('judge_token', token);
+        secureStorage.setItem('judge_user', JSON.stringify(judge));
+        
+        // Store competition context
+        if (competitionId) {
+          secureStorage.setItem('judge_competition_id', competitionId);
+          logger.log('Judge competition context stored:', competitionId);
+        }
+        
+        login(judge, token, 'judge');
+        
+        // Display success message with competition details
+        if (competitionName) {
+          toast.success(`Welcome ${judge.name}! Assigned to ${competitionName}`);
+        } else {
+          toast.success(`Welcome ${judge.name}!`);
+        }
+        
         reset();
         navigate('/judge/scoring');
         return;
@@ -325,7 +328,11 @@ const UnifiedLoginInner = () => {
       // Other roles use API service
       const apiService = getAPIService();
       response = await apiService.login(validation.data);
-      const { token } = response.data;
+      
+      // Handle nested response structure: {success: true, data: {user, token}}
+      const responseData = response.data.data || response.data;
+      const { token } = responseData;
+      
       const userDataKeyByRole = {
         admin: 'admin',
         superadmin: 'admin',
@@ -333,7 +340,8 @@ const UnifiedLoginInner = () => {
         player: 'player',
       };
       const expectedUserKey = userDataKeyByRole[role];
-      const userData = response.data[expectedUserKey] || response.data.user || response.data.profile;
+      const userData = responseData[expectedUserKey] || responseData.user || responseData.profile;
+      
       if (!token || !userData) {
         throw new Error('Invalid login response');
       }
@@ -348,19 +356,36 @@ const UnifiedLoginInner = () => {
       
       // Handle post-login navigation
       if (role === 'admin') {
+        // Admin needs to select competition
         setShowCompetitionSelection(true);
-      } else if (role === 'coach') {
-        try {
-          const statusResponse = await coachAPI.getStatus();
-          const { step } = statusResponse.data;
-          navigate(step === 'create-team' ? '/coach/create-team' : '/coach/select-competition');
-        } catch {
-          navigate('/coach/select-competition');
-        }
-      } else if (role === 'player') {
+      } else if (role === 'superadmin') {
+        // Superadmin goes directly to dashboard without competition selection
         setTimeout(() => {
-          navigate(userData.team ? '/player/dashboard' : '/player/select-team');
+          navigate('/superadmin/dashboard');
         }, 100);
+      } else if (role === 'coach') {
+        // Coach always goes to competition selection after login
+        navigate('/coach/select-competition');
+      } else if (role === 'player') {
+        // Player: check if they have a team assigned
+        // Team can be either a string ID or an object with _id
+        const hasTeam = userData.team && (
+          typeof userData.team === 'string' ? userData.team : 
+          (userData.team._id || userData.team.id)
+        );
+        
+        if (hasTeam) {
+          const teamId = typeof userData.team === 'string' ? userData.team : (userData.team._id || userData.team.id);
+          logger.info('Player has team, redirecting to dashboard', { teamId });
+          setTimeout(() => {
+            navigate('/player/dashboard');
+          }, 100);
+        } else {
+          logger.info('Player has no team, redirecting to team selection');
+          setTimeout(() => {
+            navigate('/player/select-team');
+          }, 100);
+        }
       } else {
         // Add small delay for state to update before navigation
         setTimeout(() => {
@@ -370,17 +395,47 @@ const UnifiedLoginInner = () => {
     } catch (error) {
       recordAttempt();
       logger.error(`${role} login error:`, error);
-      toast.error(error.response?.data?.message || 'Login failed');
+      
+      // Handle account lockout errors
+      if (error.response?.data?.message?.toLowerCase().includes('locked') || 
+          error.response?.data?.message?.toLowerCase().includes('lockout')) {
+        const lockoutDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
+        const endTime = new Date(Date.now() + lockoutDuration);
+        setLockoutEndTime(endTime);
+        const errorMsg = 'Account locked due to failed attempts. Try again in 15 minutes.';
+        setLoginError(errorMsg);
+        toast.error(errorMsg);
+        return;
+      }
+      
+      // Handle rate limiting errors (429 status)
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.data?.retryAfter || 900; // Default 15 minutes in seconds
+        const endTime = new Date(Date.now() + retryAfter * 1000);
+        setRateLimitEndTime(endTime);
+        const minutes = Math.ceil(retryAfter / 60);
+        const errorMsg = `Too many login attempts. Please wait ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+        setLoginError(errorMsg);
+        toast.error(errorMsg);
+        return;
+      }
+      
+      // Handle invalid credentials or other login errors
+      const errorMsg = error.response?.data?.message || 'Incorrect credentials. Please try again with correct credentials.';
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
+      
+      // DO NOT navigate away - stay on login page
     } finally {
       setLoading(false);
     }
   };
   
-  // Show competition selection for admin
+  // Show competition selection for admin only (superadmin goes directly to dashboard)
   if (showCompetitionSelection && role === 'admin') {
     return (
-      <CompetitionProvider userType="admin">
-        <CompetitionSelectionScreen userType="admin" onCompetitionSelected={() => {}} />
+      <CompetitionProvider userType={role}>
+        <CompetitionSelectionScreen userType={role} onCompetitionSelected={() => {}} />
       </CompetitionProvider>
     );
   }
@@ -501,6 +556,55 @@ const UnifiedLoginInner = () => {
             <motion.div className="space-y-4"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
               
+              {/* Login Error Message */}
+              <AnimatePresence>
+                {loginError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="rounded-lg p-4 border"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      borderColor: 'rgba(239, 68, 68, 0.3)',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="w-5 h-5" style={{ color: '#EF4444' }} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>
+                          Login Failed
+                        </h3>
+                        <p className="text-sm" style={{ color: 'rgba(239, 68, 68, 0.9)' }}>
+                          {loginError}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              {/* Account Lockout Message */}
+              {lockoutEndTime && (
+                <AccountLockoutMessage 
+                  lockoutEndTime={lockoutEndTime} 
+                  primaryColor={theme.colors.primary}
+                />
+              )}
+              
+              {/* Rate Limit Message */}
+              {rateLimitEndTime && !lockoutEndTime && (
+                <AccountLockoutMessage 
+                  lockoutEndTime={rateLimitEndTime} 
+                  primaryColor={theme.colors.primary}
+                />
+              )}
+              
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
                   style={{ color: `${theme.colors.primary}90` }} 
@@ -568,7 +672,7 @@ const UnifiedLoginInner = () => {
               
               <ThemedButton
                 type="submit"
-                disabled={loading}
+                disabled={loading || lockoutEndTime !== null || rateLimitEndTime !== null}
                 loading={loading}
                 className="w-full mt-2"
               >

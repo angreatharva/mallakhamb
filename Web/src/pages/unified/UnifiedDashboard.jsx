@@ -8,10 +8,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { adminAPI, superAdminAPI } from '../../services/api';
-import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionDisplay from '../../components/CompetitionDisplay';
-import CompetitionSelector from '../../components/CompetitionSelector';
+import { adminAPI, superAdminAPI } from '@/services/api';
+import { useCompetition } from '../../contexts/CompetitionContext';
+import { useAuth } from '../../contexts/AuthContext';
+import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import CompetitionSelector from '@/components/competition/CompetitionSelector';
+import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useRouteContext } from '../../contexts/RouteContext';
 import AdminTeams from '../admin/AdminTeams';
@@ -19,10 +21,9 @@ import AdminScores from '../admin/AdminScores';
 import AdminJudges from '../admin/AdminJudges';
 import AdminTransactions from '../admin/AdminTransactions';
 import SuperAdminManagement from '../superadmin/SuperAdminManagement';
-import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
-import { logger } from '../../utils/logger';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import { logger } from '@/infrastructure/logger';
+import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import BHALogo from '../../assets/BHA.png';
 
 // Design system imports
@@ -151,9 +152,57 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
 
-  const { currentCompetition } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, clearCompetitionContext } = useCompetition();
+  const { logout } = useAuth();
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
+
+  // Auto-select competition if user has only one, or handle URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const competitionIdFromUrl = urlParams.get('competitionId');
+    
+    logger.info('UnifiedDashboard competition check', {
+      routePrefix,
+      storagePrefix,
+      isSuperAdmin,
+      activeTab,
+      pathname: location.pathname,
+      competitionIdFromUrl,
+      hasCurrentCompetition: !!currentCompetition,
+      currentCompetitionId: currentCompetition?._id,
+      assignedCompetitionsCount: assignedCompetitions?.length || 0
+    });
+
+    // Skip for superadmin as they don't use competition context
+    if (isSuperAdmin) return;
+
+    // If there's a competition ID in the URL, set it as current competition
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
+      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
+      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
+        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
+        switchCompetition(competitionIdFromUrl).then(() => {
+          // Remove the URL parameter after successfully setting the competition
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('competitionId');
+          window.history.replaceState({}, '', newUrl);
+        }).catch(error => {
+          logger.error('Failed to set competition from URL:', error);
+        });
+        return;
+      }
+    }
+
+    // Auto-select if user has exactly one competition and none is currently selected
+    if (!currentCompetition && assignedCompetitions?.length === 1) {
+      const competition = assignedCompetitions[0];
+      logger.info('Auto-selecting single assigned competition', { competitionId: competition._id, competitionName: competition.name });
+      switchCompetition(competition._id).catch(error => {
+        logger.error('Failed to auto-select competition:', error);
+      });
+    }
+  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition, isSuperAdmin]);
 
   // Nav tabs configuration - role-specific
   const NAV_TABS = isSuperAdmin ? [
@@ -186,21 +235,45 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
   // Fetch data based on active tab
   useEffect(() => {
+    logger.info('Dashboard useEffect triggered', { 
+      activeTab, 
+      isSuperAdmin, 
+      hasCurrentCompetition: !!currentCompetition,
+      currentCompetitionId: currentCompetition?._id,
+      currentCompetitionName: currentCompetition?.name
+    });
+
     if (isSuperAdmin && activeTab === 'overview') {
       fetchCompetitions();
       fetchSuperAdminData();
     } else if (!isSuperAdmin && activeTab === 'dashboard') {
-      fetchAdminDashboardData();
-      fetchJudgesSummary();
+      if (currentCompetition) {
+        logger.info('Fetching admin dashboard data for competition', { competitionId: currentCompetition._id });
+        fetchAdminDashboardData();
+        fetchJudgesSummary();
+      } else {
+        logger.warn('Dashboard tab active but no currentCompetition set');
+        setLoading(false);
+      }
+    } else {
+      // Other tabs don't need loading state
+      setLoading(false);
     }
-  }, [activeTab, selectedCompetition, isSuperAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedCompetition, isSuperAdmin, currentCompetition?._id]);
 
   const fetchCompetitions = async () => {
     try {
       const response = await superAdminAPI.getAllCompetitions();
-      setCompetitions(response.data.competitions || []);
+      // Handle nested response structure: {success: true, data: [competitions array]}
+      const responseData = response.data.data || response.data;
+      // If responseData is already an array, use it; otherwise try to get competitions property
+      const competitionsArray = Array.isArray(responseData) ? responseData : (responseData.competitions || []);
+      setCompetitions(competitionsArray);
+      logger.info('Fetched competitions:', competitionsArray);
     } catch (error) {
       logger.error('Failed to fetch competitions:', error);
+      toast.error('Failed to load competitions');
     }
   };
 
@@ -212,29 +285,49 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         superAdminAPI.getDashboard(params),
         superAdminAPI.getSystemStats()
       ]);
-      setSystemStats(systemResponse.data);
-      setCompetitionStats(dashboardResponse.data.competitionStats);
+      // Handle nested response structure
+      const systemData = systemResponse.data.data || systemResponse.data;
+      const dashboardData = dashboardResponse.data.data || dashboardResponse.data;
+      setSystemStats(systemData);
+      setCompetitionStats(dashboardData.competitionStats || dashboardData);
+      logger.info('Fetched superadmin data:', { systemData, dashboardData });
     } catch (error) {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please login again.');
       } else {
         toast.error('Failed to load dashboard data');
       }
+      logger.error('Failed to fetch superadmin data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchAdminDashboardData = async () => {
+    if (!currentCompetition) {
+      logger.warn('fetchAdminDashboardData called without currentCompetition');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    // Clear previous stats to show loading state
+    setStats(null);
     try {
+      logger.info('Fetching admin dashboard data', { competitionId: currentCompetition._id });
       const response = await adminAPI.getDashboard();
-      setStats(response.data.stats);
+      // Handle nested response structure
+      const responseData = response.data.data || response.data;
+      setStats(responseData.stats || responseData);
+      logger.info('Admin dashboard data loaded successfully', { stats: responseData.stats || responseData });
     } catch (error) {
+      logger.error('Failed to fetch admin dashboard data', { error: error.message, response: error.response?.data });
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please login again.');
+      } else if (error.response?.status === 400 && error.response?.data?.error?.code === 'COMPETITION_CONTEXT_REQUIRED') {
+        toast.error('Please select a competition first');
       } else {
-        toast.error('Failed to load dashboard stats');
+        toast.error(error.response?.data?.error?.message || 'Failed to load dashboard stats');
       }
     } finally {
       setLoading(false);
@@ -242,10 +335,22 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   };
 
   const fetchJudgesSummary = async () => {
+    if (!currentCompetition) {
+      logger.warn('fetchJudgesSummary called without currentCompetition');
+      return;
+    }
+    
     setLoadingJudgesSummary(true);
+    // Clear previous summary to show loading state
+    setJudgesSummary([]);
     try {
+      logger.info('Fetching judges summary', { competitionId: currentCompetition._id });
       const response = await api.getAllJudgesSummary();
-      setJudgesSummary(response.data.summary || []);
+      // Handle nested response structure: {success: true, data: {summary: [...], totalJudges: 3, ...}}
+      const responseData = response.data.data || response.data;
+      const summary = responseData.summary || [];
+      setJudgesSummary(summary);
+      logger.info('Judges summary loaded successfully', { count: summary.length });
     } catch (error) {
       logger.error('Failed to fetch judges summary:', error);
     } finally {
@@ -274,10 +379,9 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(`${storagePrefix}_token`);
-    localStorage.removeItem(`${storagePrefix}_user`);
-    navigate(`${routePrefix}/login`);
+  const handleLogout = async () => {
+    clearCompetitionContext?.();
+    await logout(navigate);
   };
 
   const handleTabNav = (tabId) => {
@@ -291,12 +395,10 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     <div className="space-y-8">
       {/* Competition Display */}
       <FadeIn>
-        <CompetitionProvider userType={storagePrefix}>
-          <div className="rounded-2xl border p-4 md:p-6"
-            style={{ background: theme.colors.card, borderColor: theme.colors.border }}>
-            <CompetitionDisplay />
-          </div>
-        </CompetitionProvider>
+        <div className="rounded-2xl border p-4 md:p-6"
+          style={{ background: theme.colors.card, borderColor: theme.colors.border }}>
+          <CompetitionDisplay />
+        </div>
       </FadeIn>
 
       {/* Stats Grid */}
@@ -317,7 +419,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       </div>
 
       {/* Judges Assignment Status */}
-      {currentCompetition && (
+      
+      {/*currentCompetition && (
         <FadeIn delay={0.1}>
           <div className="rounded-2xl border p-6"
             style={{ background: theme.colors.card, borderColor: theme.colors.border }}>
@@ -339,7 +442,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Boys */}
+                //Boys
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Mars className="w-4 h-4" style={{ color: '#3B82F6' }} />
@@ -356,7 +459,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       ))}
                   </div>
                 </div>
-                {/* Girls */}
+                //Girls
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Venus className="w-4 h-4" style={{ color: '#EC4899' }} />
@@ -377,7 +480,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             )}
           </div>
         </FadeIn>
-      )}
+      )*/}
+
     </div>
   );
 
@@ -394,13 +498,11 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             </p>
           </div>
         </FadeIn>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <StatCard icon={Shield} label="Total Admins" value={systemStats?.stats?.users?.totalAdmins} color="#8B5CF6" delay={0} />
-          <StatCard icon={UserCheck} label="Total Coaches" value={systemStats?.stats?.users?.totalCoaches} color="#3B82F6" delay={0.05} />
-          <StatCard icon={Users} label="Total Players" value={systemStats?.stats?.users?.totalPlayers} color="#22C55E" delay={0.1} />
-          <StatCard icon={ShieldHalf} label="Total Teams" value={systemStats?.stats?.content?.totalTeams} color={theme.colors.primary} delay={0.15} />
-          <StatCard icon={Target} label="Competitions" value={systemStats?.stats?.content?.totalCompetitions} color="#EC4899" delay={0.2} />
-          <StatCard icon={Activity} label="Active Judges" value={systemStats?.stats?.content?.totalJudges} color="#F5A623" delay={0.25} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard icon={Shield} label="Total Admins" value={systemStats?.admins} color="#8B5CF6" delay={0} />
+          <StatCard icon={UserCheck} label="Total Coaches" value={systemStats?.coaches} color="#3B82F6" delay={0.05} />
+          <StatCard icon={ShieldHalf} label="Total Teams" value={systemStats?.teams} color={theme.colors.primary} delay={0.1} />
+          <StatCard icon={Target} label="Competitions" value={systemStats?.competitions} color="#EC4899" delay={0.15} />
         </div>
       </div>
 
@@ -417,39 +519,22 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 <h3 className="text-xl font-black text-white">Participation Breakdown</h3>
               </div>
             </div>
-            <div className="md:w-64 relative">
-              <select
-                value={selectedCompetition || ''}
-                onChange={(e) => setSelectedCompetition(e.target.value || null)}
-                className="w-full rounded-xl text-sm font-medium text-white outline-none min-h-[44px] px-4 py-3 pr-10 appearance-none cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2"
-                style={{ 
-                  background: 'rgba(255,255,255,0.05)',
-                  border: `1px solid rgba(255,255,255,0.06)`,
-                  color: selectedCompetition ? '#fff' : 'rgba(255,255,255,0.45)',
-                  outlineColor: theme.colors.primary,
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = `${theme.colors.primary}60`;
-                  e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}18`;
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.06)';
-                  e.target.style.boxShadow = 'none';
-                }}
-                aria-label="Filter by competition"
-              >
-                <option value="" style={{ background: '#111111', color: 'rgba(255,255,255,0.45)' }}>All Competitions</option>
-                {competitions.map((comp) => (
-                  <option key={comp._id} value={comp._id} style={{ background: '#111111', color: '#fff' }}>
-                    {comp.name}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex-shrink-0">
-                <svg className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.45)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+            <div className="md:w-64">
+              <Dropdown
+                options={competitions.map(comp => ({
+                  value: comp._id,
+                  label: `${comp.name} (${comp.year}) — ${comp.place}`
+                }))}
+                value={selectedCompetition ? { 
+                  value: selectedCompetition, 
+                  label: (() => {
+                    const comp = competitions.find(c => c._id === selectedCompetition);
+                    return comp ? `${comp.name} (${comp.year}) — ${comp.place}` : '';
+                  })()
+                } : null}
+                onChange={(option) => setSelectedCompetition(option ? option.value : null)}
+                placeholder="All Competitions"
+              />
             </div>
           </div>
 
@@ -519,6 +604,25 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4"
             style={{ borderTopColor: theme.colors.primary, animation: 'spin 0.8s linear infinite' }} />
           <p className="text-white/40 text-sm">Loading dashboard…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No competition selected for admin
+  if (!isSuperAdmin && !currentCompetition && activeTab === 'dashboard') {
+    return (
+      <div className="min-h-dvh flex items-center justify-center"
+        style={{ background: theme.colors.background }}>
+        <div className="text-center max-w-md px-4">
+          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ background: `${theme.colors.primary}18`, border: `2px solid ${theme.colors.primary}30` }}>
+            <Trophy className="w-8 h-8" style={{ color: theme.colors.primary }} />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">No Competition Selected</h2>
+          <p className="text-white/60 text-sm mb-6">
+            Please select a competition from the dropdown in the navigation bar to view the dashboard.
+          </p>
         </div>
       </div>
     );
@@ -598,9 +702,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           {/* Right: Competition Selector + Logout + Mobile Menu */}
           <div className="flex items-center gap-2">
             {!isSuperAdmin && (
-              <CompetitionProvider userType={storagePrefix}>
-                <CompetitionSelector userType={storagePrefix} />
-              </CompetitionProvider>
+              <CompetitionSelector userType={storagePrefix} />
             )}
 
             {isSuperAdmin && (

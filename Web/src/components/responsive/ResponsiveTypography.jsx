@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/ui/cn';
 
 /**
  * Responsive heading component that scales appropriately across viewports
