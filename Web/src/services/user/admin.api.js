@@ -17,7 +17,7 @@ export const createAdminAPI = (basePath = '/admin') => ({
   getJudges: (params) => api.get(`${basePath}/judges`, { params }),
   getAllJudgesSummary: (params) => api.get(`${basePath}/judges/summary`, { params }),
   updateJudge: (judgeId, data) => api.put(`${basePath}/judges/${judgeId}`, data),
-  createSingleJudge: (data) => api.post(`${basePath}/judges/single`, data),
+  createSingleJudge: (data) => api.post(`${basePath}/judges`, data),
   deleteJudge: (judgeId) => api.delete(`${basePath}/judges/${judgeId}`),
   startAgeGroup: (data) => api.post(`${basePath}/age-groups/start`, data),
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),

@@ -188,7 +188,12 @@ function createAdminController(container) {
 
     /** @route POST /api/admin/judges */
     createSingleJudge: asyncHandler(async (req, res) => {
-      const judge = await adminService.createSingleJudge(req.body, req.user._id);
+      const competitionId = req.competitionId || req.body.competition;
+      const { gender, ageGroup, competitionTypes } = req.body;
+      const judge = await adminService.createSingleJudge(
+        { ...req.body, competition: competitionId, gender, ageGroup, competitionTypes },
+        req.user._id
+      );
       res.status(201).json({ success: true, data: judge, message: 'Judge created successfully' });
     }),
 

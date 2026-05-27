@@ -289,6 +289,7 @@ function createAdminRoutes(container) {
     '/judges',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.createSingleJudge(),
     handleValidationErrors,
     adminController.createSingleJudge
@@ -303,6 +304,7 @@ function createAdminRoutes(container) {
     '/judges/:judgeId',
     authMiddleware,
     authorize,
+    validateCompetitionContext,
     adminValidator.updateJudge(),
     handleValidationErrors,
     adminController.updateJudge

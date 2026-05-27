@@ -1330,10 +1330,27 @@ class AdminService extends UserService {
 
       for (const judgeData of judges) {
         try {
-          const lookupKey = judgeData.username || judgeData.email;
-          const existing = lookupKey ? await this.judgeRepository.findByEmail(lookupKey) : null;
+          if (!judgeData.name?.trim()) {
+            continue;
+          }
 
-          // Determine if judge should be active based on having complete data
+          const lookupKey = judgeData.username || judgeData.email;
+          let existing = null;
+          if (competitionId && judgeData.gender && judgeData.ageGroup && judgeData.judgeNo) {
+            existing = await this.judgeRepository.findOne({
+              competition: competitionId,
+              gender: judgeData.gender,
+              ageGroup: judgeData.ageGroup,
+              judgeNo: judgeData.judgeNo,
+            });
+          }
+          if (!existing && lookupKey && competitionId) {
+            existing = await this.judgeRepository.findOne({
+              username: lookupKey.toLowerCase(),
+              competition: competitionId,
+            });
+          }
+
           const hasCompleteData = !!(judgeData.name && judgeData.username && judgeData.password);
           const judgeDataWithStatus = {
             ...judgeData,
@@ -1342,11 +1359,18 @@ class AdminService extends UserService {
           };
 
           if (existing) {
-            // Update existing judge
-            const updated = await this.judgeRepository.updateById(existing._id, judgeDataWithStatus);
+            const mergedTypes = [
+              ...new Set([
+                ...(existing.competitionTypes || []),
+                ...(judgeData.competitionTypes || []),
+              ]),
+            ];
+            const updated = await this.judgeRepository.updateById(existing._id, {
+              ...judgeDataWithStatus,
+              competitionTypes: mergedTypes,
+            });
             results.updated.push(updated);
           } else {
-            // Create new judge
             const created = await this.judgeRepository.create({
               ...judgeDataWithStatus,
               createdBy: adminId
@@ -1390,7 +1414,12 @@ class AdminService extends UserService {
       const query = { competition: competitionId };
       if (filters.gender) query.gender = filters.gender;
       if (filters.ageGroup) query.ageGroup = filters.ageGroup;
-      if (filters.competitionTypes) query.competitionTypes = filters.competitionTypes;
+      if (filters.competitionTypes) {
+        const types = Array.isArray(filters.competitionTypes)
+          ? filters.competitionTypes
+          : [filters.competitionTypes];
+        query.competitionTypes = { $in: types };
+      }
 
       const judges = await this.judgeRepository.find(query, {
         sort: { createdAt: -1 }

@@ -19,11 +19,12 @@ const ageGroupMapping = {
  * @param {string} gender - 'Male' or 'Female'
  * @returns {Array} Array of age group options filtered by competition and gender
  */
-export const useAgeGroups = (gender) => {
+export const useAgeGroups = (gender, competitionOverride = null) => {
   const { currentCompetition } = useCompetition();
+  const competition = competitionOverride ?? currentCompetition;
 
   return useMemo(() => {
-    if (!currentCompetition || !currentCompetition.ageGroups || currentCompetition.ageGroups.length === 0) {
+    if (!competition || !competition.ageGroups || competition.ageGroups.length === 0) {
       // Fallback to default age groups if competition doesn't have age groups set
       return gender === 'Male' 
         ? [
@@ -43,7 +44,7 @@ export const useAgeGroups = (gender) => {
     }
 
     // Filter age groups by gender from competition
-    const filteredAgeGroups = currentCompetition.ageGroups
+    const filteredAgeGroups = competition.ageGroups
       .filter(ag => ag.gender === gender)
       .map(ag => {
         const mapping = ageGroupMapping[ag.ageGroup];
@@ -66,7 +67,7 @@ export const useAgeGroups = (gender) => {
       });
 
     return filteredAgeGroups;
-  }, [currentCompetition, gender]);
+  }, [competition, gender]);
 };
 
 /**
