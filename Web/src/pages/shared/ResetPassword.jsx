@@ -75,7 +75,7 @@ const StyledInput = ({ error, verified, ...props }) => (
 );
 
 const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
-  <div className="relative">
+  <div className="relative flex items-center">
     <input
       type={showPassword ? 'text' : 'password'}
       className="w-full px-4 py-3 pr-12 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
@@ -91,7 +91,7 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
     <button
       type="button"
       onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-white/35 hover:text-white/70 transition-colors duration-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
+      className="absolute right-3 top-0 bottom-0 my-auto h-9 w-9 rounded-lg text-white/35 hover:text-white/70 transition-colors duration-200 flex items-center justify-center"
       aria-label={showPassword ? 'Hide password' : 'Show password'}
     >
       {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}

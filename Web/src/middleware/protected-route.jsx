@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { isTokenExpired } from '@/utils/auth/tokenUtils';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
@@ -32,13 +33,20 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
 
   const { storagePrefix, loginPath } = detectRouteContext();
 
+  // Clear storage if token is expired to avoid infinite spinner/limbo state
+  const token = secureStorage.getItem(`${storagePrefix}_token`);
+  if (token && isTokenExpired(token)) {
+    secureStorage.removeItem(`${storagePrefix}_token`);
+    secureStorage.removeItem(`${storagePrefix}_user`);
+  }
+
   // Show loading spinner while auth is being determined
   if (user === null && userType === null) {
     // Check if there's stored auth data for this user type using detected storage prefix
-    const token = secureStorage.getItem(`${storagePrefix}_token`);
+    const currentToken = secureStorage.getItem(`${storagePrefix}_token`);
     const userData = secureStorage.getItem(`${storagePrefix}_user`);
     
-    if (token && userData) {
+    if (currentToken && userData) {
       // Auth data exists but context hasn't loaded yet, show responsive loading
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -56,11 +64,11 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   }
 
   // Also check if auth data exists in storage even if user state hasn't loaded yet
-  const token = secureStorage.getItem(`${storagePrefix}_token`);
+  const activeToken = secureStorage.getItem(`${storagePrefix}_token`);
   const userData = secureStorage.getItem(`${storagePrefix}_user`);
   
   // If we have stored auth data but user state is not yet loaded, show loading
-  if (!user && token && userData) {
+  if (!user && activeToken && userData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center max-w-sm w-full">

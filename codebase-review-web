@@ -1,0 +1,609 @@
+# Frontend Codebase Audit — MallakhambIndia Web
+
+## Executive Summary
+
+This is a **well-structured, security-conscious React/Vite SPA** with clear evidence of intentional architectural decisions: role-based routing, encrypted storage, input sanitization, CSP headers, lazy-loading, and a design token system. For a domain-specific competition management platform, the overall quality is **above average**.
+
+However, the audit reveals **3 critical**, **5 high**, **8 medium**, and **6 low** severity findings across security, architecture, performance, and maintainability. The most impactful issues are:
+
+1. **Client-side encryption providing false security** — the encryption key is embedded in the JS bundle shipped to the browser.
+2. **Home.jsx used as a module-export barrel** — a page component is the source-of-truth for COLORS, animation helpers, and hooks, creating a deep circular dependency risk and defeating code splitting.
+3. **ProtectedRoute never validates token expiry** — it checks if a token *exists* in storage, but never calls `isTokenExpired()`, so a user with a stale/expired encrypted blob gets an infinite loading spinner instead of a redirect.
+
+**What the codebase does well:**
+- Content-Security-Policy meta tag with specific directives
+- DOMPurify-based sanitization with zero allowed tags
+- Redirect whitelist to prevent open-redirect attacks
+- Development-only logging (logger suppresses in prod)
+- Vite build drops console + debugger statements via Terser
+- Lazy-loading of all page components
+- Well-structured Zod validation schemas
+- `.env` is in `.gitignore`
+- Accessible ARIA attributes on Navbar, Dropdown, ConfirmDialog
+- `useReducedMotion` hook for a11y
+- Custom ESLint rules for design system enforcement
+
+---
+
+## Prioritized Findings
+
+---
+
+### 🔴 CRITICAL
+
+---
+
+#### C-1: `secureStorage` Encryption Is Security Theater
+
+**What:** [secureStorage.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/auth/secureStorage.js) encrypts tokens with CryptoJS AES using a key derived from `VITE_STORAGE_KEY` + browser fingerprint.
+
+**Why it matters:** `VITE_STORAGE_KEY` is embedded in the built JS bundle — it's in the client-side code. Any user can extract it from DevTools > Sources. The browser fingerprint is deterministic for the same browser. This means the "encryption" is **fully reversible by anyone with access to the page** — it only prevents casual `localStorage` snooping but provides no actual security against XSS-stolen tokens.
+
+**Where:** [secureStorage.js:7](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/auth/secureStorage.js#L6-L22)
+
+**Impact:** False sense of security; may lead to skipping actual token protection measures.
+
+**How to fix:**
+- **Accept that `localStorage` is inherently insecure against XSS.** The real defense is your CSP + sanitization, not encryption.
+- **Move tokens to `httpOnly` cookies** set by the server (the gold standard). This removes tokens from JS access entirely.
+- If cookies aren't feasible, keep tokens in a short-lived in-memory variable (React state/context) and use a refresh-token flow via `httpOnly` cookie.
+- If you keep `secureStorage`, rename it to `obfuscatedStorage` and document that it's NOT a security boundary.
+
+```js
+// Recommended: Server sets httpOnly cookie on login response
+// res.cookie('token', jwt, { httpOnly: true, secure: true, sameSite: 'strict' });
+// Then api-client.js uses `withCredentials: true` instead of Authorization header.
+
+// If in-memory approach:
+// Store token in AuthContext state only (not localStorage)
+// Use a /auth/refresh endpoint with httpOnly cookie to restore after page reload
+```
+
+---
+
+#### C-2: `.env` File with Real Secret Committed to Repo
+
+**What:** [.env](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/.env) contains `VITE_STORAGE_KEY=8IARHJvZL5OaVVPhfLkSGBS7qKBRnxWvafiEf4NDKOk` — a real encryption key.
+
+**Why it matters:** While `.env` is in `.gitignore`, the file **exists on disk in your repo directory** and may have been committed in past history. `VITE_` variables are embedded into the build output anyway, but shipping a known key in a file alongside `.env_example` with a placeholder strongly suggests this key was previously committed.
+
+**Where:** [.env:28](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/.env#L28)
+
+**How to fix:**
+1. Run `git log --all -- Web/.env` to check if it was ever committed.
+2. If yes, rotate the key immediately and use `git filter-branch` or BFG Repo-Cleaner to purge history.
+3. Consider removing `VITE_STORAGE_KEY` entirely if you follow the C-1 recommendations above.
+
+---
+
+#### C-3: ProtectedRoute Never Validates Token Expiry
+
+**What:** [protected-route.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/middleware/protected-route.jsx) checks if a token *exists* in storage but never calls `isTokenExpired()`. A user with an expired token gets an infinite loading spinner (lines 41-55, 63-76) because `token && userData` is truthy but `AuthContext.user` is null.
+
+**Why it matters:** Users can be stuck on loading spinners indefinitely. Worse, the auth state is "limbo" — they appear authenticated to storage checks but not to context.
+
+**Where:** [protected-route.jsx:36-76](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/middleware/protected-route.jsx#L36-L76)
+
+**How to fix:**
+```jsx
+import { isTokenExpired } from '@/utils/auth/tokenUtils';
+
+// Inside ProtectedRoute, after getting token:
+const token = secureStorage.getItem(`${storagePrefix}_token`);
+const userData = secureStorage.getItem(`${storagePrefix}_user`);
+
+// Add expiry check
+if (token && isTokenExpired(token)) {
+  secureStorage.removeItem(`${storagePrefix}_token`);
+  secureStorage.removeItem(`${storagePrefix}_user`);
+  return <Navigate to={loginPath} replace />;
+}
+```
+
+---
+
+### 🟠 HIGH
+
+---
+
+#### H-1: Home.jsx Is a Module Barrel — Massive Anti-Pattern
+
+**What:** 13+ files import `COLORS`, `useReducedMotion`, `FadeIn`, `GlassCard`, `GradientText`, `SaffronButton` from `@/pages/public/Home`. A *page component* is being used as a shared utility module.
+
+**Why it matters:**
+- **Defeats code-splitting:** `Home.jsx` is lazy-loaded, but importing from it eagerly in `Navbar.jsx`, `Dropdown.jsx`, `ConfirmDialog.jsx`, etc. forces the Home page bundle to load on *every* route.
+- **Architectural violation:** Pages should be leaf nodes that import from `components/` and `utils/`, never the reverse.
+- **Circular dependency risk:** If Home ever imports Navbar or ConfirmDialog, you get a cycle.
+
+**Where:** Found in 13 files — [Navbar.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/layout/Navbar.jsx#L7), [ConfirmDialog.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/ConfirmDialog.jsx#L5), [Dropdown.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/Dropdown.jsx#L5), all competition components, coach pages, player pages, judge pages.
+
+**How to fix:**
+1. You already have [tokens.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/styles/tokens.js) with `COLORS` (as deprecated proxy). Make it the canonical import.
+2. Move `useReducedMotion` → already exists in [useResponsive.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useResponsive.js#L243). Update all imports.
+3. Move `FadeIn`, `GlassCard`, `GradientText`, `SaffronButton` → `src/components/design-system/` (they're generic UI primitives).
+4. Remove all exports from Home.jsx except the default page export.
+
+```js
+// Before (13 files):
+import { COLORS, useReducedMotion } from '@/pages/public/Home';
+
+// After:
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { FadeIn, GlassCard, GradientText, SaffronButton } from '@/components/design-system';
+```
+
+---
+
+#### H-2: `getCurrentUserTypeFromURL()` Duplicated in 3 Places
+
+**What:** The same URL-to-role mapping function exists in:
+1. [App.jsx:20-28](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/App.jsx#L20-L28)
+2. [api-client.js:21-29](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/services/api-client.js#L21-L29)
+3. [protected-route.jsx:12-31](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/middleware/protected-route.jsx#L12-L31)
+
+**Why it matters:** If a new role is added (e.g., `organizer`), it must be updated in 3 places. The `/superadmin` vs `/admin` ordering matters and is easy to get wrong.
+
+**How to fix:**
+```js
+// src/utils/auth/roleFromPath.js
+const ROLE_PREFIXES = [
+  { prefix: '/superadmin', role: 'superadmin' },
+  { prefix: '/admin', role: 'admin' },
+  { prefix: '/coach', role: 'coach' },
+  { prefix: '/player', role: 'player' },
+  { prefix: '/judge', role: 'judge' },
+];
+
+export const getRoleFromPath = (pathname) => {
+  const match = ROLE_PREFIXES.find(({ prefix }) => pathname.startsWith(prefix));
+  return match?.role ?? null;
+};
+```
+
+---
+
+#### H-3: API Interceptor Uses `window.location.href` for Redirects
+
+**What:** [api-client.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/services/api-client.js#L62) uses `window.location.href = '/'` on 401/expired tokens. This causes a full page reload, destroying React state, triggering a re-download of all chunks, and losing any unsaved form data.
+
+**Why it matters:** Poor UX — users filling out a long form hit a token expiry and lose everything. Also bypasses the safe redirect utility you built.
+
+**Where:** Lines 62, 103, 125 in api-client.js
+
+**How to fix:** Use a shared event emitter or auth context callback to navigate via React Router:
+
+```js
+// src/utils/auth/authEvents.js
+export const authEvents = new EventTarget();
+export const AUTH_EXPIRED = 'auth:expired';
+
+// In api-client.js interceptor:
+authEvents.dispatchEvent(new CustomEvent(AUTH_EXPIRED, { detail: { role: currentType } }));
+
+// In App.jsx, listen:
+useEffect(() => {
+  const handler = (e) => {
+    handleLogout(navigate);
+  };
+  authEvents.addEventListener(AUTH_EXPIRED, handler);
+  return () => authEvents.removeEventListener(AUTH_EXPIRED, handler);
+}, []);
+```
+
+---
+
+#### H-4: `secureStorage.clear()` Nukes All localStorage
+
+**What:** [handleLogout](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/App.jsx#L128-L130) calls `secureStorage.clear()` → `localStorage.clear()`, `localStorage.clear()` again, and `sessionStorage.clear()`. This wipes all storage including any third-party analytics data, user preferences, or other role sessions.
+
+**Why it matters:** In a multi-role app where a user can be logged in as both `coach` and `admin` simultaneously, logging out as `coach` kills the `admin` session too.
+
+**Where:** [App.jsx:128-131](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/App.jsx#L128-L131)
+
+**How to fix:**
+```js
+// Only remove keys for the current role
+const handleLogout = async (navigate) => {
+  const currentType = getCurrentUserTypeFromURL() || userType;
+  // ...server logout call...
+  
+  // Targeted cleanup
+  if (currentType) {
+    secureStorage.removeItem(`${currentType}_token`);
+    secureStorage.removeItem(`${currentType}_user`);
+    secureStorage.removeItem(`${currentType}_current_competition`);
+  }
+  // Remove legacy keys
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('userType');
+  apiCache.clear();
+  // ...
+};
+```
+
+---
+
+#### H-5: `no-unused-vars` ESLint Rule Disabled
+
+**What:** [eslint.config.js:32](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/eslint.config.js#L32) sets `'no-unused-vars': 'off'`. This suppresses warnings for dead code, unused imports, and variable declarations.
+
+**Why it matters:** Dead code accumulates, increases bundle size, and masks real bugs. Unused variables often indicate incomplete refactors.
+
+**Where:** [eslint.config.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/eslint.config.js)
+
+**How to fix:**
+```js
+'no-unused-vars': ['warn', { 
+  argsIgnorePattern: '^_', 
+  varsIgnorePattern: '^_',
+  ignoreRestSiblings: true 
+}],
+```
+
+---
+
+### 🟡 MEDIUM
+
+---
+
+#### M-1: Error Handler Has Broken Import Path
+
+**What:** [error-handler.js:3](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/errors/error-handler.js#L3) imports from `'./logger.js'` but logger is at `@/infrastructure/logger.js`. The `errors/` and `infrastructure/` directories are siblings, not parent-child.
+
+**Why it matters:** This file likely throws a build error or is dead code. If it's dead code, it means error handling is scattered rather than centralized.
+
+**Where:** [error-handler.js:3](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/errors/error-handler.js#L3)
+
+**How to fix:**
+```js
+import { logger } from '@/infrastructure/logger.js';
+```
+
+---
+
+#### M-2: API Cache Hack — Using Promise.reject for Cache Hits
+
+**What:** [api-client.js:42-48](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/services/api-client.js#L40-L48) uses `Promise.reject` with a `cached: true` flag to short-circuit cached GET responses in the request interceptor, then catches it in the response interceptor.
+
+**Why it matters:** This is a clever but fragile pattern. It breaks the normal axios flow — error interceptors see cached responses, error tracking (Sentry) might log them, and any future middleware that inspects rejections will mishandle cache hits.
+
+**How to fix:** Use a proper adapter or check cache before calling axios:
+```js
+// Better: wrapper function
+const cachedGet = (url, config = {}) => {
+  const cached = apiCache.get(url, config.params);
+  if (cached) return Promise.resolve({ data: cached, cached: true });
+  return api.get(url, config);
+};
+```
+
+---
+
+#### M-3: Vite Dev Server Allows All Hosts
+
+**What:** [vite.config.js:19](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/vite.config.js#L19) sets `allowedHosts: 'all'`, allowing any hostname to reach the dev server.
+
+**Why it matters:** Combined with `host: '0.0.0.0'`, this makes the dev server accessible to any device on the network and vulnerable to DNS rebinding attacks.
+
+**How to fix:**
+```js
+server: {
+  host: '0.0.0.0',
+  port: 5173,
+  allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app']
+},
+```
+
+---
+
+#### M-4: Duplicate Loading Spinner UI in ProtectedRoute
+
+**What:** [protected-route.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/middleware/protected-route.jsx) has the exact same loading spinner JSX block copied 3 times (lines 43-54, 64-76, 91-102).
+
+**Why it matters:** DRY violation. When you change the spinner design, you must update 3 places. Different spinners on different auth states is confusing UX.
+
+**How to fix:**
+```jsx
+const AuthLoadingSpinner = ({ isMobile }) => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="text-center max-w-sm w-full">
+      <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
+        isMobile ? 'h-8 w-8' : 'h-12 w-12'
+      }`} />
+      <p className={`mt-4 text-gray-600 ${isMobile ? 'text-sm' : 'text-base'}`}>Loading...</p>
+    </div>
+  </div>
+);
+```
+
+---
+
+#### M-5: `useRateLimit` Is Trivially Bypassable
+
+**What:** [useRateLimit.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useRateLimit.js) stores attempt counts in React state. Refreshing the page resets it. Opening a new tab resets it.
+
+**Why it matters:** If this is the only rate limiting in front of login attempts, it provides zero security. The server-side rate limiting is what matters.
+
+**Where:** [useRateLimit.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useRateLimit.js)
+
+**How to fix:**
+- Treat this as a **UX enhancement only** (debounce rapid-clicking), not a security control.
+- Ensure server-side rate limiting is enforced (your 429 handling in `error-handler.js` suggests it exists).
+- Document this explicitly:
+```js
+/**
+ * Client-side rate limiting hook — UX ONLY, not a security control.
+ * Server-side rate limiting is the actual enforcement layer.
+ */
+```
+
+---
+
+#### M-6: `useApiCall` Hook Does Not Return Loading State
+
+**What:** [useApiCall.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useApiCall.js) exposes `execute` and `executeWithLoading` but doesn't manage its own `loading`/`error` state. The JSDoc shows `loading` and `error` in the destructuring example but they're not returned.
+
+**Why it matters:** Consumers must manage their own loading state, which defeats the purpose of a unified API call hook. The example in the JSDoc is misleading.
+
+**Where:** [useApiCall.js:9-10](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useApiCall.js#L9-L10) vs [line 84-88](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useApiCall.js#L84-L88)
+
+**How to fix:**
+```js
+export const useApiCall = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const execute = useCallback(async (apiCall) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await apiCall();
+      return result;
+    } catch (err) {
+      const msg = handleError(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { execute, loading, error, handleError };
+};
+```
+
+---
+
+#### M-7: AuthContext Has No AuthProvider — Logic Lives in App.jsx
+
+**What:** [AuthContext.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/contexts/AuthContext.jsx) is just a `createContext` + `useAuth` hook. All auth logic (login, logout, storage, URL parsing) lives in [App.jsx:14-202](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/App.jsx#L14-L202).
+
+**Why it matters:** App.jsx is 216 lines with auth logic, URL detection, navbar visibility, and layout logic mixed together. This makes testing impossible (you can't test auth without rendering the entire app). `AppContent` has 3 `useEffect` hooks that all call `loadAuthData()` redundantly.
+
+**How to fix:** Extract auth logic into an `AuthProvider`:
+
+```jsx
+// src/contexts/AuthProvider.jsx
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [userType, setUserType] = useState(null);
+  const [loading, setLoading] = useState(true);
+  // ... all auth logic from App.jsx ...
+  return (
+    <AuthContext.Provider value={{ user, userType, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+---
+
+#### M-8: `useAgeGroups` Has Extensive Code Duplication
+
+**What:** [useAgeGroups.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useAgeGroups.js) contains the same fallback array and filter/sort logic copy-pasted between `useAgeGroups` (lines 27-70) and `useAllAgeGroups` (lines 77-131).
+
+**Why it matters:** Maintenance burden — if you add a new age group, you update 4+ places. The `getAgeGroupsForGender` function inside `useAllAgeGroups` duplicates `useAgeGroups` entirely.
+
+**How to fix:** Extract the core logic into a shared function:
+```js
+const getFilteredAgeGroups = (competition, gender) => {
+  if (!competition?.ageGroups?.length) {
+    return DEFAULT_AGE_GROUPS[gender] ?? [];
+  }
+  return competition.ageGroups
+    .filter(ag => ag.gender === gender)
+    .map(ag => ageGroupMapping[ag.ageGroup] ?? { value: ag.ageGroup, label: ag.ageGroup })
+    .sort((a, b) => AGE_GROUP_ORDER.indexOf(a.value) - AGE_GROUP_ORDER.indexOf(b.value));
+};
+```
+
+---
+
+### 🟢 LOW
+
+---
+
+#### L-1: `void motion` Pattern Is Unusual
+
+**What:** [Navbar.jsx:9](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/layout/Navbar.jsx#L9), [ConfirmDialog.jsx:8](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/ConfirmDialog.jsx#L8), [Dropdown.jsx:7](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/Dropdown.jsx#L7) all have `void motion;`.
+
+**Why it matters:** This is presumably to suppress the `no-unused-vars` lint error (which is already disabled). It's unnecessary noise and confusing to other developers.
+
+**How to fix:** Remove `void motion` lines. If motion is used in JSX (which it is via `<motion.div>`), it won't trigger unused-var warnings with proper ESLint config.
+
+---
+
+#### L-2: Navbar Has Hardcoded `localStorage.removeItem` Calls
+
+**What:** [Navbar.jsx:42-44](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/layout/Navbar.jsx#L42-L44) directly calls `localStorage.removeItem` for legacy keys, duplicating cleanup logic that also exists in `handleLogout` in App.jsx.
+
+**Why it matters:** Double cleanup = double maintenance. The Navbar's `handleLogout` calls `onLogout(navigate)` which already clears storage.
+
+**How to fix:** Remove the direct localStorage calls from Navbar's `handleLogout`.
+
+---
+
+#### L-3: CSP Meta Tag Contains `unsafe-inline` and `unsafe-eval`
+
+**What:** [index.html:11](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/index.html#L11) has `script-src 'self' 'unsafe-inline' 'unsafe-eval'`.
+
+**Why it matters:** `unsafe-inline` and `unsafe-eval` weaken CSP significantly. The comment notes this is for dev, but the same HTML is used in production builds.
+
+**How to fix:** Use nonce-based CSP for production. Vite supports CSP nonces via plugins. In production, the CSP should be set via server response headers (more reliable than meta tags) without `unsafe-inline`/`unsafe-eval`.
+
+---
+
+#### L-4: `index.css` Has Light-Theme Defaults but App Is Dark
+
+**What:** [index.css:9-11](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/index.css#L9-L11) sets `color-scheme: light`, `color: #213547`, `background-color: #ffffff`. But the app uses `background: '#0a0a0a'` everywhere.
+
+**Why it matters:** Brief flash of white on initial load (FOIT). Also, scrollbar colors and system UI elements may render in light mode.
+
+**How to fix:**
+```css
+:root {
+  color-scheme: dark;
+  color: #ffffff;
+  background-color: #0a0a0a;
+}
+```
+
+---
+
+#### L-5: `socket.io-client` Is a Dependency but No Socket Code Found
+
+**What:** [package.json:27](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/package.json#L27) includes `socket.io-client` but grep finds no usage in `src/`.
+
+**Why it matters:** Unused dependency adds ~65KB to `node_modules` and may end up in the bundle if tree-shaking misses it.
+
+**How to fix:** Remove if unused: `npm uninstall socket.io-client`. If planned for future use, add a comment.
+
+---
+
+#### L-6: `RouteContext.Provider` Wrapped Inline in Route Definitions
+
+**What:** [routes/index.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/routes/index.jsx#L113-L115) wraps every admin/superadmin route with `<RouteContext.Provider value={{...}}>`. This is repeated 8 times.
+
+**Why it matters:** Verbose, error-prone, and creates a new provider instance on every render.
+
+**How to fix:** Create a wrapper component:
+```jsx
+const AdminRouteWrapper = ({ children }) => (
+  <ProtectedRoute requiredUserType="admin">
+    <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
+      {children}
+    </RouteContext.Provider>
+  </ProtectedRoute>
+);
+```
+Or better, use a layout route:
+```jsx
+<Route element={<AdminLayout />}>
+  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+  <Route path="/admin/teams" element={<AdminTeams />} />
+</Route>
+```
+
+---
+
+## File/Folder Assessment Summary
+
+| Path | Verdict | Key Issue |
+|------|---------|-----------|
+| [App.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/App.jsx) | Needs refactor | Auth logic should be in AuthProvider, 3 redundant useEffects |
+| [main.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/main.jsx) | ✅ Good | Clean, minimal |
+| [vite.config.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/vite.config.js) | Good, minor fix | `allowedHosts: 'all'` (M-3), manual chunks well done |
+| [index.html](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/index.html) | Good, minor fix | CSP `unsafe-inline/eval` (L-3) |
+| [secureStorage.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/auth/secureStorage.js) | Critical redesign | Encryption key in client bundle (C-1) |
+| [tokenUtils.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/auth/tokenUtils.js) | ✅ Good | Clean, well-structured with buffer time |
+| [redirectUtils.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/auth/redirectUtils.js) | ✅ Good | Whitelist approach is solid |
+| [sanitize.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/security/sanitize.js) | ✅ Good | Zero-tag DOMPurify is correct |
+| [api-client.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/services/api-client.js) | Needs refactor | Cache hack (M-2), window.location redirects (H-3), duplicated fn (H-2) |
+| [protected-route.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/middleware/protected-route.jsx) | Critical fix | No expiry check (C-3), duplicated spinners (M-4) |
+| [AuthContext.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/contexts/AuthContext.jsx) | Needs refactor | Missing AuthProvider (M-7) |
+| [CompetitionContext.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/contexts/CompetitionContext.jsx) | ✅ Solid | Good cleanup handling, isMounted pattern |
+| [RouteContext.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/contexts/RouteContext.jsx) | ✅ Good | Simple, correct |
+| [routes/index.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/routes/index.jsx) | Needs refactor | Verbose wrapping (L-6), no layout routes |
+| [lazy-pages.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/routes/lazy-pages.js) | ✅ Good | Clean lazy imports |
+| [useApiCall.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useApiCall.js) | Needs fix | Misleading JSDoc, no loading/error state (M-6) |
+| [useRateLimit.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useRateLimit.js) | Needs docs | Bypassable (M-5) — fine as UX, bad as security |
+| [useResponsive.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useResponsive.js) | ✅ Good | Comprehensive, debounced, SSR-safe |
+| [useAgeGroups.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/hooks/useAgeGroups.js) | Needs refactor | Heavy duplication (M-8) |
+| [logger.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/infrastructure/logger.js) | ✅ Good | Dev-only, simple |
+| [error-handler.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/errors/error-handler.js) | Broken import | Wrong path (M-1) |
+| [form.validator.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/validators/form.validator.js) | ✅ Good | Clean Zod schemas, well-structured |
+| [apiCache.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/utils/data/apiCache.js) | ✅ Good | Whitelist-only, TTL-based |
+| [api.config.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/config/api.config.js) | ✅ Good | Clean singleton |
+| [tokens.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/styles/tokens.js) | ✅ Excellent | Comprehensive design system, deprecation proxy is clever |
+| [eslint.config.js](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/eslint.config.js) | Needs fix | `no-unused-vars: off` (H-5) |
+| [SafeText.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/SafeText.jsx) | ✅ Good | Correct sanitization |
+| [AccountLockoutMessage.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/AccountLockoutMessage.jsx) | ✅ Good | Clean countdown logic |
+| [ErrorBoundary.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/layout/ErrorBoundary.jsx) | ✅ Good | Dev-only details, user-friendly prod UX |
+| [ConfirmDialog.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/ConfirmDialog.jsx) | Good, minor | Focus trap, escape, ARIA — well done. Imports from Home (H-1) |
+| [Dropdown.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/auth/Dropdown.jsx) | Good, minor | Keyboard nav, ARIA listbox — well done. Imports from Home (H-1) |
+| [Navbar.jsx](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Web/src/components/layout/Navbar.jsx) | Good, minor | Accessible, responsive. Duplicate cleanup (L-2), imports from Home (H-1) |
+| `services/user/*.api.js` | ✅ Good | Clean, consistent API wrappers |
+| `services/auth/auth.api.js` | ✅ Good | Clean |
+| `services/public/*.api.js` | ✅ Good | Uses `publicApi` correctly |
+| `components/responsive/*` | ✅ Good | Comprehensive responsive system |
+
+---
+
+## Refactor Roadmap
+
+### Phase 1: Immediate Fixes (1–2 days)
+
+> [!CAUTION]
+> These address active security holes or bugs that could affect users now.
+
+| # | Task | Finding | Effort |
+|---|------|---------|--------|
+| 1 | Add `isTokenExpired()` check in `ProtectedRoute` | C-3 | 30 min |
+| 2 | Verify `.env` was never committed; rotate `VITE_STORAGE_KEY` if it was | C-2 | 30 min |
+| 3 | Fix broken import in `error-handler.js` | M-1 | 5 min |
+| 4 | Restrict `allowedHosts` in vite.config.js | M-3 | 5 min |
+| 5 | Add comment to `useRateLimit` clarifying it's UX-only | M-5 | 5 min |
+| 6 | Fix `index.css` color-scheme to dark | L-4 | 5 min |
+| 7 | Remove `socket.io-client` if unused | L-5 | 5 min |
+
+---
+
+### Phase 2: Short-Term Refactors (1–2 weeks)
+
+> [!IMPORTANT]
+> These address architectural debt that slows development and makes bugs harder to find.
+
+| # | Task | Finding | Effort |
+|---|------|---------|--------|
+| 1 | Extract `COLORS`, `FadeIn`, `GlassCard`, etc. from Home.jsx into `components/design-system/` and `styles/tokens.js` | H-1 | 4 hours |
+| 2 | Extract `getCurrentUserTypeFromURL` into shared utility | H-2 | 1 hour |
+| 3 | Replace `window.location.href` redirects in api-client.js with event-driven React Router navigation | H-3 | 3 hours |
+| 4 | Scope `secureStorage.clear()` to current role only | H-4 | 1 hour |
+| 5 | Enable `no-unused-vars` as warning, fix violations | H-5 | 2 hours |
+| 6 | Extract `AuthProvider` from App.jsx | M-7 | 3 hours |
+| 7 | Refactor ProtectedRoute: extract spinner, simplify auth checks | M-4 | 2 hours |
+| 8 | Add loading/error state to `useApiCall` | M-6 | 1 hour |
+| 9 | DRY up `useAgeGroups` | M-8 | 1 hour |
+| 10 | Use React Router layout routes for admin/superadmin | L-6 | 2 hours |
+| 11 | Replace cache hack in api-client.js with wrapper | M-2 | 2 hours |
+
+---
+
+### Phase 3: Long-Term Architecture (1–2 months)
+
+> [!NOTE]
+> These are strategic improvements for scalability, testability, and security posture.
+
+| # | Task | Rationale |
+|---|------|-----------|
+| 1 | **Move token storage to `httpOnly` cookies** | Eliminates entire class of XSS token-theft attacks. Requires server-side changes. |
+| 2 | **Implement React Query (TanStack Query)** | Replace manual `useState`/`useEffect` data fetching with cache invalidation, background refetch, optimistic updates. Eliminates `apiCache.js` and most loading state management. |
+| 3 | **Add production CSP with nonces** | Remove `unsafe-inline`/`unsafe-eval` by using Vite CSP plugin + server-side nonce injection. |
+| 4 | **Add automated testing** | No tests exist. Add Vitest for hooks/utils, React Testing Library for components, Playwright for auth flows. |
+| 5 | **Design system migration** | Complete the `DESIGN_TOKENS` migration. Remove deprecated `COLORS`/`ADMIN_COLORS` proxies. Convert all hardcoded color strings. |
+| 6 | **TypeScript migration** | Gradual migration starting from `services/`, `hooks/`, and `utils/`. Prevents type mismatches (e.g., `user` being `null` vs `undefined`). |
+| 7 | **Error boundary per route** | Wrap each route section in its own ErrorBoundary so a crash in judge scoring doesn't kill the admin dashboard. |
+| 8 | **Bundle analysis** | Run `npx vite-bundle-visualizer` to find unexpected large chunks. The `AdminScoring.jsx` (42KB) and `AdminJudges.jsx` (41KB) files likely need component splitting. |

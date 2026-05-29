@@ -1,0 +1,472 @@
+# Mallakhamb Server — Comprehensive Code Review
+
+## Executive Summary
+
+The Mallakhamb backend is a **well-structured, refactored Node.js/Express/MongoDB application** for managing Mallakhamb (traditional Indian sport) competitions, including scoring, judging, team/player management, and payments via Razorpay. The codebase shows clear evidence of a deliberate refactor from a legacy monolith towards a **layered architecture with DI container, repository pattern, and service layer**, which is commendable.
+
+**What's Working Well:**
+- Clean separation: `routes → controllers → services → repositories → models`
+- Custom DI container with circular dependency detection
+- Centralized error handling with custom error hierarchy
+- Good use of express-validator, express-mongo-sanitize, helmet, and rate limiting
+- Token rotation, correlation IDs, graceful shutdown, health monitoring
+- CSRF protection (double-submit cookie pattern)
+- Environment-specific config validation at startup
+
+**Top Concerns (by severity):**
+
+| Severity | Count | Key Areas |
+|----------|-------|-----------|
+| 🔴 Critical | 3 | `.env` committed with production secrets, OTP uses `Math.random()`, admin registration is publicly open |
+| 🟠 High | 5 | In-memory token invalidation, role naming inconsistency, controller bypasses service layer, duplicate CORS config, `superadmin` vs `super_admin` confusion |
+| 🟡 Medium | 6 | `console.log` in production code, inline `require()`, `test-token` bypass in prod risk, missing password validation on reset, Judge has no `comparePassword`, socket lacks logout check |
+| 🟢 Low | 4 | Redundant route aliases, DI container module-level singleton, test-only scripts committed, email failure silently swallowed |
+
+---
+
+## 🔴 CRITICAL Findings
+
+---
+
+### C1: `.env` File Committed to Git with Production Secrets
+
+> **What:** The file [`.env`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/.env) is tracked in git and contains real credentials: MongoDB Atlas connection string with password, JWT secret, Gmail app password, Razorpay keys, Resend API key, and ngrok auth token.
+>
+> **Why it matters:** Anyone with read access to this repository (current or historical) now has database credentials, payment gateway keys, and email account access. Credential rotation is required even after removing the file, because git history retains the values.
+>
+> **Where:** [`.env`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/.env) — all 108 lines.
+>
+> **How to fix:**
+
+1. **Immediately rotate ALL exposed credentials** — MongoDB password, JWT secret, Gmail app password, Razorpay keys, Resend API key, ngrok token.
+2. Remove `.env` from tracking:
+```bash
+git rm --cached Server/.env
+```
+3. Verify [`.gitignore`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/.gitignore) includes `.env` (it does, but the file was added before the rule):
+```
+# Already present — good
+.env
+```
+4. Scrub git history (use `git filter-repo` or BFG Repo Cleaner):
+```bash
+# Using BFG:
+bfg --delete-files .env
+git reflog expire --expire=now --all && git gc --prune=now
+git push --force
+```
+5. Use Render's environment variable UI or a secrets manager for production values.
+
+---
+
+### C2: OTP Generated with `Math.random()` — Not Cryptographically Secure
+
+> **What:** [`otp.service.js:41`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/otp.service.js#L41) generates OTP codes using `Math.random()`, which is predictable.
+>
+> **Why it matters:** An attacker who knows the approximate time the OTP was generated can narrow down the seed state and predict the OTP value. This is the password reset flow — predicting it means full account takeover.
+>
+> **Where:** [`otp.service.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/otp.service.js) — `generateOTPCode()` method.
+
+**Current code:**
+```javascript
+generateOTPCode() {
+  const otpLength = this.config.get('security.otpLength');
+  const max = Math.pow(10, otpLength) - 1;
+  const min = Math.pow(10, otpLength - 1);
+  const otp = Math.floor(Math.random() * (max - min + 1)) + min;
+  return otp.toString();
+}
+```
+
+**Fixed code:**
+```javascript
+const crypto = require('crypto'); // already imported at top
+
+generateOTPCode() {
+  const otpLength = this.config.get('security.otpLength');
+  const max = Math.pow(10, otpLength);
+  const min = Math.pow(10, otpLength - 1);
+  const range = max - min;
+  
+  // Use crypto.randomInt for uniform, cryptographically secure random number
+  const otp = crypto.randomInt(min, max);
+  return otp.toString();
+}
+```
+
+> Note: `crypto` is already imported in the file but the line is dead code.
+
+---
+
+### C3: Admin Registration Endpoint is Publicly Accessible
+
+> **What:** [`admin.routes.js:48`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/routes/admin.routes.js#L48) exposes `POST /api/admin/register` without any authentication or authorization.
+>
+> **Why it matters:** Anyone on the internet can create admin accounts, gaining access to all admin-protected functionality: team approvals, score manipulation, judge management, player management, and financial data.
+>
+> **Where:** [`admin.routes.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/routes/admin.routes.js) lines 47-48.
+
+**Current code:**
+```javascript
+router.post('/register', adminController.registerAdmin);
+```
+
+**Fix — require super-admin authentication:**
+```javascript
+router.post(
+  '/register',
+  authMiddleware,
+  requireSuperAdmin,
+  adminValidator.registerAdmin(), // add validation
+  handleValidationErrors,
+  adminController.registerAdmin
+);
+```
+
+> Alternatively, remove the public endpoint entirely and only allow admin creation through the existing `scripts/createAdmin.js` CLI tool.
+
+---
+
+## 🟠 HIGH Findings
+
+---
+
+### H1: In-Memory Token Invalidation Won't Survive Restarts or Scale
+
+> **What:** [`token-invalidation.util.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/utils/security/token-invalidation.util.js) uses `Map()` objects (`adminAssignmentChanges`, `logoutTimestamps`) to track token invalidation.
+>
+> **Why it matters:** Server restart wipes all invalidation records — all previously logged-out tokens become valid again. In a multi-instance deployment (e.g., Render auto-scaling), invalidation on one instance doesn't affect others. The file itself has a comment acknowledging this ("replace with Redis").
+>
+> **Where:** [`token-invalidation.util.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/utils/security/token-invalidation.util.js) lines 12-15.
+>
+> **Fix:**
+> - **Short term:** Accept the limitation but set JWT expiry to a shorter window (e.g., 1h instead of 24h) to reduce the exposure window.
+> - **Long term:** Implement Redis-backed invalidation or switch to a refresh-token rotation scheme with short-lived access tokens (5-15 min).
+
+---
+
+### H2: Inconsistent Role Naming — `superadmin` vs `super_admin`
+
+> **What:** The codebase uses both `'superadmin'` and `'super_admin'` in different places, and the auth middleware tries to handle both.
+>
+> **Why it matters:** A subtle mismatch means authorization checks can silently fail. For example, a token issued with `userType: 'superadmin'` may bypass checks that only compare against `'super_admin'`.
+>
+> **Where:**
+> - [`auth.middleware.js:233`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/auth.middleware.js#L233): `requireAdmin = requireRole('admin', 'superadmin', 'super_admin')`
+> - [`auth.middleware.js:249`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/auth.middleware.js#L249): `req.userType === 'superadmin' || req.user.role === 'super_admin'`
+> - Admin model enum: `['admin', 'super_admin']`
+> - Routes: `/api/superadmin` and `/api/super-admin` both mount the same routes
+
+**Fix:** Standardize on ONE value. Since the Admin model uses `'super_admin'`, adopt that everywhere:
+```javascript
+// auth.middleware.js
+const requireAdmin = requireRole('admin', 'super_admin');
+const requireSuperAdmin = requireRole('super_admin');
+
+// routes/index.js — remove the duplicate mount
+app.use('/api/super-admin', superAdminRoutes);
+// app.use('/api/superadmin', superAdminRoutes);  // REMOVE
+```
+
+---
+
+### H3: Controller Directly Imports Model and Bypasses Service Layer
+
+> **What:** [`admin.controller.js:229`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/controllers/admin.controller.js#L229) does `const Score = require('../../models/Score')` and performs direct Mongoose operations (`Score.findById`, `scoreDoc.save()`).
+>
+> **Why it matters:** This violates the established layered architecture. The controller bypasses the repository, service, and DI container. This makes testing difficult, introduces tight coupling, and circumvents any audit/logging/caching the service layer provides.
+>
+> **Where:** [`admin.controller.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/controllers/admin.controller.js) — `unlockScores` handler, lines 226-253.
+
+**Fix:** Move the logic to `adminService.unlockScore(scoreId, userId)` and call `scoreRepository` from there.
+
+---
+
+### H4: Duplicate CORS Configuration — `server.js` vs `security.middleware.js`
+
+> **What:** CORS is configured in two places: [`server.js:43-89`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/server.js#L43-L89) (inline with a manual additional headers middleware) and [`security.middleware.js:120-171`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/security.middleware.js#L120-L171) (properly abstracted `createCorsMiddleware`).
+>
+> **Why it matters:** The `server.js` version is applied AND then a second middleware manually sets Access-Control headers again (lines 80-89). This is redundant and confusing — changing one without the other will cause subtle CORS bugs. The `security.middleware.js` version is better but unused in the main entry.
+>
+> **Where:** [`server.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/server.js) lines 42-89.
+>
+> **Fix:** Remove inline CORS from `server.js` and use the abstracted middleware from `security.middleware.js`:
+```javascript
+// server.js — replace lines 42-89 with:
+const { createCorsMiddleware } = require('./src/middleware/security.middleware');
+app.use(createCorsMiddleware(container));
+```
+
+---
+
+### H5: Missing Password Hashing Guarantee on `updateById`
+
+> **What:** [`authentication.service.js:301`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L301) calls `repository.updateById(user._id, { password: newPassword, ... })`, relying on the base repository to detect a password field and use `.save()` to trigger the pre-save hook.
+>
+> **Why it matters:** The [`base.repository.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/repositories/base.repository.js#L183-L195) does handle this case — but it's fragile. If anyone changes the `updateById` method or adds a new repository without this check, passwords could be stored in plaintext. This is a correctness concern with a wide blast radius.
+>
+> **Where:** [`base.repository.js:183-195`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/repositories/base.repository.js#L183-L195).
+>
+> **Fix:** Hash passwords at the service layer before passing to the repository:
+```javascript
+// authentication.service.js — resetPasswordWithOTP
+const bcrypt = require('bcryptjs');
+const hashedPassword = await bcrypt.hash(newPassword, 12);
+await repository.updateById(user._id, {
+  password: hashedPassword,
+  resetPasswordToken: null,
+  resetPasswordExpires: null
+});
+```
+
+---
+
+## 🟡 MEDIUM Findings
+
+---
+
+### M1: `console.log` Statements in Production Code
+
+> **What:** [`admin.controller.js:41-53`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/controllers/admin.controller.js#L41-L53) uses `console.log` for debugging, and [`server.js:116`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/server.js#L116) uses it for request logging. The codebase has a proper Winston logger infrastructure.
+>
+> **Why it matters:** `console.log` bypasses log levels, rotation, and structured logging. It can expose sensitive data in production logs and doesn't integrate with the monitoring infrastructure.
+>
+> **Where:** `admin.controller.js` lines 41, 49; `server.js` lines 53, 102, 116, 186-189.
+>
+> **Fix:** Replace all `console.log` with `logger.info`/`logger.debug`.
+
+---
+
+### M2: Inline `require()` Inside Methods
+
+> **What:** [`authentication.service.js:134`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L134) does `const { sanitizeUserData } = require(...)` inside the `register` method.
+>
+> **Why it matters:** This is a performance anti-pattern (though Node caches modules), makes dependencies invisible at the top of the file, and suggests a circular dependency was being worked around. It also appears in the `unlockScores` handler with the Score model.
+>
+> **Where:** [`authentication.service.js:134`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L134).
+>
+> **Fix:** Move all `require()` to the top of the file.
+
+---
+
+### M3: Test Token Bypass Could Leak to Production
+
+> **What:** [`auth.middleware.js:49-53`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/auth.middleware.js#L49-L53) allows `token === 'test-token'` to bypass authentication when `NODE_ENV === 'test'`.
+>
+> **Why it matters:** If `NODE_ENV` is ever accidentally set to `'test'` in a deployed environment, all endpoints become accessible with `Authorization: Bearer test-token`. This is a defense-in-depth concern.
+>
+> **Where:** [`auth.middleware.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/auth.middleware.js) lines 49-53.
+>
+> **Fix:** Add a secondary guard:
+```javascript
+if (process.env.NODE_ENV === 'test' && 
+    process.env.ALLOW_TEST_TOKEN === 'true' && 
+    token === 'test-token') {
+  // ...
+}
+```
+
+---
+
+### M4: Judge Model Has No `comparePassword` Method
+
+> **What:** The Player, Coach, and Admin models all define a `comparePassword` method. The [`Judge`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/models/Judge.js) model does not, despite having a password field and pre-save hashing.
+>
+> **Why it matters:** [`authentication.service.js:560-562`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L560-L562) tries `user.comparePassword()` first and falls back to `bcrypt.compare()`. When the `findById` in auth middleware uses `.lean()` (returning a plain object), neither approach works correctly because `.lean()` strips methods AND the password field may not be selected.
+>
+> **Where:** [`Judge.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/models/Judge.js).
+>
+> **Fix:** Add `comparePassword` to the Judge model:
+```javascript
+judgeSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+```
+
+---
+
+### M5: OTP Not Cleared After Successful Password Reset
+
+> **What:** In [`authentication.service.js:291-305`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L291-L305), after a successful OTP verification and password update, the `resetPasswordToken` is set to `null` as part of the update — but the `otpService.clearOTP()` method is never called. More importantly, the OTP is verified but can potentially be reused in the same window before the update completes.
+>
+> **Why it matters:** A timing attack could allow the same OTP to be used in parallel requests.
+>
+> **Where:** [`authentication.service.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js) — `resetPasswordWithOTP` method.
+>
+> **Fix:** Use an atomic `findOneAndUpdate` with the OTP as a query condition to guarantee single-use:
+```javascript
+const result = await repository.model.findOneAndUpdate(
+  { _id: user._id, resetPasswordToken: otp },
+  { password: hashedPassword, resetPasswordToken: null, resetPasswordExpires: null },
+  { new: true }
+);
+if (!result) throw new ValidationError('Invalid or expired OTP');
+```
+
+---
+
+### M6: Socket Authentication Doesn't Check Token Invalidation
+
+> **What:** [`socket.manager.js:80-120`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/socket/socket.manager.js#L80-L120) verifies the JWT token but does not check `isTokenLoggedOut()` like the HTTP auth middleware does.
+>
+> **Why it matters:** A user who logs out can still maintain an active socket connection and receive real-time scoring updates. This is inconsistent with the HTTP layer.
+>
+> **Where:** [`socket.manager.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/socket/socket.manager.js) — `createAuthMiddleware` method.
+>
+> **Fix:** Add the same check:
+```javascript
+const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
+
+// After verifyToken:
+if (isTokenLoggedOut(String(decoded.userId), decoded.iat)) {
+  return next(new Error('Session ended. Please log in again.'));
+}
+```
+
+---
+
+## 🟢 LOW Findings
+
+---
+
+### L1: Redundant Route Aliases
+
+Multiple routes point to the same controller methods: `/api/superadmin` and `/api/super-admin`, `/dashboard` and `/dashboard/stats`, `/rankings/team` and `/scores/team-rankings`. This adds surface area and testing burden without clear value.
+
+**Fix:** Deprecate aliases with a redirect middleware, then remove after a transition period.
+
+---
+
+### L2: DI Container Exported as Module-Level Singleton
+
+[`di-container.js:132`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/infrastructure/di-container.js#L132) exports `new DIContainer()` — a module-level singleton. This makes it harder to test with isolated containers.
+
+**Fix:** Export the class and create the singleton in bootstrap:
+```javascript
+// di-container.js
+module.exports = DIContainer; // export class
+
+// bootstrap.js
+const DIContainer = require('./di-container');
+const container = new DIContainer();
+```
+
+---
+
+### L3: Email Send Failure Silently Swallowed
+
+[`otp.service.js:83-90`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/otp.service.js#L83-L90) catches email send errors and logs them, but the OTP is still stored in the database. The user sees a success response but never receives the email.
+
+**Fix:** Consider returning a warning in the response or implementing a retry mechanism.
+
+---
+
+### L4: `getRepositoryByType` Duplicated Across Services
+
+[`authentication.service.js:581-594`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/authentication.service.js#L581-L594) and [`otp.service.js:203-213`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/otp.service.js#L203-L213) both have identical `getRepositoryByType` switch statements. The OTP service version is missing `'judge'`.
+
+**Fix:** Create a shared `UserRepositoryResolver` utility or inject a pre-built Map:
+```javascript
+// utils/user-repository-resolver.js
+class UserRepositoryResolver {
+  constructor(repos) {
+    this.repos = new Map(Object.entries(repos));
+  }
+  resolve(userType) {
+    const repo = this.repos.get(userType.toLowerCase());
+    if (!repo) throw new Error(`Invalid user type: ${userType}`);
+    return repo;
+  }
+}
+```
+
+---
+
+## Architecture Assessment
+
+### What's Good ✅
+
+| Area | Assessment |
+|------|-----------|
+| **Layered Architecture** | Clean `route → controller → service → repository → model` chain |
+| **DI Container** | Custom but solid, with circular dependency detection and singleton/transient lifecycles |
+| **Error Hierarchy** | `BaseError → AuthenticationError, AuthorizationError, ValidationError, etc.` — well done |
+| **Config Management** | Centralized with validation at startup, typed getters, environment-aware defaults |
+| **Security Middleware Stack** | Helmet, mongoSanitize, rate limiting (IP + user + auth), CSRF, HTTPS enforcement |
+| **Repository Pattern** | Base repository with soft delete, lean queries, password-aware updates |
+| **Socket.IO Architecture** | Proper manager class with auth middleware, room management, metrics integration |
+| **Graceful Shutdown** | Full handler for HTTP, WebSocket, DB, and metrics cleanup |
+
+### What Needs Work ⚠️
+
+| Area | Issue |
+|------|-------|
+| **`server.js` is a God File** | 200 lines doing config, CORS, body parsing, rate limiting, debug endpoints, and server startup. The refactored middleware in `security.middleware.js` exists but isn't wired in. |
+| **`bootstrap.js` Manual Wiring** | 310 lines of manual DI registration. No auto-discovery, no module grouping. Adding a new service requires editing 3+ files. |
+| **Socket Manager Late Injection** | `initializeSocketIO` mutates 5 already-resolved singletons by assigning `.socketManager`. This is a code smell — consider using lazy resolution or event-based initialization. |
+| **No Input Validation on Password Reset** | `resetPasswordWithOTP` doesn't validate new password strength — the controller passes `req.body.password` directly with no strength check. |
+
+---
+
+## Recommended Refactor Roadmap
+
+### 🚨 Immediate (do today)
+
+| # | Action | Severity | Effort |
+|---|--------|----------|--------|
+| 1 | **Rotate ALL credentials** in `.env`, remove from git history | Critical | 1h |
+| 2 | **Replace `Math.random()` with `crypto.randomInt()`** in OTP generation | Critical | 10m |
+| 3 | **Protect admin registration** with authentication/super-admin check | Critical | 15m |
+| 4 | **Add `comparePassword`** to Judge model | Medium | 5m |
+| 5 | **Add token invalidation check** to Socket.IO auth middleware | Medium | 10m |
+
+### 📋 Short-Term (1-2 sprints)
+
+| # | Action | Severity | Effort |
+|---|--------|----------|--------|
+| 6 | **Standardize role naming** to `super_admin` everywhere | High | 2h |
+| 7 | **Move `unlockScores` logic** from controller to service layer | High | 30m |
+| 8 | **Consolidate CORS config** — remove inline `server.js` version, use middleware | High | 1h |
+| 9 | **Replace all `console.log`** with structured logger calls | Medium | 1h |
+| 10 | **Move inline `require()`** to top of files | Medium | 15m |
+| 11 | **Add password strength validation** to reset-password flow | Medium | 30m |
+| 12 | **Extract `getRepositoryByType`** into shared utility | Low | 30m |
+| 13 | **Add new-password validation** in `resetPasswordWithOTP` service method | Medium | 15m |
+| 14 | **Strengthen test-token guard** with additional env check | Medium | 5m |
+
+### 🏗️ Long-Term (next quarter)
+
+| # | Action | Impact | Effort |
+|---|--------|--------|--------|
+| 15 | **Implement Redis-backed token invalidation** | Enables scaling, proper logout | 1-2d |
+| 16 | **Implement refresh token scheme** — short-lived access tokens (15min) + refresh tokens | Major security improvement | 3-5d |
+| 17 | **Refactor `server.js`** to be a thin composition root, move all middleware setup to bootstrap | Architecture | 1d |
+| 18 | **Refactor `bootstrap.js`** — group registrations by module, consider auto-registration | DX | 1d |
+| 19 | **Add audit logging service** — track admin actions (approvals, rejections, score changes) to a separate collection | Compliance | 2-3d |
+| 20 | **Add integration test coverage** for auth flows (login → OTP → reset) | Quality | 2-3d |
+| 21 | **Consider account lockout** — `maxLoginAttempts` and `lockoutDuration` are configured but not implemented | Security | 1d |
+| 22 | **Add request-level logging middleware** using Winston instead of `console.log` in `server.js` | Observability | 30m |
+| 23 | **Remove duplicate route aliases** — `/api/superadmin` → redirect to `/api/super-admin` | Maintainability | 30m |
+
+---
+
+## Files That Look Fine
+
+These files are well-structured and don't have significant issues worth calling out:
+
+- [`src/errors/*`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/errors) — Clean error hierarchy, proper use of `isOperational` flag
+- [`src/middleware/error.middleware.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/error.middleware.js) — Excellent centralized error handling with environment-aware formatting and message sanitization
+- [`src/middleware/csrf.middleware.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/csrf.middleware.js) — Solid double-submit cookie implementation with timing-safe comparison
+- [`src/repositories/base.repository.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/repositories/base.repository.js) — Good abstraction with soft delete, lean queries, operator detection
+- [`src/services/auth/token.service.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/services/auth/token.service.js) — Clean token lifecycle with rotation
+- [`src/config/config-manager.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/config/config-manager.js) — Thorough validation with typed getters
+- [`src/middleware/security.middleware.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/middleware/security.middleware.js) — Well-organized rate limiting with environment-specific configs
+- [`src/controllers/auth.controller.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/controllers/auth.controller.js) — Thin, properly delegates to service, anti-enumeration on forgot-password
+- [`src/controllers/payment.controller.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/controllers/payment.controller.js) — Clean delegation to payment service
+- [`src/utils/validation/sanitization.util.js`](file:///d:/Mallakhamb-Repo/Mallakhamb-server-refactor/Server/src/utils/validation/sanitization.util.js) — Comprehensive sanitization with domain-specific helpers
+
+---
+
+## Summary
+
+The codebase is in **good shape architecturally** — the refactoring towards DI/service/repository layers was done thoughtfully. The **three critical issues** (leaked credentials, weak OTP, open admin registration) need immediate attention. The high-priority items (role confusion, architecture bypass, duplicate config) should be addressed within the current sprint. The long-term items (Redis, refresh tokens, audit logging) are investments that will pay off as the platform scales.

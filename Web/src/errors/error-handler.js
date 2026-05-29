@@ -1,6 +1,6 @@
 // Centralized error handling
 import toast from 'react-hot-toast';
-import { logger } from './logger.js';
+import { logger } from '@/infrastructure/logger.js';
 
 /**
  * Centralized API error handler utility

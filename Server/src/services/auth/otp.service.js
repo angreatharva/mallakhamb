@@ -38,7 +38,7 @@ class OTPService {
     const max = Math.pow(10, otpLength) - 1;
     const min = Math.pow(10, otpLength - 1);
     
-    const otp = Math.floor(Math.random() * (max - min + 1)) + min;
+    const otp = crypto.randomInt(min, max + 1);
     return otp.toString();
   }
 

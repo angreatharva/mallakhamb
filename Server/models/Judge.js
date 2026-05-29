@@ -104,4 +104,10 @@ judgeSchema.pre('save', async function(next) {
   }
 });
 
+// Compare password method
+judgeSchema.methods.comparePassword = async function(candidatePassword) {
+  if (!this.password) return false;
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
 module.exports = mongoose.model('Judge', judgeSchema);

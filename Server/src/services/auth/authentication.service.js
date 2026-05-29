@@ -287,22 +287,43 @@ class AuthenticationService {
         throw new ValidationError('Invalid OTP');
       }
 
-      // Verify OTP
+      // Verify OTP (read-only verification check first)
       const isValid = await this.otpService.verifyOTP(user, otp, userType);
 
       if (!isValid) {
         throw new ValidationError('Invalid or expired OTP');
       }
 
+      // Hash password explicitly (resolves MED-14)
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
       // Get repository for user type
       const repository = this.getRepositoryByType(userType);
 
-      // Update password (will be hashed by model pre-save hook)
-      await repository.updateById(user._id, {
-        password: newPassword,
-        resetPasswordToken: null,
-        resetPasswordExpires: null
-      });
+      // Atomic find and update under matching conditions to prevent parallel replay
+      const updatedUser = await repository.model.findOneAndUpdate(
+        {
+          _id: user._id,
+          resetPasswordToken: otp,
+          resetPasswordExpires: { $gt: new Date() }
+        },
+        {
+          $set: {
+            password: hashedPassword,
+            resetPasswordToken: null,
+            resetPasswordExpires: null
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        throw new ValidationError('Invalid or expired OTP');
+      }
+
+      // Clear OTP explicitly
+      await this.otpService.clearOTP(user._id, userType);
 
       this.logger.info('Password reset successful', { 
         userId: user._id, 

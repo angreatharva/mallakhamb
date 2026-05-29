@@ -137,7 +137,7 @@ const resetPassword = () => {
       .withMessage('OTP must be 6 digits')
       .isNumeric()
       .withMessage('OTP must contain only numbers'),
-    password('newPassword')
+    password('password')
   ];
 };
 

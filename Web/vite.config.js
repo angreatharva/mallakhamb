@@ -16,7 +16,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Allow external connections
     port: 5173,
-    allowedHosts: 'all' // Allow all hosts including ngrok
+    allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app'] // Restrict allowed hosts for security (resolves MED-15)
   },
   build: {
     sourcemap: false, // Disable source maps in production for security

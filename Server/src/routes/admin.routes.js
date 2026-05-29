@@ -17,7 +17,7 @@
 
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
-const { requireAdmin } = require('../middleware/auth.middleware');
+const { requireAdmin, requireSuperAdmin } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
@@ -45,7 +45,7 @@ function createAdminRoutes(container) {
    * @desc    Register a new admin
    * @access  Public
    */
-  router.post('/register', adminController.registerAdmin);
+  router.post('/register', authMiddleware, requireSuperAdmin, adminController.registerAdmin);
 
   /**
    * @route   POST /api/admin/login
