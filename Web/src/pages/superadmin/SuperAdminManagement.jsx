@@ -387,8 +387,8 @@ const SuperAdminManagement = () => {
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
-    const roleOption = admin.role === 'super_admin' 
-      ? { value: 'super_admin', label: 'Super Admin' }
+    const roleOption = admin.role === 'superadmin' 
+      ? { value: 'superadmin', label: 'Super Admin' }
       : { value: 'admin', label: 'Admin' };
     setFormData({ name: admin.name, email: admin.email, password: '', role: roleOption, isActive: admin.isActive });
   };
@@ -570,7 +570,7 @@ const SuperAdminManagement = () => {
     }
   };
 
-  const filteredAdmins = (admins || []).filter(a => a.role !== 'super_admin').filter(a => {
+  const filteredAdmins = (admins || []).filter(a => a.role !== 'superadmin').filter(a => {
     if (!adminSearchQuery) return true;
     const q = adminSearchQuery.toLowerCase();
     return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
@@ -719,8 +719,8 @@ const SuperAdminManagement = () => {
                     <Td>{admin.email}</Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{ background: admin.role === 'super_admin' ? `${ADMIN_COLORS.saffron}20` : `${ADMIN_COLORS.blue}20`, color: admin.role === 'super_admin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
-                        {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                        style={{ background: admin.role === 'superadmin' ? `${ADMIN_COLORS.saffron}20` : `${ADMIN_COLORS.blue}20`, color: admin.role === 'superadmin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
+                        {admin.role === 'superadmin' ? 'Super Admin' : 'Admin'}
                       </span>
                     </Td>
                     <Td><StatusBadge active={admin.isActive} /></Td>
@@ -823,7 +823,7 @@ const SuperAdminManagement = () => {
             label="Role" 
             options={[
               { value: 'admin', label: 'Admin' },
-              { value: 'super_admin', label: 'Super Admin' }
+              { value: 'superadmin', label: 'Super Admin' }
             ]}
             value={formData.role}
             onChange={(option) => setFormData({ ...formData, role: option })}
@@ -1042,7 +1042,7 @@ const SuperAdminManagement = () => {
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {(admins || []).filter(a => a.role !== 'super_admin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
+                {(admins || []).filter(a => a.role !== 'superadmin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
                   <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
                     style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>

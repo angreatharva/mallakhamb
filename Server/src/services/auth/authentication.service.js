@@ -394,7 +394,7 @@ class AuthenticationService {
 
   /**
    * Get competitions assigned to a user.
-   * - admin/super_admin: competitions array on the user document
+   * - admin/superadmin: competitions array on the user document
    * - judge: single competition field on the user document
    * - player/coach: no direct competition assignment, returns empty array
    * @param {string} userId - User ID
@@ -412,9 +412,9 @@ class AuthenticationService {
 
       const type = userType.toLowerCase();
 
-      if (type === 'admin' || type === 'super_admin') {
-        // super_admin: fetch all competitions
-        if (user.role === 'super_admin') {
+      if (type === 'admin' || type === 'superadmin') {
+        // superadmin: fetch all competitions
+        if (user.role === 'superadmin') {
           return await this.competitionRepository.find({});
         }
         // admin: fetch competitions by their assigned IDs

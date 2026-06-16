@@ -92,7 +92,7 @@ The configuration is organized into logical groups:
 
 ### JWT Configuration
 - `jwt.secret` - JWT secret key (required, min 32 characters)
-- `jwt.expiresIn` - Token expiration time (default: '24h')
+- `jwt.expiresIn` - Token expiration time (default: '1h')
 
 ### Email Configuration
 - `email.provider` - Email provider ('nodemailer' or 'resend')
@@ -143,7 +143,7 @@ DB_CONNECT_TIMEOUT=10000
 DB_SOCKET_TIMEOUT=45000
 
 # JWT
-JWT_EXPIRES_IN=24h
+JWT_EXPIRES_IN=1h
 
 # Email (Nodemailer)
 EMAIL_PROVIDER=nodemailer

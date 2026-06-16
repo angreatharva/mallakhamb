@@ -3,35 +3,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { isTokenExpired } from '@/utils/auth/tokenUtils';
+import { getRoleFromPath, getLoginPathFromPath } from '@/utils/auth/roleFromPath';
 
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
   const { isMobile } = useResponsive();
   const location = useLocation();
 
-  // Detect route context from current URL path
-  const detectRouteContext = () => {
-    const path = location.pathname;
-    if (path.startsWith('/superadmin')) {
-      return { storagePrefix: 'superadmin', loginPath: '/superadmin/login' };
-    }
-    if (path.startsWith('/admin')) {
-      return { storagePrefix: 'admin', loginPath: '/admin/login' };
-    }
-    if (path.startsWith('/coach')) {
-      return { storagePrefix: 'coach', loginPath: '/coach/login' };
-    }
-    if (path.startsWith('/player')) {
-      return { storagePrefix: 'player', loginPath: '/player/login' };
-    }
-    if (path.startsWith('/judge')) {
-      return { storagePrefix: 'judge', loginPath: '/judge/login' };
-    }
-    // Default fallback
-    return { storagePrefix: requiredUserType || 'admin', loginPath: '/' };
-  };
-
-  const { storagePrefix, loginPath } = detectRouteContext();
+  // Detect role and login path from current URL using centralized utility
+  const storagePrefix = getRoleFromPath(location.pathname) || requiredUserType || 'admin';
+  const loginPath = getLoginPathFromPath(location.pathname);
 
   // Clear storage if token is expired to avoid infinite spinner/limbo state
   const token = secureStorage.getItem(`${storagePrefix}_token`);

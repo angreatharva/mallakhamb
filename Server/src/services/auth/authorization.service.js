@@ -40,7 +40,7 @@ class AuthorizationService {
       coach: 2,
       judge: 3,
       admin: 4,
-      super_admin: 5
+      superadmin: 5
     };
   }
 
@@ -363,7 +363,7 @@ class AuthorizationService {
     switch (userType.toLowerCase()) {
       case 'admin':
         // Super admin has access to all competitions
-        if (user.role === 'super_admin') {
+        if (user.role === 'superadmin') {
           return true;
         }
         // Regular admin has access to assigned competitions

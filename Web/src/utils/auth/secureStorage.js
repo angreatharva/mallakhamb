@@ -1,6 +1,7 @@
 // Simple encrypted storage wrapper for sensitive data
 import CryptoJS from 'crypto-js';
 import { logger } from '@/infrastructure/logger.js';
+import { ROLE_PREFIXES } from '@/utils/auth/roleFromPath.js';
 
 // Generate a more robust encryption key
 const getEncryptionKey = () => {
@@ -20,6 +21,12 @@ const getEncryptionKey = () => {
   
   return `${envKey}-${fingerprintHash}`;
 };
+
+/**
+ * Known per-role storage key suffixes.
+ * When clearing for a specific role we remove `${role}_${suffix}` keys.
+ */
+const ROLE_KEY_SUFFIXES = ['token', 'user'];
 
 export const secureStorage = {
   setItem: (key, value) => {
@@ -49,8 +56,30 @@ export const secureStorage = {
   removeItem: (key) => {
     localStorage.removeItem(key);
   },
-  
+
+  /**
+   * Remove only the storage keys belonging to a specific role.
+   * Other roles' sessions are preserved so concurrent logins survive.
+   *
+   * @param {string} role - The role to clear (e.g. 'admin', 'superadmin')
+   */
+  clearForRole: (role) => {
+    if (!role) return;
+    for (const suffix of ROLE_KEY_SUFFIXES) {
+      localStorage.removeItem(`${role}_${suffix}`);
+    }
+    // Also clear any legacy un-prefixed keys
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userType');
+  },
+
+  /**
+   * Nuclear clear — removes ALL localStorage keys.
+   * Prefer clearForRole() in logout flows to preserve other sessions.
+   */
   clear: () => {
     localStorage.clear();
   }
 };
+

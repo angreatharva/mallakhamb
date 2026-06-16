@@ -46,7 +46,12 @@ function createAuthMiddleware(container) {
 
       // Backward-compatibility support for integration tests that rely on a
       // synthetic token value and mocked auth context.
-      if (process.env.NODE_ENV === 'test' && token === 'test-token') {
+      // Requires BOTH NODE_ENV=test AND explicit ALLOW_TEST_TOKEN=true.
+      if (
+        process.env.NODE_ENV === 'test' &&
+        process.env.ALLOW_TEST_TOKEN === 'true' &&
+        token === 'test-token'
+      ) {
         req.user = req.user || { _id: 'user-test-id' };
         req.userType = req.userType || req.headers['x-user-type'] || 'admin';
         return next();
@@ -230,7 +235,7 @@ const requireCoach = requireRole('coach');
 /**
  * Middleware to check if user is an admin (regular or super)
  */
-const requireAdmin = requireRole('admin', 'superadmin', 'super_admin');
+const requireAdmin = requireRole('admin', 'superadmin');
 
 /**
  * Middleware to check if user is a super admin
@@ -247,7 +252,7 @@ const requireSuperAdmin = (req, res, next) => {
   }
 
   const isSuperAdmin = req.userType === 'superadmin' || 
-                       req.user.role === 'super_admin';
+                       req.user.role === 'superadmin';
 
   if (!isSuperAdmin) {
     return res.status(403).json({ 

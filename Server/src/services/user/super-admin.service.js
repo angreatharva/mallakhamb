@@ -48,7 +48,7 @@ class SuperAdminService {
   async loginSuperAdmin(email, password) {
     const result = await this.authenticationService.login(email, password, 'admin');
     const role = result?.user?.role;
-    if (role !== 'super_admin' && role !== 'superadmin') {
+    if (role !== 'superadmin') {
       throw new NotFoundError('Super admin account');
     }
     return result;

@@ -264,7 +264,7 @@ container.register('authorizationService', (c) =>
 
 1. **Password Hashing** - Passwords are hashed by model pre-save hooks using bcrypt with 12 rounds
 2. **OTP Expiration** - OTPs expire after configured time (default: 10 minutes)
-3. **Token Expiration** - JWT tokens expire after configured time (default: 24 hours)
+3. **Token Expiration** - JWT tokens expire after configured time (default: 1 hour)
 4. **Email Normalization** - All emails are normalized to lowercase
 5. **Sensitive Data Logging** - Logger automatically redacts passwords, tokens, and OTPs
 6. **Security Best Practice** - Password reset doesn't reveal if email exists

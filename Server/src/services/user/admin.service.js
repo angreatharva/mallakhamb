@@ -138,7 +138,7 @@ class AdminService extends UserService {
       }
 
       // Super admins have access to all competitions, no need to assign
-      if (admin.role === 'super_admin') {
+      if (admin.role === 'superadmin') {
         this.logger.warn('Assign competition failed: Super admin has access to all competitions', { 
           adminId 
         });
@@ -209,7 +209,7 @@ class AdminService extends UserService {
       }
 
       // Super admins have access to all competitions
-      if (admin.role === 'super_admin') {
+      if (admin.role === 'superadmin') {
         this.logger.warn('Remove competition failed: Cannot remove competitions from super admin', { 
           adminId 
         });
@@ -270,12 +270,12 @@ class AdminService extends UserService {
       }
 
       // Super admins have access to all competitions
-      if (admin.role === 'super_admin') {
+      if (admin.role === 'superadmin') {
         this.logger.info('Admin competition access checked', { 
           adminId, 
           competitionId, 
           hasAccess: true,
-          reason: 'super_admin'
+          reason: 'superadmin'
         });
         return true;
       }
@@ -490,7 +490,7 @@ class AdminService extends UserService {
 
   /**
    * Get admins by role
-   * @param {string} role - Admin role (admin or super_admin)
+   * @param {string} role - Admin role (admin or superadmin)
    * @returns {Promise<Array>} Array of admins
    */
   async getAdminsByRole(role) {

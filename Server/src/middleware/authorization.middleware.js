@@ -33,7 +33,7 @@ function createCompetitionContextMiddleware(container) {
 
       // Super Admin dashboard can work without competition context
       const isSuperAdminDashboard =
-        (req.userType === 'superadmin' || req.user?.role === 'super_admin') &&
+        (req.userType === 'superadmin' || req.user?.role === 'superadmin') &&
         req.method === 'GET' &&
         (req.path === '/dashboard' || req.originalUrl?.includes('/superadmin/dashboard'));
       

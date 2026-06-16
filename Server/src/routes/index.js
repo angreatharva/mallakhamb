@@ -124,7 +124,6 @@ function loadRoutes(app, container, options = {}) {
     app.use('/api/judge', judgeAuthRouter);
   }
   
-  app.use('/api/super-admin', superAdminRoutes);
   app.use('/api/superadmin', superAdminRoutes);
   app.use('/api/judge', judgeRoutes);
 
@@ -170,7 +169,7 @@ function getRouteGroups() {
     players: '/api/players',
     coaches: '/api/coaches',
     admin: '/api/admin',
-    superadmin: '/api/super-admin',
+    superadmin: '/api/superadmin',
     judge: '/api/judge',
     competitions: '/api/competitions',
     teams: '/api/teams',

@@ -27,7 +27,7 @@ const adminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'super_admin'],
+    enum: ['admin', 'superadmin'],
     default: 'admin'
   },
   isActive: {
@@ -62,7 +62,7 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 
 // Check if admin has access to a specific competition
 adminSchema.methods.hasAccessToCompetition = function(competitionId) {
-  if (this.role === 'super_admin') {
+  if (this.role === 'superadmin') {
     return true; // Super admins have access to all competitions
   }
   return this.competitions.some(comp => comp.toString() === competitionId.toString());

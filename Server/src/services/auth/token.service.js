@@ -14,9 +14,9 @@ const { AuthenticationError } = require('../../errors');
 /**
  * Token rotation threshold in milliseconds.
  * Tokens older than this will be rotated on use.
- * Default: 12 hours (half of the 24h expiry).
+ * Default: 30 minutes (half of the 1h expiry).
  */
-const TOKEN_ROTATION_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 hours
+const TOKEN_ROTATION_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
 class TokenService {
   /**

@@ -5,6 +5,7 @@ import { isTokenExpired, getCompetitionIdFromToken } from '@/utils/auth/tokenUti
 import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { apiCache } from '@/utils/data/apiCache.js';
 import { logger } from '@/infrastructure/logger.js';
+import { dispatchAuthExpired } from '@/utils/auth/authEvents.js';
 
 logger.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
@@ -18,15 +19,9 @@ export const publicApi = axios.create({
   headers: apiConfig.getHeaders(),
 });
 
-const getCurrentUserTypeFromURL = () => {
-  const path = window.location.pathname;
-  if (path.startsWith('/player')) return 'player';
-  if (path.startsWith('/coach')) return 'coach';
-  if (path.startsWith('/judge')) return 'judge';
-  if (path.startsWith('/superadmin')) return 'superadmin';
-  if (path.startsWith('/admin')) return 'admin';
-  return null;
-};
+import { getRoleFromPath } from '@/utils/auth/roleFromPath.js';
+
+const getCurrentUserTypeFromURL = () => getRoleFromPath(window.location.pathname);
 
 const getToken = (userType) => {
   if (userType) {
@@ -59,7 +54,7 @@ api.interceptors.request.use(
       secureStorage.removeItem('token');
       secureStorage.removeItem('user');
 
-      window.location.href = '/';
+      dispatchAuthExpired({ userType: currentType, reason: 'token_expired' });
       return Promise.reject(new Error('Token expired'));
     }
 
@@ -78,6 +73,18 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    // --- Token Rotation (X-New-Token header) ---
+    // The server rotates tokens that are older than the rotation threshold
+    // and sends the new token in the X-New-Token response header.
+    const newToken = response.headers['x-new-token'];
+    if (newToken) {
+      const currentType = getCurrentUserTypeFromURL();
+      if (currentType) {
+        secureStorage.setItem(`${currentType}_token`, newToken);
+        logger.log(`🔄 Token rotated for ${currentType}`);
+      }
+    }
+
     if (response.config.method === 'get' && !response.config.skipCache) {
       apiCache.set(response.config.url, response.config.params, response.data);
     }
@@ -100,7 +107,7 @@ api.interceptors.response.use(
       secureStorage.removeItem('user');
       secureStorage.removeItem('userType');
 
-      window.location.href = '/';
+      dispatchAuthExpired({ userType: currentType, reason: 'unauthorized_401' });
     } else if (error.response?.status === 403) {
       const errorMessage = error.response?.data?.message || '';
 
@@ -122,7 +129,7 @@ api.interceptors.response.use(
 
           if (!isSuperAdmin) {
             logger.warn('Competition context invalid, redirecting non-superadmin user to competition selection');
-            window.location.href = `/${currentType}/login`;
+            dispatchAuthExpired({ userType: currentType, reason: 'competition_context_invalid' });
           } else {
             logger.warn('Competition context error for superadmin, but not redirecting');
           }

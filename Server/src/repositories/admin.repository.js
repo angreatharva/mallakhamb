@@ -72,7 +72,7 @@ class AdminRepository extends BaseRepository {
 
   /**
    * Find admins by role
-   * @param {string} role - Admin role (admin, super_admin)
+   * @param {string} role - Admin role (admin, superadmin)
    * @param {Object} options - Query options
    * @returns {Promise<Array>} Array of admins with the specified role
    */

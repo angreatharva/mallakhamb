@@ -9,6 +9,7 @@
 
 const { Server } = require('socket.io');
 const { AuthenticationError } = require('../errors');
+const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 
 class SocketManager {
   /**
@@ -91,6 +92,19 @@ class SocketManager {
 
         // Verify token using TokenService
         const decoded = this.tokenService.verifyToken(token);
+
+        // Check if token was issued before the user logged out
+        if (
+          decoded.userId != null &&
+          typeof decoded.iat === 'number' &&
+          isTokenLoggedOut(String(decoded.userId), decoded.iat)
+        ) {
+          this.logger.warn('Socket connection rejected: token invalidated after logout', {
+            socketId: socket.id,
+            userId: decoded.userId
+          });
+          return next(new Error('Session ended. Please log in again.'));
+        }
 
         // Attach user info to socket
         socket.userId = decoded.userId;

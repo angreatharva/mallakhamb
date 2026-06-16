@@ -91,7 +91,7 @@
 
 ### 1A — Token Lifecycle (HIGH-1, HIGH-5, HIGH-6, S1, S3)
 
-- [ ] **1.1 — Implement `X-New-Token` rotation handler** `~1h` — **HIGH-1**
+- [x] **1.1 — Implement `X-New-Token` rotation handler** `~1h` — **HIGH-1**
   - **File:** `api-client.js`
   - Add response interceptor to read `X-New-Token` header
   - Update `secureStorage` with the new token for the current user type
@@ -103,27 +103,27 @@
     }
     ```
 
-- [ ] **1.2 — Replace `window.location.href` redirects with event-driven navigation** `~3h` — **HIGH-6**
+- [x] **1.2 — Replace `window.location.href` redirects with event-driven navigation** `~3h` — **HIGH-6**
   - **New file:** `src/utils/auth/authEvents.js` — `EventTarget` + `AUTH_EXPIRED` constant
   - **Modify:** `api-client.js` — dispatch `AUTH_EXPIRED` event instead of `window.location.href`
   - **Modify:** `AuthProvider` (or `App.jsx`) — listen for `AUTH_EXPIRED`, call `navigate()` via React Router
 
-- [ ] **1.3 — Strengthen test-token bypass guard** `~5m` — **MED-12**
+- [x] **1.3 — Strengthen test-token bypass guard** `~5m` — **MED-12**
   - **File:** `auth.middleware.js`
   - Add explicit `ALLOW_TEST_TOKEN` env var check in addition to `NODE_ENV === 'test'`
 
-- [ ] **1.4 — Add token invalidation check to Socket.IO auth** `~10m` — **MED-7**
+- [x] **1.4 — Add token invalidation check to Socket.IO auth** `~10m` — **MED-7**
   - **File:** `socket.manager.js`
   - In socket authentication middleware, check token against invalidation map (same as HTTP middleware)
 
-- [ ] **1.5 — Reduce JWT expiry (short-term fix for in-memory invalidation)** `~5m` — **HIGH-5**
+- [x] **1.5 — Reduce JWT expiry (short-term fix for in-memory invalidation)** `~5m` — **HIGH-5**
   - Reduce from 24h → 1h until Redis-backed invalidation is in place
 
 ---
 
 ### 1B — Role & Auth Architecture (HIGH-2, S2, MED-1, MED-2, MED-3)
 
-- [ ] **1.6 — Standardize role naming across the full stack** `~2–3h` — **HIGH-2**
+- [x] **1.6 — Standardize role naming across the full stack** `~2–3h` — **HIGH-2**
   - **Decision:** Choose `superadmin` (recommended — fewer changes, frontend stays as-is)
   - **If `superadmin`:**
     - Change Admin model enum from `['admin', 'super_admin']` → `['admin', 'superadmin']`
@@ -133,17 +133,17 @@
     - Update all frontend routes, storage keys, URL paths, `api-client.js` role checks
   - ⚠️ **Coordinated cross-stack change — deploy both stacks together**
 
-- [ ] **1.7 — Centralize `getCurrentUserTypeFromURL()`** `~1h` — **MED-1**
+- [x] **1.7 — Centralize `getCurrentUserTypeFromURL()`** `~1h` — **MED-1**
   - **New file:** `src/utils/auth/roleFromPath.js`
   - Define `ROLE_PREFIXES` array + `getRoleFromPath(pathname)` function
   - **Update:** `App.jsx`, `api-client.js`, `protected-route.jsx` — import from shared utility
 
-- [ ] **1.8 — Extract AuthProvider from App.jsx** `~3h` — **MED-2**
+- [x] **1.8 — Extract AuthProvider from App.jsx** `~3h` — **MED-2**
   - **New file:** `src/contexts/AuthProvider.jsx` — all auth state, `loadAuthData()`, login/logout handlers
   - **Modify:** `App.jsx` — reduce to ~50-line thin layout shell
   - Move the 3 redundant `useEffect` → `loadAuthData()` calls into a single effect in `AuthProvider`
 
-- [ ] **1.9 — Scope `secureStorage.clear()` to current role only** `~1h` — **MED-3**
+- [x] **1.9 — Scope `secureStorage.clear()` to current role only** `~1h` — **MED-3**
   - **File:** `secureStorage.js`
   - Replace `localStorage.clear()` with targeted key removal for the current role
   - Preserve other roles' sessions on logout

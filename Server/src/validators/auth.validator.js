@@ -92,8 +92,8 @@ const registerAdmin = () => {
     body('role')
       .optional()
       .trim()
-      .isIn(['admin', 'super_admin'])
-      .withMessage('Role must be either admin or super_admin')
+      .isIn(['admin', 'superadmin'])
+      .withMessage('Role must be either admin or superadmin')
   ];
 };
 
