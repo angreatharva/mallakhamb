@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, useReducedMotion } from '@/pages/public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
 
-void motion;
 
 const statusColors = {
   ongoing: '#22C55E',

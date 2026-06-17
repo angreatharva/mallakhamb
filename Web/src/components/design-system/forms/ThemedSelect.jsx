@@ -1,10 +1,9 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
-import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
 
 /**
  * ThemedSelect - A themed select component that adapts to the current role context

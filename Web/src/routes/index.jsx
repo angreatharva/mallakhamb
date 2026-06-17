@@ -28,14 +28,8 @@ import {
   UnifiedRegister,
 } from './lazy-pages';
 
-export const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0a' }}>
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#FF6B35' }}></div>
-      <p className="mt-4 text-white/45">Loading...</p>
-    </div>
-  </div>
-);
+import { AuthLoadingSpinner as PageLoader } from '@/components/auth/AuthLoadingSpinner';
+export { PageLoader };
 
 export default function AppRoutes() {
   return (

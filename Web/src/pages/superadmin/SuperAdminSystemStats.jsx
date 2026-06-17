@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
   Server, Database, Users, Activity, Clock, HardDrive,
   TrendingUp, AlertCircle, CheckCircle, RefreshCw
 } from 'lucide-react';
-import { AnimatePresence, useInView } from 'framer-motion';
+import { useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';

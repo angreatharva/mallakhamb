@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI } from '@/services/api';
@@ -9,9 +9,10 @@ import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, useReducedMotion, GradientText, FadeIn } from '@/pages/public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { GradientText, FadeIn } from '@/components/design-system';
 
-void motion;
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 

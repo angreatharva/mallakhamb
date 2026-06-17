@@ -1,4 +1,3 @@
-import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import { ADMIN_COLORS } from '../../styles/tokens';

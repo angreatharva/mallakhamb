@@ -35,11 +35,15 @@ api.interceptors.request.use(
     if (config.method === 'get' && !config.skipCache) {
       const cached = apiCache.get(config.url, config.params);
       if (cached) {
-        return Promise.reject({
+        config.adapter = () => Promise.resolve({
+          data: cached,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
           config,
-          response: { data: cached },
-          cached: true
+          request: {}
         });
+        return config;
       }
     }
 
@@ -91,10 +95,6 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.cached) {
-      return Promise.resolve(error.response);
-    }
-
     if (error.response?.status === 401) {
       const currentType = getCurrentUserTypeFromURL();
 

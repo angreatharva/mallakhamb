@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Trophy, Calendar, MapPin, ArrowRight, User, LogOut, Search, X, CheckCircle,
-  Users, Zap, AlertCircle,
+  Trophy, Calendar, MapPin, ArrowRight, User, LogOut, Search, X, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI, playerAPI } from '@/services/api';
@@ -10,12 +9,11 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { GlassCard } from '../../components/design-system/cards';
-import { ThemedButton } from '../../components/design-system/forms';
 import { HexMesh, RadialBurst } from '../../components/design-system/backgrounds';
 import { useReducedMotion } from '../../components/design-system/animations';
 import BHALogo from '../../assets/BHA.png';

@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { Loader2 } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
-import { MIN_TOUCH_TARGET } from '../../../styles/tokens';
 import { useResponsive } from '../../../hooks/useResponsive';
 
 /**

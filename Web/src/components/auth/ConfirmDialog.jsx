@@ -2,10 +2,10 @@ import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, useReducedMotion } from '@/pages/public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
 import { useResponsive } from '@/hooks/useResponsive';
 
-void motion;
 
 const ConfirmDialog = ({
   isOpen,

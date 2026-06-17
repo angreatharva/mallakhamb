@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { 
   ArrowRight, Eye, EyeOff, Lock, Mail, User, Shield, 
-  CheckCircle2, AlertCircle
+  CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';

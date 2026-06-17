@@ -3,13 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Mail, Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 import { COLORS, EASE_OUT } from '../../styles/tokens';
-import { useReducedMotion as _useReducedMotion } from '../../hooks/useResponsive';
 
 const useReducedMotion = () => {
   const [reduced] = useState(

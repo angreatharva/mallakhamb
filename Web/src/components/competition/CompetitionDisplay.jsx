@@ -1,11 +1,9 @@
-import React from 'react';
 import { useCompetition } from '@/contexts/CompetitionContext';
-import { Calendar, MapPin, Trophy, Zap, Clock } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SafeText from '@/components/auth/SafeText';
-import { COLORS } from '@/pages/public/Home';
+import { COLORS } from '@/styles/tokens';
 
-void motion;
 
 const statusConfig = {
   ongoing: { color: '#22C55E', label: 'Live', pulse: true },

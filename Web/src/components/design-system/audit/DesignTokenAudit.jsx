@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { DESIGN_TOKENS, getStatusColor, getRoleColor, getStatusBg, getRoleBg } from '../../../styles/tokens';
+import { useState } from 'react';
+import { DESIGN_TOKENS, getStatusColor, getRoleColor } from '../../../styles/tokens';
 
 /**
  * DesignTokenAudit - Visual audit tool for design tokens

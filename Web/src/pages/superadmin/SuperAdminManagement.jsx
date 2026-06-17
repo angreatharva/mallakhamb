@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search,
-  ChevronDown, Save, Users
+  Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search, Save
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';

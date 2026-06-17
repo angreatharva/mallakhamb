@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
-import { COLORS, useReducedMotion } from '@/pages/public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
 
-void motion;
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
@@ -39,9 +39,6 @@ const Navbar = ({ user, userType, onLogout }) => {
 
   const handleLogout = () => {
     if (clearCompetitionContext) clearCompetitionContext();
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
     onLogout(navigate);
   };
 

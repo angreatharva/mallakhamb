@@ -1,3 +1,4 @@
+import { AuthLoadingSpinner } from '@/components/auth/AuthLoadingSpinner';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
@@ -29,18 +30,7 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
     
     if (currentToken && userData) {
       // Auth data exists but context hasn't loaded yet, show responsive loading
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-          <div className="text-center max-w-sm w-full">
-            <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-              isMobile ? 'h-8 w-8' : 'h-12 w-12'
-            }`}></div>
-            <p className={`mt-4 text-gray-600 ${
-              isMobile ? 'text-sm' : 'text-base'
-            }`}>Loading...</p>
-          </div>
-        </div>
-      );
+      return <AuthLoadingSpinner />;
     }
   }
 
@@ -50,18 +40,7 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   
   // If we have stored auth data but user state is not yet loaded, show loading
   if (!user && activeToken && userData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center max-w-sm w-full">
-          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-            isMobile ? 'h-8 w-8' : 'h-12 w-12'
-          }`}></div>
-          <p className={`mt-4 text-gray-600 ${
-            isMobile ? 'text-sm' : 'text-base'
-          }`}>Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoadingSpinner />;
   }
 
   // If not authenticated, redirect to the correct login page based on route context
@@ -77,18 +56,7 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   
   // If user exists but userType hasn't loaded yet, show loading
   if (user && !userType && requiredUserType) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center max-w-sm w-full">
-          <div className={`animate-spin rounded-full border-b-2 border-purple-600 mx-auto ${
-            isMobile ? 'h-8 w-8' : 'h-12 w-12'
-          }`}></div>
-          <p className={`mt-4 text-gray-600 ${
-            isMobile ? 'text-sm' : 'text-base'
-          }`}>Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoadingSpinner />;
   }
 
   // Wrap children in responsive container to preserve layouts

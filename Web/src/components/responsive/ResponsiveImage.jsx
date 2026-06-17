@@ -8,7 +8,7 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 
 /**

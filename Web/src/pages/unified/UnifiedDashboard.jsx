@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
-  ShieldHalf, Mars, Users, Venus, Target, Award, Shield,
+  ShieldHalf, Mars, Users, Venus, Target, Shield,
   Menu, X, LogOut, Play, CheckCircle, XCircle, LayoutDashboard,
-  Users2, Trophy, Gavel, ReceiptIndianRupee, Settings, Activity,
+  Users2, Trophy, Gavel, ReceiptIndianRupee, Settings,
   TrendingUp, UserCheck
 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';

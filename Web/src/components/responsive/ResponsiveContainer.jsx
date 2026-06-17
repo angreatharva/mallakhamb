@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
-import { getResponsiveLayout, getResponsiveSpacing } from '@/utils/ui/responsive';
+import { getResponsiveLayout } from '@/utils/ui/responsive';
 
 /**
  * ResponsiveContainer component for consistent responsive layouts

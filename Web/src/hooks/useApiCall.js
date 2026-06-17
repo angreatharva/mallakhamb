@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 
@@ -16,23 +16,26 @@ import { logger } from '@/infrastructure/logger';
  * };
  */
 export const useApiCall = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   /**
    * Handle API errors consistently
    */
-  const handleError = useCallback((error) => {
+  const handleError = useCallback((err) => {
     // Extract error message
     const message = 
-      error.response?.data?.message || 
-      error.response?.data?.error ||
-      error.message || 
+      err.response?.data?.message || 
+      err.response?.data?.error ||
+      err.message || 
       'An unexpected error occurred';
     
     // Log error for debugging
     logger.error('API Error:', {
       message,
-      status: error.response?.status,
-      url: error.config?.url,
-      method: error.config?.method,
+      status: err.response?.status,
+      url: err.config?.url,
+      method: err.config?.method,
     });
     
     // Show user-friendly error message
@@ -40,14 +43,14 @@ export const useApiCall = () => {
     
     // Report to error tracking service in production
     if (import.meta.env.PROD && window.Sentry) {
-      window.Sentry.captureException(error, {
+      window.Sentry.captureException(err, {
         tags: {
           type: 'api_error',
-          status: error.response?.status,
+          status: err.response?.status,
         },
         extra: {
-          url: error.config?.url,
-          method: error.config?.method,
+          url: err.config?.url,
+          method: err.config?.method,
         },
       });
     }
@@ -59,32 +62,46 @@ export const useApiCall = () => {
    * Execute API call with error handling
    */
   const execute = useCallback(async (apiCall) => {
+    setLoading(true);
+    setError(null);
     try {
       const result = await apiCall();
       return result;
-    } catch (error) {
-      handleError(error);
-      throw error; // Re-throw for component-level handling if needed
+    } catch (err) {
+      setError(err);
+      handleError(err);
+      throw err; // Re-throw for component-level handling if needed
+    } finally {
+      setLoading(false);
     }
   }, [handleError]);
 
   /**
-   * Execute API call with loading state management
+   * Execute API call with loading state management (for custom loading state)
    */
-  const executeWithLoading = useCallback(async (apiCall, setLoading) => {
+  const executeWithLoading = useCallback(async (apiCall, customSetLoading) => {
+    customSetLoading(true);
     setLoading(true);
+    setError(null);
     try {
-      const result = await execute(apiCall);
+      const result = await apiCall();
       return result;
+    } catch (err) {
+      setError(err);
+      handleError(err);
+      throw err;
     } finally {
+      customSetLoading(false);
       setLoading(false);
     }
-  }, [execute]);
+  }, [handleError]);
 
   return { 
     execute, 
     executeWithLoading,
     handleError,
+    loading,
+    error,
   };
 };
 

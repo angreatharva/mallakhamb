@@ -3,10 +3,10 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { 
   ArrowRight, Eye, EyeOff, Lock, Mail, User, Shield, UserCheck, Scale, Crown,
-  BarChart2, Settings, Users, Star, Zap, Trophy, Layers, Flame, Dumbbell, Gavel, BookOpen
+  BarChart2, Settings, Users
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { useRateLimit } from '../../hooks/useRateLimit';
@@ -21,15 +21,9 @@ import AccountLockoutMessage from '@/components/auth/AccountLockoutMessage';
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton } from '../../components/design-system/forms';
 import { 
-  HexGrid, 
-  HexMesh, 
-  RadialBurst, 
-  DiagonalBurst, 
-  Constellation 
+  HexGrid 
 } from '../../components/design-system/backgrounds';
 import { 
-  ShieldOrnament, 
-  CoachOrnament, 
   GradientText 
 } from '../../components/design-system/ornaments';
 import { useReducedMotion } from '../../components/design-system/animations';

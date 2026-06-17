@@ -13,7 +13,9 @@ import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS, useReducedMotion, FadeIn } from '../public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { FadeIn } from '@/components/design-system';
 
 // ─── Design tokens for judge theme ───────────────────────────────────────────
 const J = {

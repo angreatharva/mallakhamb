@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { Clock, Users, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
@@ -13,7 +13,6 @@ import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
-import ScoreCalculationDisplay from '../../components/admin/ScoreCalculationDisplay';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 
 const AdminScoring = () => {

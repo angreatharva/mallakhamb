@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { COLORS, FadeIn, useReducedMotion } from '../public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 

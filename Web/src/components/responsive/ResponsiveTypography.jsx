@@ -7,7 +7,6 @@
  * Requirements: 5.1, 5.2, 5.4
  */
 
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/ui/cn';
 

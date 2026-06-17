@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { HexGrid, RadialBurst, DiagonalBurst, HexMesh, Constellation } from './index';
 import { DESIGN_TOKENS } from '../../../styles/tokens';
 

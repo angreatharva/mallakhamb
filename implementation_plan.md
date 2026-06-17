@@ -152,37 +152,37 @@
 
 ### 1C — Frontend Code Quality
 
-- [ ] **1.10 — Dismantle Home.jsx barrel exports** `~4h` — **HIGH-4**
+- [x] **1.10 — Dismantle Home.jsx barrel exports** `~4h` — **HIGH-4**
   - **New dir:** `src/components/design-system/` — move `FadeIn`, `GlassCard`, `GradientText`, `SaffronButton`
   - **Move:** `COLORS` → `src/styles/tokens.js` (make this the canonical source)
   - **Move:** `useReducedMotion` → `src/hooks/useResponsive.js`
   - **Update:** 13+ importing files to use new paths
   - **Modify:** `Home.jsx` — remove all named exports, keep only default page export
 
-- [ ] **1.11 — Enable `no-unused-vars` ESLint rule** `~2h` — **LOW-1**
+- [x] **1.11 — Enable `no-unused-vars` ESLint rule** `~2h` — **LOW-1**
   - Change from `off` → `warn` with `argsIgnorePattern: '^_'`
   - Fix violations across the codebase
   - Remove `void motion` workaround pattern — **LOW-2**
 
-- [ ] **1.12 — Fix `useApiCall` hook — add loading/error state** `~1h` — **MED-11**
+- [x] **1.12 — Fix `useApiCall` hook — add loading/error state** `~1h` — **MED-11**
   - **File:** `useApiCall.js`
   - Implement the `loading` and `error` state management promised in JSDoc
   - Update consumers as needed
 
-- [ ] **1.13 — Replace API cache `Promise.reject` hack** `~2h` — **MED-10**
+- [x] **1.13 — Replace API cache `Promise.reject` hack** `~2h` — **MED-10**
   - **File:** `api-client.js` (cache logic)
   - Replace `Promise.reject` cache-hit pattern with proper wrapper function
   - Ensure error interceptors aren't triggered by cache hits
 
-- [ ] **1.14 — Extract duplicate loading spinner** `~30m` — **LOW-12**
+- [x] **1.14 — Extract duplicate loading spinner** `~30m` — **LOW-12**
   - **New:** `src/components/auth/AuthLoadingSpinner.jsx`
   - **Modify:** `protected-route.jsx` — use component in all 3 places
 
-- [ ] **1.15 — Remove Navbar's redundant `localStorage.removeItem`** `~5m` — **LOW-13**
+- [x] **1.15 — Remove Navbar's redundant `localStorage.removeItem`** `~5m` — **LOW-13**
   - **File:** `Navbar.jsx`
   - Lines 42–44: remove direct `localStorage.removeItem` calls (already handled by `onLogout(navigate)`)
 
-- [ ] **1.16 — Fix `useAgeGroups` duplication** `~1h` — **LOW-10**
+- [x] **1.16 — Fix `useAgeGroups` duplication** `~1h` — **LOW-10**
   - Extract shared `getFilteredAgeGroups` helper function
 
 ---

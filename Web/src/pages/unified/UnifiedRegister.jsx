@@ -3,11 +3,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
   ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
-  UserCheck, UserPlus, Users, Trophy, Layers, Flame, Dumbbell, Star,
+  UserCheck, UserPlus, Users,
   BarChart2, Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import BHALogo from '../../assets/BHA.png';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -16,8 +16,8 @@ import { logger } from '@/infrastructure/logger';
 // Design system
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
-import { HexMesh, RadialBurst, HexGrid } from '../../components/design-system/backgrounds';
-import { CoachOrnament, GradientText } from '../../components/design-system/ornaments';
+import { HexGrid } from '../../components/design-system/backgrounds';
+import { GradientText } from '../../components/design-system/ornaments';
 import { useReducedMotion } from '../../components/design-system/animations';
 
 // API services

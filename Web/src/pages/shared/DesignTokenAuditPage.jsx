@@ -1,4 +1,3 @@
-import React from 'react';
 import DesignTokenAudit from '../../components/design-system/audit/DesignTokenAudit';
 
 /**

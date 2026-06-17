@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Users, Calendar, Award, User, RefreshCw } from 'lucide-react';
+import { Trophy, Users, Calendar, Award, User } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { playerAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -9,7 +9,9 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
-import { COLORS, GradientText, FadeIn, GlassCard, SaffronButton, useReducedMotion } from '../public/Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
@@ -112,7 +114,7 @@ const PlayerDashboard = () => {
   useEffect(() => {
     if (!currentCompetition?._id) return;
     fetchPlayerProfile(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when competition id changes only
+     
   }, [currentCompetition?._id]);
 
   // Show modal if multiple competitions and no current competition selected

@@ -1,12 +1,15 @@
+import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import { useState, useEffect, useRef } from 'react';
-import { Filter, Search, X, ArrowLeft, Trophy, Medal, ChevronDown, Users } from 'lucide-react';
+import { Filter, Search, X, ArrowLeft, Trophy, Medal, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import Dropdown from '@/components/auth/Dropdown';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, useReducedMotion, GradientText, FadeIn, GlassCard, SaffronButton } from './Home';
+import { COLORS } from '@/styles/tokens';
+import { useReducedMotion } from '@/hooks/useResponsive';
+import { GradientText, FadeIn } from '@/components/design-system';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
