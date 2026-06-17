@@ -1,11 +1,10 @@
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
-const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const { createCorsMiddleware } = require('./src/middleware/security.middleware');
 // Load environment variables FIRST
 dotenv.config();
 // Import new infrastructure components
@@ -20,10 +19,11 @@ const { bootstrap, initializeSocketIO } = require('./src/infrastructure/bootstra
 const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('./src/middleware/metrics.middleware');
 // Bootstrap application (initialize DI container and services)
 const { container } = bootstrap();
+const logger = container.resolve('logger');
 // Connect to database using new DatabaseConnection
 const databaseConnection = container.resolve('databaseConnection');
 databaseConnection.connect().catch(error => {
-  console.error('Failed to connect to database:', error);
+  logger.error('Failed to connect to database', { error: error.message });
   process.exit(1);
 });
 // Resolve metrics collector for middleware
@@ -37,28 +37,6 @@ const socketManager = initializeSocketIO(server);
 const io = socketManager.getIO();
 // Make io available to routes
 app.set('io', io);
-// Get allowed origins from config
-const allowedOrigins = config.get('server.corsOrigins') || [];
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (health checks, server-to-server, curl, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'x-competition-id'],
-  optionsSuccessStatus: 200
-};
 // Security Middleware
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -75,18 +53,8 @@ if (process.env.NODE_ENV === 'production') {
     next();
   });
 }
-app.use(cors(corsOptions));
-// Additional CORS headers
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning,x-competition-id');
-  next();
-});
+// CORS — delegated to the centralized security middleware (MED-5)
+app.use(createCorsMiddleware(container));
 // Request size limits
 app.use(express.json({
   limit: '1mb',
@@ -99,21 +67,15 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(mongoSanitize({
   replaceWith: '_',
   onSanitize: ({ req, key }) => {
-    console.warn(`⚠️ Sanitized potentially malicious input: ${key}`);
+    logger.warn('Sanitized potentially malicious input', { key, path: req.path, method: req.method });
   }
 }));
-// Rate limiter for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
-  message: 'Too many authentication attempts, please try again after 15 minutes',
-  skipSuccessfulRequests: true,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// Rate limiter for authentication endpoints (uses centralized security middleware)
+const { createAuthRateLimitMiddleware } = require('./src/middleware/security.middleware');
+const authLimiter = createAuthRateLimitMiddleware(container);
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.headers.origin || 'no-origin'}`);
+  logger.debug('Incoming request', { method: req.method, path: req.path, origin: req.headers.origin || 'no-origin' });
   next();
 });
 // Metrics collection middleware
@@ -183,10 +145,11 @@ const PORT = config.get('server.port');
 // Start server
 if (require.main === module) {
   server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Socket.IO server running`);
-    console.log(`Environment: ${config.get('server.nodeEnv')}`);
-    console.log('🔗 CORS allowed origins:', config.get('server.corsOrigins'));
+    logger.info('Server started', {
+      port: PORT,
+      environment: config.get('server.nodeEnv'),
+      corsOrigins: config.get('server.corsOrigins')
+    });
     // Register graceful shutdown handler
     const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
     gracefulShutdownHandler.register({
@@ -195,7 +158,7 @@ if (require.main === module) {
       dbConnection: databaseConnection,
       metricsCollector: metricsCollector
     });
-    console.log('✅ Graceful shutdown handler registered');
+    logger.info('Graceful shutdown handler registered');
   });
 }
 // Export app for testing

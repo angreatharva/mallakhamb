@@ -14,8 +14,9 @@ const {
   ValidationError,
   NotFoundError 
 } = require('../../errors');
-const { normalizeEmail, sanitizeString } = require('../../utils/validation/sanitization.util');
+const { normalizeEmail, sanitizeString, sanitizeUserData } = require('../../utils/validation/sanitization.util');
 const { recordLogout } = require('../../utils/security/token-invalidation.util');
+const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
 
 class AuthenticationService {
   /**
@@ -52,6 +53,14 @@ class AuthenticationService {
       error: typeof logger?.error === 'function' ? logger.error.bind(logger) : () => {},
       debug: typeof logger?.debug === 'function' ? logger.debug.bind(logger) : () => {},
     };
+
+    // Shared repository resolver (MED-13)
+    this._repoResolver = createUserRepositoryResolver({
+      playerRepository,
+      coachRepository,
+      adminRepository,
+      judgeRepository,
+    });
   }
 
   /**
@@ -131,7 +140,6 @@ class AuthenticationService {
   async register(userData, userType) {
     try {
       // Sanitize inputs
-      const { sanitizeUserData } = require('../../utils/validation/sanitization.util');
       const sanitizedData = sanitizeUserData(userData);
       const sanitizedUserType = sanitizeString(userType);
 
@@ -292,6 +300,14 @@ class AuthenticationService {
 
       if (!isValid) {
         throw new ValidationError('Invalid or expired OTP');
+      }
+
+      // Validate password strength (MED-9)
+      if (!newPassword || newPassword.length < 8) {
+        throw new ValidationError('Password must be at least 8 characters long');
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        throw new ValidationError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
       }
 
       // Hash password explicitly (resolves MED-14)
@@ -600,18 +616,7 @@ class AuthenticationService {
    * @throws {Error} If user type is invalid
    */
   getRepositoryByType(userType) {
-    switch (userType.toLowerCase()) {
-      case 'player':
-        return this.playerRepository;
-      case 'coach':
-        return this.coachRepository;
-      case 'admin':
-        return this.adminRepository;
-      case 'judge':
-        return this.judgeRepository;
-      default:
-        throw new Error(`Invalid user type: ${userType}`);
-    }
+    return this._repoResolver.getRepositoryByType(userType);
   }
 }
 

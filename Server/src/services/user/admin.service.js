@@ -1882,6 +1882,47 @@ class AdminService extends UserService {
   }
 
   /**
+   * Unlock a single score document by ID (MED-4)
+   * @param {string} scoreId - Score document ID
+   * @param {string} adminId - Admin performing the unlock
+   * @returns {Promise<Object>} Unlock result
+   * @throws {NotFoundError} If score not found
+   */
+  async unlockScore(scoreId, adminId) {
+    try {
+      const scoreDoc = await this.scoreRepository.findById(scoreId);
+
+      if (!scoreDoc) {
+        throw new NotFoundError('Score');
+      }
+
+      await this.scoreRepository.updateById(scoreId, {
+        isLocked: false,
+        unlockedBy: adminId,
+        unlockedAt: new Date()
+      });
+
+      this.logger.info('Score unlocked', { scoreId, adminId });
+
+      return {
+        message: 'Score unlocked successfully',
+        scoreId,
+        isLocked: false
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Unlock score error', {
+        scoreId,
+        adminId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Unlock scores for editing
    * @param {string} competitionId - Competition ID
    * @param {string} ageGroup - Age group
@@ -1924,6 +1965,7 @@ class AdminService extends UserService {
       throw error;
     }
   }
+
 
   /**
    * Lock scores

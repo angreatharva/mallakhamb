@@ -38,15 +38,14 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/dashboard/stats */
     getDashboardStats: asyncHandler(async (req, res) => {
-      console.log('[AdminController] getDashboardStats called:', {
+      logger.debug('getDashboardStats called', {
         userId: req.user?._id,
         userType: req.userType,
         competitionId: req.competitionId,
-        path: req.path,
-        method: req.method
+        path: req.path
       });
       const stats = await adminService.getDashboardStats(req.competitionId);
-      console.log('[AdminController] getDashboardStats response:', {
+      logger.debug('getDashboardStats response', {
         competitionId: req.competitionId,
         competitionName: stats.competition?.name,
         totalTeams: stats.totalTeams
@@ -224,32 +223,8 @@ function createAdminController(container) {
     /** @route PUT /api/admin/scores/:scoreId/unlock */
     unlockScores: asyncHandler(async (req, res) => {
       const { scoreId } = req.params;
-      
-      // Find the score document to get competition and ageGroup
-      const Score = require('../../models/Score');
-      const scoreDoc = await Score.findById(scoreId);
-      
-      if (!scoreDoc) {
-        return res.status(404).json({ 
-          success: false, 
-          error: { message: 'Score document not found', code: 'NOT_FOUND' }
-        });
-      }
-      
-      // Simply update the isLocked field to false
-      scoreDoc.isLocked = false;
-      scoreDoc.unlockedBy = req.user._id;
-      scoreDoc.unlockedAt = new Date();
-      await scoreDoc.save();
-      
-      res.json({ 
-        success: true, 
-        data: { 
-          message: 'Score unlocked successfully',
-          scoreId: scoreDoc._id,
-          isLocked: scoreDoc.isLocked
-        } 
-      });
+      const result = await adminService.unlockScore(scoreId, req.user._id);
+      res.json({ success: true, data: result });
     }),
 
     /** @route PUT /api/admin/scores/lock */

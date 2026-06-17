@@ -189,40 +189,40 @@
 
 ### 1D — Backend Code Quality
 
-- [ ] **1.17 — Consolidate CORS config** `~1h` — **MED-5**
+- [x] **1.17 — Consolidate CORS config** `~1h` — **MED-5**
   - **File:** `server.js` — remove inline 47-line CORS config (lines 42–89)
   - Wire in `createCorsMiddleware(container)` from `security.middleware.js`
 
-- [ ] **1.18 — Replace `console.log` with structured Winston logger** `~1h` — **MED-6**
+- [x] **1.18 — Replace `console.log` with structured Winston logger** `~1h` — **MED-6**
   - **Files:** `server.js`, `admin.controller.js`, any other files with `console.log`
   - Use the existing Winston logger consistently
 
-- [ ] **1.19 — Move `unlockScores` to service layer** `~30m` — **MED-4**
+- [x] **1.19 — Move `unlockScores` to service layer** `~30m` — **MED-4**
   - **File:** `admin.controller.js` (line 229)
   - Remove direct Score model import
   - Create service method, call from controller
 
-- [ ] **1.20 — Add password strength validation to reset flow** `~30m` — **MED-9**
+- [x] **1.20 — Add password strength validation to reset flow** `~30m` — **MED-9**
   - **File:** `authentication.service.js`
   - Validate password complexity before `updateById`
 
-- [ ] **1.21 — Extract shared `UserRepositoryResolver`** `~30m` — **MED-13**
+- [x] **1.21 — Extract shared `UserRepositoryResolver`** `~30m` — **MED-13**
   - **New file:** `src/utils/user-repository-resolver.js`
   - Merge duplicated `getRepositoryByType` from `authentication.service.js` and `otp.service.js`
   - Add missing `judge` type to the OTP version
 
-- [ ] **1.22 — Hash password explicitly in service layer** `~20m` — **MED-14**
+- [x] **1.22 — Hash password explicitly in service layer** `~20m` — **MED-14**
   - **File:** `authentication.service.js`
   - Hash password before calling `updateById` — don't rely on `base.repository.js` detecting the field
 
-- [ ] **1.23 — Move inline `require()` calls to top of file** `~15m` — **LOW-15**
+- [x] **1.23 — Move inline `require()` calls to top of file** `~15m` — **LOW-15**
   - **Files:** `authentication.service.js`, `admin.controller.js`
 
-- [ ] **1.24 — Refactor Socket Manager initialization** `~2h` — **LOW-14**
+- [x] **1.24 — Refactor Socket Manager initialization** `~2h` — **LOW-14**
   - **File:** `socket.manager.js` / DI setup
   - Move `.socketManager` injection from post-resolution mutation → lazy DI or event-based init
 
-- [ ] **1.25 — Rename `secureStorage` to `obfuscatedStorage`** `~30m` — **HIGH-3** (short-term)
+- [x] **1.25 — Rename `secureStorage` to `obfuscatedStorage`** `~30m` — **HIGH-3** (short-term)
   - **File:** `secureStorage.js` → rename
   - Add documentation comment: "This is NOT a security boundary"
   - Update all import references

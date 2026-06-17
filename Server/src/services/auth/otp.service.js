@@ -9,6 +9,7 @@
 
 const crypto = require('crypto');
 const { ValidationError } = require('../../errors');
+const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
 
 class OTPService {
   /**
@@ -19,14 +20,23 @@ class OTPService {
    * @param {CoachRepository} coachRepository - Coach repository
    * @param {AdminRepository} adminRepository - Admin repository
    * @param {EmailService} emailService - Email service instance (optional)
+   * @param {JudgeRepository} judgeRepository - Judge repository (optional)
    */
-  constructor(configManager, logger, playerRepository, coachRepository, adminRepository, emailService = null) {
+  constructor(configManager, logger, playerRepository, coachRepository, adminRepository, emailService = null, judgeRepository = null) {
     this.config = configManager;
     this.logger = logger;
     this.playerRepository = playerRepository;
     this.coachRepository = coachRepository;
     this.adminRepository = adminRepository;
     this.emailService = emailService;
+
+    // Shared repository resolver (MED-13) — now includes judge type
+    this._repoResolver = createUserRepositoryResolver({
+      playerRepository,
+      coachRepository,
+      adminRepository,
+      judgeRepository,
+    });
   }
 
   /**
@@ -201,16 +211,7 @@ class OTPService {
    * @throws {Error} If user type is invalid
    */
   getRepositoryByType(userType) {
-    switch (userType.toLowerCase()) {
-      case 'player':
-        return this.playerRepository;
-      case 'coach':
-        return this.coachRepository;
-      case 'admin':
-        return this.adminRepository;
-      default:
-        throw new Error(`Invalid user type: ${userType}`);
-    }
+    return this._repoResolver.getRepositoryByType(userType);
   }
 }
 

@@ -82,7 +82,8 @@ function bootstrap() {
     c.resolve('playerRepository'),
     c.resolve('coachRepository'),
     c.resolve('adminRepository'),
-    c.resolve('emailService')
+    c.resolve('emailService'),
+    c.resolve('judgeRepository')
   ), 'singleton');
   container.register('authenticationService', (c) => new AuthenticationService(
     c.resolve('playerRepository'),
@@ -248,11 +249,29 @@ function initializeSocketIO(httpServer) {
 
   const socketManager = container.resolve('socketManager');
 
-  container.resolve('scoringService').socketManager = socketManager;
-  container.resolve('competitionService').socketManager = socketManager;
-  container.resolve('teamService').socketManager = socketManager;
-  container.resolve('judgeService').socketManager = socketManager;
-  container.resolve('adminService').socketManager = socketManager;
+  // Provide lazy socket manager access to services that need it (LOW-14)
+  // Instead of mutating `.socketManager` after resolution, we set a lazy getter
+  // that resolves from the DI container on first access.
+  const servicesNeedingSocket = [
+    'scoringService',
+    'competitionService',
+    'teamService',
+    'judgeService',
+    'adminService',
+  ];
+
+  for (const serviceName of servicesNeedingSocket) {
+    const service = container.resolve(serviceName);
+    Object.defineProperty(service, 'socketManager', {
+      get() {
+        // Replace the getter with the resolved value after first access
+        const sm = container.resolve('socketManager');
+        Object.defineProperty(this, 'socketManager', { value: sm, writable: true, configurable: true });
+        return sm;
+      },
+      configurable: true,
+    });
+  }
 
   // Register event handlers
   container.register('scoringHandler', (c) => {
