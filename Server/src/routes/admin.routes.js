@@ -21,6 +21,10 @@ const { requireAdmin, requireSuperAdmin } = require('../middleware/auth.middlewa
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
+const { 
+  auditUserCreated, auditUserUpdated, auditCompetitionCreated, auditCompetitionUpdated, auditCompetitionDeleted,
+  auditScoreUpdated, auditUserDeleted, auditPaymentCompleted
+} = require('../middleware/audit.middleware');
 
 /**
  * Initialize admin routes with dependencies from DI container
@@ -292,6 +296,7 @@ function createAdminRoutes(container) {
     validateCompetitionContext,
     adminValidator.createSingleJudge(),
     handleValidationErrors,
+    auditUserCreated,
     adminController.createSingleJudge
   );
 
@@ -307,6 +312,7 @@ function createAdminRoutes(container) {
     validateCompetitionContext,
     adminValidator.updateJudge(),
     handleValidationErrors,
+    auditUserUpdated,
     adminController.updateJudge
   );
 
@@ -322,6 +328,7 @@ function createAdminRoutes(container) {
     validateCompetitionContext,
     adminValidator.deleteJudge(),
     handleValidationErrors,
+    auditUserDeleted,
     adminController.deleteJudge
   );
 
@@ -339,6 +346,7 @@ function createAdminRoutes(container) {
     validateCompetitionContext,
     adminValidator.unlockScores(),
     handleValidationErrors,
+    auditScoreUpdated,
     adminController.unlockScores
   );
 

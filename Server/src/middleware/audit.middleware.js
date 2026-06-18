@@ -58,6 +58,7 @@ const SENSITIVE_OPERATIONS = {
  */
 function createAuditMiddleware(container) {
   const logger = container.resolve('logger');
+  const auditLogRepository = container.resolve('auditLogRepository');
 
   return (req, res, next) => {
     // Attach audit logging function to request
@@ -78,6 +79,22 @@ function createAuditMiddleware(container) {
       };
 
       logger.info('Audit log', auditLog);
+
+      // Save admin actions to database
+      if (req.user && (req.userType === 'admin' || req.userType === 'superadmin')) {
+        auditLogRepository.logAction({
+          adminId: req.user._id,
+          adminType: req.userType,
+          action: operation,
+          resource: details.resourceType || 'API',
+          resourceId: details.resourceId || details.competitionId || details.userId || 'system',
+          details: auditLog,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        }).catch(err => {
+          logger.error('Failed to save audit log to database', { error: err.message });
+        });
+      }
     };
 
     next();

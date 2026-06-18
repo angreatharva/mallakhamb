@@ -69,6 +69,10 @@ function createApp(container) {
   const requestCoalescingMiddleware = container.resolve('requestCoalescingMiddleware');
   app.use(requestCoalescingMiddleware.middleware());
 
+  // Audit middleware
+  const { createAuditMiddleware } = require('../middleware/audit.middleware');
+  app.use(createAuditMiddleware(container));
+
   // Load routes with auth limiter
   const authLimiter = createAuthRateLimitMiddleware(container);
   loadRoutes(app, container, { authLimiter });

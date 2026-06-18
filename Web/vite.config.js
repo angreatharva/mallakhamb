@@ -39,7 +39,13 @@ export default defineConfig({
       }
     },
     // Copy _redirects file to dist folder for Render SPA routing
-    copyPublicDir: true
+    chunkSizeWarningLimit: 1000
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+    css: true,
   },
   publicDir: 'public',
 })

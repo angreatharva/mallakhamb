@@ -98,21 +98,23 @@ export default function AuthProvider({ children }) {
   // Listens for auth expiry events dispatched by Axios interceptors and
   // navigates via React Router instead of doing a full page reload.
   useEffect(() => {
-    const handleAuthExpired = (event) => {
-      const { redirectTo, reason } = event.detail;
-      logger.warn(`Auth expired (${reason}), redirecting to ${redirectTo}`);
+    const handleAuthExpired = (e) => {
+      const expiredRole = e.detail?.role || currentRole || userType;
+      if (!expiredRole) return;
 
-      // Clear React auth state
+      secureStorage.clearForRole(expiredRole);
+      sessionStorage.clear();
+
       setUser(null);
       setUserType(null);
 
-      // Navigate within React Router — no page reload
+      const redirectTo = getLoginPathForRole(expiredRole);
       navigate(redirectTo, { replace: true });
     };
 
     authEventBus.addEventListener(AUTH_EXPIRED, handleAuthExpired);
     return () => authEventBus.removeEventListener(AUTH_EXPIRED, handleAuthExpired);
-  }, [navigate]);
+  }, [navigate, currentRole, userType]);
 
   // --- Login handler ---
   const login = useCallback((userData, token, type) => {
@@ -126,7 +128,7 @@ export default function AuthProvider({ children }) {
   // --- Logout handler ---
   // Uses clearForRole() to preserve other roles' sessions (MED-3)
   const handleLogout = useCallback(
-    async (nav) => {
+    async () => {
       const roleToLogout = currentRole || userType;
 
       try {
@@ -154,12 +156,12 @@ export default function AuthProvider({ children }) {
       setUser(null);
       setUserType(null);
 
-      if (nav && roleToLogout) {
+      if (navigate && roleToLogout) {
         const loginPath = getLoginPathForRole(roleToLogout);
-        nav(loginPath);
+        navigate(loginPath, { replace: true });
       }
     },
-    [currentRole, userType],
+    [currentRole, userType, navigate],
   );
 
   // --- Context value (memoized to prevent unnecessary re-renders) ---

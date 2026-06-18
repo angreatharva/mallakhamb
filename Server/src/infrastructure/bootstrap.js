@@ -10,6 +10,7 @@ const CompetitionRepository = require('../repositories/competition.repository');
 const TeamRepository = require('../repositories/team.repository');
 const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
+const AuditLogRepository = require('../repositories/audit-log.repository');
 
 const CacheService = require('../services/cache/cache.service');
 const CacheWarmer = require('../services/cache/cache-warmer');
@@ -86,6 +87,7 @@ function bootstrap() {
   container.register('teamRepository', (c) => new TeamRepository(c.resolve('logger')), 'singleton');
   container.register('scoreRepository', (c) => new ScoreRepository(c.resolve('logger')), 'singleton');
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
+  container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('featureFlagService', (c) => new FeatureFlagService(c.resolve('config'), c.resolve('logger')), 'singleton');
