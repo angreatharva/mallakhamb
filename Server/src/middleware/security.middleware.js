@@ -302,7 +302,7 @@ function createStrictRateLimit(options = {}) {
     max,
     keyGenerator: (req) => {
       // Use user ID if authenticated, otherwise IP
-      return req.user?._id?.toString() || req.ip;
+      return req.user?._id?.toString() || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     },
     message: {
       success: false,
@@ -332,7 +332,6 @@ function createAuthRateLimitMiddleware(container) {
   return rateLimit({
     windowMs,
     max,
-    keyGenerator: (req) => req.ip,
     message: {
       success: false,
       error: {

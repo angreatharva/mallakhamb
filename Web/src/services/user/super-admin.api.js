@@ -1,5 +1,4 @@
 import api from '../api-client.js';
-import { clearCachePattern } from '@/utils/data/apiCache.js';
 import { createAdminAPI } from './admin.api.js';
 
 export const superAdminAPI = {
@@ -26,7 +25,6 @@ export const superAdminAPI = {
   addPlayerToTeam: (data) => api.post('/superadmin/players/add', data),
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {
-    clearCachePattern('/superadmin');
     return api.post('/superadmin/players/payment/verify', data);
   },
 };

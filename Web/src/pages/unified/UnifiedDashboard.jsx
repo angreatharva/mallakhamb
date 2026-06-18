@@ -16,11 +16,13 @@ import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useRouteContext } from '../../contexts/RouteContext';
-import AdminTeams from '../admin/AdminTeams';
-import AdminScores from '../admin/AdminScores';
-import AdminJudges from '../admin/AdminJudges';
-import AdminTransactions from '../admin/AdminTransactions';
-import SuperAdminManagement from '../superadmin/SuperAdminManagement';
+import { lazy, Suspense } from 'react';
+
+const AdminTeams = lazy(() => import('../admin/AdminTeams'));
+const AdminScores = lazy(() => import('../admin/AdminScores'));
+const AdminJudges = lazy(() => import('../admin/AdminJudges'));
+const AdminTransactions = lazy(() => import('../admin/AdminTransactions'));
+const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
@@ -785,7 +787,13 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       {/* ─── Page Content ───────────────────────────────────────────────── */}
       <main id="main-content" className="pt-16">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-          {renderTabContent()}
+          <Suspense fallback={
+            <div className="flex justify-center items-center py-20">
+              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            </div>
+          }>
+            {renderTabContent()}
+          </Suspense>
         </div>
       </main>
     </div>

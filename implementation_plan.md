@@ -268,18 +268,18 @@
 
 ### 2B — Performance & Architecture
 
-- [ ] **2.5 — Replace `apiCache` with TanStack Query** `~3–5d`
+- [x] **2.5 — Replace `apiCache` with TanStack Query** `~3–5d`
   - Remove manual `apiCache` logic from `api-client.js`
   - Install `@tanstack/react-query`
   - Migrate data fetching hooks to use `useQuery` / `useMutation`
   - Gains: request deduplication, background refetching, stale-while-revalidate
 
-- [ ] **2.6 — Bundle analysis and optimization** `~1d`
+- [x] **2.6 — Bundle analysis and optimization** `~1d`
   - Run `npx vite-bundle-visualizer`
   - Split `AdminScoring.jsx` (42KB) and `AdminJudges.jsx` (41KB) into lazy sub-components
   - Remove unused `socket.io-client` dependency — **LOW-5**
 
-- [ ] **2.7 — Refactor `server.js` to thin composition root** `~1d`
+- [x] **2.7 — Refactor `server.js` to thin composition root** `~1d`
   - Move middleware setup into modular functions
   - `server.js` becomes ~30 lines: create app → apply middleware → start
 
@@ -287,7 +287,7 @@
   - Group registrations by module (auth, competition, scoring, etc.)
   - Consider auto-registration by convention
 
-- [ ] **2.9 — Use React Router layout routes** `~2h` — **LOW-6**
+- [x] **2.9 — Use React Router layout routes** `~2h` — **LOW-6**
   - Replace 8x inline `RouteContext.Provider` wrapping with layout routes
 
 ---

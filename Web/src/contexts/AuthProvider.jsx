@@ -12,7 +12,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/contexts/AuthContext';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { apiCache } from '@/utils/data/apiCache';
 import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
 import { authEventBus, AUTH_EXPIRED } from '@/utils/auth/authEvents';
@@ -106,7 +105,6 @@ export default function AuthProvider({ children }) {
       // Clear React auth state
       setUser(null);
       setUserType(null);
-      apiCache.clear();
 
       // Navigate within React Router — no page reload
       navigate(redirectTo, { replace: true });
@@ -152,7 +150,6 @@ export default function AuthProvider({ children }) {
       // Scoped clear — only remove keys for the current role
       secureStorage.clearForRole(roleToLogout);
       sessionStorage.clear();
-      apiCache.clear();
 
       setUser(null);
       setUserType(null);

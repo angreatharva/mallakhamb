@@ -3,7 +3,6 @@ import { jwtDecode } from 'jwt-decode';
 import apiConfig from '@/config/api.config.js';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils.js';
 import { secureStorage } from '@/utils/auth/secureStorage.js';
-import { apiCache } from '@/utils/data/apiCache.js';
 import { logger } from '@/infrastructure/logger.js';
 import { dispatchAuthExpired } from '@/utils/auth/authEvents.js';
 
@@ -94,21 +93,6 @@ async function attemptSilentRefresh() {
 
 api.interceptors.request.use(
   (config) => {
-    if (config.method === 'get' && !config.skipCache) {
-      const cached = apiCache.get(config.url, config.params);
-      if (cached) {
-        config.adapter = () => Promise.resolve({
-          data: cached,
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config,
-          request: {}
-        });
-        return config;
-      }
-    }
-
     // --- Backward compat: still send Authorization header if we have a token ---
     // This ensures mobile clients / Postman / tests that don't use cookies
     // continue to work during migration.
@@ -142,9 +126,6 @@ api.interceptors.response.use(
       }
     }
 
-    if (response.config.method === 'get' && !response.config.skipCache) {
-      apiCache.set(response.config.url, response.config.params, response.data);
-    }
     return response;
   },
   async (error) => {

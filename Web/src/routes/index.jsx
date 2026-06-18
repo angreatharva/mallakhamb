@@ -31,6 +31,43 @@ import {
 import { AuthLoadingSpinner as PageLoader } from '@/components/auth/AuthLoadingSpinner';
 export { PageLoader };
 
+import { Outlet } from 'react-router-dom';
+
+// Layout Components
+const PlayerLayout = () => (
+  <ProtectedRoute requiredUserType="player">
+    <Outlet />
+  </ProtectedRoute>
+);
+
+const CoachLayout = () => (
+  <ProtectedRoute requiredUserType="coach">
+    <Outlet />
+  </ProtectedRoute>
+);
+
+const AdminLayout = () => (
+  <ProtectedRoute requiredUserType="admin">
+    <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
+      <Outlet />
+    </RouteContext.Provider>
+  </ProtectedRoute>
+);
+
+const SuperAdminLayout = () => (
+  <ProtectedRoute requiredUserType="superadmin">
+    <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
+      <Outlet />
+    </RouteContext.Provider>
+  </ProtectedRoute>
+);
+
+const JudgeLayout = () => (
+  <ProtectedRoute requiredUserType="judge">
+    <Outlet />
+  </ProtectedRoute>
+);
+
 export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -41,159 +78,53 @@ export default function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+        {/* Player Routes */}
         <Route path="/player" element={<Navigate to="/player/login" replace />} />
         <Route path="/player/login" element={<PlayerLogin />} />
         <Route path="/player/register" element={<UnifiedRegister />} />
-        <Route
-          path="/player/select-team"
-          element={
-            <ProtectedRoute requiredUserType="player">
-              <PlayerTeamSelection />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/player/dashboard"
-          element={
-            <ProtectedRoute requiredUserType="player">
-              <PlayerDashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/player" element={<PlayerLayout />}>
+          <Route path="select-team" element={<PlayerTeamSelection />} />
+          <Route path="dashboard" element={<PlayerDashboard />} />
+        </Route>
 
+        {/* Coach Routes */}
         <Route path="/coach" element={<Navigate to="/coach/login" replace />} />
         <Route path="/coach/login" element={<CoachLogin />} />
         <Route path="/coach/register" element={<UnifiedRegister />} />
-        <Route
-          path="/coach/create-team"
-          element={
-            <ProtectedRoute requiredUserType="coach">
-              <CoachCreateTeam />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/coach/select-competition"
-          element={
-            <ProtectedRoute requiredUserType="coach">
-              <CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/coach/dashboard"
-          element={
-            <ProtectedRoute requiredUserType="coach">
-              <CoachDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/coach/payment"
-          element={
-            <ProtectedRoute requiredUserType="coach">
-              <CoachPayment />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/coach" element={<CoachLayout />}>
+          <Route path="create-team" element={<CoachCreateTeam />} />
+          <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
+          <Route path="dashboard" element={<CoachDashboard />} />
+          <Route path="payment" element={<CoachPayment />} />
+        </Route>
 
+        {/* Admin Routes */}
         <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute requiredUserType="admin">
-              <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
-                <AdminDashboard />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/dashboard/:tab"
-          element={
-            <ProtectedRoute requiredUserType="admin">
-              <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
-                <AdminDashboard />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/teams"
-          element={
-            <ProtectedRoute requiredUserType="admin">
-              <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
-                <AdminTeams />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/scoring"
-          element={
-            <ProtectedRoute requiredUserType="admin">
-              <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
-                <AdminScoring />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard/:tab" element={<AdminDashboard />} />
+          <Route path="teams" element={<AdminTeams />} />
+          <Route path="scoring" element={<AdminScoring />} />
+        </Route>
 
+        {/* Judge Routes */}
         <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
         <Route path="/judge/login" element={<JudgeLogin />} />
-        <Route
-          path="/judge/scoring"
-          element={
-            <ProtectedRoute requiredUserType="judge">
-              <JudgeScoring />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/judge" element={<JudgeLayout />}>
+          <Route path="scoring" element={<JudgeScoring />} />
+        </Route>
 
+        {/* SuperAdmin Routes */}
         <Route path="/superadmin" element={<Navigate to="/superadmin/login" replace />} />
         <Route path="/superadmin/login" element={<SuperAdminLogin />} />
-        <Route
-          path="/superadmin/dashboard"
-          element={
-            <ProtectedRoute requiredUserType="superadmin">
-              <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
-                <SuperAdminDashboard />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/superadmin/dashboard/:tab"
-          element={
-            <ProtectedRoute requiredUserType="superadmin">
-              <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
-                <SuperAdminDashboard />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/superadmin/add-player-payment"
-          element={
-            <ProtectedRoute requiredUserType="superadmin">
-              <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
-                <SuperAdminAddPlayerPayment />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/superadmin/scoring"
-          element={
-            <ProtectedRoute requiredUserType="superadmin">
-              <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
-                <AdminScoring />
-              </RouteContext.Provider>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/superadmin" element={<SuperAdminLayout />}>
+          <Route path="dashboard" element={<SuperAdminDashboard />} />
+          <Route path="dashboard/:tab" element={<SuperAdminDashboard />} />
+          <Route path="add-player-payment" element={<SuperAdminAddPlayerPayment />} />
+          <Route path="scoring" element={<AdminScoring />} />
+        </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
