@@ -1,22 +1,30 @@
 /**
  * Token Service
  * 
- * Handles JWT token generation, verification, and refresh operations.
+ * Handles JWT token generation, verification, refresh, and rotation.
  * Uses ConfigManager for JWT configuration.
- * Implements token rotation for long-lived sessions (Requirement 17.7).
+ * Implements:
+ *  - Short-lived access tokens (15 min)
+ *  - Long-lived refresh tokens (7 days) with rotation & reuse detection
+ *  - Token rotation for long-lived sessions (Requirement 17.7)
  * 
- * Requirements: 1.5, 1.8, 17.7
+ * Requirements: 1.5, 1.8, 17.7, HIGH-5 (Phase 2A, Item 2.2)
  */
 
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { AuthenticationError } = require('../../errors');
+const RefreshToken = require('../../../models/RefreshToken');
 
 /**
  * Token rotation threshold in milliseconds.
  * Tokens older than this will be rotated on use.
- * Default: 30 minutes (half of the 1h expiry).
+ * Default: 7 minutes (roughly half of the 15-min access token expiry).
  */
-const TOKEN_ROTATION_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+const TOKEN_ROTATION_THRESHOLD_MS = 7 * 60 * 1000;
+
+/** Refresh token lifetime in days */
+const REFRESH_TOKEN_DAYS = 7;
 
 class TokenService {
   /**
@@ -30,7 +38,7 @@ class TokenService {
   }
 
   /**
-   * Generate JWT token for user
+   * Generate JWT access token for user.
    * Includes `iat` (issued-at) claim for rotation tracking.
    * @param {string} userId - User ID
    * @param {string} userType - User type (player, coach, admin, judge)
@@ -173,6 +181,125 @@ class TokenService {
       this.logger.warn('Token decode failed', { error: error.message });
       return null;
     }
+  }
+
+  // ------------------------------------------------------------------
+  //  Refresh Token Methods (Phase 2A, Item 2.2)
+  // ------------------------------------------------------------------
+
+  /**
+   * Generate a cryptographically random refresh token and persist it.
+   *
+   * @param {string} userId - User ID
+   * @param {string} userType - User type
+   * @param {string|null} [family] - Token family UUID (null = new family)
+   * @returns {Promise<{ token: string, family: string }>}
+   */
+  async generateRefreshToken(userId, userType, family = null) {
+    const rawToken = crypto.randomBytes(40).toString('hex');
+    const tokenHash = this._hashToken(rawToken);
+    const tokenFamily = family || crypto.randomUUID();
+
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000);
+
+    await RefreshToken.create({
+      tokenHash,
+      userId,
+      userType,
+      family: tokenFamily,
+      expiresAt,
+    });
+
+    this.logger.debug('Refresh token generated', { userId, userType, family: tokenFamily });
+
+    return { token: rawToken, family: tokenFamily };
+  }
+
+  /**
+   * Validate a refresh token and rotate it (issue a new one, mark old as used).
+   *
+   * If the presented token has already been used, this indicates token theft.
+   * The entire family is revoked to force re-authentication.
+   *
+   * @param {string} rawToken - Raw refresh token string
+   * @returns {Promise<{ accessToken: string, refreshToken: string, family: string }>}
+   * @throws {AuthenticationError} If the token is invalid, used, revoked, or expired
+   */
+  async rotateRefreshToken(rawToken) {
+    const tokenHash = this._hashToken(rawToken);
+
+    // Look up the token record
+    const tokenRecord = await RefreshToken.findOne({ tokenHash });
+
+    if (!tokenRecord) {
+      this.logger.warn('Refresh token not found — possible theft or expired');
+      throw new AuthenticationError('Invalid refresh token');
+    }
+
+    // Reuse detection: if the token was already consumed, the family is compromised
+    if (tokenRecord.isUsed || tokenRecord.isRevoked) {
+      this.logger.warn('Refresh token reuse detected — revoking family', {
+        userId: tokenRecord.userId,
+        family: tokenRecord.family,
+      });
+      await RefreshToken.revokeFamily(tokenRecord.family);
+      throw new AuthenticationError('Refresh token reuse detected. Please log in again.');
+    }
+
+    // Check expiry (belt-and-suspenders; TTL index should clean up, but be safe)
+    if (tokenRecord.expiresAt < new Date()) {
+      throw new AuthenticationError('Refresh token expired');
+    }
+
+    // Mark old token as used
+    tokenRecord.isUsed = true;
+    await tokenRecord.save();
+
+    // Issue new access + refresh tokens in the same family
+    const accessToken = this.generateToken(
+      tokenRecord.userId.toString(),
+      tokenRecord.userType,
+    );
+
+    const { token: newRefreshToken, family } = await this.generateRefreshToken(
+      tokenRecord.userId,
+      tokenRecord.userType,
+      tokenRecord.family, // same family
+    );
+
+    this.logger.info('Refresh token rotated', {
+      userId: tokenRecord.userId,
+      userType: tokenRecord.userType,
+      family,
+    });
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      family,
+      userId: tokenRecord.userId,
+      userType: tokenRecord.userType,
+    };
+  }
+
+  /**
+   * Revoke all refresh tokens for a user (used on logout).
+   * @param {string} userId
+   * @returns {Promise<void>}
+   */
+  async revokeAllRefreshTokens(userId) {
+    await RefreshToken.revokeAllForUser(userId);
+    this.logger.info('All refresh tokens revoked', { userId });
+  }
+
+  /**
+   * Hash a raw token using SHA-256.
+   * @param {string} raw - Raw token string
+   * @returns {string} Hex-encoded hash
+   * @private
+   */
+  _hashToken(raw) {
+    return crypto.createHash('sha256').update(raw).digest('hex');
   }
 }
 

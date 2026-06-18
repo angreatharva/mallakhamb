@@ -9,6 +9,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 /**
  * @param {Object} container - DI container
@@ -16,7 +17,10 @@ const { asyncHandler } = require('../middleware/error.middleware');
  */
 function createAdminController(container) {
   const adminService = container.resolve('adminService');
+  const tokenService = container.resolve('tokenService');
+  const config = container.resolve('config');
   const logger = container.resolve('logger');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return {
     // ==================== Authentication ====================
@@ -24,14 +28,21 @@ function createAdminController(container) {
     /** @route POST /api/admin/register */
     registerAdmin: asyncHandler(async (req, res) => {
       const result = await adminService.registerAdmin(req.body);
-      res.status(201).json({ success: true, data: result });
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'admin',
+        statusCode: 201,
+      });
     }),
 
     /** @route POST /api/admin/login */
     loginAdmin: asyncHandler(async (req, res) => {
       const { email, password } = req.body;
       const result = await adminService.loginAdmin(email, password);
-      res.json({ success: true, data: result });
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'admin',
+      });
     }),
 
     // ==================== Dashboard & Statistics ====================

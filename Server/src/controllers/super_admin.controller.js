@@ -8,10 +8,14 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 function createSuperAdminController(container) {
   const superAdminService = container.resolve('superAdminService');
+  const tokenService = container.resolve('tokenService');
+  const config = container.resolve('config');
   const logger = container.resolve('logger');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return {
     // ==================== Auth ====================
@@ -21,7 +25,10 @@ function createSuperAdminController(container) {
       try {
         const { email, password } = req.body;
         const result = await superAdminService.loginSuperAdmin(email, password, req);
-        res.json({ success: true, data: result });
+        await sendLoginResponse({
+          res, tokenService, isProduction,
+          data: result, userType: 'superadmin',
+        });
       } catch (error) {
         next(error);
       }

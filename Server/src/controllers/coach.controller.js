@@ -9,10 +9,14 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 function createCoachController(container) {
   const coachService = container.resolve('coachService');
+  const tokenService = container.resolve('tokenService');
+  const config = container.resolve('config');
   const logger = container.resolve('logger');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return {
     // ==================== Auth ====================
@@ -20,10 +24,10 @@ function createCoachController(container) {
     /** @route POST /api/coach/register */
     registerCoach: asyncHandler(async (req, res) => {
       const result = await coachService.registerCoach(req.body);
-      res.status(201).json({
-        success: true,
-        data: result,
-        message: 'Coach registered successfully. Please create your team.',
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'coach',
+        statusCode: 201, message: 'Coach registered successfully. Please create your team.',
       });
     }),
 
@@ -31,7 +35,10 @@ function createCoachController(container) {
     loginCoach: asyncHandler(async (req, res) => {
       const { email, password } = req.body;
       const result = await coachService.loginCoach(email, password);
-      res.json({ success: true, data: result });
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'coach',
+      });
     }),
 
     /** @route GET /api/coach/profile */

@@ -53,6 +53,11 @@ const ScoringHandler = require('../socket/handlers/scoring.handler');
 const NotificationHandler = require('../socket/handlers/notification.handler');
 const RequestCoalescingMiddleware = require('../middleware/request-coalescing.middleware');
 
+// Phase 2A — Redis + token invalidation
+const RedisClient = require('./redis-client');
+const TokenInvalidationService = require('../services/auth/token-invalidation.service');
+const { setTokenInvalidationService } = require('../utils/security/token-invalidation.util');
+
 function bootstrap() {
   configManager.load();
   container.register('config', () => configManager, 'singleton');
@@ -63,6 +68,15 @@ function bootstrap() {
   container.register('healthMonitor', (c) => new HealthMonitor(c.resolve('config'), c.resolve('logger'), c.resolve('emailService')), 'singleton');
   container.register('gracefulShutdownHandler', (c) => new GracefulShutdownHandler(c.resolve('logger'), c.resolve('config')), 'singleton');
   container.register('requestCoalescingMiddleware', (c) => new RequestCoalescingMiddleware(c.resolve('logger')), 'singleton');
+
+  // --- Redis + Token Invalidation (Phase 2A, Item 2.4) ---
+  container.register('redisClient', (c) => new RedisClient(c.resolve('config'), c.resolve('logger')), 'singleton');
+  container.register('tokenInvalidationService', (c) => {
+    const svc = new TokenInvalidationService(c.resolve('redisClient'), c.resolve('logger'));
+    // Wire the shim so existing sync callers get the service
+    setTokenInvalidationService(svc);
+    return svc;
+  }, 'singleton');
 
   container.register('playerRepository', (c) => new PlayerRepository(c.resolve('logger')), 'singleton');
   container.register('coachRepository', (c) => new CoachRepository(c.resolve('logger')), 'singleton');

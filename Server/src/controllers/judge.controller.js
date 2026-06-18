@@ -9,10 +9,14 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 function createJudgeController(container) {
   const judgeService = container.resolve('judgeService');
+  const tokenService = container.resolve('tokenService');
+  const config = container.resolve('config');
   const logger = container.resolve('logger');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return {
     // ==================== Auth ====================
@@ -21,7 +25,11 @@ function createJudgeController(container) {
     login: asyncHandler(async (req, res) => {
       const { username, password } = req.body;
       const result = await judgeService.loginJudge(username, password);
-      res.json({ success: true, data: result, message: 'Login successful' });
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'judge',
+        message: 'Login successful',
+      });
     }),
 
     // ==================== Profile ====================

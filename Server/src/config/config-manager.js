@@ -88,6 +88,9 @@ class ConfigManager {
       ngrok: {
         enabled: this.getBoolean('NGROK_ENABLED', false),
         authToken: this.getString('NGROK_AUTH_TOKEN', '')
+      },
+      redis: {
+        url: this.getString('REDIS_URL', ''),
       }
     };
 

@@ -8,10 +8,14 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 function createPlayerController(container) {
   const playerService = container.resolve('playerService');
+  const tokenService = container.resolve('tokenService');
+  const config = container.resolve('config');
   const logger = container.resolve('logger');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return {
     // ==================== Auth ====================
@@ -19,10 +23,10 @@ function createPlayerController(container) {
     /** @route POST /api/player/register */
     registerPlayer: asyncHandler(async (req, res) => {
       const result = await playerService.registerPlayer(req.body);
-      res.status(201).json({
-        success: true,
-        data: result,
-        message: 'Player registered successfully.',
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'player',
+        statusCode: 201, message: 'Player registered successfully.',
       });
     }),
 
@@ -30,7 +34,10 @@ function createPlayerController(container) {
     loginPlayer: asyncHandler(async (req, res) => {
       const { email, password } = req.body;
       const result = await playerService.loginPlayer(email, password);
-      res.json({ success: true, data: result });
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'player',
+      });
     }),
 
     // ==================== Profile ====================

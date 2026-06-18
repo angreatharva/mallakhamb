@@ -97,6 +97,8 @@ function createCsrfMiddleware(options = {}) {
 
     // Bearer-token authenticated requests are inherently CSRF-safe because
     // a cross-origin attacker cannot set the Authorization header.
+    // Cookie-based auth (Phase 2A) IS vulnerable to CSRF, so we only skip
+    // CSRF checks when we detect an explicit Bearer header.
     if (skipBearerAuth) {
       const authHeader = req.headers['authorization'] || '';
       if (authHeader.startsWith('Bearer ')) {

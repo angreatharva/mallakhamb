@@ -94,6 +94,13 @@ function createAuthRoutes(container) {
    */
   router.post('/logout', authMiddleware, authController.logout);
 
+  /**
+   * @route   POST /api/auth/refresh
+   * @desc    Refresh access token using refresh token cookie
+   * @access  Public (uses httpOnly refresh_token cookie)
+   */
+  router.post('/refresh', authController.refresh);
+
   return router;
 }
 

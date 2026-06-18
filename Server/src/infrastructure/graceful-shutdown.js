@@ -16,6 +16,7 @@ class GracefulShutdownHandler {
     this.socketManager = null;
     this.dbConnection = null;
     this.metricsCollector = null;
+    this.redisClient = null;
     this.shutdownTimeout = 30000; // 30 seconds max wait for in-flight requests
   }
 
@@ -27,11 +28,12 @@ class GracefulShutdownHandler {
    * @param {mongoose.Connection} options.dbConnection - Database connection
    * @param {MetricsCollector} options.metricsCollector - Metrics collector
    */
-  register({ server, socketManager, dbConnection, metricsCollector }) {
+  register({ server, socketManager, dbConnection, metricsCollector, redisClient }) {
     this.server = server;
     this.socketManager = socketManager;
     this.dbConnection = dbConnection;
     this.metricsCollector = metricsCollector;
+    this.redisClient = redisClient || null;
 
     // Register signal handlers
     this.setupSignalHandlers();
@@ -97,6 +99,9 @@ class GracefulShutdownHandler {
 
       // Step 4: Close database connections
       await this.closeDatabaseConnections();
+
+      // Step 4.5: Disconnect Redis (Phase 2A)
+      await this.closeRedisConnection();
 
       // Step 5: Flush logs and metrics
       await this.flushLogsAndMetrics();
@@ -242,6 +247,28 @@ class GracefulShutdownHandler {
         error: error.message 
       });
       throw error;
+    }
+  }
+
+  /**
+   * Close Redis connection
+   * Phase 2A — graceful Redis disconnect
+   */
+  async closeRedisConnection() {
+    if (!this.redisClient) {
+      return;
+    }
+
+    this.logger.info('Closing Redis connection');
+
+    try {
+      await this.redisClient.disconnect();
+      this.logger.info('Redis connection closed');
+    } catch (error) {
+      this.logger.error('Error closing Redis connection', {
+        error: error.message,
+      });
+      // Don't throw — Redis disconnect failure shouldn't block shutdown
     }
   }
 

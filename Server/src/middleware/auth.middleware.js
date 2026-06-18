@@ -4,12 +4,18 @@
  * Refactored to use AuthenticationService and TokenService.
  * Validates JWT tokens, loads user context, and performs token rotation
  * for long-lived sessions (Requirement 17.7).
+ *
+ * Phase 2A changes:
+ *  - Extracts access token from httpOnly cookie (preferred) or Authorization header (fallback)
+ *  - Token rotation sets a new httpOnly cookie instead of X-New-Token header
+ *  - isTokenLoggedOut is now awaited (async for Redis support)
  * 
- * Requirements: 1.2, 13.3, 17.7, 19.1
+ * Requirements: 1.2, 13.3, 17.7, 19.1, HIGH-3 (Phase 2A, Item 2.1)
  */
 
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
+const { COOKIE_NAMES, setAccessTokenCookie } = require('../utils/security/cookie.util');
 
 /**
  * Create authentication middleware
@@ -20,13 +26,32 @@ function createAuthMiddleware(container) {
   const tokenService = container.resolve('tokenService');
   const authenticationService = container.resolve('authenticationService');
   const logger = container.resolve('logger');
+  const config = container.resolve('config');
+  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
   return async (req, res, next) => {
     try {
-      // Extract token from Authorization header
-      const authHeader = req.header('Authorization');
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // --- Extract token ---
+      // Priority: httpOnly cookie > Authorization header
+      let token = null;
+      let tokenSource = 'none';
+
+      // 1. Try httpOnly cookie
+      if (req.cookies && req.cookies[COOKIE_NAMES.ACCESS_TOKEN]) {
+        token = req.cookies[COOKIE_NAMES.ACCESS_TOKEN];
+        tokenSource = 'cookie';
+      }
+
+      // 2. Fallback to Authorization header (backward compat for mobile / Postman / tests)
+      if (!token) {
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.replace('Bearer ', '');
+          tokenSource = 'header';
+        }
+      }
+
+      if (!token) {
         logger.warn('Authentication failed: No token provided', {
           path: req.path,
           method: req.method,
@@ -41,8 +66,6 @@ function createAuthMiddleware(container) {
           }
         });
       }
-
-      const token = authHeader.replace('Bearer ', '');
 
       // Backward-compatibility support for integration tests that rely on a
       // synthetic token value and mocked auth context.
@@ -66,6 +89,7 @@ function createAuthMiddleware(container) {
           path: req.path,
           method: req.method,
           ip: req.ip,
+          tokenSource,
           error: error.message
         });
         return res.status(401).json({ 
@@ -78,25 +102,28 @@ function createAuthMiddleware(container) {
         });
       }
 
+      // Check logout-based invalidation (now async for Redis support)
       if (
         decoded.userId != null &&
-        typeof decoded.iat === 'number' &&
-        isTokenLoggedOut(String(decoded.userId), decoded.iat)
+        typeof decoded.iat === 'number'
       ) {
-        logger.warn('Authentication failed: Token invalidated after logout', {
-          userId: decoded.userId,
-          path: req.path,
-          method: req.method,
-          ip: req.ip,
-        });
-        return res.status(401).json({
-          success: false,
-          message: 'Session ended. Please log in again.',
-          error: {
+        const loggedOut = await isTokenLoggedOut(String(decoded.userId), decoded.iat);
+        if (loggedOut) {
+          logger.warn('Authentication failed: Token invalidated after logout', {
+            userId: decoded.userId,
+            path: req.path,
+            method: req.method,
+            ip: req.ip,
+          });
+          return res.status(401).json({
+            success: false,
             message: 'Session ended. Please log in again.',
-            code: 'TOKEN_INVALIDATED_LOGOUT',
-          },
-        });
+            error: {
+              message: 'Session ended. Please log in again.',
+              code: 'TOKEN_INVALIDATED_LOGOUT',
+            },
+          });
+        }
       }
 
       // Load user using repository
@@ -145,16 +172,18 @@ function createAuthMiddleware(container) {
       }
 
       // --- Token Rotation (Requirement 17.7) ---
-      // If the token is older than the rotation threshold, issue a new one
-      // and include it in the X-New-Token response header so the client can
-      // transparently swap it out.
+      // If the token is older than the rotation threshold, issue a new one.
+      // The new token is set as an httpOnly cookie (preferred) and also in
+      // X-New-Token header for backward compatibility with non-cookie clients.
       if (typeof tokenService.rotateTokenIfNeeded === 'function') {
         const newToken = tokenService.rotateTokenIfNeeded(decoded);
         if (newToken) {
+          setAccessTokenCookie(res, newToken, isProduction);
           res.setHeader('X-New-Token', newToken);
-          logger.debug('Token rotation header set', {
+          logger.debug('Token rotation applied', {
             userId: user._id,
-            userType: decoded.userType
+            userType: decoded.userType,
+            tokenSource,
           });
         }
       }
@@ -162,7 +191,8 @@ function createAuthMiddleware(container) {
       logger.debug('Authentication successful', {
         userId: user._id,
         userType: decoded.userType,
-        path: req.path
+        path: req.path,
+        tokenSource,
       });
 
       next();

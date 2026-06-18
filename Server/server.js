@@ -4,7 +4,8 @@ const http = require('http');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
-const { createCorsMiddleware } = require('./src/middleware/security.middleware');
+const cookieParser = require('cookie-parser');
+const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware } = require('./src/middleware/security.middleware');
 // Load environment variables FIRST
 dotenv.config();
 // Import new infrastructure components
@@ -38,11 +39,8 @@ const io = socketManager.getIO();
 // Make io available to routes
 app.set('io', io);
 // Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(generateNonceMiddleware);
+app.use(createHelmetMiddleware(container));
 app.use(compression());
 // HTTPS enforcement in production
 if (process.env.NODE_ENV === 'production') {
@@ -63,6 +61,8 @@ app.use(express.json({
   },
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Cookie parsing (required for httpOnly auth cookies — Phase 2A)
+app.use(cookieParser());
 // NoSQL injection protection
 app.use(mongoSanitize({
   replaceWith: '_',
@@ -144,19 +144,30 @@ app.use(errorHandler);
 const PORT = config.get('server.port');
 // Start server
 if (require.main === module) {
-  server.listen(PORT, () => {
+  server.listen(PORT, async () => {
     logger.info('Server started', {
       port: PORT,
       environment: config.get('server.nodeEnv'),
       corsOrigins: config.get('server.corsOrigins')
     });
+
+    // Connect Redis for token invalidation (Phase 2A, Item 2.4)
+    // Non-blocking: falls back to in-memory if Redis is unavailable
+    const redisClient = container.resolve('redisClient');
+    await redisClient.connect().catch((err) => {
+      logger.warn('Redis connection failed at startup — using in-memory fallback', { error: err.message });
+    });
+    // Eagerly resolve the token invalidation service so the shim is wired
+    container.resolve('tokenInvalidationService');
+
     // Register graceful shutdown handler
     const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
     gracefulShutdownHandler.register({
       server: server,
       socketManager: socketManager,
       dbConnection: databaseConnection,
-      metricsCollector: metricsCollector
+      metricsCollector: metricsCollector,
+      redisClient: redisClient,
     });
     logger.info('Graceful shutdown handler registered');
   });

@@ -243,25 +243,24 @@
 
 ## Phase 2 — 🏗️ Mid-Term Improvements (Weeks 3–6)
 
-### 2A — Security Hardening
+### 2A — Security Hardening (Completed)
 
-- [ ] **2.1 — Move tokens to `httpOnly` cookies** `~5–8d` — **HIGH-3** (long-term)
+- [x] **2.1 — Move tokens to `httpOnly` cookies** `~5–8d` — **HIGH-3** (long-term)
   - Backend: set JWT in `httpOnly`, `Secure`, `SameSite=Strict` cookie
   - Frontend: remove token from localStorage/secureStorage
   - Update CORS to allow credentials
   - Handle CSRF implications (double-submit cookie or origin check)
 
-- [ ] **2.2 — Implement refresh token rotation** `~3–5d` — **HIGH-5** (long-term)
+- [x] **2.2 — Implement refresh token rotation** `~3–5d` — **HIGH-5** (long-term)
   - Short-lived access tokens (15min)
   - Long-lived refresh tokens (7d) with rotation on use
   - Refresh token stored in `httpOnly` cookie
 
-- [ ] **2.3 — Production CSP with nonces** `~1d` — **LOW-3**
+- [x] **2.3 — Production CSP with nonces** `~1d` — **LOW-3**
   - Remove `unsafe-inline` and `unsafe-eval` from CSP meta tag
-  - Use Vite plugin for nonce-based script injection
-  - Backend: set CSP header with nonce
+  - Set per-request nonce in server and pass to Vite build
 
-- [ ] **2.4 — Implement Redis-backed token invalidation** `~1–2d` — **HIGH-5**
+- [x] **2.4 — Implement Redis-backed token invalidation** `~1–2d` — **HIGH-5**
   - Replace in-memory `Map()` with Redis SET + TTL matching JWT expiry
   - Works across multiple server instances
 
