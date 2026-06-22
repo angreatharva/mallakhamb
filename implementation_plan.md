@@ -294,25 +294,25 @@
 
 ### 2C — Testing Foundation
 
-- [ ] **2.10 — Set up frontend test infrastructure** `~1–2d`
+- [x] **2.10 — Set up frontend test infrastructure** `~1–2d`
   - Install Vitest + React Testing Library
   - Configure test environment (jsdom)
   - Write initial tests for:
-    - [ ] `AuthProvider` — login/logout flows
-    - [ ] `ProtectedRoute` — expired token handling
-    - [ ] `roleFromPath` — role resolution
-    - [ ] `secureStorage` — read/write/clear
+    - [x] `AuthProvider` — login/logout flows
+    - [x] `ProtectedRoute` — expired token handling
+    - [x] `roleFromPath` — role resolution
+    - [x] `secureStorage` — read/write/clear
 
-- [ ] **2.11 — Set up backend test infrastructure** `~1–2d`
+- [x] **2.11 — Set up backend test infrastructure** `~1–2d`
   - Install Jest + Supertest
   - Configure test database (MongoDB Memory Server)
   - Write initial tests for:
-    - [ ] Auth middleware — token validation, role checks
-    - [ ] OTP service — generation, atomic verification
-    - [ ] Admin registration — auth guard
-    - [ ] Password reset — strength validation
+    - [x] Auth middleware — token validation, role checks
+    - [x] OTP service — generation, atomic verification
+    - [x] Admin registration — auth guard
+    - [x] Password reset — strength validation
 
-- [ ] **2.12 — Add audit logging for admin actions** `~2–3d`
+- [x] **2.12 — Add audit logging for admin actions** `~2–3d`
   - Log all admin CRUD operations with actor, timestamp, and diff
   - Store in dedicated audit collection
 
