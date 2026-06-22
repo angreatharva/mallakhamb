@@ -295,8 +295,7 @@ const UnifiedLoginInner = () => {
         const competitionId = competition?._id;
         const competitionName = competition?.name;
         
-        // Store token and user data
-        secureStorage.setItem('judge_token', token);
+        // Store user data
         secureStorage.setItem('judge_user', JSON.stringify(judge));
         
         // Store competition context
@@ -340,8 +339,7 @@ const UnifiedLoginInner = () => {
         throw new Error('Invalid login response');
       }
       
-      // Store token and user data immediately for all roles
-      secureStorage.setItem(`${role}_token`, token);
+      // Store user data immediately for all roles
       secureStorage.setItem(`${role}_user`, JSON.stringify(userData));
       
       login(userData, token, role);

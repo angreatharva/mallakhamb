@@ -320,12 +320,12 @@
 
 ### Phase 2 Verification
 
-- [ ] **2.V1** — Verify `httpOnly` cookies: open DevTools → no token visible in Application/Storage
-- [ ] **2.V2** — Refresh token: access token expires → automatic silent refresh → no user disruption
-- [ ] **2.V3** — Redis invalidation: logout → restart server → token is still invalid
-- [ ] **2.V4** — CSP: attempt inline script injection → blocked by CSP
-- [ ] **2.V5** — All tests pass: `npm test` green on both stacks
-- [ ] **2.V6** — Bundle size: compare before/after with `vite-bundle-visualizer`
+- [x] **2.V1** — Verify `httpOnly` cookies: open DevTools → no token visible in Application/Storage
+- [x] **2.V2** — Refresh token: access token expires → automatic silent refresh → no user disruption
+- [x] **2.V3** — Redis invalidation: logout → restart server → token is still invalid
+- [x] **2.V4** — CSP: attempt inline script injection → blocked by CSP
+- [x] **2.V5** — All tests pass: `npm test` green on both stacks
+- [x] **2.V6** — Bundle size: compare before/after with `vite-bundle-visualizer`
 
 ---
 

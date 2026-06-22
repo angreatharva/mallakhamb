@@ -55,7 +55,6 @@ describe('AuthProvider', () => {
 
   it('loads auth data from storage on mount if available', () => {
     secureStorage.getItem.mockImplementation((key) => {
-      if (key === 'admin_token') return 'mock-token';
       if (key === 'admin_user') return JSON.stringify({ name: 'Admin User' });
       return null;
     });
@@ -94,7 +93,6 @@ describe('AuthProvider', () => {
       screen.getByText('Login').click();
     });
 
-    expect(secureStorage.setItem).toHaveBeenCalledWith('admin_token', 'valid-token');
     expect(secureStorage.setItem).toHaveBeenCalledWith('admin_user', JSON.stringify({ name: 'Admin User' }));
     
     expect(screen.getByTestId('user').textContent).toBe('Admin User');
@@ -103,7 +101,6 @@ describe('AuthProvider', () => {
 
   it('clears state and storage on logout', () => {
     secureStorage.getItem.mockImplementation((key) => {
-      if (key === 'admin_token') return 'mock-token';
       if (key === 'admin_user') return JSON.stringify({ name: 'Admin User' });
       return null;
     });
@@ -125,7 +122,6 @@ describe('AuthProvider', () => {
 
   it('listens for AUTH_EXPIRED events and logs user out', () => {
     secureStorage.getItem.mockImplementation((key) => {
-      if (key === 'admin_token') return 'mock-token';
       if (key === 'admin_user') return JSON.stringify({ name: 'Admin User' });
       return null;
     });

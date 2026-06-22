@@ -33,10 +33,9 @@ export default function AuthProvider({ children }) {
    */
   const loadAuthData = useCallback(() => {
     if (currentRole) {
-      const token = secureStorage.getItem(`${currentRole}_token`);
       const userData = secureStorage.getItem(`${currentRole}_user`);
 
-      if (token && userData) {
+      if (userData) {
         try {
           const parsedUser = JSON.parse(userData);
           setUser(parsedUser);
@@ -118,7 +117,6 @@ export default function AuthProvider({ children }) {
 
   // --- Login handler ---
   const login = useCallback((userData, token, type) => {
-    secureStorage.setItem(`${type}_token`, token);
     secureStorage.setItem(`${type}_user`, JSON.stringify(userData));
 
     setUser(userData);
@@ -132,19 +130,13 @@ export default function AuthProvider({ children }) {
       const roleToLogout = currentRole || userType;
 
       try {
-        const token = roleToLogout
-          ? secureStorage.getItem(`${roleToLogout}_token`)
-          : secureStorage.getItem('token');
-
-        if (token) {
-          await fetch(`${apiConfig.getBaseUrl()}/auth/logout`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }).catch(() => {});
-        }
+        await fetch(`${apiConfig.getBaseUrl()}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include' // Send httpOnly cookies
+        }).catch(() => {});
       } catch {
         // Ignore logout errors
       }

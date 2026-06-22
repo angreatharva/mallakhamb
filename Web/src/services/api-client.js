@@ -74,15 +74,6 @@ async function attemptSilentRefresh() {
     );
     if (response.data?.success) {
       // The new access_token cookie is set by the server automatically.
-      // If the server also returns the token in the body (backward compat),
-      // store it for any legacy code that reads from secureStorage.
-      const newToken = response.data?.data?.token;
-      if (newToken) {
-        const currentType = getCurrentUserTypeFromURL();
-        if (currentType) {
-          secureStorage.setItem(`${currentType}_token`, newToken);
-        }
-      }
       return true;
     }
     return false;
@@ -114,14 +105,11 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    // --- Token Rotation (X-New-Token header — backward compat) ---
-    // The server also sets a new httpOnly cookie, but we sync to
-    // secureStorage for any code that still reads from there.
+    // The server also sets a new httpOnly cookie.
     const newToken = response.headers['x-new-token'];
     if (newToken) {
       const currentType = getCurrentUserTypeFromURL();
       if (currentType) {
-        secureStorage.setItem(`${currentType}_token`, newToken);
         logger.log(`🔄 Token rotated for ${currentType}`);
       }
     }
