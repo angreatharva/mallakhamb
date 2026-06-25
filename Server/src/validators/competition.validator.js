@@ -30,6 +30,32 @@ const createCompetition = () => {
         }
         return true;
       }),
+    body('apparatusConfig')
+      .optional()
+      .isObject()
+      .withMessage('Apparatus config must be an object')
+      .custom((value) => {
+        if (value) {
+          const validTypes = ['competition_1', 'competition_2', 'competition_3'];
+          const validApparatus = ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'];
+          
+          for (const [compType, apps] of Object.entries(value)) {
+            if (!validTypes.includes(compType)) {
+              throw new Error(`Invalid competition type key in apparatusConfig: ${compType}`);
+            }
+            if (!Array.isArray(apps)) {
+              throw new Error(`Apparatus list for ${compType} must be an array`);
+            }
+            if (apps.length === 0) {
+              throw new Error(`At least one apparatus must be selected for ${compType}`);
+            }
+            if (!apps.every(app => validApparatus.includes(app))) {
+              throw new Error(`Invalid apparatus in ${compType}`);
+            }
+          }
+        }
+        return true;
+      }),
     body('place')
       .trim()
       .notEmpty()
@@ -102,6 +128,32 @@ const updateCompetition = () => {
         const validTypes = ['competition_1', 'competition_2', 'competition_3'];
         if (!value.every(type => validTypes.includes(type))) {
           throw new Error('Invalid competition type');
+        }
+        return true;
+      }),
+    body('apparatusConfig')
+      .optional()
+      .isObject()
+      .withMessage('Apparatus config must be an object')
+      .custom((value) => {
+        if (value) {
+          const validTypes = ['competition_1', 'competition_2', 'competition_3'];
+          const validApparatus = ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'];
+          
+          for (const [compType, apps] of Object.entries(value)) {
+            if (!validTypes.includes(compType)) {
+              throw new Error(`Invalid competition type key in apparatusConfig: ${compType}`);
+            }
+            if (!Array.isArray(apps)) {
+              throw new Error(`Apparatus list for ${compType} must be an array`);
+            }
+            if (apps.length === 0) {
+              throw new Error(`At least one apparatus must be selected for ${compType}`);
+            }
+            if (!apps.every(app => validApparatus.includes(app))) {
+              throw new Error(`Invalid apparatus in ${compType}`);
+            }
+          }
         }
         return true;
       }),

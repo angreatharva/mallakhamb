@@ -247,7 +247,7 @@ const SuperAdminManagement = () => {
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [competitionFormData, setCompetitionFormData] = useState({
-    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: ''
   });
@@ -403,7 +403,7 @@ const SuperAdminManagement = () => {
 
   // ─── Competition CRUD ──────────────────────────────────────────────────────
   const resetCompetitionForm = () => setCompetitionFormData({
-    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'],
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: ''
   });
@@ -420,7 +420,7 @@ const SuperAdminManagement = () => {
         label: (comp.year || new Date().getFullYear()).toString() 
       };
       setCompetitionFormData({
-        name: comp.name, level: levelOption, competitionTypes: comp.competitionTypes || [],
+        name: comp.name, level: levelOption, competitionTypes: comp.competitionTypes || [], apparatusConfig: comp.apparatusConfig || {},
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
@@ -436,6 +436,16 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
     if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    const activeApparatusConfig = Object.fromEntries(
+      Object.entries(competitionFormData.apparatusConfig || {}).filter(([key]) => competitionFormData.competitionTypes.includes(key))
+    );
+    for (const compType of competitionFormData.competitionTypes) {
+      if (!activeApparatusConfig[compType] || activeApparatusConfig[compType].length === 0) {
+        const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
+        toast.error(`Select at least one apparatus for ${typeLabel}`);
+        return;
+      }
+    }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
       toast.error('Enter a per-player fee (INR) for this competition');
       return;
@@ -448,6 +458,7 @@ const SuperAdminManagement = () => {
     try {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
+        apparatusConfig: activeApparatusConfig,
         level: competitionFormData.level.value,
         year: competitionFormData.year.value,
         playerFee
@@ -460,6 +471,16 @@ const SuperAdminManagement = () => {
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
+    const activeApparatusConfig = Object.fromEntries(
+      Object.entries(competitionFormData.apparatusConfig || {}).filter(([key]) => competitionFormData.competitionTypes.includes(key))
+    );
+    for (const compType of competitionFormData.competitionTypes) {
+      if (!activeApparatusConfig[compType] || activeApparatusConfig[compType].length === 0) {
+        const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
+        toast.error(`Select at least one apparatus for ${typeLabel}`);
+        return;
+      }
+    }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
       toast.error('Enter a per-player fee (INR) for this competition');
       return;
@@ -472,7 +493,7 @@ const SuperAdminManagement = () => {
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
         name: competitionFormData.name, level: competitionFormData.level.value,
-        competitionTypes: competitionFormData.competitionTypes, place: competitionFormData.place,
+        competitionTypes: competitionFormData.competitionTypes, apparatusConfig: activeApparatusConfig, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
         playerFee
@@ -912,12 +933,12 @@ const SuperAdminManagement = () => {
           }} 
         />
 
-        {/* Competition Types */}
+        {/* Competition Types & Apparatus */}
         <div>
           <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-            Competition Types <span style={{ color: ADMIN_COLORS.red }}>*</span>
+            Competition Types & Apparatus <span style={{ color: ADMIN_COLORS.red }}>*</span>
           </p>
-          <div className="space-y-2">
+          <div className="space-y-4">
             {[
               { id: 'competition_1', label: 'Competition I', desc: 'Team Championship & Qualifier' },
               { id: 'competition_2', label: 'Competition II', desc: 'All Round Individual Final' },
@@ -925,18 +946,50 @@ const SuperAdminManagement = () => {
             ].map(ct => {
               const checked = competitionFormData.competitionTypes.includes(ct.id);
               return (
-                <label key={ct.id} className="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200"
-                  style={{ background: checked ? `${ADMIN_COLORS.purple}10` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${ADMIN_COLORS.purple}40` : ADMIN_COLORS.darkBorderSubtle }}>
-                  <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
-                  <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-                    style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
-                    {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">{ct.label}</p>
-                    <p className="text-xs text-white/40">{ct.desc}</p>
-                  </div>
-                </label>
+                <div key={ct.id} className="p-3 rounded-xl border transition-all duration-200"
+                  style={{ background: checked ? `${ADMIN_COLORS.purple}08` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${ADMIN_COLORS.purple}40` : ADMIN_COLORS.darkBorderSubtle }}>
+                  <label className="flex items-start gap-3 cursor-pointer mb-2">
+                    <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
+                    <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+                      style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                      {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{ct.label}</p>
+                      <p className="text-xs text-white/40">{ct.desc}</p>
+                    </div>
+                  </label>
+                  
+                  {checked && (
+                    <div className="ml-7 mt-3 pl-3 border-l-2 space-y-2" style={{ borderColor: `${ADMIN_COLORS.purple}30` }}>
+                      <p className="text-[10px] font-bold tracking-wider uppercase text-white/40 mb-1">Select Apparatus</p>
+                      {['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'].map(app => {
+                        const appChecked = (competitionFormData.apparatusConfig[ct.id] || []).includes(app);
+                        return (
+                          <label key={app} className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" className="sr-only" checked={appChecked} onChange={() => {
+                              setCompetitionFormData(prev => {
+                                const current = prev.apparatusConfig[ct.id] || [];
+                                return {
+                                  ...prev,
+                                  apparatusConfig: {
+                                    ...prev.apparatusConfig,
+                                    [ct.id]: current.includes(app) ? current.filter(a => a !== app) : [...current, app]
+                                  }
+                                };
+                              });
+                            }} />
+                            <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                              style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                              {appChecked && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                            </div>
+                            <span className="text-xs font-semibold text-white/80">{app}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

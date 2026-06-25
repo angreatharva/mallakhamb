@@ -21,6 +21,14 @@ const competitionSchema = new mongoose.Schema({
       message: 'Competition type must be competition_1, competition_2, or competition_3'
     }
   }],
+  apparatusConfig: {
+    type: Map,
+    of: [{
+      type: String,
+      enum: ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb']
+    }],
+    default: {}
+  },
   place: {
     type: String,
     required: [true, 'Competition place is required'],
