@@ -154,7 +154,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
 
-  const { currentCompetition, assignedCompetitions, switchCompetition, clearCompetitionContext } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, clearCompetitionContext, isLoading: isCompetitionLoading } = useCompetition();
   const { logout } = useAuth();
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
@@ -598,7 +598,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   };
 
   // Loading state
-  if (loading && (activeTab === 'dashboard' || activeTab === 'overview')) {
+  if ((loading || isCompetitionLoading) && (activeTab === 'dashboard' || activeTab === 'overview')) {
     return (
       <div className="min-h-dvh flex items-center justify-center"
         style={{ background: theme.colors.background }}>
