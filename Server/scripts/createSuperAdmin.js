@@ -17,7 +17,7 @@ const createSuperAdmin = async () => {
 
     console.log('🔗 Connecting to MongoDB...');
     console.log('📍 Database:', process.env.MONGODB_URI.split('/').pop());
-    
+
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
@@ -27,13 +27,13 @@ const createSuperAdmin = async () => {
       name: 'Atharva Angre',
       email: 'Superadmin@gmail.com',
       password: 'Superadmin@2026',
-      role: 'super_admin',
+      role: 'superadmin',
       isActive: true
     };
 
     // Check if super admin already exists
     const existingSuperAdmin = await Admin.findOne({ email: superAdminData.email });
-    
+
     if (existingSuperAdmin) {
       console.log('⚠️  Super Admin already exists with email:', superAdminData.email);
       console.log('Super Admin Details:');
@@ -65,17 +65,17 @@ const createSuperAdmin = async () => {
   } catch (error) {
     console.error('❌ Error creating super admin:', error.message);
     console.error('\nFull error:', error);
-    
+
     if (error.code === 11000) {
       console.log('\n⚠️  Duplicate key error - Super admin might already exist');
     }
-    
+
     try {
       await mongoose.disconnect();
     } catch (disconnectError) {
       // Ignore disconnect errors
     }
-    
+
     process.exit(1);
   }
 };
