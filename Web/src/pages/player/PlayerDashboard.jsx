@@ -95,9 +95,10 @@ const PlayerDashboard = () => {
         logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
         switchCompetition(competitionIdFromUrl).then(() => {
           // Remove the URL parameter after successfully setting the competition
-          const newUrl = new URL(window.location);
-          newUrl.searchParams.delete('competitionId');
-          window.history.replaceState({}, '', newUrl);
+          const searchParams = new URLSearchParams(location.search);
+          searchParams.delete('competitionId');
+          const newSearch = searchParams.toString();
+          navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
         }).catch(error => {
           logger.error('Failed to set competition from URL:', error);
         });
