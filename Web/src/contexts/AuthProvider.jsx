@@ -118,6 +118,9 @@ export default function AuthProvider({ children }) {
   // --- Login handler ---
   const login = useCallback((userData, token, type) => {
     secureStorage.setItem(`${type}_user`, JSON.stringify(userData));
+    if (token) {
+      secureStorage.setItem(`${type}_token`, token);
+    }
 
     setUser(userData);
     setUserType(type);

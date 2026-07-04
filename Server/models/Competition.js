@@ -94,6 +94,10 @@ const competitionSchema = new mongoose.Schema({
       gender: {
         type: String,
         enum: ['Male', 'Female']
+      },
+      apparatus: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
       }
     }],
     isSubmitted: {

@@ -124,8 +124,6 @@ const CoachPayment = () => {
 
       const options = {
         key: razorpayKeyId,
-        amount: order.amount * 100,
-        currency: order.currency || 'INR',
         name: 'Mallakhamb Competition',
         description: `Registration for ${orderTeam?.name || team?.name || 'Team'}`,
         order_id: order.id,

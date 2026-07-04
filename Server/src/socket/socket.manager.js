@@ -10,6 +10,7 @@
 const { Server } = require('socket.io');
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
+const { COOKIE_NAMES } = require('../utils/security/cookie.util');
 
 class SocketManager {
   /**
@@ -81,7 +82,17 @@ class SocketManager {
   createAuthMiddleware() {
     return async (socket, next) => {
       try {
-        const token = socket.handshake.auth.token;
+        // First check the explicit auth payload (backward compat / non-browser clients)
+        let token = socket.handshake.auth.token;
+
+        // If not found, check the cookie manually
+        if (!token && socket.request.headers.cookie) {
+          const cookieStr = socket.request.headers.cookie;
+          const match = cookieStr.match(new RegExp('(^|;\\s*)' + COOKIE_NAMES.ACCESS_TOKEN + '=([^;]+)'));
+          if (match) {
+            token = decodeURIComponent(match[2]);
+          }
+        }
 
         if (!token) {
           this.logger.warn('Socket connection attempt without token', {
@@ -97,7 +108,7 @@ class SocketManager {
         if (
           decoded.userId != null &&
           typeof decoded.iat === 'number' &&
-          isTokenLoggedOut(String(decoded.userId), decoded.iat)
+          await isTokenLoggedOut(String(decoded.userId), decoded.iat)
         ) {
           this.logger.warn('Socket connection rejected: token invalidated after logout', {
             socketId: socket.id,

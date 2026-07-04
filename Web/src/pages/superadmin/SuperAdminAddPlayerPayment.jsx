@@ -148,8 +148,6 @@ const SuperAdminAddPlayerPayment = () => {
 
       const options = {
         key: razorpayKeyId,
-        amount: order.amount * 100,
-        currency: order.currency || 'INR',
         name: 'Mallakhamb Competition',
         description: `Add player ${playerData.firstName} ${playerData.lastName} — ${orderTeam?.name || checkout.teamLabel || 'Team'}`,
         order_id: order.id,

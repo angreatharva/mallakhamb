@@ -50,7 +50,8 @@ const AdminScoring = () => {
         const newSocket = io(socketUrl, {
             auth: {
                 token: token
-            }
+            },
+            withCredentials: true
         });
         
         setSocket(newSocket);

@@ -16,6 +16,11 @@ const playerScoreSchema = new mongoose.Schema({
     // Time in format "MM:SS" or seconds - used for time deductions and 3-judge tie-breaker
     // Required context: Must be present when time deductions are applied or for 3-judge tie-breaker
   },
+  apparatus: {
+    type: String,
+    enum: ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'],
+    default: 'Pole Mallakhamb'
+  },
   judgeScores: {
     seniorJudge: {
       type: Number,

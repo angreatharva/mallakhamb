@@ -298,6 +298,8 @@ export const ResponsiveScoreFilters = ({
   onClearFilters,
   ageGroups,
   competitionTypes,
+  selectedApparatus, onApparatusChange,
+  apparatusOptions,
   className = '',
   ...props
 }) => {
@@ -340,11 +342,18 @@ export const ResponsiveScoreFilters = ({
     { key: 'competitionType', label: 'Competition Type', required: true, options: competitionTypes || [], value: selectedCompetitionType, placeholder: 'Select type' },
   ];
 
+  if (apparatusOptions && apparatusOptions.length > 0) {
+    filters.push({
+      key: 'apparatus', label: 'Apparatus', required: false, options: apparatusOptions, value: selectedApparatus, placeholder: 'All Apparatuses'
+    });
+  }
+
   const handleFilterChange = (key, value) => {
     if (key === 'scoreType') onScoreTypeChange(value.value);
     else if (key === 'gender') onGenderChange(value);
     else if (key === 'ageGroup') onAgeGroupChange(value);
     else if (key === 'competitionType') onCompetitionTypeChange(value);
+    else if (key === 'apparatus') onApparatusChange(value);
   };
 
   return (

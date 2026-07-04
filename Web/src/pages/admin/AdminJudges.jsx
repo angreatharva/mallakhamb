@@ -133,8 +133,8 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
                 const n = e.target.value;
                 setFormData(prev => ({
                   ...prev, name: n,
-                  username: (!prev.username || prev.username.toLowerCase() === generateUsername(prev.name).toLowerCase())
-                    ? (n ? generateUsername(n) : '') : prev.username
+                  username: (!prev.username || prev.username.toLowerCase() === generateUsername(prev.name, judge?.judgeNo).toLowerCase())
+                    ? (n ? generateUsername(n, judge?.judgeNo) : '') : prev.username
                 }));
               }}
               placeholder="Enter judge name" />
@@ -146,7 +146,7 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
                 <DarkBtn size="sm" variant="purple" disabled={!formData.name.trim()}
                   onClick={() => {
                     if (formData.name.trim()) {
-                      const u = generateUsername(formData.name);
+                      const u = generateUsername(formData.name, judge?.judgeNo);
                       setFormData(prev => ({ ...prev, username: u }));
                       toast.success(`Username: ${u}`);
                     }
@@ -213,6 +213,7 @@ const Judges = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
+  const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [judgeType, setJudgeType] = useState(null);
   const [judgesExistForSelection, setJudgesExistForSelection] = useState(false);
   const [checkingExistingJudges, setCheckingExistingJudges] = useState(false);
@@ -231,7 +232,13 @@ const Judges = () => {
   const hasGender = !!selectedGender;
   const hasAgeGroup = !!selectedAgeGroup;
   const hasCompetitionType = !!selectedCompetitionType;
-  const ladderComplete = hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && hasCompetitionType;
+  
+  const apparatusOptions = selectedCompetitionType && competitionForAgeGroups?.apparatusConfig?.[selectedCompetitionType.value]
+    ? competitionForAgeGroups.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app }))
+    : [];
+    
+  const hasApparatus = apparatusOptions.length === 0 || !!selectedApparatus;
+  const ladderComplete = hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && hasCompetitionType && hasApparatus;
 
   const getCompetitionTypeOptions = () => {
     const order = ['competition_1', 'competition_2', 'competition_3'];
@@ -264,6 +271,7 @@ const Judges = () => {
     setSelectedGender(null);
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
+    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedCompetition, isSuperAdmin]);
@@ -288,15 +296,23 @@ const Judges = () => {
   useEffect(() => {
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
+    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedGender]);
 
   useEffect(() => {
     setSelectedCompetitionType(null);
+    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedAgeGroup]);
+  
+  useEffect(() => {
+    setSelectedApparatus(null);
+    setJudges([]);
+    setJudgesExistForSelection(false);
+  }, [selectedCompetitionType]);
 
   const getAgeGroupCode = (ageGroup) => {
     if (!ageGroup) return '';
@@ -310,13 +326,13 @@ const Judges = () => {
     return match ? match[1] : '';
   };
 
-  const generateUsername = (name) => {
+  const generateUsername = (name, judgeNo = null) => {
     if (!name?.trim() || !selectedGender?.value || !selectedAgeGroup?.value || !selectedCompetitionType?.value) return '';
-    const initials = name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
+    const prefix = judgeNo ? `J${judgeNo}` : name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
     const genderCode = selectedGender.value === 'Female' ? 'F' : 'M';
     const ageCode = getAgeGroupCode(selectedAgeGroup.value);
     const compCode = getCompetitionTypeNum(selectedCompetitionType.value);
-    return `${initials}-${genderCode}-${ageCode}-${compCode}`;
+    return `${prefix}-${genderCode}-${ageCode}-${compCode}`;
   };
 
   // Ensure the judge list always shows all 5 slots, filling in empty placeholders for missing ones
@@ -364,17 +380,23 @@ const Judges = () => {
     if (!params.competitionTypes && selectedCompetitionType?.value) {
       params.competitionTypes = selectedCompetitionType.value;
     }
+    if (!params.apparatus && selectedApparatus) {
+      params.apparatus = selectedApparatus.value;
+    }
     if (isSuperAdmin && selectedCompetition) params.competition = selectedCompetition.value;
     return params;
   };
 
-  const isLadderCompleteWith = (compTypeOption = selectedCompetitionType) =>
-    hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && !!compTypeOption;
+  const isLadderCompleteWith = (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) =>
+    hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && !!compTypeOption && (apparatusOptions.length === 0 || !!apparatusOption);
 
-  const checkForExistingJudges = async (compTypeOption = selectedCompetitionType) => {
-    if (!isLadderCompleteWith(compTypeOption)) return false;
+  const checkForExistingJudges = async (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) => {
+    if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return false;
     try {
-      const response = await api.getJudges(buildJudgeQueryParams({ competitionTypes: compTypeOption.value }));
+      const response = await api.getJudges(buildJudgeQueryParams({ 
+        competitionTypes: compTypeOption.value,
+        apparatus: apparatusOption?.value
+      }));
       return (response.data.data || []).filter(j => j._id && j.name?.trim()).length > 0;
     } catch { return false; }
   };
@@ -383,11 +405,14 @@ const Judges = () => {
     setSelectedAgeGroup(ageGroupOption);
   };
 
-  const loadJudgeList = async (compTypeOption = selectedCompetitionType) => {
-    if (!isLadderCompleteWith(compTypeOption)) return;
+  const loadJudgeList = async (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) => {
+    if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return;
     setLoadingJudges(true);
     try {
-      const response = await api.getJudges(buildJudgeQueryParams({ competitionTypes: compTypeOption.value }));
+      const response = await api.getJudges(buildJudgeQueryParams({ 
+        competitionTypes: compTypeOption.value,
+        apparatus: apparatusOption?.value
+      }));
       setJudges(padToFiveSlots(response.data.data || []));
       const summaryResponse = await api.getAllJudgesSummary(
         isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : undefined
@@ -406,19 +431,27 @@ const Judges = () => {
 
   const handleCompetitionTypeChange = async (compTypeOption) => {
     setSelectedCompetitionType(compTypeOption);
-    if (!compTypeOption || !selectedGender || !selectedAgeGroup || !judgeType) return;
-
-    if (judgeType === 'list') {
-      await loadJudgeList(compTypeOption);
-      return;
-    }
-
-    setCheckingExistingJudges(true);
-    try {
-      const judgesExist = await checkForExistingJudges(compTypeOption);
-      setJudgesExistForSelection(judgesExist);
-    } finally {
+    if (compTypeOption && apparatusOptions.length === 0) {
+      setCheckingExistingJudges(true);
+      const exists = await checkForExistingJudges(compTypeOption, null);
+      setJudgesExistForSelection(exists);
       setCheckingExistingJudges(false);
+      if (judgeType === 'list') {
+        loadJudgeList(compTypeOption, null);
+      }
+    }
+  };
+
+  const handleApparatusChange = async (apparatusOption) => {
+    setSelectedApparatus(apparatusOption);
+    if (selectedCompetitionType && apparatusOption) {
+      setCheckingExistingJudges(true);
+      const exists = await checkForExistingJudges(selectedCompetitionType, apparatusOption);
+      setJudgesExistForSelection(exists);
+      setCheckingExistingJudges(false);
+      if (judgeType === 'list') {
+        loadJudgeList(selectedCompetitionType, apparatusOption);
+      }
     }
   };
 
@@ -443,13 +476,14 @@ const Judges = () => {
         judgeNo: j.judgeNo,
         judgeType: j.judgeType,
         name: j.name.trim(),
-        username: (j.username.trim() || generateUsername(j.name)).trim(),
+        username: (j.username.trim() || generateUsername(j.name, j.judgeNo)).trim(),
         password: j.password.trim(),
       }));
       const judgesData = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionTypes: [selectedCompetitionType.value],
+        apparatus: selectedApparatus?.value || null,
         judges: cleanedJudges,
         ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
       };
@@ -477,7 +511,7 @@ const Judges = () => {
   const handleEditJudge = (judge) => {
     if (ageGroupStarted) { toast.error('Cannot edit judges. Age group has been started.'); return; }
     setEditingJudge(judge);
-    setEditFormData({ name: judge.name || '', username: judge.username || (judge.name ? generateUsername(judge.name) : ''), password: judge.password || '' });
+    setEditFormData({ name: judge.name || '', username: judge.username || (judge.name ? generateUsername(judge.name, judge.judgeNo) : ''), password: judge.password || '' });
   };
 
   const handleDeleteJudge = async (judge) => {
@@ -506,6 +540,7 @@ const Judges = () => {
           gender: editingJudge.gender || selectedGender?.value,
           ageGroup: editingJudge.ageGroup || selectedAgeGroup?.value,
           competitionTypes: [selectedCompetitionType?.value],
+          apparatus: selectedApparatus?.value || null,
           judgeNo: editingJudge.judgeNo,
           judgeType: editingJudge.judgeType,
           ...updatedData,
@@ -555,8 +590,8 @@ const Judges = () => {
             <EmptyState icon={Filter} title="Select a Competition First" desc="Choose a competition above to start managing judges." />
           ) : (
             <div>
-              {/* Filters row — ladder: action → gender → age group → competition type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {/* Filters row — ladder: action → gender → age group → competition type → apparatus */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
                     Judge Action <span style={{ color: ADMIN_COLORS.red }}>*</span>
@@ -610,8 +645,23 @@ const Judges = () => {
                       disabled={!hasAgeGroup}
                     />
                   )}
-                  {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
+                  {checkingExistingJudges && apparatusOptions.length === 0 && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
                 </div>
+                {apparatusOptions.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                      Apparatus <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                    </label>
+                    <Dropdown
+                      options={apparatusOptions}
+                      value={selectedApparatus}
+                      onChange={handleApparatusChange}
+                      placeholder={hasCompetitionType ? 'Select apparatus' : 'Select competition type first'}
+                      disabled={!hasCompetitionType}
+                    />
+                    {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
+                  </div>
+                )}
               </div>
 
               {/* Add Judge Form */}
@@ -625,7 +675,7 @@ const Judges = () => {
                       <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
                         <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
-                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}</strong>. Use "Judge List" to view or edit.</p>
+                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}{selectedApparatus ? ` — ${selectedApparatus.label}` : ''}</strong>. Use "Judge List" to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
                       </div>
                     </div>
@@ -634,6 +684,7 @@ const Judges = () => {
                       <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.blue}10`, borderColor: `${ADMIN_COLORS.blue}30` }}>
                         <p className="text-white/70">Adding judges for: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
                           {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
+                          {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
                         </p>
                         <p className="text-white/50 text-xs mt-1">Minimum 3 judges required · Maximum 5 allowed · Empty slots can be filled later</p>
                       </div>
@@ -648,7 +699,7 @@ const Judges = () => {
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <DarkInput placeholder="Enter judge name" value={judge.name}
-                                  onChange={(e) => { const n = e.target.value; handleJudgeFormChange(index, 'name', n); if (n) handleJudgeFormChange(index, 'username', generateUsername(n)); }} />
+                                  onChange={(e) => { const n = e.target.value; handleJudgeFormChange(index, 'name', n); if (n) handleJudgeFormChange(index, 'username', generateUsername(n, judge.judgeNo)); }} />
                                 <DarkInput placeholder="Auto-generated username" value={judge.username}
                                   onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)} />
                                 <div className="flex gap-2">
@@ -685,6 +736,7 @@ const Judges = () => {
                         setSelectedGender(null);
                         setSelectedAgeGroup(null);
                         setSelectedCompetitionType(null);
+                        setSelectedApparatus(null);
                         setJudges([]);
                         setJudgesExistForSelection(false);
                       }}>

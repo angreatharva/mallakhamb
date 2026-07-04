@@ -779,7 +779,7 @@ class SuperAdminService {
     }
   }
 
-  async addPlayer({ firstName, lastName, email, dateOfBirth, gender, ageGroup, teamId, competitionId, password }, superAdminId) {
+  async addPlayer({ firstName, lastName, email, dateOfBirth, gender, ageGroup, teamId, competitionId, password, apparatus }, superAdminId) {
     // Verify teamId belongs to competitionId
     const competition = await this.competitionRepository.findById(competitionId);
     if (!competition) {
@@ -850,7 +850,8 @@ class SuperAdminService {
         registeredTeam.players.push({
           player: player._id,
           ageGroup: ageGroup,
-          gender: gender
+          gender: gender,
+          apparatus: apparatus || {}
         });
 
         await this.competitionRepository.updateById(competitionId, {

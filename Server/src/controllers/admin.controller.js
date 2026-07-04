@@ -108,6 +108,8 @@ function createAdminController(container) {
       
       if (req.query.gender) filters.gender = req.query.gender;
       if (req.query.ageGroup) filters.ageGroup = req.query.ageGroup;
+      if (req.query.competitionType) filters.competitionType = req.query.competitionType;
+      if (req.query.apparatus) filters.apparatus = req.query.apparatus;
       
       const teams = await adminService.getSubmittedTeams(competitionId, filters);
       res.json({ success: true, data: teams });
@@ -168,7 +170,7 @@ function createAdminController(container) {
 
     /** @route POST /api/admin/judges/bulk */
     saveJudges: asyncHandler(async (req, res) => {
-      const { gender, ageGroup, competitionTypes, judges, competition } = req.body;
+      const { gender, ageGroup, competitionTypes, judges, competition, apparatus } = req.body;
       // For super-admin requests, competitionId comes from body; for admin it's on req
       const competitionId = req.competitionId || competition;
       // Merge top-level fields into each judge so the model has all required fields
@@ -177,6 +179,7 @@ function createAdminController(container) {
         gender,
         ageGroup,
         competitionTypes,
+        apparatus: apparatus || null
       }));
       const result = await adminService.saveJudges(
         competitionId, enrichedJudges, req.user._id
@@ -191,17 +194,17 @@ function createAdminController(container) {
     /** @route GET /api/admin/judges */
     getJudges: asyncHandler(async (req, res) => {
       const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
-      const { gender, ageGroup, competitionTypes } = req.query;
-      const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes });
+      const { gender, ageGroup, competitionTypes, apparatus } = req.query;
+      const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes, apparatus });
       res.json({ success: true, data: judges });
     }),
 
     /** @route POST /api/admin/judges */
     createSingleJudge: asyncHandler(async (req, res) => {
       const competitionId = req.competitionId || req.body.competition;
-      const { gender, ageGroup, competitionTypes } = req.body;
+      const { gender, ageGroup, competitionTypes, apparatus } = req.body;
       const judge = await adminService.createSingleJudge(
-        { ...req.body, competition: competitionId, gender, ageGroup, competitionTypes },
+        { ...req.body, competition: competitionId, gender, ageGroup, competitionTypes, apparatus: apparatus || null },
         req.user._id
       );
       res.status(201).json({ success: true, data: judge, message: 'Judge created successfully' });
@@ -250,7 +253,9 @@ function createAdminController(container) {
     getTeamScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
       const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
-      const scores = await adminService.getTeamScores(competitionId, req.query.ageGroup, req.query.gender);
+      const scores = await adminService.getTeamScores(
+        competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus
+      );
       res.json({ success: true, data: scores });
     }),
 
@@ -261,7 +266,9 @@ function createAdminController(container) {
       const scores = await adminService.getIndividualScores(
         competitionId, 
         req.query.ageGroup, 
-        req.query.gender
+        req.query.gender,
+        req.query.competitionType,
+        req.query.apparatus
       );
       res.json({ success: true, data: scores });
     }),
@@ -308,6 +315,7 @@ function createAdminController(container) {
         scoreData.playerScores = [{
           playerId: req.body.playerId,
           playerName: req.body.playerName,
+          apparatus: req.body.apparatus,
           judgeScores: {
             [judgeField]: req.body.score
           },

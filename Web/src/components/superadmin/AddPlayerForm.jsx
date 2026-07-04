@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -157,6 +157,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
+  const [selectedApparatus, setSelectedApparatus] = useState({});
   const [loadingTeams, setLoadingTeams] = useState(false);
   
   // Age group limits for validation
@@ -191,20 +192,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     const ageGroups = competitionAgeGroups.map(ag => ({ ...ag, ...ageGroupLimits[ag.value] }));
     
     // Filter age groups where the player is eligible
-    // A player can play in ANY category where they meet the age requirement
     const eligibleGroups = ageGroups.filter(ag => {
       if (ag.value.startsWith('Under')) {
-        // For "Under" categories, player age must be <= maxAge
         return playerAge <= ag.maxAge;
       } else if (ag.value.startsWith('Above')) {
-        // For "Above" categories, player can play regardless of age
-        // (they can play up in higher age categories)
         return true;
       }
       return false;
     });
     
-    // Sort the eligible groups: Under categories first (by maxAge), then Above categories (by minAge)
     return eligibleGroups.sort((a, b) => {
       if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
         return a.maxAge - b.maxAge;
@@ -212,7 +208,6 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
         return a.minAge - b.minAge;
       }
-      // Under categories come before Above categories
       return a.value.startsWith('Under') ? -1 : 1;
     });
   };
@@ -231,10 +226,41 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     if (selectedCompetition && onFetchTeams) {
       setLoadingTeams(true);
       setSelectedTeam(null); // Reset team selection when competition changes
+      setSelectedApparatus({}); // Reset apparatus when competition changes
       onFetchTeams(selectedCompetition.value)
         .finally(() => setLoadingTeams(false));
     }
-  }, [selectedCompetition]); // Removed onFetchTeams from dependencies to prevent infinite calls
+  }, [selectedCompetition]); 
+  
+  // Calculate available apparatuses for the selected competition per type
+  const availableApparatusesByType = React.useMemo(() => {
+    if (!selectedCompetition) return {};
+    const doc = competitions.find(c => c._id === selectedCompetition.value);
+    if (!doc || !doc.apparatusConfig || !doc.competitionTypes) return {};
+    
+    const config = {};
+    doc.competitionTypes.forEach(type => {
+      if (doc.apparatusConfig[type] && doc.apparatusConfig[type].length > 0) {
+        config[type] = [...doc.apparatusConfig[type]].sort();
+      }
+    });
+    return config;
+  }, [selectedCompetition, competitions]);
+  
+  // Toggle apparatus selection for a specific competition type
+  const toggleApparatus = (compType, app) => {
+    setSelectedApparatus(prev => {
+      const typeList = prev[compType] || [];
+      const updatedList = typeList.includes(app)
+        ? typeList.filter(a => a !== app)
+        : [...typeList, app];
+      
+      return {
+        ...prev,
+        [compType]: updatedList
+      };
+    });
+  };
   
   // Watch password fields for validation
   const password = watch('password', '');
@@ -312,6 +338,12 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       return;
     }
     
+    // Validate apparatus selection
+    if (Object.values(selectedApparatus).flat().length === 0) {
+      toast.error('Please select at least one apparatus');
+      return;
+    }
+    
     setLoading(true);
     try {
       const selectedCompetitionDoc = competitions.find(c => c._id === selectedCompetition.value);
@@ -332,6 +364,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         teamId: selectedTeam.value,
         competitionId: selectedCompetition.value,
         password: data.password,
+        apparatus: selectedApparatus,
       };
 
       const checkoutPayload = {
@@ -361,6 +394,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     setSelectedTeam(null);
     setSelectedCompetition(null);
     setSelectedAgeGroup(null);
+    setSelectedApparatus([]);
   };
   
   return (
@@ -570,6 +604,59 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           )}
         </div>
       </div>
+      
+      {/* Apparatus */}
+      {selectedCompetition && Object.keys(availableApparatusesByType).length > 0 && (
+        <div className="pt-2 border-t mt-4" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          <label className="block text-xs font-bold tracking-wide uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+            Apparatus Selection <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          </label>
+          <div className="space-y-4">
+            {Object.entries(availableApparatusesByType).map(([compType, apparatuses]) => {
+              const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
+              return (
+                <div key={compType} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                  <p className="text-xs font-bold text-white/60 mb-2">{typeLabel}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {apparatuses.map((app) => {
+                      const isSelected = (selectedApparatus[compType] || []).includes(app);
+                      return (
+                        <label 
+                          key={app}
+                          onClick={() => toggleApparatus(compType, app)}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200"
+                          style={{
+                            background: isSelected ? `${ADMIN_COLORS.saffron}15` : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : ADMIN_COLORS.darkBorderMid}`,
+                          }}
+                        >
+                          <div 
+                            className="w-4 h-4 rounded-md flex items-center justify-center transition-colors"
+                            style={{
+                              background: isSelected ? ADMIN_COLORS.saffron : 'transparent',
+                              border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.2)'}`,
+                            }}
+                          >
+                            {isSelected && <CheckCircle2 className="w-3 h-3 text-dark" />}
+                          </div>
+                          <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-white/70'}`}>
+                            {app}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {Object.values(selectedApparatus).flat().length === 0 && (
+            <p className="text-xs mt-2" style={{ color: ADMIN_COLORS.red }}>
+              At least one apparatus must be selected across all competitions
+            </p>
+          )}
+        </div>
+      )}
       
       {/* Password */}
       <div>

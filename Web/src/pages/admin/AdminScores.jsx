@@ -5,6 +5,7 @@ import { motion, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
@@ -101,6 +102,7 @@ const Scores = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
+  const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [scoreType, setScoreType] = useState('add');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -109,6 +111,16 @@ const Scores = () => {
     { value: 'competition_2', label: 'Competition II - All Round Individual' },
     { value: 'competition_3', label: 'Competition III - Apparatus Championship' }
   ];
+
+  const { currentCompetition } = useCompetition();
+  
+  const activeCompetition = isSuperAdmin 
+    ? competitions.find(c => c._id === selectedCompetition?.value)
+    : currentCompetition;
+    
+  const apparatusOptions = selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType.value]
+    ? activeCompetition.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app }))
+    : [];
 
   const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
@@ -132,11 +144,12 @@ const Scores = () => {
   }, [isSuperAdmin]);
 
   useEffect(() => {
-    setSelectedGender(null); setSelectedAgeGroup(null); setSelectedCompetitionType(null);
+    setSelectedGender(null); setSelectedAgeGroup(null); setSelectedCompetitionType(null); setSelectedApparatus(null);
     setSubmittedTeams([]); setScores([]); setSearchTerm('');
   }, [selectedCompetition]);
 
   useEffect(() => { if (selectedGender) setSelectedAgeGroup(null); }, [selectedGender]);
+  useEffect(() => { setSelectedApparatus(null); }, [selectedCompetitionType]);
 
   useEffect(() => {
     if (isSuperAdmin && !selectedCompetition) return;
@@ -147,14 +160,20 @@ const Scores = () => {
     } else {
       setSubmittedTeams([]); setScores([]);
     }
-  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, scoreType, selectedCompetition]);
+  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus, scoreType, selectedCompetition]);
 
   const fetchSubmittedTeams = async () => {
     if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
     if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType: selectedCompetitionType.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
+      const params = { 
+        gender: selectedGender.value, 
+        ageGroup: selectedAgeGroup.value, 
+        competitionType: selectedCompetitionType.value, 
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
+        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
+      };
       const response = await api.getSubmittedTeams(params);
       // Handle response structure: {success: true, data: teams array}
       const teams = response.data.data || response.data;
@@ -184,7 +203,8 @@ const Scores = () => {
         gender: selectedGender.value, 
         ageGroup: selectedAgeGroup.value,
         competitionType: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) 
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
+        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
       };
       const response = await api.getIndividualScores(params);
       // Handle response structure: {success: true, data: [...]}
@@ -239,7 +259,8 @@ const Scores = () => {
         gender: selectedGender.value, 
         ageGroup: selectedAgeGroup.value,
         competitionType: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) 
+        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
+        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
       };
       const response = await api.getTeamRankings(params);
       // Handle response structure: {success: true, data: [...]}
@@ -281,7 +302,7 @@ const Scores = () => {
   };
 
   const handleClearFilters = () => {
-    setSelectedGender(null); setSelectedAgeGroup(null); setSelectedCompetitionType(null);
+    setSelectedGender(null); setSelectedAgeGroup(null); setSelectedCompetitionType(null); setSelectedApparatus(null);
     setSubmittedTeams([]); setScores([]); setSearchTerm('');
     if (isSuperAdmin) setSelectedCompetition(null);
   };
@@ -330,8 +351,10 @@ const Scores = () => {
               selectedGender={selectedGender} onGenderChange={setSelectedGender}
               selectedAgeGroup={selectedAgeGroup} onAgeGroupChange={setSelectedAgeGroup}
               selectedCompetitionType={selectedCompetitionType} onCompetitionTypeChange={setSelectedCompetitionType}
+              selectedApparatus={selectedApparatus} onApparatusChange={setSelectedApparatus}
               searchTerm={searchTerm} onSearchChange={setSearchTerm}
               onClearFilters={handleClearFilters} ageGroups={availableAgeGroups} competitionTypes={competitionTypes}
+              apparatusOptions={apparatusOptions}
             />
           </div>
 

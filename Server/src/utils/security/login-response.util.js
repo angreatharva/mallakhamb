@@ -42,8 +42,10 @@ async function sendLoginResponse({
   }
 
   // 2. Generate and set refresh token cookie
+  const userObj = data.user || data.admin || data.coach || data.player || data.judge || data[userType];
+  const userId = userObj?._id || userObj?.id;
   const { token: refreshToken } = await tokenService.generateRefreshToken(
-    data.user?._id?.toString() || data.user?.id,
+    userId?.toString(),
     userType,
   );
   setRefreshTokenCookie(res, refreshToken, isProduction);

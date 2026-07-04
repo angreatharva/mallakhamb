@@ -279,7 +279,10 @@ const UnifiedLoginInner = () => {
             username: validation.data.username.toLowerCase(), 
             password: validation.data.password 
           },
-          { headers: apiConfig.getHeaders() }
+          { 
+            headers: apiConfig.getHeaders(),
+            withCredentials: true 
+          }
         );
         
         console.log('Judge login response:', response.data);

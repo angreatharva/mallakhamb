@@ -428,9 +428,9 @@ class AuthenticationService {
 
       const type = userType.toLowerCase();
 
-      if (type === 'admin' || type === 'superadmin') {
+      if (type === 'admin' || type === 'superadmin' || type === 'super_admin') {
         // superadmin: fetch all competitions
-        if (user.role === 'superadmin') {
+        if (user.role === 'superadmin' || user.role === 'super_admin') {
           return await this.competitionRepository.find({});
         }
         // admin: fetch competitions by their assigned IDs

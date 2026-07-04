@@ -987,13 +987,26 @@ class AdminService extends UserService {
       let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted);
 
       // Apply additional filters if provided
-      if (filters.gender || filters.ageGroup) {
+      if (filters.gender || filters.ageGroup || filters.competitionType || filters.apparatus) {
         submittedTeams = submittedTeams.filter(regTeam => {
           // Check if any player in the team matches the filters
           return regTeam.players.some(playerEntry => {
             const matchesGender = !filters.gender || playerEntry.gender === filters.gender;
             const matchesAgeGroup = !filters.ageGroup || playerEntry.ageGroup === filters.ageGroup;
-            return matchesGender && matchesAgeGroup;
+            
+            let matchesApparatus = true;
+            if (filters.competitionType && filters.apparatus) {
+              const playerApparatuses = playerEntry.apparatus?.[filters.competitionType] || [];
+              matchesApparatus = playerApparatuses.includes(filters.apparatus);
+            } else if (filters.competitionType) {
+              const playerApparatuses = playerEntry.apparatus?.[filters.competitionType] || [];
+              matchesApparatus = playerApparatuses.length > 0;
+            } else if (filters.apparatus) {
+              const allApps = Object.values(playerEntry.apparatus || {}).flat();
+              matchesApparatus = allApps.includes(filters.apparatus);
+            }
+
+            return matchesGender && matchesAgeGroup && matchesApparatus;
           });
         });
       }
@@ -1337,12 +1350,18 @@ class AdminService extends UserService {
           const lookupKey = judgeData.username || judgeData.email;
           let existing = null;
           if (competitionId && judgeData.gender && judgeData.ageGroup && judgeData.judgeNo) {
-            existing = await this.judgeRepository.findOne({
+            const query = {
               competition: competitionId,
               gender: judgeData.gender,
               ageGroup: judgeData.ageGroup,
               judgeNo: judgeData.judgeNo,
-            });
+            };
+            if (judgeData.apparatus) {
+              query.apparatus = judgeData.apparatus;
+            } else {
+              query.apparatus = { $in: [null, ''] }; // explicitly check for no apparatus
+            }
+            existing = await this.judgeRepository.findOne(query);
           }
           if (!existing && lookupKey && competitionId) {
             existing = await this.judgeRepository.findOne({
@@ -1420,6 +1439,7 @@ class AdminService extends UserService {
           : [filters.competitionTypes];
         query.competitionTypes = { $in: types };
       }
+      if (filters.apparatus) query.apparatus = filters.apparatus;
 
       const judges = await this.judgeRepository.find(query, {
         sort: { createdAt: -1 }
@@ -2014,10 +2034,11 @@ class AdminService extends UserService {
   /**
    * Get team scores with aggregation
    * @param {string} competitionId - Competition ID
-   * @param {string} ageGroup - Age group
-   * @returns {Promise<Array>} Teams with aggregated scores
+   * @param {string} competitionType - Competition type
+   * @param {string} apparatus - Apparatus
+   * @returns {Promise<Array>} Teams with scores
    */
-  async getTeamScores(competitionId, ageGroup, gender) {
+  async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus) {
     try {
       // Query the Competition model to get registered teams
       const competition = await this.competitionRepository.findById(competitionId, {
@@ -2059,10 +2080,16 @@ class AdminService extends UserService {
           };
           if (gender) scoreQuery.gender = gender;
           if (ageGroup) scoreQuery.ageGroup = ageGroup;
+          if (competitionType) scoreQuery.competitionType = competitionType;
           
           const scores = await this.scoreRepository.find(scoreQuery);
 
-          const playerScores = scores.flatMap(s => s.playerScores || []);
+          let playerScores = scores.flatMap(s => s.playerScores || []);
+          
+          if (apparatus) {
+            playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
+          }
+          
           const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
           
           // Get the most recent score document for metadata (isLocked, timeKeeper, etc.)
@@ -2117,10 +2144,11 @@ class AdminService extends UserService {
   /**
    * Get individual player scores
    * @param {string} competitionId - Competition ID
-   * @param {string} ageGroup - Age group
+   * @param {string} competitionType - Competition type
+   * @param {string} apparatus - Apparatus
    * @returns {Promise<Array>} Players with individual scores
    */
-  async getIndividualScores(competitionId, ageGroup, gender) {
+  async getIndividualScores(competitionId, ageGroup, gender, competitionType, apparatus) {
     try {
       // Build query filters
       const query = { competition: competitionId };
@@ -2128,6 +2156,9 @@ class AdminService extends UserService {
       // Only add ageGroup filter if provided
       if (ageGroup) {
         query.ageGroup = ageGroup;
+      }
+      if (competitionType) {
+        query.competitionType = competitionType;
       }
 
       const scores = await this.scoreRepository.find(query);
@@ -2140,6 +2171,11 @@ class AdminService extends UserService {
           if (playerId) {
             // Apply gender filter if provided
             if (gender && ps.playerGender && ps.playerGender !== gender) {
+              return; // Skip this player score
+            }
+            
+            // Apply apparatus filter if provided
+            if (apparatus && ps.apparatus && ps.apparatus !== apparatus) {
               return; // Skip this player score
             }
             
@@ -2182,11 +2218,13 @@ class AdminService extends UserService {
    * Get team rankings
    * @param {string} competitionId - Competition ID
    * @param {string} ageGroup - Age group
+   * @param {string} competitionType - Competition Type
+   * @param {string} apparatus - Apparatus
    * @returns {Promise<Array>} Team rankings
    */
-  async getTeamRankings(competitionId, ageGroup, gender) {
+  async getTeamRankings(competitionId, ageGroup, gender, competitionType, apparatus) {
     try {
-      const teamsWithScores = await this.getTeamScores(competitionId, ageGroup, gender);
+      const teamsWithScores = await this.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus);
 
       // Calculate rankings using CalculationService
       const rankings = this.calculationService.calculateRankings(

@@ -198,6 +198,7 @@ const JudgeScoring = () => {
   const [loading, setLoading] = useState(false);
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState('');
+  const [selectedApparatus, setSelectedApparatus] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [teams, setTeams] = useState([]);
@@ -249,7 +250,8 @@ const JudgeScoring = () => {
     const newSocket = io(socketUrl, {
       auth: {
         token: token
-      }
+      },
+      withCredentials: true
     });
     
     setSocket(newSocket);
@@ -332,7 +334,8 @@ const JudgeScoring = () => {
           ageGroup: judgeInfo.ageGroup, 
           competitionType: selectedCompetitionType 
         },
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
+        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+        withCredentials: true
       });
       setTeams(response.data.data || []);
       setSelectedTeam(null); setSelectedPlayer(null); setPlayers([]);
@@ -346,8 +349,25 @@ const JudgeScoring = () => {
   const handleTeamSelect = (team) => {
     setSelectedTeam(team);
     const filtered = team.players
-      .filter(e => e.player && e.player.gender === judgeInfo.gender && e.ageGroup === judgeInfo.ageGroup)
-      .map(e => ({ id: e.player._id, name: `${e.player.firstName} ${e.player.lastName}`, gender: e.player.gender, ageGroup: e.ageGroup }));
+      .filter(e => {
+        if (!e.player || e.player.gender !== judgeInfo.gender || e.ageGroup !== judgeInfo.ageGroup) return false;
+        
+        // If an apparatus is selected, ensure the player is registered for it in this competition type
+        if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
+          const apps = e.apparatus[selectedCompetitionType];
+          if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map(e => ({ 
+        id: e.player._id, 
+        name: `${e.player.firstName} ${e.player.lastName}`, 
+        gender: e.player.gender, 
+        ageGroup: e.ageGroup,
+        apparatus: e.apparatus || {}
+      }));
     setPlayers(filtered);
     setSelectedPlayer(null);
     resetScores();
@@ -402,10 +422,12 @@ const JudgeScoring = () => {
         teamId: selectedTeam._id, gender: judgeInfo.gender,
         ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+        apparatus: selectedApparatus,
         breakdown: { difficulty: scores.difficulty, combination: scores.combination, execution: parseFloat(scores.execution || 0), originality: parseFloat(scores.originality || 0) }
       };
       await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` }
+        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+        withCredentials: true
       });
       if (socket?.connected) {
         socket.emit('score_update', { ...scoreData, roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}` });
@@ -429,7 +451,9 @@ const JudgeScoring = () => {
 
   const req = getRequiredElements();
   const finalScore = parseFloat(calcFinal());
-  const step = !selectedCompetitionType ? 1 : !selectedTeam ? 2 : !selectedPlayer ? 3 : 4;
+  const needsApparatus = selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]?.length > 0;
+  const isApparatusSelected = !needsApparatus || !!selectedApparatus;
+  const step = !selectedCompetitionType ? 1 : !isApparatusSelected ? 1 : !selectedTeam ? 2 : !selectedPlayer ? 3 : 4;
 
   return (
     <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -504,6 +528,25 @@ const JudgeScoring = () => {
           </SectionCard>
         </FadeIn>
 
+        {/* Step 1.5: Apparatus (if applicable) */}
+        <FadeIn delay={0.07}>
+          <AnimatePresence>
+            {selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType] && judgeInfo.competition.apparatusConfig[selectedCompetitionType].length > 0 && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: EASE_OUT }} className="mt-3">
+                <SectionCard step="A" title="Select Apparatus" active={!selectedApparatus} done={!!selectedApparatus}>
+                  <div className="space-y-2">
+                    {judgeInfo.competition.apparatusConfig[selectedCompetitionType].map(app => (
+                      <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => { setSelectedApparatus(app); setSelectedTeam(null); setSelectedPlayer(null); resetScores(); }}>
+                        <span>{app}</span>
+                      </SelectBtn>
+                    ))}
+                  </div>
+                </SectionCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </FadeIn>
+
         {/* Step 2: Team */}
         <FadeIn delay={0.1}>
           <SectionCard step={2} title="Select Team" active={step === 2} done={step > 2}>
@@ -541,9 +584,16 @@ const JudgeScoring = () => {
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {players.map(player => (
                   <SelectBtn key={player.id} selected={selectedPlayer?.id === player.id} onClick={() => handlePlayerSelect(player)}>
-                    <div>
-                      <p className="font-bold text-sm">{player.name}</p>
-                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{player.gender}  {player.ageGroup}</p>
+                    <div className="w-full">
+                      <p className="font-bold text-sm text-left">{player.name}</p>
+                      <div className="flex items-center justify-between mt-0.5 w-full">
+                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{player.gender}  {player.ageGroup}</p>
+                        {player.apparatus && player.apparatus[selectedCompetitionType] && player.apparatus[selectedCompetitionType].length > 0 && (
+                          <p className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}>
+                            {player.apparatus[selectedCompetitionType].join(', ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </SelectBtn>
                 ))}

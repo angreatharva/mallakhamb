@@ -22,6 +22,11 @@ const judgeSchema = new mongoose.Schema({
     enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
     required: [true, 'Age group is required']
   },
+  apparatus: {
+    type: String,
+    trim: true,
+    default: null
+  },
   judgeNo: {
     type: Number,
     required: [true, 'Judge number is required'],

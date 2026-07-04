@@ -119,7 +119,8 @@ class JudgeService extends UserService {
           place: competition.place,
           startDate: competition.startDate,
           endDate: competition.endDate,
-          status: competition.status
+          status: competition.status,
+          apparatusConfig: competition.apparatusConfig
         }
       };
     } catch (error) {
