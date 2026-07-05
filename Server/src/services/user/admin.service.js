@@ -996,15 +996,26 @@ class AdminService extends UserService {
             const matchesAgeGroup = !filters.ageGroup || playerEntry.ageGroup === filters.ageGroup;
             
             let matchesApparatus = true;
+            let playerApparatuses = [];
+            
+            if (typeof playerEntry.apparatus === 'string') {
+              playerApparatuses = [playerEntry.apparatus];
+            } else if (Array.isArray(playerEntry.apparatus)) {
+              playerApparatuses = playerEntry.apparatus;
+            } else if (playerEntry.apparatus && typeof playerEntry.apparatus === 'object') {
+              if (filters.competitionType) {
+                playerApparatuses = playerEntry.apparatus[filters.competitionType] || [];
+              } else {
+                playerApparatuses = Object.values(playerEntry.apparatus).flat();
+              }
+            }
+
             if (filters.competitionType && filters.apparatus) {
-              const playerApparatuses = playerEntry.apparatus?.[filters.competitionType] || [];
               matchesApparatus = playerApparatuses.includes(filters.apparatus);
             } else if (filters.competitionType) {
-              const playerApparatuses = playerEntry.apparatus?.[filters.competitionType] || [];
               matchesApparatus = playerApparatuses.length > 0;
             } else if (filters.apparatus) {
-              const allApps = Object.values(playerEntry.apparatus || {}).flat();
-              matchesApparatus = allApps.includes(filters.apparatus);
+              matchesApparatus = playerApparatuses.includes(filters.apparatus);
             }
 
             return matchesGender && matchesAgeGroup && matchesApparatus;
