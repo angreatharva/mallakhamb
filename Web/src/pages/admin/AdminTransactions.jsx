@@ -199,7 +199,8 @@ const AdminTransactions = () => {
                         players = registeredTeam.players.map(p => ({
                           name: p.player?.name || p.player?.firstName || 'Unknown',
                           ageGroup: p.ageGroup || 'N/A',
-                          gender: p.gender || 'N/A'
+                          gender: p.gender || 'N/A',
+                          apparatus: p.apparatus
                         }));
                       }
                     }
@@ -340,6 +341,11 @@ const AdminTransactions = () => {
                               }}>
                                 {player.gender}
                               </span>
+                              {player.apparatus && (Object.keys(player.apparatus).length > 0 || typeof player.apparatus === 'string') && (
+                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)' }}>
+                                  {typeof player.apparatus === 'object' ? Object.values(player.apparatus).flat().join(', ') : player.apparatus}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

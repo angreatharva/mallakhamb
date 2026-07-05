@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
+import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
@@ -122,6 +123,11 @@ const TeamModal = ({ team, onClose }) => (
                         <p>Age Group: <span className="text-white/70">{player.ageGroup || 'Not assigned'}</span></p>
                         {player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(player.dateOfBirth).toLocaleDateString()}</span></p>}
                         {player.email && <p>Email: <span className="text-white/70">{player.email}</span></p>}
+                        {player.apparatus && (Object.keys(player.apparatus).length > 0 || typeof player.apparatus === 'string') && (
+                          <p>Apparatus: <span className="text-white/70">
+                            {typeof player.apparatus === 'object' ? Object.values(player.apparatus).flat().join(', ') : player.apparatus}
+                          </span></p>
+                        )}
                       </div>
                       <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
                         {player.isActive ? 'Active' : 'Inactive'}
@@ -153,6 +159,7 @@ const TeamModal = ({ team, onClose }) => (
 
 const Teams = () => {
   const { routePrefix, storagePrefix } = useRouteContext();
+  const { currentCompetition } = useCompetition();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
 
@@ -197,7 +204,12 @@ const Teams = () => {
     if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value, ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}) };
+      const activeCompetitionId = isSuperAdmin ? selectedCompetition?.value : currentCompetition?._id;
+      const params = { 
+        gender: selectedGender.value, 
+        ageGroup: selectedAgeGroup.value, 
+        ...(activeCompetitionId ? { competition: activeCompetitionId } : {}) 
+      };
       const response = await api.getAllTeams(params);
       // Handle nested response structure
       const responseData = response.data.data || response.data;
@@ -218,7 +230,9 @@ const Teams = () => {
       const params = {};
       if (selectedGender) params.gender = selectedGender.value;
       if (selectedAgeGroup) params.ageGroup = selectedAgeGroup.value;
-      if (isSuperAdmin && selectedCompetition) params.competition = selectedCompetition.value;
+      
+      const activeCompetitionId = isSuperAdmin ? selectedCompetition?.value : currentCompetition?._id;
+      if (activeCompetitionId) params.competition = activeCompetitionId;
       
       const response = await api.getTeamDetails(teamId, params);
       // Handle nested response structure: response.data.data.team

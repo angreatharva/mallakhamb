@@ -28,25 +28,78 @@ function requireCompetitionPlayerFeePerPlayer(competitionPlayerFee) {
 }
 
 /**
- * Total for team submission: player count × competition per-player fee (no base fee).
- * @param {number} playerCount
- * @param {number} competitionPlayerFee - From competition.playerFee
+ * Total for team submission: sums the calculated fee for each player based on their apparatuses.
+ * @param {Array} players - The players array from registeredTeam
+ * @param {Object} competition - The competition document
  * @returns {number} Total INR
  */
-function calculateTeamPaymentAmount(playerCount, competitionPlayerFee) {
-  const fee = requireCompetitionPlayerFeePerPlayer(competitionPlayerFee);
-  const count = Number(playerCount);
-  const c = Number.isFinite(count) && count >= 0 ? count : 0;
-  return c * fee;
+function calculateTeamPaymentAmount(players, competition) {
+  if (!players || !Array.isArray(players) || players.length === 0) return 0;
+  
+  let total = 0;
+  for (const player of players) {
+    total += calculatePlayerFee(player, competition);
+  }
+  return total;
 }
 
 /**
- * Single player addition: one × competition per-player fee.
- * @param {number} competitionPlayerFee - From competition.playerFee
+ * Calculate fee for a single player based on their selected apparatuses.
+ * @param {Object} player - The player registration object
+ * @param {Object} competition - The competition document
  * @returns {number} INR
  */
-function calculatePlayerAdditionAmount(competitionPlayerFee) {
-  return requireCompetitionPlayerFeePerPlayer(competitionPlayerFee);
+function calculatePlayerFee(player, competition) {
+  const baseFee = requireCompetitionPlayerFeePerPlayer(competition.playerFee);
+  
+  // Standardize the player's selected apparatuses into a flat array
+  let selectedApparatuses = [];
+  if (typeof player?.apparatus === 'string') {
+    selectedApparatuses.push(player.apparatus);
+  } else if (Array.isArray(player?.apparatus)) {
+    selectedApparatuses = player.apparatus;
+  } else if (player?.apparatus && typeof player.apparatus === 'object') {
+    Object.values(player.apparatus).forEach(apps => {
+      if (Array.isArray(apps)) selectedApparatuses.push(...apps);
+      else if (typeof apps === 'string') selectedApparatuses.push(apps);
+    });
+  }
+  
+  if (selectedApparatuses.length === 0) {
+    return baseFee;
+  }
+  
+  let totalFee = baseFee;
+  // Use a Set to avoid double-charging if the same apparatus is selected across different competition types
+  const uniqueApparatuses = new Set(selectedApparatuses);
+  
+  for (const app of uniqueApparatuses) {
+    let addonFee = null;
+    // Check if there is an apparatus-specific fee mapping. Map can be plain object or Mongoose Map.
+    let appFees = competition.apparatusFees;
+    if (appFees && typeof appFees.get === 'function') {
+      const specificFee = appFees.get(app);
+      if (specificFee !== undefined && specificFee !== null) addonFee = Number(specificFee);
+    } else if (appFees && appFees[app] !== undefined && appFees[app] !== null) {
+      addonFee = Number(appFees[app]);
+    }
+    
+    if (addonFee !== null && !isNaN(addonFee)) {
+      totalFee += addonFee;
+    }
+  }
+  
+  return totalFee;
+}
+
+/**
+ * Single player addition fee.
+ * @param {Object} player
+ * @param {Object} competition 
+ * @returns {number} INR
+ */
+function calculatePlayerAdditionAmount(player, competition) {
+  return calculatePlayerFee(player, competition);
 }
 
 /**
@@ -61,5 +114,6 @@ module.exports = {
   PAYMENT_CONFIG,
   calculateTeamPaymentAmount,
   calculatePlayerAdditionAmount,
+  calculatePlayerFee,
   getPaymentConfig,
 };

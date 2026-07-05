@@ -372,6 +372,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         teamLabel: selectedTeam.label,
         competitionLabel: selectedCompetition.label,
         competitionPlayerFee,
+        competitionApparatusFees: selectedCompetitionDoc.apparatusFees || {},
       };
 
       sessionStorage.setItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutPayload));

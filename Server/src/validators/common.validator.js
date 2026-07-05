@@ -35,7 +35,6 @@ const email = (field = 'email') => {
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Please provide a valid email address')
-    .normalizeEmail()
     .toLowerCase();
 };
 

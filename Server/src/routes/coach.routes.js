@@ -59,7 +59,8 @@ function createCoachRoutes(container) {
       .withMessage('Valid age group is required'),
     body('gender')
       .isIn(['Male', 'Female'])
-      .withMessage('Gender must be either Male or Female')
+      .withMessage('Gender must be either Male or Female'),
+    body('apparatus').optional().isString()
   ];
 
   /**

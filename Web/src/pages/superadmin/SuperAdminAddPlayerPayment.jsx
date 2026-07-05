@@ -8,7 +8,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
-import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
+import { calculatePlayerFee } from '@/utils/scoring/competitionFee';
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -97,8 +97,7 @@ const SuperAdminAddPlayerPayment = () => {
         navigate(managementPath, { replace: true });
         return;
       }
-      const sessionFee = getCompetitionPlayerFeeRupees({ playerFee: parsed?.competitionPlayerFee });
-      if (sessionFee === null) {
+      if (!parsed?.competitionPlayerFee) {
         sessionStorage.removeItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY);
         toast.error('Checkout is missing a valid competition per-player fee. Start again from Add Player.');
         navigate(managementPath, { replace: true });
@@ -303,7 +302,11 @@ const SuperAdminAddPlayerPayment = () => {
   }
 
   const pd = checkout?.playerData;
-  const playerFee = getCompetitionPlayerFeeRupees({ playerFee: checkout.competitionPlayerFee }) ?? 0;
+  const mockCompetition = {
+    playerFee: checkout?.competitionPlayerFee,
+    apparatusFees: checkout?.competitionApparatusFees || {}
+  };
+  const playerFee = calculatePlayerFee(pd, mockCompetition) ?? 0;
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -396,8 +399,15 @@ const SuperAdminAddPlayerPayment = () => {
                 className="space-y-2 mb-6 p-4 rounded-2xl"
                 style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
               >
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Per-player registration (this competition)</span>
+                <div className="flex justify-between text-sm items-center">
+                  <div>
+                    <span className="text-white/50 block">Per-player registration (this competition)</span>
+                    {pd?.apparatus && (
+                      <span className="text-white/30 text-xs">
+                        Apparatus: {typeof pd.apparatus === 'string' ? pd.apparatus : (Array.isArray(pd.apparatus) ? pd.apparatus.join(', ') : 'Multiple')}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-white">₹{playerFee.toLocaleString()}</span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>

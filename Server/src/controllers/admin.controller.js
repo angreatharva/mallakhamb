@@ -96,7 +96,14 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/teams/:teamId */
     getTeamDetails: asyncHandler(async (req, res) => {
-      const team = await adminService.getTeamDetails(req.params.teamId);
+      const filters = {};
+      if (req.query.gender) filters.gender = req.query.gender;
+      if (req.query.ageGroup) filters.ageGroup = req.query.ageGroup;
+      // Normal admins are scoped to their competition implicitly, but frontend now sends it
+      if (req.query.competition) filters.competition = req.query.competition;
+      else if (req.competitionId) filters.competition = req.competitionId;
+
+      const team = await adminService.getTeamDetails(req.params.teamId, filters);
       res.json({ success: true, data: team });
     }),
 

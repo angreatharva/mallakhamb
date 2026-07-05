@@ -360,7 +360,8 @@ class CoachService extends UserService {
                 gender: player.gender
               },
               ageGroup: playerEntry.ageGroup,
-              gender: playerEntry.gender
+              gender: playerEntry.gender,
+              apparatus: playerEntry.apparatus
             });
           }
         } catch (error) {
@@ -388,7 +389,8 @@ class CoachService extends UserService {
         competition: {
           _id: competition._id,
           name: competition.name,
-          playerFee: competition.playerFee
+          playerFee: competition.playerFee,
+          apparatusFees: competition.apparatusFees
         }
       },
       totalTeams: teams.length,
@@ -437,7 +439,7 @@ class CoachService extends UserService {
   }
 
   async addPlayerToAgeGroup(coachId, competitionId, payload) {
-    const { playerId, ageGroup, gender } = payload;
+    const { playerId, ageGroup, gender, apparatus } = payload;
     
     // Get coach's teams
     const teams = await this.getCoachTeams(coachId);
@@ -478,7 +480,8 @@ class CoachService extends UserService {
         {
           $set: {
             [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.ageGroup`]: ageGroup,
-            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.gender`]: gender
+            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.gender`]: gender,
+            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.apparatus`]: apparatus || {}
           }
         }
       );
@@ -491,7 +494,8 @@ class CoachService extends UserService {
             [`registeredTeams.${registeredTeamIndex}.players`]: {
               player: playerId,
               ageGroup,
-              gender
+              gender,
+              apparatus: apparatus || {}
             }
           }
         }
@@ -594,7 +598,7 @@ class CoachService extends UserService {
 
       // Calculate payment amount using centralized config with competition-specific player fee
       const playerCount = registeredTeam.players?.length || 0;
-      const amount = calculateTeamPaymentAmount(playerCount, competition.playerFee);
+      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -818,7 +822,7 @@ class CoachService extends UserService {
       // Use registeredTeam.players (players registered for this competition)
       // NOT team.players (all players in the team)
       const playerCount = registeredTeam.players?.length || 0;
-      const expectedAmount = calculateTeamPaymentAmount(playerCount, competition.playerFee) * 100; // Convert to paise
+      const expectedAmount = calculateTeamPaymentAmount(registeredTeam.players, competition) * 100; // Convert to paise
 
       // Verify payment amount
       if (paymentDetails.amount !== expectedAmount) {

@@ -8,7 +8,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
-import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
+import { getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee } from '@/utils/scoring/competitionFee';
 
 const CoachPayment = () => {
   const navigate = useNavigate();
@@ -220,13 +220,12 @@ const CoachPayment = () => {
     }
   };
 
-  const playerFeePerPlayer = getCompetitionPlayerFeeRupees(team?.competition);
-  const feeConfigured = playerFeePerPlayer !== null;
+  const basePlayerFee = getCompetitionPlayerFeeRupees(team?.competition);
+  const feeConfigured = basePlayerFee !== null;
 
   const calculateTotal = () => {
-    const count = team?.players?.length || 0;
-    if (!feeConfigured) return 0;
-    return count * playerFeePerPlayer;
+    if (!feeConfigured || !team?.players) return 0;
+    return calculateTeamPaymentAmount(team.players, team.competition);
   };
 
   if (loading) {
@@ -393,11 +392,28 @@ const CoachPayment = () => {
 
               {/* Fee breakdown */}
               <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Per player ({team?.players?.length || 0} × ₹{playerFeePerPlayer?.toLocaleString()})</span>
-                  <span className="text-white">₹{((team?.players?.length || 0) * playerFeePerPlayer).toLocaleString()}</span>
-                </div>
-                <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                {team?.players?.length > 0 ? (
+                  <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 mb-3">
+                    {team.players.map((p, i) => (
+                      <div key={p.player?._id || i} className="flex justify-between items-center text-sm py-1 border-b border-white/5 last:border-0">
+                        <div>
+                          <span className="text-white/80">{p.player?.firstName} {p.player?.lastName}</span>
+                          <span className="text-white/30 text-xs ml-2">
+                            ({typeof p.apparatus === 'string' ? p.apparatus : (Object.keys(p.apparatus||{}).length > 0 ? 'Multiple' : 'Base')})
+                          </span>
+                        </div>
+                        <span className="text-white">₹{calculatePlayerFee(p, team.competition).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-sm mb-3">
+                    <span className="text-white/50">No players</span>
+                    <span className="text-white">₹0</span>
+                  </div>
+                )}
+                
+                <div className="border-t pt-3 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total Amount</span>
                   <span className="font-black text-lg" style={{ color: COLORS.saffron }}>
                     ₹{calculateTotal().toLocaleString()}

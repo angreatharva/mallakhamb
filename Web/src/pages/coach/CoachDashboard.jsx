@@ -30,6 +30,7 @@ const CoachDashboard = () => {
   const [selectedPlayerData, setSelectedPlayerData] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
+  const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
@@ -137,6 +138,18 @@ const CoachDashboard = () => {
   }, [currentCompetition?._id]);
   useEffect(() => { if (selectedGender && selectedPlayerData) setSelectedAgeGroup(null); }, [selectedGender, selectedPlayerData]);
 
+  // Extract unique apparatuses configured for the current competition by SuperAdmin
+  const availableApparatuses = Array.from(
+    new Set(
+      Object.values(currentCompetition?.apparatusConfig || {}).flat()
+    )
+  );
+  
+  const apparatusOptions = availableApparatuses.map(app => ({
+    value: app,
+    label: app
+  }));
+
   const calculateAge = (dob) => {
     const today = new Date(), birth = new Date(dob);
     let age = today.getFullYear() - birth.getFullYear();
@@ -227,15 +240,20 @@ const CoachDashboard = () => {
   };
 
   const handleAddPlayer = async () => {
-    if (!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedPlayerData) {
-      return toast.error('Please select player and age group');
+    if (!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedPlayerData || !selectedApparatus) {
+      return toast.error('Please select player, age group, and apparatus');
     }
     const { age } = selectedPlayerData;
     if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
       return toast.error(`Player is ${age} years old and cannot play in ${selectedAgeGroup.label} (max: ${selectedAgeGroup.maxAge})`);
     }
     try {
-      await coachAPI.addPlayerToAgeGroup({ playerId: selectedPlayer.value, ageGroup: selectedAgeGroup.value, gender: selectedGender.value });
+      await coachAPI.addPlayerToAgeGroup({ 
+        playerId: selectedPlayer.value, 
+        ageGroup: selectedAgeGroup.value, 
+        gender: selectedGender.value,
+        apparatus: selectedApparatus?.value
+      });
       toast.success('Player added to age group successfully!');
       handleCloseModal();
       fetchTeamDashboard();
@@ -244,7 +262,7 @@ const CoachDashboard = () => {
 
   const handleCloseModal = () => {
     setShowAddPlayer(false); setSelectedPlayer(null); setSelectedPlayerData(null);
-    setSelectedAgeGroup(null); setSelectedGender(null); setSearchQuery(''); setPlayers([]);
+    setSelectedAgeGroup(null); setSelectedGender(null); setSelectedApparatus(null); setSearchQuery(''); setPlayers([]);
   };
 
   const handleRemovePlayer = async (playerId) => {
@@ -382,6 +400,7 @@ const CoachDashboard = () => {
               style={{ background: 'rgba(255,255,255,0.03)' }}>
               <span className="text-white/70 text-sm truncate flex-1">
                 {player.player.firstName} {player.player.lastName}
+                {player.apparatus ? <span className="ml-2 text-xs opacity-60">({player.apparatus})</span> : null}
               </span>
               <button onClick={() => handleRemovePlayer(player.player._id)}
                 disabled={team?.isSubmitted}
@@ -640,7 +659,12 @@ const CoachDashboard = () => {
                                 <span className="text-white/40 text-xs">{gPlayers.length} players</span>
                               </div>
                               {gPlayers.length > 0
-                                ? gPlayers.map((p, i) => <p key={i} className="text-white/55 text-xs">{p.player.firstName} {p.player.lastName}</p>)
+                                ? gPlayers.map((p, i) => (
+                                    <p key={i} className="text-white/55 text-xs">
+                                      {p.player.firstName} {p.player.lastName}
+                                      {p.apparatus ? <span className="opacity-60 ml-1">({p.apparatus})</span> : null}
+                                    </p>
+                                  ))
                                 : <p className="text-white/20 text-xs italic">No players</p>}
                             </div>
                           );
@@ -818,6 +842,18 @@ const CoachDashboard = () => {
                         Player age: {selectedPlayerData.age} yrs. Showing eligible categories.
                       </p>
                     </div>
+                    <div>
+                      <label className="block text-xs font-semibold tracking-wide uppercase mb-2"
+                        style={{ color: COLORS.saffronLight }}>
+                        Apparatus <span aria-hidden="true" style={{ color: COLORS.saffron }}>*</span>
+                      </label>
+                      <Dropdown
+                        options={apparatusOptions}
+                        value={selectedApparatus}
+                        onChange={setSelectedApparatus}
+                        placeholder="Select apparatus"
+                      />
+                    </div>
                     <div className="flex gap-3 pt-2">
                       <button onClick={handleCloseModal}
                         className="flex-1 py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
@@ -825,7 +861,7 @@ const CoachDashboard = () => {
                         Cancel
                       </button>
                       <button onClick={handleAddPlayer}
-                        disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender}
+                        disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedApparatus}
                         className="flex-1 py-3 rounded-xl font-bold text-white min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ background: 'linear-gradient(135deg, #FF6B00, #CC5500)' }}>
                         Add Player

@@ -49,7 +49,6 @@ const updateCoach = () => {
       .trim()
       .isEmail()
       .withMessage('Please provide a valid email address')
-      .normalizeEmail()
       .toLowerCase(),
     body('team')
       .optional()

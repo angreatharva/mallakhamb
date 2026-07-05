@@ -121,7 +121,8 @@ class SuperAdminService {
               lastName: player.lastName,
               email: player.email,
               ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
-              gender: registeredPlayer?.gender || player.gender
+              gender: registeredPlayer?.gender || player.gender,
+              apparatus: registeredPlayer?.apparatus
             };
           });
           
@@ -539,7 +540,7 @@ class SuperAdminService {
       }
 
       // Calculate payment amount using centralized config with competition-specific player fee
-      const amount = calculatePlayerAdditionAmount(competition.playerFee);
+      const amount = calculatePlayerAdditionAmount(playerData, competition);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -717,7 +718,7 @@ class SuperAdminService {
       }
 
       // Verify payment amount with competition-specific player fee
-      const expectedAmount = calculatePlayerAdditionAmount(competition.playerFee) * 100; // Convert to paise
+      const expectedAmount = calculatePlayerAdditionAmount(playerData, competition) * 100; // Convert to paise
       if (paymentDetails.amount !== expectedAmount) {
         this.logger?.error?.('Payment amount mismatch', {
           expected: expectedAmount,

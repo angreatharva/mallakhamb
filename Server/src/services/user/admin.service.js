@@ -883,7 +883,8 @@ class AdminService extends UserService {
               return {
                 ...player,
                 ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
-                gender: registeredPlayer?.gender || player.gender
+                gender: registeredPlayer?.gender || player.gender,
+                apparatus: registeredPlayer?.apparatus
               };
             });
           } else {

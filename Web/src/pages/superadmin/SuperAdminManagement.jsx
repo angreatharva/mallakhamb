@@ -249,7 +249,7 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: ''
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}
   });
 
   // Admin management modal
@@ -405,7 +405,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: ''
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}
   });
 
   const openCompetitionModal = (comp = null) => {
@@ -424,7 +424,7 @@ const SuperAdminManagement = () => {
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
-        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : ''
+        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {}
       });
     } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
@@ -461,7 +461,8 @@ const SuperAdminManagement = () => {
         apparatusConfig: activeApparatusConfig,
         level: competitionFormData.level.value,
         year: competitionFormData.year.value,
-        playerFee
+        playerFee,
+        apparatusFees: competitionFormData.apparatusFees
       });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
@@ -496,7 +497,8 @@ const SuperAdminManagement = () => {
         competitionTypes: competitionFormData.competitionTypes, apparatusConfig: activeApparatusConfig, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
-        playerFee
+        playerFee,
+        apparatusFees: competitionFormData.apparatusFees
       });
       toast.success('Competition updated');
       setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
@@ -914,14 +916,14 @@ const SuperAdminManagement = () => {
 
         {/* Player Fee */}
         <DarkInput 
-          label="Per-player fee (₹)" 
+          label="BASE FEE (Per-player ₹)" 
           required 
           type="number" 
           min="0"
           step="1"
           placeholder="e.g. 500" 
           value={competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined ? '' : competitionFormData.playerFee}
-          hint="This competition only — total is players × this amount (no separate base fee)."
+          hint="This is the default per-player entry fee. Apparatus-wise fees (below) will be added on top of this amount."
           onChange={(e) => {
             const raw = e.target.value;
             if (raw === '') {
@@ -932,6 +934,42 @@ const SuperAdminManagement = () => {
             setCompetitionFormData({ ...competitionFormData, playerFee: Number.isFinite(n) ? n : '' });
           }} 
         />
+
+        {/* Apparatus Fees (Optional) */}
+        <div>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+            APPARATUS-WISE FEES (Optional)
+          </p>
+          <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+            <p className="text-xs text-white/50 mb-4 leading-relaxed">
+              Enter any additional fees for specific apparatuses here. These will be <strong>added on top</strong> of the base per-player fee. Leave blank for no additional charge.
+            </p>
+            {['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'].map(app => (
+              <DarkInput
+                key={app}
+                label={`${app} Fee (₹)`}
+                type="number"
+                min="0"
+                step="1"
+                placeholder={`Base fee applied if blank`}
+                value={competitionFormData.apparatusFees?.[app] ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setCompetitionFormData(prev => {
+                    const newFees = { ...(prev.apparatusFees || {}) };
+                    if (raw === '') {
+                      delete newFees[app];
+                    } else {
+                      const n = Number(raw);
+                      if (Number.isFinite(n)) newFees[app] = n;
+                    }
+                    return { ...prev, apparatusFees: newFees };
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </div>
 
         {/* Competition Types & Apparatus */}
         <div>
@@ -994,6 +1032,8 @@ const SuperAdminManagement = () => {
             })}
           </div>
         </div>
+
+
 
         <DarkTextarea label="Description" placeholder="Optional description…" rows={3} value={competitionFormData.description}
           onChange={(e) => setCompetitionFormData({ ...competitionFormData, description: e.target.value })} />

@@ -82,7 +82,6 @@ const updatePlayer = () => {
       .trim()
       .isEmail()
       .withMessage('Please provide a valid email address')
-      .normalizeEmail()
       .toLowerCase(),
     body('dateOfBirth')
       .optional()
