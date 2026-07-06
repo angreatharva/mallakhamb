@@ -17,6 +17,7 @@ export const SuperAdminAddPlayerPayment = lazy(() => import('@/pages/superadmin/
 export const AdminTeams = lazy(() => import('@/pages/admin/AdminTeams'));
 export const AdminScoring = lazy(() => import('@/pages/admin/AdminScoring'));
 export const JudgeLogin = lazy(() => import('@/pages/judge/JudgeLogin'));
+export const JudgeDashboard = lazy(() => import('@/pages/judge/JudgeDashboard'));
 export const JudgeScoring = lazy(() => import('@/pages/judge/JudgeScoring'));
 export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword'));
 export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));

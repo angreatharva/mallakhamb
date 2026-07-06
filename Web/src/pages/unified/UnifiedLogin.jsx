@@ -232,7 +232,7 @@ const UnifiedLoginInner = () => {
       const redirectPaths = {
         admin: '/admin/dashboard',
         superadmin: '/superadmin/dashboard',
-        judge: '/judge/scoring',
+        judge: '/judge/dashboard',
       };
       const targetPath = redirectPaths[role] || '/';
 
@@ -316,8 +316,9 @@ const UnifiedLoginInner = () => {
           toast.success(`Welcome ${judge.name}!`);
         }
         
+        sessionStorage.removeItem('judge_category_selected');
         reset();
-        navigate('/judge/scoring');
+        navigate('/judge/dashboard');
         return;
       }
       

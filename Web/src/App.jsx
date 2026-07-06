@@ -25,8 +25,10 @@ function AppContent() {
   const isRegisterPage = location.pathname.includes('/register');
   const isForgotPasswordPage = location.pathname.includes('/forgot-password') || location.pathname.includes('/reset-password');
 
+  const isJudgeRoute = location.pathname.startsWith('/judge');
+
   const shouldHideNavbar =
-    isAdminRoute || isHomePage || isPublicScores || isCompetitionSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
+    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isCompetitionSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
 
   return (
     <CompetitionProvider userType={userType}>

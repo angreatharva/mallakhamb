@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, User, Trophy, LogOut, CheckCircle,
-  RotateCcw, Send
+  Scale, User, LogOut, CheckCircle, RotateCcw, Send, ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -15,9 +14,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
-import { FadeIn } from '@/components/design-system';
 
-// ─── Design tokens for judge theme ───────────────────────────────────────────
+// Design tokens for judge theme
 const J = {
   purple: '#A855F7',
   purpleLight: '#C084FC',
@@ -29,7 +27,6 @@ const J = {
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
-// ─── Ambient orb ─────────────────────────────────────────────────────────────
 const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   const reduced = useReducedMotion();
   if (reduced) return null;
@@ -47,7 +44,6 @@ const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   );
 };
 
-// ─── Live indicator ───────────────────────────────────────────────────────────
 const LiveDot = ({ connected }) => (
   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${
     connected ? 'border-green-500/30' : 'border-red-500/30'
@@ -62,70 +58,6 @@ const LiveDot = ({ connected }) => (
   </div>
 );
 
-// ─── Step badge ───────────────────────────────────────────────────────────────
-const StepBadge = ({ n, active, done }) => (
-  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-    style={{
-      background: done ? J.green : active ? J.purple : 'rgba(255,255,255,0.08)',
-      color: done || active ? '#fff' : 'rgba(255,255,255,0.3)',
-    }}>
-    {done ? <CheckCircle className="w-4 h-4" /> : n}
-  </div>
-);
-
-// ─── Section card ─────────────────────────────────────────────────────────────
-const SectionCard = ({ step, total, title, active, done, children }) => (
-  <motion.div
-    className="rounded-2xl border overflow-hidden"
-    style={{
-      background: active ? 'rgba(168,85,247,0.06)' : 'rgba(255,255,255,0.02)',
-      borderColor: active ? 'rgba(168,85,247,0.3)' : done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
-    }}
-    animate={{ opacity: active || done ? 1 : 0.5 }}
-    transition={{ duration: 0.3 }}>
-    <div className="flex items-center gap-3 px-5 py-4 border-b"
-      style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-      <StepBadge n={step} active={active} done={done} />
-      <span className="font-bold text-sm" style={{ color: active ? '#fff' : done ? J.green : 'rgba(255,255,255,0.4)' }}>
-        {title}
-      </span>
-    </div>
-    <AnimatePresence initial={false}>
-      {(active || done) && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.3, ease: EASE_OUT }}>
-          <div className="p-5">{children}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </motion.div>
-);
-
-// ─── Selectable button ────────────────────────────────────────────────────────
-const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
-  const reduced = useReducedMotion();
-  return (
-    <motion.button
-      onClick={onClick}
-      className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3"
-      style={{
-        background: selected ? `${accent}14` : 'rgba(255,255,255,0.03)',
-        borderColor: selected ? `${accent}50` : 'rgba(255,255,255,0.07)',
-        color: selected ? '#fff' : 'rgba(255,255,255,0.6)',
-      }}
-      whileHover={reduced ? {} : { scale: 1.005 }}
-      whileTap={reduced ? {} : { scale: 0.995 }}
-      transition={{ duration: 0.15 }}>
-      <span className="text-sm font-semibold">{children}</span>
-      {selected && <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: accent }} aria-hidden="true" />}
-    </motion.button>
-  );
-};
-
-// ─── Score number input ───────────────────────────────────────────────────────
 const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
   const [focused, setFocused] = useState(false);
   return (
@@ -159,7 +91,6 @@ const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
   );
 };
 
-// ─── Score row display ────────────────────────────────────────────────────────
 const ScoreRow = ({ label, value, max, color = J.purple }) => (
   <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>
@@ -170,7 +101,6 @@ const ScoreRow = ({ label, value, max, color = J.purple }) => (
   </div>
 );
 
-// ─── Checkbox row ─────────────────────────────────────────────────────────────
 const CheckRow = ({ checked, onChange, label }) => (
   <label className="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px]"
     style={{
@@ -187,25 +117,34 @@ const CheckRow = ({ checked, onChange, label }) => (
   </label>
 );
 
-//  Main component 
 const JudgeScoring = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
+  
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [judgeInfo, setJudgeInfo] = useState(null);
-  const [selectedCompetitionType, setSelectedCompetitionType] = useState('');
-  const [selectedApparatus, setSelectedApparatus] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState(null);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [teams, setTeams] = useState([]);
-  const [players, setPlayers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const joinedRoomRef = useRef(null);
+
+  // Read data from location state
+  const stateData = location.state;
+  
+  useEffect(() => {
+    if (!stateData || !stateData.player || !stateData.team || !stateData.competitionType) {
+      toast.error('Missing player selection. Redirecting to dashboard.');
+      navigate('/judge/dashboard');
+    }
+  }, [stateData, navigate]);
+
+  const selectedTeam = stateData?.team;
+  const selectedPlayer = stateData?.player;
+  const selectedCompetitionType = stateData?.competitionType;
+  const selectedApparatus = stateData?.apparatus;
 
   const [scores, setScores] = useState({
     difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
@@ -220,19 +159,12 @@ const JudgeScoring = () => {
     originality: 0
   });
 
-  const competitionTypes = [
-    { value: 'competition_1', label: 'Competition I', sub: 'Team' },
-    { value: 'competition_2', label: 'Competition II', sub: 'Individual' },
-    { value: 'competition_3', label: 'Competition III', sub: 'Apparatus' },
-  ];
-
   useEffect(() => {
     const storedJudge = secureStorage.getItem('judge_user');
     if (!storedJudge) { toast.error('Please login first'); navigate('/judge/login'); return; }
     try {
       const judge = JSON.parse(storedJudge);
       setJudgeInfo(judge);
-      if (judge.competitionTypes?.length === 1) setSelectedCompetitionType(judge.competitionTypes[0]);
     } catch {
       secureStorage.removeItem('judge_user');
       secureStorage.removeItem('judge_token');
@@ -242,15 +174,12 @@ const JudgeScoring = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (!judgeInfo) return;
+    if (!judgeInfo || !selectedCompetitionType) return;
     const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
     const token = secureStorage.getItem('judge_token');
     
-    // Connect with authentication token
     const newSocket = io(socketUrl, {
-      auth: {
-        token: token
-      },
+      auth: { token },
       withCredentials: true
     });
     
@@ -258,23 +187,18 @@ const JudgeScoring = () => {
     newSocket.on('connect', () => {
       setIsConnected(true);
       logger.info('Socket connected successfully');
-      if (judgeInfo && selectedCompetitionType) {
-        const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
-        if (joinedRoomRef.current !== roomId) {
-          newSocket.emit('join_scoring_room', { roomId });
-          joinedRoomRef.current = roomId;
-          logger.info(`Joined scoring room: ${roomId}`);
-        }
+      const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
+      if (joinedRoomRef.current !== roomId) {
+        newSocket.emit('join_scoring_room', { roomId });
+        joinedRoomRef.current = roomId;
+        logger.info(`Joined scoring room: ${roomId}`);
       }
     });
     newSocket.on('disconnect', () => { 
       setIsConnected(false); 
       joinedRoomRef.current = null;
-      logger.info('Socket disconnected');
     });
     newSocket.on('connect_error', (error) => {
-      logger.error('Socket connection error:', error);
-      // Handle authorization errors (Requirement 4.6)
       if (error.message && (error.message.includes('authorization') || error.message.includes('Unauthorized'))) {
         toast.error('Not authorized to access scoring room');
         navigate('/judge/dashboard');
@@ -283,97 +207,26 @@ const JudgeScoring = () => {
       }
     });
     
-    // Handle room join authorization errors (Requirement 4.2)
     newSocket.on('error', (error) => {
-      logger.error('Socket error:', error);
       if (error.message === 'Not authorized to join this room') {
         toast.error('You do not have permission to access this scoring room');
-        navigate('/judge/scores');
+        navigate('/judge/dashboard');
       }
     });
     
-    // Handle score update authorization errors (Requirement 4.3)
     newSocket.on('score_update_error', (error) => {
-      logger.error('Score update error:', error);
       if (error.message === 'Only judges can update scores') {
         toast.error('Only judges can submit scores');
       }
     });
     
-    // Handle scores saved authorization errors (Requirement 4.4)
     newSocket.on('scores_saved_error', (error) => {
-      logger.error('Scores saved error:', error);
       if (error.message === 'Unauthorized to save scores') {
         toast.error('You do not have permission to save scores');
       }
     });
     return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
-  }, [judgeInfo, selectedCompetitionType]);
-
-  useEffect(() => {
-    if (!socket?.connected || !judgeInfo || !selectedCompetitionType) return;
-    const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
-    if (joinedRoomRef.current !== roomId) {
-      socket.emit('join_scoring_room', { roomId });
-      joinedRoomRef.current = roomId;
-    }
-  }, [socket, judgeInfo, selectedCompetitionType]);
-
-  useEffect(() => {
-    if (judgeInfo && selectedCompetitionType) fetchTeams();
-  }, [judgeInfo, selectedCompetitionType]);
-
-  const fetchTeams = async () => {
-    try {
-      setLoading(true);
-      const token = secureStorage.getItem('judge_token');
-      const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params: { 
-          competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-          gender: judgeInfo.gender, 
-          ageGroup: judgeInfo.ageGroup, 
-          competitionType: selectedCompetitionType 
-        },
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true
-      });
-      setTeams(response.data.data || []);
-      setSelectedTeam(null); setSelectedPlayer(null); setPlayers([]);
-    } catch (error) {
-      logger.error('Error fetching teams:', error);
-      toast.error('Failed to load teams');
-      setTeams([]);
-    } finally { setLoading(false); }
-  };
-
-  const handleTeamSelect = (team) => {
-    setSelectedTeam(team);
-    const filtered = team.players
-      .filter(e => {
-        if (!e.player || e.player.gender !== judgeInfo.gender || e.ageGroup !== judgeInfo.ageGroup) return false;
-        
-        // If an apparatus is selected, ensure the player is registered for it in this competition type
-        if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
-          const apps = e.apparatus[selectedCompetitionType];
-          if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
-            return false;
-          }
-        }
-        return true;
-      })
-      .map(e => ({ 
-        id: e.player._id, 
-        name: `${e.player.firstName} ${e.player.lastName}`, 
-        gender: e.player.gender, 
-        ageGroup: e.ageGroup,
-        apparatus: e.apparatus || {}
-      }));
-    setPlayers(filtered);
-    setSelectedPlayer(null);
-    resetScores();
-  };
-
-  const handlePlayerSelect = (player) => { setSelectedPlayer(player); resetScores(); setSubmitted(false); };
+  }, [judgeInfo, selectedCompetitionType, navigate]);
 
   const resetScores = () => setScores({
     difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
@@ -410,7 +263,7 @@ const JudgeScoring = () => {
   ).toFixed(2);
 
   const submitScore = async () => {
-    if (!selectedPlayer) { toast.error('Please select a player'); return; }
+    if (!selectedPlayer) return;
     if (parseFloat(calcFinal()) === 0) { toast.error('Please enter scores'); return; }
     setSubmitting(true);
     try {
@@ -434,7 +287,10 @@ const JudgeScoring = () => {
       }
       toast.success(`Score ${finalScore} submitted for ${selectedPlayer.name}`);
       setSubmitted(true);
-      setTimeout(() => { setSelectedPlayer(null); resetScores(); setSubmitted(false); }, 1800);
+      setTimeout(() => { 
+        // Go back to dashboard after submitting
+        navigate('/judge/dashboard');
+      }, 1800);
     } catch (error) {
       logger.error('Failed to save score:', error);
       toast.error('Failed to save score. Please try again.');
@@ -447,13 +303,10 @@ const JudgeScoring = () => {
     toast.success('Logged out successfully');
   };
 
-  if (!judgeInfo) return null;
+  if (!judgeInfo || !selectedPlayer) return null;
 
   const req = getRequiredElements();
   const finalScore = parseFloat(calcFinal());
-  const needsApparatus = selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]?.length > 0;
-  const isApparatusSelected = !needsApparatus || !!selectedApparatus;
-  const step = !selectedCompetitionType ? 1 : !isApparatusSelected ? 1 : !selectedTeam ? 2 : !selectedPlayer ? 3 : 4;
 
   return (
     <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -466,6 +319,10 @@ const JudgeScoring = () => {
         style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => navigate('/judge/dashboard')}
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10">
+              <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+            </button>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
               <Scale className="w-4 h-4 text-white" aria-hidden="true" />
@@ -489,284 +346,160 @@ const JudgeScoring = () => {
       </header>
 
       <main className="relative z-10 max-w-2xl mx-auto px-4 py-6 space-y-3" id="main-content">
-        {/* Assignment banner */}
-        <FadeIn delay={0}>
-          <div className="rounded-2xl border p-4 flex flex-wrap gap-4"
-            style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: J.purple }} aria-hidden="true" />
-              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>Assignment</span>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE_OUT }} className="space-y-3">
+
+          {/* Scoring for banner */}
+          <div className="rounded-2xl border p-4 flex items-center gap-4"
+            style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(34,197,94,0.15)' }}>
+              <User className="w-5 h-5" style={{ color: J.green }} aria-hidden="true" />
             </div>
-            <div className="flex flex-wrap gap-3 ml-auto">
-              {[
-                { label: 'Gender', value: judgeInfo.gender },
-                { label: 'Age Group', value: judgeInfo.ageGroup },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}:</span>
-                  <span className="text-xs font-bold text-white">{value}</span>
-                </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: J.green }}>Scoring For</p>
+              <p className="text-white font-black text-base leading-tight truncate">{selectedPlayer.name}</p>
+              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{selectedTeam?.name}</p>
+            </div>
+            <button onClick={() => navigate('/judge/dashboard')}
+              className="ml-auto p-2 rounded-lg transition-colors hover:bg-white/5 min-h-[36px] min-w-[36px] flex items-center justify-center"
+              style={{ color: 'rgba(255,255,255,0.3)' }} aria-label="Change player">
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* 1. Difficulty */}
+          <div className="rounded-2xl border p-5 space-y-4"
+            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-white text-sm">1. Difficulty</h3>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
+            </div>
+            <div className="p-3 rounded-xl text-xs" style={{ background: 'rgba(168,85,247,0.08)', color: 'rgba(255,255,255,0.5)' }}>
+              Required: A{req.a} (0.20)  B{req.b} (0.40)  C{req.c} (0.60)
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {[['aClass', 'A Class', '0.20'], ['bClass', 'B Class', '0.40'], ['cClass', 'C Class', '0.60']].map(([key, lbl, mult]) => (
+                <ScoreInput key={key} label={lbl} hint={mult} value={scores.difficulty[key]} max="99" step={1}
+                  onChange={e => handleDifficulty(key, e.target.value)} />
               ))}
             </div>
-          </div>
-        </FadeIn>
-
-        {/* Step 1: Competition Type */}
-        <FadeIn delay={0.05}>
-          <SectionCard step={1} title="Select Competition Type" active={step === 1} done={step > 1}>
-            <div className="space-y-2">
-              {competitionTypes
-                .filter(ct => !judgeInfo.competitionTypes || judgeInfo.competitionTypes.includes(ct.value))
-                .map(ct => (
-                  <SelectBtn key={ct.value} selected={selectedCompetitionType === ct.value}
-                    onClick={() => { setSelectedCompetitionType(ct.value); setSelectedTeam(null); setSelectedPlayer(null); resetScores(); }}>
-                    <span>{ct.label}</span>
-                    <span className="text-xs ml-2" style={{ color: 'rgba(255,255,255,0.35)' }}>{ct.sub}</span>
-                  </SelectBtn>
-                ))}
+            <div className="flex justify-end">
+              <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
+                {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
+              </span>
             </div>
-          </SectionCard>
-        </FadeIn>
+          </div>
 
-        {/* Step 1.5: Apparatus (if applicable) */}
-        <FadeIn delay={0.07}>
-          <AnimatePresence>
-            {selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType] && judgeInfo.competition.apparatusConfig[selectedCompetitionType].length > 0 && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: EASE_OUT }} className="mt-3">
-                <SectionCard step="A" title="Select Apparatus" active={!selectedApparatus} done={!!selectedApparatus}>
-                  <div className="space-y-2">
-                    {judgeInfo.competition.apparatusConfig[selectedCompetitionType].map(app => (
-                      <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => { setSelectedApparatus(app); setSelectedTeam(null); setSelectedPlayer(null); resetScores(); }}>
-                        <span>{app}</span>
-                      </SelectBtn>
-                    ))}
-                  </div>
-                </SectionCard>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </FadeIn>
+          {/* 2. Combination */}
+          <div className="rounded-2xl border p-5 space-y-3"
+            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-white text-sm">2. Combination</h3>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
+            </div>
+            {[
+              ['fullApparatusUtilization', 'Full apparatus utilization'],
+              ['rightLeftExecution', 'Right & left side execution'],
+              ['forwardBackwardFlexibility', 'Forward & backward flexibility'],
+              ['minimumElementCount', 'Minimum element count met'],
+            ].map(([field, label]) => (
+              <CheckRow key={field} checked={scores.combination[field]}
+                onChange={() => handleCombination(field)} label={label} />
+            ))}
+            <div className="flex justify-end pt-1">
+              <span className="text-lg font-black" style={{ color: J.purple }}>
+                {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 1.60</span>
+              </span>
+            </div>
+          </div>
 
-        {/* Step 2: Team */}
-        <FadeIn delay={0.1}>
-          <SectionCard step={2} title="Select Team" active={step === 2} done={step > 2}>
-            {loading ? (
-              <div className="flex items-center justify-center py-8 gap-3">
-                <motion.div className="w-5 h-5 rounded-full border-2 border-t-transparent"
-                  style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-                  animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                <span className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading teams...</span>
-              </div>
-            ) : teams.length > 0 ? (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {teams.map(team => (
-                  <SelectBtn key={team._id} selected={selectedTeam?._id === team._id} onClick={() => handleTeamSelect(team)}>
-                    <div>
-                      <p className="font-bold text-sm">{team.name}</p>
-                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Coach: {team.coach?.name}</p>
-                    </div>
-                  </SelectBtn>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No teams found for this category</p>
-              </div>
-            )}
-          </SectionCard>
-        </FadeIn>
+          {/* 3. Execution */}
+          <div className="rounded-2xl border p-5"
+            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-white text-sm">3. Execution</h3>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+            </div>
+            <ScoreInput label="Execution Score" value={scores.execution} max={4.40} step={0.1}
+              onChange={e => { const v = Math.max(0, Math.min(4.40, parseFloat(e.target.value) || 0)); setScores({ ...scores, execution: v }); }} />
+          </div>
 
-        {/* Step 3: Player */}
-        <FadeIn delay={0.15}>
-          <SectionCard step={3} title="Select Player" active={step === 3} done={step > 3}>
-            {players.length > 0 ? (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {players.map(player => (
-                  <SelectBtn key={player.id} selected={selectedPlayer?.id === player.id} onClick={() => handlePlayerSelect(player)}>
-                    <div className="w-full">
-                      <p className="font-bold text-sm text-left">{player.name}</p>
-                      <div className="flex items-center justify-between mt-0.5 w-full">
-                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{player.gender}  {player.ageGroup}</p>
-                        {player.apparatus && player.apparatus[selectedCompetitionType] && player.apparatus[selectedCompetitionType].length > 0 && (
-                          <p className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}>
-                            {player.apparatus[selectedCompetitionType].join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </SelectBtn>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <User className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No players found in this team for selected category</p>
-              </div>
-            )}
-          </SectionCard>
-        </FadeIn>
+          {/* 4. Originality */}
+          <div className="rounded-2xl border p-5"
+            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-white text-sm">4. Originality</h3>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 0.20</span>
+            </div>
+            <ScoreInput label="Originality Score" value={scores.originality} max={0.20} step={0.05}
+              onChange={e => { const v = Math.max(0, Math.min(0.20, parseFloat(e.target.value) || 0)); setScores({ ...scores, originality: v }); }} />
+          </div>
 
-        {/* Step 4: Scoring */}
-        <AnimatePresence>
-          {selectedPlayer && (
-            <motion.div key="scoring" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4, ease: EASE_OUT }}
-              className="space-y-3">
+          {/* Final score card */}
+          <motion.div className="rounded-2xl p-6 text-center relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #A855F720, #7C3AED20)', border: '1px solid rgba(168,85,247,0.3)' }}
+            animate={{ boxShadow: finalScore > 0 ? `0 0 60px rgba(168,85,247,0.2)` : 'none' }}>
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
+            <p className="text-xs font-bold tracking-widest uppercase mb-2 relative z-10" style={{ color: J.purpleLight }}>Final Score</p>
+            <motion.p className="text-6xl font-black relative z-10"
+              key={calcFinal()}
+              initial={{ scale: 0.9, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              style={{ color: '#fff' }}>
+              {calcFinal()}
+            </motion.p>
+            <p className="text-sm relative z-10 mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>out of 10.00</p>
+            <div className="mt-4 grid grid-cols-4 gap-2 relative z-10">
+              <ScoreRow label="Difficulty" value={scores.difficulty.total} max="3.80" />
+              <ScoreRow label="Combination" value={scores.combination.total} max="1.60" />
+              <ScoreRow label="Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
+              <ScoreRow label="Originality" value={parseFloat(scores.originality || 0)} max="0.20" />
+            </div>
+          </motion.div>
 
-              {/* Scoring for banner */}
-              <div className="rounded-2xl border p-4 flex items-center gap-4"
-                style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(34,197,94,0.15)' }}>
-                  <User className="w-5 h-5" style={{ color: J.green }} aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: J.green }}>Scoring For</p>
-                  <p className="text-white font-black text-base leading-tight truncate">{selectedPlayer.name}</p>
-                  <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{selectedTeam?.name}</p>
-                </div>
-                <button onClick={() => { setSelectedPlayer(null); resetScores(); }}
-                  className="ml-auto p-2 rounded-lg transition-colors hover:bg-white/5 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                  style={{ color: 'rgba(255,255,255,0.3)' }} aria-label="Change player">
-                  <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
-
-              {/* 1. Difficulty */}
-              <div className="rounded-2xl border p-5 space-y-4"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-black text-white text-sm">1. Difficulty</h3>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
-                </div>
-                <div className="p-3 rounded-xl text-xs" style={{ background: 'rgba(168,85,247,0.08)', color: 'rgba(255,255,255,0.5)' }}>
-                  Required: A{req.a} (0.20)  B{req.b} (0.40)  C{req.c} (0.60)
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[['aClass', 'A Class', '0.20'], ['bClass', 'B Class', '0.40'], ['cClass', 'C Class', '0.60']].map(([key, lbl, mult]) => (
-                    <ScoreInput key={key} label={lbl} hint={mult} value={scores.difficulty[key]} max="99" step={1}
-                      onChange={e => handleDifficulty(key, e.target.value)} />
-                  ))}
-                </div>
-                <div className="flex justify-end">
-                  <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
-                    {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. Combination */}
-              <div className="rounded-2xl border p-5 space-y-3"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-black text-white text-sm">2. Combination</h3>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
-                </div>
-                {[
-                  ['fullApparatusUtilization', 'Full apparatus utilization'],
-                  ['rightLeftExecution', 'Right & left side execution'],
-                  ['forwardBackwardFlexibility', 'Forward & backward flexibility'],
-                  ['minimumElementCount', 'Minimum element count met'],
-                ].map(([field, label]) => (
-                  <CheckRow key={field} checked={scores.combination[field]}
-                    onChange={() => handleCombination(field)} label={label} />
-                ))}
-                <div className="flex justify-end pt-1">
-                  <span className="text-lg font-black" style={{ color: J.purple }}>
-                    {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 1.60</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* 3. Execution */}
-              <div className="rounded-2xl border p-5"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-black text-white text-sm">3. Execution</h3>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
-                </div>
-                <ScoreInput label="Execution Score" value={scores.execution} max={4.40} step={0.1}
-                  onChange={e => { const v = Math.max(0, Math.min(4.40, parseFloat(e.target.value) || 0)); setScores({ ...scores, execution: v }); }} />
-              </div>
-
-              {/* 4. Originality */}
-              <div className="rounded-2xl border p-5"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-black text-white text-sm">4. Originality</h3>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 0.20</span>
-                </div>
-                <ScoreInput label="Originality Score" value={scores.originality} max={0.20} step={0.05}
-                  onChange={e => { const v = Math.max(0, Math.min(0.20, parseFloat(e.target.value) || 0)); setScores({ ...scores, originality: v }); }} />
-              </div>
-
-              {/* Final score card */}
-              <motion.div className="rounded-2xl p-6 text-center relative overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #A855F720, #7C3AED20)', border: '1px solid rgba(168,85,247,0.3)' }}
-                animate={{ boxShadow: finalScore > 0 ? `0 0 60px rgba(168,85,247,0.2)` : 'none' }}>
-                <div className="absolute inset-0 pointer-events-none"
-                  style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
-                <p className="text-xs font-bold tracking-widest uppercase mb-2 relative z-10" style={{ color: J.purpleLight }}>Final Score</p>
-                <motion.p className="text-6xl font-black relative z-10"
-                  key={calcFinal()}
-                  initial={{ scale: 0.9, opacity: 0.5 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ color: '#fff' }}>
-                  {calcFinal()}
-                </motion.p>
-                <p className="text-sm relative z-10 mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>out of 10.00</p>
-                <div className="mt-4 grid grid-cols-4 gap-2 relative z-10">
-                  <ScoreRow label="Difficulty" value={scores.difficulty.total} max="3.80" />
-                  <ScoreRow label="Combination" value={scores.combination.total} max="1.60" />
-                  <ScoreRow label="Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
-                  <ScoreRow label="Originality" value={parseFloat(scores.originality || 0)} max="0.20" />
-                </div>
-              </motion.div>
-
-              {/* Submit */}
-              <motion.button
-                onClick={submitScore}
-                disabled={submitting || !isConnected || submitted}
-                className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
-                style={{
-                  background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
-                  opacity: (!isConnected || submitting) ? 0.6 : 1,
-                }}
-                whileHover={reduced || submitting || !isConnected ? {} : { scale: 1.01, filter: 'brightness(1.1)' }}
-                whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
-                transition={{ duration: 0.15 }}>
-                <AnimatePresence mode="wait" initial={false}>
-                  {submitting ? (
-                    <motion.span key="submitting" className="flex items-center gap-2"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
-                        animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                      Submitting...
-                    </motion.span>
-                  ) : submitted ? (
-                    <motion.span key="done" className="flex items-center gap-2"
-                      initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
-                      <CheckCircle className="w-5 h-5" aria-hidden="true" /> Score Submitted!
-                    </motion.span>
-                  ) : (
-                    <motion.span key="idle" className="flex items-center gap-2"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Send className="w-5 h-5" aria-hidden="true" /> Submit Score
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-
-              {!isConnected && (
-                <p className="text-center text-xs" style={{ color: '#EF4444' }}>
-                  Not connected to server. Scores cannot be submitted.
-                </p>
+          {/* Submit */}
+          <motion.button
+            onClick={submitScore}
+            disabled={submitting || !isConnected || submitted}
+            className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
+            style={{
+              background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
+              opacity: (!isConnected || submitting) ? 0.6 : 1,
+            }}
+            whileHover={reduced || submitting || !isConnected ? {} : { scale: 1.01, filter: 'brightness(1.1)' }}
+            whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
+            transition={{ duration: 0.15 }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {submitting ? (
+                <motion.span key="submitting" className="flex items-center gap-2"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
+                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                  Submitting...
+                </motion.span>
+              ) : submitted ? (
+                <motion.span key="done" className="flex items-center gap-2"
+                  initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
+                  <CheckCircle className="w-5 h-5" aria-hidden="true" /> Score Submitted!
+                </motion.span>
+              ) : (
+                <motion.span key="idle" className="flex items-center gap-2"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <Send className="w-5 h-5" aria-hidden="true" /> Submit Score
+                </motion.span>
               )}
-            </motion.div>
+            </AnimatePresence>
+          </motion.button>
+
+          {!isConnected && (
+            <p className="text-center text-xs" style={{ color: '#EF4444' }}>
+              Not connected to server. Scores cannot be submitted.
+            </p>
           )}
-        </AnimatePresence>
+        </motion.div>
       </main>
     </div>
   );

@@ -974,6 +974,9 @@ class AdminService extends UserService {
             populate: { path: 'coach' }
           },
           {
+            path: 'registeredTeams.coach'
+          },
+          {
             path: 'registeredTeams.players.player'
           }
         ]
@@ -1027,7 +1030,9 @@ class AdminService extends UserService {
       const teamsWithPlayers = submittedTeams.map(regTeam => ({
         _id: regTeam.team._id,
         name: regTeam.team.name,
-        coach: regTeam.coach,
+        coach: (regTeam.coach && regTeam.coach.name) ? regTeam.coach : 
+               (regTeam.team && regTeam.team.coach && regTeam.team.coach.name) ? regTeam.team.coach : 
+               regTeam.coach,
         isSubmitted: regTeam.isSubmitted,
         submittedAt: regTeam.submittedAt,
         paymentStatus: regTeam.paymentStatus,

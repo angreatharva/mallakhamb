@@ -21,6 +21,7 @@ import {
   AdminTeams,
   AdminScoring,
   JudgeLogin,
+  JudgeDashboard,
   JudgeScoring,
   ForgotPassword,
   ResetPassword,
@@ -113,6 +114,7 @@ export default function AppRoutes() {
         <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
         <Route path="/judge/login" element={<JudgeLogin />} />
         <Route path="/judge" element={<JudgeLayout />}>
+          <Route path="dashboard" element={<JudgeDashboard />} />
           <Route path="scoring" element={<JudgeScoring />} />
         </Route>
 
