@@ -134,3 +134,33 @@ export function computeCombinationTotal(apparatus, checkedById) {
   );
   return Math.max(0, Number((POINT_CEILINGS.combination - penalties).toFixed(2)));
 }
+
+/**
+ * Resolve difficulty point value using strict C→B→A cascade (v2 §3.2.1).
+ * When element counts differ from requirements, excess C cascades to B,
+ * excess B cascades to A. A is the floor of the hierarchy.
+ */
+export function resolveDifficultyValue(counts, required) {
+  const cUsed = Math.min(counts?.C || 0, required?.C || 0);
+  const cExcess = Math.max(0, (counts?.C || 0) - (required?.C || 0));
+
+  const bPool = (counts?.B || 0) + cExcess;
+  const bUsed = Math.min(bPool, required?.B || 0);
+  const bExcess = Math.max(0, bPool - (required?.B || 0));
+
+  const aPool = (counts?.A || 0) + bExcess;
+  const aUsed = Math.min(aPool, required?.A || 0);
+
+  const cPoints = cUsed * ELEMENT_CLASS_VALUES.C;
+  const bPoints = bUsed * ELEMENT_CLASS_VALUES.B;
+  const aPoints = aUsed * ELEMENT_CLASS_VALUES.A;
+
+  return {
+    C: Number(cPoints.toFixed(2)),
+    B: Number(bPoints.toFixed(2)),
+    A: Number(aPoints.toFixed(2)),
+    total: Number((cPoints + bPoints + aPoints).toFixed(2)),
+    shortfallFlag: (cUsed < (required?.C || 0)) || (bUsed < (required?.B || 0)) || (aUsed < (required?.A || 0)),
+    counts: { C: cUsed, B: bUsed, A: aUsed }
+  };
+}

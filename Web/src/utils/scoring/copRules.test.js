@@ -5,6 +5,7 @@ import {
   getDifficultyRequirement,
   isApparatusAllowedForGender,
   normalizeApparatus,
+  resolveDifficultyValue,
   POINT_CEILINGS,
 } from './copRules';
 
@@ -77,5 +78,26 @@ describe('copRules — gender apparatus rule', () => {
     expect(isApparatusAllowedForGender('Pole Mallakhamb', 'Female')).toBe(true);
     expect(isApparatusAllowedForGender('Rope Mallakhamb', 'Female')).toBe(true);
     expect(isApparatusAllowedForGender('Hanging Mallakhamb', 'Male')).toBe(true);
+  });
+});
+
+describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
+  it('cascades excess C to B, excess B to A', () => {
+    // Competition I required: A4 B6 C1; executed: A0 B5 C2
+    const required = getDifficultyRequirement('competition_1');
+    const result = resolveDifficultyValue({ A: 0, B: 5, C: 2 }, required);
+    // C: 1*0.60=0.60, B: (5+1)*0.40=2.40, A: 0 (shortfall)
+    expect(result.C).toBe(0.60);
+    expect(result.B).toBe(2.40);
+    expect(result.A).toBe(0.00);
+    expect(result.total).toBe(3.00);
+    expect(result.shortfallFlag).toBe(true);
+  });
+
+  it('returns full points when mix matches exactly', () => {
+    const required = getDifficultyRequirement('competition_1');
+    const result = resolveDifficultyValue({ A: 4, B: 6, C: 1 }, required);
+    expect(result.total).toBe(3.80);
+    expect(result.shortfallFlag).toBe(false);
   });
 });

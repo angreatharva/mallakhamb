@@ -1,106 +1,137 @@
 /**
  * Scoring Calculation Utilities
- * 
+ *
  * Provides low-level calculation functions for scoring operations.
  * These utilities are pure functions with no dependencies.
- * 
- * Requirements: 1.5, 1.8
+ *
+ * Requirements: 1.5, 1.8, v2 spec additions
  */
 
 /**
  * Calculate individual player score with base score and tolerance
- * Implements the Mallakhamb scoring algorithm:
- * 1. Remove highest and lowest execution judge scores (outlier removal)
- * 2. Average the remaining middle scores
- * 3. Apply base score if senior judge difference exceeds tolerance
- * 
+ * Implements the Mallakhamb scoring algorithm per v2 spec:
+ * - Panel size determines the entire scoring path (Section 4)
+ * - 3-judge: simple average, no Chief Judge, no tolerance/base-score
+ * - 4-judge: Sr. Judge=Chief, average all 3 eval judges (no high/low drop)
+ * - 5-judge: Standard COP (drop high/low of eval judges, tolerance-check vs Chief)
+ *
  * @param {Object} judgeScores - Judge scores object
- * @param {number} judgeScores.seniorJudge - Senior judge score
+ * @param {number} judgeScores.seniorJudge - Senior judge score (Chief role for 4/5-judge panels)
  * @param {number} judgeScores.judge1 - Execution judge 1 score
  * @param {number} judgeScores.judge2 - Execution judge 2 score
  * @param {number} judgeScores.judge3 - Execution judge 3 score
  * @param {number} judgeScores.judge4 - Execution judge 4 score
- * @returns {Object} Calculation result with executionAverage, baseScore, baseScoreApplied, toleranceUsed, averageMarks
+ * @param {number} judgeScores.judge5 - Execution judge 5 score (5-judge panel)
+ * @param {number} panelSize - Optional: explicit panel size (3, 4, or 5). If omitted,
+ *                              inferred from which judge fields have non-zero scores.
+ * @returns {Object} Calculation result with executionAverage, baseScore, baseScoreApplied, toleranceUsed, averageMarks, method
  */
-function calculateIndividualScore(judgeScores) {
+function calculateIndividualScore(judgeScores, panelSize) {
   if (!judgeScores) {
     return {
-      executionAverage: 0,
-      baseScore: 0,
-      baseScoreApplied: false,
-      toleranceUsed: 0,
-      averageMarks: 0
+      executionAverage: 0, baseScore: 0, baseScoreApplied: false,
+      toleranceUsed: 0, averageMarks: 0, method: null
     };
   }
 
-  // Extract execution judge scores (judge1-4)
-  const executionScores = [
+  // Extract all judge scores and count non-zero entries
+  const allScores = [
+    judgeScores.seniorJudge || 0,
     judgeScores.judge1 || 0,
     judgeScores.judge2 || 0,
     judgeScores.judge3 || 0,
-    judgeScores.judge4 || 0
-  ].filter(score => score > 0); // Only include scores that have been entered
+    judgeScores.judge4 || 0,
+    judgeScores.judge5 || 0
+  ];
 
-  // Need at least 2 execution judges for calculation
-  if (executionScores.length < 2) {
+  // Infer panel size if not provided
+  if (panelSize === undefined) {
+    const nonZeroCount = allScores.filter(s => s > 0).length;
+    // Map: 3 scores = 3-judge panel, 4 scores = 4-judge panel, 5+ = 5-judge panel
+    panelSize = nonZeroCount === 3 ? 3 : nonZeroCount >= 4 ? 4 : 0;
+  }
+
+  // 3-judge panel: simple average of all 3 totals (no Chief, no high/low drop)
+  if (panelSize === 3) {
+    const evalScores = [
+      judgeScores.judge1 || 0,
+      judgeScores.judge2 || 0,
+      judgeScores.judge3 || 0
+    ].filter(s => s > 0);
+    if (evalScores.length < 3) return { executionAverage: 0, baseScore: 0, baseScoreApplied: false, toleranceUsed: 0, averageMarks: 0, method: null };
+    const avgScore = evalScores.reduce((sum, s) => sum + s, 0) / evalScores.length;
     return {
-      executionAverage: 0,
+      executionAverage: parseFloat(avgScore.toFixed(3)),
       baseScore: 0,
       baseScoreApplied: false,
       toleranceUsed: 0,
-      averageMarks: 0
+      averageMarks: parseFloat(avgScore.toFixed(3)),
+      method: '3_JUDGE_SIMPLE_AVERAGE'
     };
   }
 
-  // Sort scores and remove highest and lowest (outlier removal)
-  const sortedScores = [...executionScores].sort((a, b) => a - b);
-  
-  let middleScores;
-  if (sortedScores.length === 4) {
-    // Remove highest and lowest, keep middle 2
-    middleScores = sortedScores.slice(1, 3);
-  } else if (sortedScores.length === 3) {
-    // Remove highest, keep lowest 2
-    middleScores = sortedScores.slice(0, 2);
-  } else {
-    // Only 2 scores, use both
-    middleScores = sortedScores;
+  // For 4/5-judge panels: Sr. Judge acts as Chief for 4-judge, regular Chief for 5-judge
+  const seniorJudgeScore = judgeScores.seniorJudge || 0;
+  const evalScores = [
+    judgeScores.judge1 || 0,
+    judgeScores.judge2 || 0,
+    judgeScores.judge3 || 0,
+    judgeScores.judge4 || 0,
+    judgeScores.judge5 || 0
+  ].filter(s => s > 0);
+
+  // Determine if this is 4-judge panel (Sr. Judge + 3 eval judges)
+  // or 5-judge panel (Chief + 4 eval judges)
+  const is4JudgePanel = (seniorJudgeScore > 0 && evalScores.length === 3);
+  const is5JudgePanel = (seniorJudgeScore > 0 && evalScores.length === 4);
+
+  if (!seniorJudgeScore || (!is4JudgePanel && !is5JudgePanel)) {
+    return { executionAverage: 0, baseScore: 0, baseScoreApplied: false, toleranceUsed: 0, averageMarks: 0, method: null };
   }
 
-  // Calculate execution average from middle scores
-  const executionAverage = middleScores.reduce((sum, score) => sum + score, 0) / middleScores.length;
+  let middleScores, avgScore, method;
+  const sortedScores = [...evalScores].sort((a, b) => a - b);
 
-  // Get senior judge score
-  const seniorJudgeScore = judgeScores.seniorJudge || 0;
+  if (is5JudgePanel) {
+    // Standard 5-judge COP: drop high/low of 4 eval judges, average middle two
+    if (sortedScores.length !== 4) {
+      return { executionAverage: 0, baseScore: 0, baseScoreApplied: false, toleranceUsed: 0, averageMarks: 0, method: null };
+    }
+    middleScores = sortedScores.slice(1, 3);
+    method = '5_JUDGE_STANDARD_COP';
+  } else {
+    // 4-judge panel: average all 3 eval judges (no drop)
+    middleScores = sortedScores;
+    method = '4_JUDGE_AS_5_JUDGE_EQUIVALENT';
+  }
 
-  // Determine tolerance based on execution average
+  avgScore = middleScores.reduce((sum, s) => sum + s, 0) / middleScores.length;
+
+  // Tolerance check (only for 4/5-judge panels)
   let tolerance;
-  if (executionAverage >= 9.00) tolerance = 0.10;
-  else if (executionAverage >= 8.00) tolerance = 0.20;
-  else if (executionAverage >= 7.00) tolerance = 0.30;
-  else if (executionAverage >= 6.00) tolerance = 0.40;
-  else if (executionAverage >= 5.00) tolerance = 0.50;
+  if (avgScore >= 9.00) tolerance = 0.10;
+  else if (avgScore >= 8.00) tolerance = 0.20;
+  else if (avgScore >= 7.00) tolerance = 0.30;
+  else if (avgScore >= 6.00) tolerance = 0.40;
+  else if (avgScore >= 5.00) tolerance = 0.50;
   else tolerance = 1.00;
 
-  // Check if difference exceeds tolerance
-  const difference = Math.abs(executionAverage - seniorJudgeScore);
+  const difference = Math.abs(avgScore - seniorJudgeScore);
   let baseScoreApplied = false;
-  let averageMarks = executionAverage;
+  let averageMarks = avgScore;
 
-  if (seniorJudgeScore > 0 && difference > tolerance) {
-    // Apply base score (average of execution average and senior judge score)
+  if (difference > tolerance) {
     baseScoreApplied = true;
-    averageMarks = (executionAverage + seniorJudgeScore) / 2;
+    averageMarks = (avgScore + seniorJudgeScore) / 2;
   }
 
-  // COP §4 rounds averages/base scores to 3 decimals (a base score such as
-  // 9.225 must not be truncated to 2 decimals).
   return {
-    executionAverage: parseFloat(executionAverage.toFixed(3)),
+    executionAverage: parseFloat(avgScore.toFixed(3)),
     baseScore: baseScoreApplied ? parseFloat(averageMarks.toFixed(3)) : 0,
     baseScoreApplied,
     toleranceUsed: tolerance,
-    averageMarks: parseFloat(averageMarks.toFixed(3))
+    averageMarks: parseFloat(averageMarks.toFixed(3)),
+    method
   };
 }
 

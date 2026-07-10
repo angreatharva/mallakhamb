@@ -4,15 +4,18 @@
  * These tests are pure unit tests that don't require MongoDB.
  * They test the core calculation logic directly.
  *
- * Covers the algorithm of record (see plan / "Mallakhamb Judging Software.md"):
- *   - the two COP worked examples (within-tolerance vs base-score applied)
- *   - tolerance-tier boundaries (COP §3.4)
- *   - time-deduction table (COP §3.5)
- *   - slip section-ceiling rejection (COP §3.3)
+ * Covers the v2 spec panel-size branches (Section 4) and the difficulty
+ * cascade rule (Section 3.2.1).
  */
 
 const { calculateIndividualScore } = require('../../src/utils/scoring/calculation.util');
-const { validateSlipBreakdown, getTolerance, getTimeDeduction } = require('../../src/config/cop-rules');
+const {
+  validateSlipBreakdown,
+  getTolerance,
+  getTimeDeduction,
+  resolveDifficultyValue,
+  getDifficultyRequirement
+} = require('../../src/config/cop-rules');
 
 describe('CalculationService — COP aggregation', () => {
   describe('calculateCompletePlayerScore — worked examples', () => {
@@ -152,17 +155,88 @@ describe('calculateTimeDeduction — COP §3.5 tiered table', () => {
   });
 });
 
-describe('calculateCompletePlayerScore integration', () => {
-  // Test the full calculation flow including time deduction
-  it('Example 2 with overtime applies time deduction to final score', () => {
-    // This would require CalculationService, but we can test the pure util
-    // Full integration with time deduction is tested when using CalculationService.calculateCompletePlayerScore
-    // which calls calculateIndividualScore + calculateTimeDeduction
-    const utilResult = calculateIndividualScore({
-      seniorJudge: 9.40, judge1: 8.90, judge2: 9.10, judge3: 9.00, judge4: 9.50
+describe('Panel Size Branches (v2 §4)', () => {
+  describe('4.2 — 3-Judge Panel', () => {
+    it('simple average of all 3 judge totals, no base-score concept', () => {
+      const result = calculateIndividualScore({
+        panelSize: 3,
+        judge1: 8.5, judge2: 8.7, judge3: 8.9
+      });
+      expect(result.method).toBe('3_JUDGE_SIMPLE_AVERAGE');
+      expect(result.executionAverage).toBeCloseTo(8.7, 3);
+      expect(result.averageMarks).toBeCloseTo(8.7, 3);
+      expect(result.baseScoreApplied).toBe(false);
+      expect(result.toleranceUsed).toBe(0);
     });
-    // Verify base score logic works
-    expect(utilResult.baseScoreApplied).toBe(true);
-    expect(utilResult.averageMarks).toBeCloseTo(9.225, 3);
+
+    it('infers 3-judge panel when only 3 scores provided without panelSize', () => {
+      const result = calculateIndividualScore({
+        judge1: 8.0, judge2: 8.5, judge3: 9.0
+      });
+      expect(result.method).toBe('3_JUDGE_SIMPLE_AVERAGE');
+    });
+  });
+
+  describe('4.3 — 4-Judge Panel (Sr. Judge acts as Chief)', () => {
+    it('averages all 3 evaluation judges (no high/low drop)', () => {
+      const result = calculateIndividualScore({
+        panelSize: 4,
+        seniorJudge: 9.0, // acts as Chief
+        judge2: 8.5, judge3: 8.7, judge4: 9.2
+      });
+      // Note: 4-judge panel has Sr. Judge (chief) and 3 eval judges only
+      expect(result.method).toBe('4_JUDGE_AS_5_JUDGE_EQUIVALENT');
+      // avg of 8.5+8.7+9.2 = 8.8
+      expect(result.executionAverage).toBeCloseTo(8.8, 3);
+    });
+  });
+
+  describe('4.4 — 5-Judge Panel (Standard COP)', () => {
+    it('drops high/low of 4 eval judges, averages middle two', () => {
+      const result = calculateIndividualScore({
+        panelSize: 5,
+        seniorJudge: 9.4, // Chief
+        judge1: 8.9, judge2: 9.1, judge3: 9.0, judge4: 9.5
+      });
+      expect(result.method).toBe('5_JUDGE_STANDARD_COP');
+      // Sorted: 8.9, 9.0, 9.1, 9.5 -> middle two: 9.0, 9.1 -> avg = 9.05
+      expect(result.executionAverage).toBeCloseTo(9.05, 3);
+    });
+  });
+});
+
+describe('Difficulty Cascade (v2 §3.2.1)', () => {
+  it('works with Competition I required mix (A4/B6/C1)', () => {
+    const required = getDifficultyRequirement('competition_1');
+    // Performer executes {A: 0, B: 5, C: 2}
+    const result = resolveDifficultyValue({ A: 0, B: 5, C: 2 }, required);
+    // C excess (1) cascades to B, giving B pool = 6 (exact), then no B excess to cascade to A
+    // C: 1 * 0.60 = 0.60, B: 6 * 0.40 = 2.40, A: 0 * 0.20 = 0.00
+    expect(result.C).toBe(0.60);
+    expect(result.B).toBe(2.40);
+    expect(result.A).toBe(0.00);
+    expect(result.total).toBe(3.00);
+    expect(result.shortfallFlag).toBe(true); // missing A elements
+  });
+
+  it('works with Competition II/III required mix (A1/B6/C2)', () => {
+    const required = getDifficultyRequirement('competition_2');
+    // Exact match
+    const result = resolveDifficultyValue({ A: 1, B: 6, C: 2 }, required);
+    expect(result.total).toBe(3.80);
+    expect(result.shortfallFlag).toBe(false);
+  });
+
+  it('cascades excess C to B and excess B to A in multi-step cascade', () => {
+    const required = { A: 2, B: 3, C: 1 };
+    // Executes {A: 0, B: 1, C: 3} - excess C=2 cascades to B, then excess B=0
+    const result = resolveDifficultyValue({ A: 0, B: 1, C: 3 }, required);
+    // C: 1 used (capped), C excess: 2 -> B pool = 1+2=3 (exact), no B excess -> A pool = 0
+    // C: 1*0.60=0.60, B: 3*0.40=1.20, A: 0*0.20=0.00
+    expect(result.C).toBe(0.60);
+    expect(result.B).toBe(1.20);
+    expect(result.A).toBe(0.00);
+    expect(result.total).toBe(1.80);
+    expect(result.shortfallFlag).toBe(true); // missing A elements
   });
 });
