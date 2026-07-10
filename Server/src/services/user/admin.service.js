@@ -10,6 +10,7 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError, BusinessRuleError } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
+const { toCompetitionTypeSlug, validateSlipBreakdown } = require('../../config/cop-rules');
 
 class AdminService extends UserService {
   /**
@@ -1779,6 +1780,13 @@ class AdminService extends UserService {
       // Process each player score through calculation service
       const processedPlayerScores = [];
       for (const playerScore of scoreData.playerScores) {
+        // COP §3.3 — reject a slip whose breakdown exceeds the section ceilings
+        // (Difficulty ≤3.80, Combination ≤1.60, Execution ≤4.40, Bonus 0/0.20,
+        // total ≤10.00). No-op when no breakdown is supplied.
+        const capCheck = validateSlipBreakdown(playerScore.breakdown);
+        if (!capCheck.valid) {
+          throw new ValidationError(`Invalid score for ${playerScore.playerName || playerScore.playerId}: ${capCheck.error}`);
+        }
         const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore);
         processedPlayerScores.push(calculatedScore);
       }
@@ -1858,14 +1866,9 @@ class AdminService extends UserService {
 
       // Emit socket event for real-time updates
       if (this.socketManager && scoreData.gender && scoreData.ageGroup && scoreData.competitionType) {
-        // Map competition type back to frontend format for room ID
-        const competitionTypeRoomMap = {
-          'Competition I': 'competition_1',
-          'Competition II': 'competition_2',
-          'Competition III': 'competition_3'
-        };
-        const competitionTypeForRoom = competitionTypeRoomMap[scoreData.competitionType] || 'competition_1';
-        
+        // Map competition type back to frontend slug for the room ID
+        const competitionTypeForRoom = toCompetitionTypeSlug(scoreData.competitionType);
+
         const roomId = `scoring_${scoreData.gender}_${scoreData.ageGroup}_${competitionTypeForRoom}`;
         
         // Emit score update for each player score

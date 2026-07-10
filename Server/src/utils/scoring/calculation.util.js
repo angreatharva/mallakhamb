@@ -93,12 +93,14 @@ function calculateIndividualScore(judgeScores) {
     averageMarks = (executionAverage + seniorJudgeScore) / 2;
   }
 
+  // COP §4 rounds averages/base scores to 3 decimals (a base score such as
+  // 9.225 must not be truncated to 2 decimals).
   return {
-    executionAverage: parseFloat(executionAverage.toFixed(2)),
-    baseScore: baseScoreApplied ? parseFloat(averageMarks.toFixed(2)) : 0,
+    executionAverage: parseFloat(executionAverage.toFixed(3)),
+    baseScore: baseScoreApplied ? parseFloat(averageMarks.toFixed(3)) : 0,
     baseScoreApplied,
     toleranceUsed: tolerance,
-    averageMarks: parseFloat(averageMarks.toFixed(2))
+    averageMarks: parseFloat(averageMarks.toFixed(3))
   };
 }
 

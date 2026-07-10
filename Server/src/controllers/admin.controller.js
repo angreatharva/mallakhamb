@@ -10,6 +10,7 @@
 
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
+const { toCompetitionTypeDisplay } = require('../config/cop-rules');
 
 /**
  * @param {Object} container - DI container
@@ -293,15 +294,9 @@ function createAdminController(container) {
       // Handle both judge individual score submissions and admin bulk submissions
       let scoreData = { ...req.body };
       
-      // Map competition type from frontend format to database format
-      const competitionTypeMap = {
-        'competition_1': 'Competition I',
-        'competition_2': 'Competition II',
-        'competition_3': 'Competition III'
-      };
-      
-      if (scoreData.competitionType && competitionTypeMap[scoreData.competitionType]) {
-        scoreData.competitionType = competitionTypeMap[scoreData.competitionType];
+      // Map competition type from frontend slug to Score display form
+      if (scoreData.competitionType) {
+        scoreData.competitionType = toCompetitionTypeDisplay(scoreData.competitionType);
       }
       
       // If this is a judge submitting a single score (has playerId, judgeType, score)

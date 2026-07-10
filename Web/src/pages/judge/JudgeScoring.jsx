@@ -14,6 +14,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import {
+  getCombinationChecklist,
+  getDifficultyRequirement,
+  computeCombinationTotal,
+  POINT_CEILINGS,
+} from '@/utils/scoring/copRules';
 
 // Design tokens for judge theme
 const J = {
@@ -101,7 +107,7 @@ const ScoreRow = ({ label, value, max, color = J.purple }) => (
   </div>
 );
 
-const CheckRow = ({ checked, onChange, label }) => (
+const CheckRow = ({ checked, onChange, label, penalty }) => (
   <label className="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px]"
     style={{
       background: checked ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)',
@@ -113,7 +119,7 @@ const CheckRow = ({ checked, onChange, label }) => (
     </div>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     <span className="text-sm font-medium" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{label}</span>
-    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: '#EF4444' }}>-0.40</span>}
+    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: '#EF4444' }}>-{penalty.toFixed(2)}</span>}
   </label>
 );
 
@@ -146,17 +152,22 @@ const JudgeScoring = () => {
   const selectedCompetitionType = stateData?.competitionType;
   const selectedApparatus = stateData?.apparatus;
 
+  // Apparatus-specific combination checklist (COP §5.1–5.3). Defaults to Pole
+  // if no apparatus was passed. Stable for the component's lifetime.
+  const combinationChecklist = useRef(getCombinationChecklist(selectedApparatus)).current;
+
+  // Build the initial "all requirements met" checked-map for the checklist.
+  const buildInitialCombination = () => {
+    const checked = {};
+    combinationChecklist.forEach(item => { checked[item.id] = true; });
+    return { checked, total: POINT_CEILINGS.combination };
+  };
+
   const [scores, setScores] = useState({
     difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
-    combination: {
-      fullApparatusUtilization: true,
-      rightLeftExecution: true,
-      forwardBackwardFlexibility: true,
-      minimumElementCount: true,
-      total: 1.60
-    },
+    combination: buildInitialCombination(),
     execution: 0,
-    originality: 0
+    bonus: 0
   });
 
   useEffect(() => {
@@ -230,8 +241,8 @@ const JudgeScoring = () => {
 
   const resetScores = () => setScores({
     difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
-    combination: { fullApparatusUtilization: true, rightLeftExecution: true, forwardBackwardFlexibility: true, minimumElementCount: true, total: 1.60 },
-    execution: 0, originality: 0
+    combination: buildInitialCombination(),
+    execution: 0, bonus: 0
   });
 
   const calcDiffTotal = (a, b, c) => (a * 0.20) + (b * 0.40) + (c * 0.60);
@@ -243,23 +254,24 @@ const JudgeScoring = () => {
     setScores({ ...scores, difficulty: d });
   };
 
-  const handleCombination = (field) => {
-    const c = { ...scores.combination, [field]: !scores.combination[field] };
-    let deductions = 0;
-    if (!c.fullApparatusUtilization) deductions += 0.40;
-    if (!c.rightLeftExecution) deductions += 0.40;
-    if (!c.forwardBackwardFlexibility) deductions += 0.40;
-    if (!c.minimumElementCount) deductions += 0.40;
-    c.total = Math.max(0, 1.60 - deductions);
-    setScores({ ...scores, combination: c });
+  const handleCombination = (itemId) => {
+    const checked = { ...scores.combination.checked, [itemId]: !scores.combination.checked[itemId] };
+    const total = computeCombinationTotal(selectedApparatus, checked);
+    setScores({ ...scores, combination: { checked, total } });
   };
 
-  const getRequiredElements = () =>
-    selectedCompetitionType === 'competition_1' ? { a: 4, b: 6, c: 1 } : { a: 1, b: 6, c: 2 };
+  const req = getDifficultyRequirement(selectedCompetitionType);
+
+  // Difficulty mix warning (COP §4.1) — non-blocking. Fires when any entered
+  // count differs from the required mix for this competition type.
+  const difficultyMismatch =
+    (scores.difficulty.aClass || 0) !== req.A ||
+    (scores.difficulty.bClass || 0) !== req.B ||
+    (scores.difficulty.cClass || 0) !== req.C;
 
   const calcFinal = () => (
     scores.difficulty.total + scores.combination.total +
-    parseFloat(scores.execution || 0) + parseFloat(scores.originality || 0)
+    parseFloat(scores.execution || 0) + parseFloat(scores.bonus || 0)
   ).toFixed(2);
 
   const submitScore = async () => {
@@ -276,7 +288,14 @@ const JudgeScoring = () => {
         ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         apparatus: selectedApparatus,
-        breakdown: { difficulty: scores.difficulty, combination: scores.combination, execution: parseFloat(scores.execution || 0), originality: parseFloat(scores.originality || 0) }
+        breakdown: {
+          difficulty: scores.difficulty,
+          combination: { total: scores.combination.total, checked: scores.combination.checked },
+          execution: parseFloat(scores.execution || 0),
+          // DB key stays `originality` (no migration); it now carries the COP Bonus (0 or 0.20).
+          originality: parseFloat(scores.bonus || 0),
+          bonus: parseFloat(scores.bonus || 0)
+        }
       };
       await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
@@ -305,7 +324,6 @@ const JudgeScoring = () => {
 
   if (!judgeInfo || !selectedPlayer) return null;
 
-  const req = getRequiredElements();
   const finalScore = parseFloat(calcFinal());
 
   return (
@@ -376,7 +394,7 @@ const JudgeScoring = () => {
               <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
             </div>
             <div className="p-3 rounded-xl text-xs" style={{ background: 'rgba(168,85,247,0.08)', color: 'rgba(255,255,255,0.5)' }}>
-              Required: A{req.a} (0.20)  B{req.b} (0.40)  C{req.c} (0.60)
+              Required: A{req.A} (0.20)  B{req.B} (0.40)  C{req.C} (0.60)
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[['aClass', 'A Class', '0.20'], ['bClass', 'B Class', '0.40'], ['cClass', 'C Class', '0.60']].map(([key, lbl, mult]) => (
@@ -384,6 +402,13 @@ const JudgeScoring = () => {
                   onChange={e => handleDifficulty(key, e.target.value)} />
               ))}
             </div>
+            {difficultyMismatch && (
+              <div className="p-2.5 rounded-lg text-xs flex items-start gap-2"
+                style={{ background: 'rgba(245,158,11,0.1)', color: J.amber, border: '1px solid rgba(245,158,11,0.25)' }}>
+                <span aria-hidden="true">⚠</span>
+                <span>Element mix differs from the required A{req.A}/B{req.B}/C{req.C} for this competition. You can still submit.</span>
+              </div>
+            )}
             <div className="flex justify-end">
               <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
                 {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
@@ -395,17 +420,15 @@ const JudgeScoring = () => {
           <div className="rounded-2xl border p-5 space-y-3"
             style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-white text-sm">2. Combination</h3>
+              <div>
+                <h3 className="font-black text-white text-sm">2. Combination</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{selectedApparatus || 'Pole Mallakhamb'}</p>
+              </div>
               <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
             </div>
-            {[
-              ['fullApparatusUtilization', 'Full apparatus utilization'],
-              ['rightLeftExecution', 'Right & left side execution'],
-              ['forwardBackwardFlexibility', 'Forward & backward flexibility'],
-              ['minimumElementCount', 'Minimum element count met'],
-            ].map(([field, label]) => (
-              <CheckRow key={field} checked={scores.combination[field]}
-                onChange={() => handleCombination(field)} label={label} />
+            {combinationChecklist.map((item) => (
+              <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
+                onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
             ))}
             <div className="flex justify-end pt-1">
               <span className="text-lg font-black" style={{ color: J.purple }}>
@@ -425,15 +448,30 @@ const JudgeScoring = () => {
               onChange={e => { const v = Math.max(0, Math.min(4.40, parseFloat(e.target.value) || 0)); setScores({ ...scores, execution: v }); }} />
           </div>
 
-          {/* 4. Originality */}
+          {/* 4. Bonus */}
           <div className="rounded-2xl border p-5"
             style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-white text-sm">4. Originality</h3>
-              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 0.20</span>
+              <h3 className="font-black text-white text-sm">4. Bonus</h3>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>0 or 0.20</span>
             </div>
-            <ScoreInput label="Originality Score" value={scores.originality} max={0.20} step={0.05}
-              onChange={e => { const v = Math.max(0, Math.min(0.20, parseFloat(e.target.value) || 0)); setScores({ ...scores, originality: v }); }} />
+            <div className="grid grid-cols-2 gap-3">
+              {[['None', 0], ['Awarded (+0.20)', POINT_CEILINGS.bonus]].map(([label, val]) => {
+                const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
+                return (
+                  <button key={label} type="button"
+                    onClick={() => setScores({ ...scores, bonus: val })}
+                    className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[52px]"
+                    style={{
+                      background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
+                      borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
+                      color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                    }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Final score card */}
@@ -456,7 +494,7 @@ const JudgeScoring = () => {
               <ScoreRow label="Difficulty" value={scores.difficulty.total} max="3.80" />
               <ScoreRow label="Combination" value={scores.combination.total} max="1.60" />
               <ScoreRow label="Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
-              <ScoreRow label="Originality" value={parseFloat(scores.originality || 0)} max="0.20" />
+              <ScoreRow label="Bonus" value={parseFloat(scores.bonus || 0)} max="0.20" />
             </div>
           </motion.div>
 

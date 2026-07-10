@@ -25,6 +25,10 @@ const {
   getTopTeams,
   getTopPlayers
 } = require('../../utils/scoring/ranking.util');
+const {
+  TIME_LIMIT_SECONDS,
+  getTimeDeduction
+} = require('../../config/cop-rules');
 
 class CalculationService {
   /**
@@ -38,6 +42,11 @@ class CalculationService {
   /**
    * Calculate execution average from judge scores
    * Removes highest and lowest scores from judges 1-4, then averages the remaining two
+   * @deprecated The live scoring path now uses calculateIndividualScore
+   *   (utils/scoring/calculation.util) via calculateCompletePlayerScore, which
+   *   filters unsubmitted judges and applies the COP tiered tolerance. Retained
+   *   for backward compatibility only. Note: this method counts missing judges
+   *   as 0, which is NOT COP-correct for partial panels.
    * @param {Object} judgeScores - Judge scores object
    * @returns {number} Execution average
    */
@@ -96,7 +105,8 @@ class CalculationService {
         finalScore
       });
 
-      return Number(finalScore.toFixed(2));
+      // 3 decimals to preserve COP base scores (e.g. 9.225) through deductions.
+      return Number(finalScore.toFixed(3));
     } catch (error) {
       this.logger.error('Calculate final score error', {
         playerScore,
@@ -193,14 +203,15 @@ class CalculationService {
   }
 
   /**
-   * Calculate time deduction based on performance time
-   * Deduction applies if time exceeds 90 seconds
+   * Calculate time deduction based on performance time.
+   * COP §3.5 — a tiered penalty applies to the overage beyond the 90s limit:
+   *   overage ≤3s → 0.20, ≤5s → 0.30, ≤9s → 0.40, ≥10s → 0.50.
+   * (Superseded the earlier per-second 0.1/sec rule, which was not COP.)
    * @param {string|number} time - Time in seconds or "MM:SS" format
    * @param {number} maxTime - Maximum allowed time in seconds (default: 90)
-   * @param {number} deductionRate - Deduction per second over limit (default: 0.1)
    * @returns {number} Time deduction
    */
-  calculateTimeDeduction(time, maxTime = 90, deductionRate = 0.1) {
+  calculateTimeDeduction(time, maxTime = TIME_LIMIT_SECONDS) {
     try {
       let timeInSeconds = 0;
 
@@ -220,11 +231,10 @@ class CalculationService {
         timeInSeconds = time;
       }
 
-      // Calculate deduction
-      if (timeInSeconds > maxTime) {
-        const overtime = timeInSeconds - maxTime;
-        const deduction = overtime * deductionRate;
-        
+      const overtime = timeInSeconds - maxTime;
+      const deduction = getTimeDeduction(overtime);
+
+      if (deduction > 0) {
         this.logger.debug('Time deduction calculated', {
           time,
           timeInSeconds,
@@ -232,16 +242,13 @@ class CalculationService {
           overtime,
           deduction
         });
-
-        return Number(deduction.toFixed(2));
       }
 
-      return 0;
+      return deduction;
     } catch (error) {
       this.logger.error('Calculate time deduction error', {
         time,
         maxTime,
-        deductionRate,
         error: error.message
       });
       return 0;
@@ -251,6 +258,10 @@ class CalculationService {
   /**
    * Check if base score should be applied based on tolerance
    * Base score is used when the difference between highest and lowest execution scores exceeds tolerance
+   * @deprecated Superseded by the COP tiered-tolerance logic in
+   *   calculateIndividualScore (utils/scoring/calculation.util), which compares
+   *   the execution average against the Senior (Chief) judge — not the raw J1–J4
+   *   range against a flat 0.5. Retained for backward compatibility only.
    * @param {Object} judgeScores - Judge scores object
    * @param {number} tolerance - Tolerance threshold (default: 0.5)
    * @returns {Object} { shouldApplyBase: boolean, tolerance: number, range: number }
@@ -307,36 +318,28 @@ class CalculationService {
    */
   calculateCompletePlayerScore(playerScoreData, options = {}) {
     try {
-      const {
-        tolerance = 0.5,
-        maxTime = 90,
-        timeDeductionRate = 0.1
-      } = options;
+      const { maxTime = TIME_LIMIT_SECONDS } = options;
 
       const result = { ...playerScoreData };
 
-      // Calculate execution average
+      // COP §2.1.3 / §3.4 — aggregate the 4+1 panel: drop the highest and lowest
+      // of the 4 execution judges, average the middle two, then apply the tiered
+      // tolerance check against the Senior (Chief) judge. When the Chief's slip
+      // differs from the execution average by more than the allowed tolerance,
+      // the base score = (executionAverage + chief) / 2 is used instead.
+      // Single source of truth: calculateIndividualScore (utils/scoring).
       if (result.judgeScores) {
-        result.executionAverage = this.calculateExecutionAverage(result.judgeScores);
+        const cop = calculateIndividualScore(result.judgeScores);
+        result.executionAverage = cop.executionAverage;
+        result.baseScore = cop.baseScore;
+        result.baseScoreApplied = cop.baseScoreApplied;
+        result.toleranceUsed = cop.toleranceUsed;
+        result.averageMarks = cop.averageMarks;
       }
 
-      // Check if base score should be applied
-      if (result.judgeScores) {
-        const baseScoreCheck = this.shouldApplyBaseScore(result.judgeScores, tolerance);
-        result.baseScoreApplied = baseScoreCheck.shouldApplyBase;
-        result.toleranceUsed = tolerance;
-
-        // Set average marks based on whether base score is applied
-        if (result.baseScoreApplied && result.baseScore !== undefined) {
-          result.averageMarks = result.baseScore;
-        } else {
-          result.averageMarks = result.executionAverage || 0;
-        }
-      }
-
-      // Calculate time deduction if time is provided
+      // Calculate time deduction if time is provided (COP §3.5 tiered table)
       if (result.time) {
-        result.deduction = this.calculateTimeDeduction(result.time, maxTime, timeDeductionRate);
+        result.deduction = this.calculateTimeDeduction(result.time, maxTime);
       }
 
       // Calculate final score

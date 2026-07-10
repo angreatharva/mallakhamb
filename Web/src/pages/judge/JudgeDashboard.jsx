@@ -14,6 +14,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
+import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 
 // Design tokens for judge theme
 const J = {
@@ -173,7 +174,13 @@ const JudgeDashboard = () => {
 
   if (!judgeInfo) return null;
 
-  const needsApparatus = selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]?.length > 0;
+  // Apparatus options for the selected competition type, filtered by the COP
+  // gender rule (Women's competitions exclude Hanging Mallakhamb, §11 / 1.8.2).
+  const apparatusOptions = (
+    (selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]) || []
+  ).filter(app => isApparatusAllowedForGender(app, judgeInfo.gender));
+
+  const needsApparatus = apparatusOptions.length > 0;
   const isApparatusSelected = !needsApparatus || !!selectedApparatus;
   const isSelectionComplete = selectedCompetitionType && isApparatusSelected;
 
@@ -446,7 +453,7 @@ const JudgeDashboard = () => {
                       <div className="pt-2">
                         <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {judgeInfo.competition.apparatusConfig[selectedCompetitionType].map(app => (
+                          {apparatusOptions.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
                               <span>{app}</span>
                             </SelectBtn>

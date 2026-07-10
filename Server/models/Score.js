@@ -179,6 +179,19 @@ const scoreSchema = new mongoose.Schema({
     default: false,
     required: true
   },
+  // Panel / scorer metadata written by the save + lock/unlock/recalculate flows.
+  // Declared explicitly so Mongoose strict mode persists them (previously they
+  // were written by admin.service but silently stripped).
+  judgeDetails: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+  lockedAt: { type: Date, default: null },
+  unlockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+  unlockedAt: { type: Date, default: null },
+  recalculatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+  recalculatedAt: { type: Date, default: null },
   playerScores: [playerScoreSchema],
   createdAt: {
     type: Date,
@@ -196,8 +209,11 @@ scoreSchema.pre('save', function(next) {
   next();
 });
 
-// Create indexes for better query performance
-scoreSchema.index({ teamId: 1, gender: 1, ageGroup: 1, competition: 1 });
+// Create indexes for better query performance.
+// This key is the upsert identity in admin.service.saveScores, so it must be
+// unique. NOTE: if any existing DB holds duplicate (teamId, gender, ageGroup,
+// competition) documents, dedupe them BEFORE this unique index can build.
+scoreSchema.index({ teamId: 1, gender: 1, ageGroup: 1, competition: 1 }, { unique: true });
 scoreSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Score', scoreSchema);
