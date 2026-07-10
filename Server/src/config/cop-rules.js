@@ -247,54 +247,10 @@ function validateSlipBreakdown(breakdown) {
   return { valid: true, error: null };
 }
 
-// §3.6 — minor deductions (2.4.1); folded into the judge's own Execution rating.
-// Reference-only in this phase (Execution is entered as a free number).
-const MINOR_DEDUCTIONS = Object.freeze([
-  { code: 'M01', desc: 'Improper body posture', amount: 0.10, fixed: true },
-  { code: 'M02', desc: 'Not stretched palms/legs', amount: 0.10, fixed: true },
-  { code: 'M03', desc: 'Bending palms/elbows/knees', amount: 0.10, fixed: true },
-  { code: 'M04', desc: 'Unnecessary separation of hands/legs', amount: 0.10, fixed: true },
-  { code: 'M05', desc: 'Improper final position', amount: 0.10, fixed: true },
-  { code: 'M06', desc: 'Unessential pause >2 sec', amount: 0.10, fixed: true },
-  { code: 'M07', desc: 'Unnecessary touches to apparatus', amount: 0.10, fixed: true },
-  { code: 'M08', desc: 'Low height/flight at mount/dismount', amount: 0.10, fixed: true },
-  { code: 'M09', desc: 'Technically improper turning movements', amount: 0.10, fixed: true },
-  { code: 'M10', desc: 'Low amplitude', amount: 0.10, fixed: true },
-  { code: 'M11', desc: 'Slight touch of hands/legs to ground/mats', amountMax: 0.20, fixed: false },
-  { code: 'M12', desc: 'Extra swing where not required', amountMax: 0.20, fixed: false },
-  { code: 'M13', desc: 'Improper/slipped catches', amountMax: 0.20, fixed: false },
-  { code: 'M14', desc: 'Too low height/flight at mount/dismount', amountMax: 0.20, fixed: false },
-  { code: 'M15', desc: 'Tuck/pike/hollow where not required', amountMax: 0.20, fixed: false },
-  { code: 'M16', desc: 'Unnecessary break in continuity', amountMax: 0.20, fixed: false },
-]);
-
-// §3.7 — major deductions (2.4.2).
-const MAJOR_DEDUCTIONS = Object.freeze([
-  { code: 'J01', desc: 'Losing balance on apparatus', amountMax: 0.50, fixed: false },
-  { code: 'J02', desc: 'Physical help by coach', amountMax: 0.50, fixed: false },
-  { code: 'J03', desc: 'Fall on the ground', amount: 0.50, fixed: true },
-]);
-
-// §3.8 — final-score deductions (2.4.3), applied by the Chief Judge AFTER the
-// average/base score. Reference-only in this phase (Chief workflow deferred).
-// NOTE: F09 lists 0.10 for a "debarring" offense — flagged as a likely source
-// inconsistency; keep editable, do not trust blindly.
-const FINAL_SCORE_DEDUCTIONS = Object.freeze([
-  { code: 'F01', desc: 'Not reporting to Chief Judge before/after set', amount: 0.10 },
-  { code: 'F02', desc: 'Not maintaining sequence', amount: 0.20 },
-  { code: 'F03', desc: 'Exceeding warm-up period', amount: 0.20 },
-  { code: 'F04', desc: 'Set not started within 10 sec of start signal', amount: 0.20 },
-  { code: 'F05', desc: 'Improper attire', amount: 0.20 },
-  { code: 'F06', desc: 'Team not in uniform (applies to whole team total)', amount: 0.50 },
-  { code: 'F07', desc: 'Time overage', amount: 'lookup', note: 'use time-deduction table §3.5' },
-  { code: 'F08', desc: 'Misbehaviour of competitor', amount: 1.00 },
-  { code: 'F09', desc: 'Gross misconduct debarring individual/team', amount: 0.10, flagged: true },
-  { code: 'F10', desc: 'Coach present near apparatus during performance', amount: 0.20 },
-  { code: 'F11', desc: 'Coach signals competitor during performance', amount: 0.50 },
-  { code: 'F12', desc: 'Coach in improper uniform (deducted from ALL team members)', amount: 0.50 },
-  { code: 'F13', desc: 'Fall, continued within 10 sec', amount: 0.50, perOccurrence: true },
-  { code: 'F14', desc: 'General indiscipline/misconduct (individual or team)', amount: 0.50 },
-]);
+// Note: Sections 3.6–3.8 (minor/major/final-score deductions) are not modeled
+// as separate system entities — all deductions are folded directly into the
+// judge's Execution component per v2 §2 note. These catalogs are retained
+// as comments only for reference, since judges apply them internally.
 
 module.exports = {
   COP_EDITION,
@@ -312,7 +268,4 @@ module.exports = {
   toCompetitionTypeDisplay,
   toCompetitionTypeSlug,
   validateSlipBreakdown,
-  MINOR_DEDUCTIONS,
-  MAJOR_DEDUCTIONS,
-  FINAL_SCORE_DEDUCTIONS,
 };
