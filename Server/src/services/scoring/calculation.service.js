@@ -86,26 +86,26 @@ class CalculationService {
 
   /**
    * Calculate final score for a player
-   * Final score = averageMarks - deduction - otherDeduction
+   * Per v2 §2 note: All deductions are folded into the judge's Execution score,
+   * so there is NO separate system-level deduction step. The submitted total on
+   * each JudgeSlip is the judge's final say. The system only averages/reconciles.
    * @param {Object} playerScore - Player score object
-   * @returns {number} Final score
+   * @returns {number} Final score (same as averageMarks since no deductions applied)
    */
   calculateFinalScore(playerScore) {
     try {
+      // Per v2 §2 note: All deductions are folded into the judge's Execution score,
+      // so there is NO separate system-level deduction step.
       const averageMarks = playerScore.averageMarks || 0;
-      const deduction = playerScore.deduction || 0;
-      const otherDeduction = playerScore.otherDeduction || 0;
 
-      const finalScore = Math.max(0, averageMarks - deduction - otherDeduction);
+      const finalScore = Math.max(0, averageMarks);
 
-      this.logger.debug('Final score calculated', {
+      this.logger.debug('Final score calculated (v2: no post-average deductions)', {
         averageMarks,
-        deduction,
-        otherDeduction,
         finalScore
       });
 
-      // 3 decimals to preserve COP base scores (e.g. 9.225) through deductions.
+      // 3 decimals to preserve COP base scores (e.g. 9.225).
       return Number(finalScore.toFixed(3));
     } catch (error) {
       this.logger.error('Calculate final score error', {
@@ -203,13 +203,12 @@ class CalculationService {
   }
 
   /**
-   * Calculate time deduction based on performance time.
-   * COP §3.5 — a tiered penalty applies to the overage beyond the 90s limit:
-   *   overage ≤3s → 0.20, ≤5s → 0.30, ≤9s → 0.40, ≥10s → 0.50.
-   * (Superseded the earlier per-second 0.1/sec rule, which was not COP.)
+   * Calculate time deduction reference — judges apply this within their own
+   * Execution score per v2 §3.5. This is NOT a system-level deduction step.
+   * Time overage penalty table is shown to judges as reference table only.
    * @param {string|number} time - Time in seconds or "MM:SS" format
    * @param {number} maxTime - Maximum allowed time in seconds (default: 90)
-   * @returns {number} Time deduction
+   * @returns {number} Time deduction value (for UI reference)
    */
   calculateTimeDeduction(time, maxTime = TIME_LIMIT_SECONDS) {
     try {
@@ -337,20 +336,20 @@ class CalculationService {
         result.averageMarks = cop.averageMarks;
       }
 
-      // Calculate time deduction if time is provided (COP §3.5 tiered table)
+      // Calculate time deduction reference (for UI display only; v2 §3.5 says judges apply it)
       if (result.time) {
-        result.deduction = this.calculateTimeDeduction(result.time, maxTime);
+        result.deductionReference = this.calculateTimeDeduction(result.time, maxTime);
       }
 
-      // Calculate final score
+      // Calculate final score (v2 §2: all deductions folded into judge's Execution score)
       result.finalScore = this.calculateFinalScore(result);
 
-      this.logger.debug('Complete player score calculated', {
+      this.logger.debug('Complete player score calculated (v2)', {
         playerId: result.playerId,
         executionAverage: result.executionAverage,
         baseScoreApplied: result.baseScoreApplied,
         averageMarks: result.averageMarks,
-        deduction: result.deduction,
+        deductionReference: result.deductionReference,
         finalScore: result.finalScore
       });
 
@@ -412,16 +411,14 @@ class CalculationService {
         // Calculate individual score with tolerance
         const scoreResult = calculateIndividualScore(playerData.judgeScores);
 
-        // Calculate final score with deductions
-        const finalScore = Math.max(
-          0,
-          scoreResult.averageMarks - (playerData.deduction || 0) - (playerData.otherDeduction || 0)
-        );
+        // v2 §2: All deductions are folded into the judge's Execution score,
+        // so finalScore = averageMarks (no deduction step)
+        const finalScore = Math.max(0, scoreResult.averageMarks);
 
         return {
           ...playerData,
           ...scoreResult,
-          finalScore: parseFloat(finalScore.toFixed(2))
+          finalScore: parseFloat(finalScore.toFixed(3))
         };
       });
 
