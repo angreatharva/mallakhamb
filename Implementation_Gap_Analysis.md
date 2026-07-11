@@ -22,6 +22,12 @@ The most significant deviations from the specification are found in the data mod
 - **Spec:** Each `Performance` should have an array of `JudgeSlip` entities (one per judge). Each slip contains its own difficulty, combination, execution, and bonus scores.
 - **Current Implementation:** The `playerScoreSchema` inside `Score.js` stores only **one** unified `scoreBreakdown` (Difficulty, Combination, Execution, Originality) per player performance, rather than an array of individual `JudgeSlip` breakdowns. It only stores a simple map of final totals for the judges (`judgeScores: { seniorJudge, judge1, judge2, judge3, judge4 }`). This prevents individual judges from submitting their own detailed score breakdowns.
 
+  **Important note on 4-judge panels (v2 §4.3):** Per the spec, a 4-judge panel has:
+  - Sr. Judge = acts as Chief Judge (fills the Chief role)
+  - J2, J3, J4 = the 3 evaluation judges (J1 is NOT used)
+  - No high/low drop since there are only 3 evaluation judges
+  - The same algorithm applies, but with `drop_high_low=false`
+
 ### Missing `ElementSelection` Entity
 - **Spec:** Judges should select specific elements from the Element Bank (e.g., A-class mounts, B-class acrobatic elements) which are stored as `ElementSelection` rows on the performance.
 - **Current Implementation:** The system only stores the raw count of executed elements (`aClass`, `bClass`, `cClass` inside `scoreBreakdown.difficulty`). It does not store which specific elements were performed.
