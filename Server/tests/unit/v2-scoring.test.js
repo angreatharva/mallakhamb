@@ -175,21 +175,21 @@ describe('Time Deduction Table', () => {
 // 6. Difficulty Cascade (v2 §3.2.1 worked example)
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Difficulty Cascade (C→B→A)', () => {
-  test('Competition I: {A:0, B:5, C:2} → total 3.00 (spec worked example)', () => {
+  test('Competition I: {A:0, B:5, C:2} → total 3.20 (C keeps 0.60 value when filling B slot)', () => {
     // Required: A:4, B:6, C:1
-    // Step 1 — C: required 1, executed 2. c_used=1 (→0.60), c_excess=1
-    // Step 2 — B: pool=5+1=6, required 6. b_used=6 (→2.40), b_excess=0
-    // Step 3 — A: pool=0+0=0, required 4. a_used=0 (→0.00). shortfall=TRUE
-    // Total = 0.60 + 2.40 + 0.00 = 3.00
+    // Step 1 — C: required 1, executed 2. cInC=1, cExcess=1
+    // Step 2 — B: 5 orig B fill 5 of 6 slots, 1 excess C fills 1 more → bSlotsFilled=6
+    // Step 3 — A: 0 orig A → shortfall=TRUE
+    // Points: C=(1+1)*0.60=1.20, B=5*0.40=2.00, A=0 → total=3.20
     const result = resolveDifficultyValue(
       { A: 0, B: 5, C: 2 },
       { A: 4, B: 6, C: 1 }
     );
 
-    expect(result.C).toBeCloseTo(0.60, 2);
-    expect(result.B).toBeCloseTo(2.40, 2);
+    expect(result.C).toBeCloseTo(1.20, 2);
+    expect(result.B).toBeCloseTo(2.00, 2);
     expect(result.A).toBeCloseTo(0.00, 2);
-    expect(result.total).toBeCloseTo(3.00, 2);
+    expect(result.total).toBeCloseTo(3.20, 2);
     expect(result.shortfallFlag).toBe(true);
   });
 
@@ -213,21 +213,20 @@ describe('Difficulty Cascade (C→B→A)', () => {
     expect(result.shortfallFlag).toBe(false);
   });
 
-  test('excess C cascades to B, excess B cascades to A', () => {
+  test('excess C cascades to B then A, keeping C value — capped at 3.80', () => {
     // Competition II/III required: A:1, B:6, C:2
     // Executed: A:0, B:4, C:5
-    // Step 1 — C: c_used=2 (→1.20), c_excess=3
-    // Step 2 — B: pool=4+3=7, b_used=6 (→2.40), b_excess=1
-    // Step 3 — A: pool=0+1=1, a_used=1 (→0.20), no shortfall on A
-    // Total = 1.20 + 2.40 + 0.20 = 3.80, shortfall=false (all met!)
+    // cInC=2, cExcess=3. bInB=4, cInB=2 (fills 2 empty B slots), cExcess=1.
+    // aInA=0, cInA=1 (fills 1 of 1 A slot).
+    // C=(2+2+1)*0.60=3.00, B=4*0.40=1.60, A=0 → raw=4.60, capped to 3.80
     const result = resolveDifficultyValue(
       { A: 0, B: 4, C: 5 },
       { A: 1, B: 6, C: 2 }
     );
 
-    expect(result.C).toBeCloseTo(1.20, 2);
-    expect(result.B).toBeCloseTo(2.40, 2);
-    expect(result.A).toBeCloseTo(0.20, 2);
+    expect(result.C).toBeCloseTo(3.00, 2);
+    expect(result.B).toBeCloseTo(1.60, 2);
+    expect(result.A).toBeCloseTo(0.00, 2);
     expect(result.total).toBeCloseTo(3.80, 2);
     expect(result.shortfallFlag).toBe(false);
   });

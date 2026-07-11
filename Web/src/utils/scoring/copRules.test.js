@@ -82,15 +82,17 @@ describe('copRules — gender apparatus rule', () => {
 });
 
 describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
-  it('cascades excess C to B, excess B to A', () => {
+  it('cascades excess C to B, keeping C value (0.60)', () => {
     // Competition I required: A4 B6 C1; executed: A0 B5 C2
     const required = getDifficultyRequirement('competition_1');
     const result = resolveDifficultyValue({ A: 0, B: 5, C: 2 }, required);
-    // C: 1*0.60=0.60, B: (5+1)*0.40=2.40, A: 0 (shortfall)
-    expect(result.C).toBe(0.60);
-    expect(result.B).toBe(2.40);
+    // C: 2 elements × 0.60 = 1.20 (1 in C slot, 1 filling B slot)
+    // B: 5 elements × 0.40 = 2.00
+    // A: 0
+    expect(result.C).toBe(1.20);
+    expect(result.B).toBe(2.00);
     expect(result.A).toBe(0.00);
-    expect(result.total).toBe(3.00);
+    expect(result.total).toBe(3.20);
     expect(result.shortfallFlag).toBe(true);
   });
 
@@ -99,5 +101,22 @@ describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
     const result = resolveDifficultyValue({ A: 4, B: 6, C: 1 }, required);
     expect(result.total).toBe(3.80);
     expect(result.shortfallFlag).toBe(false);
+  });
+
+  it('caps via cascade — A4 B4 C2 for Comp I gives 3.60, not 3.40', () => {
+    const required = getDifficultyRequirement('competition_1');
+    const result = resolveDifficultyValue({ A: 4, B: 4, C: 2 }, required);
+    // C: 2 × 0.60 = 1.20 (1 in C, 1 fills B), B: 4 × 0.40 = 1.60, A: 4 × 0.20 = 0.80
+    expect(result.C).toBe(1.20);
+    expect(result.B).toBe(1.60);
+    expect(result.A).toBe(0.80);
+    expect(result.total).toBe(3.60);
+  });
+
+  it('discards excess when all slots are full — A4 B6 C2 stays 3.80', () => {
+    const required = getDifficultyRequirement('competition_1');
+    const result = resolveDifficultyValue({ A: 4, B: 6, C: 2 }, required);
+    // 1 C in slot + 0 cascaded (B full, A full) → extra C discarded
+    expect(result.total).toBe(3.80);
   });
 });

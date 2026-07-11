@@ -137,30 +137,52 @@ export function computeCombinationTotal(apparatus, checkedById) {
 
 /**
  * Resolve difficulty point value using strict C→B→A cascade (v2 §3.2.1).
- * When element counts differ from requirements, excess C cascades to B,
- * excess B cascades to A. A is the floor of the hierarchy.
+ *
+ * When element counts differ from requirements, excess higher-class elements
+ * cascade downward to fill lower-class slots. Crucially, each element retains
+ * its ORIGINAL class value — a C element filling a B slot still scores 0.60,
+ * not 0.40. The cascade priority follows the hierarchy: C → B → A.
  */
 export function resolveDifficultyValue(counts, required) {
-  const cUsed = Math.min(counts?.C || 0, required?.C || 0);
-  const cExcess = Math.max(0, (counts?.C || 0) - (required?.C || 0));
+  const cCount = counts?.C || 0;
+  const bCount = counts?.B || 0;
+  const aCount = counts?.A || 0;
+  const cReq = required?.C || 0;
+  const bReq = required?.B || 0;
+  const aReq = required?.A || 0;
 
-  const bPool = (counts?.B || 0) + cExcess;
-  const bUsed = Math.min(bPool, required?.B || 0);
-  const bExcess = Math.max(0, bPool - (required?.B || 0));
+  // Step 1: Fill C slots with C elements
+  const cInC = Math.min(cCount, cReq);
+  let cExcess = cCount - cInC;
 
-  const aPool = (counts?.A || 0) + bExcess;
-  const aUsed = Math.min(aPool, required?.A || 0);
+  // Step 2: Fill B slots — original B first, then excess C (keeps C value)
+  const bInB = Math.min(bCount, bReq);
+  const bSlotsLeft = bReq - bInB;
+  const cInB = Math.min(cExcess, bSlotsLeft);
+  cExcess -= cInB;
+  const bExcess = bCount - bInB;          // original B that didn't fit
 
-  const cPoints = cUsed * ELEMENT_CLASS_VALUES.C;
-  const bPoints = bUsed * ELEMENT_CLASS_VALUES.B;
-  const aPoints = aUsed * ELEMENT_CLASS_VALUES.A;
+  // Step 3: Fill A slots — original A first, then excess C, then excess B
+  const aInA = Math.min(aCount, aReq);
+  let aSlotsLeft = aReq - aInA;
+  const cInA = Math.min(cExcess, aSlotsLeft);
+  aSlotsLeft -= cInA;
+  const bInA = Math.min(bExcess, aSlotsLeft);
+
+  // Points — each element scored at its ORIGINAL class value
+  const cPoints = (cInC + cInB + cInA) * ELEMENT_CLASS_VALUES.C;
+  const bPoints = (bInB + bInA) * ELEMENT_CLASS_VALUES.B;
+  const aPoints = aInA * ELEMENT_CLASS_VALUES.A;
+
+  const bSlotsFilled = bInB + cInB;
+  const aSlotsFilled = aInA + cInA + bInA;
 
   return {
     C: Number(cPoints.toFixed(2)),
     B: Number(bPoints.toFixed(2)),
     A: Number(aPoints.toFixed(2)),
-    total: Number((cPoints + bPoints + aPoints).toFixed(2)),
-    shortfallFlag: (cUsed < (required?.C || 0)) || (bUsed < (required?.B || 0)) || (aUsed < (required?.A || 0)),
-    counts: { C: cUsed, B: bUsed, A: aUsed }
+    total: Math.min(Number((cPoints + bPoints + aPoints).toFixed(2)), POINT_CEILINGS.difficulty),
+    shortfallFlag: (cInC < cReq) || (bSlotsFilled < bReq) || (aSlotsFilled < aReq),
+    counts: { C: cInC + cInB + cInA, B: bInB + bInA, A: aInA }
   };
 }

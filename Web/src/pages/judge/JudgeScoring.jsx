@@ -18,6 +18,7 @@ import {
   getCombinationChecklist,
   getDifficultyRequirement,
   computeCombinationTotal,
+  resolveDifficultyValue,
   POINT_CEILINGS,
 } from '@/utils/scoring/copRules';
 
@@ -93,6 +94,41 @@ const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
           placeholder="0.00"
         />
       </motion.div>
+    </div>
+  );
+};
+
+const Stepper = ({ label, hint, value, onChange, min = 0 }) => {
+  const dec = () => onChange(Math.max(min, value - 1));
+  const inc = () => onChange(value + 1);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>{label}</label>
+        {hint && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{hint}</span>}
+      </div>
+      <div className="flex items-center gap-0 rounded-xl border overflow-hidden"
+        style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
+        <motion.button type="button" onClick={dec} aria-label={`Decrease ${label}`}
+          className="flex items-center justify-center flex-shrink-0 text-xl font-black select-none"
+          style={{ width: 44, height: 52, color: value <= min ? 'rgba(255,255,255,0.15)' : J.purpleLight,
+            background: 'rgba(255,255,255,0.04)', borderRight: '1px solid rgba(255,255,255,0.08)' }}
+          whileTap={value > min ? { scale: 0.9 } : {}}
+          disabled={value <= min}>
+          −
+        </motion.button>
+        <span className="flex-1 text-center text-2xl font-black py-2 select-none"
+          style={{ color: '#fff', minWidth: 0 }}>
+          {value}
+        </span>
+        <motion.button type="button" onClick={inc} aria-label={`Increase ${label}`}
+          className="flex items-center justify-center flex-shrink-0 text-xl font-black select-none"
+          style={{ width: 44, height: 52, color: J.purpleLight,
+            background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
+          whileTap={{ scale: 0.9 }}>
+          +
+        </motion.button>
+      </div>
     </div>
   );
 };
@@ -245,12 +281,16 @@ const JudgeScoring = () => {
     execution: 0, bonus: 0
   });
 
-  const calcDiffTotal = (a, b, c) => (a * 0.20) + (b * 0.40) + (c * 0.60);
-
   const handleDifficulty = (cls, val) => {
     const n = parseInt(val) || 0;
     const d = { ...scores.difficulty, [cls]: n };
-    d.total = calcDiffTotal(d.aClass, d.bClass, d.cClass);
+    // Use C→B→A cascade: excess higher-class elements fill lower-class slots
+    const resolved = resolveDifficultyValue(
+      { A: d.aClass, B: d.bClass, C: d.cClass },
+      req
+    );
+    // Hard-cap at the COP difficulty ceiling (3.80)
+    d.total = Math.min(resolved.total, POINT_CEILINGS.difficulty);
     setScores({ ...scores, difficulty: d });
   };
 
@@ -398,8 +438,8 @@ const JudgeScoring = () => {
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[['aClass', 'A Class', '0.20'], ['bClass', 'B Class', '0.40'], ['cClass', 'C Class', '0.60']].map(([key, lbl, mult]) => (
-                <ScoreInput key={key} label={lbl} hint={mult} value={scores.difficulty[key]} max="99" step={1}
-                  onChange={e => handleDifficulty(key, e.target.value)} />
+                <Stepper key={key} label={lbl} hint={mult} value={scores.difficulty[key]}
+                  onChange={v => handleDifficulty(key, v)} />
               ))}
             </div>
             {difficultyMismatch && (

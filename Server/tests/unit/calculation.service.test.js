@@ -210,12 +210,13 @@ describe('Difficulty Cascade (v2 §3.2.1)', () => {
     const required = getDifficultyRequirement('competition_1');
     // Performer executes {A: 0, B: 5, C: 2}
     const result = resolveDifficultyValue({ A: 0, B: 5, C: 2 }, required);
-    // C excess (1) cascades to B, giving B pool = 6 (exact), then no B excess to cascade to A
-    // C: 1 * 0.60 = 0.60, B: 6 * 0.40 = 2.40, A: 0 * 0.20 = 0.00
-    expect(result.C).toBe(0.60);
-    expect(result.B).toBe(2.40);
+    // C: 1 in C slot + 1 filling B slot = 2 C elements × 0.60 = 1.20
+    // B: 5 × 0.40 = 2.00
+    // A: 0
+    expect(result.C).toBe(1.20);
+    expect(result.B).toBe(2.00);
     expect(result.A).toBe(0.00);
-    expect(result.total).toBe(3.00);
+    expect(result.total).toBe(3.20);
     expect(result.shortfallFlag).toBe(true); // missing A elements
   });
 
@@ -227,16 +228,17 @@ describe('Difficulty Cascade (v2 §3.2.1)', () => {
     expect(result.shortfallFlag).toBe(false);
   });
 
-  it('cascades excess C to B and excess B to A in multi-step cascade', () => {
+  it('cascades excess C to B and A, keeping original C value', () => {
     const required = { A: 2, B: 3, C: 1 };
-    // Executes {A: 0, B: 1, C: 3} - excess C=2 cascades to B, then excess B=0
+    // Executes {A: 0, B: 1, C: 3}
+    // cInC=1, cExcess=2. bInB=1, bSlotsLeft=2, cInB=2 → cExcess=0
+    // aInA=0, no excess C/B to fill A → shortfall on A
+    // C: (1+2)*0.60=1.80, B: 1*0.40=0.40, A: 0
     const result = resolveDifficultyValue({ A: 0, B: 1, C: 3 }, required);
-    // C: 1 used (capped), C excess: 2 -> B pool = 1+2=3 (exact), no B excess -> A pool = 0
-    // C: 1*0.60=0.60, B: 3*0.40=1.20, A: 0*0.20=0.00
-    expect(result.C).toBe(0.60);
-    expect(result.B).toBe(1.20);
+    expect(result.C).toBe(1.80);
+    expect(result.B).toBe(0.40);
     expect(result.A).toBe(0.00);
-    expect(result.total).toBe(1.80);
+    expect(result.total).toBe(2.20);
     expect(result.shortfallFlag).toBe(true); // missing A elements
   });
 });
