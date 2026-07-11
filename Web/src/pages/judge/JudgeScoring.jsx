@@ -155,7 +155,7 @@ const CheckRow = ({ checked, onChange, label, penalty }) => (
     </div>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     <span className="text-sm font-medium" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{label}</span>
-    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: '#EF4444' }}>-{penalty.toFixed(2)}</span>}
+    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>{penalty.toFixed(2)}</span>}
   </label>
 );
 
@@ -192,11 +192,12 @@ const JudgeScoring = () => {
   // if no apparatus was passed. Stable for the component's lifetime.
   const combinationChecklist = useRef(getCombinationChecklist(selectedApparatus)).current;
 
-  // Build the initial "all requirements met" checked-map for the checklist.
+  // Build the initial combination map with all items unchecked.
   const buildInitialCombination = () => {
     const checked = {};
-    combinationChecklist.forEach(item => { checked[item.id] = true; });
-    return { checked, total: POINT_CEILINGS.combination };
+    combinationChecklist.forEach(item => { checked[item.id] = false; });
+    const total = computeCombinationTotal(selectedApparatus, checked);
+    return { checked, total };
   };
 
   const [scores, setScores] = useState({
