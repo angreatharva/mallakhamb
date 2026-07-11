@@ -68,8 +68,8 @@ const JudgeDashboard = () => {
   const { clearCompetitionContext } = useCompetition();
   
   const [judgeInfo, setJudgeInfo] = useState(null);
-  const [selectedCompetitionType, setSelectedCompetitionType] = useState('');
-  const [selectedApparatus, setSelectedApparatus] = useState('');
+  const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
+  const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || '');
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,8 +92,8 @@ const JudgeDashboard = () => {
       const judge = JSON.parse(storedJudge);
       setJudgeInfo(judge);
       
-      // Auto-select if there's only one option assigned
-      if (judge.competitionTypes?.length === 1) {
+      // Auto-select if there's only one option assigned and we haven't selected one yet
+      if (judge.competitionTypes?.length === 1 && !sessionStorage.getItem('judge_selected_comp_type')) {
         setSelectedCompetitionType(judge.competitionTypes[0]);
       }
     } catch {
@@ -127,6 +127,13 @@ const JudgeDashboard = () => {
       setTeams([]);
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (judgeInfo && !showModal && selectedCompetitionType) {
+      fetchTeams();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [judgeInfo, showModal]);
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
@@ -168,8 +175,13 @@ const JudgeDashboard = () => {
 
   const handleConfirmSelection = () => {
     sessionStorage.setItem('judge_category_selected', 'true');
+    sessionStorage.setItem('judge_selected_comp_type', selectedCompetitionType);
+    if (selectedApparatus) {
+      sessionStorage.setItem('judge_selected_apparatus', selectedApparatus);
+    } else {
+      sessionStorage.removeItem('judge_selected_apparatus');
+    }
     setShowModal(false);
-    fetchTeams();
   };
 
   if (!judgeInfo) return null;

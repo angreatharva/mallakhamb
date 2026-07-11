@@ -27,18 +27,18 @@ vi.mock('crypto-js', () => {
 
 describe('obfuscatedStorage', () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
   });
 
-  it('should store encrypted items in localStorage', () => {
+  it('should store encrypted items in sessionStorage', () => {
     obfuscatedStorage.setItem('test_key', 'test_value');
     expect(CryptoJS.AES.encrypt).toHaveBeenCalledWith('test_value', expect.any(String));
-    expect(localStorage.getItem('test_key')).toBe('encrypted-test_value');
+    expect(sessionStorage.getItem('test_key')).toBe('encrypted-test_value');
   });
 
-  it('should retrieve and decrypt items from localStorage', () => {
-    localStorage.setItem('test_key', 'encrypted-test_value');
+  it('should retrieve and decrypt items from sessionStorage', () => {
+    sessionStorage.setItem('test_key', 'encrypted-test_value');
     const value = obfuscatedStorage.getItem('test_key');
     expect(CryptoJS.AES.decrypt).toHaveBeenCalledWith('encrypted-test_value', expect.any(String));
     expect(value).toBe('test_value');
@@ -49,43 +49,43 @@ describe('obfuscatedStorage', () => {
     expect(value).toBeNull();
   });
 
-  it('should remove an item from localStorage', () => {
-    localStorage.setItem('test_key', 'encrypted-test_value');
+  it('should remove an item from sessionStorage', () => {
+    sessionStorage.setItem('test_key', 'encrypted-test_value');
     obfuscatedStorage.removeItem('test_key');
-    expect(localStorage.getItem('test_key')).toBeNull();
+    expect(sessionStorage.getItem('test_key')).toBeNull();
   });
 
   it('should clear all items for a specific role', () => {
-    localStorage.setItem('admin_token', 'token123');
-    localStorage.setItem('admin_user', 'user_data');
-    localStorage.setItem('player_token', 'token456');
+    sessionStorage.setItem('admin_token', 'token123');
+    sessionStorage.setItem('admin_user', 'user_data');
+    sessionStorage.setItem('player_token', 'token456');
 
     obfuscatedStorage.clearForRole('admin');
 
-    expect(localStorage.getItem('admin_token')).toBeNull();
-    expect(localStorage.getItem('admin_user')).toBeNull();
+    expect(sessionStorage.getItem('admin_token')).toBeNull();
+    expect(sessionStorage.getItem('admin_user')).toBeNull();
     // Should preserve other roles
-    expect(localStorage.getItem('player_token')).toBe('token456');
+    expect(sessionStorage.getItem('player_token')).toBe('token456');
   });
 
   it('should clear legacy keys when calling clearForRole', () => {
-    localStorage.setItem('token', 'legacy_token');
-    localStorage.setItem('user', 'legacy_user');
-    localStorage.setItem('userType', 'legacy_type');
+    sessionStorage.setItem('token', 'legacy_token');
+    sessionStorage.setItem('user', 'legacy_user');
+    sessionStorage.setItem('userType', 'legacy_type');
     
     obfuscatedStorage.clearForRole('admin');
 
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('user')).toBeNull();
-    expect(localStorage.getItem('userType')).toBeNull();
+    expect(sessionStorage.getItem('token')).toBeNull();
+    expect(sessionStorage.getItem('user')).toBeNull();
+    expect(sessionStorage.getItem('userType')).toBeNull();
   });
 
-  it('should completely clear localStorage', () => {
-    localStorage.setItem('key1', 'value1');
-    localStorage.setItem('key2', 'value2');
+  it('should completely clear sessionStorage', () => {
+    sessionStorage.setItem('key1', 'value1');
+    sessionStorage.setItem('key2', 'value2');
     
     obfuscatedStorage.clear();
 
-    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
   });
 });

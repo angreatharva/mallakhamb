@@ -7,7 +7,7 @@
  * a browser fingerprint. It provides obfuscation — not security — because:
  *   1. The encryption key is derived entirely from public browser metadata.
  *   2. The key material is visible in the bundle source.
- *   3. Any script running in the same origin can read the same localStorage.
+ *   3. Any script running in the same origin can read the same sessionStorage.
  *
  * The long-term fix (Phase 2, item 2.1) is to move tokens to httpOnly
  * cookies so they never appear in JavaScript-accessible storage at all.
@@ -47,7 +47,7 @@ export const obfuscatedStorage = {
   setItem: (key, value) => {
     try {
       const encrypted = CryptoJS.AES.encrypt(value, getEncryptionKey()).toString();
-      localStorage.setItem(key, encrypted);
+      sessionStorage.setItem(key, encrypted);
     } catch (error) {
       logger.error('Failed to encrypt data:', error);
       // Do not fall back to plain storage - fail silently to avoid exposing sensitive data
@@ -56,7 +56,7 @@ export const obfuscatedStorage = {
   
   getItem: (key) => {
     try {
-      const encrypted = localStorage.getItem(key);
+      const encrypted = sessionStorage.getItem(key);
       if (!encrypted) return null;
       
       const decrypted = CryptoJS.AES.decrypt(encrypted, getEncryptionKey());
@@ -69,7 +69,7 @@ export const obfuscatedStorage = {
   },
   
   removeItem: (key) => {
-    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
   },
 
   /**
@@ -81,20 +81,20 @@ export const obfuscatedStorage = {
   clearForRole: (role) => {
     if (!role) return;
     for (const suffix of ROLE_KEY_SUFFIXES) {
-      localStorage.removeItem(`${role}_${suffix}`);
+      sessionStorage.removeItem(`${role}_${suffix}`);
     }
     // Also clear any legacy un-prefixed keys
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('userType');
   },
 
   /**
-   * Nuclear clear — removes ALL localStorage keys.
+   * Nuclear clear — removes ALL sessionStorage keys.
    * Prefer clearForRole() in logout flows to preserve other sessions.
    */
   clear: () => {
-    localStorage.clear();
+    sessionStorage.clear();
   }
 };
 
