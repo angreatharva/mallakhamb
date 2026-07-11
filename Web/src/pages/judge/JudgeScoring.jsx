@@ -80,6 +80,16 @@ const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
           boxShadow: focused ? `0 0 0 3px ${J.purple}20` : 'none',
         }}
         transition={{ duration: 0.2 }}>
+        <style>{`
+          .no-spinners::-webkit-inner-spin-button,
+          .no-spinners::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+          .no-spinners {
+            -moz-appearance: textfield;
+          }
+        `}</style>
         <input
           type="number"
           step={step}
@@ -89,7 +99,7 @@ const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
           onChange={onChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full px-4 py-3 text-2xl font-black text-center outline-none bg-transparent"
+          className="w-full px-4 py-3 text-2xl font-black text-center outline-none bg-transparent no-spinners"
           style={{ color: '#fff', background: 'rgba(255,255,255,0.04)' }}
           placeholder="0.00"
         />
