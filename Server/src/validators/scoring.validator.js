@@ -1,5 +1,6 @@
 const { body, param } = require('express-validator');
 const { objectId, enumValue, number } = require('./common.validator');
+const { isApparatusAllowedForGender } = require('../config/cop-rules');
 
 /**
  * Validation rules for scoring endpoints
@@ -75,10 +76,16 @@ const submitScore = () => {
       .withMessage('Player scores are required')
       .isArray({ min: 1 })
       .withMessage('At least one player score is required')
-      .custom((value) => {
+      .custom((value, { req }) => {
         // Validate each player score
+        const gender = req.body.gender;
         for (const playerScore of value) {
           const mongoose = require('mongoose');
+          
+          // v2 §11 (rule 1.8.2/1.10): Hanging Mallakhamb is a HARD BLOCK for Female
+          if (playerScore.apparatus && gender && !isApparatusAllowedForGender(playerScore.apparatus, gender)) {
+            throw new Error(`${playerScore.apparatus} is not allowed for ${gender} competitions (rule 1.8.2)`);
+          }
           
           // Validate player ID
           if (!playerScore.playerId || !mongoose.Types.ObjectId.isValid(playerScore.playerId)) {

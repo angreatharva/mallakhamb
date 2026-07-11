@@ -53,6 +53,31 @@ const playerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // ── v2 spec additions ──────────────────────────────────────────────
+  // State/unit the player belongs to (v2 §2 Player entity).
+  stateUnit: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  // Official MFI registration number.
+  registrationNumber: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  // One-way lock: once a player plays in a higher age group, they can never
+  // register in a lower one again (v2 §8, rule 1.8.3.3).
+  hasPlayedUpBefore: {
+    type: Boolean,
+    default: false
+  },
+  // The age group the player is locked into after playing up.
+  lockedAgeGroup: {
+    type: String,
+    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+    default: null
+  },
   resetPasswordToken: {
     type: String,
     default: null

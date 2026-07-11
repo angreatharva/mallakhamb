@@ -189,7 +189,28 @@ const competitionSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  // ── v2 spec additions ──────────────────────────────────────────────
+  // COP edition this competition's rules are based on (v2 §1).
+  editionRef: {
+    type: String,
+    default: 'COP Nov 2022'
+  },
+  // Qualification threshold percentage for Competition II/III eligibility
+  // (v2 §6.1, rule 1.11.A.i). Admin-configurable, defaults to 60%.
+  qualificationThresholdPct: {
+    type: Number,
+    default: 60.0,
+    min: 0,
+    max: 100
+  },
+  // Championship type — determines which age-group/apparatus engine applies
+  // (v2 §8, §10.2). National Games bypasses age limits; Khelo India fixes U18.
+  championshipType: {
+    type: String,
+    enum: ['national', 'khelo_india', 'national_games', 'invitational', 'district_state', null],
+    default: null
+  }
 }, {
   timestamps: true
 });

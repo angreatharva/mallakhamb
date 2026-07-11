@@ -252,6 +252,20 @@ function validateSlipBreakdown(breakdown) {
 // judge's Execution component per v2 §2 note. These catalogs are retained
 // as comments only for reference, since judges apply them internally.
 
+/**
+ * Hanging Mallakhamb is not available for women (v2 §11, rule 1.8.2 / 1.10).
+ * This is a HARD BLOCK — not a warning.
+ * @param {string} apparatus
+ * @param {string} gender - 'Male' or 'Female'
+ * @returns {boolean}
+ */
+function isApparatusAllowedForGender(apparatus, gender) {
+  const key = normalizeApparatus(apparatus);
+  const isFemale = String(gender || '').toLowerCase().startsWith('f');
+  if (isFemale && key === 'Hanging Mallakhamb') return false;
+  return true;
+}
+
 module.exports = {
   COP_EDITION,
   POINT_CEILINGS,
@@ -268,4 +282,5 @@ module.exports = {
   toCompetitionTypeDisplay,
   toCompetitionTypeSlug,
   validateSlipBreakdown,
+  isApparatusAllowedForGender,
 };
