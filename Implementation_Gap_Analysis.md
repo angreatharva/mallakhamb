@@ -29,8 +29,9 @@ The most significant deviations from the specification are found in the data mod
 ## 2. Scoring Algorithm & Logic Gaps
 
 ### Post-Average Deductions vs Judge-Applied Deductions
-- **Spec:** Section 2 explicitly states: *"The system does **not** apply any separate post-average deduction step... any time overage can be folded directly into that judge's Execution score."*
-- **Current Implementation:** The `Score` model and `calculation.service.js` apply system-level post-average deductions (`averageMarks - deduction - otherDeduction = finalScore`). This directly contradicts the spec.
+- ~~**Spec:** Section 2 explicitly states: *"The system does **not** apply any separate post-average deduction step... any time overage can be folded directly into that judge's Execution score."*~~
+- ~~**Current Implementation:** The `Score` model and `calculation.service.js` apply system-level post-average deductions (`averageMarks - deduction - otherDeduction = finalScore`). This directly contradicts the spec.~~
+- ✅ **FIXED:** Removed post-average deduction application. Judges now see `deductionReference` as UI guidance for time overage; final score = averageMarks with no deduction step.
 
 ### Chief Judge Pre-fill Enforcement
 - **Spec:** Rule 2.2 item 4 dictates that the Chief Judge scores before seeing others. The system should lock the Chief Judge's slip until submitted, and lock out the evaluation judges' scores from the Chief until then.
@@ -50,4 +51,4 @@ The core Code of Points (COP) mathematics have been correctly ported and reside 
 To fully align the software with `v2.md`, the following architectural refactors are needed:
 1. **Database Migration:** Break apart `Score.js` into distinct `Performance` and `JudgeSlip` collections.
 2. **Scoring API Update:** Update the scoring APIs to accept arrays of `ElementSelection` from the frontend, rather than just A/B/C counts.
-3. **Deduction Removal:** Remove the `deduction` and `otherDeduction` fields from the final score calculation pipeline, allowing judges to manually adjust their execution scores based on the time reference table.
+3. ~~**Deduction Removal:** Remove the `deduction` and `otherDeduction` fields from the final score calculation pipeline, allowing judges to manually adjust their execution scores based on the time reference table.~~ ✅ **COMPLETED**
