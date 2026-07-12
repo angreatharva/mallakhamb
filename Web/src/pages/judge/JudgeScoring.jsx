@@ -499,11 +499,11 @@ const JudgeScoring = () => {
               onChange={e => { const v = Math.max(0, Math.min(4.40, parseFloat(e.target.value) || 0)); setScores({ ...scores, execution: v }); }} />
           </div>
 
-          {/* 4. Bonus */}
+          {/* 4. Originality */}
           <div className="rounded-2xl border p-5"
             style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-white text-sm">4. Bonus</h3>
+              <h3 className="font-black text-white text-sm">4. Originality</h3>
               <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>0 or 0.20</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
