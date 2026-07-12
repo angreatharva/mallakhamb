@@ -694,7 +694,7 @@ const Judges = () => {
                           return (
                             <div key={index} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-2 mb-4">
-                                <span className="text-sm font-bold text-white">Judge {judge.judgeNo}</span>
+                                <span className="text-sm font-bold text-white">{judge.judgeNo}</span>
                                 <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
