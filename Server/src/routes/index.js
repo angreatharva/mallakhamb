@@ -114,16 +114,7 @@ function loadRoutes(app, container, options = {}) {
 
   const superAdminRoutes = createSuperAdminRoutes(container);
   const judgeRoutes = createJudgeRoutes(container);
-  if (authLimiter) {
-    const superAdminAuthRouter = express.Router();
-    superAdminAuthRouter.post('/login', authLimiter);
-    app.use('/api/superadmin', superAdminAuthRouter);
-    
-    const judgeAuthRouter = express.Router();
-    judgeAuthRouter.post('/login', authLimiter);
-    app.use('/api/judge', judgeAuthRouter);
-  }
-  
+  // Note: Rate limiting skipped for judges and superadmins (per requirement)
   app.use('/api/superadmin', superAdminRoutes);
   app.use('/api/judge', judgeRoutes);
 

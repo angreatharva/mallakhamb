@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Scale, Users, User, Trophy, LogOut, CheckCircle, Search, ChevronDown, ChevronRight, X, Filter
+  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -69,11 +69,10 @@ const JudgeDashboard = () => {
   
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
-  const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || '');
+  const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || 'Pole Mallakhamb');
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedTeamId, setExpandedTeamId] = useState(null);
   
   const [showModal, setShowModal] = useState(() => {
     return !sessionStorage.getItem('judge_category_selected');
@@ -120,7 +119,6 @@ const JudgeDashboard = () => {
         withCredentials: true
       });
       setTeams(response.data.data || []);
-      setExpandedTeamId(null);
     } catch (error) {
       logger.error('Error fetching teams:', error);
       toast.error('Failed to load teams');
@@ -152,24 +150,16 @@ const JudgeDashboard = () => {
           }
         }
         return true;
-      })
-      .map(e => ({ 
-        id: e.player._id, 
-        name: `${e.player.firstName} ${e.player.lastName}`, 
-        gender: e.player.gender, 
-        ageGroup: e.ageGroup,
-        apparatus: e.apparatus || {}
-      }));
+      });
   };
 
-  const handlePlayerSelect = (team, player) => {
-    navigate('/judge/scoring', {
+  const handleTeamSelect = (team) => {
+    navigate(`/judge/team/${team._id}`, {
       state: {
-        team: team,
-        player: player,
+        team,
         competitionType: selectedCompetitionType,
-        apparatus: selectedApparatus
-      }
+        apparatus: selectedApparatus,
+      },
     });
   };
 
@@ -298,80 +288,41 @@ const JudgeDashboard = () => {
               <div className="space-y-4 pb-12">
                 {filteredTeams.map(team => {
                   const teamPlayers = getFilteredPlayersForTeam(team);
-                  const isExpanded = expandedTeamId === team._id;
+                  const scoredCount = teamPlayers.filter((e) => e.isFinalized).length;
                   
                   return (
-                    <div key={team._id} className="rounded-2xl border overflow-hidden transition-all duration-300"
+                    <button
+                      key={team._id}
+                      type="button"
+                      onClick={() => handleTeamSelect(team)}
+                      className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-white/5"
                       style={{ 
                         background: 'rgba(255,255,255,0.02)',
-                        borderColor: isExpanded ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.08)'
-                      }}>
-                      <button 
-                        onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
-                        className="w-full flex items-center justify-between p-5 hover:bg-white/5 transition-colors">
-                        <div className="text-left">
-                          <p className="font-bold text-lg text-white">{team.name}</p>
-                          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Coach: {team.coach?.name || 'N/A'}</p>
+                        borderColor: 'rgba(255,255,255,0.08)'
+                      }}
+                    >
+                      <div className="flex items-center justify-between p-5">
+                        <div className="min-w-0">
+                          <p className="font-bold text-lg text-white truncate">{team.name}</p>
+                          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            Coach: {team.coach?.name || 'N/A'}
+                          </p>
+                          {scoredCount > 0 && (
+                            <p className="text-xs mt-1.5" style={{ color: J.green }}>
+                              {scoredCount} of {teamPlayers.length} scored
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 flex-shrink-0">
                           <span className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/70 font-semibold">
                             {teamPlayers.length} {teamPlayers.length === 1 ? 'Player' : 'Players'}
                           </span>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isExpanded ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-white/40'}`}>
-                            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
-                              <ChevronDown className="w-5 h-5" />
-                            </motion.div>
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/40">
+                            <ChevronRight className="w-5 h-5" aria-hidden="true" />
                           </div>
                         </div>
-                      </button>
-                      
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="border-t border-white/10 bg-black/20">
-                            {teamPlayers.length > 0 ? (
-                              <div className="p-3 space-y-2">
-                                {teamPlayers.map(player => (
-                                  <button 
-                                    key={player.id}
-                                    onClick={() => handlePlayerSelect(team, player)}
-                                    className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-purple-500/15 border border-transparent hover:border-purple-500/30 transition-all group">
-                                    <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10 transition-colors">
-                                        <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" />
-                                      </div>
-                                      <div className="text-left">
-                                        <p className="font-bold text-base text-white">{player.name}</p>
-                                        <p className="text-xs text-white/40 mt-0.5">{player.gender} - {player.ageGroup}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      {player.apparatus && player.apparatus[selectedCompetitionType] && player.apparatus[selectedCompetitionType].length > 0 && (
-                                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/10 text-white/80 border border-white/5">
-                                          {player.apparatus[selectedCompetitionType].join(', ')}
-                                        </span>
-                                      )}
-                                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                                        <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400" />
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="p-8 text-center flex flex-col items-center">
-                                <User className="w-8 h-8 mb-3 text-white/20" />
-                                <p className="text-sm text-white/50 font-medium">No eligible players found.</p>
-                                <p className="text-xs text-white/30 mt-1">None of the players match your assigned category and apparatus.</p>
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                      </div>
+                    </button>
                   );
                 })}
               </div>

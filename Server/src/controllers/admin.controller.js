@@ -310,24 +310,68 @@ function createAdminController(container) {
           'Judge 3': 'judge3',
           'Judge 4': 'judge4'
         };
+        const judgeRoleMap = {
+          'Senior Judge': 'SR_JUDGE',
+          'Judge 1': 'J1',
+          'Judge 2': 'J2',
+          'Judge 3': 'J3',
+          'Judge 4': 'J4'
+        };
         
         const judgeField = judgeFieldMap[req.body.judgeType];
+        const breakdown = req.body.breakdown || {};
+        const bonus = breakdown.bonus ?? breakdown.originality ?? 0;
         
         // Create a single player score entry
         scoreData.playerScores = [{
           playerId: req.body.playerId,
           playerName: req.body.playerName,
-          apparatus: req.body.apparatus,
+          apparatus: req.body.apparatus || 'Pole Mallakhamb',
           judgeScores: {
             [judgeField]: req.body.score
           },
-          breakdown: req.body.breakdown || {}
+          breakdown,
+          // Per-judge detailed slip for Panel Review / audit (v2 judgeSlips)
+          judgeSlips: [{
+            judgeRole: judgeRoleMap[req.body.judgeType] || 'J1',
+            difficultyScore: breakdown.difficulty?.total || 0,
+            combinationScore: breakdown.combination?.total || 0,
+            executionScore: breakdown.execution || 0,
+            bonusScore: bonus === 0.20 ? 0.20 : 0,
+            total: req.body.score,
+            submittedAt: new Date(),
+            isChiefPrefilled: req.body.judgeType === 'Senior Judge'
+          }]
         }];
         
         // Ensure required fields are present
         if (!scoreData.teamId) scoreData.teamId = req.body.teamId;
         if (!scoreData.gender) scoreData.gender = req.body.gender;
         if (!scoreData.ageGroup) scoreData.ageGroup = req.body.ageGroup;
+      }
+
+      // Senior Judge final submit: lock this player's panel result
+      if (req.body.isFinalSubmit) {
+        if (req.body.judgeType && req.body.judgeType !== 'Senior Judge') {
+          return res.status(403).json({
+            success: false,
+            error: {
+              message: 'Only the Senior Judge can Final Submit and lock scores',
+              code: 'FORBIDDEN',
+            },
+          });
+        }
+        scoreData.isFinalSubmit = true;
+        if (req.body.panelSize) scoreData.panelSize = req.body.panelSize;
+        // Per-player finalize — do not lock the whole team score document
+        // (other players on the team may still need scoring).
+        if (Array.isArray(scoreData.playerScores)) {
+          scoreData.playerScores = scoreData.playerScores.map((ps) => ({
+            ...ps,
+            isFinalized: true,
+            finalizedAt: new Date(),
+          }));
+        }
       }
       
       // Handle both admin routes (with req.competitionId) and superadmin routes (with body/query params)

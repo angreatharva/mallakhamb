@@ -12,6 +12,8 @@ const COMPETITION_TYPE_MAP = {
   competition_3: 'Competition III',
 };
 
+const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
+
 class PublicService {
   /**
    * @param {Object} dependencies
@@ -28,18 +30,59 @@ class PublicService {
   }
 
   /**
+   * Enrich a player score row with COP average/final when stored values are 0
+   * but judge slips exist (common for in-progress / unlocked panels).
+   */
+  enrichPlayerScore(ps) {
+    const row = { ...(typeof ps.toObject === 'function' ? ps.toObject() : ps) };
+    const hasJudges = row.judgeScores && Object.values(row.judgeScores).some((v) => Number(v) > 0);
+    if (!hasJudges) return row;
+
+    if (!(row.finalScore > 0) || !(row.averageMarks > 0)) {
+      const calc = calculateIndividualScore(row.judgeScores, row.panelSize || undefined);
+      if (calc.averageMarks > 0) {
+        row.executionAverage = calc.executionAverage;
+        row.baseScore = calc.baseScore;
+        row.baseScoreApplied = calc.baseScoreApplied;
+        row.toleranceUsed = calc.toleranceUsed;
+        row.averageMarks = calc.averageMarks;
+        if (!(row.finalScore > 0)) {
+          const deduction = Number(row.deduction) || 0;
+          const other = Number(row.otherDeduction) || 0;
+          row.finalScore = Math.max(0, Number((calc.averageMarks - deduction - other).toFixed(3)));
+        }
+      }
+    }
+    return row;
+  }
+
+  /**
    * Get public scores for a competition with optional filters.
+   * Returns score docs that match filters — including unlocked drafts that already
+   * have judge marks (document-level isLocked is no longer required; Senior Judge
+   * Final Submit locks per-player via isFinalized).
+   *
    * @param {string} [competitionId]
    * @param {Object} [filters]
    * @param {string} [filters.teamId]
    * @param {string} [filters.gender]
    * @param {string} [filters.ageGroup]
    * @param {string} [filters.competitionType]
+   * @param {boolean|string} [filters.lockedOnly] - when true, only isLocked docs
    * @returns {Promise<Array>}
    */
   async getPublicScores(competitionId, filters = {}) {
     try {
-      const query = { isLocked: true };
+      const query = {};
+
+      // Optional: legacy "published only" mode
+      const lockedOnly =
+        filters.lockedOnly === true ||
+        filters.lockedOnly === 'true' ||
+        filters.lockedOnly === '1';
+      if (lockedOnly) {
+        query.isLocked = true;
+      }
 
       if (competitionId) {
         query.competition = competitionId;
@@ -66,8 +109,12 @@ class PublicService {
 
       const formattedScores = scores.map((score) => {
         const scoreObj = score.toObject ? score.toObject() : score;
+        const playerScores = (scoreObj.playerScores || []).map((ps) =>
+          this.enrichPlayerScore(ps)
+        );
         return {
           ...scoreObj,
+          playerScores,
           teamName: scoreObj.teamId?.name || 'Unknown Team',
           team: scoreObj.teamId,
         };

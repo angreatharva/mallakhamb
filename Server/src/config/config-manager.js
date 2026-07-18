@@ -47,7 +47,7 @@ class ConfigManager {
       },
       jwt: {
         secret: this.getRequired('JWT_SECRET'),
-        expiresIn: this.getString('JWT_EXPIRES_IN', '1h')
+        expiresIn: this.getString('JWT_EXPIRES_IN', '24h')
       },
       email: {
         provider: this.getString('EMAIL_PROVIDER', 'nodemailer'),

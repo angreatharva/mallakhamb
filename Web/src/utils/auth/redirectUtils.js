@@ -27,6 +27,7 @@ const ALLOWED_PATHS = [
   '/admin/scores',
   '/admin/transactions',
   '/judge/login',
+  '/judge/dashboard',
   '/judge/scoring',
   '/judge/scoring-old',
   '/superadmin/login',
@@ -41,6 +42,7 @@ const ALLOWED_PATHS = [
 const ALLOWED_PATTERNS = [
   /^\/admin\/dashboard\/[a-z-]+$/,
   /^\/superadmin\/dashboard\/[a-z-]+$/,
+  /^\/judge\/team\/[a-zA-Z0-9-_]+$/,
   /^\/reset-password\/[a-zA-Z0-9-_]+$/,
 ];
 

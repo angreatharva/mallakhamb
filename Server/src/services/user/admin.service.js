@@ -10,7 +10,8 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError, BusinessRuleError } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
-const { toCompetitionTypeSlug, validateSlipBreakdown } = require('../../config/cop-rules');
+const { toCompetitionTypeSlug, toCompetitionTypeDisplay, validateSlipBreakdown } = require('../../config/cop-rules');
+const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
 
 class AdminService extends UserService {
   /**
@@ -1027,7 +1028,71 @@ class AdminService extends UserService {
         });
       }
 
-      // Transform to expected format
+      // Transform to expected format, attach per-player finalize status for judge dashboard
+      const scoreQuery = { competition: competitionId };
+      if (filters.gender) scoreQuery.gender = filters.gender;
+      if (filters.ageGroup) scoreQuery.ageGroup = filters.ageGroup;
+      if (filters.competitionType) {
+        scoreQuery.competitionType = toCompetitionTypeDisplay(filters.competitionType);
+      }
+
+      const scoreDocs = await this.scoreRepository.find(scoreQuery);
+      const finalizedByPlayer = new Map();
+      const scoredByPlayer = new Map();
+      for (const doc of scoreDocs || []) {
+        const teamKey = doc.teamId?.toString();
+        let needsRepair = false;
+        for (const ps of doc.playerScores || []) {
+          const pid = ps.playerId?.toString();
+          if (!pid) continue;
+          const key = `${teamKey}:${pid}`;
+
+          // Resolve display final: stored value, else averageMarks, else recompute from slips
+          let resolvedFinal = typeof ps.finalScore === 'number' ? ps.finalScore : null;
+          if ((resolvedFinal == null || resolvedFinal === 0) && ps.averageMarks > 0) {
+            resolvedFinal = ps.averageMarks;
+          }
+          if ((resolvedFinal == null || resolvedFinal === 0) && ps.judgeScores) {
+            const recomputed = calculateIndividualScore(ps.judgeScores, ps.panelSize);
+            if (recomputed.averageMarks > 0) {
+              resolvedFinal = recomputed.averageMarks;
+              // Repair stale 0.00 finals left by the old 3-judge Senior+J1+J2 bug
+              if (ps.isFinalized) {
+                ps.finalScore = resolvedFinal;
+                ps.averageMarks = recomputed.averageMarks;
+                ps.executionAverage = recomputed.executionAverage;
+                ps.baseScore = recomputed.baseScore;
+                ps.baseScoreApplied = recomputed.baseScoreApplied;
+                ps.toleranceUsed = recomputed.toleranceUsed;
+                needsRepair = true;
+              }
+            }
+          }
+
+          if (ps.isFinalized || doc.isLocked) {
+            finalizedByPlayer.set(key, {
+              isFinalized: true,
+              finalScore: resolvedFinal,
+              finalizedAt: ps.finalizedAt,
+            });
+          }
+          scoredByPlayer.set(key, true);
+        }
+        if (needsRepair && doc._id) {
+          try {
+            const plainScores = (doc.playerScores || []).map((ps) =>
+              typeof ps.toObject === 'function' ? ps.toObject() : { ...ps }
+            );
+            await this.scoreRepository.updateById(doc._id, { playerScores: plainScores });
+          } catch (repairErr) {
+            this.logger.warn('Failed to repair zero finalScore on read', {
+              scoreId: doc._id,
+              error: repairErr.message,
+            });
+          }
+        }
+      }
+
       const teamsWithPlayers = submittedTeams.map(regTeam => ({
         _id: regTeam.team._id,
         name: regTeam.team.name,
@@ -1040,10 +1105,17 @@ class AdminService extends UserService {
         players: regTeam.players.map(playerEntry => {
           // Handle both Mongoose documents and plain objects
           const playerData = playerEntry.player?.toObject ? playerEntry.player.toObject() : playerEntry.player;
+          const playerId = playerData?._id?.toString();
+          const key = `${regTeam.team._id?.toString()}:${playerId}`;
+          const finalized = finalizedByPlayer.get(key);
           return {
             player: playerData,
             ageGroup: playerEntry.ageGroup,
-            gender: playerEntry.gender
+            gender: playerEntry.gender,
+            apparatus: playerEntry.apparatus,
+            isFinalized: !!finalized,
+            finalScore: finalized?.finalScore ?? null,
+            hasScore: scoredByPlayer.has(key),
           };
         })
       }));
@@ -1787,7 +1859,9 @@ class AdminService extends UserService {
         if (!capCheck.valid) {
           throw new ValidationError(`Invalid score for ${playerScore.playerName || playerScore.playerId}: ${capCheck.error}`);
         }
-        const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore);
+        const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore, {
+          panelSize: scoreData.panelSize || playerScore.panelSize
+        });
         processedPlayerScores.push(calculatedScore);
       }
 
@@ -1814,6 +1888,10 @@ class AdminService extends UserService {
         competition: scoreData.competitionId
       });
 
+      if (existingScore?.isLocked && !scoreData.isFinalSubmit) {
+        throw new ValidationError('Scores are locked and cannot be modified');
+      }
+
       let savedScore;
       if (existingScore) {
         // Merge player scores if updating
@@ -1828,6 +1906,26 @@ class AdminService extends UserService {
           if (existingPlayerIndex >= 0) {
             // Merge judge scores - keep existing scores and add/update new ones
             const existingPlayerScore = mergedPlayerScores[existingPlayerIndex];
+
+            // Per-player lock after Senior Judge Final Submit
+            if (existingPlayerScore.isFinalized && !scoreData.isFinalSubmit) {
+              throw new ValidationError(
+                `Scores for ${existingPlayerScore.playerName || 'this player'} are finalized and locked`
+              );
+            }
+
+            // Merge judgeSlips by role (upsert per judge)
+            const existingSlips = Array.isArray(existingPlayerScore.judgeSlips)
+              ? [...existingPlayerScore.judgeSlips]
+              : [];
+            const incomingSlips = Array.isArray(incomingPlayerScore.judgeSlips)
+              ? incomingPlayerScore.judgeSlips
+              : [];
+            for (const slip of incomingSlips) {
+              const idx = existingSlips.findIndex(s => s.judgeRole === slip.judgeRole);
+              if (idx >= 0) existingSlips[idx] = { ...existingSlips[idx], ...slip };
+              else existingSlips.push(slip);
+            }
             mergedPlayerScores[existingPlayerIndex] = {
               ...existingPlayerScore,
               ...incomingPlayerScore,
@@ -1835,24 +1933,50 @@ class AdminService extends UserService {
                 ...existingPlayerScore.judgeScores,
                 ...incomingPlayerScore.judgeScores
               },
+              judgeSlips: existingSlips.length > 0 ? existingSlips : existingPlayerScore.judgeSlips,
               // Update other fields only if provided
               time: incomingPlayerScore.time || existingPlayerScore.time,
               deduction: incomingPlayerScore.deduction !== undefined ? incomingPlayerScore.deduction : existingPlayerScore.deduction,
               otherDeduction: incomingPlayerScore.otherDeduction !== undefined ? incomingPlayerScore.otherDeduction : existingPlayerScore.otherDeduction,
-              breakdown: incomingPlayerScore.breakdown || existingPlayerScore.breakdown
+              breakdown: incomingPlayerScore.breakdown || existingPlayerScore.breakdown,
+              panelSize: incomingPlayerScore.panelSize || scoreData.panelSize || existingPlayerScore.panelSize,
+              isFinalized: scoreData.isFinalSubmit
+                ? true
+                : (incomingPlayerScore.isFinalized ?? existingPlayerScore.isFinalized),
+              finalizedAt: scoreData.isFinalSubmit
+                ? (incomingPlayerScore.finalizedAt || new Date())
+                : (incomingPlayerScore.finalizedAt || existingPlayerScore.finalizedAt)
             };
           } else {
             // New player score
+            if (scoreData.panelSize && !incomingPlayerScore.panelSize) {
+              incomingPlayerScore.panelSize = scoreData.panelSize;
+            }
+            if (scoreData.isFinalSubmit) {
+              incomingPlayerScore.isFinalized = true;
+              incomingPlayerScore.finalizedAt = incomingPlayerScore.finalizedAt || new Date();
+            }
             mergedPlayerScores.push(incomingPlayerScore);
           }
         }
         
         scoreDocData.playerScores = mergedPlayerScores;
+        // Keep existing document lock unless admin explicitly locks
+        if (!scoreData.isLocked) {
+          scoreDocData.isLocked = existingScore.isLocked;
+        }
         
         // Update existing record
         savedScore = await this.scoreRepository.updateById(existingScore._id, scoreDocData);
       } else {
         // Create new record
+        if (scoreData.isFinalSubmit) {
+          scoreDocData.playerScores = processedPlayerScores.map((ps) => ({
+            ...ps,
+            isFinalized: true,
+            finalizedAt: ps.finalizedAt || new Date(),
+          }));
+        }
         savedScore = await this.scoreRepository.create(scoreDocData);
       }
 
@@ -1883,7 +2007,7 @@ class AdminService extends UserService {
             judge4: 'Judge 4'
           };
           
-          // Emit for each judge score that was provided
+          // Emit for each judge score that was provided (include full breakdown for Panel Review)
           for (const [field, judgeType] of Object.entries(judgeTypeMap)) {
             if (judgeScores[field] !== undefined && judgeScores[field] !== 0) {
               this.socketManager.emitToRoom(roomId, 'score_updated', {
@@ -1891,12 +2015,27 @@ class AdminService extends UserService {
                 playerName: playerScore.playerName,
                 judgeType: judgeType,
                 score: judgeScores[field],
+                breakdown: playerScore.breakdown || null,
                 teamId: scoreData.teamId,
                 gender: scoreData.gender,
                 ageGroup: scoreData.ageGroup,
+                isFinalSubmit: !!scoreData.isFinalSubmit,
+                isLocked: !!scoreData.isLocked,
                 timestamp: new Date().toISOString()
               });
             }
+          }
+
+          if (scoreData.isFinalSubmit) {
+            this.socketManager.emitToRoom(roomId, 'scores_saved_notification', {
+              playerId: playerScore.playerId,
+              playerName: playerScore.playerName,
+              teamId: scoreData.teamId,
+              finalScore: playerScore.finalScore,
+              isFinalized: true,
+              isLocked: true,
+              timestamp: new Date().toISOString()
+            });
           }
         }
         
@@ -2100,7 +2239,9 @@ class AdminService extends UserService {
           };
           if (gender) scoreQuery.gender = gender;
           if (ageGroup) scoreQuery.ageGroup = ageGroup;
-          if (competitionType) scoreQuery.competitionType = competitionType;
+          if (competitionType) {
+            scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
+          }
           
           const scores = await this.scoreRepository.find(scoreQuery);
 

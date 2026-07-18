@@ -123,6 +123,15 @@ const playerScoreSchema = new mongoose.Schema({
     min: 0,
     // Final score = averageMarks - deduction - otherDeduction
   },
+  // Set when Senior Judge completes Final Submit for this player (panel locked).
+  isFinalized: {
+    type: Boolean,
+    default: false
+  },
+  finalizedAt: {
+    type: Date,
+    default: null
+  },
   tieBreakRank: {
     type: Number,
     default: null,

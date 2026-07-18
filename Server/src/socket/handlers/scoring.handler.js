@@ -123,86 +123,55 @@ class ScoringHandler {
       throw new Error('Only judges can update scores');
     }
 
-    const { roomId, playerId, teamId, judgeType, score, notes } = data;
+    const { roomId, playerId, teamId, judgeType, score, notes, breakdown, playerName } = data;
 
     // Validate required fields
     if (!roomId || !playerId || !judgeType || score === undefined) {
       throw new Error('Missing required fields: roomId, playerId, judgeType, score');
     }
 
-    // Extract competition ID from room ID
-    const competitionId = roomId.split('_')[0];
-
-    // Validate judge has permission to score in this competition
-    const hasPermission = await this.authorizationService.canJudgeScore(
-      socket.userId,
-      competitionId
-    );
-
-    if (!hasPermission) {
-      throw new Error('Not authorized to score in this competition');
-    }
-
-    // If teamId is provided, save the score via JudgeService
-    if (teamId) {
-      try {
-        if (!this.judgeService) {
-          throw new Error('Judge service is not configured');
-        }
-
-        const savedScore = await this.judgeService.saveIndividualScore(socket.userId, {
-          playerId,
-          teamId,
-          competitionId,
-          score,
-          notes
-        });
-
-        // Emit confirmation to judge
-        socket.emit(EventTypes.SCORE_SAVED, {
-          scoreId: savedScore._id,
-          playerId,
-          teamId,
-          score: savedScore.score
-        });
-
-        this.logger.info('Score saved via Socket.IO', {
-          roomId,
-          playerId,
-          teamId,
-          judgeId: socket.userId,
-          score
-        });
-
-        return; // Score saved, event already broadcasted by service
-      } catch (error) {
-        this.logger.error('Socket.IO score save error', {
-          roomId,
-          playerId,
-          error: error.message
-        });
-        socket.emit(EventTypes.SCORE_ERROR, {
-          message: error.message
-        });
-        return;
+    // Room format is scoring_{gender}_{ageGroup}_{competitionType} — not competitionId.
+    // Join already gated by role; allow panel broadcast for scoring rooms.
+    const isScoringRoom = String(roomId).startsWith('scoring_');
+    if (!isScoringRoom) {
+      const competitionId = roomId.split('_')[0];
+      const hasPermission = await this.authorizationService.canJudgeScore(
+        socket.userId,
+        competitionId
+      );
+      if (!hasPermission) {
+        throw new Error('Not authorized to score in this competition');
       }
     }
 
-    // Broadcast score update to all users in the room except sender (real-time preview)
+    // Broadcast score update to all users in the room except sender (real-time panel sync).
+    // Persistence is handled by POST /public/save-score; socket is for live Panel Review.
     socket.to(roomId).emit(EventTypes.SCORE_UPDATED, {
       playerId,
+      playerName,
       judgeType,
       score,
+      breakdown,
+      teamId: teamId || null,
       judgeId: socket.userId,
       timestamp: new Date().toISOString()
     });
 
-    this.logger.info('Score update broadcasted', {
+    socket.emit(EventTypes.SCORE_SAVED, {
+      playerId,
+      teamId: teamId || null,
+      score,
+      broadcast: true
+    });
+
+    this.logger.info('Score update broadcast via Socket.IO', {
       roomId,
       playerId,
+      teamId,
+      judgeId: socket.userId,
       judgeType,
       score,
-      judgeId: socket.userId
+      hasBreakdown: !!breakdown
     });
   }
 

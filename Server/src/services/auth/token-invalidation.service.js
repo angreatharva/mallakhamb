@@ -28,7 +28,7 @@ const KEYS = {
  * Default TTL for invalidation records in seconds.
  * Should be >= the maximum JWT lifetime so records outlive any token
  * that could reference them. With refresh tokens the max lifetime
- * of an access token is 15 min, but we use a generous 24 h buffer.
+ * of an access token is 24h, and we use this same buffer.
  */
 const DEFAULT_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 

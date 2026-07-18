@@ -1,6 +1,7 @@
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import { ADMIN_COLORS } from '../../styles/tokens';
+import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/copRules';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
 const C = ADMIN_COLORS;
@@ -174,21 +175,6 @@ export const ResponsiveScoringTable = ({
     'Judge 4': 'judge4',
   };
 
-  const calculateAverageMarks = (ps) => {
-    const judgeScores = [ps.seniorJudge, ps.judge1, ps.judge2, ps.judge3, ps.judge4]
-      .map(Number).filter(s => s > 0);
-    if (!judgeScores.length) return '0.00';
-    if (judgeScores.length <= 3) return (judgeScores.reduce((a, b) => a + b, 0) / judgeScores.length).toFixed(2);
-    const sorted = [...judgeScores].sort((a, b) => a - b);
-    const trimmed = sorted.slice(1, -1);
-    return (trimmed.reduce((a, b) => a + b, 0) / trimmed.length).toFixed(2);
-  };
-
-  const calculateFinalScore = (ps) => {
-    const avg = parseFloat(calculateAverageMarks(ps));
-    return Math.max(0, avg - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);
-  };
-
   const ScoreInput = ({ playerId, field, placeholder, type = 'number', step, min, max }) => (
     <input
       type={type}
@@ -239,9 +225,23 @@ export const ResponsiveScoringTable = ({
 
               {/* Calculated */}
               <div style={{ borderTop: `1px solid ${border}`, paddingTop: 12, marginTop: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 12, color: textSecondary }}>Average</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.blue }}>{calculateAverageMarks(scores[player.id] || {})}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {(() => {
+                      const result = calculateAverageMarks(scores[player.id] || {});
+                      return (
+                        <>
+                          {result.baseScoreApplied && (
+                            <span style={{ fontSize: 10, background: `${C.amber}22`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                              Base Score Applied (±{result.tolerance.toFixed(2)})
+                            </span>
+                          )}
+                          <span style={{ fontSize: 13, fontWeight: 600, color: C.blue }}>{result.average.toFixed(2)}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <label style={{ fontSize: 12, color: textSecondary }}>Deduction</label>
@@ -295,9 +295,25 @@ export const ResponsiveScoringTable = ({
                   );
                 })}
                 <td style={{ padding: '12px 14px' }}>
-                  <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 600 }}>
-                    {calculateAverageMarks(scores[player.id] || {})}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                    <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 600 }}>
+                      {(() => {
+                        const result = calculateAverageMarks(scores[player.id] || {});
+                        return result.average.toFixed(2);
+                      })()}
+                    </span>
+                    {(() => {
+                      const result = calculateAverageMarks(scores[player.id] || {});
+                      if (result.baseScoreApplied) {
+                        return (
+                          <span style={{ fontSize: 9, background: `${C.amber}22`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            Base Score (±{result.tolerance.toFixed(2)})
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                 </td>
                 <td style={{ padding: '12px 14px' }}>
                   <ScoreInput playerId={player.id} field="deduction" placeholder="0.0" step="0.1" min="0" />

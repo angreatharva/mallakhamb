@@ -186,3 +186,204 @@ export function resolveDifficultyValue(counts, required) {
     counts: { C: cInC + cInB + cInA, B: bInB + bInA, A: aInA }
   };
 }
+
+const JUDGE_TYPE_TO_FIELD = Object.freeze({
+  'Senior Judge': 'seniorJudge',
+  'Judge 1': 'judge1',
+  'Judge 2': 'judge2',
+  'Judge 3': 'judge3',
+  'Judge 4': 'judge4',
+});
+
+/** Map panel review entries → { seniorJudge, judge1…judge4 } totals. */
+export function panelScoresToJudgeFields(panelScores) {
+  const fields = { seniorJudge: 0, judge1: 0, judge2: 0, judge3: 0, judge4: 0 };
+  Object.values(panelScores || {}).forEach((entry) => {
+    const field = JUDGE_TYPE_TO_FIELD[entry.judgeType];
+    if (field) fields[field] = parseFloat(entry.score) || 0;
+  });
+  return fields;
+}
+
+/**
+ * Panel average with COP tolerance (mirrors Server calculation.util).
+ * @param {Object} judgeScores - { seniorJudge, judge1…judge4 }
+ * @param {number} [panelSize] - 3 | 4 | 5; inferred from non-zero counts if omitted
+ */
+export function calculateAverageMarks(playerScores, panelSize) {
+  const judgeScores = playerScores?.seniorJudge !== undefined || playerScores?.judge1 !== undefined
+    ? playerScores
+    : panelScoresToJudgeFields(playerScores);
+
+  const seniorJudge = parseFloat(judgeScores.seniorJudge) || 0;
+  const evalScores = [
+    parseFloat(judgeScores.judge1) || 0,
+    parseFloat(judgeScores.judge2) || 0,
+    parseFloat(judgeScores.judge3) || 0,
+    parseFloat(judgeScores.judge4) || 0,
+  ].filter((s) => s > 0);
+
+  const nonZeroCount = (seniorJudge > 0 ? 1 : 0) + evalScores.length;
+  const size = panelSize || (nonZeroCount === 3 ? 3 : nonZeroCount >= 5 ? 5 : nonZeroCount === 4 ? 4 : 0);
+
+  if (size === 3) {
+    if (evalScores.length < 3 && nonZeroCount < 3) {
+      return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, method: null };
+    }
+    // Only judge slip totals — never include time/deduction/other fields
+    const totals = [
+      seniorJudge,
+      parseFloat(judgeScores.judge1) || 0,
+      parseFloat(judgeScores.judge2) || 0,
+      parseFloat(judgeScores.judge3) || 0,
+      parseFloat(judgeScores.judge4) || 0,
+    ].filter((s) => s > 0);
+    const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
+    return {
+      average: parseFloat(avg.toFixed(2)),
+      baseScoreApplied: false,
+      executionAvg: parseFloat(avg.toFixed(2)),
+      baseScore: 0,
+      tolerance: 0,
+      difference: 0,
+      method: '3_JUDGE_SIMPLE_AVERAGE',
+    };
+  }
+
+  if (evalScores.length === 0) {
+    return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, method: null };
+  }
+
+  const sorted = [...evalScores].sort((a, b) => a - b);
+  let executionAverage;
+  let method;
+  if (size === 5 || sorted.length === 4) {
+    const middle = sorted.slice(1, -1);
+    executionAverage = middle.reduce((a, b) => a + b, 0) / middle.length;
+    method = '5_JUDGE_STANDARD_COP';
+  } else {
+    // 4-judge: average all 3 eval judges (no drop)
+    executionAverage = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+    method = '4_JUDGE_AS_5_JUDGE_EQUIVALENT';
+  }
+
+  const tolerance = getTolerance(executionAverage);
+  if (seniorJudge === 0) {
+    return {
+      average: parseFloat(executionAverage.toFixed(2)),
+      baseScoreApplied: false,
+      executionAvg: parseFloat(executionAverage.toFixed(2)),
+      baseScore: 0,
+      tolerance,
+      difference: 0,
+      method,
+    };
+  }
+
+  const difference = Math.abs(executionAverage - seniorJudge);
+  if (difference <= tolerance) {
+    return {
+      average: parseFloat(executionAverage.toFixed(2)),
+      baseScoreApplied: false,
+      executionAvg: parseFloat(executionAverage.toFixed(2)),
+      baseScore: 0,
+      tolerance,
+      difference: parseFloat(difference.toFixed(2)),
+      method,
+    };
+  }
+
+  const baseScore = (executionAverage + seniorJudge) / 2;
+  return {
+    average: parseFloat(baseScore.toFixed(2)),
+    baseScoreApplied: true,
+    executionAvg: parseFloat(executionAverage.toFixed(2)),
+    baseScore: parseFloat(baseScore.toFixed(2)),
+    tolerance,
+    difference: parseFloat(difference.toFixed(2)),
+    method,
+  };
+}
+
+/**
+ * Cross-judge panel mismatch checks for Panel Review.
+ * Combination/Difficulty compare the actual selections (checklist / A-B-C counts),
+ * not only the section totals — two slips can share a total while disagreeing on why.
+ * Tolerance mismatch applies only to 4/5-judge panels (not 3).
+ *
+ * @param {Object} panelScores - { [judgeType]: { judgeType, score, breakdown } }
+ * @param {number} panelSize - Expected panel size (3, 4, or 5)
+ */
+export function analyzePanelMismatches(panelScores, panelSize) {
+  const slips = Object.values(panelScores || {}).filter((e) => e && (e.breakdown || e.score != null));
+  const nearlyEqual = (a, b) => Math.abs(Number(a) - Number(b)) < 0.005;
+
+  const difficultyValues = slips
+    .map((s) => s.breakdown?.difficulty?.total)
+    .filter((v) => v !== undefined && v !== null);
+  const combinationValues = slips
+    .map((s) => s.breakdown?.combination?.total)
+    .filter((v) => v !== undefined && v !== null);
+
+  // Difficulty: totals OR A/B/C element counts must agree across judges
+  const difficultyMixKeys = slips.map((s) => {
+    const d = s.breakdown?.difficulty || {};
+    return `${d.aClass ?? 0}|${d.bClass ?? 0}|${d.cClass ?? 0}`;
+  });
+  const difficultyTotalMismatch =
+    difficultyValues.length >= 2 && !difficultyValues.every((v) => nearlyEqual(v, difficultyValues[0]));
+  const difficultyMixMismatch =
+    difficultyMixKeys.length >= 2 && !difficultyMixKeys.every((k) => k === difficultyMixKeys[0]);
+  const difficultyMismatch = difficultyTotalMismatch || difficultyMixMismatch;
+
+  // Combination: totals OR checklist selections must agree across judges
+  const allComboIds = new Set();
+  slips.forEach((s) => {
+    Object.keys(s.breakdown?.combination?.checked || {}).forEach((id) => allComboIds.add(Number(id)));
+  });
+  const sortedComboIds = [...allComboIds].sort((a, b) => a - b);
+  const combinationFingerprints = slips.map((s) => {
+    const checked = s.breakdown?.combination?.checked || {};
+    // Missing key treated as unmet (same as false) so selections compare consistently
+    return sortedComboIds.map((id) => `${id}:${checked[id] ? 1 : 0}`).join(',');
+  });
+  const combinationTotalMismatch =
+    combinationValues.length >= 2 && !combinationValues.every((v) => nearlyEqual(v, combinationValues[0]));
+  const combinationSelectionMismatch =
+    combinationFingerprints.length >= 2 &&
+    !combinationFingerprints.every((fp) => fp === combinationFingerprints[0]);
+  const combinationMismatch = combinationTotalMismatch || combinationSelectionMismatch;
+
+  const size = panelSize || slips.length;
+  let toleranceMismatch = false;
+  let toleranceInfo = null;
+
+  // Tolerance / base-score only for 4- and 5-judge panels
+  if (size >= 4 && slips.length >= 4) {
+    const fields = panelScoresToJudgeFields(panelScores);
+    const result = calculateAverageMarks(fields, size);
+    toleranceMismatch = !!result.baseScoreApplied;
+    toleranceInfo = result;
+  }
+
+  return {
+    difficultyMismatch,
+    combinationMismatch,
+    combinationSelectionMismatch,
+    difficultyMixMismatch,
+    toleranceMismatch,
+    toleranceInfo,
+    difficultyValues,
+    combinationValues,
+    hasBlockingMismatch: difficultyMismatch || combinationMismatch,
+  };
+}
+
+/**
+ * Calculate final score applying deductions to the average marks.
+ */
+export function calculateFinalScore(ps) {
+    const r = calculateAverageMarks(ps);
+    return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);
+}
+

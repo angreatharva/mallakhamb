@@ -46,7 +46,7 @@ function generateToken(userId, userType, currentCompetition = null) {
 
   configManager.load();
   const jwtSecret = configManager.get('jwt.secret');
-  const expiresIn = configManager.get('jwt.expiresIn') || '1h';
+  const expiresIn = configManager.get('jwt.expiresIn') || '24h';
   return jwt.sign(payload, jwtSecret, { expiresIn });
 }
 

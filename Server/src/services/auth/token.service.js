@@ -1,13 +1,13 @@
 /**
  * Token Service
- * 
+ *
  * Handles JWT token generation, verification, refresh, and rotation.
  * Uses ConfigManager for JWT configuration.
  * Implements:
- *  - Short-lived access tokens (15 min)
+ *  - Short-lived access tokens (24h)
  *  - Long-lived refresh tokens (7 days) with rotation & reuse detection
  *  - Token rotation for long-lived sessions (Requirement 17.7)
- * 
+ *
  * Requirements: 1.5, 1.8, 17.7, HIGH-5 (Phase 2A, Item 2.2)
  */
 
@@ -19,9 +19,9 @@ const RefreshToken = require('../../../models/RefreshToken');
 /**
  * Token rotation threshold in milliseconds.
  * Tokens older than this will be rotated on use.
- * Default: 7 minutes (roughly half of the 15-min access token expiry).
+ * Default: 12 hours (roughly half of the 24-hour token expiry).
  */
-const TOKEN_ROTATION_THRESHOLD_MS = 7 * 60 * 1000;
+const TOKEN_ROTATION_THRESHOLD_MS = 12 * 60 * 60 * 1000;
 
 /** Refresh token lifetime in days */
 const REFRESH_TOKEN_DAYS = 7;

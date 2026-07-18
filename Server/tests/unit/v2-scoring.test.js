@@ -82,6 +82,22 @@ describe('3-Judge Panel Scoring', () => {
     expect(result.baseScore).toBe(0);
     expect(result.toleranceUsed).toBe(0);
   });
+
+  test('Senior + J1 + J2 (common 3-judge assignment) averages all three totals', () => {
+    // Live panels often put Senior in the chief slot even on a 3-judge panel.
+    // Avg = (0.80 + 0.70 + 0.90) / 3 = 0.80
+    const result = calculateIndividualScore({
+      seniorJudge: 0.80,
+      judge1: 0.70,
+      judge2: 0.90,
+      judge3: 0,
+      judge4: 0
+    }, 3);
+
+    expect(result.method).toBe('3_JUDGE_SIMPLE_AVERAGE');
+    expect(result.averageMarks).toBeCloseTo(0.80, 2);
+    expect(result.baseScoreApplied).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

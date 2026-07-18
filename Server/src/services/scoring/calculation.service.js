@@ -328,7 +328,10 @@ class CalculationService {
       // the base score = (executionAverage + chief) / 2 is used instead.
       // Single source of truth: calculateIndividualScore (utils/scoring).
       if (result.judgeScores) {
-        const cop = calculateIndividualScore(result.judgeScores);
+        const cop = calculateIndividualScore(
+          result.judgeScores,
+          result.panelSize || options.panelSize
+        );
         result.executionAverage = cop.executionAverage;
         result.baseScore = cop.baseScore;
         result.baseScoreApplied = cop.baseScoreApplied;
@@ -342,7 +345,17 @@ class CalculationService {
       }
 
       // Calculate final score (v2 §2: all deductions folded into judge's Execution score)
-      result.finalScore = this.calculateFinalScore(result);
+      const computedFinal = this.calculateFinalScore(result);
+      // Prefer a positive client-provided final when recalculation still yields 0
+      // (guards incomplete panel-size inference during finalize).
+      if (computedFinal > 0) {
+        result.finalScore = computedFinal;
+      } else if (typeof playerScoreData.finalScore === 'number' && playerScoreData.finalScore > 0) {
+        result.finalScore = playerScoreData.finalScore;
+        if (!result.averageMarks) result.averageMarks = playerScoreData.finalScore;
+      } else {
+        result.finalScore = computedFinal;
+      }
 
       this.logger.debug('Complete player score calculated (v2)', {
         playerId: result.playerId,

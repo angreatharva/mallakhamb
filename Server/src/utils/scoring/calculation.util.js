@@ -51,15 +51,24 @@ function calculateIndividualScore(judgeScores, panelSize) {
     panelSize = nonZeroCount === 3 ? 3 : nonZeroCount >= 4 ? 4 : 0;
   }
 
-  // 3-judge panel: simple average of all 3 totals (no Chief, no high/low drop)
+  // 3-judge panel: simple average of all submitted totals (no Chief/tolerance).
+  // Include seniorJudge — live panels often assign Senior + J1 + J2 as the three slips.
   if (panelSize === 3) {
-    const evalScores = [
+    const totals = [
+      judgeScores.seniorJudge || 0,
       judgeScores.judge1 || 0,
       judgeScores.judge2 || 0,
-      judgeScores.judge3 || 0
+      judgeScores.judge3 || 0,
+      judgeScores.judge4 || 0,
+      judgeScores.judge5 || 0
     ].filter(s => s > 0);
-    if (evalScores.length < 3) return { executionAverage: 0, baseScore: 0, baseScoreApplied: false, toleranceUsed: 0, averageMarks: 0, method: null };
-    const avgScore = evalScores.reduce((sum, s) => sum + s, 0) / evalScores.length;
+    if (totals.length < 3) {
+      return {
+        executionAverage: 0, baseScore: 0, baseScoreApplied: false,
+        toleranceUsed: 0, averageMarks: 0, method: null
+      };
+    }
+    const avgScore = totals.reduce((sum, s) => sum + s, 0) / totals.length;
     return {
       executionAverage: parseFloat(avgScore.toFixed(3)),
       baseScore: 0,

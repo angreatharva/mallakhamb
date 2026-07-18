@@ -9,6 +9,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
+import { getTimeDeduction } from '@/utils/scoring/copRules';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
@@ -97,7 +98,26 @@ const AdminScoring = () => {
             if (!playerExists) return;
             const fieldMap = { 'Senior Judge': 'seniorJudge', 'Judge 1': 'judge1', 'Judge 2': 'judge2', 'Judge 3': 'judge3', 'Judge 4': 'judge4' };
             const fieldName = fieldMap[data.judgeType] || 'seniorJudge';
-            setScores(prev => ({ ...prev, [data.playerId]: { ...prev[data.playerId], [fieldName]: data.score.toString() } }));
+            
+            setScores(prev => {
+                const player = prev[data.playerId] || {};
+                const difficulties = { ...(player.difficulties || {}) };
+                
+                // Store this judge's difficulty if it exists in the payload
+                if (data.breakdown?.difficulty?.total !== undefined) {
+                    difficulties[fieldName] = data.breakdown.difficulty.total;
+                }
+                
+                return { 
+                    ...prev, 
+                    [data.playerId]: { 
+                        ...player, 
+                        [fieldName]: data.score.toString(),
+                        difficulties
+                    } 
+                };
+            });
+            
             setLastUpdated(new Date());
             toast.success(`${data.judgeType} scored ${data.score} for ${data.playerName}`, { duration: 2000, icon: '🎯' });
         };
@@ -179,7 +199,7 @@ const AdminScoring = () => {
                 .map(pe => ({ id: pe.player._id, name: `${pe.player.firstName} ${pe.player.lastName}`, gender: pe.player.gender, ageGroup: pe.ageGroup, teamId: selectedTeam._id, teamName: selectedTeam.name }));
             setPlayers(teamPlayers);
             const initialScores = {};
-            teamPlayers.forEach(p => { initialScores[p.id] = { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '' }; });
+            teamPlayers.forEach(p => { initialScores[p.id] = { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '', difficulties: {} }; });
             setScores(initialScores);
             await loadExistingScores(selectedTeam._id, selectedGender.value, selectedAgeGroup.value, initialScores, teamPlayers);
         } catch (error) {
@@ -280,6 +300,17 @@ const AdminScoring = () => {
                 });
                 
                 if (targetId && existingScores[targetId]) {
+                    const difficulties = {};
+                    if (ps.judgeSlips && Array.isArray(ps.judgeSlips)) {
+                        ps.judgeSlips.forEach(slip => {
+                            const judgeMap = { 'SR_JUDGE': 'seniorJudge', 'J1': 'judge1', 'J2': 'judge2', 'J3': 'judge3', 'J4': 'judge4' };
+                            const fieldName = judgeMap[slip.judgeRole];
+                            if (fieldName && slip.difficultyScore !== undefined) {
+                                difficulties[fieldName] = slip.difficultyScore;
+                            }
+                        });
+                    }
+                    
                     existingScores[targetId] = { 
                         time: ps.time || '', 
                         seniorJudge: ps.judgeScores?.seniorJudge !== undefined && ps.judgeScores?.seniorJudge !== null ? ps.judgeScores.seniorJudge.toString() : '', 
@@ -288,7 +319,8 @@ const AdminScoring = () => {
                         judge3: ps.judgeScores?.judge3 !== undefined && ps.judgeScores?.judge3 !== null ? ps.judgeScores.judge3.toString() : '', 
                         judge4: ps.judgeScores?.judge4 !== undefined && ps.judgeScores?.judge4 !== null ? ps.judgeScores.judge4.toString() : '', 
                         deduction: ps.deduction !== undefined && ps.deduction !== null ? ps.deduction.toString() : '', 
-                        otherDeduction: ps.otherDeduction !== undefined && ps.otherDeduction !== null ? ps.otherDeduction.toString() : '' 
+                        otherDeduction: ps.otherDeduction !== undefined && ps.otherDeduction !== null ? ps.otherDeduction.toString() : '',
+                        difficulties
                     };
                     logger.info('Successfully mapped score for player:', targetId, existingScores[targetId]);
                 } else {
@@ -329,7 +361,35 @@ const AdminScoring = () => {
 
     const handleScoreChange = (playerId, field, value) => {
         if (isLocked) { toast.error('Cannot edit scores - this entry is locked'); return; }
-        setScores(prev => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
+        
+        setScores(prev => {
+            const updatedPlayer = { ...prev[playerId], [field]: value };
+            
+            // Auto-calculate time deduction when time changes
+            if (field === 'time') {
+                const timeStr = value.trim();
+                let seconds = 0;
+                if (timeStr.includes(':')) {
+                    const [m, s] = timeStr.split(':');
+                    seconds = (parseInt(m) || 0) * 60 + (parseInt(s) || 0);
+                } else {
+                    seconds = parseInt(timeStr) || 0;
+                }
+                
+                // Only calculate deduction if time is valid and > 90s
+                if (seconds > 0) {
+                    const overage = Math.max(0, seconds - 90);
+                    const deduction = getTimeDeduction(overage);
+                    
+                    // Always set the calculated deduction so it shows up in UI immediately
+                    updatedPlayer.deduction = deduction > 0 ? deduction.toFixed(2) : '';
+                } else if (timeStr === '') {
+                    updatedPlayer.deduction = '';
+                }
+            }
+            
+            return { ...prev, [playerId]: updatedPlayer };
+        });
         setLastUpdated(new Date());
     };
 
@@ -363,6 +423,26 @@ const AdminScoring = () => {
         
         const allPlayersScored = players.every(p => { const ps = scores[p.id]; if (!ps) return false; const hasJudge = (ps.seniorJudge && parseFloat(ps.seniorJudge) > 0) || (ps.judge1 && parseFloat(ps.judge1) > 0) || (ps.judge2 && parseFloat(ps.judge2) > 0) || (ps.judge3 && parseFloat(ps.judge3) > 0) || (ps.judge4 && parseFloat(ps.judge4) > 0); return hasJudge && ps.time?.trim(); });
         const shouldLock = allPlayersScored;
+        
+        // Validation: Difficulty Mismatch
+        if (shouldLock) {
+            const mismatchedPlayers = players.filter(p => {
+                const ps = scores[p.id];
+                if (!ps || !ps.difficulties) return false;
+                const diffValues = Object.values(ps.difficulties).filter(v => v !== undefined && v !== null);
+                if (diffValues.length > 1) {
+                    const firstDiff = diffValues[0];
+                    return !diffValues.every(v => v === firstDiff);
+                }
+                return false;
+            });
+            
+            if (mismatchedPlayers.length > 0) {
+                const names = mismatchedPlayers.map(p => p.name).join(', ');
+                toast.error(`Cannot lock scores. Difficulty values mismatch between judges for: ${names}`);
+                return;
+            }
+        }
         
         // Show confirmation dialog before saving
         const dialogTitle = shouldLock ? 'Lock & Submit Scores' : 'Save Scores as Draft';
