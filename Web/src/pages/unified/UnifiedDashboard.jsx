@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ShieldHalf, Mars, Users, Venus, Target, Shield,
@@ -158,12 +158,21 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const { logout } = useAuth();
   const maleAgeGroupValues = useAgeGroupValues('Male');
   const femaleAgeGroupValues = useAgeGroupValues('Female');
+  // Apply ?competitionId= from login only once — never fight later dropdown switches
+  const urlCompetitionHandledRef = useRef(false);
 
-  // Auto-select competition if user has only one, or handle URL parameter
+  const clearCompetitionIdFromUrl = useCallback(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.has('competitionId')) return;
+    searchParams.delete('competitionId');
+    const newSearch = searchParams.toString();
+    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
+  }, [location.pathname, location.search, navigate]);
+
+  // Auto-select competition if user has only one, or handle URL parameter once
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const competitionIdFromUrl = urlParams.get('competitionId');
-    
+    const competitionIdFromUrl = new URLSearchParams(location.search).get('competitionId');
+
     logger.info('UnifiedDashboard competition check', {
       routePrefix,
       storagePrefix,
@@ -173,39 +182,75 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       competitionIdFromUrl,
       hasCurrentCompetition: !!currentCompetition,
       currentCompetitionId: currentCompetition?._id,
-      assignedCompetitionsCount: assignedCompetitions?.length || 0
+      assignedCompetitionsCount: assignedCompetitions?.length || 0,
+      urlHandled: urlCompetitionHandledRef.current,
     });
 
     // Skip for superadmin as they don't use competition context
     if (isSuperAdmin) return;
 
-    // If there's a competition ID in the URL, set it as current competition
-    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
-      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
-      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
-        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
-        switchCompetition(competitionIdFromUrl).then(() => {
-          // Remove the URL parameter after successfully setting the competition
-          const searchParams = new URLSearchParams(location.search);
-          searchParams.delete('competitionId');
-          const newSearch = searchParams.toString();
-          navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
-        }).catch(error => {
-          logger.error('Failed to set competition from URL:', error);
+    // URL still has a competitionId but the user already switched away via the dropdown —
+    // strip the stale query param so it cannot overwrite the new selection.
+    if (
+      competitionIdFromUrl &&
+      currentCompetition &&
+      String(currentCompetition._id) !== String(competitionIdFromUrl)
+    ) {
+      clearCompetitionIdFromUrl();
+      urlCompetitionHandledRef.current = true;
+      return;
+    }
+
+    // Apply URL competition at most once (post-login handoff)
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0 && !urlCompetitionHandledRef.current) {
+      urlCompetitionHandledRef.current = true;
+      const competition = assignedCompetitions.find(
+        (c) => String(c._id) === String(competitionIdFromUrl)
+      );
+
+      if (competition && (!currentCompetition || String(currentCompetition._id) !== String(competitionIdFromUrl))) {
+        logger.info('Setting competition from URL parameter', {
+          competitionId: competitionIdFromUrl,
+          competitionName: competition.name,
         });
+        switchCompetition(competitionIdFromUrl)
+          .catch((error) => {
+            logger.error('Failed to set competition from URL:', error);
+          })
+          .finally(() => {
+            clearCompetitionIdFromUrl();
+          });
         return;
       }
+
+      // Already on the right competition — just clean the URL
+      clearCompetitionIdFromUrl();
+      return;
     }
 
     // Auto-select if user has exactly one competition and none is currently selected
     if (!currentCompetition && assignedCompetitions?.length === 1) {
       const competition = assignedCompetitions[0];
-      logger.info('Auto-selecting single assigned competition', { competitionId: competition._id, competitionName: competition.name });
-      switchCompetition(competition._id).catch(error => {
+      logger.info('Auto-selecting single assigned competition', {
+        competitionId: competition._id,
+        competitionName: competition.name,
+      });
+      switchCompetition(competition._id).catch((error) => {
         logger.error('Failed to auto-select competition:', error);
       });
     }
-  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition, isSuperAdmin]);
+  }, [
+    location.search,
+    assignedCompetitions,
+    currentCompetition,
+    switchCompetition,
+    isSuperAdmin,
+    clearCompetitionIdFromUrl,
+    routePrefix,
+    storagePrefix,
+    activeTab,
+    location.pathname,
+  ]);
 
   // Nav tabs configuration - role-specific
   const NAV_TABS = isSuperAdmin ? [

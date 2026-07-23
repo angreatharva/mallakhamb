@@ -3,6 +3,17 @@ const { objectId, enumValue, number } = require('./common.validator');
 const { isApparatusAllowedForGender } = require('../config/cop-rules');
 
 /**
+ * Validate that a value is a multiple of 0.05 (for execution marks).
+ * Accepts values like 0.00, 0.05, 0.10, 0.15, etc.
+ */
+const multipleOf005 = (value) => {
+  if (value === undefined || value === null || value === '') return true; // Handled by other validators
+  const num = parseFloat(value);
+  if (isNaN(num)) return true; // Handled by other validators
+  return Math.round(num * 20) / 20 === num;
+};
+
+/**
  * Validation rules for scoring endpoints
  */
 
@@ -101,7 +112,7 @@ const submitScore = () => {
           if (!playerScore.judgeScores) {
             throw new Error('Judge scores are required for each player');
           }
-          
+
           const judges = ['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'];
           for (const judge of judges) {
             const score = playerScore.judgeScores[judge];
@@ -109,6 +120,20 @@ const submitScore = () => {
               if (typeof score !== 'number' || score < 0 || score > 10) {
                 throw new Error(`${judge} score must be between 0 and 10`);
               }
+            }
+          }
+
+          // Validate execution marks (must be multiples of 0.05)
+          if (playerScore.breakdown?.execution !== undefined) {
+            const exec = playerScore.breakdown.execution;
+            if (typeof exec !== 'number') {
+              throw new Error('Execution score must be a number');
+            }
+            if (exec < 0 || exec > 4.40) {
+              throw new Error('Execution score must be between 0 and 4.40');
+            }
+            if (Math.round(exec * 20) / 20 !== exec) {
+              throw new Error('Execution score must be in multiples of 0.05 (e.g., 0.00, 0.05, 0.10)');
             }
           }
           
@@ -208,7 +233,21 @@ const updateScore = () => {
               }
             }
           }
-          
+
+          // Validate execution marks (must be multiples of 0.05)
+          if (playerScore.breakdown?.execution !== undefined) {
+            const exec = playerScore.breakdown.execution;
+            if (typeof exec !== 'number') {
+              throw new Error('Execution score must be a number');
+            }
+            if (exec < 0 || exec > 4.40) {
+              throw new Error('Execution score must be between 0 and 4.40');
+            }
+            if (Math.round(exec * 20) / 20 !== exec) {
+              throw new Error('Execution score must be in multiples of 0.05 (e.g., 0.00, 0.05, 0.10)');
+            }
+          }
+
           if (playerScore.executionAverage !== undefined) {
             if (typeof playerScore.executionAverage !== 'number' || 
                 playerScore.executionAverage < 0 || 

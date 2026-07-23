@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trophy, Users, Calendar, Award, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -82,30 +82,61 @@ const PlayerDashboard = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
+  const urlCompetitionHandledRef = useRef(false);
   useReducedMotion(); // Initialize for accessibility
 
-  // Handle competition selection from URL parameter
+  const clearCompetitionIdFromUrl = useCallback(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.has('competitionId')) return;
+    searchParams.delete('competitionId');
+    const newSearch = searchParams.toString();
+    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
+  }, [location.pathname, location.search, navigate]);
+
+  // Apply ?competitionId= from login only once — never fight later dropdown switches
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const competitionIdFromUrl = urlParams.get('competitionId');
-    
-    if (competitionIdFromUrl && assignedCompetitions?.length > 0) {
-      const competition = assignedCompetitions.find(c => c._id === competitionIdFromUrl);
-      if (competition && (!currentCompetition || currentCompetition._id !== competitionIdFromUrl)) {
-        logger.info('Setting competition from URL parameter', { competitionId: competitionIdFromUrl, competitionName: competition.name });
-        switchCompetition(competitionIdFromUrl).then(() => {
-          // Remove the URL parameter after successfully setting the competition
-          const searchParams = new URLSearchParams(location.search);
-          searchParams.delete('competitionId');
-          const newSearch = searchParams.toString();
-          navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
-        }).catch(error => {
-          logger.error('Failed to set competition from URL:', error);
+    const competitionIdFromUrl = new URLSearchParams(location.search).get('competitionId');
+
+    if (
+      competitionIdFromUrl &&
+      currentCompetition &&
+      String(currentCompetition._id) !== String(competitionIdFromUrl)
+    ) {
+      clearCompetitionIdFromUrl();
+      urlCompetitionHandledRef.current = true;
+      return;
+    }
+
+    if (competitionIdFromUrl && assignedCompetitions?.length > 0 && !urlCompetitionHandledRef.current) {
+      urlCompetitionHandledRef.current = true;
+      const competition = assignedCompetitions.find(
+        (c) => String(c._id) === String(competitionIdFromUrl)
+      );
+
+      if (competition && (!currentCompetition || String(currentCompetition._id) !== String(competitionIdFromUrl))) {
+        logger.info('Setting competition from URL parameter', {
+          competitionId: competitionIdFromUrl,
+          competitionName: competition.name,
         });
+        switchCompetition(competitionIdFromUrl)
+          .catch((error) => {
+            logger.error('Failed to set competition from URL:', error);
+          })
+          .finally(() => {
+            clearCompetitionIdFromUrl();
+          });
         return;
       }
+
+      clearCompetitionIdFromUrl();
     }
-  }, [location.search, assignedCompetitions, currentCompetition, switchCompetition]);
+  }, [
+    location.search,
+    assignedCompetitions,
+    currentCompetition,
+    switchCompetition,
+    clearCompetitionIdFromUrl,
+  ]);
 
   useEffect(() => {
     fetchPlayerProfile();

@@ -89,13 +89,27 @@ const JudgeDashboard = () => {
     if (!storedJudge) { toast.error('Please login first'); navigate('/judge/login'); return; }
     try {
       const judge = JSON.parse(storedJudge);
+      logger.log('Judge info loaded:', { 
+        judgeType: judge.judgeType, 
+        gender: judge.gender, 
+        ageGroup: judge.ageGroup,
+        competitionTypes: judge.competitionTypes,
+        competition: judge.competition 
+      });
       setJudgeInfo(judge);
-      
+
       // Auto-select if there's only one option assigned and we haven't selected one yet
       if (judge.competitionTypes?.length === 1 && !sessionStorage.getItem('judge_selected_comp_type')) {
         setSelectedCompetitionType(judge.competitionTypes[0]);
       }
-    } catch {
+
+      // For scorers without competitionTypes, auto-select competition_1 (Team Championship)
+      if (judge.judgeType === 'Scorer' && !judge.competitionTypes?.length && !sessionStorage.getItem('judge_selected_comp_type')) {
+        logger.log('Scorer without competitionTypes, defaulting to competition_1');
+        setSelectedCompetitionType('competition_1');
+      }
+    } catch (error) {
+      logger.error('Error loading judge info:', error);
       secureStorage.removeItem('judge_user');
       secureStorage.removeItem('judge_token');
       toast.error('Invalid session. Please login again.');
@@ -108,20 +122,53 @@ const JudgeDashboard = () => {
     try {
       setLoading(true);
       const token = secureStorage.getItem('judge_token');
+      
+      // Extract competition ID from various possible locations
+      const competitionId = judgeInfo.competition?._id || 
+                           judgeInfo.competition || 
+                           secureStorage.getItem('judge_competition_id');
+      
+      // Build API request parameters
+      const params = { 
+        competitionId: competitionId,
+        gender: judgeInfo.gender, 
+        ageGroup: judgeInfo.ageGroup, 
+        competitionType: selectedCompetitionType 
+      };
+      
+      logger.log('Fetching teams with params:', params);
+      
+      // Validate parameters before making request
+      if (!params.competitionId) {
+        logger.error('Missing competitionId - cannot fetch teams', { judgeInfo });
+        toast.error('Competition ID not found. Please contact admin.');
+        setTeams([]);
+        return;
+      }
+      
+      if (!params.gender || !params.ageGroup) {
+        logger.error('Missing gender or ageGroup', { judgeInfo });
+        toast.error('Judge assignment incomplete. Please contact admin.');
+        setTeams([]);
+        return;
+      }
+      
       const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params: { 
-          competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-          gender: judgeInfo.gender, 
-          ageGroup: judgeInfo.ageGroup, 
-          competitionType: selectedCompetitionType 
-        },
+        params,
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
         withCredentials: true
       });
+      
+      logger.log('Teams fetched successfully:', { count: response.data.data?.length || 0 });
       setTeams(response.data.data || []);
+      
+      if (response.data.data?.length === 0) {
+        logger.warn('No teams found for filters', params);
+      }
     } catch (error) {
       logger.error('Error fetching teams:', error);
-      toast.error('Failed to load teams');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to load teams';
+      toast.error(errorMessage);
       setTeams([]);
     } finally { setLoading(false); }
   };
@@ -154,13 +201,35 @@ const JudgeDashboard = () => {
   };
 
   const handleTeamSelect = (team) => {
-    navigate(`/judge/team/${team._id}`, {
-      state: {
-        team,
-        competitionType: selectedCompetitionType,
-        apparatus: selectedApparatus,
-      },
-    });
+    const competitionTypeObj = {
+      value: selectedCompetitionType,
+      label: competitionTypes.find(ct => ct.value === selectedCompetitionType)?.label || selectedCompetitionType
+    };
+
+    // Both scorers and regular judges go to /judge/scoring
+    // The JudgeScoring component will handle the role-based UI
+    if (judgeInfo?.judgeType === 'Scorer') {
+      // Scorer: Navigate to scoring with team-level state
+      navigate(`/judge/scoring`, {
+        state: {
+          selectedTeam: team,
+          selectedCompetitionType: competitionTypeObj,
+          apparatus: selectedApparatus,
+          gender: judgeInfo.gender,
+          ageGroup: judgeInfo.ageGroup,
+          isScorer: true, // Flag to indicate scorer mode
+        },
+      });
+    } else {
+      // Regular Judge: Navigate to team players first
+      navigate(`/judge/team/${team._id}`, {
+        state: {
+          team,
+          competitionType: selectedCompetitionType,
+          apparatus: selectedApparatus,
+        },
+      });
+    }
   };
 
   const handleConfirmSelection = () => {
@@ -389,7 +458,18 @@ const JudgeDashboard = () => {
                   <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
-                      .filter(ct => !judgeInfo.competitionTypes || judgeInfo.competitionTypes.includes(ct.value))
+                      .filter(ct => {
+                        // If judge has specific competition types assigned, filter to those
+                        if (judgeInfo.competitionTypes && judgeInfo.competitionTypes.length > 0) {
+                          return judgeInfo.competitionTypes.includes(ct.value);
+                        }
+                        // For scorers without competitionTypes assigned, show all types
+                        if (judgeInfo.judgeType === 'Scorer') {
+                          return true;
+                        }
+                        // For other judges without competitionTypes, use their assigned types
+                        return judgeInfo.competitionTypes?.includes(ct.value);
+                      })
                       .map(ct => (
                         <SelectBtn key={ct.value} selected={selectedCompetitionType === ct.value}
                           onClick={() => { 

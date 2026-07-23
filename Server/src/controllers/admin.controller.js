@@ -112,6 +112,14 @@ function createAdminController(container) {
     getSubmittedTeams: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
       const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      
+      logger.info('getSubmittedTeams called', {
+        competitionId,
+        userType: req.userType,
+        userId: req.user?._id,
+        query: req.query
+      });
+      
       const filters = {};
       
       if (req.query.gender) filters.gender = req.query.gender;
@@ -119,7 +127,16 @@ function createAdminController(container) {
       if (req.query.competitionType) filters.competitionType = req.query.competitionType;
       if (req.query.apparatus) filters.apparatus = req.query.apparatus;
       
+      logger.info('Fetching submitted teams', { competitionId, filters });
+      
       const teams = await adminService.getSubmittedTeams(competitionId, filters);
+      
+      logger.info('Submitted teams fetched', { 
+        competitionId, 
+        filters, 
+        teamsCount: teams?.length || 0 
+      });
+      
       res.json({ success: true, data: teams });
     }),
 

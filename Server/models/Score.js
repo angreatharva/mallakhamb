@@ -68,7 +68,20 @@ const playerScoreSchema = new mongoose.Schema({
       minimumElementCount: { type: Boolean, default: true },
       total: { type: Number, default: 1.60 }
     },
-    execution: { type: Number, default: 0 },
+    execution: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 4.40,
+      validate: {
+        validator: function(v) {
+          // Must be a multiple of 0.05 (0.00, 0.05, 0.10, ..., 4.40)
+          if (v === 0) return true;
+          return Math.round(v * 20) / 20 === v;
+        },
+        message: props => `${props.value} is not a valid execution score. Must be in multiples of 0.05.`
+      }
+    },
     originality: { type: Number, default: 0 }
   },
   executionAverage: {
@@ -160,7 +173,20 @@ const playerScoreSchema = new mongoose.Schema({
     },
     difficultyScore: { type: Number, min: 0, max: 3.80, default: 0 },
     combinationScore: { type: Number, min: 0, max: 1.60, default: 0 },
-    executionScore: { type: Number, min: 0, max: 4.40, default: 0 },
+    executionScore: {
+      type: Number,
+      min: 0,
+      max: 4.40,
+      default: 0,
+      validate: {
+        validator: function(v) {
+          // Must be a multiple of 0.05 (0.00, 0.05, 0.10, ..., 4.40)
+          if (v === 0) return true;
+          return Math.round(v * 20) / 20 === v;
+        },
+        message: props => `${props.value} is not a valid execution score. Must be in multiples of 0.05.`
+      }
+    },
     bonusScore: { type: Number, enum: [0, 0.20], default: 0 },
     total: { type: Number, min: 0, max: 10.00, default: 0 },
     submittedAt: { type: Date, default: null },

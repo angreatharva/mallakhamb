@@ -31,11 +31,11 @@ const judgeSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Judge number is required'],
     min: 1,
-    max: 5
+    max: 7 // 7 allowed for legacy Scorer docs created before Time Keeper was removed
   },
   judgeType: {
     type: String,
-    enum: ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'],
+    enum: ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'],
     required: [true, 'Judge type is required']
   },
   name: {
@@ -77,6 +77,14 @@ judgeSchema.index({ username: 1, competition: 1 }, {
   unique: true, 
   sparse: true,
   partialFilterExpression: { username: { $ne: '' } }
+});
+
+// Normalize legacy Scorer records created when Time Keeper occupied slot 6 (judgeNo 7)
+judgeSchema.pre('validate', function(next) {
+  if (this.judgeType === 'Scorer' && Number(this.judgeNo) === 7) {
+    this.judgeNo = 6;
+  }
+  next();
 });
 
 // Pre-save hook to hash password

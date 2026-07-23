@@ -968,6 +968,12 @@ class AdminService extends UserService {
    */
   async getSubmittedTeams(competitionId, filters = {}) {
     try {
+      // Log the incoming request
+      this.logger.info('AdminService.getSubmittedTeams called', { 
+        competitionId, 
+        filters 
+      });
+      
       // Query the Competition model to get registered teams
       const competition = await this.competitionRepository.findById(competitionId, {
         populate: [
@@ -989,8 +995,18 @@ class AdminService extends UserService {
         return [];
       }
 
+      this.logger.info('Competition found', { 
+        competitionId,
+        competitionName: competition.name,
+        totalRegisteredTeams: competition.registeredTeams?.length || 0
+      });
+
       // Filter submitted teams
       let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted);
+      
+      this.logger.info('Submitted teams (before additional filters)', { 
+        count: submittedTeams.length 
+      });
 
       // Apply additional filters if provided
       if (filters.gender || filters.ageGroup || filters.competitionType || filters.apparatus) {
@@ -1027,6 +1043,11 @@ class AdminService extends UserService {
           });
         });
       }
+      
+      this.logger.info('Submitted teams (after filters)', { 
+        count: submittedTeams.length,
+        filters 
+      });
 
       // Transform to expected format, attach per-player finalize status for judge dashboard
       const scoreQuery = { competition: competitionId };
@@ -1591,11 +1612,29 @@ class AdminService extends UserService {
         throw new NotFoundError('Judge');
       }
 
-      const updatedJudge = await this.judgeRepository.updateById(judgeId, {
+      const payload = {
         ...updates,
         updatedBy: adminId,
-        updatedAt: new Date()
-      });
+        updatedAt: new Date(),
+      };
+
+      // Legacy Scorer docs used judgeNo 7 (before Time Keeper was removed) — migrate to 6 when safe
+      if (judge.judgeType === 'Scorer' && Number(judge.judgeNo) === 7) {
+        payload.judgeNo = 6;
+      }
+
+      let updatedJudge;
+      try {
+        updatedJudge = await this.judgeRepository.updateById(judgeId, payload);
+      } catch (err) {
+        // Slot 6 may still be occupied by a legacy Time Keeper — update without remapping judgeNo
+        if (payload.judgeNo === 6 && /duplicate|E11000/i.test(err.message || '')) {
+          delete payload.judgeNo;
+          updatedJudge = await this.judgeRepository.updateById(judgeId, payload);
+        } else {
+          throw err;
+        }
+      }
 
       this.logger.info('Judge updated', { judgeId, adminId });
 
@@ -1738,7 +1777,9 @@ class AdminService extends UserService {
           entry.competitionTypes[ct].judges.push({
             _id: judge._id,
             name: judge.name,
-            email: judge.email
+            email: judge.email,
+            judgeType: judge.judgeType,
+            judgeNo: judge.judgeNo,
           });
         });
       });
@@ -1754,11 +1795,14 @@ class AdminService extends UserService {
         }
       });
 
-      // Update hasMinimumJudges flag (minimum 3 judges required)
+      // Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required
       summaryMap.forEach(entry => {
         Object.keys(entry.competitionTypes).forEach(ct => {
-          const judgeCount = entry.competitionTypes[ct].judges.length;
-          entry.competitionTypes[ct].hasMinimumJudges = judgeCount >= 3;
+          const judges = entry.competitionTypes[ct].judges || [];
+          const requiredTypes = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
+          entry.competitionTypes[ct].hasMinimumJudges = requiredTypes.every(
+            (type) => judges.some((j) => j.judgeType === type && j.name?.trim())
+          );
         });
       });
 

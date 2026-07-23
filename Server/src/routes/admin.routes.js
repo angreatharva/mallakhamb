@@ -17,7 +17,7 @@
 
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
-const { requireAdmin, requireSuperAdmin } = require('../middleware/auth.middleware');
+const { requireAdmin, requireSuperAdmin, requireAdminOrScorer } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
@@ -261,12 +261,12 @@ function createAdminRoutes(container) {
   /**
    * @route   GET /api/admin/judges/summary
    * @desc    Get all judges summary
-   * @access  Admin, SuperAdmin
+   * @access  Admin, SuperAdmin, Scorer
    */
   router.get(
     '/judges/summary',
     authMiddleware,
-    authorize,
+    requireAdminOrScorer,
     validateCompetitionContext,
     adminController.getAllJudgesSummary
   );
@@ -274,12 +274,12 @@ function createAdminRoutes(container) {
   /**
    * @route   GET /api/admin/judges
    * @desc    Get all judges for competition
-   * @access  Admin, SuperAdmin
+   * @access  Admin, SuperAdmin, Scorer
    */
   router.get(
     '/judges',
     authMiddleware,
-    authorize,
+    requireAdminOrScorer,
     validateCompetitionContext,
     adminController.getJudges
   );

@@ -199,12 +199,12 @@ const saveJudges = () => {
       .optional()
       .isMongoId()
       .withMessage('Invalid competition ID'),
-    array('judges', { minLength: 1, maxLength: 5 }),
+    array('judges', { minLength: 1, maxLength: 6 }),
     body('judges.*.judgeNo')
-      .isInt({ min: 1, max: 5 })
-      .withMessage('Judge number must be between 1 and 5'),
+      .isInt({ min: 1, max: 6 })
+      .withMessage('Judge number must be between 1 and 6'),
     body('judges.*.judgeType')
-      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'])
+      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
       .withMessage('Invalid judge type'),
     body('judges.*.name')
       .trim()
@@ -242,10 +242,10 @@ const createSingleJudge = () => {
       .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
       .withMessage('Invalid age group'),
     body('judgeNo')
-      .isInt({ min: 1, max: 5 })
-      .withMessage('Judge number must be between 1 and 5'),
+      .isInt({ min: 1, max: 6 })
+      .withMessage('Judge number must be between 1 and 6'),
     body('judgeType')
-      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'])
+      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
       .withMessage('Invalid judge type'),
     body('name')
       .trim()

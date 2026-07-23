@@ -56,8 +56,8 @@ class JudgeService extends UserService {
         throw new AuthenticationError('Invalid credentials');
       }
 
-      // Check if active
-      if (!judge.isActive) {
+      // Check if active — treat missing isActive as inactive only when explicitly false
+      if (judge.isActive === false) {
         this.logger.warn('Judge login failed: Account inactive', { 
           judgeId: judge._id, 
           username 

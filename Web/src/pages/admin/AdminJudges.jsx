@@ -101,6 +101,22 @@ const LoadingState = ({ label }) => (
   </div>
 );
 
+const EMPTY_JUDGE_FORM = [
+  { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
+  { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
+  { judgeNo: 3, judgeType: 'Judge 2', name: '', username: '', password: '' },
+  { judgeNo: 4, judgeType: 'Judge 3', name: '', username: '', password: '' },
+  { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' },
+  { judgeNo: 6, judgeType: 'Scorer', name: '', username: '', password: '' },
+];
+
+const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo, judgeType }));
+
+const SUPPORT_JUDGE_TYPES = ['Scorer'];
+const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
+
+const USERNAME_PREFIX_BY_NO = { 6: 'SC' };
+
 // ─── Edit Judge Modal ─────────────────────────────────────────────────────────
 const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, generateUsername, generatePassword }) => (
   <AnimatePresence>
@@ -152,9 +168,10 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
                     }
                   }}>Auto</DarkBtn>
               } />
-            <DarkInput label="Password" required value={formData.password}
+            <DarkInput label="Password" required={!judge?.name} value={formData.password}
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Enter password"
+              placeholder={judge?.name ? 'Leave blank to keep current password' : 'Enter password'}
+              hint={judge?.name ? 'Enter a new password only if you want to change it.' : undefined}
               rightElement={
                 <DarkBtn size="sm" variant="ghost"
                   onClick={() => setFormData(prev => ({ ...prev, password: generatePassword() }))}>Gen</DarkBtn>
@@ -201,13 +218,7 @@ const Judges = () => {
   const availableCompetitionTypes = getAvailableCompetitionTypes();
 
   const [judges, setJudges] = useState([]);
-  const [judgeFormData, setJudgeFormData] = useState([
-    { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
-    { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
-    { judgeNo: 3, judgeType: 'Judge 2', name: '', username: '', password: '' },
-    { judgeNo: 4, judgeType: 'Judge 3', name: '', username: '', password: '' },
-    { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' }
-  ]);
+  const [judgeFormData, setJudgeFormData] = useState(() => EMPTY_JUDGE_FORM.map((j) => ({ ...j })));
   const [editingJudge, setEditingJudge] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: '', username: '', password: '' });
   const [selectedGender, setSelectedGender] = useState(null);
@@ -280,13 +291,7 @@ const Judges = () => {
     setJudges([]);
     setJudgesExistForSelection(false);
     if (judgeType === 'add') {
-      setJudgeFormData([
-        { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
-        { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
-        { judgeNo: 3, judgeType: 'Judge 2', name: '', username: '', password: '' },
-        { judgeNo: 4, judgeType: 'Judge 3', name: '', username: '', password: '' },
-        { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' }
-      ]);
+      setJudgeFormData(EMPTY_JUDGE_FORM.map((j) => ({ ...j })));
     }
     if (judgeType === 'list' && isLadderCompleteWith()) {
       loadJudgeList();
@@ -328,30 +333,26 @@ const Judges = () => {
 
   const generateUsername = (name, judgeNo = null) => {
     if (!name?.trim() || !selectedGender?.value || !selectedAgeGroup?.value || !selectedCompetitionType?.value) return '';
-    const prefix = judgeNo ? `J${judgeNo}` : name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
+    const prefix = judgeNo
+      ? (USERNAME_PREFIX_BY_NO[judgeNo] || `J${judgeNo}`)
+      : name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
     const genderCode = selectedGender.value === 'Female' ? 'F' : 'M';
     const ageCode = getAgeGroupCode(selectedAgeGroup.value);
     const compCode = getCompetitionTypeNum(selectedCompetitionType.value);
     return `${prefix}-${genderCode}-${ageCode}-${compCode}`;
   };
 
-  // Ensure the judge list always shows all 5 slots, filling in empty placeholders for missing ones
-  const JUDGE_SLOTS = [
-    { judgeNo: 1, judgeType: 'Senior Judge' },
-    { judgeNo: 2, judgeType: 'Judge 1' },
-    { judgeNo: 3, judgeType: 'Judge 2' },
-    { judgeNo: 4, judgeType: 'Judge 3' },
-    { judgeNo: 5, judgeType: 'Judge 4' },
-  ];
-  const padToFiveSlots = (apiJudges) => {
+  // Ensure the judge list always shows all slots (5 panel + Scorer)
+  const padJudgeSlots = (apiJudges) => {
     const list = Array.isArray(apiJudges) ? apiJudges : [];
     return JUDGE_SLOTS.map(slot => {
-      const found = list.find(j => Number(j.judgeNo) === slot.judgeNo);
+      const found = list.find(j => j.judgeType === slot.judgeType)
+        || list.find(j => Number(j.judgeNo) === slot.judgeNo);
       if (found) {
         return {
           ...found,
           judgeNo: slot.judgeNo,
-          judgeType: found.judgeType || slot.judgeType,
+          judgeType: slot.judgeType,
           gender: found.gender || selectedGender?.value,
           ageGroup: found.ageGroup || selectedAgeGroup?.value,
           isEmpty: !found.name?.trim(),
@@ -413,7 +414,7 @@ const Judges = () => {
         competitionTypes: compTypeOption.value,
         apparatus: apparatusOption?.value
       }));
-      setJudges(padToFiveSlots(response.data.data || []));
+      setJudges(padJudgeSlots(response.data.data || []));
       const summaryResponse = await api.getAllJudgesSummary(
         isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : undefined
       );
@@ -468,7 +469,13 @@ const Judges = () => {
   const handleSaveJudges = async () => {
     if (!ladderComplete) { toast.error('Please complete all filters: competition, action, gender, age group, and competition type'); return; }
     const validJudges = judgeFormData.filter(j => j.name.trim() && j.password.trim());
-    if (validJudges.length < 3) { toast.error('Please fill in at least 3 judges with name and password'); return; }
+    const missingRequired = REQUIRED_JUDGE_TYPES.filter(
+      (type) => !validJudges.some((j) => j.judgeType === type)
+    );
+    if (missingRequired.length > 0) {
+      toast.error(`${missingRequired.join(', ')} ${missingRequired.length === 1 ? 'is' : 'are'} required`);
+      return;
+    }
     const judgesExist = await checkForExistingJudges();
     if (judgesExist) { toast.error('Judges already exist. Use "Judge List" to edit.'); return; }
     try {
@@ -495,13 +502,7 @@ const Judges = () => {
       } else {
         toast.success(`Judge panel saved! ${savedCount} judge${savedCount === 1 ? '' : 's'} saved.`);
       }
-      setJudgeFormData([
-        { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
-        { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
-        { judgeNo: 3, judgeType: 'Judge 2', name: '', username: '', password: '' },
-        { judgeNo: 4, judgeType: 'Judge 3', name: '', username: '', password: '' },
-        { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' }
-      ]);
+      setJudgeFormData(EMPTY_JUDGE_FORM.map((j) => ({ ...j })));
     } catch (error) {
       logger.error('Save judges error:', error);
       toast.error(error.response?.data?.message || 'Failed to save judges');
@@ -511,14 +512,21 @@ const Judges = () => {
   const handleEditJudge = (judge) => {
     if (ageGroupStarted) { toast.error('Cannot edit judges. Age group has been started.'); return; }
     setEditingJudge(judge);
-    setEditFormData({ name: judge.name || '', username: judge.username || (judge.name ? generateUsername(judge.name, judge.judgeNo) : ''), password: judge.password || '' });
+    // Never prefill password with the stored hash — leave blank; only send if user enters a new one
+    setEditFormData({
+      name: judge.name || '',
+      username: judge.username || (judge.name ? generateUsername(judge.name, judge.judgeNo) : ''),
+      password: '',
+    });
   };
 
   const handleDeleteJudge = async (judge) => {
     if (!judge._id || !judge.name) { toast.error('Cannot delete an empty judge slot'); return; }
     if (ageGroupStarted) { toast.error('Cannot delete judges. Age group has been started.'); return; }
-    const activeCount = judges.filter(j => j.name?.trim()).length;
-    if (activeCount <= 3) { toast.error('Cannot delete. Minimum 3 judges required.'); return; }
+    if (REQUIRED_JUDGE_TYPES.includes(judge.judgeType)) {
+      toast.error(`${judge.judgeType} is required and cannot be deleted`);
+      return;
+    }
     if (!window.confirm(`Delete judge "${judge.name}"?`)) return;
     try {
       await api.deleteJudge(judge._id);
@@ -528,14 +536,30 @@ const Judges = () => {
   };
 
   const handleUpdateJudge = async () => {
-    if (!editFormData.name.trim() || !editFormData.password.trim()) { toast.error('Please fill in name and password'); return; }
+    if (!editFormData.name.trim()) { toast.error('Please fill in name'); return; }
     if (!editFormData.username?.trim()) { toast.error('Please provide a username'); return; }
+    const isNewSlot = !editingJudge._id || editingJudge.isEmpty;
+    if (isNewSlot && !editFormData.password.trim()) {
+      toast.error('Please provide a password');
+      return;
+    }
     try {
-      const updatedData = { name: editFormData.name.trim(), username: editFormData.username.trim(), password: editFormData.password.trim() };
-      if (editingJudge._id && !editingJudge.isEmpty) {
+      const updatedData = {
+        name: editFormData.name.trim(),
+        username: editFormData.username.trim(),
+      };
+      // Only update password when the user entered a new one
+      if (editFormData.password.trim()) {
+        updatedData.password = editFormData.password.trim();
+      }
+      if (!isNewSlot) {
         await api.updateJudge(editingJudge._id, updatedData);
         toast.success('Judge updated!');
       } else {
+        if (!updatedData.password) {
+          toast.error('Please provide a password');
+          return;
+        }
         await api.createSingleJudge({
           gender: editingJudge.gender || selectedGender?.value,
           ageGroup: editingJudge.ageGroup || selectedAgeGroup?.value,
@@ -560,9 +584,11 @@ const Judges = () => {
   const competitionOptions = competitions.map(c => ({ value: c._id, label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}` }));
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
-  const judgeTypeBadge = (jt) => jt === 'Senior Judge'
-    ? { bg: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight }
-    : { bg: `${ADMIN_COLORS.blue}20`, color: '#93C5FD' };
+  const judgeTypeBadge = (jt) => {
+    if (jt === 'Senior Judge') return { bg: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight };
+    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold };
+    return { bg: `${ADMIN_COLORS.blue}20`, color: '#93C5FD' };
+  };
 
   return (
     <div className="space-y-6">
@@ -686,7 +712,7 @@ const Judges = () => {
                           {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
                           {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
                         </p>
-                        <p className="text-white/50 text-xs mt-1">Minimum 3 judges required · Maximum 5 allowed · Empty slots can be filled later</p>
+                        <p className="text-white/50 text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 & Scorer · Judge 3 & Judge 4 optional</p>
                       </div>
                       <div className="space-y-4">
                         {judgeFormData.map((judge, index) => {
@@ -696,6 +722,9 @@ const Judges = () => {
                               <div className="flex items-center gap-2 mb-4">
                                 <span className="text-sm font-bold text-white">{judge.judgeNo}</span>
                                 <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
+                                {REQUIRED_JUDGE_TYPES.includes(judge.judgeType) && (
+                                  <span className="text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>* Required</span>
+                                )}
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <DarkInput placeholder="Enter judge name" value={judge.name}
@@ -761,8 +790,7 @@ const Judges = () => {
                       <div className="space-y-3">
                         {judges.map((judge, index) => {
                           const badge = judgeTypeBadge(judge.judgeType);
-                          const activeCount = judges.filter(j => j.name?.trim()).length;
-                          const canDelete = activeCount > 3;
+                          const canDelete = judge.name?.trim() && !REQUIRED_JUDGE_TYPES.includes(judge.judgeType);
                           return (
                             <div key={index} className="rounded-xl border p-4 flex items-center justify-between gap-4"
                               style={{ background: judge.isEmpty ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>

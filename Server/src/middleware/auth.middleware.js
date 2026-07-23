@@ -253,6 +253,35 @@ function requireRole(...allowedRoles) {
 }
 
 /**
+ * Middleware for endpoints that allow both Admin and Scorer (Judge)
+ */
+const requireAdminOrScorer = (req, res, next) => {
+  if (!req.user || !req.userType) {
+    return res.status(401).json({ 
+      success: false,
+      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }
+    });
+  }
+
+  const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' || 
+                 (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
+                 
+  const isScorer = req.userType === 'judge' && req.user.judgeType === 'Scorer';
+
+  if (!isAdmin && !isScorer) {
+    return res.status(403).json({ 
+      success: false,
+      error: {
+        message: 'Access denied. Requires Admin or Scorer permissions.',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      }
+    });
+  }
+  
+  next();
+};
+
+/**
  * Middleware to check if user is a player
  */
 const requirePlayer = requireRole('player');
@@ -314,3 +343,4 @@ module.exports.requireCoach = requireCoach;
 module.exports.requireAdmin = requireAdmin;
 module.exports.requireSuperAdmin = requireSuperAdmin;
 module.exports.requireJudge = requireJudge;
+module.exports.requireAdminOrScorer = requireAdminOrScorer;

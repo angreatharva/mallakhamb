@@ -184,13 +184,16 @@ class BaseRepository {
       if (updates.password !== undefined) {
         const doc = await this.model.findById(id);
         if (!doc) return null;
-        
-        // Apply updates to document
-        Object.assign(doc, updates);
-        
+
+        // Use set() so Mongoose tracks changes (Object.assign bypasses change tracking)
+        doc.set(updates);
+        if (updates.password) {
+          doc.markModified('password');
+        }
+
         // Save will trigger pre-save hooks (including password hashing)
         await doc.save();
-        
+
         return this.toPlainObject(doc);
       }
       

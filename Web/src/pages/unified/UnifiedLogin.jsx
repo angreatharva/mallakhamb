@@ -304,6 +304,9 @@ const UnifiedLoginInner = () => {
         // Store competition context
         if (competitionId) {
           secureStorage.setItem('judge_competition_id', competitionId);
+          if (competition) {
+            secureStorage.setItem('judge_current_competition', JSON.stringify(competition));
+          }
           logger.log('Judge competition context stored:', competitionId);
         }
         
@@ -417,7 +420,11 @@ const UnifiedLoginInner = () => {
       }
       
       // Handle invalid credentials or other login errors
-      const errorMsg = error.response?.data?.message || 'Incorrect credentials. Please try again with correct credentials.';
+      const errorMsg =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Incorrect credentials. Please try again with correct credentials.';
       setLoginError(errorMsg);
       toast.error(errorMsg);
       

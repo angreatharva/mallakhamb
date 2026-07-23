@@ -174,8 +174,15 @@ const AdminScoring = () => {
             
             const judgesResponse = await api.getJudges(judgesParams);
             const judgesData = judgesResponse.data.data || judgesResponse.data;
-            const activeJudges = (Array.isArray(judgesData) ? judgesData : []).filter(j => !j.isEmpty && j.name?.trim()).sort((a, b) => a.judgeNo - b.judgeNo);
+            const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+            const allAssigned = (Array.isArray(judgesData) ? judgesData : []).filter(j => !j.isEmpty && j.name?.trim());
+            const activeJudges = allAssigned
+              .filter(j => PANEL_TYPES.includes(j.judgeType))
+              .sort((a, b) => a.judgeNo - b.judgeNo);
             setJudges(activeJudges);
+
+            const sc = allAssigned.find(j => j.judgeType === 'Scorer');
+            if (sc?.name) setScorer((prev) => prev || sc.name);
             
             const summaryParams = {};
             if (routePrefix === '/superadmin' && currentCompetition?._id) {

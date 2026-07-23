@@ -25,6 +25,7 @@ import {
   calculateAverageMarks,
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
+import ScorerScoring from './ScorerScoring'; // Import scorer component
 
 // Design tokens for judge theme
 const J = {
@@ -186,6 +187,15 @@ const JudgeScoring = () => {
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
 
+  // Check if this is a scorer accessing the page
+  const stateData = location.state || {};
+  const isScorer = stateData.isScorer || false;
+  
+  // If scorer, render ScorerScoring component instead
+  if (isScorer) {
+    return <ScorerScoring />;
+  }
+
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [judgeInfo, setJudgeInfo] = useState(null);
@@ -198,9 +208,7 @@ const JudgeScoring = () => {
   const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
   const joinedRoomRef = useRef(null);
 
-  // Read data from location state
-  const stateData = location.state;
-
+  // Read data from location state (regular judge flow requires player selection)
   useEffect(() => {
     if (!stateData || !stateData.player || !stateData.team || !stateData.competitionType) {
       toast.error('Missing player selection. Redirecting to dashboard.');
@@ -734,8 +742,13 @@ const JudgeScoring = () => {
                         <h3 className="font-black text-white text-sm">Execution</h3>
                         <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
                       </div>
-                      <ScoreInput label="" value={scores.execution} max={4.40} step={0.1}
-                        onChange={e => { const v = Math.max(0, Math.min(4.40, parseFloat(e.target.value) || 0)); setScores({ ...scores, execution: v }); }} />
+                      <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
+                        onChange={e => {
+                          const raw = parseFloat(e.target.value) || 0;
+                          // Round to nearest 0.05 increment (0.00, 0.05, 0.10, ...)
+                          const v = Math.round(raw * 20) / 20;
+                          setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
+                        }} />
                     </div>
 
                     <div className="rounded-2xl border p-3 sm:p-4"
