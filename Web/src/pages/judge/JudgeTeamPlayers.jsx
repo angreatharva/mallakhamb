@@ -49,11 +49,22 @@ const JudgeTeamPlayers = () => {
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [team, setTeam] = useState(location.state?.team || null);
   const [loading, setLoading] = useState(!location.state?.team);
+  const [judgeScoreMap, setJudgeScoreMap] = useState({}); // { playerId: true } for players this judge has scored
 
   const selectedCompetitionType =
     location.state?.competitionType || sessionStorage.getItem('judge_selected_comp_type') || '';
   const selectedApparatus =
     location.state?.apparatus || sessionStorage.getItem('judge_selected_apparatus') || 'Pole Mallakhamb';
+  
+  // Use gender and ageGroup from navigation state (if passed), otherwise fall back to session storage or judgeInfo
+  const selectedGender = 
+    location.state?.gender || 
+    sessionStorage.getItem('judge_selected_gender') || 
+    judgeInfo?.gender;
+  const selectedAgeGroup = 
+    location.state?.ageGroup || 
+    sessionStorage.getItem('judge_selected_age_group') || 
+    judgeInfo?.ageGroup;
 
   useEffect(() => {
     const storedJudge = secureStorage.getItem('judge_user');
@@ -73,11 +84,20 @@ const JudgeTeamPlayers = () => {
     try {
       setLoading(true);
       const token = secureStorage.getItem('judge_token');
+      
+      logger.log('Fetching team with params:', {
+        teamId,
+        gender: selectedGender,
+        ageGroup: selectedAgeGroup,
+        competitionType: selectedCompetitionType
+      });
+      
+      // Fetch team data from public API
       const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
         params: {
           competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-          gender: judgeInfo.gender,
-          ageGroup: judgeInfo.ageGroup,
+          gender: selectedGender,
+          ageGroup: selectedAgeGroup,
           competitionType: selectedCompetitionType,
         },
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
@@ -86,11 +106,94 @@ const JudgeTeamPlayers = () => {
       const teams = response.data.data || [];
       const found = teams.find((t) => String(t._id) === String(teamId));
       if (!found) {
-        toast.error('Team not found');
+        logger.error('Team not found in response:', { teamId, teamsCount: teams.length, teams });
+        toast.error('Team not found for selected category');
         navigate('/judge/dashboard');
         return;
       }
       setTeam(found);
+
+      // Fetch score status from judge endpoint & public scores to know which players have scores
+      try {
+        const scoreMap = {};
+
+        // 1. Try judge-specific endpoint
+        try {
+          const judgePlayersRes = await axios.get(
+            `${apiConfig.getBaseUrl()}/judge/teams/${teamId}/players`,
+            {
+              headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+              withCredentials: true,
+            }
+          );
+          const judgePlayers = judgePlayersRes.data?.data?.players || judgePlayersRes.data?.players || [];
+          judgePlayers.forEach((p) => {
+            if (p.hasScore) {
+              scoreMap[String(p._id)] = true;
+            }
+          });
+        } catch (e) {
+          logger.warn('Judge-specific endpoint fallback:', e.message);
+        }
+
+        // 2. Query public scores as supplement
+        try {
+          const scoresRes = await axios.get(`${apiConfig.getBaseUrl()}/public/scores`, {
+            params: {
+              competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+              teamId,
+              gender: selectedGender,
+              ageGroup: selectedAgeGroup,
+              competitionType: selectedCompetitionType,
+            },
+            headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          });
+
+          const scoreDocs = scoresRes.data?.data || [];
+          const judgeRoleMap = {
+            'Senior Judge': { field: 'seniorJudge', role: 'SR_JUDGE' },
+            'Judge 1': { field: 'judge1', role: 'J1' },
+            'Judge 2': { field: 'judge2', role: 'J2' },
+            'Judge 3': { field: 'judge3', role: 'J3' },
+            'Judge 4': { field: 'judge4', role: 'J4' }
+          };
+          const currentRoleInfo = judgeRoleMap[judgeInfo?.judgeType] || { field: 'judge1', role: 'J1' };
+
+          scoreDocs.forEach((doc) => {
+            (doc.playerScores || []).forEach((ps) => {
+              const pid = ps.playerId?._id || ps.playerId;
+              if (pid) {
+                const hasScore = ps.isFinalized ||
+                  (ps.judgeScores && ps.judgeScores[currentRoleInfo.field] > 0) ||
+                  (ps.judgeSlips && ps.judgeSlips.some(s => s.judgeRole === currentRoleInfo.role)) ||
+                  (ps.judgeScores && Object.values(ps.judgeScores).some(v => Number(v) > 0));
+
+                if (hasScore) {
+                  scoreMap[String(pid)] = true;
+                }
+              }
+            });
+          });
+        } catch (e) {
+          logger.warn('Public scores endpoint fallback:', e.message);
+        }
+
+        // 3. Merge locally saved submitted player IDs for instant session persistence
+        try {
+          const localSubmitted = JSON.parse(sessionStorage.getItem(`judge_submitted_players_${teamId}`) || '{}');
+          Object.keys(localSubmitted).forEach((pid) => {
+            if (localSubmitted[pid]) {
+              scoreMap[String(pid)] = true;
+            }
+          });
+        } catch (e) {}
+
+        setJudgeScoreMap(scoreMap);
+        logger.log('Final merged judge score map loaded:', scoreMap);
+      } catch (scoreErr) {
+        logger.warn('Could not fetch scores (non-critical):', scoreErr.message);
+      }
     } catch (error) {
       logger.error('Error loading team:', error);
       toast.error('Failed to load team');
@@ -98,11 +201,11 @@ const JudgeTeamPlayers = () => {
     } finally {
       setLoading(false);
     }
-  }, [judgeInfo, selectedCompetitionType, teamId, navigate]);
+  }, [judgeInfo, selectedCompetitionType, teamId, selectedGender, selectedAgeGroup, navigate]);
 
   useEffect(() => {
     if (judgeInfo && selectedCompetitionType) fetchTeam();
-  }, [judgeInfo, selectedCompetitionType, teamId, fetchTeam]);
+  }, [judgeInfo, selectedCompetitionType, fetchTeam]);
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
@@ -112,9 +215,21 @@ const JudgeTeamPlayers = () => {
 
   const players = (() => {
     if (!team || !judgeInfo) return [];
+    
+    logger.log('Filtering players:', {
+      totalPlayers: team.players?.length,
+      filterGender: selectedGender,
+      filterAgeGroup: selectedAgeGroup,
+      apparatus: selectedApparatus
+    });
+    
     return (team.players || [])
       .filter((e) => {
-        if (!e.player || e.player.gender !== judgeInfo.gender || e.ageGroup !== judgeInfo.ageGroup) return false;
+        // Filter by selected gender and age group (not judgeInfo)
+        if (!e.player || e.player.gender !== selectedGender || e.ageGroup !== selectedAgeGroup) {
+          return false;
+        }
+        // Filter by apparatus if specified
         if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
           const apps = e.apparatus[selectedCompetitionType];
           if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
@@ -131,7 +246,7 @@ const JudgeTeamPlayers = () => {
         apparatus: e.apparatus || {},
         isFinalized: !!e.isFinalized,
         finalScore: e.finalScore ?? null,
-        hasScore: !!e.hasScore,
+        hasScore: !!e.hasScore || !!judgeScoreMap[e.player._id],
       }));
   })();
 
@@ -142,12 +257,18 @@ const JudgeTeamPlayers = () => {
       );
       return;
     }
+    if (player.hasScore) {
+      toast.success(`You have already submitted scores for ${player.name}`);
+      return;
+    }
     navigate('/judge/scoring', {
       state: {
         team,
         player,
         competitionType: selectedCompetitionType,
         apparatus: selectedApparatus,
+        gender: selectedGender,
+        ageGroup: selectedAgeGroup,
         returnTo: `/judge/team/${team._id}`,
       },
     });
@@ -155,7 +276,7 @@ const JudgeTeamPlayers = () => {
 
   if (!judgeInfo) return null;
 
-  const scoredCount = players.filter((p) => p.isFinalized).length;
+  const scoredCount = players.filter((p) => p.isFinalized || p.hasScore).length;
 
   return (
     <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -234,28 +355,28 @@ const JudgeTeamPlayers = () => {
                   type="button"
                   onClick={() => handlePlayerSelect(player)}
                   className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
-                    player.isFinalized
+                    (player.isFinalized || player.hasScore)
                       ? 'bg-green-500/10 border-green-500/30 cursor-default'
                       : 'hover:bg-purple-500/15 border-white/10 hover:border-purple-500/30 bg-white/[0.02]'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
-                      player.isFinalized
+                      (player.isFinalized || player.hasScore)
                         ? 'bg-green-500/20 border-green-500/40'
                         : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
                     }`}>
-                      {player.isFinalized
+                      {(player.isFinalized || player.hasScore)
                         ? <CheckCircle className="w-5 h-5" style={{ color: J.green }} aria-hidden="true" />
                         : <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" aria-hidden="true" />}
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-base text-white flex items-center gap-2">
                         {player.name}
-                        {player.isFinalized && (
+                        {(player.isFinalized || player.hasScore) && (
                           <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
                             style={{ background: 'rgba(34,197,94,0.2)', color: J.green }}>
-                            Scored
+                            {player.isFinalized ? 'Finalized' : 'Scored'}
                           </span>
                         )}
                       </p>
@@ -273,7 +394,7 @@ const JudgeTeamPlayers = () => {
                         {player.apparatus[selectedCompetitionType].join(', ')}
                       </span>
                     )}
-                    {player.isFinalized ? (
+                    {(player.isFinalized || player.hasScore) ? (
                       <div className="w-8 h-8 rounded-full flex items-center justify-center"
                         style={{ background: 'rgba(34,197,94,0.2)' }}>
                         <CheckCircle className="w-4 h-4" style={{ color: J.green }} aria-hidden="true" />

@@ -218,7 +218,7 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/judges */
     getJudges: asyncHandler(async (req, res) => {
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
       const { gender, ageGroup, competitionTypes, apparatus } = req.query;
       const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes, apparatus });
       res.json({ success: true, data: judges });
@@ -252,7 +252,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/judges/summary */
     getAllJudgesSummary: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
       const summary = await adminService.getAllJudgesSummary(competitionId);
       res.json({ success: true, data: summary });
     }),
@@ -277,7 +277,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/scores/team */
     getTeamScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
       const scores = await adminService.getTeamScores(
         competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus
       );
@@ -391,8 +391,8 @@ function createAdminController(container) {
         }
       }
       
-      // Handle both admin routes (with req.competitionId) and superadmin routes (with body/query params)
-      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId;
+      // Handle admin routes, superadmin routes, and judge/scorer routes
+      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
       
       if (!competitionId) {
         return res.status(400).json({

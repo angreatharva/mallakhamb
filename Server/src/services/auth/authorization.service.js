@@ -431,6 +431,64 @@ class AuthorizationService {
   }
 
   /**
+   * Get judge details including assignment information
+   * @param {string} judgeId - Judge ID
+   * @returns {Promise<Object|null>} Judge document with assignment details or null
+   */
+  async getJudgeDetails(judgeId) {
+    try {
+      const judge = await this.judgeRepository.findById(judgeId);
+      
+      if (!judge) {
+        this.logger.warn('Judge not found for details fetch', { judgeId });
+        return null;
+      }
+
+      // Find all assignments for this judge username within the competition
+      let assignments = [judge];
+      if (judge.username && judge.competition) {
+        const all = await this.judgeRepository.find({
+          username: judge.username.toLowerCase(),
+          competition: judge.competition,
+          isActive: { $ne: false }
+        });
+        if (all && all.length > 0) {
+          assignments = all;
+        }
+      }
+
+      // Return judge with all assignment details
+      return {
+        _id: judge._id,
+        name: judge.name,
+        username: judge.username,
+        judgeType: judge.judgeType,
+        gender: judge.gender,
+        ageGroup: judge.ageGroup,
+        competitionTypes: judge.competitionTypes || [],
+        apparatus: judge.apparatus,
+        competition: judge.competition,
+        isActive: judge.isActive,
+        judgeNo: judge.judgeNo,
+        assignments: assignments.map(a => ({
+          gender: a.gender,
+          ageGroup: a.ageGroup,
+          competitionTypes: a.competitionTypes || [],
+          apparatus: a.apparatus,
+          judgeType: a.judgeType,
+          judgeNo: a.judgeNo
+        }))
+      };
+    } catch (error) {
+      this.logger.error('Get judge details error', {
+        judgeId,
+        error: error.message
+      });
+      return null;
+    }
+  }
+
+  /**
    * Get repository by user type
    * @param {string} userType - User type
    * @returns {BaseRepository} Repository instance

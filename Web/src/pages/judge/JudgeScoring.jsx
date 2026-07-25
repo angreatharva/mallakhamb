@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
@@ -187,14 +187,39 @@ const JudgeScoring = () => {
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
 
-  // Check if this is a scorer accessing the page
-  const stateData = location.state || {};
-  const isScorer = stateData.isScorer || false;
-  
-  // If scorer, render ScorerScoring component instead
+  // Check if current user is a Scorer (from navigation state or user profile)
+  const storedJudgeUser = useMemo(() => {
+    try {
+      const u = secureStorage.getItem('judge_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
+
+  // If scorer, render ScorerScoring component directly without validating player selection
   if (isScorer) {
     return <ScorerScoring />;
   }
+
+  // Read data from location state or sessionStorage fallback for regular judge refresh resilience
+  const activeSessionData = useMemo(() => {
+    if (location.state && location.state.player && (location.state.team || location.state.selectedTeam) && location.state.competitionType) {
+      sessionStorage.setItem('judge_scoring_active_session', JSON.stringify(location.state));
+      return location.state;
+    }
+    const saved = sessionStorage.getItem('judge_scoring_active_session');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, [location.state]);
 
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -208,21 +233,23 @@ const JudgeScoring = () => {
   const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
   const joinedRoomRef = useRef(null);
 
-  // Read data from location state (regular judge flow requires player selection)
   useEffect(() => {
-    if (!stateData || !stateData.player || !stateData.team || !stateData.competitionType) {
+    if (!activeSessionData || !activeSessionData.player || !activeSessionData.team || !activeSessionData.competitionType) {
       toast.error('Missing player selection. Redirecting to dashboard.');
       navigate('/judge/dashboard');
     }
-  }, [stateData, navigate]);
+  }, [activeSessionData, navigate]);
 
-  const selectedTeam = stateData?.team;
-  const selectedPlayer = stateData?.player;
-  const selectedCompetitionType = stateData?.competitionType;
-  const selectedApparatus = stateData?.apparatus || 'Pole Mallakhamb';
+  const selectedTeam = activeSessionData?.team;
+  const selectedPlayer = activeSessionData?.player;
+  const selectedCompetitionType = activeSessionData?.competitionType;
+  const selectedApparatus = activeSessionData?.apparatus || 'Pole Mallakhamb';
+  const selectedGender = activeSessionData?.gender;
+  const selectedAgeGroup = activeSessionData?.ageGroup;
 
   const goBackAfterScoring = () => {
-    const returnTo = stateData?.returnTo
+    sessionStorage.removeItem('judge_scoring_active_session');
+    const returnTo = activeSessionData?.returnTo
       || (selectedTeam?._id ? `/judge/team/${selectedTeam._id}` : '/judge/dashboard');
     navigate(returnTo, {
       state: selectedTeam?._id
@@ -230,6 +257,8 @@ const JudgeScoring = () => {
             team: selectedTeam,
             competitionType: selectedCompetitionType,
             apparatus: selectedApparatus,
+            gender: selectedGender,
+            ageGroup: selectedAgeGroup,
           }
         : undefined,
     });
@@ -278,16 +307,20 @@ const JudgeScoring = () => {
         const res = await axios.get(`${apiConfig.getBaseUrl()}/public/judges`, {
           params: {
             competitionId,
-            gender: judgeInfo.gender,
-            ageGroup: judgeInfo.ageGroup,
+            gender: selectedGender || judgeInfo.gender,
+            ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
             competitionTypes: selectedCompetitionType,
             apparatus: selectedApparatus,
           },
           headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
-        const judges = res.data?.data || [];
-        const count = judges.length;
+        const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+        const judgesData = res.data?.data || [];
+        const panelJudges = (Array.isArray(judgesData) ? judgesData : [])
+          .filter(j => !j.isEmpty && j.name?.trim())
+          .filter(j => PANEL_TYPES.includes(j.judgeType));
+        const count = panelJudges.length;
         if (count >= 3 && count <= 5) setPanelSize(count);
         else if (count > 5) setPanelSize(5);
         else setPanelSize(null);
@@ -296,7 +329,7 @@ const JudgeScoring = () => {
       }
     };
     loadPanelSize();
-  }, [judgeInfo, selectedCompetitionType, selectedApparatus]);
+  }, [judgeInfo, selectedCompetitionType, selectedApparatus, selectedGender, selectedAgeGroup]);
 
   const playerIdOf = (player) => player?.id || player?._id;
 
@@ -320,6 +353,120 @@ const JudgeScoring = () => {
     const bonus = parseFloat(breakdown.bonus ?? breakdown.originality ?? 0) || 0;
     return { difficulty, combination, execution, bonus, _score: fallbackScore };
   };
+
+  // Fetch existing submitted scores for this player and panel upon mount/refresh
+  const fetchExistingScores = useCallback(async () => {
+    if (!judgeInfo || !selectedPlayer || !selectedTeam) return;
+    try {
+      const token = secureStorage.getItem('judge_token');
+      const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
+      const gender = selectedGender || judgeInfo.gender;
+      const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+      const playerId = playerIdOf(selectedPlayer);
+
+      const res = await axios.get(`${apiConfig.getBaseUrl()}/public/scores`, {
+        params: {
+          competitionId,
+          teamId: selectedTeam._id || selectedTeam.id,
+          gender,
+          ageGroup,
+          competitionType: selectedCompetitionType,
+        },
+        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+
+      const scoreDocs = res.data?.data || [];
+      if (!Array.isArray(scoreDocs) || scoreDocs.length === 0) return;
+
+      const scoreDoc = scoreDocs[0];
+      const playerScoresList = scoreDoc.playerScores || [];
+      const targetPs = playerScoresList.find(
+        (ps) => String(ps.playerId) === String(playerId)
+      );
+
+      if (!targetPs) return;
+
+      const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+      const loadedPanelScores = {};
+
+      if (Array.isArray(targetPs.judgeSlips) && targetPs.judgeSlips.length > 0) {
+        const roleMap = { SJ: 'Senior Judge', J1: 'Judge 1', J2: 'Judge 2', J3: 'Judge 3', J4: 'Judge 4' };
+        targetPs.judgeSlips.forEach((slip) => {
+          const jType = roleMap[slip.judgeRole] || slip.judgeRole;
+          if (PANEL_TYPES.includes(jType) && Number(slip.total) > 0) {
+            loadedPanelScores[jType] = {
+              judgeType: jType,
+              score: slip.total,
+              breakdown: normalizeBreakdown(slip.breakdown, slip.total),
+              timestamp: slip.submittedAt || new Date().toISOString(),
+            };
+          }
+        });
+      }
+
+      if (targetPs.judgeScores) {
+        const roleToType = {
+          seniorJudge: 'Senior Judge',
+          judge1: 'Judge 1',
+          judge2: 'Judge 2',
+          judge3: 'Judge 3',
+          judge4: 'Judge 4',
+        };
+        Object.entries(targetPs.judgeScores).forEach(([key, val]) => {
+          const jType = roleToType[key];
+          if (jType && PANEL_TYPES.includes(jType) && Number(val) > 0 && !loadedPanelScores[jType]) {
+            loadedPanelScores[jType] = {
+              judgeType: jType,
+              score: Number(val),
+              breakdown: normalizeBreakdown(targetPs.breakdown, val),
+              timestamp: new Date().toISOString(),
+            };
+          }
+        });
+      }
+
+      setPanelScores(prev => ({
+        ...loadedPanelScores,
+        ...prev
+      }));
+
+      // Restore judge's own submitted score & inputs if present
+      const myScore = loadedPanelScores[judgeInfo.judgeType];
+      if (myScore) {
+        setSubmitted(true);
+        if (myScore.breakdown) {
+          const b = normalizeBreakdown(myScore.breakdown, myScore.score);
+          setScores({
+            difficulty: {
+              aClass: b.difficulty.aClass || 0,
+              bClass: b.difficulty.bClass || 0,
+              cClass: b.difficulty.cClass || 0,
+              total: b.difficulty.total || 0,
+            },
+            combination: {
+              checked: { ...buildInitialCombination().checked, ...(b.combination.checked || {}) },
+              total: b.combination.total ?? 0,
+            },
+            execution: b.execution || 0,
+            bonus: b.bonus || 0,
+          });
+        }
+      }
+
+      if (targetPs.isFinalized || scoreDoc.isLocked) {
+        setFinalized(true);
+      }
+    } catch (err) {
+      logger.warn('Could not load existing player scores:', err);
+    }
+  }, [judgeInfo, selectedPlayer, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
+
+  useEffect(() => {
+    if (judgeInfo && selectedPlayer) {
+      fetchExistingScores();
+    }
+  }, [judgeInfo, selectedPlayer, fetchExistingScores]);
 
   useEffect(() => {
     if (!judgeInfo || !selectedCompetitionType) return;
@@ -371,17 +518,20 @@ const JudgeScoring = () => {
     newSocket.on('score_updated', (data) => {
       const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
       if (currentPlayerId && String(data.playerId) === currentPlayerId) {
-        setPanelScores(prev => ({
-          ...prev,
-          [data.judgeType]: {
-            judgeType: data.judgeType,
-            score: data.score,
-            breakdown: normalizeBreakdown(data.breakdown, data.score),
-            timestamp: data.timestamp || new Date().toISOString(),
+        const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+        if (PANEL_TYPES.includes(data.judgeType)) {
+          setPanelScores(prev => ({
+            ...prev,
+            [data.judgeType]: {
+              judgeType: data.judgeType,
+              score: data.score,
+              breakdown: normalizeBreakdown(data.breakdown, data.score),
+              timestamp: data.timestamp || new Date().toISOString(),
+            }
+          }));
+          if (data.isFinalSubmit || data.isLocked) {
+            setFinalized(true);
           }
-        }));
-        if (data.isFinalSubmit || data.isLocked) {
-          setFinalized(true);
         }
       }
     });
@@ -458,9 +608,11 @@ const JudgeScoring = () => {
       };
       const scoreData = {
         playerId: playerIdOf(selectedPlayer), playerName: selectedPlayer.name,
-        judgeType: judgeInfo.judgeType, score: parseFloat(finalScore),
-        teamId: selectedTeam._id, gender: judgeInfo.gender,
-        ageGroup: judgeInfo.ageGroup, competitionType: selectedCompetitionType,
+        judgeType: judgeInfo.judgeType, judgeNo: judgeInfo.judgeNo, score: parseFloat(finalScore),
+        teamId: selectedTeam._id,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         apparatus: selectedApparatus,
         breakdown
@@ -469,6 +621,12 @@ const JudgeScoring = () => {
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
         withCredentials: true
       });
+      try {
+        const sKey = `judge_submitted_players_${selectedTeam._id}`;
+        const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
+        prev[playerIdOf(selectedPlayer)] = true;
+        sessionStorage.setItem(sKey, JSON.stringify(prev));
+      } catch (e) {}
       if (socket?.connected) {
         socket.emit('score_update', {
           ...scoreData,
@@ -523,10 +681,12 @@ const JudgeScoring = () => {
     setViewMode('scoring');
   };
 
-  const effectivePanelSize = panelSize || Object.keys(panelScores).length || 0;
+  const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+  const panelScoresCount = Object.keys(panelScores).filter(jt => PANEL_TYPES.includes(jt)).length;
+  const effectivePanelSize = panelSize || panelScoresCount || 0;
   const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
   const panelCalc = calculateAverageMarks(panelScoresToJudgeFields(panelScores), effectivePanelSize);
-  const allPanelSubmitted = effectivePanelSize > 0 && Object.keys(panelScores).length >= effectivePanelSize;
+  const allPanelSubmitted = effectivePanelSize > 0 && panelScoresCount >= effectivePanelSize;
   const isSeniorJudge = judgeInfo?.judgeType === 'Senior Judge';
   // Final Submit is Senior Judge only
   const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
@@ -544,8 +704,8 @@ const JudgeScoring = () => {
       const calc = calculateAverageMarks(fields, effectivePanelSize);
       const payload = {
         teamId: selectedTeam._id,
-        gender: judgeInfo.gender,
-        ageGroup: judgeInfo.ageGroup,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
         competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         isFinalSubmit: true,
@@ -592,6 +752,12 @@ const JudgeScoring = () => {
         headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
+      try {
+        const sKey = `judge_submitted_players_${selectedTeam._id}`;
+        const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
+        prev[playerIdOf(selectedPlayer)] = true;
+        sessionStorage.setItem(sKey, JSON.stringify(prev));
+      } catch (e) {}
       if (socket?.connected) {
         socket.emit('scores_saved', {
           roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
@@ -939,7 +1105,7 @@ const JudgeScoring = () => {
                 <div>
                   <h2 className="text-xl font-black text-white">Panel Review</h2>
                   <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {Object.keys(panelScores).length}
+                    {panelScoresCount}
                     {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
                     {effectivePanelSize ? ` · ${effectivePanelSize}-judge panel` : ''}
                   </p>
@@ -1075,14 +1241,14 @@ const JudgeScoring = () => {
                 })}
               </div>
 
-              {Object.keys(panelScores).length === 0 && (
+              {panelScoresCount === 0 && (
                 <p className="text-center text-sm py-8" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   Waiting for judges to submit…
                 </p>
               )}
 
               {/* Panel average preview */}
-              {Object.keys(panelScores).length > 0 && (
+              {panelScoresCount > 0 && (
                 <div className="rounded-2xl border p-4"
                   style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}>
                   <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: J.purpleLight }}>

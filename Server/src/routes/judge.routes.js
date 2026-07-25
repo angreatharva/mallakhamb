@@ -21,6 +21,7 @@ const judgeValidator = require('../validators/judge.validator');
 function createJudgeRoutes(container) {
   const router = express.Router();
   const judgeController = container.resolve('judgeController');
+  const adminController = container.resolve('adminController');
   const authenticate = createAuthMiddleware(container);
 
   // Authentication
@@ -105,6 +106,31 @@ function createJudgeRoutes(container) {
     authenticate,
     requireJudge,
     judgeController.getMyScores
+  );
+
+  // Scorer interface endpoints
+  router.get('/scores/team',
+    authenticate,
+    requireJudge,
+    adminController.getTeamScores
+  );
+
+  router.get('/judges',
+    authenticate,
+    requireJudge,
+    adminController.getJudges
+  );
+
+  router.get('/judges/summary',
+    authenticate,
+    requireJudge,
+    adminController.getAllJudgesSummary
+  );
+
+  router.post('/scores/save',
+    authenticate,
+    requireJudge,
+    adminController.saveScores
   );
 
   return router;

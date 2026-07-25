@@ -48,7 +48,7 @@ class JudgeService extends UserService {
    */
   async loginJudge(username, password) {
     try {
-      // Find judge by username (case-insensitive)
+      // Find judge by username (case-insensitive) - gets one record
       const judge = await this.judgeRepository.findByUsername(username.toLowerCase());
       
       if (!judge) {
@@ -86,19 +86,28 @@ class JudgeService extends UserService {
         throw new NotFoundError('Competition');
       }
 
+      // Find ALL judge records with the same username and competition (for multi-assignment support)
+      const allAssignments = await this.judgeRepository.find({
+        username: username.toLowerCase(),
+        competition: competitionId,
+        isActive: { $ne: false } // Only include active assignments
+      });
+
+      this.logger.info('Judge logged in successfully', { 
+        judgeId: judge._id, 
+        competitionId,
+        username,
+        totalAssignments: allAssignments.length,
+        ageGroups: [...new Set(allAssignments.map(a => a.ageGroup))],
+        genders: [...new Set(allAssignments.map(a => a.gender))]
+      });
+
       // Generate token with competition context
       const token = this.tokenService.generateToken(
         judge._id, 
         'judge', 
         competitionId
       );
-
-      this.logger.info('Judge logged in successfully', { 
-        judgeId: judge._id, 
-        competitionId,
-        ageGroup: judge.ageGroup,
-        gender: judge.gender
-      });
 
       return {
         judge: {
@@ -109,7 +118,17 @@ class JudgeService extends UserService {
           judgeNo: judge.judgeNo,
           ageGroup: judge.ageGroup,
           gender: judge.gender,
-          competitionTypes: judge.competitionTypes
+          competitionTypes: judge.competitionTypes,
+          // NEW: Include all assignments for this judge
+          allAssignments: allAssignments.map(a => ({
+            _id: a._id,
+            gender: a.gender,
+            ageGroup: a.ageGroup,
+            competitionTypes: a.competitionTypes,
+            apparatus: a.apparatus,
+            judgeType: a.judgeType,
+            judgeNo: a.judgeNo
+          }))
         },
         token,
         competition: {
@@ -433,28 +452,54 @@ class JudgeService extends UserService {
         throw new NotFoundError('Team');
       }
 
+      // Find score documents for this team and judge's category
+      const scoreQuery = {
+        teamId: teamId,
+        gender: judge.gender,
+        ageGroup: judge.ageGroup
+      };
+      if (judge.competition) {
+        scoreQuery.competition = judge.competition._id || judge.competition;
+      }
+
+      const scores = await this.scoreRepository.find(scoreQuery);
+
+      const judgeRoleMap = {
+        'Senior Judge': { field: 'seniorJudge', role: 'SR_JUDGE' },
+        'Judge 1': { field: 'judge1', role: 'J1' },
+        'Judge 2': { field: 'judge2', role: 'J2' },
+        'Judge 3': { field: 'judge3', role: 'J3' },
+        'Judge 4': { field: 'judge4', role: 'J4' }
+      };
+
+      const judgeInfo = judgeRoleMap[judge.judgeType] || { field: 'judge1', role: 'J1' };
+      const scoreMap = {};
+
+      for (const scoreDoc of scores || []) {
+        for (const ps of scoreDoc.playerScores || []) {
+          const pid = ps.playerId?.toString();
+          if (!pid) continue;
+
+          const hasJudgeScore = (ps.judgeScores && ps.judgeScores[judgeInfo.field] > 0) ||
+            (ps.judgeSlips && ps.judgeSlips.some(s => s.judgeRole === judgeInfo.role)) ||
+            ps.isFinalized ||
+            (ps.judgeScores && Object.values(ps.judgeScores).some(v => Number(v) > 0));
+
+          if (hasJudgeScore) {
+            scoreMap[pid] = {
+              hasScore: true,
+              isFinalized: !!ps.isFinalized,
+              score: ps.judgeScores?.[judgeInfo.field] || ps.finalScore || null
+            };
+          }
+        }
+      }
+
       // Fetch players for this team
       const Player = require('../../models/Player');
       const players = await Player.find({ team: teamId }).lean();
 
-      // Verify judge can score this team (age group and gender match)
-      if (team.ageGroup !== judge.ageGroup || team.gender !== judge.gender) {
-        throw new AuthorizationError('Not authorized to score this team');
-      }
-
-      // Get existing scores by this judge for this team
-      const scores = await this.scoreRepository.find({
-        team: teamId,
-        judge: judgeId
-      });
-
-      const scoreMap = scores.reduce((map, score) => {
-        map[score.player.toString()] = score;
-        return map;
-      }, {});
-
-      // Add score info to each player
-      const playersWithScores = team.players.map(player => ({
+      const playersWithScores = players.map(player => ({
         _id: player._id,
         firstName: player.firstName,
         lastName: player.lastName,
@@ -462,16 +507,15 @@ class JudgeService extends UserService {
         dateOfBirth: player.dateOfBirth,
         gender: player.gender,
         ageGroup: player.ageGroup,
-        score: scoreMap[player._id.toString()] || null,
-        hasScore: !!scoreMap[player._id.toString()]
+        score: scoreMap[player._id.toString()]?.score || null,
+        isFinalized: !!scoreMap[player._id.toString()]?.isFinalized,
+        hasScore: !!scoreMap[player._id.toString()]?.hasScore
       }));
 
       return {
         team: {
           _id: team._id,
           name: team.name,
-          ageGroup: team.ageGroup,
-          gender: team.gender,
           coach: team.coach,
           competition: team.competition
         },

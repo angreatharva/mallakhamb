@@ -11,7 +11,9 @@ import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
 import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI } from '@/services/api';
+import { createAdminAPI } from '@/services/user/admin.api';
+
+const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { getTimeDeduction } from '@/utils/scoring/copRules';
 import { logger } from '@/infrastructure/logger';
@@ -23,8 +25,23 @@ import ConfirmDialog from '@/components/auth/ConfirmDialog';
 const ScorerScoring = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const stateData = location.state || {};
-  const { selectedTeam, selectedCompetitionType, gender, ageGroup } = stateData;
+  const activeSessionData = useMemo(() => {
+    if (location.state && location.state.selectedTeam && location.state.selectedCompetitionType) {
+      sessionStorage.setItem('scorer_scoring_active_session', JSON.stringify(location.state));
+      return location.state;
+    }
+    const saved = sessionStorage.getItem('scorer_scoring_active_session');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, [location.state]);
+
+  const { selectedTeam, selectedCompetitionType, gender, ageGroup } = activeSessionData || {};
 
   const [socket, setSocket] = useState(null);
   const [judges, setJudges] = useState([]);
@@ -94,7 +111,7 @@ const ScorerScoring = () => {
   const loadExistingScores = useCallback(async (teamId, gender, ageGroup, initialScores, currentPlayers) => {
     try {
       const scoresParams = { teamId, gender, ageGroup };
-      const allResponse = await adminAPI.getTeamScores(scoresParams);
+      const allResponse = await scorerAPI.getTeamScores(scoresParams);
 
       if (!allResponse?.data) {
         setScores(initialScores);
@@ -172,7 +189,7 @@ const ScorerScoring = () => {
 
       const judgesParams = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value };
       if (selectedCompetitionType?.value) judgesParams.competitionTypes = selectedCompetitionType.value;
-      const judgesResponse = await adminAPI.getJudges(judgesParams);
+      const judgesResponse = await scorerAPI.getJudges(judgesParams);
       const judgesData = judgesResponse.data.data || judgesResponse.data;
       const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
       const activeJudges = (Array.isArray(judgesData) ? judgesData : [])
@@ -182,7 +199,7 @@ const ScorerScoring = () => {
       setJudges(activeJudges);
 
       const summaryParams = {};
-      const summaryResponse = await adminAPI.getAllJudgesSummary(summaryParams);
+      const summaryResponse = await scorerAPI.getAllJudgesSummary(summaryParams);
       const summaryData = summaryResponse.data.data?.summary || summaryResponse.data.summary || [];
       const ageGroupInfo = summaryData.find(item =>
         item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value
@@ -234,7 +251,7 @@ const ScorerScoring = () => {
   }, [selectedTeam, selectedGender, selectedAgeGroup, navigate]);
 
   useEffect(() => {
-    if (!judgeInfo || !selectedCompetitionType) return;
+    if (!judgeInfo) return;
     const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
     const token = secureStorage.getItem('judge_token');
 
@@ -247,8 +264,13 @@ const ScorerScoring = () => {
     newSocket.on('connect', () => {
       setIsConnected(true);
       logger.info('Scorer socket connected successfully');
-      if (selectedGender?.value && selectedAgeGroup?.value && selectedCompetitionType?.value) {
-        const roomId = `scoring_${selectedGender.value}_${selectedAgeGroup.value}_${selectedCompetitionType.value}`;
+      
+      const genderVal = selectedGender?.value || selectedGender || judgeInfo.gender;
+      const ageGroupVal = selectedAgeGroup?.value || selectedAgeGroup || judgeInfo.ageGroup;
+      const compTypeVal = selectedCompetitionType?.value || selectedCompetitionType || 'competition_1';
+      
+      if (genderVal && ageGroupVal && compTypeVal) {
+        const roomId = `scoring_${genderVal}_${ageGroupVal}_${compTypeVal}`;
         newSocket.emit('join_scoring_room', { roomId });
         logger.info(`Joined scoring room: ${roomId}`);
       }
@@ -273,13 +295,23 @@ const ScorerScoring = () => {
       if (isLocked) return;
       const playerExists = players.some(p => p.id === data.playerId);
       if (!playerExists) return;
+
+      const fieldMap = {
+        'Senior Judge': 'seniorJudge',
+        'Judge 1': 'judge1',
+        'Judge 2': 'judge2',
+        'Judge 3': 'judge3',
+        'Judge 4': 'judge4'
+      };
+      const fieldName = fieldMap[data.judgeType] || (data.judgeNo ? `judge${data.judgeNo}` : 'seniorJudge');
+
       setScores(prev => {
         const player = prev[data.playerId] || {};
         return {
           ...prev,
           [data.playerId]: {
             ...player,
-            [data.judgeType === 'Senior Judge' ? 'seniorJudge' : `judge${data.judgeNo}`]: data.score.toString()
+            [fieldName]: data.score.toString()
           }
         };
       });
@@ -465,7 +497,7 @@ const ScorerScoring = () => {
         scoringData.competition = competitionId;
       }
 
-      const response = await adminAPI.saveScores(scoringData);
+      const response = await scorerAPI.saveScores(scoringData);
 
       const responseData = response.data.data || response.data;
       const { scoreId, isLocked: responseLocked, playerScores: calculatedPlayerScores } = responseData;

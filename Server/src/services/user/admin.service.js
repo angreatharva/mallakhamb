@@ -1097,7 +1097,9 @@ class AdminService extends UserService {
               finalizedAt: ps.finalizedAt,
             });
           }
-          scoredByPlayer.set(key, true);
+          if (ps.isFinalized || (ps.judgeScores && Object.values(ps.judgeScores).some((v) => Number(v) > 0)) || (ps.judgeSlips && ps.judgeSlips.length > 0)) {
+            scoredByPlayer.set(key, true);
+          }
         }
         if (needsRepair && doc._id) {
           try {
@@ -1458,7 +1460,7 @@ class AdminService extends UserService {
             continue;
           }
 
-          const lookupKey = judgeData.username || judgeData.email;
+          // Look for existing judge in the SAME slot (gender + ageGroup + judgeNo + competition)
           let existing = null;
           if (competitionId && judgeData.gender && judgeData.ageGroup && judgeData.judgeNo) {
             const query = {
@@ -1474,12 +1476,10 @@ class AdminService extends UserService {
             }
             existing = await this.judgeRepository.findOne(query);
           }
-          if (!existing && lookupKey && competitionId) {
-            existing = await this.judgeRepository.findOne({
-              username: lookupKey.toLowerCase(),
-              competition: competitionId,
-            });
-          }
+
+          // NOTE: We do NOT search by username alone anymore
+          // This allows the same person to be assigned to multiple age groups/genders
+          // They will have separate judge records with the same username
 
           const hasCompleteData = !!(judgeData.name && judgeData.username && judgeData.password);
           const judgeDataWithStatus = {
@@ -1489,6 +1489,7 @@ class AdminService extends UserService {
           };
 
           if (existing) {
+            // Update existing judge in this specific slot
             const mergedTypes = [
               ...new Set([
                 ...(existing.competitionTypes || []),
@@ -1501,6 +1502,7 @@ class AdminService extends UserService {
             });
             results.updated.push(updated);
           } else {
+            // Create new judge record for this slot
             const created = await this.judgeRepository.create({
               ...judgeDataWithStatus,
               createdBy: adminId

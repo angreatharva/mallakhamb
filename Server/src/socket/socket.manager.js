@@ -149,7 +149,7 @@ class SocketManager {
    * Handle new socket connection
    * @param {Socket} socket - Socket.IO socket instance
    */
-  handleConnection(socket) {
+  async handleConnection(socket) {
     this.logger.info('User connected', {
       socketId: socket.id,
       userId: socket.userId,
@@ -162,14 +162,135 @@ class SocketManager {
       this.metricsCollector.trackSocketConnection(1);
     }
 
-    // Store user connection mapping
-    this.connectedUsers.set(socket.userId, socket.id);
+    // Store user connection mapping (Set of socket.ids per userId)
+    if (!this.connectedUsers.has(socket.userId)) {
+      this.connectedUsers.set(socket.userId, new Set());
+    }
+    this.connectedUsers.get(socket.userId).add(socket.id);
+
+    // Auto-join judges to their assigned scoring room
+    if (socket.userType === 'judge') {
+      await this.autoJoinJudgeRoom(socket);
+    }
 
     // Register all event handlers for this socket
     this.registerSocketEvents(socket);
 
     // Handle disconnection
     socket.on('disconnect', () => this.handleDisconnection(socket));
+  }
+
+  /**
+   * Auto-join judge to their assigned scoring room
+   * @param {Socket} socket - Socket.IO socket instance with authenticated judge
+   */
+  async autoJoinJudgeRoom(socket) {
+    try {
+      // Fetch judge details from authorizationService to get their assignment(s)
+      const judgeDetails = await this.authorizationService.getJudgeDetails(socket.userId);
+      
+      if (!judgeDetails) {
+        this.logger.warn('Judge details not found for auto-join', {
+          socketId: socket.id,
+          userId: socket.userId
+        });
+        return;
+      }
+
+      const assignments = (judgeDetails.assignments && judgeDetails.assignments.length > 0)
+        ? judgeDetails.assignments
+        : [judgeDetails];
+
+      for (const assignment of assignments) {
+        const { gender, ageGroup, competitionTypes, apparatus, judgeType } = assignment;
+        
+        if (!gender || !ageGroup) {
+          this.logger.warn('Judge assignment missing gender/ageGroup', {
+            socketId: socket.id,
+            userId: socket.userId,
+            gender,
+            ageGroup
+          });
+          continue;
+        }
+
+        const compTypes = (competitionTypes && Array.isArray(competitionTypes) && competitionTypes.length > 0)
+          ? competitionTypes
+          : ['competition_1'];
+
+        for (const compType of compTypes) {
+          // Raw room format (e.g., scoring_Male_Under18_competition_1)
+          const rawRoomId = `scoring_${gender}_${ageGroup}_${compType}`;
+          socket.join(rawRoomId);
+
+          // Normalized room format (e.g., scoring_Male_Under18_Competition I)
+          const compTypeValue = this.normalizeCompetitionType(compType);
+          const normRoomId = `scoring_${gender}_${ageGroup}_${compTypeValue}`;
+          if (normRoomId !== rawRoomId) {
+            socket.join(normRoomId);
+          }
+
+          this.logger.info('Judge auto-joined scoring room', {
+            socketId: socket.id,
+            userId: socket.userId,
+            judgeId: judgeDetails._id,
+            judgeName: judgeDetails.name,
+            judgeType: judgeType || judgeDetails.judgeType,
+            rawRoomId,
+            normRoomId,
+            gender,
+            ageGroup,
+            competitionType: compType,
+            apparatus
+          });
+
+          // Notify the judge client that they've joined the room
+          socket.emit('room_joined', {
+            roomId: rawRoomId,
+            message: 'Automatically joined your assigned scoring room',
+            assignment: {
+              gender,
+              ageGroup,
+              competitionType: compType,
+              apparatus,
+              judgeType: judgeType || judgeDetails.judgeType
+            }
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error auto-joining judge to room', {
+        socketId: socket.id,
+        userId: socket.userId,
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  }
+
+  /**
+   * Normalize competition type from database format to display format
+   * @param {string} compType - Competition type (e.g., "competition_1", "Competition I")
+   * @returns {string} Normalized competition type
+   */
+  normalizeCompetitionType(compType) {
+    if (!compType) return 'Competition I';
+    
+    // If already in "Competition X" format, return as is
+    if (/^Competition [IVX]+$/i.test(compType)) {
+      return compType;
+    }
+    
+    // Convert competition_1 -> Competition I, competition_2 -> Competition II, etc.
+    const typeMap = {
+      'competition_1': 'Competition I',
+      'competition_2': 'Competition II',
+      'competition_3': 'Competition III',
+      'competition_4': 'Competition IV',
+      'competition_5': 'Competition V'
+    };
+    
+    return typeMap[compType.toLowerCase()] || compType;
   }
 
   /**
@@ -188,8 +309,18 @@ class SocketManager {
       this.metricsCollector.trackSocketConnection(-1);
     }
 
-    // Remove user connection mapping
-    this.connectedUsers.delete(socket.userId);
+    // Remove user connection mapping from Set
+    if (this.connectedUsers.has(socket.userId)) {
+      const userSockets = this.connectedUsers.get(socket.userId);
+      if (userSockets instanceof Set) {
+        userSockets.delete(socket.id);
+        if (userSockets.size === 0) {
+          this.connectedUsers.delete(socket.userId);
+        }
+      } else {
+        this.connectedUsers.delete(socket.userId);
+      }
+    }
   }
 
   /**
@@ -346,18 +477,23 @@ class SocketManager {
       return;
     }
 
-    const socketId = this.connectedUsers.get(userId);
+    const userSockets = this.connectedUsers.get(userId);
     
-    if (!socketId) {
+    if (!userSockets) {
       this.logger.warn('User not connected', { userId, eventName });
       return;
     }
 
-    this.io.to(socketId).emit(eventName, data);
+    if (userSockets instanceof Set) {
+      for (const socketId of userSockets) {
+        this.io.to(socketId).emit(eventName, data);
+      }
+    } else {
+      this.io.to(userSockets).emit(eventName, data);
+    }
 
     this.logger.debug('Event emitted to user', {
       userId,
-      socketId,
       eventName,
       data
     });
@@ -420,19 +556,22 @@ class SocketManager {
    * @param {string} userId - User ID to disconnect
    */
   disconnectUser(userId) {
-    const socketId = this.connectedUsers.get(userId);
+    const userSockets = this.connectedUsers.get(userId);
     
-    if (!socketId) {
+    if (!userSockets) {
       this.logger.warn('Cannot disconnect user: not connected', { userId });
       return;
     }
 
-    const socket = this.io.sockets.sockets.get(socketId);
-    
-    if (socket) {
-      socket.disconnect(true);
-      this.logger.info('User disconnected by server', { userId, socketId });
+    const ids = userSockets instanceof Set ? Array.from(userSockets) : [userSockets];
+    for (const socketId of ids) {
+      const socket = this.io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.disconnect(true);
+      }
     }
+    this.connectedUsers.delete(userId);
+    this.logger.info('User disconnected by server', { userId });
   }
 
   /**

@@ -123,7 +123,7 @@ class ScoringHandler {
       throw new Error('Only judges can update scores');
     }
 
-    const { roomId, playerId, teamId, judgeType, score, notes, breakdown, playerName } = data;
+    const { roomId, playerId, teamId, judgeType, judgeNo, score, notes, breakdown, playerName } = data;
 
     // Validate required fields
     if (!roomId || !playerId || !judgeType || score === undefined) {
@@ -144,18 +144,26 @@ class ScoringHandler {
       }
     }
 
-    // Broadcast score update to all users in the room except sender (real-time panel sync).
-    // Persistence is handled by POST /public/save-score; socket is for live Panel Review.
-    socket.to(roomId).emit(EventTypes.SCORE_UPDATED, {
+    const payload = {
       playerId,
       playerName,
       judgeType,
+      judgeNo: judgeNo || data.judgeNo || null,
       score,
       breakdown,
       teamId: teamId || null,
       judgeId: socket.userId,
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // Broadcast score update to all users in the room except sender (real-time panel sync).
+    // Persistence is handled by POST /public/save-score; socket is for live Panel Review.
+    socket.to(roomId).emit(EventTypes.SCORE_UPDATED, payload);
+
+    const altRoomId = this.getAltRoomId(roomId);
+    if (altRoomId && altRoomId !== roomId) {
+      socket.to(altRoomId).emit(EventTypes.SCORE_UPDATED, payload);
+    }
 
     socket.emit(EventTypes.SCORE_SAVED, {
       playerId,
@@ -166,6 +174,7 @@ class ScoringHandler {
 
     this.logger.info('Score update broadcast via Socket.IO', {
       roomId,
+      altRoomId,
       playerId,
       teamId,
       judgeId: socket.userId,
@@ -173,6 +182,33 @@ class ScoringHandler {
       score,
       hasBreakdown: !!breakdown
     });
+  }
+
+  /**
+   * Helper to get alternate room ID format (competition_1 <-> Competition I)
+   * @param {string} roomId - Room ID
+   * @returns {string|null} Alternate room ID
+   */
+  getAltRoomId(roomId) {
+    if (!roomId || typeof roomId !== 'string') return null;
+    if (!roomId.startsWith('scoring_')) return null;
+
+    if (roomId.includes('competition_')) {
+      return roomId
+        .replace('competition_1', 'Competition I')
+        .replace('competition_2', 'Competition II')
+        .replace('competition_3', 'Competition III')
+        .replace('competition_4', 'Competition IV')
+        .replace('competition_5', 'Competition V');
+    } else if (roomId.includes('Competition ')) {
+      return roomId
+        .replace('Competition I', 'competition_1')
+        .replace('Competition II', 'competition_2')
+        .replace('Competition III', 'competition_3')
+        .replace('Competition IV', 'competition_4')
+        .replace('Competition V', 'competition_5');
+    }
+    return null;
   }
 
   /**
@@ -208,14 +244,21 @@ class ScoringHandler {
       }
     }
 
-    // Broadcast scores saved notification to all users in the room
-    this.socketManager.emitToRoom(roomId, EventTypes.SCORES_SAVED_NOTIFICATION, {
+    const payload = {
       playerId,
       scores,
       savedBy: socket.userId,
       savedByType: socket.userType,
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // Broadcast scores saved notification to all users in the room
+    this.socketManager.emitToRoom(roomId, EventTypes.SCORES_SAVED_NOTIFICATION, payload);
+    
+    const altRoomId = this.getAltRoomId(roomId);
+    if (altRoomId && altRoomId !== roomId) {
+      this.socketManager.emitToRoom(altRoomId, EventTypes.SCORES_SAVED_NOTIFICATION, payload);
+    }
 
     this.logger.info('Scores saved notification broadcasted', {
       roomId,

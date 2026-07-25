@@ -69,6 +69,8 @@ const JudgeDashboard = () => {
   
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
+  const [selectedGender, setSelectedGender] = useState(() => sessionStorage.getItem('judge_selected_gender') || '');
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(() => sessionStorage.getItem('judge_selected_age_group') || '');
   const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || 'Pole Mallakhamb');
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
@@ -77,6 +79,10 @@ const JudgeDashboard = () => {
   const [showModal, setShowModal] = useState(() => {
     return !sessionStorage.getItem('judge_category_selected');
   });
+
+  // Available options based on judge assignment(s)
+  const [availableGenders, setAvailableGenders] = useState([]);
+  const [availableAgeGroups, setAvailableAgeGroups] = useState([]);
 
   const competitionTypes = [
     { value: 'competition_1', label: 'Competition I', sub: 'Team' },
@@ -94,11 +100,28 @@ const JudgeDashboard = () => {
         gender: judge.gender, 
         ageGroup: judge.ageGroup,
         competitionTypes: judge.competitionTypes,
-        competition: judge.competition 
+        competition: judge.competition,
+        allAssignments: judge.allAssignments
       });
       setJudgeInfo(judge);
 
-      // Auto-select if there's only one option assigned and we haven't selected one yet
+      // Extract unique genders and age groups from all assignments
+      const allAssignments = judge.allAssignments || [judge];
+      const genders = [...new Set(allAssignments.map(a => a.gender))].filter(Boolean);
+      const ageGroups = [...new Set(allAssignments.map(a => a.ageGroup))].filter(Boolean);
+      
+      setAvailableGenders(genders);
+      setAvailableAgeGroups(ageGroups);
+
+      // Auto-select if there's only one option
+      if (genders.length === 1 && !sessionStorage.getItem('judge_selected_gender')) {
+        setSelectedGender(genders[0]);
+      }
+      if (ageGroups.length === 1 && !sessionStorage.getItem('judge_selected_age_group')) {
+        setSelectedAgeGroup(ageGroups[0]);
+      }
+
+      // Auto-select if there's only one competition type and we haven't selected one yet
       if (judge.competitionTypes?.length === 1 && !sessionStorage.getItem('judge_selected_comp_type')) {
         setSelectedCompetitionType(judge.competitionTypes[0]);
       }
@@ -128,11 +151,15 @@ const JudgeDashboard = () => {
                            judgeInfo.competition || 
                            secureStorage.getItem('judge_competition_id');
       
+      // Use selected values if available, otherwise fall back to judgeInfo
+      const gender = selectedGender || judgeInfo.gender;
+      const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+      
       // Build API request parameters
       const params = { 
         competitionId: competitionId,
-        gender: judgeInfo.gender, 
-        ageGroup: judgeInfo.ageGroup, 
+        gender: gender, 
+        ageGroup: ageGroup, 
         competitionType: selectedCompetitionType 
       };
       
@@ -147,8 +174,8 @@ const JudgeDashboard = () => {
       }
       
       if (!params.gender || !params.ageGroup) {
-        logger.error('Missing gender or ageGroup', { judgeInfo });
-        toast.error('Judge assignment incomplete. Please contact admin.');
+        logger.error('Missing gender or ageGroup', { gender, ageGroup, judgeInfo });
+        toast.error('Judge assignment incomplete. Please select gender and age group.');
         setTeams([]);
         return;
       }
@@ -177,8 +204,7 @@ const JudgeDashboard = () => {
     if (judgeInfo && !showModal && selectedCompetitionType) {
       fetchTeams();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [judgeInfo, showModal]);
+  }, [judgeInfo, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup]);
 
   const handleLogout = async () => {
     clearCompetitionContext?.();
@@ -187,9 +213,12 @@ const JudgeDashboard = () => {
   };
 
   const getFilteredPlayersForTeam = (team) => {
+    const gender = selectedGender || judgeInfo.gender;
+    const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+    
     return team.players
       .filter(e => {
-        if (!e.player || e.player.gender !== judgeInfo.gender || e.ageGroup !== judgeInfo.ageGroup) return false;
+        if (!e.player || e.player.gender !== gender || e.ageGroup !== ageGroup) return false;
         if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
           const apps = e.apparatus[selectedCompetitionType];
           if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
@@ -201,6 +230,18 @@ const JudgeDashboard = () => {
   };
 
   const handleTeamSelect = (team) => {
+    const gender = selectedGender || judgeInfo.gender;
+    const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+    
+    logger.log('handleTeamSelect called:', {
+      teamId: team._id,
+      teamName: team.name,
+      judgeType: judgeInfo?.judgeType,
+      gender,
+      ageGroup,
+      selectedCompetitionType
+    });
+    
     const competitionTypeObj = {
       value: selectedCompetitionType,
       label: competitionTypes.find(ct => ct.value === selectedCompetitionType)?.label || selectedCompetitionType
@@ -209,24 +250,28 @@ const JudgeDashboard = () => {
     // Both scorers and regular judges go to /judge/scoring
     // The JudgeScoring component will handle the role-based UI
     if (judgeInfo?.judgeType === 'Scorer') {
+      logger.log('Navigating to scorer scoring page');
       // Scorer: Navigate to scoring with team-level state
       navigate(`/judge/scoring`, {
         state: {
           selectedTeam: team,
           selectedCompetitionType: competitionTypeObj,
           apparatus: selectedApparatus,
-          gender: judgeInfo.gender,
-          ageGroup: judgeInfo.ageGroup,
+          gender: gender,
+          ageGroup: ageGroup,
           isScorer: true, // Flag to indicate scorer mode
         },
       });
     } else {
+      logger.log('Navigating to team players page:', `/judge/team/${team._id}`);
       // Regular Judge: Navigate to team players first
       navigate(`/judge/team/${team._id}`, {
         state: {
           team,
           competitionType: selectedCompetitionType,
           apparatus: selectedApparatus,
+          gender: gender,
+          ageGroup: ageGroup,
         },
       });
     }
@@ -235,6 +280,8 @@ const JudgeDashboard = () => {
   const handleConfirmSelection = () => {
     sessionStorage.setItem('judge_category_selected', 'true');
     sessionStorage.setItem('judge_selected_comp_type', selectedCompetitionType);
+    sessionStorage.setItem('judge_selected_gender', selectedGender || judgeInfo.gender);
+    sessionStorage.setItem('judge_selected_age_group', selectedAgeGroup || judgeInfo.ageGroup);
     if (selectedApparatus) {
       sessionStorage.setItem('judge_selected_apparatus', selectedApparatus);
     } else {
@@ -253,7 +300,9 @@ const JudgeDashboard = () => {
 
   const needsApparatus = apparatusOptions.length > 0;
   const isApparatusSelected = !needsApparatus || !!selectedApparatus;
-  const isSelectionComplete = selectedCompetitionType && isApparatusSelected;
+  const isGenderSelected = availableGenders.length <= 1 || !!selectedGender;
+  const isAgeGroupSelected = availableAgeGroups.length <= 1 || !!selectedAgeGroup;
+  const isSelectionComplete = selectedCompetitionType && isApparatusSelected && isGenderSelected && isAgeGroupSelected;
 
   const filteredTeams = teams.filter(team => 
     team.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -317,8 +366,8 @@ const JudgeDashboard = () => {
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
-                  { label: 'Gender', value: judgeInfo.gender },
-                  { label: 'Age Group', value: judgeInfo.ageGroup },
+                  { label: 'Gender', value: selectedGender || judgeInfo.gender },
+                  { label: 'Age Group', value: selectedAgeGroup || judgeInfo.ageGroup },
                   { label: 'Competition', value: getCompLabel(selectedCompetitionType) },
                   ...(selectedApparatus ? [{ label: 'Apparatus', value: selectedApparatus }] : []),
                 ].map(({ label, value }) => (
@@ -440,17 +489,45 @@ const JudgeDashboard = () => {
                   <p className="text-white/50 text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
-                {/* Fixed Assignments */}
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex justify-around">
-                  <div className="text-center">
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Gender</p>
-                    <p className="font-bold text-white">{judgeInfo.gender}</p>
-                  </div>
-                  <div className="w-px bg-white/10"></div>
-                  <div className="text-center">
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Age Group</p>
-                    <p className="font-bold text-white">{judgeInfo.ageGroup}</p>
-                  </div>
+                {/* Fixed or Selectable Assignments */}
+                <div className="space-y-4">
+                  {/* Gender Selection or Display */}
+                  {availableGenders.length > 1 ? (
+                    <div>
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Gender</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {availableGenders.map(g => (
+                          <SelectBtn key={g} selected={selectedGender === g} onClick={() => setSelectedGender(g)}>
+                            <span>{g}</span>
+                          </SelectBtn>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Gender</p>
+                      <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender}</p>
+                    </div>
+                  )}
+
+                  {/* Age Group Selection or Display */}
+                  {availableAgeGroups.length > 1 ? (
+                    <div>
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Age Group</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {availableAgeGroups.map(ag => (
+                          <SelectBtn key={ag} selected={selectedAgeGroup === ag} onClick={() => setSelectedAgeGroup(ag)}>
+                            <span>{ag}</span>
+                          </SelectBtn>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Age Group</p>
+                      <p className="font-bold text-white">{availableAgeGroups[0] || judgeInfo.ageGroup}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Competition Type */}
