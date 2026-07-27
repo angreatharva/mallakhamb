@@ -68,6 +68,7 @@ class PublicService {
    * @param {string} [filters.gender]
    * @param {string} [filters.ageGroup]
    * @param {string} [filters.competitionType]
+   * @param {string} [filters.apparatus]
    * @param {boolean|string} [filters.lockedOnly] - when true, only isLocked docs
    * @returns {Promise<Array>}
    */
@@ -109,16 +110,22 @@ class PublicService {
 
       const formattedScores = scores.map((score) => {
         const scoreObj = score.toObject ? score.toObject() : score;
-        const playerScores = (scoreObj.playerScores || []).map((ps) =>
+        let playerScores = (scoreObj.playerScores || []).map((ps) =>
           this.enrichPlayerScore(ps)
         );
+        
+        // Filter by apparatus if specified
+        if (filters.apparatus) {
+          playerScores = playerScores.filter((ps) => ps.apparatus === filters.apparatus);
+        }
+        
         return {
           ...scoreObj,
           playerScores,
           teamName: scoreObj.teamId?.name || 'Unknown Team',
           team: scoreObj.teamId,
         };
-      });
+      }).filter(score => score.playerScores.length > 0); // Only include scores with matching players
 
       this.logger.info('Public scores retrieved', {
         competitionId,
@@ -204,7 +211,7 @@ class PublicService {
     try {
       const competitions = await this.competitionRepository.findActive({
         sort: { startDate: -1 },
-        select: 'name year place status competitionTypes startDate endDate level',
+        select: 'name year place status competitionTypes startDate endDate level apparatusConfig',
       });
 
       this.logger.info('Public competitions retrieved', { count: competitions.length });

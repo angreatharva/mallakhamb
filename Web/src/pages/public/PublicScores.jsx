@@ -1,6 +1,6 @@
 import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import { useState, useEffect, useRef } from 'react';
-import { Filter, Search, X, ArrowLeft, Trophy, Medal, ChevronDown } from 'lucide-react';
+import { Filter, Search, X, ArrowLeft, Trophy, Medal, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -33,23 +33,23 @@ const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
 };
 
 // ─── Rank badge ───────────────────────────────────────────────────────────────
-const RankBadge = ({ rank }) => {
+const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   const colors = {
-    1: { bg: 'rgba(245,166,35,0.2)', border: 'rgba(245,166,35,0.5)', text: '#F5A623', icon: '🥇' },
-    2: { bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', text: '#C0C0C0', icon: '🥈' },
-    3: { bg: 'rgba(205,127,50,0.15)', border: 'rgba(205,127,50,0.4)', text: '#CD7F32', icon: '🥉' },
+    1: { bg: 'rgba(245,166,35,0.2)', border: 'rgba(245,166,35,0.5)', text: '#F5A623' },
+    2: { bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', text: '#C0C0C0' },
+    3: { bg: 'rgba(205,127,50,0.15)', border: 'rgba(205,127,50,0.4)', text: '#CD7F32' },
   };
   const c = colors[rank];
   if (c) {
     return (
-      <div className="w-8 h-8 rounded-full flex items-center justify-center border text-sm font-black flex-shrink-0"
+      <div className={`${size} rounded-full flex items-center justify-center border ${textSize} font-black flex-shrink-0`}
         style={{ background: c.bg, borderColor: c.border, color: c.text }}>
         {rank}
       </div>
     );
   }
   return (
-    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+    <div className={`${size} rounded-full flex items-center justify-center ${textSize} font-bold flex-shrink-0`}
       style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
       {rank}
     </div>
@@ -69,7 +69,7 @@ const ScorePill = ({ label, value, accent = COLORS.saffron }) => (
 const SkeletonRow = () => (
   <div className="flex items-center gap-4 p-4 rounded-2xl border animate-pulse"
     style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
-    <div className="w-8 h-8 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    <div className="w-9 h-9 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
     <div className="flex-1 space-y-2">
       <div className="h-3 rounded-full w-1/3" style={{ background: 'rgba(255,255,255,0.06)' }} />
       <div className="h-2 rounded-full w-1/4" style={{ background: 'rgba(255,255,255,0.04)' }} />
@@ -78,27 +78,32 @@ const SkeletonRow = () => (
   </div>
 );
 
-// ─── Player score card ────────────────────────────────────────────────────────
-const PlayerScoreCard = ({ player, rank, isTied, index }) => {
+// ─── Unified Player Card ──────────────────────────────────────────────────────
+// Single container: rank + name + team/coach + full score breakdown, all in one card.
+// Used for both podium (rank 1-3, highlighted) and the rest of the list.
+const PlayerCard = ({ player, rank, isTied, index, podium = false, className = '' }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-20px' });
   const reduced = useReducedMotion();
 
+  const rankAccent = rank === 1 ? '#F5A623' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : null;
+
   return (
     <motion.div
       ref={ref}
-      className="rounded-2xl border overflow-hidden"
+      className={`rounded-2xl border overflow-hidden ${className}`}
       style={{
         background: rank <= 3
-          ? `linear-gradient(135deg, ${rank === 1 ? 'rgba(245,166,35,0.08)' : rank === 2 ? 'rgba(192,192,192,0.06)' : 'rgba(205,127,50,0.06)'}, rgba(255,255,255,0.02))`
+          ? `linear-gradient(135deg, ${rank === 1 ? 'rgba(245,166,35,0.1)' : rank === 2 ? 'rgba(192,192,192,0.08)' : 'rgba(205,127,50,0.08)'}, rgba(255,255,255,0.02))`
           : 'rgba(255,255,255,0.02)',
-        borderColor: rank === 1 ? 'rgba(245,166,35,0.3)' : rank === 2 ? 'rgba(192,192,192,0.2)' : rank === 3 ? 'rgba(205,127,50,0.2)' : 'rgba(255,255,255,0.06)',
+        borderColor: rank === 1 ? 'rgba(245,166,35,0.35)' : rank === 2 ? 'rgba(192,192,192,0.25)' : rank === 3 ? 'rgba(205,127,50,0.25)' : 'rgba(255,255,255,0.06)',
+        boxShadow: podium ? `0 8px 28px ${rankAccent}22` : 'none',
       }}
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.45, delay: index * 0.04, ease: EASE_OUT }}>
 
-      {/* Main row */}
+      {/* Header row: rank, name, team/coach, final score */}
       <div className="flex items-center gap-4 p-4">
         <RankBadge rank={rank} />
         <div className="flex-1 min-w-0">
@@ -111,6 +116,17 @@ const PlayerScoreCard = ({ player, rank, isTied, index }) => {
               </span>
             )}
           </div>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            {player.teamName && (
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{player.teamName}</span>
+            )}
+            {player.teamName && player.coach && (
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+            )}
+            {player.coach && (
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Coach: {player.coach}</span>
+            )}
+          </div>
           {player.time && (
             <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Time: {player.time}</p>
           )}
@@ -121,7 +137,7 @@ const PlayerScoreCard = ({ player, rank, isTied, index }) => {
         </div>
       </div>
 
-      {/* Score breakdown */}
+      {/* Score breakdown — inside the SAME card */}
       <div className="px-4 pb-4 flex flex-wrap gap-2">
         <ScorePill label="Senior" value={player.judgeScores.seniorJudge} accent={COLORS.saffron} />
         <ScorePill label="J1" value={player.judgeScores.judge1} accent="#A855F7" />
@@ -142,87 +158,98 @@ const PlayerScoreCard = ({ player, rank, isTied, index }) => {
   );
 };
 
-// ─── Score group card ─────────────────────────────────────────────────────────
-const ScoreGroupCard = ({ scoreEntry, index }) => {
-  const [expanded, setExpanded] = useState(true);
-
-  const sorted = [...scoreEntry.playerScores].sort((a, b) => {
+// ─── Individual Ranking Board ─────────────────────────────────────────────────
+// Pools ALL players across every filtered score entry into one global ranking.
+// Top 3 render in a true podium arrangement (2nd left, 1st elevated center,
+// 3rd right) using the SAME single-container PlayerCard, just placed
+// differently and given a taller top margin for 1st so it visually sits
+// higher. Rank 4+ render as the normal stacked list below.
+const RankingBoard = ({ players }) => {
+  const sorted = [...players].sort((a, b) => {
     if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
     if (a.baseScoreApplied && b.baseScoreApplied && a.baseScore !== b.baseScore) return b.baseScore - a.baseScore;
     return b.executionAverage - a.executionAverage;
   });
 
+  const getIsTied = (i) => {
+    if (i === 0) return false;
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    return prev.finalScore === curr.finalScore && prev.executionAverage === curr.executionAverage;
+  };
+
+  const topPlayers = sorted.slice(0, 3);
+  const remainingPlayers = sorted.slice(3);
+
+  const first = topPlayers[0];
+  const second = topPlayers[1];
+  const third = topPlayers[2];
+
   return (
-    <FadeIn delay={index * 0.08}>
-      <div className="rounded-2xl border overflow-hidden"
-        style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorder }}>
-        {/* Header */}
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="w-full flex items-center justify-between px-5 py-4 border-b text-left min-h-[60px]"
-          style={{ borderColor: 'rgba(255,255,255,0.05)' }}
-          aria-expanded={expanded}>
-          <div>
-            <p className="text-white font-bold">{scoreEntry.teamName}</p>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {scoreEntry.gender} · {scoreEntry.ageGroup} · {new Date(scoreEntry.createdAt).toLocaleDateString()}
-            </p>
+    <div className="space-y-6">
+      {/* Podium: 2nd (left) - 1st (center, elevated) - 3rd (right) */}
+      {topPlayers.length > 0 && (
+        <div className="flex items-start justify-center gap-3 sm:gap-4">
+          {/* Second place - left */}
+          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
+            {second ? (
+              <PlayerCard
+                player={second}
+                rank={2}
+                isTied={getIsTied(1)}
+                index={1}
+                podium
+              />
+            ) : null}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-2 py-1 rounded-full font-bold"
-              style={{ background: `${COLORS.saffron}15`, color: COLORS.saffronLight, border: `1px solid ${COLORS.saffron}30` }}>
-              {sorted.length} players
-            </span>
-            <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.25 }}>
-              <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
-            </motion.div>
+
+          {/* First place - center, no top margin so it sits highest */}
+          <div className="flex-1 max-w-xs">
+            {first && (
+              <PlayerCard
+                player={first}
+                rank={1}
+                isTied={false}
+                index={0}
+                podium
+                className="scale-105 sm:scale-110 origin-top"
+              />
+            )}
           </div>
-        </button>
 
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: EASE_OUT }}>
-              <div className="p-4 space-y-2">
-                {sorted.map((player, i, arr) => {
-                  const isTied = i > 0 &&
-                    arr[i - 1].finalScore === player.finalScore &&
-                    arr[i - 1].executionAverage === player.executionAverage;
-                  return (
-                    <PlayerScoreCard key={player.playerId} player={player} rank={i + 1} isTied={isTied} index={i} />
-                  );
-                })}
-              </div>
+          {/* Third place - right */}
+          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
+            {third ? (
+              <PlayerCard
+                player={third}
+                rank={3}
+                isTied={getIsTied(2)}
+                index={2}
+                podium
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
 
-              {/* Footer metadata */}
-              {(scoreEntry.timeKeeper || scoreEntry.scorer || scoreEntry.remarks) && (
-                <div className="px-5 pb-4 pt-2 border-t flex flex-wrap gap-4 text-xs"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                  {scoreEntry.timeKeeper && (
-                    <span style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      <span className="font-bold text-white/60">Timekeeper:</span> {scoreEntry.timeKeeper}
-                    </span>
-                  )}
-                  {scoreEntry.scorer && (
-                    <span style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      <span className="font-bold text-white/60">Scorer:</span> {scoreEntry.scorer}
-                    </span>
-                  )}
-                  {scoreEntry.remarks && (
-                    <span style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      <span className="font-bold text-white/60">Remarks:</span> {scoreEntry.remarks}
-                    </span>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </FadeIn>
+      {/* Remaining players - normal list */}
+      {remainingPlayers.length > 0 && (
+        <div className="space-y-3">
+          {remainingPlayers.map((player, i) => {
+            const actualIndex = i + 3;
+            return (
+              <PlayerCard
+                key={player.playerId}
+                player={player}
+                rank={actualIndex + 1}
+                isTied={getIsTied(actualIndex)}
+                index={actualIndex}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -248,6 +275,7 @@ const PublicScores = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
+  const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const genders = [
@@ -290,6 +318,16 @@ const PublicScores = () => {
     }));
   };
 
+  const getAvailableApparatus = () => {
+    if (!selectedCompetition || !selectedCompetitionType) return [];
+    const apparatusConfig = selectedCompetition.apparatusConfig || {};
+    const apparatusList = apparatusConfig[selectedCompetitionType.value] || [];
+    return apparatusList.map(app => ({
+      value: app,
+      label: app
+    }));
+  };
+
   // Cascade resets
   useEffect(() => {
     if (selectedCompetition) {
@@ -297,42 +335,52 @@ const PublicScores = () => {
       setSelectedGender(null);
       setSelectedAgeGroup(null);
       setSelectedCompetitionType(null);
+      setSelectedApparatus(null);
       fetchTeams();
     } else {
       setTeams([]);
     }
   }, [selectedCompetition]);
 
-  useEffect(() => { 
-    if (selectedTeam) { 
-      setSelectedGender(null); 
-      setSelectedAgeGroup(null); 
+  useEffect(() => {
+    if (selectedTeam) {
+      setSelectedGender(null);
+      setSelectedAgeGroup(null);
       setSelectedCompetitionType(null);
-    } 
+      setSelectedApparatus(null);
+    }
   }, [selectedTeam]);
 
-  useEffect(() => { 
-    if (selectedGender) { 
-      setSelectedAgeGroup(null); 
+  useEffect(() => {
+    if (selectedGender) {
+      setSelectedAgeGroup(null);
       setSelectedCompetitionType(null);
-    } 
+      setSelectedApparatus(null);
+    }
   }, [selectedGender]);
 
-  useEffect(() => { 
-    if (selectedAgeGroup) { 
+  useEffect(() => {
+    if (selectedAgeGroup) {
       setSelectedCompetitionType(null);
-    } 
+      setSelectedApparatus(null);
+    }
   }, [selectedAgeGroup]);
+
+  useEffect(() => {
+    if (selectedCompetitionType) {
+      setSelectedApparatus(null);
+    }
+  }, [selectedCompetitionType]);
 
   useEffect(() => { fetchCompetitions(); }, []);
 
   useEffect(() => {
-    if (selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType) {
+    if (selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus) {
       fetchScores();
     } else {
       setScores([]);
     }
-  }, [selectedCompetition, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
+  }, [selectedCompetition, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);
 
   const fetchCompetitions = async () => {
     setLoadingCompetitions(true);
@@ -343,6 +391,7 @@ const PublicScores = () => {
         value: c._id,
         label: `${c.name} (${c.year}) — ${c.place}`,
         competitionTypes: c.competitionTypes || [],
+        apparatusConfig: c.apparatusConfig || {},
       })));
       if (!comps.length) {
         logger.warn('No public competitions returned from API');
@@ -375,7 +424,7 @@ const PublicScores = () => {
   };
 
   const fetchScores = async () => {
-    if (!selectedCompetition || !selectedTeam || !selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
+    if (!selectedCompetition || !selectedTeam || !selectedGender || !selectedAgeGroup || !selectedCompetitionType || !selectedApparatus) return;
     setLoading(true);
     try {
       const response = await publicAPI.getScores({
@@ -384,6 +433,7 @@ const PublicScores = () => {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionType: selectedCompetitionType.value,
+        apparatus: selectedApparatus.value,
       });
       setScores(response.data.data || response.data.scores || []);
       if (!(response.data.data || response.data.scores || []).length) {
@@ -404,23 +454,42 @@ const PublicScores = () => {
     setSelectedGender(null);
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
+    setSelectedApparatus(null);
     setTeams([]);
     setScores([]);
     setSearchTerm('');
   };
 
-  const getFilteredScores = () => {
+  // Flatten every player from every score entry into one global list,
+  // attaching that entry's team name onto each player. Coach comes from
+  // the player object itself (player.coach), per-player.
+  const getAllPlayers = () => {
     if (!scores.length) return [];
-    return scores.map(entry => ({
-      ...entry,
-      playerScores: entry.playerScores.filter(p =>
-        !searchTerm || p.playerName?.toLowerCase().includes(searchTerm.toLowerCase())
-      ),
-    })).filter(entry => entry.playerScores.length > 0);
+    const players = [];
+    for (const entry of scores) {
+      for (const player of entry.playerScores) {
+        players.push({
+          ...player,
+          teamName: player.teamName || entry.teamName,
+        });
+      }
+    }
+    return players;
   };
 
-  const allFiltersSet = selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType;
-  const filtered = getFilteredScores();
+  const getFilteredPlayers = () => {
+    const all = getAllPlayers();
+    if (!searchTerm) return all;
+    const term = searchTerm.toLowerCase();
+    return all.filter(p =>
+      p.playerName?.toLowerCase().includes(term) ||
+      p.teamName?.toLowerCase().includes(term) ||
+      p.coach?.toLowerCase().includes(term)
+    );
+  };
+
+  const allFiltersSet = selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus;
+  const filteredPlayers = getFilteredPlayers();
 
   return (
     <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -477,74 +546,85 @@ const PublicScores = () => {
           <div className="rounded-2xl border p-5 md:p-6"
             style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
             <div className="space-y-4">
+              <div>
+                <FilterLabel primary>Competition *</FilterLabel>
+                <Dropdown
+                  options={competitions}
+                  value={selectedCompetition}
+                  onChange={setSelectedCompetition}
+                  placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select competition...'}
+                  className="w-full"
+                  loading={loadingCompetitions}
+                  disabled={loadingCompetitions}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
-                  <FilterLabel primary>Competition *</FilterLabel>
+                  <FilterLabel>Team *</FilterLabel>
                   <Dropdown
-                    options={competitions}
-                    value={selectedCompetition}
-                    onChange={setSelectedCompetition}
-                    placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select competition...'}
+                    options={teams}
+                    value={selectedTeam}
+                    onChange={setSelectedTeam}
+                    placeholder={loadingTeams ? 'Loading teams...' : 'Select team...'}
                     className="w-full"
-                    loading={loadingCompetitions}
-                    disabled={loadingCompetitions}
+                    loading={loadingTeams}
+                    disabled={!selectedCompetition || loadingTeams}
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <FilterLabel>Team *</FilterLabel>
-                    <Dropdown
-                      options={teams}
-                      value={selectedTeam}
-                      onChange={setSelectedTeam}
-                      placeholder={loadingTeams ? 'Loading teams...' : 'Select team...'}
-                      className="w-full"
-                      loading={loadingTeams}
-                      disabled={!selectedCompetition || loadingTeams}
-                    />
-                  </div>
-                  <div>
-                    <FilterLabel>Gender *</FilterLabel>
-                    <Dropdown
-                      options={genders}
-                      value={selectedGender}
-                      onChange={setSelectedGender}
-                      placeholder="Select gender..."
-                      className="w-full"
-                      disabled={!selectedTeam}
-                    />
-                  </div>
-                  <div>
-                    <FilterLabel>Age Group *</FilterLabel>
-                    <Dropdown
-                      options={getAvailableAgeGroups()}
-                      value={selectedAgeGroup}
-                      onChange={setSelectedAgeGroup}
-                      placeholder="Select age group..."
-                      className="w-full"
-                      disabled={!selectedGender}
-                    />
-                  </div>
-                  <div>
-                    <FilterLabel>Competition Type *</FilterLabel>
-                    <Dropdown
-                      options={getAvailableCompetitionTypes()}
-                      value={selectedCompetitionType}
-                      onChange={setSelectedCompetitionType}
-                      placeholder="Select type..."
-                      className="w-full"
-                      disabled={!selectedAgeGroup}
-                    />
-                  </div>
+                <div>
+                  <FilterLabel>Gender *</FilterLabel>
+                  <Dropdown
+                    options={genders}
+                    value={selectedGender}
+                    onChange={setSelectedGender}
+                    placeholder="Select gender..."
+                    className="w-full"
+                    disabled={!selectedTeam}
+                  />
                 </div>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleClearFilters}
-                    className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
-                    style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>
-                    Clear Filters
-                  </button>
+                <div>
+                  <FilterLabel>Age Group *</FilterLabel>
+                  <Dropdown
+                    options={getAvailableAgeGroups()}
+                    value={selectedAgeGroup}
+                    onChange={setSelectedAgeGroup}
+                    placeholder="Select age group..."
+                    className="w-full"
+                    disabled={!selectedGender}
+                  />
                 </div>
+                <div>
+                  <FilterLabel>Competition Type *</FilterLabel>
+                  <Dropdown
+                    options={getAvailableCompetitionTypes()}
+                    value={selectedCompetitionType}
+                    onChange={setSelectedCompetitionType}
+                    placeholder="Select type..."
+                    className="w-full"
+                    disabled={!selectedAgeGroup}
+                  />
+                </div>
+                <div>
+                  <FilterLabel>Apparatus *</FilterLabel>
+                  <Dropdown
+                    options={getAvailableApparatus()}
+                    value={selectedApparatus}
+                    onChange={setSelectedApparatus}
+                    placeholder="Select apparatus..."
+                    className="w-full"
+                    disabled={!selectedCompetitionType}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
+                  style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>
+                  Clear Filters
+                </button>
+              </div>
             </div>
           </div>
         </FadeIn>
@@ -580,7 +660,7 @@ const PublicScores = () => {
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
                   style={{ background: `${COLORS.saffron}10`, borderColor: `${COLORS.saffron}30`, color: COLORS.saffronLight }}>
                   <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
-                  {selectedCompetition.label} · {selectedTeam.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label}
+                  {selectedCompetition.label} · {selectedTeam.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
                 </div>
                 {/* Search */}
                 <div className="relative">
@@ -588,7 +668,7 @@ const PublicScores = () => {
                     style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
-                    placeholder="Search players..."
+                    placeholder="Search players, team, coach..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="pl-9 pr-8 py-2 rounded-xl border text-sm outline-none transition-all duration-200 min-h-[40px]"
@@ -596,9 +676,9 @@ const PublicScores = () => {
                       background: 'rgba(255,255,255,0.04)',
                       borderColor: searchTerm ? `${COLORS.saffron}50` : 'rgba(255,255,255,0.08)',
                       color: '#fff',
-                      width: '200px',
+                      width: '220px',
                     }}
-                    aria-label="Search players by name"
+                    aria-label="Search players by name, team, or coach"
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm('')}
@@ -610,12 +690,18 @@ const PublicScores = () => {
                 </div>
               </div>
 
-              {/* Score groups */}
-              {filtered.map((entry, i) => (
-                <ScoreGroupCard key={entry._id} scoreEntry={entry} index={i} />
-              ))}
+              {/* Player count badge */}
+              <div className="flex items-center gap-2 px-1">
+                <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
+                <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
+                </span>
+              </div>
 
-              {filtered.length === 0 && searchTerm && (
+              {/* Individual ranking board — one global list across all teams */}
+              {filteredPlayers.length > 0 ? (
+                <RankingBoard players={filteredPlayers} />
+              ) : searchTerm ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
                   <Search className="w-10 h-10 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
                   <p className="text-white font-bold mb-1">No players found</p>
@@ -628,7 +714,7 @@ const PublicScores = () => {
                     Clear search
                   </button>
                 </motion.div>
-              )}
+              ) : null}
             </motion.div>
           ) : (
             <motion.div key="no-scores"

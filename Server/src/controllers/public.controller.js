@@ -31,12 +31,13 @@ function createPublicController(container) {
 
     /** @route GET /api/public/scores */
     getPublicScores: asyncHandler(async (req, res) => {
-      const { competitionId, teamId, gender, ageGroup, competitionType, lockedOnly } = req.query;
+      const { competitionId, teamId, gender, ageGroup, competitionType, apparatus, lockedOnly } = req.query;
       const scores = await publicService.getPublicScores(competitionId, {
         teamId,
         gender,
         ageGroup,
         competitionType,
+        apparatus,
         lockedOnly,
       });
       res.json({ success: true, data: scores });

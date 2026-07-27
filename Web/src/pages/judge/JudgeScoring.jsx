@@ -248,6 +248,15 @@ const JudgeScoring = () => {
   const selectedAgeGroup = activeSessionData?.ageGroup;
 
   const goBackAfterScoring = () => {
+    // Clear cached scores when leaving the scoring page
+    const cacheKey = getScoringCacheKey();
+    if (cacheKey) {
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch (e) {
+        logger.warn('Failed to clear cached scores on navigation', e);
+      }
+    }
     sessionStorage.removeItem('judge_scoring_active_session');
     const returnTo = activeSessionData?.returnTo
       || (selectedTeam?._id ? `/judge/team/${selectedTeam._id}` : '/judge/dashboard');
@@ -276,12 +285,67 @@ const JudgeScoring = () => {
     return { checked, total };
   };
 
-  const [scores, setScores] = useState({
-    difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
-    combination: buildInitialCombination(),
-    execution: 0,
-    bonus: 0
-  });
+  // Helper function to extract player ID (must be defined before cache functions)
+  const playerIdOf = (player) => player?.id || player?._id;
+
+  // Generate a unique key for this scoring session
+  const getScoringCacheKey = () => {
+    if (!selectedPlayer || !selectedTeam) return null;
+    return `judge_scores_${selectedTeam._id}_${playerIdOf(selectedPlayer)}_${judgeInfo?.judgeType || 'unknown'}`;
+  };
+
+  // Load initial scores from cache or create new
+  const getInitialScores = () => {
+    const cacheKey = getScoringCacheKey();
+    if (cacheKey) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Validate cached data structure
+          if (parsed.difficulty && parsed.combination && typeof parsed.execution === 'number') {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        logger.warn('Failed to load cached scores', e);
+      }
+    }
+    return {
+      difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
+      combination: buildInitialCombination(),
+      execution: 0,
+      bonus: 0
+    };
+  };
+
+  const [scores, setScores] = useState(getInitialScores);
+
+  // Auto-save scores to localStorage whenever they change
+  useEffect(() => {
+    const cacheKey = getScoringCacheKey();
+    if (cacheKey && !submitted && !finalized) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(scores));
+      } catch (e) {
+        logger.warn('Failed to cache scores', e);
+      }
+    }
+  }, [scores, submitted, finalized]);
+
+  // Clear cached scores when score is submitted or finalized
+  useEffect(() => {
+    if (submitted || finalized) {
+      const cacheKey = getScoringCacheKey();
+      if (cacheKey) {
+        try {
+          localStorage.removeItem(cacheKey);
+        } catch (e) {
+          logger.warn('Failed to clear cached scores', e);
+        }
+      }
+    }
+  }, [submitted, finalized]);
 
   useEffect(() => {
     const storedJudge = secureStorage.getItem('judge_user');
@@ -330,8 +394,6 @@ const JudgeScoring = () => {
     };
     loadPanelSize();
   }, [judgeInfo, selectedCompetitionType, selectedApparatus, selectedGender, selectedAgeGroup]);
-
-  const playerIdOf = (player) => player?.id || player?._id;
 
   const normalizeBreakdown = (breakdown, fallbackScore) => {
     if (!breakdown) {
@@ -552,11 +614,23 @@ const JudgeScoring = () => {
     return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
   }, [judgeInfo, selectedCompetitionType, navigate, selectedPlayer]);
 
-  const resetScores = () => setScores({
-    difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
-    combination: buildInitialCombination(),
-    execution: 0, bonus: 0
-  });
+  const resetScores = () => {
+    const newScores = {
+      difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
+      combination: buildInitialCombination(),
+      execution: 0, bonus: 0
+    };
+    setScores(newScores);
+    // Clear cached scores when reset
+    const cacheKey = getScoringCacheKey();
+    if (cacheKey) {
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch (e) {
+        logger.warn('Failed to clear cached scores on reset', e);
+      }
+    }
+  };
 
   const handleDifficulty = (cls, val) => {
     const n = parseInt(val) || 0;
@@ -647,6 +721,16 @@ const JudgeScoring = () => {
       toast.success(`Score ${finalScore} submitted for ${selectedPlayer.name}`);
       setSubmitted(true);
       setViewMode('review');
+      
+      // Clear cached scores after successful submission
+      const cacheKey = getScoringCacheKey();
+      if (cacheKey) {
+        try {
+          localStorage.removeItem(cacheKey);
+        } catch (e) {
+          logger.warn('Failed to clear cached scores after submission', e);
+        }
+      }
     } catch (error) {
       logger.error('Failed to save score:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to save score. Please try again.');
