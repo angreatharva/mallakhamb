@@ -60,6 +60,29 @@ export const ResponsiveIndividualRankings = ({
     const tied = isTied(player);
     const [open, setOpen] = React.useState(false);
 
+    const is3JudgePanel = player.panelSize === 3 || (!player.judgeScores?.judge3 && !player.judgeScores?.judge4);
+
+    const getAverageBreakdown = (p) => {
+      const slips = p.judgeSlips || [];
+      if (slips.length > 0) {
+        const len = slips.length;
+        const diff = slips.reduce((acc, s) => acc + (Number(s.difficultyScore) || 0), 0) / len;
+        const comb = slips.reduce((acc, s) => acc + (Number(s.combinationScore) || 0), 0) / len;
+        const exec = slips.reduce((acc, s) => acc + (Number(s.executionScore) || 0), 0) / len;
+        const bonus = slips.reduce((acc, s) => acc + (Number(s.bonusScore) || 0), 0) / len;
+        return { difficulty: diff, combination: comb, execution: exec, bonus: bonus };
+      }
+      const sb = p.scoreBreakdown || {};
+      return {
+        difficulty: Number(sb.difficulty?.total) || 0,
+        combination: Number(sb.combination?.total) || 0,
+        execution: Number(sb.execution) || 0,
+        bonus: Number(sb.originality) || 0,
+      };
+    };
+
+    const avgBreakdown = is3JudgePanel ? getAverageBreakdown(player) : null;
+
     return (
       <div style={{
         background: ms.bg,
@@ -106,22 +129,43 @@ export const ResponsiveIndividualRankings = ({
             padding: '6px 0',
           }}
         >
-          {open ? '▲' : '▼'} Judge Scores
+          {open ? '▲' : '▼'} {is3JudgePanel ? 'Score Breakdown' : 'Judge Scores'}
         </button>
-        {open && player.judgeScores && (
+        {open && (
           <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'].map(key => (
-              player.judgeScores[key] !== undefined && (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: textSecondary, textTransform: 'capitalize' }}>
-                    {key.replace(/([A-Z])/g, ' $1').replace('judge', 'Judge')}
-                  </span>
-                  <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>
-                    {player.judgeScores[key]?.toFixed(2) || '0.00'}
-                  </span>
+            {is3JudgePanel ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: textSecondary }}>Avg Difficulty</span>
+                  <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>{avgBreakdown.difficulty.toFixed(2)}</span>
                 </div>
-              )
-            ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: textSecondary }}>Avg Combination</span>
+                  <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>{avgBreakdown.combination.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: textSecondary }}>Avg Execution</span>
+                  <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>{avgBreakdown.execution.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: textSecondary }}>Avg Bonus</span>
+                  <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>{avgBreakdown.bonus.toFixed(2)}</span>
+                </div>
+              </>
+            ) : (
+              player.judgeScores && ['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'].map(key => (
+                player.judgeScores[key] !== undefined && (
+                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, color: textSecondary, textTransform: 'capitalize' }}>
+                      {key.replace(/([A-Z])/g, ' $1').replace('judge', 'Judge')}
+                    </span>
+                    <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>
+                      {player.judgeScores[key]?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                )
+              ))
+            )}
           </div>
         )}
       </div>

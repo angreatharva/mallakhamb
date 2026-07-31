@@ -88,6 +88,29 @@ const PlayerCard = ({ player, rank, isTied, index, podium = false, className = '
 
   const rankAccent = rank === 1 ? '#F5A623' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : null;
 
+  const is3JudgePanel = player.panelSize === 3 || (!player.judgeScores?.judge3 && !player.judgeScores?.judge4);
+
+  const getAverageBreakdown = (p) => {
+    const slips = p.judgeSlips || [];
+    if (slips.length > 0) {
+      const len = slips.length;
+      const diff = slips.reduce((acc, s) => acc + (Number(s.difficultyScore) || 0), 0) / len;
+      const comb = slips.reduce((acc, s) => acc + (Number(s.combinationScore) || 0), 0) / len;
+      const exec = slips.reduce((acc, s) => acc + (Number(s.executionScore) || 0), 0) / len;
+      const bonus = slips.reduce((acc, s) => acc + (Number(s.bonusScore) || 0), 0) / len;
+      return { difficulty: diff, combination: comb, execution: exec, bonus: bonus };
+    }
+    const sb = p.scoreBreakdown || {};
+    return {
+      difficulty: Number(sb.difficulty?.total) || 0,
+      combination: Number(sb.combination?.total) || 0,
+      execution: Number(sb.execution) || 0,
+      bonus: Number(sb.originality) || 0,
+    };
+  };
+
+  const avgBreakdown = is3JudgePanel ? getAverageBreakdown(player) : null;
+
   return (
     <motion.div
       ref={ref}
@@ -139,12 +162,23 @@ const PlayerCard = ({ player, rank, isTied, index, podium = false, className = '
 
       {/* Score breakdown — inside the SAME card */}
       <div className="px-4 pb-4 flex flex-wrap gap-2">
-        <ScorePill label="Senior" value={player.judgeScores.seniorJudge} accent={COLORS.saffron} />
-        <ScorePill label="J1" value={player.judgeScores.judge1} accent="#A855F7" />
-        <ScorePill label="J2" value={player.judgeScores.judge2} accent="#3B82F6" />
-        <ScorePill label="J3" value={player.judgeScores.judge3} accent="#22C55E" />
-        <ScorePill label="J4" value={player.judgeScores.judge4} accent="#F59E0B" />
-        <ScorePill label="Avg" value={player.averageMarks.toFixed(2)} accent={COLORS.saffronLight} />
+        {is3JudgePanel ? (
+          <>
+            <ScorePill label="Diff" value={avgBreakdown.difficulty.toFixed(2)} accent="#A855F7" />
+            <ScorePill label="Comb" value={avgBreakdown.combination.toFixed(2)} accent="#3B82F6" />
+            <ScorePill label="Exec" value={avgBreakdown.execution.toFixed(2)} accent="#22C55E" />
+            <ScorePill label="Bonus" value={avgBreakdown.bonus.toFixed(2)} accent="#F59E0B" />
+          </>
+        ) : (
+          <>
+            {player.judgeScores?.seniorJudge !== undefined && <ScorePill label="Senior" value={player.judgeScores.seniorJudge} accent={COLORS.saffron} />}
+            {player.judgeScores?.judge1 !== undefined && <ScorePill label="J1" value={player.judgeScores.judge1} accent="#A855F7" />}
+            {player.judgeScores?.judge2 !== undefined && <ScorePill label="J2" value={player.judgeScores.judge2} accent="#3B82F6" />}
+            {player.judgeScores?.judge3 > 0 && <ScorePill label="J3" value={player.judgeScores.judge3} accent="#22C55E" />}
+            {player.judgeScores?.judge4 > 0 && <ScorePill label="J4" value={player.judgeScores.judge4} accent="#F59E0B" />}
+            <ScorePill label="Avg" value={player.averageMarks ? player.averageMarks.toFixed(2) : '0.00'} accent={COLORS.saffronLight} />
+          </>
+        )}
         {player.deduction > 0 && <ScorePill label="Deduct" value={`-${player.deduction}`} accent="#EF4444" />}
         {player.otherDeduction > 0 && <ScorePill label="Other" value={`-${player.otherDeduction}`} accent="#EF4444" />}
         {player.baseScoreApplied && (

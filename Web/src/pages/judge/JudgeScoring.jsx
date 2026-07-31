@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, User, LogOut, CheckCircle, RotateCcw, Send, ArrowLeft,
-  AlertTriangle, Pencil, Lock
+  Scale, User, LogOut, CheckCircle, Send, ArrowLeft,
+  AlertTriangle, Pencil, Lock, BookOpen, X, ChevronDown, Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -38,6 +38,424 @@ const J = {
 };
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+
+// ─── COP PDF Modal ────────────────────────────────────────────────────────────
+const CopPdfModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9999] flex flex-col"
+          style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          {/* Modal header */}
+          <div
+            className="flex items-center justify-between px-4 sm:px-6 py-3 flex-shrink-0 border-b"
+            style={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.25)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
+              >
+                <BookOpen className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm leading-tight">Code of Points</p>
+                <p className="text-xs" style={{ color: 'rgba(192,132,252,0.8)' }}>COP Mallakhamb — Rules &amp; Scoring Guide</p>
+              </div>
+            </div>
+            <motion.button
+              onClick={onClose}
+              className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Close COP PDF"
+            >
+              <X className="w-4 h-4" />
+            </motion.button>
+          </div>
+          {/* PDF iframe */}
+          <div className="flex-1 min-h-0">
+            <iframe
+              src="/docs/COP-Mallakhamb.pdf"
+              title="COP Mallakhamb Rules"
+              className="w-full h-full"
+              style={{ border: 'none' }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ─── Mismatch Modal ───────────────────────────────────────────────────────────
+const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, effectivePanelSize, judgeNameMap }) => {
+  if (!isOpen) return null;
+  const amber = '#F59E0B';
+  const red = '#EF4444';
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="w-full max-w-lg rounded-2xl border overflow-hidden"
+            style={{ background: '#0E0E0E', borderColor: 'rgba(239,68,68,0.4)' }}
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
+                >
+                  <AlertTriangle className="w-5 h-5" style={{ color: red }} />
+                </div>
+                <div>
+                  <p className="text-white font-black text-base">Score Mismatch Detected</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your score may need correction'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.4)' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-3 max-h-[65vh] overflow-y-auto">
+              {panelMismatch.combinationMismatch && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
+                >
+                  <p className="text-sm font-bold text-white mb-1">⛔ Combination Mismatch</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    {panelMismatch.combinationSelectionMismatch
+                      ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
+                      : `Totals: ${panelMismatch.combinationValues.map(v => Number(v).toFixed(2)).join(', ')}`}
+                  </p>
+                  {isSeniorJudge && panelMismatch.combinationValues.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.entries(panelScores).map(([jt, data]) => (
+                        <span
+                          key={jt}
+                          className="text-xs px-2 py-1 rounded-lg"
+                          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
+                        >
+                          {judgeNameMap?.[jt] || jt}: {Number(data.breakdown?.combination?.total ?? 0).toFixed(2)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {panelMismatch.difficultyMismatch && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
+                >
+                  <p className="text-sm font-bold text-white mb-1">⛔ Difficulty Mismatch</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    {panelMismatch.difficultyMixMismatch
+                      ? 'A/B/C element counts differ between judges. The element mix must be identical across all judges.'
+                      : `Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
+                  </p>
+                  {isSeniorJudge && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.entries(panelScores).map(([jt, data]) => (
+                        <span
+                          key={jt}
+                          className="text-xs px-2 py-1 rounded-lg"
+                          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
+                        >
+                          {judgeNameMap?.[jt] || jt}: A{data.breakdown?.difficulty?.aClass ?? 0}/B{data.breakdown?.difficulty?.bClass ?? 0}/C{data.breakdown?.difficulty?.cClass ?? 0}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {panelMismatch.toleranceMismatch && effectivePanelSize >= 4 && panelMismatch.toleranceInfo && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.3)' }}
+                >
+                  <p className="text-sm font-bold text-white mb-1" style={{ color: amber }}>⚠️ Tolerance Level Exceeded</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    |Exec avg {panelMismatch.toleranceInfo.executionAvg?.toFixed(2)} − Senior {panelMismatch.toleranceInfo.seniorScore?.toFixed(2)}|
+                    {' '}= {panelMismatch.toleranceInfo.difference?.toFixed(2)} exceeds ±{panelMismatch.toleranceInfo.tolerance?.toFixed(2)}.
+                    Base score {panelMismatch.toleranceInfo.baseScore?.toFixed(2)} will be applied.
+                  </p>
+                  {!isSeniorJudge && myJudgeType !== 'Senior Judge' && (
+                    <p className="text-xs mt-2 font-semibold" style={{ color: amber }}>
+                      Your score ({Number(panelScores[myJudgeType]?.score || 0).toFixed(2)}) may be contributing to this gap.
+                      Please verify your execution mark.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!isSeniorJudge && (
+                <div
+                  className="rounded-xl border p-3 text-xs"
+                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                >
+                  Please contact the Senior Judge to resolve the mismatch before final submission.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <motion.button
+                onClick={onClose}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white"
+                style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
+                whileHover={{ filter: 'brightness(1.1)' }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Understood — Dismiss
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ─── SR Judge Edit Modal ───────────────────────────────────────────────────────
+const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationChecklist, selectedApparatus, POINT_CEILINGS, resolveDifficultyValue, getDifficultyRequirement, computeCombinationTotal, selectedCompetitionType }) => {
+  const [editScores, setEditScores] = useState(null);
+
+  useEffect(() => {
+    if (isOpen && editTarget) {
+      const b = editTarget.breakdown || {};
+      setEditScores({
+        difficulty: {
+          aClass: b.difficulty?.aClass ?? 0,
+          bClass: b.difficulty?.bClass ?? 0,
+          cClass: b.difficulty?.cClass ?? 0,
+          total: b.difficulty?.total ?? 0,
+        },
+        combination: {
+          checked: { ...(combinationChecklist.reduce((acc, item) => ({ ...acc, [item.id]: false }), {})), ...(b.combination?.checked || {}) },
+          total: b.combination?.total ?? 0,
+        },
+        execution: b.execution ?? 0,
+        bonus: b.bonus ?? 0,
+      });
+    }
+  }, [isOpen, editTarget]);
+
+  if (!isOpen || !editTarget || !editScores) return null;
+
+  const req = getDifficultyRequirement(selectedCompetitionType);
+
+  const handleDiff = (cls, val) => {
+    const n = parseInt(val) || 0;
+    const d = { ...editScores.difficulty, [cls]: n };
+    const resolved = resolveDifficultyValue({ A: d.aClass, B: d.bClass, C: d.cClass }, req);
+    d.total = Math.min(resolved.total, POINT_CEILINGS.difficulty);
+    setEditScores({ ...editScores, difficulty: d });
+  };
+
+  const handleComb = (itemId) => {
+    const checked = { ...editScores.combination.checked, [itemId]: !editScores.combination.checked[itemId] };
+    const total = computeCombinationTotal(selectedApparatus, checked);
+    setEditScores({ ...editScores, combination: { checked, total } });
+  };
+
+  const calcTotal = () => (
+    editScores.difficulty.total + editScores.combination.total +
+    parseFloat(editScores.execution || 0) + parseFloat(editScores.bonus || 0)
+  ).toFixed(2);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9997] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="w-full max-w-xl rounded-2xl border overflow-hidden"
+            style={{ background: '#0D0D0D', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
+              style={{ background: 'rgba(168,85,247,0.10)', borderColor: 'rgba(168,85,247,0.2)' }}
+            >
+              <div>
+                <p className="text-white font-black text-base">Edit Score — {editTarget.judgeType}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(192,132,252,0.7)' }}>Senior Judge override</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Total</p>
+                  <p className="text-2xl font-black" style={{ color: '#A855F7' }}>{calcTotal()}</p>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {/* Difficulty */}
+              <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-white text-sm">Difficulty</h4>
+                  <span className="text-lg font-black" style={{ color: '#F59E0B' }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>
+                </div>
+                {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl]) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase" style={{ color: '#C084FC' }}>{lbl} - Class</label>
+                    <div className="flex items-center gap-0 rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
+                      <button type="button" onClick={() => handleDiff(key, Math.max(0, editScores.difficulty[key] - 1))}
+                        className="flex items-center justify-center text-xl font-black select-none"
+                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>−</button>
+                      <span className="w-10 text-center text-lg font-black text-white">{editScores.difficulty[key]}</span>
+                      <button type="button" onClick={() => handleDiff(key, editScores.difficulty[key] + 1)}
+                        className="flex items-center justify-center text-xl font-black select-none"
+                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Combination */}
+              <div className="rounded-xl border p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-white text-sm">Combination</h4>
+                  <span className="text-lg font-black" style={{ color: '#A855F7' }}>{editScores.combination.total.toFixed(2)} / 1.60</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {combinationChecklist.map(item => {
+                    const checked = editScores.combination.checked[item.id];
+                    return (
+                      <label key={item.id}
+                        className="flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer"
+                        style={{ background: checked ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)', borderColor: checked ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)' }}
+                      >
+                        <div className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
+                          style={{ borderColor: checked ? '#22C55E' : 'rgba(255,255,255,0.2)', background: checked ? '#22C55E' : 'transparent' }}>
+                          {checked && <CheckCircle className="w-3 h-3 text-white" />}
+                        </div>
+                        <input type="checkbox" checked={checked} onChange={() => handleComb(item.id)} className="sr-only" />
+                        <span className="text-xs" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{item.rule}</span>
+                        {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.penalty.toFixed(2)}</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Execution */}
+              <div className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-white text-sm">Execution</h4>
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC' }}>Max 4.40</span>
+                </div>
+                <input type="number" step="0.05" min="0" max="4.40"
+                  value={editScores.execution}
+                  onChange={e => {
+                    const raw = parseFloat(e.target.value) || 0;
+                    const v = Math.round(raw * 20) / 20;
+                    setEditScores({ ...editScores, execution: Math.max(0, Math.min(4.40, v)) });
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
+                />
+              </div>
+
+              {/* Originality */}
+              <div className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-white text-sm">Originality</h4>
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC' }}>0.20</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[['None', 0], ['+0.20', 0.20]].map(([label, val]) => {
+                    const active = Math.abs((editScores.bonus || 0) - val) < 1e-6;
+                    return (
+                      <button key={label} type="button"
+                        onClick={() => setEditScores({ ...editScores, bonus: val })}
+                        className="py-3 rounded-xl border font-bold text-sm transition-all duration-200"
+                        style={{ background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)', borderColor: active ? '#A855F7' : 'rgba(255,255,255,0.08)', color: active ? '#fff' : 'rgba(255,255,255,0.5)' }}
+                      >{label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <button onClick={onClose}
+                className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-white/5"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
+              >Cancel</button>
+              <motion.button
+                onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())}
+                className="flex-1 py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
+                whileHover={{ filter: 'brightness(1.1)' }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Save className="w-4 h-4" /> Save Override
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   const reduced = useReducedMotion();
@@ -232,6 +650,14 @@ const JudgeScoring = () => {
   const [panelScores, setPanelScores] = useState({}); // { judgeType: scoreData }
   const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
   const joinedRoomRef = useRef(null);
+  // Modal states
+  const [showCopModal, setShowCopModal] = useState(false);
+  const [showMismatchModal, setShowMismatchModal] = useState(false);
+  const [mismatchDismissed, setMismatchDismissed] = useState(false);
+  const [showSrEditModal, setShowSrEditModal] = useState(false);
+  const [srEditTarget, setSrEditTarget] = useState(null); // { judgeType, score, breakdown }
+  // Map judgeType -> judge name (populated after fetchExistingScores)
+  const [judgeNameMap, setJudgeNameMap] = useState({});
 
   useEffect(() => {
     if (!activeSessionData || !activeSessionData.player || !activeSessionData.team || !activeSessionData.competitionType) {
@@ -388,6 +814,10 @@ const JudgeScoring = () => {
         if (count >= 3 && count <= 5) setPanelSize(count);
         else if (count > 5) setPanelSize(5);
         else setPanelSize(null);
+        // Build judgeType → name map for panel review cards
+        const nameMap = {};
+        panelJudges.forEach(j => { nameMap[j.judgeType] = j.name; });
+        setJudgeNameMap(nameMap);
       } catch (err) {
         logger.warn('Could not load panel size from judges list', err);
       }
@@ -775,6 +1205,77 @@ const JudgeScoring = () => {
   // Final Submit is Senior Judge only
   const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
 
+  // Auto-show mismatch modal when entering review mode
+  useEffect(() => {
+    if (viewMode === 'review' && !mismatchDismissed) {
+      const hasMismatch = panelMismatch.difficultyMismatch || panelMismatch.combinationMismatch ||
+        (panelMismatch.toleranceMismatch && effectivePanelSize >= 4);
+      if (hasMismatch && panelScoresCount > 0) {
+        setShowMismatchModal(true);
+      }
+    }
+  }, [viewMode, panelMismatch.difficultyMismatch, panelMismatch.combinationMismatch, panelMismatch.toleranceMismatch, mismatchDismissed, panelScoresCount]);
+
+  // SR judge: save override for another judge's score
+  const handleSrEditSave = async (targetJudgeType, editedScores, newTotal) => {
+    try {
+      const token = secureStorage.getItem('judge_token');
+      const breakdown = {
+        difficulty: editedScores.difficulty,
+        combination: { total: editedScores.combination.total, checked: editedScores.combination.checked },
+        execution: parseFloat(editedScores.execution || 0),
+        originality: parseFloat(editedScores.bonus || 0),
+        bonus: parseFloat(editedScores.bonus || 0),
+      };
+      const scoreData = {
+        playerId: playerIdOf(selectedPlayer),
+        playerName: selectedPlayer.name,
+        judgeType: targetJudgeType,
+        judgeNo: judgeInfo.judgeNo,
+        score: parseFloat(newTotal),
+        teamId: selectedTeam._id,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        competitionType: selectedCompetitionType,
+        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+        apparatus: selectedApparatus,
+        breakdown,
+        overrideBySenior: true,
+      };
+      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
+        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      if (socket?.connected) {
+        socket.emit('score_update', {
+          ...scoreData,
+          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
+        });
+      }
+      setPanelScores(prev => ({
+        ...prev,
+        [targetJudgeType]: {
+          judgeType: targetJudgeType,
+          score: parseFloat(newTotal),
+          breakdown: {
+            difficulty: editedScores.difficulty,
+            combination: editedScores.combination,
+            execution: parseFloat(editedScores.execution || 0),
+            bonus: parseFloat(editedScores.bonus || 0),
+          },
+          timestamp: new Date().toISOString(),
+        },
+      }));
+      toast.success(`Score updated for ${targetJudgeType}: ${newTotal}`);
+      setShowSrEditModal(false);
+      setSrEditTarget(null);
+      setMismatchDismissed(false); // allow mismatch modal to re-check
+    } catch (error) {
+      logger.error('SR edit save failed:', error);
+      toast.error('Failed to save score override');
+    }
+  };
+
   const finalizePanelScore = async () => {
     if (!canFinalSubmit) return;
     if (panelMismatch.hasBlockingMismatch) {
@@ -1120,19 +1621,28 @@ const JudgeScoring = () => {
                         Not connected to server. Scores cannot be submitted.
                       </p>
                     )}
-                    <button onClick={resetScores}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 hover:bg-white/5"
-                      style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
-                      <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Reset All Scores
-                    </button>
+                    {/* COP Rules button (replaces Reset All Scores) */}
+                    <motion.button
+                      onClick={() => setShowCopModal(true)}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
+                      style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                      whileHover={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.5)' }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
+                    </motion.button>
                   </div>
 
-                  {/* Mobile reset only (submit is sticky footer) */}
-                  <button onClick={resetScores}
-                    className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 hover:bg-white/5"
-                    style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
-                    <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Reset All Scores
-                  </button>
+                  {/* Mobile COP button (replaces Reset All Scores) */}
+                  <motion.button
+                    onClick={() => setShowCopModal(true)}
+                    className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
+                    style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                    whileHover={{ background: 'rgba(168,85,247,0.12)' }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
+                  </motion.button>
                 </div>
 
               </div>
@@ -1215,62 +1725,48 @@ const JudgeScoring = () => {
                 </div>
               </div>
 
-              {/* Panel mismatch alerts */}
+              {/* Panel mismatch — inline summary strip (mismatch modal is the primary alert) */}
               {(panelMismatch.difficultyMismatch || panelMismatch.combinationMismatch || panelMismatch.toleranceMismatch) && (
-                <div className="space-y-2">
-                  {panelMismatch.combinationMismatch && (
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl border"
-                      style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.35)' }}>
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} aria-hidden="true" />
-                      <div>
-                        <p className="text-sm font-bold text-white">Combination of all the judges not matched</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          {panelMismatch.combinationSelectionMismatch
-                            ? 'Checklist selections differ between judges (same total is not enough — failed items must match).'
-                            : `Totals: ${panelMismatch.combinationValues.map((v) => Number(v).toFixed(2)).join(', ')}`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {panelMismatch.difficultyMismatch && (
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl border"
-                      style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.35)' }}>
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} aria-hidden="true" />
-                      <div>
-                        <p className="text-sm font-bold text-white">Difficulty of all the judges not matched</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          {panelMismatch.difficultyMixMismatch
-                            ? 'A/B/C element counts differ between judges (same total is not enough — the mix must match).'
-                            : `Totals: ${panelMismatch.difficultyValues.map((v) => Number(v).toFixed(2)).join(', ')}`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {panelMismatch.toleranceMismatch && effectivePanelSize >= 4 && panelMismatch.toleranceInfo && (
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl border"
-                      style={{ background: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.4)' }}>
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: J.amber }} aria-hidden="true" />
-                      <div>
-                        <p className="text-sm font-bold text-white">Tolerance level mismatch</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          |Exec avg {panelMismatch.toleranceInfo.executionAvg?.toFixed(2)} − Senior|
-                          {' '}={panelMismatch.toleranceInfo.difference?.toFixed(2)} exceeds
-                          ±{panelMismatch.toleranceInfo.tolerance?.toFixed(2)}. Base score
-                          {' '}{panelMismatch.toleranceInfo.baseScore?.toFixed(2)} will be applied.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <motion.button
+                  type="button"
+                  onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }}
+                  className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
+                  style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }}
+                  whileHover={{ background: 'rgba(239,68,68,0.13)' }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#EF4444' }} />
+                    <span className="text-sm font-bold text-white">
+                      {[panelMismatch.difficultyMismatch && 'Difficulty', panelMismatch.combinationMismatch && 'Combination', panelMismatch.toleranceMismatch && 'Tolerance'].filter(Boolean).join(' · ')} mismatch detected
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>View Details</span>
+                </motion.button>
               )}
 
               {/* Detailed per-judge slips */}
+              {/* SR judge sees all cards; normal judges see only their own */}
+              {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 0 && (
+                <div className="rounded-xl border p-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>You haven't submitted yet — other judges' scores are visible only to the Senior Judge.</p>
+                </div>
+              )}
+              {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 1 && (
+                <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.15)' }}>
+                  <Lock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(192,132,252,0.6)' }} />
+                  <p className="text-xs" style={{ color: 'rgba(192,132,252,0.6)' }}>
+                    {panelScoresCount - 1} other judge{panelScoresCount - 1 > 1 ? 's have' : ' has'} submitted. Scores are visible to the Senior Judge only.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                {orderedPanelEntries.map(([judge, data]) => {
+                {(isSeniorJudge ? orderedPanelEntries : orderedPanelEntries.filter(([jt]) => jt === judgeInfo?.judgeType)).map(([judge, data]) => {
                   const b = normalizeBreakdown(data.breakdown, data.score);
                   const isYou = judge === judgeInfo?.judgeType;
                   const checkedMap = b.combination.checked || {};
                   const failedItems = combinationChecklist.filter((item) => !checkedMap[item.id]);
+                  const judgeName = judgeNameMap[judge];
                   return (
                     <div key={judge} className="rounded-2xl border p-4 space-y-3"
                       style={{
@@ -1278,14 +1774,35 @@ const JudgeScoring = () => {
                         borderColor: isYou ? J.purple : 'rgba(255,255,255,0.1)',
                       }}>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-bold text-white">
-                          {judge}
-                          {isYou && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300">You</span>
+                        <div>
+                          <div className="text-sm font-bold text-white flex items-center gap-2">
+                            {judge}
+                            {isYou && (
+                              <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300">You</span>
+                            )}
+                          </div>
+                          {judgeName && (
+                            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{judgeName}</p>
                           )}
                         </div>
-                        <div className="text-2xl font-black" style={{ color: isYou ? J.purpleLight : '#fff' }}>
-                          {Number(data.score).toFixed(2)}
+                        <div className="flex items-center gap-2">
+                          <div className="text-2xl font-black" style={{ color: isYou ? J.purpleLight : '#fff' }}>
+                            {Number(data.score).toFixed(2)}
+                          </div>
+                          {/* SR judge edit button for non-self cards */}
+                          {isSeniorJudge && !isYou && !finalized && (
+                            <motion.button
+                              type="button"
+                              onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0"
+                              style={{ borderColor: 'rgba(168,85,247,0.4)', color: '#C084FC', background: 'rgba(168,85,247,0.08)' }}
+                              whileHover={{ background: 'rgba(168,85,247,0.2)' }}
+                              whileTap={{ scale: 0.9 }}
+                              title={`Edit ${judge} score`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </motion.button>
+                          )}
                         </div>
                       </div>
 
@@ -1410,6 +1927,32 @@ const JudgeScoring = () => {
         </AnimatePresence>
         </motion.div>
       </main>
+
+      {/* Modals */}
+      <CopPdfModal isOpen={showCopModal} onClose={() => setShowCopModal(false)} />
+      <MismatchModal
+        isOpen={showMismatchModal}
+        onClose={() => { setShowMismatchModal(false); setMismatchDismissed(true); }}
+        panelMismatch={panelMismatch}
+        panelScores={panelScores}
+        isSeniorJudge={isSeniorJudge}
+        myJudgeType={judgeInfo?.judgeType}
+        effectivePanelSize={effectivePanelSize}
+        judgeNameMap={judgeNameMap}
+      />
+      <SrEditModal
+        isOpen={showSrEditModal}
+        onClose={() => { setShowSrEditModal(false); setSrEditTarget(null); }}
+        onSave={handleSrEditSave}
+        editTarget={srEditTarget}
+        combinationChecklist={combinationChecklist}
+        selectedApparatus={selectedApparatus}
+        POINT_CEILINGS={POINT_CEILINGS}
+        resolveDifficultyValue={resolveDifficultyValue}
+        getDifficultyRequirement={getDifficultyRequirement}
+        computeCombinationTotal={computeCombinationTotal}
+        selectedCompetitionType={selectedCompetitionType}
+      />
     </div>
   );
 };

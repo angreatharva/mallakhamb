@@ -155,6 +155,23 @@ export const ResponsiveTable = ({
   );
 };
 
+// ─── ScoreInputCell ───────────────────────────────────────────────────────────
+const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'number', step, min, max }) => (
+  <input
+    type={type}
+    step={step}
+    min={min}
+    max={max}
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    disabled={isLocked}
+    placeholder={placeholder}
+    style={inputStyle(isLocked)}
+    onFocus={e => { if (!isLocked) e.target.style.borderColor = `${C.saffron}80`; }}
+    onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
+  />
+);
+
 // ─── ResponsiveScoringTable ───────────────────────────────────────────────────
 export const ResponsiveScoringTable = ({
   players = [],
@@ -175,22 +192,6 @@ export const ResponsiveScoringTable = ({
     'Judge 4': 'judge4',
   };
 
-  const ScoreInput = ({ playerId, field, placeholder, type = 'number', step, min, max }) => (
-    <input
-      type={type}
-      step={step}
-      min={min}
-      max={max}
-      value={scores[playerId]?.[field] || ''}
-      onChange={e => onScoreChange(playerId, field, e.target.value)}
-      disabled={isLocked}
-      placeholder={placeholder}
-      style={inputStyle(isLocked)}
-      onFocus={e => { if (!isLocked) e.target.style.borderColor = `${C.saffron}80`; }}
-      onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
-    />
-  );
-
   if (isMobile) {
     return (
       <ResponsiveContainer className={className} {...props}>
@@ -208,7 +209,13 @@ export const ResponsiveScoringTable = ({
                 <label style={{ fontSize: 12, color: textSecondary }}>
                   Time <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <ScoreInput playerId={player.id} field="time" placeholder="00:00" type="text" />
+                <ScoreInputCell
+                  value={scores[player.id]?.time}
+                  onChange={val => onScoreChange(player.id, 'time', val)}
+                  isLocked={isLocked}
+                  placeholder="00:00"
+                  type="text"
+                />
               </div>
 
               {/* Judge scores */}
@@ -217,8 +224,20 @@ export const ResponsiveScoringTable = ({
                 const field = fieldMap[judge.judgeType] || 'seniorJudge';
                 return (
                   <div key={judge._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <label style={{ fontSize: 12, color: textSecondary }}>{judge.judgeType}</label>
-                    <ScoreInput playerId={player.id} field={field} placeholder="0.0" step="0.1" min="0" max="10" />
+                    <div>
+                      <label style={{ fontSize: 12, color: textSecondary, display: 'block' }}>{judge.judgeType}</label>
+                      {judge.name && <span style={{ fontSize: 10, color: C.purpleLight, opacity: 0.85 }}>{judge.name}</span>}
+                    </div>
+                    <ScoreInputCell
+                      value={scores[player.id]?.[field]}
+                      onChange={val => onScoreChange(player.id, field, val)}
+                      isLocked={isLocked}
+                      placeholder="0.0"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                    />
                   </div>
                 );
               })}
@@ -245,11 +264,27 @@ export const ResponsiveScoringTable = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <label style={{ fontSize: 12, color: textSecondary }}>Deduction</label>
-                  <ScoreInput playerId={player.id} field="deduction" placeholder="0.0" step="0.1" min="0" />
+                  <ScoreInputCell
+                    value={scores[player.id]?.deduction}
+                    onChange={val => onScoreChange(player.id, 'deduction', val)}
+                    isLocked={isLocked}
+                    placeholder="0.0"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                  />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <label style={{ fontSize: 12, color: textSecondary }}>Other Deduction</label>
-                  <ScoreInput playerId={player.id} field="otherDeduction" placeholder="0.0" step="0.1" min="0" />
+                  <ScoreInputCell
+                    value={scores[player.id]?.otherDeduction}
+                    onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
+                    isLocked={isLocked}
+                    placeholder="0.0"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                  />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>Final Score</span>
@@ -269,11 +304,18 @@ export const ResponsiveScoringTable = ({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: elevated }}>
-              {['Participant', 'Time', ...judges.map(j => j.judgeType), 'Average', 'Deduction', 'Other Ded.', 'Final Score'].map((h, i) => (
-                <th key={i} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
-                  {h === 'Time' ? <>{h} <span style={{ color: '#EF4444' }}>*</span></> : h}
-                </th>
-              ))}
+              {['Participant', 'Time', ...judges.map(j => j.judgeType), 'Average', 'Deduction', 'Other Ded.', 'Final Score'].map((h, i) => {
+                const judgeObj = judges[i - 2]; // offset by 2 (Participant, Time)
+                const isJudgeCol = i >= 2 && i < 2 + judges.length;
+                return (
+                  <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
+                    {h === 'Time' ? <>{h} <span style={{ color: '#EF4444' }}>*</span></> : h}
+                    {isJudgeCol && judgeObj?.name && (
+                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: C.purpleLight, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -284,13 +326,28 @@ export const ResponsiveScoringTable = ({
                   {player.teamName && <p style={{ fontSize: 11, color: textSecondary }}>{player.teamName}</p>}
                 </td>
                 <td style={{ padding: '12px 14px' }}>
-                  <ScoreInput playerId={player.id} field="time" placeholder="00:00" type="text" />
+                  <ScoreInputCell
+                    value={scores[player.id]?.time}
+                    onChange={val => onScoreChange(player.id, 'time', val)}
+                    isLocked={isLocked}
+                    placeholder="00:00"
+                    type="text"
+                  />
                 </td>
                 {judges.map(judge => {
                   const field = fieldMap[judge.judgeType] || 'seniorJudge';
                   return (
                     <td key={judge._id} style={{ padding: '12px 14px' }}>
-                      <ScoreInput playerId={player.id} field={field} placeholder="0.0" step="0.1" min="0" max="10" />
+                      <ScoreInputCell
+                        value={scores[player.id]?.[field]}
+                        onChange={val => onScoreChange(player.id, field, val)}
+                        isLocked={isLocked}
+                        placeholder="0.0"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="10"
+                      />
                     </td>
                   );
                 })}
@@ -316,10 +373,26 @@ export const ResponsiveScoringTable = ({
                   </div>
                 </td>
                 <td style={{ padding: '12px 14px' }}>
-                  <ScoreInput playerId={player.id} field="deduction" placeholder="0.0" step="0.1" min="0" />
+                  <ScoreInputCell
+                    value={scores[player.id]?.deduction}
+                    onChange={val => onScoreChange(player.id, 'deduction', val)}
+                    isLocked={isLocked}
+                    placeholder="0.0"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                  />
                 </td>
                 <td style={{ padding: '12px 14px' }}>
-                  <ScoreInput playerId={player.id} field="otherDeduction" placeholder="0.0" step="0.1" min="0" />
+                  <ScoreInputCell
+                    value={scores[player.id]?.otherDeduction}
+                    onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
+                    isLocked={isLocked}
+                    placeholder="0.0"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                  />
                 </td>
                 <td style={{ padding: '12px 14px' }}>
                   <span style={{ background: `${C.green}18`, color: C.green, borderRadius: 8, padding: '4px 10px', fontSize: 14, fontWeight: 700 }}>

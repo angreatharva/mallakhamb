@@ -264,11 +264,11 @@ const ScorerScoring = () => {
     newSocket.on('connect', () => {
       setIsConnected(true);
       logger.info('Scorer socket connected successfully');
-      
+
       const genderVal = selectedGender?.value || selectedGender || judgeInfo.gender;
       const ageGroupVal = selectedAgeGroup?.value || selectedAgeGroup || judgeInfo.ageGroup;
       const compTypeVal = selectedCompetitionType?.value || selectedCompetitionType || 'competition_1';
-      
+
       if (genderVal && ageGroupVal && compTypeVal) {
         const roomId = `scoring_${genderVal}_${ageGroupVal}_${compTypeVal}`;
         newSocket.emit('join_scoring_room', { roomId });
@@ -606,57 +606,52 @@ const ScorerScoring = () => {
         )}
 
         <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {/* 1. Scoring Session */}
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
-              <h2 className="text-2xl font-black text-white">{selectedGender.label} — {selectedAgeGroup.label}</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white">{selectedGender.label} — {selectedAgeGroup.label}</h2>
               <div className="mt-2 space-y-1 text-sm text-white/50">
                 <p>Team: <span className="text-white font-semibold">{selectedTeam.name}</span></p>
-                <p>Coach: <span className="text-white/70">{selectedTeam.coach?.name}</span></p>
-                {selectedCompetitionType && <p>Competition: <span className="text-white/70">{selectedCompetitionType.label}</span></p>}
-                {lastUpdated && <p>Last updated: <span className="text-white/40">{lastUpdated.toLocaleString()}</span></p>}
+                <p>Coach: <span className="text-white font-semibold">{selectedTeam.coach?.name}</span></p>
+                {selectedCompetitionType && <p>Competition: <span className="text-white font-semibold">{selectedCompetitionType.label}</span></p>}
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
+
+            {/* 2. Judges Panel */}
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Judges Panel</p>
+              {judges.length > 0 ? (
+                <div className="flex flex-row items-center gap-2 flex-nowrap overflow-x-auto">
+                  {judges.map((jud) => {
+                    const isSenior = jud.judgeType === 'Senior Judge';
+                    return (
+                      <div key={jud._id} className="rounded-xl border p-2 text-center min-w-[90px] flex-shrink-0"
+                        style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
+                        <span className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold mb-1 truncate max-w-full"
+                          style={{ background: isSenior ? `${ADMIN_COLORS.purple}25` : `${ADMIN_COLORS.blue}25`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
+                          {jud.judgeType}
+                        </span>
+                        <p className="font-bold text-white text-xs truncate">{jud.name}</p>
+                        <p className="text-[10px] text-white/40 truncate">@{jud.username}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-white/30 text-sm py-4">No judges found for this category.</p>
+              )}
+            </div>
+
+            {/* 3. Players */}
+            <div className="text-left md:text-right flex-shrink-0">
               <p className="text-xs text-white/40 uppercase tracking-wide">Players</p>
               <p className="text-4xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</p>
             </div>
           </div>
-          <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.purple}10`, borderColor: `${ADMIN_COLORS.purple}30` }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.purpleLight }}>Competition Type</p>
-            <p className="font-bold text-white">{competitionType}</p>
-            <p className="text-xs text-white/40 mt-0.5">
-              {competitionType === 'Competition I' && 'Team: A=4, B=6, C=1'}
-              {competitionType === 'Competition II' && 'Individual: A=1, B=6, C=2'}
-              {competitionType === 'Competition III' && 'Apparatus: A=1, B=6, C=2'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Judges Panel</p>
-            {judges.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {judges.map((jud) => {
-                  const isSenior = jud.judgeType === 'Senior Judge';
-                  return (
-                    <div key={jud._id} className="rounded-xl border p-3 text-center"
-                      style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold mb-2"
-                        style={{ background: isSenior ? `${ADMIN_COLORS.purple}25` : `${ADMIN_COLORS.blue}25`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
-                        {jud.judgeType}
-                      </span>
-                      <p className="font-bold text-white text-sm">{jud.name}</p>
-                      <p className="text-xs text-white/40">@{jud.username}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-white/30 text-sm text-center py-4">No judges found for this category.</p>
-            )}
-          </div>
         </div>
 
-        <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
+        {/* <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
             <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
@@ -664,7 +659,7 @@ const ScorerScoring = () => {
             <p><span className="text-white/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
             <p><span className="text-white/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
           </div>
-        </div>
+        </div> */}
 
         {players.length > 0 ? (
           <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
@@ -682,18 +677,18 @@ const ScorerScoring = () => {
         <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {[{ label: 'Time Keeper', value: timeKeeper, setter: setTimeKeeper, placeholder: 'Enter time keeper name', required: true },
-              { label: 'Scorer', value: scorer, setter: setScorer, placeholder: judgeInfo?.name || 'Enter scorer name', required: true },
-              { label: 'Remarks', value: remarks, setter: setRemarks, placeholder: 'Enter any remarks', required: false }].map(({ label, value, setter, placeholder, required }) => (
-                <div key={label}>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    {label}
-                    {required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
-                    onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
-                    onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
-                </div>
-              ))}
+            { label: 'Scorer', value: scorer, setter: setScorer, placeholder: judgeInfo?.name || 'Enter scorer name', required: true },
+            { label: 'Remarks', value: remarks, setter: setRemarks, placeholder: 'Enter any remarks', required: false }].map(({ label, value, setter, placeholder, required }) => (
+              <div key={label}>
+                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                  {label}
+                  {required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
+                  onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                  onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
+              </div>
+            ))}
           </div>
           <div className="flex justify-end">
             {!isLocked ? (
