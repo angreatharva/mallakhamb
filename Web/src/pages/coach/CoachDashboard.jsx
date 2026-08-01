@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle, LogOut, User } from 'lucide-react';
+import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle, LogOut, User, Save, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
+import PerformancePanel from '@/components/performance/PerformancePanel';
 
 const CoachDashboard = () => {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const CoachDashboard = () => {
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
+  const [savingDraft, setSavingDraft] = useState(false);
   const urlCompetitionHandledRef = useRef(false);
   useReducedMotion(); // Initialize for accessibility
 
@@ -302,6 +304,87 @@ const CoachDashboard = () => {
     } catch { toast.error('Failed to remove player'); }
   };
 
+  const handleSaveDraft = async () => {
+    if (!team) return;
+    setSavingDraft(true);
+    try {
+      await fetchTeamDashboard();
+      toast.success('Team draft saved to database! Roster will persist across devices and sessions.');
+    } catch (error) {
+      toast.error('Failed to save team draft to database.');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleDragStart = (e, playerItem, gender, ageGroup) => {
+    if (team?.isSubmitted) return;
+    const dragPayload = {
+      playerId: playerItem.player._id,
+      firstName: playerItem.player.firstName,
+      lastName: playerItem.player.lastName,
+      dateOfBirth: playerItem.player.dateOfBirth,
+      gender: playerItem.gender || gender,
+      currentAgeGroup: ageGroup,
+      apparatus: playerItem.apparatus,
+    };
+    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDropPlayer = async (e, targetGender, targetAgeGroup) => {
+    if (team?.isSubmitted) return;
+    e.preventDefault();
+    try {
+      const rawData = e.dataTransfer.getData('application/json');
+      if (!rawData) return;
+      const data = JSON.parse(rawData);
+
+      if (data.gender !== targetGender) {
+        toast.error(`Cannot move ${data.firstName} (${data.gender}) to ${targetGender} category.`);
+        return;
+      }
+
+      if (data.currentAgeGroup === targetAgeGroup) return;
+
+      if (!data.dateOfBirth) {
+        toast.error(`${data.firstName}'s date of birth is missing.`);
+        return;
+      }
+
+      const playerAge = calculateAge(data.dateOfBirth);
+      const limits = ageGroupLimits[targetAgeGroup];
+
+      if (targetAgeGroup.startsWith('Under') && limits && playerAge > limits.maxAge) {
+        toast.error(
+          `${data.firstName} is ${playerAge} yrs old and cannot play in ${getAgeGroupDisplay(targetAgeGroup)} (max age: ${limits.maxAge})`
+        );
+        return;
+      }
+
+      if (targetAgeGroup.startsWith('Above') && limits && playerAge < limits.minAge) {
+        toast.error(
+          `${data.firstName} is ${playerAge} yrs old and cannot play in ${getAgeGroupDisplay(targetAgeGroup)} (min age: ${limits.minAge})`
+        );
+        return;
+      }
+
+      toast.loading(`Moving ${data.firstName} to ${getAgeGroupDisplay(targetAgeGroup)}...`, { id: 'move-player' });
+
+      await coachAPI.addPlayerToAgeGroup({
+        playerId: data.playerId,
+        ageGroup: targetAgeGroup,
+        gender: targetGender,
+        apparatus: data.apparatus,
+      });
+
+      toast.success(`${data.firstName} moved to ${getAgeGroupDisplay(targetAgeGroup)}!`, { id: 'move-player' });
+      fetchTeamDashboard();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to move player', { id: 'move-player' });
+    }
+  };
+
   const getAgeGroupDisplay = (ag) => ({
     'Under10': 'Under 10', 'Under12': 'Under 12', 'Under14': 'Under 14',
     'Under16': 'Under 16', 'Under18': 'Under 18', 'Above18': 'Above 18', 'Above16': 'Above 16',
@@ -412,36 +495,77 @@ const CoachDashboard = () => {
   const AgeGroupCard = ({ ageGroup, gender, accentColor }) => {
     const key = `${gender}_${ageGroup}`;
     const groupPlayers = playersByAgeGroup[key] || [];
+    const [isDragOver, setIsDragOver] = useState(false);
+
     return (
-      <div className="rounded-xl border p-4"
-        style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorderSubtle }}>
+      <div
+        className={`rounded-xl border p-4 transition-all duration-200 ${
+          isDragOver ? 'ring-2 ring-saffron scale-[1.01]' : ''
+        }`}
+        style={{
+          background: isDragOver ? `${accentColor}12` : 'rgba(255,255,255,0.02)',
+          borderColor: isDragOver ? accentColor : COLORS.darkBorderSubtle,
+        }}
+        onDragOver={(e) => {
+          if (team?.isSubmitted) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          if (team?.isSubmitted) return;
+          setIsDragOver(false);
+          handleDropPlayer(e, gender, ageGroup);
+        }}
+      >
         <div className="flex items-center justify-between mb-3">
-          <span className="text-white font-semibold text-sm">{getAgeGroupDisplay(ageGroup)} {gender === 'Male' ? 'Boys' : 'Girls'}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full"
-            style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}>
+          <span className="text-white font-semibold text-sm">
+            {getAgeGroupDisplay(ageGroup)} {gender === 'Male' ? 'Boys' : 'Girls'}
+          </span>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}
+          >
             {groupPlayers.length}
           </span>
         </div>
         <div className="space-y-1.5">
           {groupPlayers.map((player, idx) => (
-            <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-lg"
-              style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <span className="text-white/70 text-sm truncate flex-1">
-                {player.player.firstName} {player.player.lastName}
-                {player.apparatus ? <span className="ml-2 text-xs opacity-60">({player.apparatus})</span> : null}
-              </span>
-              <button onClick={() => handleRemovePlayer(player.player._id)}
+            <div
+              key={idx}
+              draggable={!team?.isSubmitted}
+              onDragStart={(e) => handleDragStart(e, player, gender, ageGroup)}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                !team?.isSubmitted ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : ''
+              }`}
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              <div className="flex items-center min-w-0 flex-1">
+                {!team?.isSubmitted && (
+                  <GripVertical className="w-3.5 h-3.5 mr-1.5 text-white/30 flex-shrink-0" aria-hidden="true" />
+                )}
+                <span className="text-white/70 text-sm truncate">
+                  {player.player.firstName} {player.player.lastName}
+                  {player.apparatus ? <span className="ml-2 text-xs opacity-60">({player.apparatus})</span> : null}
+                </span>
+              </div>
+              <button
+                onClick={() => handleRemovePlayer(player.player._id)}
                 disabled={team?.isSubmitted}
-                className="ml-2 p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                className="ml-2 p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center flex-shrink-0"
                 style={{ color: team?.isSubmitted ? 'rgba(255,255,255,0.2)' : '#EF4444' }}
                 title={team?.isSubmitted ? 'Cannot remove after submission' : 'Remove player'}
-                aria-label={`Remove ${player.player.firstName} ${player.player.lastName}`}>
+                aria-label={`Remove ${player.player.firstName} ${player.player.lastName}`}
+              >
                 <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
           ))}
           {groupPlayers.length === 0 && (
-            <p className="text-white/20 text-xs italic px-1">No players assigned</p>
+            <p className="text-white/20 text-xs italic px-1">
+              {team?.isSubmitted ? 'No players assigned' : 'No players assigned · Drag player here'}
+            </p>
           )}
         </div>
       </div>
@@ -526,6 +650,19 @@ const CoachDashboard = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
+                <motion.button
+                  onClick={handleSaveDraft}
+                  disabled={savingDraft || team?.isSubmitted}
+                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 border disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    background: 'rgba(255,255,255,0.06)',
+                  }}
+                  whileHover={team?.isSubmitted ? {} : { scale: 1.02, background: 'rgba(255,255,255,0.1)' }}
+                  whileTap={team?.isSubmitted ? {} : { scale: 0.98 }}>
+                  <Save className="w-4 h-4" aria-hidden="true" />
+                  {savingDraft ? 'Saving...' : 'Save Team'}
+                </motion.button>
                 <motion.button onClick={() => setShowAddPlayer(true)}
                   disabled={team?.isSubmitted}
                   className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -637,6 +774,20 @@ const CoachDashboard = () => {
             </div>
           </FadeIn>
         </div>
+
+        {/* Team Performance Section */}
+        {team?._id && currentCompetition && (
+          <div className="mt-6">
+            <PerformancePanel
+              competitionId={currentCompetition._id}
+              competitionTypes={currentCompetition.competitionTypes || []}
+              apparatusConfig={currentCompetition.apparatusConfig || {}}
+              teamId={team._id}
+              title="Team Performance"
+              emptyLabel="No finalized scores for this competition yet."
+            />
+          </div>
+        )}
       </div>
 
       {/* Team Summary Modal */}

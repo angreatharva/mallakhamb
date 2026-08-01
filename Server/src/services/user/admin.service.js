@@ -1001,8 +1001,8 @@ class AdminService extends UserService {
         totalRegisteredTeams: competition.registeredTeams?.length || 0
       });
 
-      // Filter submitted teams
-      let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted);
+      // Filter submitted teams (only teams fully submitted by coach)
+      let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted === true && regTeam.isActive !== false);
       
       this.logger.info('Submitted teams (before additional filters)', { 
         count: submittedTeams.length 

@@ -13,6 +13,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
+import PerformancePanel from '@/components/performance/PerformancePanel';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
@@ -421,6 +422,22 @@ const PlayerDashboard = () => {
             </div>
           </FadeIn>
         </div>
+
+        {/* My Performance Section */}
+        {player?.team && currentCompetition && (
+          <PerformancePanel
+            competitionId={currentCompetition._id}
+            competitionTypes={currentCompetition.competitionTypes || []}
+            apparatusConfig={currentCompetition.apparatusConfig || {}}
+            teamId={player.team._id || player.team.id || (typeof player.team === 'string' ? player.team : '')}
+            highlightPlayerId={player._id || player.id}
+            selfOnly={true}
+            gender={player.gender}
+            ageGroup={player.ageGroup}
+            title="My Performance & Scores"
+            emptyLabel="No finalized scores found for you in this competition yet."
+          />
+        )}
       </div>
 
       {/* Competition Selection Modal */}

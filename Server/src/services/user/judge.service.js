@@ -452,6 +452,20 @@ class JudgeService extends UserService {
         throw new NotFoundError('Team');
       }
 
+      // Verify team has been submitted by coach for this competition
+      const compId = judge.competition?._id || judge.competition;
+      if (compId) {
+        const comp = await this.competitionRepository.findById(compId);
+        if (comp) {
+          const regTeam = (comp.registeredTeams || []).find(
+            rt => rt.team && (rt.team._id ? rt.team._id.toString() : rt.team.toString()) === teamId.toString()
+          );
+          if (!regTeam || regTeam.isSubmitted !== true) {
+            throw new AuthorizationError('Team has not been submitted by coach yet');
+          }
+        }
+      }
+
       // Find score documents for this team and judge's category
       const scoreQuery = {
         teamId: teamId,

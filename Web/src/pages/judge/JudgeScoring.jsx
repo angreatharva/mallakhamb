@@ -658,6 +658,40 @@ const JudgeScoring = () => {
   const [srEditTarget, setSrEditTarget] = useState(null); // { judgeType, score, breakdown }
   // Map judgeType -> judge name (populated after fetchExistingScores)
   const [judgeNameMap, setJudgeNameMap] = useState({});
+  // Active mobile tab state
+  const [activeMobileTab, setActiveMobileTab] = useState('difficulty'); // 'difficulty' | 'combination' | 'exec_orig'
+  const touchStartX = useRef(null);
+  const touchEndX = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diffX = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 40;
+    const tabs = ['difficulty', 'combination', 'exec_orig'];
+    const currentIndex = tabs.indexOf(activeMobileTab);
+
+    if (diffX > minSwipeDistance) {
+      // Swiped left -> next tab
+      if (currentIndex < tabs.length - 1) {
+        setActiveMobileTab(tabs[currentIndex + 1]);
+      }
+    } else if (diffX < -minSwipeDistance) {
+      // Swiped right -> prev tab
+      if (currentIndex > 0) {
+        setActiveMobileTab(tabs[currentIndex - 1]);
+      }
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   useEffect(() => {
     if (!activeSessionData || !activeSessionData.player || !activeSessionData.team || !activeSessionData.competitionType) {
@@ -927,6 +961,7 @@ const JudgeScoring = () => {
       const myScore = loadedPanelScores[judgeInfo.judgeType];
       if (myScore) {
         setSubmitted(true);
+        setViewMode('review');
         if (myScore.breakdown) {
           const b = normalizeBreakdown(myScore.breakdown, myScore.score);
           setScores({
@@ -1205,6 +1240,11 @@ const JudgeScoring = () => {
   // Final Submit is Senior Judge only
   const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
 
+  // Scroll to top when viewMode changes (e.g. entering Panel Review or returning to Scoring)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [viewMode]);
+
   // Auto-show mismatch modal when entering review mode
   useEffect(() => {
     if (viewMode === 'review' && !mismatchDismissed) {
@@ -1445,207 +1485,398 @@ const JudgeScoring = () => {
           
           <AnimatePresence mode="wait">
             {viewMode === 'scoring' && (
-              <div key="scoring" className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 sm:gap-5 lg:min-h-[calc(100dvh-80px)]">
-                {/* Left Column: Scoring Controls */}
-                <div className="flex flex-col gap-3 sm:gap-4 order-1">
-                  {/* Score hero — always first on mobile */}
-                  <motion.div className="rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden"
-                    style={{ background: 'linear-gradient(135deg, #A855F720, #7C3AED20)', border: '1px solid rgba(168,85,247,0.3)' }}
-                    animate={{ boxShadow: finalScore > 0 ? `0 0 60px rgba(168,85,247,0.2)` : 'none' }}>
-                    <div className="absolute inset-0 pointer-events-none"
-                      style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
-                    <p className="text-xs font-bold tracking-widest uppercase mb-1 sm:mb-2 relative z-10" style={{ color: J.purpleLight }}>Final Score</p>
-                    <motion.p className="text-5xl sm:text-7xl font-black relative z-10"
-                      key={calcFinal()}
-                      initial={{ scale: 0.9, opacity: 0.5 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.2 }}
-                      style={{ color: '#fff' }}>
-                      {calcFinal()}
-                    </motion.p>
-                    <p className="text-sm relative z-10 mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>out of 10.00</p>
-                  </motion.div>
-
-                  {/* Difficulty — high priority on mobile (right after score) */}
-                  <div className="rounded-2xl border p-3 sm:p-4 space-y-3 lg:hidden"
-                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-black text-white text-sm">Difficulty</h3>
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
-                    </div>
-                    <div className="space-y-3">
-                      {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl, mult]) => (
-                        <Stepper key={key} label={`${lbl} - Class - ${mult}`} hint="" value={scores.difficulty[key]}
-                          onChange={v => handleDifficulty(key, v)} />
-                      ))}
-                    </div>
-                    <div className="flex justify-end">
-                      <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
-                        {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="rounded-2xl border p-3 sm:p-4"
-                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-black text-white text-sm">Execution</h3>
-                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+              <>
+                {/* ─── MOBILE VIEW (lg:hidden) ─── */}
+                <div className="block lg:hidden space-y-3 pb-20">
+                  {/* 1. Fixed Top Score Header */}
+                  <div className="sticky top-[57px] z-30 pt-2 pb-3 -mx-3 px-3 backdrop-blur-xl border-b"
+                    style={{ background: 'rgba(10,10,10,0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                    <div className="rounded-2xl p-3 flex items-center justify-between relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(124,58,237,0.18))', border: '1px solid rgba(168,85,247,0.35)' }}>
+                      <div className="min-w-0 pr-2">
+                        <p className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color: J.purpleLight }}>Live Final Score</p>
+                        <p className="text-xs text-white/60 truncate mt-0.5">{selectedPlayer?.name} • <span className="text-white/40">{selectedApparatus || 'Pole'}</span></p>
                       </div>
-                      <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
-                        onChange={e => {
-                          const raw = parseFloat(e.target.value) || 0;
-                          // Round to nearest 0.05 increment (0.00, 0.05, 0.10, ...)
-                          const v = Math.round(raw * 20) / 20;
-                          setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
-                        }} />
+                      <motion.div className="flex items-baseline gap-1 flex-shrink-0"
+                        key={calcFinal()}
+                        initial={{ scale: 0.95, opacity: 0.8 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.15 }}>
+                        <span className="text-4xl font-black text-white leading-none">{calcFinal()}</span>
+                        <span className="text-xs text-white/40 font-semibold">/ 10.00</span>
+                      </motion.div>
                     </div>
 
-                    <div className="rounded-2xl border p-3 sm:p-4"
-                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-black text-white text-sm">Originality</h3>
-                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>0.20</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                        {[['None', 0], ['+0.20', POINT_CEILINGS.bonus]].map(([label, val]) => {
-                          const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
-                          return (
-                            <button key={label} type="button"
-                              onClick={() => setScores({ ...scores, bonus: val })}
-                              className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[44px]"
-                              style={{
-                                background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
-                                borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
-                                color: active ? '#fff' : 'rgba(255,255,255,0.5)',
-                              }}>
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {/* 2. 3-Tab Bar */}
+                    <div className="grid grid-cols-3 gap-1 mt-2 p-1 rounded-xl border bg-black/40"
+                      style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMobileTab('difficulty')}
+                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                          activeMobileTab === 'difficulty' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                        }`}
+                      >
+                        Difficulty
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMobileTab('combination')}
+                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                          activeMobileTab === 'combination' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                        }`}
+                      >
+                        Combination
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMobileTab('exec_orig')}
+                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                          activeMobileTab === 'exec_orig' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                        }`}
+                      >
+                        Exec & Orig
+                      </button>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border p-3 sm:p-4 flex-1"
-                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="flex items-center justify-between mb-3 gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-black text-white text-sm">Combination</h3>
-                        <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{selectedApparatus || 'Pole Mallakhamb'}</p>
-                      </div>
-                      <span className="text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {combinationChecklist.map((item) => (
-                        <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
-                          onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
-                      ))}
-                    </div>
-                    <div className="flex justify-end pt-2">
-                      <span className="text-lg font-black" style={{ color: J.purple }}>
-                        {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 1.60</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Summary & Submit (desktop difficulty lives here) */}
-                <div className="flex flex-col gap-3 sm:gap-4 order-2">
-                  <div className="hidden lg:block rounded-2xl border p-3 sm:p-4 space-y-3"
-                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-black text-white text-sm">Difficulty</h3>
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
-                    </div>
-                    <div className="space-y-3">
-                      {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl, mult]) => (
-                        <Stepper key={key} label={`${lbl} - Class - ${mult}`} hint="" value={scores.difficulty[key]}
-                          onChange={v => handleDifficulty(key, v)} />
-                      ))}
-                    </div>
-                    <div className="flex justify-end">
-                      <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
-                        {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border p-3 sm:p-4 space-y-1"
-                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <h3 className="font-black text-white text-sm mb-2">Score Summary</h3>
-                    <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
-                    <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
-                    <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
-                    <ScoreRow label="4. Originality" value={parseFloat(scores.bonus || 0)} max="0.20" />
-                  </div>
-
-                  {/* Desktop submit */}
-                  <div className="hidden lg:flex flex-col gap-3">
-                    <motion.button
-                      onClick={submitScore}
-                      disabled={submitting || !isConnected || submitted}
-                      className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
-                      style={{
-                        background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
-                        opacity: (!isConnected || submitting) ? 0.6 : 1,
-                      }}
-                      whileHover={reduced || submitting || !isConnected ? {} : { scale: 1.01, filter: 'brightness(1.1)' }}
-                      whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
-                      transition={{ duration: 0.15 }}>
-                      <AnimatePresence mode="wait" initial={false}>
-                        {submitting ? (
-                          <motion.span key="submitting" className="flex items-center gap-2"
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
-                              animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                            Submitting...
-                          </motion.span>
-                        ) : submitted ? (
-                          <motion.span key="done" className="flex items-center gap-2"
-                            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
-                            <CheckCircle className="w-5 h-5" aria-hidden="true" /> Score Submitted!
-                          </motion.span>
-                        ) : (
-                          <motion.span key="idle" className="flex items-center gap-2"
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <Send className="w-5 h-5" aria-hidden="true" />
-                            {panelScores[judgeInfo?.judgeType] ? 'Resubmit Score' : 'Submit Score'}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </motion.button>
-                    {!isConnected && (
-                      <p className="text-center text-xs" style={{ color: '#EF4444' }}>
-                        Not connected to server. Scores cannot be submitted.
-                      </p>
-                    )}
-                    {/* COP Rules button (replaces Reset All Scores) */}
-                    <motion.button
-                      onClick={() => setShowCopModal(true)}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
-                      style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
-                      whileHover={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.5)' }}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
-                    </motion.button>
-                  </div>
-
-                  {/* Mobile COP button (replaces Reset All Scores) */}
-                  <motion.button
-                    onClick={() => setShowCopModal(true)}
-                    className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
-                    style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
-                    whileHover={{ background: 'rgba(168,85,247,0.12)' }}
-                    whileTap={{ scale: 0.97 }}
+                  {/* 3. Tab Content Area with Touch / Swipe Support */}
+                  <div
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    className="min-h-[300px] pt-1"
                   >
-                    <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
-                  </motion.button>
+                    <AnimatePresence mode="wait">
+                      {activeMobileTab === 'difficulty' && (
+                        <motion.div
+                          key="tab-difficulty"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="rounded-2xl border p-4 space-y-4"
+                          style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-black text-white text-base">Difficulty Elements</h3>
+                              <p className="text-xs text-white/40 mt-0.5">Select counts for Class A, B, and C elements</p>
+                            </div>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
+                          </div>
+
+                          <div className="space-y-4 pt-1">
+                            {[['aClass', 'A - Class - 0.20', '0.20 per element'], ['bClass', 'B - Class - 0.40', '0.40 per element'], ['cClass', 'C - Class - 0.60', '0.60 per element']].map(([key, lbl, hint]) => (
+                              <Stepper key={key} label={lbl} hint={hint} value={scores.difficulty[key]}
+                                onChange={v => handleDifficulty(key, v)} />
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                            <span className="text-xs font-bold text-white/50">Difficulty Subtotal</span>
+                            <span className="text-xl font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
+                              {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal text-white/30">/ 3.80</span>
+                            </span>
+                          </div>
+
+                          <motion.button
+                            onClick={() => setShowCopModal(true)}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
+                          </motion.button>
+                        </motion.div>
+                      )}
+
+                      {activeMobileTab === 'combination' && (
+                        <motion.div
+                          key="tab-combination"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="rounded-2xl border p-4 space-y-4"
+                          style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <h3 className="font-black text-white text-base">Combination Requirements</h3>
+                              <p className="text-xs text-white/40 mt-0.5 truncate">{selectedApparatus || 'Pole Mallakhamb'}</p>
+                            </div>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
+                          </div>
+
+                          <div className="space-y-2 pt-1">
+                            {combinationChecklist.map((item) => (
+                              <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
+                                onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                            <span className="text-xs font-bold text-white/50">Combination Subtotal</span>
+                            <span className="text-xl font-black" style={{ color: J.purple }}>
+                              {scores.combination.total.toFixed(2)} <span className="text-xs font-normal text-white/30">/ 1.60</span>
+                            </span>
+                          </div>
+
+                          <motion.button
+                            onClick={() => setShowCopModal(true)}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
+                          </motion.button>
+                        </motion.div>
+                      )}
+
+                      {activeMobileTab === 'exec_orig' && (
+                        <motion.div
+                          key="tab-exec_orig"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-4"
+                        >
+                          {/* Execution Card */}
+                          <div className="rounded-2xl border p-4 space-y-3"
+                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-black text-white text-base">Execution Score</h3>
+                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+                            </div>
+                            <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
+                              onChange={e => {
+                                const raw = parseFloat(e.target.value) || 0;
+                                const v = Math.round(raw * 20) / 20;
+                                setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
+                              }} />
+                          </div>
+
+                          {/* Originality Card */}
+                          <div className="rounded-2xl border p-4 space-y-3"
+                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-black text-white text-base">Originality Bonus</h3>
+                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 0.20</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[['None', 0], ['+0.20', POINT_CEILINGS.bonus]].map(([label, val]) => {
+                                const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
+                                return (
+                                  <button key={label} type="button"
+                                    onClick={() => setScores({ ...scores, bonus: val })}
+                                    className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[46px]"
+                                    style={{
+                                      background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
+                                      borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
+                                      color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                                    }}>
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Summary Card */}
+                          <div className="rounded-2xl border p-4 space-y-1"
+                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                            <h3 className="font-black text-white text-sm mb-2">Overall Score Breakdown</h3>
+                            <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
+                            <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
+                            <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
+                            <ScoreRow label="4. Originality" value={parseFloat(scores.bonus || 0)} max="0.20" />
+                          </div>
+
+                          <motion.button
+                            onClick={() => setShowCopModal(true)}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200"
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
-              </div>
+                {/* ─── DESKTOP VIEW (hidden on mobile, lg:grid) ─── */}
+                <div key="scoring-desktop" className="hidden lg:grid grid-cols-[1.6fr_1fr] gap-5 min-h-[calc(100dvh-80px)]">
+                  {/* Left Column: Scoring Controls */}
+                  <div className="flex flex-col gap-4 order-1">
+                    {/* Score hero */}
+                    <motion.div className="rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, #A855F720, #7C3AED20)', border: '1px solid rgba(168,85,247,0.3)' }}
+                      animate={{ boxShadow: finalScore > 0 ? `0 0 60px rgba(168,85,247,0.2)` : 'none' }}>
+                      <div className="absolute inset-0 pointer-events-none"
+                        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
+                      <p className="text-xs font-bold tracking-widest uppercase mb-2 relative z-10" style={{ color: J.purpleLight }}>Final Score</p>
+                      <motion.p className="text-7xl font-black relative z-10"
+                        key={calcFinal()}
+                        initial={{ scale: 0.9, opacity: 0.5 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ color: '#fff' }}>
+                        {calcFinal()}
+                      </motion.p>
+                      <p className="text-sm relative z-10 mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>out of 10.00</p>
+                    </motion.div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-2xl border p-4"
+                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-black text-white text-sm">Execution</h3>
+                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+                        </div>
+                        <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
+                          onChange={e => {
+                            const raw = parseFloat(e.target.value) || 0;
+                            const v = Math.round(raw * 20) / 20;
+                            setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
+                          }} />
+                      </div>
+
+                      <div className="rounded-2xl border p-4"
+                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-black text-white text-sm">Originality</h3>
+                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>0.20</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[['None', 0], ['+0.20', POINT_CEILINGS.bonus]].map(([label, val]) => {
+                            const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
+                            return (
+                              <button key={label} type="button"
+                                onClick={() => setScores({ ...scores, bonus: val })}
+                                className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[44px]"
+                                style={{
+                                  background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
+                                  borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
+                                  color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                                }}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border p-4 flex-1"
+                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-black text-white text-sm">Combination</h3>
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{selectedApparatus || 'Pole Mallakhamb'}</p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {combinationChecklist.map((item) => (
+                          <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
+                            onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
+                        ))}
+                      </div>
+                      <div className="flex justify-end pt-2">
+                        <span className="text-lg font-black" style={{ color: J.purple }}>
+                          {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 1.60</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Summary & Submit (desktop difficulty) */}
+                  <div className="flex flex-col gap-4 order-2">
+                    <div className="rounded-2xl border p-4 space-y-3"
+                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-black text-white text-sm">Difficulty</h3>
+                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
+                      </div>
+                      <div className="space-y-3">
+                        {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl, mult]) => (
+                          <Stepper key={key} label={`${lbl} - Class - ${mult}`} hint="" value={scores.difficulty[key]}
+                            onChange={v => handleDifficulty(key, v)} />
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
+                          {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border p-4 space-y-1"
+                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <h3 className="font-black text-white text-sm mb-2">Score Summary</h3>
+                      <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
+                      <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
+                      <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
+                      <ScoreRow label="4. Originality" value={parseFloat(scores.bonus || 0)} max="0.20" />
+                    </div>
+
+                    {/* Desktop submit */}
+                    <div className="flex flex-col gap-3">
+                      <motion.button
+                        onClick={submitScore}
+                        disabled={submitting || !isConnected || submitted}
+                        className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
+                        style={{
+                          background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
+                          opacity: (!isConnected || submitting) ? 0.6 : 1,
+                        }}
+                        whileHover={reduced || submitting || !isConnected ? {} : { scale: 1.01, filter: 'brightness(1.1)' }}
+                        whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
+                        transition={{ duration: 0.15 }}>
+                        <AnimatePresence mode="wait" initial={false}>
+                          {submitting ? (
+                            <motion.span key="submitting" className="flex items-center gap-2"
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                              <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
+                                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                              Submitting...
+                            </motion.span>
+                          ) : submitted ? (
+                            <motion.span key="done" className="flex items-center gap-2"
+                              initial={{ scale: 0.8, opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                              <CheckCircle className="w-5 h-5" aria-hidden="true" /> Score Submitted!
+                            </motion.span>
+                          ) : (
+                            <motion.span key="idle" className="flex items-center gap-2"
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                              <Send className="w-5 h-5" aria-hidden="true" />
+                              {panelScores[judgeInfo?.judgeType] ? 'Resubmit Score' : 'Submit Score'}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
+                      {!isConnected && (
+                        <p className="text-center text-xs" style={{ color: '#EF4444' }}>
+                          Not connected to server. Scores cannot be submitted.
+                        </p>
+                      )}
+                      <motion.button
+                        onClick={() => setShowCopModal(true)}
+                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
+                        style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                        whileHover={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.5)' }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Mobile sticky submit bar */}

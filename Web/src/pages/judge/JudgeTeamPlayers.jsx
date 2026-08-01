@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
-  Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users
+  Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -50,6 +50,7 @@ const JudgeTeamPlayers = () => {
   const [team, setTeam] = useState(location.state?.team || null);
   const [loading, setLoading] = useState(!location.state?.team);
   const [judgeScoreMap, setJudgeScoreMap] = useState({}); // { playerId: true } for players this judge has scored
+  const [finalizedScoreMap, setFinalizedScoreMap] = useState({}); // { playerId: finalScore|true } for finalized scores
 
   const selectedCompetitionType =
     location.state?.competitionType || sessionStorage.getItem('judge_selected_comp_type') || '';
@@ -107,7 +108,7 @@ const JudgeTeamPlayers = () => {
       const found = teams.find((t) => String(t._id) === String(teamId));
       if (!found) {
         logger.error('Team not found in response:', { teamId, teamsCount: teams.length, teams });
-        toast.error('Team not found for selected category');
+        toast.error('Team not found or has not been submitted by coach yet');
         navigate('/judge/dashboard');
         return;
       }
@@ -116,6 +117,7 @@ const JudgeTeamPlayers = () => {
       // Fetch score status from judge endpoint & public scores to know which players have scores
       try {
         const scoreMap = {};
+        const finalizedMap = {};
 
         // 1. Try judge-specific endpoint
         try {
@@ -130,6 +132,9 @@ const JudgeTeamPlayers = () => {
           judgePlayers.forEach((p) => {
             if (p.hasScore) {
               scoreMap[String(p._id)] = true;
+            }
+            if (p.isFinalized) {
+              finalizedMap[String(p._id)] = p.finalScore ?? true;
             }
           });
         } catch (e) {
@@ -164,13 +169,16 @@ const JudgeTeamPlayers = () => {
             (doc.playerScores || []).forEach((ps) => {
               const pid = ps.playerId?._id || ps.playerId;
               if (pid) {
-                const hasScore = ps.isFinalized ||
+                const hasScore =
                   (ps.judgeScores && ps.judgeScores[currentRoleInfo.field] > 0) ||
                   (ps.judgeSlips && ps.judgeSlips.some(s => s.judgeRole === currentRoleInfo.role)) ||
                   (ps.judgeScores && Object.values(ps.judgeScores).some(v => Number(v) > 0));
 
                 if (hasScore) {
                   scoreMap[String(pid)] = true;
+                }
+                if (ps.isFinalized || doc.isLocked) {
+                  finalizedMap[String(pid)] = ps.finalScore ?? doc.finalScore ?? true;
                 }
               }
             });
@@ -190,7 +198,8 @@ const JudgeTeamPlayers = () => {
         } catch (e) {}
 
         setJudgeScoreMap(scoreMap);
-        logger.log('Final merged judge score map loaded:', scoreMap);
+        setFinalizedScoreMap(finalizedMap);
+        logger.log('Final merged judge score map loaded:', scoreMap, 'finalized map:', finalizedMap);
       } catch (scoreErr) {
         logger.warn('Could not fetch scores (non-critical):', scoreErr.message);
       }
@@ -238,16 +247,22 @@ const JudgeTeamPlayers = () => {
         }
         return true;
       })
-      .map((e) => ({
-        id: e.player._id,
-        name: `${e.player.firstName} ${e.player.lastName}`,
-        gender: e.player.gender,
-        ageGroup: e.ageGroup,
-        apparatus: e.apparatus || {},
-        isFinalized: !!e.isFinalized,
-        finalScore: e.finalScore ?? null,
-        hasScore: !!e.hasScore || !!judgeScoreMap[e.player._id],
-      }));
+      .map((e) => {
+        const pidStr = String(e.player._id);
+        const finVal = finalizedScoreMap[pidStr];
+        const isFinalized = !!e.isFinalized || !!finVal;
+        const finalScore = e.finalScore ?? (typeof finVal === 'number' ? finVal : null);
+        return {
+          id: e.player._id,
+          name: `${e.player.firstName} ${e.player.lastName}`,
+          gender: e.player.gender,
+          ageGroup: e.ageGroup,
+          apparatus: e.apparatus || {},
+          isFinalized,
+          finalScore,
+          hasScore: !!e.hasScore || !!judgeScoreMap[pidStr],
+        };
+      });
   })();
 
   const handlePlayerSelect = (player) => {
@@ -255,10 +270,6 @@ const JudgeTeamPlayers = () => {
       toast.success(
         `Scores locked for ${player.name}${player.finalScore != null ? ` (${Number(player.finalScore).toFixed(2)})` : ''}`
       );
-      return;
-    }
-    if (player.hasScore) {
-      toast.success(`You have already submitted scores for ${player.name}`);
       return;
     }
     navigate('/judge/scoring', {
@@ -276,7 +287,8 @@ const JudgeTeamPlayers = () => {
 
   if (!judgeInfo) return null;
 
-  const scoredCount = players.filter((p) => p.isFinalized || p.hasScore).length;
+  const finalizedCount = players.filter((p) => p.isFinalized).length;
+  const scoredCount = players.filter((p) => p.hasScore || p.isFinalized).length;
 
   return (
     <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -329,7 +341,7 @@ const JudgeTeamPlayers = () => {
             {!loading && team && (
               <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
                 {players.length} {players.length === 1 ? 'player' : 'players'}
-                {scoredCount > 0 ? ` · ${scoredCount} scored` : ''}
+                {finalizedCount > 0 ? ` · ${finalizedCount} finalized` : scoredCount > 0 ? ` · ${scoredCount} submitted` : ''}
               </p>
             )}
           </div>
@@ -349,64 +361,82 @@ const JudgeTeamPlayers = () => {
             </div>
           ) : players.length > 0 ? (
             <div className="space-y-2 pb-12">
-              {players.map((player) => (
-                <button
-                  key={player.id}
-                  type="button"
-                  onClick={() => handlePlayerSelect(player)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
-                    (player.isFinalized || player.hasScore)
-                      ? 'bg-green-500/10 border-green-500/30 cursor-default'
-                      : 'hover:bg-purple-500/15 border-white/10 hover:border-purple-500/30 bg-white/[0.02]'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
-                      (player.isFinalized || player.hasScore)
-                        ? 'bg-green-500/20 border-green-500/40'
-                        : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
-                    }`}>
-                      {(player.isFinalized || player.hasScore)
-                        ? <CheckCircle className="w-5 h-5" style={{ color: J.green }} aria-hidden="true" />
-                        : <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" aria-hidden="true" />}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-base text-white flex items-center gap-2">
-                        {player.name}
-                        {(player.isFinalized || player.hasScore) && (
-                          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                            style={{ background: 'rgba(34,197,94,0.2)', color: J.green }}>
-                            {player.isFinalized ? 'Finalized' : 'Scored'}
-                          </span>
+              {players.map((player) => {
+                const isLocked = player.isFinalized;
+                const isSubmitted = player.hasScore;
+
+                return (
+                  <button
+                    key={player.id}
+                    type="button"
+                    onClick={() => handlePlayerSelect(player)}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
+                      isLocked
+                        ? 'bg-green-500/10 border-green-500/30 cursor-default'
+                        : isSubmitted
+                        ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 cursor-pointer'
+                        : 'hover:bg-purple-500/15 border-white/10 hover:border-purple-500/30 bg-white/[0.02] cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
+                        isLocked
+                          ? 'bg-green-500/20 border-green-500/40'
+                          : isSubmitted
+                          ? 'bg-purple-500/20 border-purple-500/40 group-hover:bg-purple-500/30'
+                          : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
+                      }`}>
+                        {isLocked ? (
+                          <Lock className="w-5 h-5 text-green-400" aria-hidden="true" />
+                        ) : isSubmitted ? (
+                          <CheckCircle className="w-5 h-5" style={{ color: J.purpleLight }} aria-hidden="true" />
+                        ) : (
+                          <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" aria-hidden="true" />
                         )}
-                      </p>
-                      <p className="text-xs text-white/40 mt-0.5">
-                        {player.gender} - {player.ageGroup}
-                        {player.isFinalized && player.finalScore != null
-                          ? ` · Final ${Number(player.finalScore).toFixed(2)}`
-                          : ''}
-                      </p>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-base text-white flex items-center gap-2">
+                          {player.name}
+                          {isLocked ? (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
+                              style={{ background: 'rgba(34,197,94,0.2)', color: J.green }}>
+                              Finalized
+                            </span>
+                          ) : isSubmitted ? (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
+                              style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
+                              Score Submitted
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-white/40 mt-0.5">
+                          {player.gender} - {player.ageGroup}
+                          {isLocked && player.finalScore != null
+                            ? ` · Final ${Number(player.finalScore).toFixed(2)}`
+                            : ''}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                      <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/10 text-white/80 border border-white/5">
-                        {player.apparatus[selectedCompetitionType].join(', ')}
-                      </span>
-                    )}
-                    {(player.isFinalized || player.hasScore) ? (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ background: 'rgba(34,197,94,0.2)' }}>
-                        <CheckCircle className="w-4 h-4" style={{ color: J.green }} aria-hidden="true" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                        <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400" aria-hidden="true" />
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+                    <div className="flex items-center gap-3">
+                      {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/10 text-white/80 border border-white/5">
+                          {player.apparatus[selectedCompetitionType].join(', ')}
+                        </span>
+                      )}
+                      {isLocked ? (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                          style={{ background: 'rgba(34,197,94,0.2)' }}>
+                          <Lock className="w-4 h-4 text-green-400" aria-hidden="true" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
+                          <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400" aria-hidden="true" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">

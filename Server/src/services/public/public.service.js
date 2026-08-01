@@ -76,11 +76,12 @@ class PublicService {
     try {
       const query = {};
 
-      // Optional: legacy "published only" mode
+      // Public scores must ONLY show locked score documents (saved & locked by Scorer/Admin)
       const lockedOnly =
         filters.lockedOnly === true ||
         filters.lockedOnly === 'true' ||
-        filters.lockedOnly === '1';
+        filters.lockedOnly === '1' ||
+        filters.lockedOnly === undefined; // Default to true for public scores
       if (lockedOnly) {
         query.isLocked = true;
       }
@@ -110,9 +111,9 @@ class PublicService {
 
       const formattedScores = scores.map((score) => {
         const scoreObj = score.toObject ? score.toObject() : score;
-        let playerScores = (scoreObj.playerScores || []).map((ps) =>
-          this.enrichPlayerScore(ps)
-        );
+        let playerScores = (scoreObj.playerScores || [])
+          .filter((ps) => ps.isFinalized === true) // ONLY show player scores finalized by Senior Judge
+          .map((ps) => this.enrichPlayerScore(ps));
         
         // Filter by apparatus if specified
         if (filters.apparatus) {
@@ -125,7 +126,7 @@ class PublicService {
           teamName: scoreObj.teamId?.name || 'Unknown Team',
           team: scoreObj.teamId,
         };
-      }).filter(score => score.playerScores.length > 0); // Only include scores with matching players
+      }).filter(score => score.playerScores.length > 0); // Only include scores with matching finalized players
 
       this.logger.info('Public scores retrieved', {
         competitionId,
@@ -175,7 +176,7 @@ class PublicService {
       }
 
       const teams = (competition.registeredTeams || [])
-        .filter((rt) => rt.isActive && rt.team)
+        .filter((rt) => rt.isActive && rt.team && rt.isSubmitted === true)
         .map((rt) => ({
           _id: rt.team._id,
           name: rt.team.name,
