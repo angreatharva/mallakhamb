@@ -139,12 +139,14 @@ const PlayerCard = ({ player, rank, isTied, index, podium = false, className = '
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+            {/* Team is shown as a chip — the board mixes every team, so it must read at a glance */}
             {player.teamName && (
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{player.teamName}</span>
-            )}
-            {player.teamName && player.coach && (
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+                <Users className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                {player.teamName}
+              </span>
             )}
             {player.coach && (
               <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Coach: {player.coach}</span>
@@ -273,7 +275,7 @@ const RankingBoard = ({ players }) => {
             const actualIndex = i + 3;
             return (
               <PlayerCard
-                key={player.playerId}
+                key={player.uid || player.playerId}
                 player={player}
                 rank={actualIndex + 1}
                 isTied={getIsTied(actualIndex)}
@@ -299,13 +301,10 @@ const FilterLabel = ({ children, primary = false }) => (
 // ─── Main component ───────────────────────────────────────────────────────────
 const PublicScores = () => {
   const [competitions, setCompetitions] = useState([]);
-  const [teams, setTeams] = useState([]);
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingCompetitions, setLoadingCompetitions] = useState(true);
-  const [loadingTeams, setLoadingTeams] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
-  const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
@@ -365,25 +364,12 @@ const PublicScores = () => {
   // Cascade resets
   useEffect(() => {
     if (selectedCompetition) {
-      setSelectedTeam(null);
       setSelectedGender(null);
       setSelectedAgeGroup(null);
       setSelectedCompetitionType(null);
       setSelectedApparatus(null);
-      fetchTeams();
-    } else {
-      setTeams([]);
     }
   }, [selectedCompetition]);
-
-  useEffect(() => {
-    if (selectedTeam) {
-      setSelectedGender(null);
-      setSelectedAgeGroup(null);
-      setSelectedCompetitionType(null);
-      setSelectedApparatus(null);
-    }
-  }, [selectedTeam]);
 
   useEffect(() => {
     if (selectedGender) {
@@ -409,12 +395,12 @@ const PublicScores = () => {
   useEffect(() => { fetchCompetitions(); }, []);
 
   useEffect(() => {
-    if (selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus) {
+    if (selectedCompetition && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus) {
       fetchScores();
     } else {
       setScores([]);
     }
-  }, [selectedCompetition, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);
+  }, [selectedCompetition, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);
 
   const fetchCompetitions = async () => {
     setLoadingCompetitions(true);
@@ -438,40 +424,25 @@ const PublicScores = () => {
     }
   };
 
-  const fetchTeams = async () => {
-    if (!selectedCompetition) return;
-    setLoadingTeams(true);
-    try {
-      const response = await publicAPI.getTeams({ competitionId: selectedCompetition.value });
-      const teamsData = response.data.data || response.data.teams || [];
-      setTeams(teamsData.map(t => ({ value: t._id, label: t.name })));
-      if (!teamsData.length) {
-        logger.warn('No teams for competition', { competitionId: selectedCompetition.value });
-      }
-    } catch (error) {
-      toast.error('Failed to load teams');
-      logger.error('Error fetching teams:', error);
-      setTeams([]);
-    } finally {
-      setLoadingTeams(false);
-    }
-  };
-
   const fetchScores = async () => {
-    if (!selectedCompetition || !selectedTeam || !selectedGender || !selectedAgeGroup || !selectedCompetitionType || !selectedApparatus) return;
+    if (!selectedCompetition || !selectedGender || !selectedAgeGroup || !selectedCompetitionType || !selectedApparatus) return;
     setLoading(true);
     try {
       const response = await publicAPI.getScores({
         competitionId: selectedCompetition.value,
-        teamId: selectedTeam.value,
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionType: selectedCompetitionType.value,
         apparatus: selectedApparatus.value,
       });
-      setScores(response.data.data || response.data.scores || []);
-      if (!(response.data.data || response.data.scores || []).length) {
-        toast.info('No scores found for this category');
+      const data = response.data.data || response.data.scores || [];
+      setScores(data);
+      if (!data.length) {
+        logger.warn('No public scores for category', {
+          competitionId: selectedCompetition.value,
+          gender: selectedGender.value,
+          ageGroup: selectedAgeGroup.value,
+        });
       }
     } catch (error) {
       toast.error('Failed to load scores');
@@ -484,12 +455,10 @@ const PublicScores = () => {
 
   const handleClearFilters = () => {
     setSelectedCompetition(null);
-    setSelectedTeam(null);
     setSelectedGender(null);
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
     setSelectedApparatus(null);
-    setTeams([]);
     setScores([]);
     setSearchTerm('');
   };
@@ -505,6 +474,9 @@ const PublicScores = () => {
         players.push({
           ...player,
           teamName: player.teamName || entry.teamName,
+          // Players now come from every team, so the row key must include the
+          // score document to stay unique across teams.
+          uid: `${entry._id}-${player.playerId}`,
         });
       }
     }
@@ -522,8 +494,9 @@ const PublicScores = () => {
     );
   };
 
-  const allFiltersSet = selectedCompetition && selectedTeam && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus;
+  const allFiltersSet = selectedCompetition && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus;
   const filteredPlayers = getFilteredPlayers();
+  const teamCount = new Set(filteredPlayers.map(p => p.teamName).filter(Boolean)).size;
 
   return (
     <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -570,7 +543,7 @@ const PublicScores = () => {
               View <GradientText>Scores</GradientText>
             </h2>
             <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Select filters to view competition results
+              Select a category to see players from all teams ranked together
             </p>
           </div>
         </FadeIn>
@@ -592,19 +565,7 @@ const PublicScores = () => {
                   disabled={loadingCompetitions}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <FilterLabel>Team *</FilterLabel>
-                  <Dropdown
-                    options={teams}
-                    value={selectedTeam}
-                    onChange={setSelectedTeam}
-                    placeholder={loadingTeams ? 'Loading teams...' : 'Select team...'}
-                    className="w-full"
-                    loading={loadingTeams}
-                    disabled={!selectedCompetition || loadingTeams}
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <FilterLabel>Gender *</FilterLabel>
                   <Dropdown
@@ -613,7 +574,7 @@ const PublicScores = () => {
                     onChange={setSelectedGender}
                     placeholder="Select gender..."
                     className="w-full"
-                    disabled={!selectedTeam}
+                    disabled={!selectedCompetition}
                   />
                 </div>
                 <div>
@@ -676,7 +637,8 @@ const PublicScores = () => {
               </div>
               <p className="text-white font-bold text-lg mb-2">Select Filters to View Scores</p>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                All filters must be selected to view results
+                Pick a competition, gender, age group, competition type and apparatus —
+                players from all teams are ranked together
               </p>
             </motion.div>
           ) : loading ? (
@@ -694,7 +656,7 @@ const PublicScores = () => {
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
                   style={{ background: `${COLORS.saffron}10`, borderColor: `${COLORS.saffron}30`, color: COLORS.saffronLight }}>
                   <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
-                  {selectedCompetition.label} · {selectedTeam.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
+                  {selectedCompetition.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
                 </div>
                 {/* Search */}
                 <div className="relative">
@@ -724,11 +686,12 @@ const PublicScores = () => {
                 </div>
               </div>
 
-              {/* Player count badge */}
+              {/* Player + team count badge */}
               <div className="flex items-center gap-2 px-1">
                 <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
                 <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
+                  {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
                 </span>
               </div>
 

@@ -58,13 +58,14 @@ class PublicService {
 
   /**
    * Get public scores for a competition with optional filters.
+   * Returns score docs for EVERY registered team that matches the category
+   * filters — public results are never scoped to a single team.
    * Returns score docs that match filters — including unlocked drafts that already
    * have judge marks (document-level isLocked is no longer required; Senior Judge
    * Final Submit locks per-player via isFinalized).
    *
    * @param {string} [competitionId]
    * @param {Object} [filters]
-   * @param {string} [filters.teamId]
    * @param {string} [filters.gender]
    * @param {string} [filters.ageGroup]
    * @param {string} [filters.competitionType]
@@ -88,9 +89,6 @@ class PublicService {
 
       if (competitionId) {
         query.competition = competitionId;
-      }
-      if (filters.teamId) {
-        query.teamId = filters.teamId;
       }
       if (filters.gender) {
         query.gender = filters.gender;
