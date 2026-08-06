@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import {
-  Scale, User, LogOut, CheckCircle, Send, ArrowLeft,
-  AlertTriangle, Pencil, Lock, BookOpen, X, ChevronDown, Save
+  Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -21,23 +19,13 @@ import {
   computeCombinationTotal,
   resolveDifficultyValue,
   POINT_CEILINGS,
-  analyzePanelMismatches,
-  calculateAverageMarks,
-  panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
-
-// Design tokens for judge theme
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-  greenDark: '#16A34A',
-  amber: '#F59E0B',
-};
-
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+import {
+  J, EASE_OUT, Orb, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
+  playerIdOf, normalizeBreakdown,
+} from './judgeShared';
+import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
 const CopPdfModal = ({ isOpen, onClose }) => {
@@ -94,400 +82,6 @@ const CopPdfModal = ({ isOpen, onClose }) => {
     </AnimatePresence>
   );
 };
-
-// ─── Mismatch Modal ───────────────────────────────────────────────────────────
-const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, effectivePanelSize, judgeNameMap }) => {
-  if (!isOpen) return null;
-  const amber = '#F59E0B';
-  const red = '#EF4444';
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            className="w-full max-w-lg rounded-2xl border overflow-hidden"
-            style={{ background: '#0E0E0E', borderColor: 'rgba(239,68,68,0.4)' }}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-5 py-4 border-b"
-              style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
-                >
-                  <AlertTriangle className="w-5 h-5" style={{ color: red }} />
-                </div>
-                <div>
-                  <p className="text-white font-black text-base">Score Mismatch Detected</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your score may need correction'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
-                style={{ color: 'rgba(255,255,255,0.4)' }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-3 max-h-[65vh] overflow-y-auto">
-              {panelMismatch.combinationMismatch && (
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
-                >
-                  <p className="text-sm font-bold text-white mb-1">⛔ Combination Mismatch</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    {panelMismatch.combinationSelectionMismatch
-                      ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
-                      : `Totals: ${panelMismatch.combinationValues.map(v => Number(v).toFixed(2)).join(', ')}`}
-                  </p>
-                  {isSeniorJudge && panelMismatch.combinationValues.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {Object.entries(panelScores).map(([jt, data]) => (
-                        <span
-                          key={jt}
-                          className="text-xs px-2 py-1 rounded-lg"
-                          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
-                        >
-                          {judgeNameMap?.[jt] || jt}: {Number(data.breakdown?.combination?.total ?? 0).toFixed(2)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {panelMismatch.difficultyMismatch && (
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
-                >
-                  <p className="text-sm font-bold text-white mb-1">⛔ Difficulty Mismatch</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    {panelMismatch.difficultyMixMismatch
-                      ? 'A/B/C element counts differ between judges. The element mix must be identical across all judges.'
-                      : `Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
-                  </p>
-                  {isSeniorJudge && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {Object.entries(panelScores).map(([jt, data]) => (
-                        <span
-                          key={jt}
-                          className="text-xs px-2 py-1 rounded-lg"
-                          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
-                        >
-                          {judgeNameMap?.[jt] || jt}: A{data.breakdown?.difficulty?.aClass ?? 0}/B{data.breakdown?.difficulty?.bClass ?? 0}/C{data.breakdown?.difficulty?.cClass ?? 0}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {panelMismatch.toleranceMismatch && effectivePanelSize >= 4 && panelMismatch.toleranceInfo && (
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.3)' }}
-                >
-                  <p className="text-sm font-bold text-white mb-1" style={{ color: amber }}>⚠️ Tolerance Level Exceeded</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    |Exec avg {panelMismatch.toleranceInfo.executionAvg?.toFixed(2)} − Senior {panelMismatch.toleranceInfo.seniorScore?.toFixed(2)}|
-                    {' '}= {panelMismatch.toleranceInfo.difference?.toFixed(2)} exceeds ±{panelMismatch.toleranceInfo.tolerance?.toFixed(2)}.
-                    Base score {panelMismatch.toleranceInfo.baseScore?.toFixed(2)} will be applied.
-                  </p>
-                  {!isSeniorJudge && myJudgeType !== 'Senior Judge' && (
-                    <p className="text-xs mt-2 font-semibold" style={{ color: amber }}>
-                      Your score ({Number(panelScores[myJudgeType]?.score || 0).toFixed(2)}) may be contributing to this gap.
-                      Please verify your execution mark.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {!isSeniorJudge && (
-                <div
-                  className="rounded-xl border p-3 text-xs"
-                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
-                >
-                  Please contact the Senior Judge to resolve the mismatch before final submission.
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <motion.button
-                onClick={onClose}
-                className="w-full py-3 rounded-xl font-bold text-sm text-white"
-                style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
-                whileHover={{ filter: 'brightness(1.1)' }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Understood — Dismiss
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-// ─── SR Judge Edit Modal ───────────────────────────────────────────────────────
-const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationChecklist, selectedApparatus, POINT_CEILINGS, resolveDifficultyValue, getDifficultyRequirement, computeCombinationTotal, selectedCompetitionType }) => {
-  const [editScores, setEditScores] = useState(null);
-
-  useEffect(() => {
-    if (isOpen && editTarget) {
-      const b = editTarget.breakdown || {};
-      setEditScores({
-        difficulty: {
-          aClass: b.difficulty?.aClass ?? 0,
-          bClass: b.difficulty?.bClass ?? 0,
-          cClass: b.difficulty?.cClass ?? 0,
-          total: b.difficulty?.total ?? 0,
-        },
-        combination: {
-          checked: { ...(combinationChecklist.reduce((acc, item) => ({ ...acc, [item.id]: false }), {})), ...(b.combination?.checked || {}) },
-          total: b.combination?.total ?? 0,
-        },
-        execution: b.execution ?? 0,
-        bonus: b.bonus ?? 0,
-      });
-    }
-  }, [isOpen, editTarget]);
-
-  if (!isOpen || !editTarget || !editScores) return null;
-
-  const req = getDifficultyRequirement(selectedCompetitionType);
-
-  const handleDiff = (cls, val) => {
-    const n = parseInt(val) || 0;
-    const d = { ...editScores.difficulty, [cls]: n };
-    const resolved = resolveDifficultyValue({ A: d.aClass, B: d.bClass, C: d.cClass }, req);
-    d.total = Math.min(resolved.total, POINT_CEILINGS.difficulty);
-    setEditScores({ ...editScores, difficulty: d });
-  };
-
-  const handleComb = (itemId) => {
-    const checked = { ...editScores.combination.checked, [itemId]: !editScores.combination.checked[itemId] };
-    const total = computeCombinationTotal(selectedApparatus, checked);
-    setEditScores({ ...editScores, combination: { checked, total } });
-  };
-
-  const calcTotal = () => (
-    editScores.difficulty.total + editScores.combination.total +
-    parseFloat(editScores.execution || 0) + parseFloat(editScores.bonus || 0)
-  ).toFixed(2);
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[9997] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            className="w-full max-w-xl rounded-2xl border overflow-hidden"
-            style={{ background: '#0D0D0D', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-              style={{ background: 'rgba(168,85,247,0.10)', borderColor: 'rgba(168,85,247,0.2)' }}
-            >
-              <div>
-                <p className="text-white font-black text-base">Edit Score — {editTarget.judgeType}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'rgba(192,132,252,0.7)' }}>Senior Judge override</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Total</p>
-                  <p className="text-2xl font-black" style={{ color: '#A855F7' }}>{calcTotal()}</p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5"
-                  style={{ color: 'rgba(255,255,255,0.4)' }}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="overflow-y-auto flex-1 p-5 space-y-4">
-              {/* Difficulty */}
-              <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-white text-sm">Difficulty</h4>
-                  <span className="text-lg font-black" style={{ color: '#F59E0B' }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>
-                </div>
-                {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase" style={{ color: '#C084FC' }}>{lbl} - Class</label>
-                    <div className="flex items-center gap-0 rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
-                      <button type="button" onClick={() => handleDiff(key, Math.max(0, editScores.difficulty[key] - 1))}
-                        className="flex items-center justify-center text-xl font-black select-none"
-                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>−</button>
-                      <span className="w-10 text-center text-lg font-black text-white">{editScores.difficulty[key]}</span>
-                      <button type="button" onClick={() => handleDiff(key, editScores.difficulty[key] + 1)}
-                        className="flex items-center justify-center text-xl font-black select-none"
-                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>+</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Combination */}
-              <div className="rounded-xl border p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Combination</h4>
-                  <span className="text-lg font-black" style={{ color: '#A855F7' }}>{editScores.combination.total.toFixed(2)} / 1.60</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {combinationChecklist.map(item => {
-                    const checked = editScores.combination.checked[item.id];
-                    return (
-                      <label key={item.id}
-                        className="flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer"
-                        style={{ background: checked ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)', borderColor: checked ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)' }}
-                      >
-                        <div className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
-                          style={{ borderColor: checked ? '#22C55E' : 'rgba(255,255,255,0.2)', background: checked ? '#22C55E' : 'transparent' }}>
-                          {checked && <CheckCircle className="w-3 h-3 text-white" />}
-                        </div>
-                        <input type="checkbox" checked={checked} onChange={() => handleComb(item.id)} className="sr-only" />
-                        <span className="text-xs" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{item.rule}</span>
-                        {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.penalty.toFixed(2)}</span>}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Execution */}
-              <div className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Execution</h4>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC' }}>Max 4.40</span>
-                </div>
-                <input type="number" step="0.05" min="0" max="4.40"
-                  value={editScores.execution}
-                  onChange={e => {
-                    const raw = parseFloat(e.target.value) || 0;
-                    const v = Math.round(raw * 20) / 20;
-                    setEditScores({ ...editScores, execution: Math.max(0, Math.min(4.40, v)) });
-                  }}
-                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white outline-none"
-                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
-                />
-              </div>
-
-              {/* Originality */}
-              <div className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Originality</h4>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC' }}>0.20</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[['None', 0], ['+0.20', 0.20]].map(([label, val]) => {
-                    const active = Math.abs((editScores.bonus || 0) - val) < 1e-6;
-                    return (
-                      <button key={label} type="button"
-                        onClick={() => setEditScores({ ...editScores, bonus: val })}
-                        className="py-3 rounded-xl border font-bold text-sm transition-all duration-200"
-                        style={{ background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)', borderColor: active ? '#A855F7' : 'rgba(255,255,255,0.08)', color: active ? '#fff' : 'rgba(255,255,255,0.5)' }}
-                      >{label}</button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <button onClick={onClose}
-                className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-white/5"
-                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
-              >Cancel</button>
-              <motion.button
-                onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())}
-                className="flex-1 py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
-                whileHover={{ filter: 'brightness(1.1)' }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <Save className="w-4 h-4" /> Save Override
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}44, ${color}11, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -25, 0], scale: [1, 1.08, 1], opacity: [0.25, 0.5, 0.25] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
-};
-
-const LiveDot = ({ connected, compact = false }) => (
-  <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full border text-xs font-bold ${connected ? 'border-green-500/30' : 'border-red-500/30'
-    }`} style={{ background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)' }}>
-    <motion.div
-      className="w-2 h-2 rounded-full flex-shrink-0"
-      style={{ background: connected ? J.green : '#EF4444' }}
-      animate={connected ? { scale: [1, 1.4, 1], opacity: [1, 0.5, 1] } : {}}
-      transition={{ duration: 1.5, repeat: Infinity }}
-    />
-    {!compact && (
-      <span style={{ color: connected ? J.green : '#EF4444' }}>{connected ? 'Live' : 'Offline'}</span>
-    )}
-  </div>
-);
 
 const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
   const [focused, setFocused] = useState(false);
@@ -622,42 +216,31 @@ const JudgeScoring = () => {
     return <ScorerScoring />;
   }
 
-  // Read data from location state or sessionStorage fallback for regular judge refresh resilience
-  const activeSessionData = useMemo(() => {
-    if (location.state && location.state.player && (location.state.team || location.state.selectedTeam) && location.state.competitionType) {
-      sessionStorage.setItem('judge_scoring_active_session', JSON.stringify(location.state));
-      return location.state;
-    }
-    const saved = sessionStorage.getItem('judge_scoring_active_session');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }, [location.state]);
+  // Session, judge identity and the live panel feed are shared with the
+  // Panel Review page — see useJudgePanelData.
+  const session = useJudgeSession(location.state);
+  const {
+    activeSessionData,
+    selectedTeam,
+    selectedPlayer,
+    selectedCompetitionType,
+    selectedApparatus,
+    selectedGender,
+    selectedAgeGroup,
+  } = session;
 
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [judgeInfo, setJudgeInfo] = useState(null);
+  const judgeInfo = useJudgeInfo();
+  const { panelScores, setPanelScores, finalized, socket, isConnected } = useJudgePanelData({ judgeInfo, session });
+
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [finalizing, setFinalizing] = useState(false);
-  const [finalized, setFinalized] = useState(false);
-  const [viewMode, setViewMode] = useState('scoring'); // 'scoring' | 'review'
-  const [panelScores, setPanelScores] = useState({}); // { judgeType: scoreData }
-  const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
-  const joinedRoomRef = useRef(null);
-  // Modal states
   const [showCopModal, setShowCopModal] = useState(false);
-  const [showMismatchModal, setShowMismatchModal] = useState(false);
-  const [mismatchDismissed, setMismatchDismissed] = useState(false);
-  const [showSrEditModal, setShowSrEditModal] = useState(false);
-  const [srEditTarget, setSrEditTarget] = useState(null); // { judgeType, score, breakdown }
-  // Map judgeType -> judge name (populated after fetchExistingScores)
-  const [judgeNameMap, setJudgeNameMap] = useState({});
+  // True while the judge is deliberately re-editing an already-submitted slip,
+  // so the restore effect below does not pull them straight back to review.
+  const editingRef = useRef(location.state?.resumeEditing === true);
+  // Guards the one-shot restore of an already-submitted slip.
+  const restoredRef = useRef(false);
+
   // Active mobile tab state
   const [activeMobileTab, setActiveMobileTab] = useState('difficulty'); // 'difficulty' | 'combination' | 'exec_orig'
   const touchStartX = useRef(null);
@@ -693,20 +276,6 @@ const JudgeScoring = () => {
     touchEndX.current = null;
   };
 
-  useEffect(() => {
-    if (!activeSessionData || !activeSessionData.player || !activeSessionData.team || !activeSessionData.competitionType) {
-      toast.error('Missing player selection. Redirecting to dashboard.');
-      navigate('/judge/dashboard');
-    }
-  }, [activeSessionData, navigate]);
-
-  const selectedTeam = activeSessionData?.team;
-  const selectedPlayer = activeSessionData?.player;
-  const selectedCompetitionType = activeSessionData?.competitionType;
-  const selectedApparatus = activeSessionData?.apparatus || 'Pole Mallakhamb';
-  const selectedGender = activeSessionData?.gender;
-  const selectedAgeGroup = activeSessionData?.ageGroup;
-
   const goBackAfterScoring = () => {
     // Clear cached scores when leaving the scoring page
     const cacheKey = getScoringCacheKey();
@@ -717,7 +286,7 @@ const JudgeScoring = () => {
         logger.warn('Failed to clear cached scores on navigation', e);
       }
     }
-    sessionStorage.removeItem('judge_scoring_active_session');
+    sessionStorage.removeItem(ACTIVE_SESSION_KEY);
     const returnTo = activeSessionData?.returnTo
       || (selectedTeam?._id ? `/judge/team/${selectedTeam._id}` : '/judge/dashboard');
     navigate(returnTo, {
@@ -744,9 +313,6 @@ const JudgeScoring = () => {
     const total = computeCombinationTotal(selectedApparatus, checked);
     return { checked, total };
   };
-
-  // Helper function to extract player ID (must be defined before cache functions)
-  const playerIdOf = (player) => player?.id || player?._id;
 
   // Generate a unique key for this scoring session
   const getScoringCacheKey = () => {
@@ -807,277 +373,48 @@ const JudgeScoring = () => {
     }
   }, [submitted, finalized]);
 
+  // Restore an already-submitted slip once the panel feed lands, so the form
+  // shows what this judge sent. Normally this also hands off straight to
+  // Panel Review; while the judge is deliberately re-editing (resumeEditing),
+  // the scores are still restored — the cache was cleared on submit, so this
+  // panel feed is the only place the prior values still exist — but we stay
+  // on this page instead of redirecting and leave submitted/editable as-is.
   useEffect(() => {
-    const storedJudge = secureStorage.getItem('judge_user');
-    if (!storedJudge) { toast.error('Please login first'); navigate('/judge/login'); return; }
-    try {
-      const judge = JSON.parse(storedJudge);
-      setJudgeInfo(judge);
-    } catch {
-      secureStorage.removeItem('judge_user');
-      secureStorage.removeItem('judge_token');
-      toast.error('Invalid session. Please login again.');
-      navigate('/judge/login');
-    }
-  }, [navigate]);
-
-  // Resolve panel size from assigned judges in this category
-  useEffect(() => {
-    if (!judgeInfo || !selectedCompetitionType) return;
-    const loadPanelSize = async () => {
-      try {
-        const token = secureStorage.getItem('judge_token');
-        const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
-        const res = await axios.get(`${apiConfig.getBaseUrl()}/public/judges`, {
-          params: {
-            competitionId,
-            gender: selectedGender || judgeInfo.gender,
-            ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
-            competitionTypes: selectedCompetitionType,
-            apparatus: selectedApparatus,
-          },
-          headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        });
-        const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-        const judgesData = res.data?.data || [];
-        const panelJudges = (Array.isArray(judgesData) ? judgesData : [])
-          .filter(j => !j.isEmpty && j.name?.trim())
-          .filter(j => PANEL_TYPES.includes(j.judgeType));
-        const count = panelJudges.length;
-        if (count >= 3 && count <= 5) setPanelSize(count);
-        else if (count > 5) setPanelSize(5);
-        else setPanelSize(null);
-        // Build judgeType → name map for panel review cards
-        const nameMap = {};
-        panelJudges.forEach(j => { nameMap[j.judgeType] = j.name; });
-        setJudgeNameMap(nameMap);
-      } catch (err) {
-        logger.warn('Could not load panel size from judges list', err);
-      }
-    };
-    loadPanelSize();
-  }, [judgeInfo, selectedCompetitionType, selectedApparatus, selectedGender, selectedAgeGroup]);
-
-  const normalizeBreakdown = (breakdown, fallbackScore) => {
-    if (!breakdown) {
-      return {
-        difficulty: { aClass: 0, bClass: 0, cClass: 0, total: 0 },
-        combination: { checked: {}, total: 0 },
-        execution: 0,
-        bonus: 0,
-      };
-    }
-    const difficulty = breakdown.difficulty || { aClass: 0, bClass: 0, cClass: 0, total: 0 };
-    const combination = {
-      total: breakdown.combination?.total ?? 0,
-      checked: breakdown.combination?.checked || {},
-    };
-    const execution = typeof breakdown.execution === 'number'
-      ? breakdown.execution
-      : parseFloat(breakdown.execution) || 0;
-    const bonus = parseFloat(breakdown.bonus ?? breakdown.originality ?? 0) || 0;
-    return { difficulty, combination, execution, bonus, _score: fallbackScore };
-  };
-
-  // Fetch existing submitted scores for this player and panel upon mount/refresh
-  const fetchExistingScores = useCallback(async () => {
-    if (!judgeInfo || !selectedPlayer || !selectedTeam) return;
-    try {
-      const token = secureStorage.getItem('judge_token');
-      const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
-      const gender = selectedGender || judgeInfo.gender;
-      const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
-      const playerId = playerIdOf(selectedPlayer);
-
-      const res = await axios.get(`${apiConfig.getBaseUrl()}/public/scores`, {
-        params: {
-          competitionId,
-          teamId: selectedTeam._id || selectedTeam.id,
-          gender,
-          ageGroup,
-          competitionType: selectedCompetitionType,
+    if (!judgeInfo || restoredRef.current) return;
+    const myScore = panelScores[judgeInfo.judgeType];
+    if (!myScore) return;
+    restoredRef.current = true;
+    if (myScore.breakdown) {
+      const b = normalizeBreakdown(myScore.breakdown, myScore.score);
+      setScores({
+        difficulty: {
+          aClass: b.difficulty.aClass || 0,
+          bClass: b.difficulty.bClass || 0,
+          cClass: b.difficulty.cClass || 0,
+          total: b.difficulty.total || 0,
         },
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
+        combination: {
+          checked: { ...buildInitialCombination().checked, ...(b.combination.checked || {}) },
+          total: b.combination.total ?? 0,
+        },
+        execution: b.execution || 0,
+        bonus: b.bonus || 0,
       });
-
-      const scoreDocs = res.data?.data || [];
-      if (!Array.isArray(scoreDocs) || scoreDocs.length === 0) return;
-
-      const scoreDoc = scoreDocs[0];
-      const playerScoresList = scoreDoc.playerScores || [];
-      const targetPs = playerScoresList.find(
-        (ps) => String(ps.playerId) === String(playerId)
-      );
-
-      if (!targetPs) return;
-
-      const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-      const loadedPanelScores = {};
-
-      if (Array.isArray(targetPs.judgeSlips) && targetPs.judgeSlips.length > 0) {
-        const roleMap = { SJ: 'Senior Judge', J1: 'Judge 1', J2: 'Judge 2', J3: 'Judge 3', J4: 'Judge 4' };
-        targetPs.judgeSlips.forEach((slip) => {
-          const jType = roleMap[slip.judgeRole] || slip.judgeRole;
-          if (PANEL_TYPES.includes(jType) && Number(slip.total) > 0) {
-            loadedPanelScores[jType] = {
-              judgeType: jType,
-              score: slip.total,
-              breakdown: normalizeBreakdown(slip.breakdown, slip.total),
-              timestamp: slip.submittedAt || new Date().toISOString(),
-            };
-          }
-        });
-      }
-
-      if (targetPs.judgeScores) {
-        const roleToType = {
-          seniorJudge: 'Senior Judge',
-          judge1: 'Judge 1',
-          judge2: 'Judge 2',
-          judge3: 'Judge 3',
-          judge4: 'Judge 4',
-        };
-        Object.entries(targetPs.judgeScores).forEach(([key, val]) => {
-          const jType = roleToType[key];
-          if (jType && PANEL_TYPES.includes(jType) && Number(val) > 0 && !loadedPanelScores[jType]) {
-            loadedPanelScores[jType] = {
-              judgeType: jType,
-              score: Number(val),
-              breakdown: normalizeBreakdown(targetPs.breakdown, val),
-              timestamp: new Date().toISOString(),
-            };
-          }
-        });
-      }
-
-      setPanelScores(prev => ({
-        ...loadedPanelScores,
-        ...prev
-      }));
-
-      // Restore judge's own submitted score & inputs if present
-      const myScore = loadedPanelScores[judgeInfo.judgeType];
-      if (myScore) {
-        setSubmitted(true);
-        setViewMode('review');
-        if (myScore.breakdown) {
-          const b = normalizeBreakdown(myScore.breakdown, myScore.score);
-          setScores({
-            difficulty: {
-              aClass: b.difficulty.aClass || 0,
-              bClass: b.difficulty.bClass || 0,
-              cClass: b.difficulty.cClass || 0,
-              total: b.difficulty.total || 0,
-            },
-            combination: {
-              checked: { ...buildInitialCombination().checked, ...(b.combination.checked || {}) },
-              total: b.combination.total ?? 0,
-            },
-            execution: b.execution || 0,
-            bonus: b.bonus || 0,
-          });
-        }
-      }
-
-      if (targetPs.isFinalized || scoreDoc.isLocked) {
-        setFinalized(true);
-      }
-    } catch (err) {
-      logger.warn('Could not load existing player scores:', err);
     }
-  }, [judgeInfo, selectedPlayer, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType]);
+    if (editingRef.current) return;
+    setSubmitted(true);
+    // Replace rather than push so Back still leaves the page.
+    navigate(PANEL_REVIEW_PATH, { replace: true, state: activeSessionData });
+  }, [panelScores, judgeInfo, navigate, activeSessionData]);
 
+  // Covers the judge who is re-editing their slip (resumeEditing) at the
+  // moment the Senior Judge finalizes elsewhere — the panel score is now
+  // locked, so bounce back to the team page like everyone else.
   useEffect(() => {
-    if (judgeInfo && selectedPlayer) {
-      fetchExistingScores();
-    }
-  }, [judgeInfo, selectedPlayer, fetchExistingScores]);
-
-  useEffect(() => {
-    if (!judgeInfo || !selectedCompetitionType) return;
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-    const token = secureStorage.getItem('judge_token');
-
-    const newSocket = io(socketUrl, {
-      auth: { token },
-      withCredentials: true
-    });
-
-    setSocket(newSocket);
-    newSocket.on('connect', () => {
-      setIsConnected(true);
-      logger.info('Socket connected successfully');
-      const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
-      if (joinedRoomRef.current !== roomId) {
-        newSocket.emit('join_scoring_room', { roomId });
-        joinedRoomRef.current = roomId;
-        logger.info(`Joined scoring room: ${roomId}`);
-      }
-    });
-    newSocket.on('disconnect', () => {
-      setIsConnected(false);
-      joinedRoomRef.current = null;
-    });
-    newSocket.on('connect_error', (error) => {
-      if (error.message && (error.message.includes('authorization') || error.message.includes('Unauthorized'))) {
-        toast.error('Not authorized to access scoring room');
-        navigate('/judge/dashboard');
-      } else {
-        toast.error('Failed to connect to server');
-      }
-    });
-
-    newSocket.on('error', (error) => {
-      if (error.message === 'Not authorized to join this room') {
-        toast.error('You do not have permission to access this scoring room');
-        navigate('/judge/dashboard');
-      }
-    });
-
-    newSocket.on('score_update_error', (error) => {
-      if (error.message === 'Only judges can update scores') {
-        toast.error('Only judges can submit scores');
-      }
-    });
-
-    newSocket.on('score_updated', (data) => {
-      const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
-      if (currentPlayerId && String(data.playerId) === currentPlayerId) {
-        const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-        if (PANEL_TYPES.includes(data.judgeType)) {
-          setPanelScores(prev => ({
-            ...prev,
-            [data.judgeType]: {
-              judgeType: data.judgeType,
-              score: data.score,
-              breakdown: normalizeBreakdown(data.breakdown, data.score),
-              timestamp: data.timestamp || new Date().toISOString(),
-            }
-          }));
-          if (data.isFinalSubmit || data.isLocked) {
-            setFinalized(true);
-          }
-        }
-      }
-    });
-
-    newSocket.on('scores_saved_notification', (data) => {
-      const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
-      if (currentPlayerId && String(data.playerId) === currentPlayerId) {
-        setFinalized(true);
-        toast.success('Panel score finalized and locked');
-      }
-    });
-
-    newSocket.on('scores_saved_error', (error) => {
-      if (error.message === 'Unauthorized to save scores') {
-        toast.error('You do not have permission to save scores');
-      }
-    });
-    return () => { newSocket.disconnect(); joinedRoomRef.current = null; };
-  }, [judgeInfo, selectedCompetitionType, navigate, selectedPlayer]);
+    if (!finalized) return;
+    const t = setTimeout(() => goBackAfterScoring(), 800);
+    return () => clearTimeout(t);
+  }, [finalized]);
 
   const resetScores = () => {
     const newScores = {
@@ -1165,7 +502,9 @@ const JudgeScoring = () => {
         const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
         prev[playerIdOf(selectedPlayer)] = true;
         sessionStorage.setItem(sKey, JSON.stringify(prev));
-      } catch (e) {}
+      } catch {
+        // best-effort cache of "already scored" markers
+      }
       if (socket?.connected) {
         socket.emit('score_update', {
           ...scoreData,
@@ -1185,7 +524,8 @@ const JudgeScoring = () => {
 
       toast.success(`Score ${finalScore} submitted for ${selectedPlayer.name}`);
       setSubmitted(true);
-      setViewMode('review');
+      editingRef.current = false;
+      navigate(PANEL_REVIEW_PATH);
       
       // Clear cached scores after successful submission
       const cacheKey = getScoringCacheKey();
@@ -1202,206 +542,6 @@ const JudgeScoring = () => {
     } finally { setSubmitting(false); }
   };
 
-  const goBackToScoring = () => {
-    if (finalized) {
-      toast.error('Cannot edit — panel score is already finalized');
-      return;
-    }
-    // Restore local slip from last submitted panel entry if present
-    const mine = panelScores[judgeInfo?.judgeType];
-    if (mine?.breakdown) {
-      const b = normalizeBreakdown(mine.breakdown, mine.score);
-      setScores({
-        difficulty: {
-          aClass: b.difficulty.aClass || 0,
-          bClass: b.difficulty.bClass || 0,
-          cClass: b.difficulty.cClass || 0,
-          total: b.difficulty.total || 0,
-        },
-        combination: {
-          checked: { ...buildInitialCombination().checked, ...(b.combination.checked || {}) },
-          total: b.combination.total ?? 0,
-        },
-        execution: b.execution || 0,
-        bonus: b.bonus || 0,
-      });
-    }
-    setSubmitted(false);
-    setViewMode('scoring');
-  };
-
-  const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-  const panelScoresCount = Object.keys(panelScores).filter(jt => PANEL_TYPES.includes(jt)).length;
-  const effectivePanelSize = panelSize || panelScoresCount || 0;
-  const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
-  const panelCalc = calculateAverageMarks(panelScoresToJudgeFields(panelScores), effectivePanelSize);
-  const allPanelSubmitted = effectivePanelSize > 0 && panelScoresCount >= effectivePanelSize;
-  const isSeniorJudge = judgeInfo?.judgeType === 'Senior Judge';
-  // Final Submit is Senior Judge only
-  const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
-
-  // Scroll to top when viewMode changes (e.g. entering Panel Review or returning to Scoring)
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [viewMode]);
-
-  // Auto-show mismatch modal when entering review mode
-  useEffect(() => {
-    if (viewMode === 'review' && !mismatchDismissed) {
-      const hasMismatch = panelMismatch.difficultyMismatch || panelMismatch.combinationMismatch ||
-        (panelMismatch.toleranceMismatch && effectivePanelSize >= 4);
-      if (hasMismatch && panelScoresCount > 0) {
-        setShowMismatchModal(true);
-      }
-    }
-  }, [viewMode, panelMismatch.difficultyMismatch, panelMismatch.combinationMismatch, panelMismatch.toleranceMismatch, mismatchDismissed, panelScoresCount]);
-
-  // SR judge: save override for another judge's score
-  const handleSrEditSave = async (targetJudgeType, editedScores, newTotal) => {
-    try {
-      const token = secureStorage.getItem('judge_token');
-      const breakdown = {
-        difficulty: editedScores.difficulty,
-        combination: { total: editedScores.combination.total, checked: editedScores.combination.checked },
-        execution: parseFloat(editedScores.execution || 0),
-        originality: parseFloat(editedScores.bonus || 0),
-        bonus: parseFloat(editedScores.bonus || 0),
-      };
-      const scoreData = {
-        playerId: playerIdOf(selectedPlayer),
-        playerName: selectedPlayer.name,
-        judgeType: targetJudgeType,
-        judgeNo: judgeInfo.judgeNo,
-        score: parseFloat(newTotal),
-        teamId: selectedTeam._id,
-        gender: selectedGender || judgeInfo.gender,
-        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
-        competitionType: selectedCompetitionType,
-        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-        apparatus: selectedApparatus,
-        breakdown,
-        overrideBySenior: true,
-      };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
-      if (socket?.connected) {
-        socket.emit('score_update', {
-          ...scoreData,
-          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
-        });
-      }
-      setPanelScores(prev => ({
-        ...prev,
-        [targetJudgeType]: {
-          judgeType: targetJudgeType,
-          score: parseFloat(newTotal),
-          breakdown: {
-            difficulty: editedScores.difficulty,
-            combination: editedScores.combination,
-            execution: parseFloat(editedScores.execution || 0),
-            bonus: parseFloat(editedScores.bonus || 0),
-          },
-          timestamp: new Date().toISOString(),
-        },
-      }));
-      toast.success(`Score updated for ${targetJudgeType}: ${newTotal}`);
-      setShowSrEditModal(false);
-      setSrEditTarget(null);
-      setMismatchDismissed(false); // allow mismatch modal to re-check
-    } catch (error) {
-      logger.error('SR edit save failed:', error);
-      toast.error('Failed to save score override');
-    }
-  };
-
-  const finalizePanelScore = async () => {
-    if (!canFinalSubmit) return;
-    if (panelMismatch.hasBlockingMismatch) {
-      toast.error('Resolve Difficulty and Combination mismatches before final submit');
-      return;
-    }
-    setFinalizing(true);
-    try {
-      const token = secureStorage.getItem('judge_token');
-      const fields = panelScoresToJudgeFields(panelScores);
-      const calc = calculateAverageMarks(fields, effectivePanelSize);
-      const payload = {
-        teamId: selectedTeam._id,
-        gender: selectedGender || judgeInfo.gender,
-        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
-        competitionType: selectedCompetitionType,
-        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-        isFinalSubmit: true,
-        judgeType: judgeInfo.judgeType,
-        panelSize: effectivePanelSize,
-        playerScores: [{
-          playerId: playerIdOf(selectedPlayer),
-          playerName: selectedPlayer.name,
-          apparatus: selectedApparatus,
-          judgeScores: fields,
-          executionAverage: calc.executionAvg,
-          baseScore: calc.baseScore,
-          baseScoreApplied: calc.baseScoreApplied,
-          toleranceUsed: calc.tolerance,
-          averageMarks: calc.average,
-          finalScore: calc.average,
-          panelSize: effectivePanelSize,
-          isFinalized: true,
-          finalizedAt: new Date().toISOString(),
-          breakdown: panelScores[judgeInfo.judgeType]?.breakdown || {},
-          judgeSlips: Object.values(panelScores).map((entry) => {
-            const roleMap = {
-              'Senior Judge': 'SR_JUDGE',
-              'Judge 1': 'J1',
-              'Judge 2': 'J2',
-              'Judge 3': 'J3',
-              'Judge 4': 'J4',
-            };
-            const b = normalizeBreakdown(entry.breakdown, entry.score);
-            return {
-              judgeRole: roleMap[entry.judgeType] || 'J1',
-              difficultyScore: b.difficulty.total || 0,
-              combinationScore: b.combination.total || 0,
-              executionScore: b.execution || 0,
-              bonusScore: b.bonus === 0.20 ? 0.20 : 0,
-              total: parseFloat(entry.score) || 0,
-              submittedAt: entry.timestamp || new Date(),
-              isChiefPrefilled: entry.judgeType === 'Senior Judge',
-            };
-          }),
-        }],
-      };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, payload, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
-      try {
-        const sKey = `judge_submitted_players_${selectedTeam._id}`;
-        const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
-        prev[playerIdOf(selectedPlayer)] = true;
-        sessionStorage.setItem(sKey, JSON.stringify(prev));
-      } catch (e) {}
-      if (socket?.connected) {
-        socket.emit('scores_saved', {
-          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
-          playerId: playerIdOf(selectedPlayer),
-          scores: { finalScore: calc.average, panelSize: effectivePanelSize },
-        });
-      }
-      setFinalized(true);
-      toast.success(`Final score ${calc.average.toFixed(2)} locked for ${selectedPlayer.name}`);
-      // Return to dashboard so the player shows as scored/locked
-      setTimeout(() => goBackAfterScoring(), 800);
-    } catch (error) {
-      logger.error('Failed to finalize panel score:', error);
-      toast.error(error.response?.data?.error?.message || 'Failed to finalize score');
-    } finally {
-      setFinalizing(false);
-    }
-  };
-
   const handleLogout = async () => {
     clearCompetitionContext?.();
     await logout(navigate);
@@ -1411,11 +551,6 @@ const JudgeScoring = () => {
   if (!judgeInfo || !selectedPlayer) return null;
 
   const finalScore = parseFloat(calcFinal());
-  const JUDGE_ORDER = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-  const orderedPanelEntries = JUDGE_ORDER
-    .filter((jt) => panelScores[jt])
-    .map((jt) => [jt, panelScores[jt]]);
-
   return (
     <div className="min-h-dvh relative pb-24 lg:pb-0" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <Orb x={5} y={10} size={400} color={J.purple} delay={0} duration={8} blur={120} />
@@ -1428,12 +563,9 @@ const JudgeScoring = () => {
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button onClick={() => {
-                if (viewMode === 'review' && !finalized) goBackToScoring();
-                else goBackAfterScoring();
-              }}
+              <button onClick={goBackAfterScoring}
                 className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
-                aria-label={viewMode === 'review' && !finalized ? 'Back to scoring' : 'Back to team'}>
+                aria-label="Back to team">
                 <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -1483,9 +615,6 @@ const JudgeScoring = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE_OUT }}>
           
-          <AnimatePresence mode="wait">
-            {viewMode === 'scoring' && (
-              <>
                 {/* ─── MOBILE VIEW (lg:hidden) ─── */}
                 <div className="block lg:hidden space-y-3 pb-20">
                   {/* 1. Fixed Top Score Header */}
@@ -1547,8 +676,7 @@ const JudgeScoring = () => {
                     onTouchEnd={handleTouchEnd}
                     className="min-h-[300px] pt-1"
                   >
-                    <AnimatePresence mode="wait">
-                      {activeMobileTab === 'difficulty' && (
+                                {activeMobileTab === 'difficulty' && (
                         <motion.div
                           key="tab-difficulty"
                           initial={{ opacity: 0, x: -10 }}
@@ -1704,8 +832,7 @@ const JudgeScoring = () => {
                           </motion.button>
                         </motion.div>
                       )}
-                    </AnimatePresence>
-                  </div>
+                              </div>
                 </div>
 
                 {/* ─── DESKTOP VIEW (hidden on mobile, lg:grid) ─── */}
@@ -1876,11 +1003,8 @@ const JudgeScoring = () => {
                     </div>
                   </div>
                 </div>
-              </>
-            )}
 
             {/* Mobile sticky submit bar */}
-            {viewMode === 'scoring' && (
               <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 border-t"
                 style={{
                   background: 'rgba(10,10,10,0.96)',
@@ -1916,274 +1040,13 @@ const JudgeScoring = () => {
                   </p>
                 )}
               </div>
-            )}
 
-          {viewMode === 'review' && (
-            <motion.div
-              key="review"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-5 pb-6"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-black text-white">Panel Review</h2>
-                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {panelScoresCount}
-                    {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
-                    {effectivePanelSize ? ` · ${effectivePanelSize}-judge panel` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!finalized && (
-                    <button
-                      type="button"
-                      onClick={goBackToScoring}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-white/5"
-                      style={{ borderColor: 'rgba(168,85,247,0.4)', color: J.purpleLight }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                      Edit My Score
-                    </button>
-                  )}
-                  {finalized && (
-                    <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
-                      style={{ background: 'rgba(34,197,94,0.15)', color: J.green }}>
-                      <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Finalized
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              {/* Panel mismatch — inline summary strip (mismatch modal is the primary alert) */}
-              {(panelMismatch.difficultyMismatch || panelMismatch.combinationMismatch || panelMismatch.toleranceMismatch) && (
-                <motion.button
-                  type="button"
-                  onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }}
-                  className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
-                  style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }}
-                  whileHover={{ background: 'rgba(239,68,68,0.13)' }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#EF4444' }} />
-                    <span className="text-sm font-bold text-white">
-                      {[panelMismatch.difficultyMismatch && 'Difficulty', panelMismatch.combinationMismatch && 'Combination', panelMismatch.toleranceMismatch && 'Tolerance'].filter(Boolean).join(' · ')} mismatch detected
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>View Details</span>
-                </motion.button>
-              )}
-
-              {/* Detailed per-judge slips */}
-              {/* SR judge sees all cards; normal judges see only their own */}
-              {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 0 && (
-                <div className="rounded-xl border p-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>You haven't submitted yet — other judges' scores are visible only to the Senior Judge.</p>
-                </div>
-              )}
-              {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 1 && (
-                <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.15)' }}>
-                  <Lock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(192,132,252,0.6)' }} />
-                  <p className="text-xs" style={{ color: 'rgba(192,132,252,0.6)' }}>
-                    {panelScoresCount - 1} other judge{panelScoresCount - 1 > 1 ? 's have' : ' has'} submitted. Scores are visible to the Senior Judge only.
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                {(isSeniorJudge ? orderedPanelEntries : orderedPanelEntries.filter(([jt]) => jt === judgeInfo?.judgeType)).map(([judge, data]) => {
-                  const b = normalizeBreakdown(data.breakdown, data.score);
-                  const isYou = judge === judgeInfo?.judgeType;
-                  const checkedMap = b.combination.checked || {};
-                  const failedItems = combinationChecklist.filter((item) => !checkedMap[item.id]);
-                  const judgeName = judgeNameMap[judge];
-                  return (
-                    <div key={judge} className="rounded-2xl border p-4 space-y-3"
-                      style={{
-                        background: isYou ? 'rgba(168,85,247,0.12)' : 'rgba(255,255,255,0.03)',
-                        borderColor: isYou ? J.purple : 'rgba(255,255,255,0.1)',
-                      }}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-bold text-white flex items-center gap-2">
-                            {judge}
-                            {isYou && (
-                              <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300">You</span>
-                            )}
-                          </div>
-                          {judgeName && (
-                            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{judgeName}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-2xl font-black" style={{ color: isYou ? J.purpleLight : '#fff' }}>
-                            {Number(data.score).toFixed(2)}
-                          </div>
-                          {/* SR judge edit button for non-self cards */}
-                          {isSeniorJudge && !isYou && !finalized && (
-                            <motion.button
-                              type="button"
-                              onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0"
-                              style={{ borderColor: 'rgba(168,85,247,0.4)', color: '#C084FC', background: 'rgba(168,85,247,0.08)' }}
-                              whileHover={{ background: 'rgba(168,85,247,0.2)' }}
-                              whileTap={{ scale: 0.9 }}
-                              title={`Edit ${judge} score`}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </motion.button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>Difficulty</p>
-                        <div className="flex flex-wrap gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                          <span>A: {b.difficulty.aClass ?? 0}</span>
-                          <span>B: {b.difficulty.bClass ?? 0}</span>
-                          <span>C: {b.difficulty.cClass ?? 0}</span>
-                          <span className="font-bold text-white">= {(b.difficulty.total ?? 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
-                          Combination · {(b.combination.total ?? 0).toFixed(2)} / 1.60
-                        </p>
-                        {failedItems.length === 0 ? (
-                          <p className="text-xs" style={{ color: J.green }}>All requirements met</p>
-                        ) : (
-                          <ul className="space-y-0.5">
-                            {failedItems.map((item) => (
-                              <li key={item.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                                −{item.penalty.toFixed(2)} {item.rule}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div className="flex gap-4 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                        <span>Execution: <strong className="text-white">{(b.execution || 0).toFixed(2)}</strong></span>
-                        <span>Originality: <strong className="text-white">{(b.bonus || 0).toFixed(2)}</strong></span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {panelScoresCount === 0 && (
-                <p className="text-center text-sm py-8" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  Waiting for judges to submit…
-                </p>
-              )}
-
-              {/* Panel average preview */}
-              {panelScoresCount > 0 && (
-                <div className="rounded-2xl border p-4"
-                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}>
-                  <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: J.purpleLight }}>
-                    Panel Average Preview
-                  </p>
-                  <p className="text-3xl font-black text-white">
-                    {(panelCalc.average || 0).toFixed(2)}
-                  </p>
-                  {panelCalc.baseScoreApplied && (
-                    <p className="text-xs mt-1" style={{ color: J.amber }}>
-                      Base score applied (exec avg {panelCalc.executionAvg?.toFixed(2)})
-                    </p>
-                  )}
-                  {!allPanelSubmitted && (
-                    <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                      Waiting for remaining judges before final submit…
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                {canFinalSubmit && (
-                  <motion.button
-                    type="button"
-                    onClick={finalizePanelScore}
-                    disabled={finalizing || panelMismatch.hasBlockingMismatch}
-                    className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold min-h-[52px]"
-                    style={{
-                      background: panelMismatch.hasBlockingMismatch
-                        ? 'rgba(255,255,255,0.1)'
-                        : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
-                      opacity: finalizing || panelMismatch.hasBlockingMismatch ? 0.6 : 1,
-                    }}
-                    whileHover={reduced || finalizing ? {} : { scale: 1.01 }}
-                    whileTap={reduced || finalizing ? {} : { scale: 0.98 }}
-                  >
-                    {finalizing ? (
-                      <>
-                        <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
-                          animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                        Finalizing…
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" aria-hidden="true" />
-                        Final Submit
-                      </>
-                    )}
-                  </motion.button>
-                )}
-                {isSeniorJudge && !allPanelSubmitted && !finalized && (
-                  <p className="flex-1 text-center text-xs self-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    Final Submit unlocks when all {effectivePanelSize || 'panel'} judges have submitted
-                    {panelMismatch.hasBlockingMismatch ? ' and mismatches are resolved' : ''}
-                  </p>
-                )}
-                {!isSeniorJudge && !finalized && (
-                  <p className="flex-1 text-center text-xs self-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    Waiting for Senior Judge to Final Submit and lock scores
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={goBackAfterScoring}
-                  className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold transition-all duration-300 min-h-[52px]"
-                  style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
-                >
-                  Return to Team
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
         </motion.div>
       </main>
 
       {/* Modals */}
       <CopPdfModal isOpen={showCopModal} onClose={() => setShowCopModal(false)} />
-      <MismatchModal
-        isOpen={showMismatchModal}
-        onClose={() => { setShowMismatchModal(false); setMismatchDismissed(true); }}
-        panelMismatch={panelMismatch}
-        panelScores={panelScores}
-        isSeniorJudge={isSeniorJudge}
-        myJudgeType={judgeInfo?.judgeType}
-        effectivePanelSize={effectivePanelSize}
-        judgeNameMap={judgeNameMap}
-      />
-      <SrEditModal
-        isOpen={showSrEditModal}
-        onClose={() => { setShowSrEditModal(false); setSrEditTarget(null); }}
-        onSave={handleSrEditSave}
-        editTarget={srEditTarget}
-        combinationChecklist={combinationChecklist}
-        selectedApparatus={selectedApparatus}
-        POINT_CEILINGS={POINT_CEILINGS}
-        resolveDifficultyValue={resolveDifficultyValue}
-        getDifficultyRequirement={getDifficultyRequirement}
-        computeCombinationTotal={computeCombinationTotal}
-        selectedCompetitionType={selectedCompetitionType}
-      />
     </div>
   );
 };

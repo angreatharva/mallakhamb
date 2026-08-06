@@ -189,6 +189,10 @@ const playerScoreSchema = new mongoose.Schema({
     },
     bonusScore: { type: Number, enum: [0, 0.20], default: 0 },
     total: { type: Number, min: 0, max: 10.00, default: 0 },
+    // Full breakdown for this judge (A/B/C element counts, combination
+    // checklist state) so re-opening this slip for edit can restore the exact
+    // selections rather than just the section totals.
+    breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
     submittedAt: { type: Date, default: null },
     isChiefPrefilled: { type: Boolean, default: false }
   }],

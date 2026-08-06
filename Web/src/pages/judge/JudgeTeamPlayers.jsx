@@ -405,7 +405,7 @@ const JudgeTeamPlayers = () => {
                           ) : isSubmitted ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
                               style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
-                              Score Submitted
+                              Partial Score Submitted
                             </span>
                           ) : null}
                         </p>

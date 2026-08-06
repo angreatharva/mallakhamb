@@ -18,24 +18,21 @@
 import CryptoJS from 'crypto-js';
 import { logger } from '@/infrastructure/logger.js';
 
-// Generate a more robust encryption key
-const getEncryptionKey = () => {
-  const envKey = import.meta.env.VITE_STORAGE_KEY || 'mallakhamb-india-2026';
-  
-  // Use multiple browser fingerprinting factors for better entropy
-  const browserFingerprint = [
-    navigator.userAgent.substring(0, 30),
-    navigator.language || 'en',
-    screen.colorDepth || '24',
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset().toString()
-  ].join('|');
-  
-  // Hash the fingerprint for consistent length
-  const fingerprintHash = CryptoJS.SHA256(browserFingerprint).toString().substring(0, 32);
-  
-  return `${envKey}-${fingerprintHash}`;
-};
+/**
+ * The obfuscation key.
+ *
+ * This used to mix in a browser fingerprint (screen dimensions, timezone
+ * offset, UA prefix). That added no security — an attacker running script on
+ * this origin reads the exact same values — but it made the key *volatile*:
+ * moving the window to a monitor with a different resolution, changing display
+ * scaling, or crossing a DST boundary all produced a different key. Every
+ * previously written entry then decrypted to garbage and threw
+ * "Malformed UTF-8 data", silently logging the user out.
+ *
+ * A constant key gives the same obfuscation with a stable read path.
+ */
+const getEncryptionKey = () =>
+  import.meta.env.VITE_STORAGE_KEY || 'mallakhamb-india-2026';
 
 /**
  * Known per-role storage key suffixes.
@@ -55,15 +52,19 @@ export const obfuscatedStorage = {
   },
   
   getItem: (key) => {
+    const encrypted = sessionStorage.getItem(key);
+    if (!encrypted) return null;
+
     try {
-      const encrypted = sessionStorage.getItem(key);
-      if (!encrypted) return null;
-      
       const decrypted = CryptoJS.AES.decrypt(encrypted, getEncryptionKey());
       const value = decrypted.toString(CryptoJS.enc.Utf8);
       return value || null;
     } catch (error) {
-      logger.error('Failed to decrypt data:', error);
+      // Ciphertext we cannot read is unusable — most often an entry written
+      // under an older key. Evict it so callers (which read several keys per
+      // render) don't re-throw on every subsequent read.
+      sessionStorage.removeItem(key);
+      logger.warn(`Discarding unreadable storage entry "${key}":`, error);
       return null; // Do not fall back to plain storage
     }
   },

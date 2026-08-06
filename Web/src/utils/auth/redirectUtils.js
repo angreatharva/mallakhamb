@@ -29,6 +29,7 @@ const ALLOWED_PATHS = [
   '/judge/login',
   '/judge/dashboard',
   '/judge/scoring',
+  '/judge/scoring/panel-review',
   '/judge/scoring-old',
   '/superadmin/login',
   '/superadmin/dashboard',

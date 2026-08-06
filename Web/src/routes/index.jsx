@@ -24,6 +24,7 @@ import {
   JudgeDashboard,
   JudgeTeamPlayers,
   JudgeScoring,
+  JudgePanelReview,
   ForgotPassword,
   ResetPassword,
   PublicScores,
@@ -118,6 +119,7 @@ export default function AppRoutes() {
           <Route path="dashboard" element={<JudgeDashboard />} />
           <Route path="team/:teamId" element={<JudgeTeamPlayers />} />
           <Route path="scoring" element={<JudgeScoring />} />
+          <Route path="scoring/panel-review" element={<JudgePanelReview />} />
         </Route>
 
         {/* SuperAdmin Routes */}

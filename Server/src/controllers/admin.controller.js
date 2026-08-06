@@ -348,7 +348,10 @@ function createAdminController(container) {
             [judgeField]: req.body.score
           },
           breakdown,
-          // Per-judge detailed slip for Panel Review / audit (v2 judgeSlips)
+          // Per-judge detailed slip for Panel Review / audit (v2 judgeSlips).
+          // Carries the full breakdown (element counts, combination checklist)
+          // so re-opening this judge's slip for edit restores the exact
+          // selections, not just the section totals.
           judgeSlips: [{
             judgeRole: judgeRoleMap[req.body.judgeType] || 'J1',
             difficultyScore: breakdown.difficulty?.total || 0,
@@ -356,6 +359,7 @@ function createAdminController(container) {
             executionScore: breakdown.execution || 0,
             bonusScore: bonus === 0.20 ? 0.20 : 0,
             total: req.body.score,
+            breakdown,
             submittedAt: new Date(),
             isChiefPrefilled: req.body.judgeType === 'Senior Judge'
           }]
@@ -391,6 +395,17 @@ function createAdminController(container) {
         }
       }
       
+      // The per-player finalize lock exists to stop JUDGES revising their marks after
+      // the Senior Judge's Final Submit. Scorers and Admins work downstream of that
+      // lock — they record time/deductions/remarks and lock the sheet — so a finalized
+      // player must not block them.
+      const isScorer = req.userType === 'judge' && req.user?.judgeType === 'Scorer';
+      const isAdmin =
+        req.userType === 'admin' ||
+        req.userType === 'superadmin' ||
+        ['admin', 'superadmin'].includes(req.user?.role);
+      scoreData.allowFinalizedEdit = isScorer || isAdmin;
+
       // Handle admin routes, superadmin routes, and judge/scorer routes
       const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
       

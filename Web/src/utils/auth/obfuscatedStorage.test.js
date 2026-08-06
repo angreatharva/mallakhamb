@@ -18,8 +18,18 @@ vi.mock('crypto-js', () => {
         })
       },
       enc: { Utf8: 'utf8' },
-      SHA256: vi.fn(() => ({
-        toString: () => 'mockhash123456789012345678901234'
+      // A real digest avalanches: every input byte affects every output byte.
+      // The mock must too, since callers take substring(0, 32) — otherwise the
+      // stability test below would pass vacuously.
+      SHA256: vi.fn((input) => ({
+        toString: () => {
+          const str = String(input);
+          let h = 0;
+          for (let i = 0; i < str.length; i++) {
+            h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+          }
+          return (h >>> 0).toString(16).padStart(8, '0').repeat(8);
+        }
       }))
     }
   };
@@ -47,6 +57,34 @@ describe('obfuscatedStorage', () => {
   it('should return null if item does not exist', () => {
     const value = obfuscatedStorage.getItem('missing_key');
     expect(value).toBeNull();
+  });
+
+  it('should derive a key that survives screen and timezone changes', () => {
+    // The key must not depend on volatile browser state: a resolution change or
+    // DST shift previously produced a different key, so every stored entry
+    // decrypted to garbage ("Malformed UTF-8 data") and logged the user out.
+    obfuscatedStorage.setItem('admin_token', 'token123');
+    const keyAtWrite = CryptoJS.AES.encrypt.mock.calls[0][1];
+
+    vi.spyOn(screen, 'width', 'get').mockReturnValue(3840);
+    vi.spyOn(screen, 'height', 'get').mockReturnValue(2160);
+    vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(-330);
+
+    expect(obfuscatedStorage.getItem('admin_token')).toBe('token123');
+    expect(CryptoJS.AES.decrypt.mock.calls[0][1]).toBe(keyAtWrite);
+  });
+
+  it('should evict an entry it cannot decrypt instead of throwing', () => {
+    CryptoJS.AES.decrypt.mockImplementationOnce(() => ({
+      toString: () => {
+        throw new Error('Malformed UTF-8 data');
+      }
+    }));
+    sessionStorage.setItem('admin_token', 'written-under-an-old-key');
+
+    expect(obfuscatedStorage.getItem('admin_token')).toBeNull();
+    // Evicted, so the repeated reads ProtectedRoute does per render stay quiet
+    expect(sessionStorage.getItem('admin_token')).toBeNull();
   });
 
   it('should remove an item from sessionStorage', () => {

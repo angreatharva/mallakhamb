@@ -5,31 +5,64 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-// We mock the auth middleware to isolate route tests
+// We mock the auth middleware to isolate route tests.
+//
+// This mock must export every guard admin.routes.js imports at module scope.
+// A missing guard resolves to `undefined` and Express throws
+// "Route.get() requires a callback function" while the router is being built,
+// which fails the whole suite at load time rather than in a single test.
+// Keep the shape in sync with module.exports at the bottom of
+// src/middleware/auth.middleware.js.
 jest.mock('../middleware/auth.middleware', () => {
+  // The real middleware sets BOTH req.userType and req.user; the guards below
+  // read both, so the mock has to populate both to be faithful.
   const createAuthMiddleware = () => (req, res, next) => {
     if (req.header('Authorization')) {
-      req.user = { role: req.header('Role') || 'player' };
+      const role = req.header('Role') || 'player';
+      req.userType = role;
+      req.user = { role, judgeType: req.header('JudgeType') || undefined };
       next();
     } else {
       res.status(401).json({ message: 'No authorization token provided' });
     }
   };
 
-  const requireRole = (roles) => (req, res, next) => {
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
-    if (req.user && allowedRoles.includes(req.user.role)) {
+  // Mirrors the real signature: variadic, flattened, and matches on either
+  // req.userType or req.user.role.
+  const requireRole = (...allowedRoles) => (req, res, next) => {
+    const roles = allowedRoles.flat();
+    if (req.user && (roles.includes(req.userType) || roles.includes(req.user.role))) {
       next();
     } else {
       res.status(403).json({ message: 'Insufficient permissions' });
     }
   };
 
+  const requireAdminOrScorer = (req, res, next) => {
+    if (!req.user || !req.userType) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const isAdmin =
+      ['admin', 'superadmin'].includes(req.userType) ||
+      (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
+    const isScorer = req.userType === 'judge' && req.user.judgeType === 'Scorer';
+
+    if (!isAdmin && !isScorer) {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    next();
+  };
+
   createAuthMiddleware.requireRole = requireRole;
-  createAuthMiddleware.requireAdmin = requireRole(['admin', 'superadmin']);
+  createAuthMiddleware.requireAdmin = requireRole('admin', 'superadmin');
   createAuthMiddleware.requireSuperAdmin = requireRole('superadmin');
+  createAuthMiddleware.requireJudge = requireRole('judge');
+  createAuthMiddleware.requirePlayer = requireRole('player');
+  createAuthMiddleware.requireCoach = requireRole('coach');
+  createAuthMiddleware.requireAdminOrScorer = requireAdminOrScorer;
   createAuthMiddleware.createAuthMiddleware = createAuthMiddleware;
-  
+  createAuthMiddleware.authenticate = createAuthMiddleware;
+
   return createAuthMiddleware;
 });
 
@@ -82,4 +115,70 @@ describe('Admin Routes - Auth Guards', () => {
       expect(response.status).toBe(201);
     });
   });
+
+  // These two routes are the only ones guarded by requireAdminOrScorer. They
+  // were previously uncovered, which is why the missing mock export went
+  // unnoticed until the router failed to build.
+  describe.each(['/api/admin/judges', '/api/admin/judges/summary'])(
+    'GET %s (requireAdminOrScorer)',
+    (route) => {
+      // The guard runs before validateCompetitionContext, so an authorized
+      // caller without competition context stops at 400 rather than 403 —
+      // that 400 is what proves the guard let them through.
+      const withContext = (req) => req.set('x-competition-id', 'comp-1');
+
+      it('blocks unauthenticated requests', async () => {
+        const response = await withContext(request(app).get(route));
+        expect(response.status).toBe(401);
+      });
+
+      it('blocks a regular judge who is not a Scorer', async () => {
+        const response = await withContext(
+          request(app).get(route).set('Authorization', 'Bearer fake-token').set('Role', 'judge')
+        );
+        expect(response.status).toBe(403);
+      });
+
+      it('blocks a coach', async () => {
+        const response = await withContext(
+          request(app).get(route).set('Authorization', 'Bearer fake-token').set('Role', 'coach')
+        );
+        expect(response.status).toBe(403);
+      });
+
+      it('allows an admin', async () => {
+        const response = await withContext(
+          request(app).get(route).set('Authorization', 'Bearer fake-token').set('Role', 'admin')
+        );
+        expect(response.status).toBe(200);
+      });
+
+      it('allows a superadmin', async () => {
+        const response = await withContext(
+          request(app).get(route).set('Authorization', 'Bearer fake-token').set('Role', 'superadmin')
+        );
+        expect(response.status).toBe(200);
+      });
+
+      it('allows a judge whose judgeType is Scorer', async () => {
+        const response = await withContext(
+          request(app)
+            .get(route)
+            .set('Authorization', 'Bearer fake-token')
+            .set('Role', 'judge')
+            .set('JudgeType', 'Scorer')
+        );
+        expect(response.status).toBe(200);
+      });
+
+      it('still requires competition context once authorized', async () => {
+        const response = await request(app)
+          .get(route)
+          .set('Authorization', 'Bearer fake-token')
+          .set('Role', 'admin');
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('COMPETITION_CONTEXT_REQUIRED');
+      });
+    }
+  );
 });

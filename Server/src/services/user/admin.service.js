@@ -1953,8 +1953,14 @@ class AdminService extends UserService {
             // Merge judge scores - keep existing scores and add/update new ones
             const existingPlayerScore = mergedPlayerScores[existingPlayerIndex];
 
-            // Per-player lock after Senior Judge Final Submit
-            if (existingPlayerScore.isFinalized && !scoreData.isFinalSubmit) {
+            // Per-player lock after Senior Judge Final Submit. Applies to judges only;
+            // Scorer/Admin (allowFinalizedEdit) still need to record time, deductions
+            // and remarks on a finalized player before locking the sheet.
+            if (
+              existingPlayerScore.isFinalized &&
+              !scoreData.isFinalSubmit &&
+              !scoreData.allowFinalizedEdit
+            ) {
               throw new ValidationError(
                 `Scores for ${existingPlayerScore.playerName || 'this player'} are finalized and locked`
               );

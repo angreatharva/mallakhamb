@@ -195,6 +195,9 @@ const JUDGE_TYPE_TO_FIELD = Object.freeze({
   'Judge 4': 'judge4',
 });
 
+/** Panel slots in display order: Senior Judge first, then Judge 1…4. */
+export const JUDGE_ORDER = Object.freeze(Object.keys(JUDGE_TYPE_TO_FIELD));
+
 /** Map panel review entries → { seniorJudge, judge1…judge4 } totals. */
 export function panelScoresToJudgeFields(panelScores) {
   const fields = { seniorJudge: 0, judge1: 0, judge2: 0, judge3: 0, judge4: 0 };
@@ -315,7 +318,11 @@ export function calculateAverageMarks(playerScores, panelSize) {
  * @param {number} panelSize - Expected panel size (3, 4, or 5)
  */
 export function analyzePanelMismatches(panelScores, panelSize) {
-  const slips = Object.values(panelScores || {}).filter((e) => e && (e.breakdown || e.score != null));
+  // Iterate in panel order (Senior Judge, Judge 1…4) so every list this
+  // produces reads in the same sequence the panel is numbered in.
+  const slips = JUDGE_ORDER
+    .map((jt) => panelScores?.[jt])
+    .filter((e) => e && (e.breakdown || e.score != null));
   const nearlyEqual = (a, b) => Math.abs(Number(a) - Number(b)) < 0.005;
 
   const difficultyValues = slips
@@ -325,8 +332,15 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     .map((s) => s.breakdown?.combination?.total)
     .filter((v) => v !== undefined && v !== null);
 
+  // Slips reloaded from the server carry only the section totals — the element
+  // counts and checklist selections are not persisted per judge and come back
+  // as zeros. Comparing those against a slip that does have the detail would
+  // report a mismatch that no judge actually entered, so restrict the
+  // element-level comparisons to slips that carry real detail.
+  const detailedSlips = slips.filter((s) => s.breakdown?.detailed !== false);
+
   // Difficulty: totals OR A/B/C element counts must agree across judges
-  const difficultyMixKeys = slips.map((s) => {
+  const difficultyMixKeys = detailedSlips.map((s) => {
     const d = s.breakdown?.difficulty || {};
     return `${d.aClass ?? 0}|${d.bClass ?? 0}|${d.cClass ?? 0}`;
   });
@@ -338,11 +352,11 @@ export function analyzePanelMismatches(panelScores, panelSize) {
 
   // Combination: totals OR checklist selections must agree across judges
   const allComboIds = new Set();
-  slips.forEach((s) => {
+  detailedSlips.forEach((s) => {
     Object.keys(s.breakdown?.combination?.checked || {}).forEach((id) => allComboIds.add(Number(id)));
   });
   const sortedComboIds = [...allComboIds].sort((a, b) => a - b);
-  const combinationFingerprints = slips.map((s) => {
+  const combinationFingerprints = detailedSlips.map((s) => {
     const checked = s.breakdown?.combination?.checked || {};
     // Missing key treated as unmet (same as false) so selections compare consistently
     return sortedComboIds.map((id) => `${id}:${checked[id] ? 1 : 0}`).join(',');
@@ -353,6 +367,50 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     combinationFingerprints.length >= 2 &&
     !combinationFingerprints.every((fp) => fp === combinationFingerprints[0]);
   const combinationMismatch = combinationTotalMismatch || combinationSelectionMismatch;
+
+  // The Senior Judge's slip is the reference: a panel judge is "off" when their
+  // slip differs from the Senior Judge's, never the other way round. Element
+  // counts and checklist selections are only compared when BOTH slips carry
+  // that detail (see the detailedSlips note above).
+  const senior = panelScores?.['Senior Judge'];
+  const comboIdsFor = (s) => Object.keys(s?.breakdown?.combination?.checked || {}).map(Number);
+  const comboFingerprint = (s, ids) => {
+    const checked = s?.breakdown?.combination?.checked || {};
+    return ids.map((id) => `${id}:${checked[id] ? 1 : 0}`).join(',');
+  };
+  const mixKey = (s) => {
+    const d = s?.breakdown?.difficulty || {};
+    return `${d.aClass ?? 0}|${d.bClass ?? 0}|${d.cClass ?? 0}`;
+  };
+
+  // Per-category divergence from the Senior Judge's slip, so each judge's own
+  // mismatch popup can show only the category(ies) THEIR slip actually
+  // disagrees on — not every category any judge in the panel disagrees on.
+  const judgeDiffFromSenior = (entry) => {
+    if (!senior || !entry || entry.judgeType === 'Senior Judge') {
+      return { difficulty: false, combination: false };
+    }
+    const bothDetailed =
+      senior.breakdown?.detailed !== false && entry.breakdown?.detailed !== false;
+
+    let difficulty = !nearlyEqual(entry.breakdown?.difficulty?.total ?? 0, senior.breakdown?.difficulty?.total ?? 0);
+    let combination = !nearlyEqual(entry.breakdown?.combination?.total ?? 0, senior.breakdown?.combination?.total ?? 0);
+    if (bothDetailed) {
+      if (mixKey(entry) !== mixKey(senior)) difficulty = true;
+      const ids = [...new Set([...comboIdsFor(senior), ...comboIdsFor(entry)])].sort((a, b) => a - b);
+      if (comboFingerprint(entry, ids) !== comboFingerprint(senior, ids)) combination = true;
+    }
+    return { difficulty, combination };
+  };
+
+  const judgeMismatchDetails = {};
+  JUDGE_ORDER.forEach((jt) => {
+    judgeMismatchDetails[jt] = judgeDiffFromSenior(panelScores?.[jt]);
+  });
+
+  const disagreeingJudges = JUDGE_ORDER.filter(
+    (jt) => judgeMismatchDetails[jt].difficulty || judgeMismatchDetails[jt].combination
+  );
 
   const size = panelSize || slips.length;
   let toleranceMismatch = false;
@@ -366,6 +424,25 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     toleranceInfo = result;
   }
 
+  // A tolerance breach is a gap between the execution average and the Senior
+  // Judge's mark, so the execution judges whose own total differs from the
+  // Senior's are the ones asked to re-check.
+  const toleranceOffJudges = toleranceMismatch
+    ? JUDGE_ORDER.filter(
+        (jt) =>
+          jt !== 'Senior Judge' &&
+          panelScores?.[jt] &&
+          !nearlyEqual(panelScores[jt].score ?? 0, senior?.score ?? 0)
+      )
+    : [];
+
+  // Everyone who should be prompted to review their slip. The Senior Judge is
+  // the reference and is never listed here — they are alerted separately
+  // because resolving the mismatch is their call.
+  const judgesNeedingReview = JUDGE_ORDER.filter(
+    (jt) => disagreeingJudges.includes(jt) || toleranceOffJudges.includes(jt)
+  );
+
   return {
     difficultyMismatch,
     combinationMismatch,
@@ -375,6 +452,10 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     toleranceInfo,
     difficultyValues,
     combinationValues,
+    disagreeingJudges,
+    judgeMismatchDetails,
+    toleranceOffJudges,
+    judgesNeedingReview,
     hasBlockingMismatch: difficultyMismatch || combinationMismatch,
   };
 }
