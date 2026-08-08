@@ -58,7 +58,33 @@ Done:
   - A test compares the served payload against the module the scoring engine actually uses, so this endpoint cannot become a third place to drift.
   - **Web Phase 4.1 (deleting the client mirror) is NOT done.** The client must tolerate the endpoint being absent, so this deliberately ships server-first.
 
-Not started (a five-agent wave was dispatched for these and every agent was killed by an API session limit before making edits; the tree was verified clean of partial work): **3.1/3.2** god-object extraction, **LOW-2** API versioning, **3.5** integration tests + CI, the Web-side deletion of the COP mirror, and the `nodemailer` breaking-major advisory.
+- **LOW-2 / 4.1 — DONE.** Every route is served under `/api/v1` with the unversioned path aliased for the deployed client. Built **once and mounted twice** on purpose: a second router would construct a second set of rate limiters, giving each logical route two independent buckets and silently doubling the effective limit — which for the judge-login limiter would have halved MED-2's protection. The versioned prefix is mounted **first**, because `app.use('/api', …)` also matches `/api/v1/…`; with the unversioned mount first, a versioned request would fall through it and traverse the limiter chain twice. Verified against a real Express app: both prefixes resolve and a counting limiter fires exactly once per request on either.
+- **3.5 (CI half) — DONE.** `.github/workflows/ci.yml` runs both suites, the errors-only lint and a production `npm audit` on push and PR. The two stacks run as **separate jobs**, not sequential steps — running both suites on one machine makes vitest's fork workers time out and report spurious failures that look like real regressions. Web lint and the audit report rather than block, and the reasons are in the file: 27 pre-existing lint errors would make CI red on arrival, and a permanently-red CI trains everyone to ignore it.
+- **`nodemailer` — DONE.** Upgraded to 9.x, taking the server from 1 advisory to **0**. Held back from the earlier non-breaking pass because it is a breaking major on the e-mail transport. Safe because the adapter's whole surface is `createTransport`/`sendMail`/`verify` with a plain host/port/secure/auth option shape. Verified by actually delivering a message through `jsonTransport` (messageId, envelope and HTML body all preserved), not by assumption. **Caveat: that exercises the API contract, not a real SMTP handshake — give OTP and password-reset one live send before production.**
+
+### Still open
+
+| Item | Why it is still open |
+|---|---|
+| **3.1 / 3.2 — extract scoring from `admin.service.js`** (MED-5, MED-6) | The only substantial item left. See the note below. |
+| **3.5 (integration-test half)** | `tests/integration/` still holds only a README. The security suites now cover the judge submit path end to end (auth → slip → panel average → finalize → lock) against real models, which was the stated goal, but a dedicated integration suite is still worth having. |
+| **Web Phase 4.1 — delete the client COP mirror** | Now unblocked: `GET /api/public/cop-rules` exists. Requires client work and must tolerate the endpoint being absent. |
+| **Web MED-W1–W5, W7 and LOW-W1–W4** | Untouched. |
+| Residual `react-router` advisory (Web, 2 moderate) | Left with the rest of the Web medium items. |
+
+#### Note on 3.1 / 3.2
+
+`admin.service.js` is **3,076 lines across 46 methods**, of which the ten scoring methods (`saveScores`, `lockScores`, `unlockScore(s)`, `recalculateScores`, `getTeamScores`, `getIndividualScores`, the two ranking methods and `endAgeGroup`) span roughly 900 lines — about 30% of the file.
+
+This is a **maintainability** refactor: it fixes no security or correctness defect. It is also the highest-risk change left, because it moves the score-write path — the code most recently altered by HIGH-3 and HIGH-4 — and those methods depend on module-level helpers (`projectFields`, the `SUBMITTED_TEAM_*_FIELD_LIST` allow-lists, `buildMergedPlayerScores`, `toCompetitionTypeDisplay`, `validateSlipBreakdown`) plus four injected collaborators.
+
+Recommended approach when it is picked up, in this order, verifying after each step:
+1. `getTeamRankings`, `getIndividualRankings` — self-contained, read-only.
+2. `getTeamScores`, `getIndividualScores` — read-only but carry the PII allow-lists.
+3. `lockScores` / `unlockScore(s)` / `endAgeGroup`.
+4. `saveScores` last, on its own, since it owns the concurrency guard and the merge.
+
+Keep `admin.service.js` delegating to `scoring.service.js` throughout so every existing caller and route keeps working; move callers onto the scoring service only after the extraction is green. **3.2** (moving `judgeFieldMap`/`judgeRoleMap` slip assembly out of `admin.controller.js`) should follow 3.1, so the HTTP and socket paths can finally share one implementation.
 
 **Verified green at this point:** Server `npm test` → 135 passing / 9 suites. Web `npm test` → 54 passed + 1 expected fail / 7 files, `npm run build` clean.
 > Do **not** run both suites concurrently on one machine — vitest's workers time out under the contention and produce a spurious 7-error failure that looks like a real regression.
