@@ -3,11 +3,16 @@
  *
  * ⚠️  THIS IS NOT A SECURITY BOUNDARY.
  *
- * This module wraps localStorage with client-side AES encryption keyed to
- * a browser fingerprint. It provides obfuscation — not security — because:
- *   1. The encryption key is derived entirely from public browser metadata.
+ * This module wraps **sessionStorage** with client-side AES encryption. It
+ * provides obfuscation — not security — because:
+ *   1. The encryption key is a constant, not a secret.
  *   2. The key material is visible in the bundle source.
  *   3. Any script running in the same origin can read the same sessionStorage.
+ *
+ * The backend matters: sessionStorage is per-tab and NEVER fires the window
+ * `storage` event, so nothing can sync tabs by listening for it. That stale
+ * "wraps localStorage" comment is exactly why AuthProvider shipped a dead
+ * cross-tab listener (HIGH-W4); cross-tab logout now uses BroadcastChannel.
  *
  * The long-term fix (Phase 2, item 2.1) is to move tokens to httpOnly
  * cookies so they never appear in JavaScript-accessible storage at all.

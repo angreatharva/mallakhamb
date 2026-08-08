@@ -14,7 +14,12 @@ import { AuthContext } from '@/contexts/AuthContext';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
-import { authEventBus, AUTH_EXPIRED } from '@/utils/auth/authEvents';
+import {
+  authEventBus,
+  AUTH_EXPIRED,
+  broadcastLogout,
+  subscribeToAuthBroadcast,
+} from '@/utils/auth/authEvents';
 import { getRoleFromPath, getLoginPathForRole } from '@/utils/auth/roleFromPath';
 
 export default function AuthProvider({ children }) {
@@ -78,20 +83,22 @@ export default function AuthProvider({ children }) {
     setLoading(false);
   }, [loadAuthData]);
 
-  // --- Cross-tab storage sync ---
+  // --- Cross-tab auth sync (HIGH-W4) ---
+  // This used to listen for the window `storage` event, which fires only for
+  // localStorage. obfuscatedStorage writes sessionStorage, so the listener
+  // could never fire and logging out in one tab left the others rendering an
+  // authenticated UI. BroadcastChannel is backend-independent.
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (
-        currentRole &&
-        (e.key === `${currentRole}_token` || e.key === `${currentRole}_user`)
-      ) {
-        loadAuthData();
-      }
-    };
+    return subscribeToAuthBroadcast((message) => {
+      if (message.type !== 'logout') return;
+      // Only react to our own role — roles keep independent sessions by design.
+      if (!currentRole || message.role !== currentRole) return;
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [currentRole, loadAuthData]);
+      secureStorage.clearForRole(currentRole);
+      setUser(null);
+      setUserType(null);
+    });
+  }, [currentRole]);
 
   // --- AUTH_EXPIRED event handler ---
   // Listens for auth expiry events dispatched by Axios interceptors and
@@ -147,6 +154,9 @@ export default function AuthProvider({ children }) {
       // Scoped clear — only remove keys for the current role
       secureStorage.clearForRole(roleToLogout);
       sessionStorage.clear();
+
+      // Tell other tabs holding this role to drop their session too (HIGH-W4).
+      broadcastLogout(roleToLogout);
 
       setUser(null);
       setUserType(null);
