@@ -15,6 +15,37 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const bcrypt = require('bcryptjs');
+const {
+  getLockoutState,
+  registerFailedAttempt,
+  clearedLockoutState,
+  lockoutMessage,
+} = require('../../utils/security/account-lockout.util');
+
+/**
+ * LOW-4: see the equivalent note in authentication.service.js. A literal, not a
+ * `hashSync` call, so importing this module does no bcrypt work at startup.
+ */
+const DUMMY_PASSWORD_HASH = '$2a$12$xkzf6jGVSx6.qXQ/GXY93OiYAmFAjB7Q9ph2ciDNL8cuW.PNc94Mi';
+
+const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
+const DEFAULT_LOCKOUT_MINUTES = 15;
+
+/**
+ * Read a security setting from the config singleton, defensively — unit tests
+ * construct this service without ever calling `config.load()`.
+ * @param {string} key
+ * @param {number} fallback
+ * @returns {number}
+ */
+function judgeSecuritySetting(key, fallback) {
+  try {
+    const value = require('../../config/config-manager').get(key);
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 class JudgeService extends UserService {
   /**
@@ -51,34 +82,73 @@ class JudgeService extends UserService {
       // Find judge by username (case-insensitive) - gets one record.
       // `password` is `select: false` on the Judge schema, so it must be
       // requested explicitly here or every judge login fails.
+      // MED-1: the lockout counters are `select: false`, so request them here
+      // alongside the password or enforcement silently does nothing.
       const judge = await this.judgeRepository.findByUsername(
         username.toLowerCase(),
-        { select: '+password' }
+        { select: '+password +loginAttempts +lockUntil' }
       );
-      
+
       if (!judge) {
+        // LOW-4: equalize timing so an unknown username is not distinguishable
+        // from a wrong password by response latency.
+        await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
         this.logger.warn('Judge login failed: Judge not found', { username });
         throw new AuthenticationError('Invalid credentials');
       }
 
       // Check if active — treat missing isActive as inactive only when explicitly false
       if (judge.isActive === false) {
-        this.logger.warn('Judge login failed: Account inactive', { 
-          judgeId: judge._id, 
-          username 
+        this.logger.warn('Judge login failed: Account inactive', {
+          judgeId: judge._id,
+          username
         });
         throw new AuthenticationError('Account is inactive');
       }
 
+      // MED-1: judge credentials were publicly disclosed by CRIT-2, so the
+      // password is the only remaining barrier on this account. Refuse a locked
+      // account before spending a comparison.
+      const lockout = getLockoutState(judge);
+      if (lockout.isLocked) {
+        this.logger.warn('Judge login failed: Account locked', {
+          judgeId: judge._id,
+          username,
+          remainingMinutes: lockout.remainingMinutes,
+        });
+        throw new AuthenticationError(lockoutMessage(lockout.remainingMinutes));
+      }
+
       // Verify password
       const isPasswordValid = await bcrypt.compare(password, judge.password);
-      
+
       if (!isPasswordValid) {
-        this.logger.warn('Judge login failed: Invalid password', { 
-          judgeId: judge._id, 
-          username 
+        const next = registerFailedAttempt(judge, {
+          maxAttempts: judgeSecuritySetting('security.maxLoginAttempts', DEFAULT_MAX_LOGIN_ATTEMPTS),
+          lockoutMinutes: judgeSecuritySetting('security.lockoutDuration', DEFAULT_LOCKOUT_MINUTES),
         });
+
+        await this.persistJudgeLockoutState(judge._id, {
+          loginAttempts: next.loginAttempts,
+          lockUntil: next.lockUntil,
+        });
+
+        this.logger.warn('Judge login failed: Invalid password', {
+          judgeId: judge._id,
+          username,
+          attempts: next.loginAttempts,
+          locked: next.isLocked,
+        });
+
+        if (next.isLocked) {
+          throw new AuthenticationError(lockoutMessage(next.remainingMinutes));
+        }
         throw new AuthenticationError('Invalid credentials');
+      }
+
+      // Clear the counter on success so nobody carries a stale tally forward.
+      if (judge.loginAttempts || judge.lockUntil) {
+        await this.persistJudgeLockoutState(judge._id, clearedLockoutState());
       }
 
       // Use judge's assigned competition
@@ -761,6 +831,40 @@ class JudgeService extends UserService {
         error: error.message 
       });
       throw error;
+    }
+  }
+
+  /**
+   * Persist the judge's account-lockout counters (MED-1).
+   *
+   * Writes through the model rather than `updateById`, which branches on
+   * `updates.password` for re-hashing and runs full document validation —
+   * neither is wanted for a counter bump, and a validation error on an
+   * unrelated legacy field must never turn a failed login into a 500.
+   *
+   * NOTE: a judge may hold several documents (one per assignment) sharing a
+   * username. `findByUsername` authenticates against one of them, so the
+   * counter is kept on that record. This is a known limitation: an attacker
+   * could get the full attempt budget per assignment. Recorded rather than
+   * silently ignored — closing it means keying lockout on the username, which
+   * is a larger change than this task.
+   *
+   * Failures are logged and swallowed: losing an increment beats breaking
+   * judge login during an event.
+   *
+   * @param {*} judgeId
+   * @param {{loginAttempts: number, lockUntil: Date|null}} state
+   * @returns {Promise<void>}
+   */
+  async persistJudgeLockoutState(judgeId, state) {
+    try {
+      if (!this.judgeRepository?.model?.updateOne) return;
+      await this.judgeRepository.model.updateOne({ _id: judgeId }, { $set: state });
+    } catch (error) {
+      this.logger.error('Failed to persist judge lockout state', {
+        judgeId: String(judgeId),
+        error: error.message,
+      });
     }
   }
 }

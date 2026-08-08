@@ -55,6 +55,20 @@ const judgeSchema = new mongoose.Schema({
     default: '',
     select: false // Never loaded unless a query opts in with .select('+password')
   },
+  /**
+   * Account lockout counters (MED-1). `select: false` keeps them out of every
+   * response and every populate; a login lookup must opt in explicitly.
+   */
+  loginAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  },
+  lockUntil: {
+    type: Date,
+    default: null,
+    select: false
+  },
   mustResetPassword: {
     type: Boolean,
     default: false,

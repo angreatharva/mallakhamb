@@ -16,7 +16,85 @@ const {
 } = require('../../errors');
 const { normalizeEmail, sanitizeString, sanitizeUserData } = require('../../utils/validation/sanitization.util');
 const { recordLogout } = require('../../utils/security/token-invalidation.util');
+const {
+  getLockoutState,
+  registerFailedAttempt,
+  clearedLockoutState,
+  lockoutMessage,
+} = require('../../utils/security/account-lockout.util');
 const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
+
+/**
+ * LOW-4: a dummy hash to compare against when the account does not exist.
+ *
+ * Without it, login returned immediately on user-not-found while a real
+ * account paid for a bcrypt comparison, so response time told an attacker
+ * which e-mail addresses are registered. Computed once at module load — doing
+ * it per request would be the same work bcrypt is meant to cost, on every
+ * unauthenticated hit.
+ *
+ * The plaintext is irrelevant and this is not a secret; only the COST of
+ * comparing against it matters. It is a literal rather than a `hashSync` call
+ * so that importing this module does no bcrypt work at startup, and so unit
+ * tests that mock bcrypt do not have to stub `hashSync` to load the file.
+ * Generated at cost 12, matching BCRYPT_ROUNDS.
+ */
+const DUMMY_PASSWORD_HASH = '$2a$12$xkzf6jGVSx6.qXQ/GXY93OiYAmFAjB7Q9ph2ciDNL8cuW.PNc94Mi';
+
+const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
+const DEFAULT_LOCKOUT_MINUTES = 15;
+// Matches the model pre-save hooks and the documented BCRYPT_ROUNDS default.
+const DEFAULT_BCRYPT_ROUNDS = 12;
+
+/**
+ * Fields that must never reach a client, whatever the query selected.
+ *
+ * The schema `toJSON` transforms are not a safety net here: BaseRepository
+ * queries use `.lean()`, so results are plain objects the transform never sees,
+ * and `.toObject()` does not run a toJSON transform either.
+ */
+const SENSITIVE_USER_FIELDS = [
+  'password',
+  'resetPasswordToken',
+  'resetPasswordExpires',
+  'loginAttempts',
+  'lockUntil',
+];
+
+/**
+ * Remove every sensitive field from a user object destined for a response.
+ * @param {Object} userObject
+ * @returns {Object} a copy without the sensitive fields
+ */
+function stripSensitiveFields(userObject) {
+  const safe = { ...userObject };
+  for (const field of SENSITIVE_USER_FIELDS) {
+    delete safe[field];
+  }
+  return safe;
+}
+
+/**
+ * Read a security setting from the config singleton.
+ *
+ * This service is constructed positionally by the DI container and has no
+ * `config` dependency; adding one would change the constructor signature that
+ * bootstrap wires by position. The singleton is read directly instead, and
+ * defensively: unit tests build the service without ever calling
+ * `config.load()`, and a lockout policy is not worth throwing over.
+ *
+ * @param {string} key - Dot path under the config root
+ * @param {number} fallback
+ * @returns {number}
+ */
+function securitySetting(key, fallback) {
+  try {
+    const value = require('../../config/config-manager').get(key);
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 class AuthenticationService {
   /**
@@ -79,39 +157,88 @@ class AuthenticationService {
 
       // Find user by type. `password` is `select: false` on every user schema,
       // so the login lookup has to opt back into it or verifyPassword sees nothing.
-      const user = await this.findUserByType(sanitizedEmail, sanitizedUserType, { select: '+password' });
+      // MED-1: the lockout counters are `select: false`, so opt into them here
+      // alongside the password or enforcement silently does nothing.
+      const user = await this.findUserByType(sanitizedEmail, sanitizedUserType, {
+        select: '+password +loginAttempts +lockUntil',
+      });
 
       if (!user) {
+        // LOW-4: burn a comparable amount of time before returning, so an
+        // unregistered e-mail is not distinguishable by response latency.
+        await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
         this.logger.warn('Login failed: User not found', { email: sanitizedEmail, userType: sanitizedUserType });
         throw new AuthenticationError('Invalid credentials');
       }
 
       // Check if account is active
       if (user.isActive === false) {
-        this.logger.warn('Login failed: Account inactive', { 
-          userId: user._id, 
+        this.logger.warn('Login failed: Account inactive', {
+          userId: user._id,
           userType: sanitizedUserType
         });
         throw new AuthenticationError('Account is inactive');
+      }
+
+      // MED-1: refuse a locked account before spending a password comparison.
+      const lockout = getLockoutState(user);
+      if (lockout.isLocked) {
+        this.logger.warn('Login failed: Account locked', {
+          userId: user._id,
+          userType: sanitizedUserType,
+          remainingMinutes: lockout.remainingMinutes,
+        });
+        throw new AuthenticationError(lockoutMessage(lockout.remainingMinutes));
       }
 
       // Verify password
       const isPasswordValid = await this.verifyPassword(user, password);
 
       if (!isPasswordValid) {
-        this.logger.warn('Login failed: Invalid password', { 
-          userId: user._id, 
-          userType: sanitizedUserType
+        const next = registerFailedAttempt(user, {
+          maxAttempts: securitySetting('security.maxLoginAttempts', DEFAULT_MAX_LOGIN_ATTEMPTS),
+          lockoutMinutes: securitySetting('security.lockoutDuration', DEFAULT_LOCKOUT_MINUTES),
         });
+
+        await this.persistLockoutState(sanitizedUserType, user._id, {
+          loginAttempts: next.loginAttempts,
+          lockUntil: next.lockUntil,
+        });
+
+        this.logger.warn('Login failed: Invalid password', {
+          userId: user._id,
+          userType: sanitizedUserType,
+          attempts: next.loginAttempts,
+          locked: next.isLocked,
+        });
+
+        // Tell the user they are now locked out rather than letting them keep
+        // guessing against a door that is already shut.
+        if (next.isLocked) {
+          throw new AuthenticationError(lockoutMessage(next.remainingMinutes));
+        }
         throw new AuthenticationError('Invalid credentials');
+      }
+
+      // A successful login always clears the counter, so nobody carries a
+      // stale tally into their next session.
+      if (user.loginAttempts || user.lockUntil) {
+        await this.persistLockoutState(sanitizedUserType, user._id, clearedLockoutState());
       }
 
       // Generate token
       const token = this.tokenService.generateToken(user._id.toString(), sanitizedUserType);
 
-      // Convert Mongoose document to plain object and remove password
+      // Strip every sensitive field from the response.
+      //
+      // `password` alone is not enough. The schema `toJSON` transform does NOT
+      // run here — BaseRepository queries are `.lean()`, so this is a plain
+      // object, and `.toObject()` does not apply a toJSON transform either. On
+      // top of that, this login lookup deliberately re-selects the normally
+      // hidden `loginAttempts`/`lockUntil` counters, which would otherwise ride
+      // out in the response. Caught by tests/security/account-lockout.security.
       const userObject = user.toObject ? user.toObject() : { ...user };
-      const { password: _, ...userWithoutPassword } = userObject;
+      const userWithoutPassword = stripSensitiveFields(userObject);
 
       this.logger.info('Login successful', { 
         userId: user._id, 
@@ -175,8 +302,8 @@ class AuthenticationService {
       // Generate token
       const token = this.tokenService.generateToken(String(safeUser._id), sanitizedUserType);
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = safeUser;
+      // Remove password and every other sensitive field from the response.
+      const userWithoutPassword = stripSensitiveFields(safeUser);
 
       this.logger.info('Registration successful', { 
         userId: safeUser._id, 
@@ -311,8 +438,11 @@ class AuthenticationService {
         throw new ValidationError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
       }
 
-      // Hash password explicitly (resolves MED-14)
-      const salt = await bcrypt.genSalt(10);
+      // MED-3: this hardcoded 10 while every model pre-save hook uses 12 and
+      // BCRYPT_ROUNDS documents 12, so any password set through the reset flow
+      // was hashed more weakly than one set at registration. Read the
+      // configured cost instead.
+      const salt = await bcrypt.genSalt(securitySetting('security.bcryptRounds', DEFAULT_BCRYPT_ROUNDS));
       const hashedPassword = await bcrypt.hash(newPassword, salt);
 
       // Get repository for user type
@@ -620,6 +750,36 @@ class AuthenticationService {
    */
   getRepositoryByType(userType) {
     return this._repoResolver.getRepositoryByType(userType);
+  }
+
+  /**
+   * Persist the account-lockout counters (MED-1).
+   *
+   * Writes straight through the model rather than `repository.updateById`,
+   * which branches on `updates.password` for re-hashing and runs full document
+   * validation — neither is wanted for a counter bump, and a validation error
+   * on an unrelated legacy field must never turn a failed login into a 500.
+   *
+   * Failures here are logged and swallowed on purpose: losing a lockout
+   * increment is far better than breaking authentication for everyone.
+   *
+   * @param {string} userType
+   * @param {*} userId
+   * @param {{loginAttempts: number, lockUntil: Date|null}} state
+   * @returns {Promise<void>}
+   */
+  async persistLockoutState(userType, userId, state) {
+    try {
+      const repository = this.getRepositoryByType(userType);
+      if (!repository?.model?.updateOne) return;
+      await repository.model.updateOne({ _id: userId }, { $set: state });
+    } catch (error) {
+      this.logger.error('Failed to persist account lockout state', {
+        userType,
+        userId: String(userId),
+        error: error.message,
+      });
+    }
   }
 }
 
