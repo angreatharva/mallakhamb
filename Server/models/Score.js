@@ -299,10 +299,20 @@ scoreSchema.pre('save', function(next) {
 });
 
 // Create indexes for better query performance.
+//
+// HIGH-3: `competitionType` is part of the identity. Without it a team could
+// hold only ONE score document per competition, even though the domain has
+// three categories (Competition I Team, II Individual, III Apparatus) — so
+// scoring a team in Competition II found and overwrote its Competition I
+// document, merging both categories' slips into one playerScores array.
+//
 // This key is the upsert identity in admin.service.saveScores, so it must be
-// unique. NOTE: if any existing DB holds duplicate (teamId, gender, ageGroup,
-// competition) documents, dedupe them BEFORE this unique index can build.
-scoreSchema.index({ teamId: 1, gender: 1, ageGroup: 1, competition: 1 }, { unique: true });
+// unique. Changing it is NOT in-place: migration 003 drops the old index and
+// builds this one, and aborts first if colliding documents exist.
+scoreSchema.index(
+  { teamId: 1, gender: 1, ageGroup: 1, competition: 1, competitionType: 1 },
+  { unique: true, name: 'score_identity_unique' }
+);
 scoreSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Score', scoreSchema);

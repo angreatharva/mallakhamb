@@ -13,6 +13,94 @@ const EventTypes = require('../../socket/events/event-types');
 const { toCompetitionTypeSlug, toCompetitionTypeDisplay, validateSlipBreakdown } = require('../../config/cop-rules');
 const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
 
+/**
+ * Field projections for the credential-bearing documents this service returns
+ * (CRIT-2, CRIT-4). Applied in the service rather than the controller because
+ * `getJudges` and `getSubmittedTeams` are shared by the public/judge routers
+ * and the admin router — projecting here means no caller can forget.
+ *
+ * These are positive whitelists: a field added to a model in future is not
+ * exposed until it is named here.
+ */
+
+// Judge panel roster. Excludes `password` (bcrypt hash) and
+// `mustResetPassword`. `username` is retained because the admin judge manager
+// renders and re-submits it (Web/src/pages/admin/AdminJudges.jsx:486,518,809)
+// and the scorer stamps it onto Score.judgeDetails
+// (Web/src/pages/judge/ScorerScoring.jsx:493).
+const JUDGE_PUBLIC_FIELDS = [
+  '_id',
+  'competition',
+  'competitionTypes',
+  'gender',
+  'ageGroup',
+  'apparatus',
+  'judgeNo',
+  'judgeType',
+  'name',
+  'username',
+  'isActive',
+  'createdAt',
+  'updatedAt',
+].join(' ');
+
+// Coach shown on a submitted-team card. Only the display name is consumed
+// (JudgeDashboard.jsx:309,426 and AdminScores.jsx:318,401).
+const SUBMITTED_TEAM_COACH_FIELDS = ['_id', 'name', 'isActive'].join(' ');
+
+// Athlete shown on a submitted-team card. Deliberately omits `email`,
+// `dateOfBirth`, `password` and the reset-token pair: these rosters include
+// minors. Consumers only read _id/firstName/lastName/gender
+// (JudgeTeamPlayers.jsx:251-258, ScorerScoring.jsx:218-222,
+// JudgeDashboard.jsx:221).
+const SUBMITTED_TEAM_PLAYER_FIELDS = [
+  '_id',
+  'firstName',
+  'lastName',
+  'gender',
+  'ageGroup',
+  'isActive',
+  'stateUnit',
+  'registrationNumber',
+].join(' ');
+
+const SUBMITTED_TEAM_PLAYER_FIELD_LIST = SUBMITTED_TEAM_PLAYER_FIELDS.split(' ');
+const SUBMITTED_TEAM_COACH_FIELD_LIST = SUBMITTED_TEAM_COACH_FIELDS.split(' ');
+
+/**
+ * Reduce a populated document (Mongoose doc or plain object) to an allow-listed
+ * set of fields.
+ *
+ * Note: `.toObject()` does NOT run a schema `toJSON` transform, so this is the
+ * only thing standing between a populated coach/player and the wire when the
+ * populate projection is bypassed or a document arrives pre-hydrated.
+ *
+ * @param {Object|null|undefined} doc - Populated document or plain object
+ * @param {string[]} allowedFields - Field names to keep
+ * @returns {Object|null|undefined} Projected plain object
+ */
+function projectFields(doc, allowedFields) {
+  if (!doc || typeof doc !== 'object') {
+    return doc;
+  }
+
+  // An unpopulated ref is a bare ObjectId — carry it through untouched.
+  if (doc._bsontype || Buffer.isBuffer(doc)) {
+    return doc;
+  }
+
+  const source = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+  const projected = {};
+
+  for (const field of allowedFields) {
+    if (source[field] !== undefined) {
+      projected[field] = source[field];
+    }
+  }
+
+  return projected;
+}
+
 class AdminService extends UserService {
   /**
    * Create an admin service
@@ -975,17 +1063,22 @@ class AdminService extends UserService {
       });
       
       // Query the Competition model to get registered teams
+      // CRIT-4: project the populated coach and athlete documents. Without a
+      // `select` these carry bcrypt hashes, e-mail addresses and — for minors —
+      // dates of birth all the way to the response body.
       const competition = await this.competitionRepository.findById(competitionId, {
         populate: [
           {
             path: 'registeredTeams.team',
-            populate: { path: 'coach' }
+            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
           },
           {
-            path: 'registeredTeams.coach'
+            path: 'registeredTeams.coach',
+            select: SUBMITTED_TEAM_COACH_FIELDS
           },
           {
-            path: 'registeredTeams.players.player'
+            path: 'registeredTeams.players.player',
+            select: SUBMITTED_TEAM_PLAYER_FIELDS
           }
         ]
       });
@@ -1119,15 +1212,21 @@ class AdminService extends UserService {
       const teamsWithPlayers = submittedTeams.map(regTeam => ({
         _id: regTeam.team._id,
         name: regTeam.team.name,
-        coach: (regTeam.coach && regTeam.coach.name) ? regTeam.coach : 
-               (regTeam.team && regTeam.team.coach && regTeam.team.coach.name) ? regTeam.team.coach : 
-               regTeam.coach,
+        // CRIT-4: second line of defence. `.toObject()` does not run a schema
+        // toJSON transform, so the allow-list is applied explicitly here as
+        // well as in the populate projection above.
+        coach: projectFields(
+          (regTeam.coach && regTeam.coach.name) ? regTeam.coach :
+          (regTeam.team && regTeam.team.coach && regTeam.team.coach.name) ? regTeam.team.coach :
+          regTeam.coach,
+          SUBMITTED_TEAM_COACH_FIELD_LIST
+        ),
         isSubmitted: regTeam.isSubmitted,
         submittedAt: regTeam.submittedAt,
         paymentStatus: regTeam.paymentStatus,
         players: regTeam.players.map(playerEntry => {
           // Handle both Mongoose documents and plain objects
-          const playerData = playerEntry.player?.toObject ? playerEntry.player.toObject() : playerEntry.player;
+          const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
           const playerId = playerData?._id?.toString();
           const key = `${regTeam.team._id?.toString()}:${playerId}`;
           const finalized = finalizedByPlayer.get(key);
@@ -1554,7 +1653,11 @@ class AdminService extends UserService {
       }
       if (filters.apparatus) query.apparatus = filters.apparatus;
 
+      // CRIT-2: without a projection this returns every judge's bcrypt hash.
+      // Applied here (not in the controller) because /api/admin/judges,
+      // /api/judge/judges and /api/public/judges all land on this method.
       const judges = await this.judgeRepository.find(query, {
+        select: JUDGE_PUBLIC_FIELDS,
         sort: { createdAt: -1 }
       });
 
@@ -1911,44 +2014,56 @@ class AdminService extends UserService {
         processedPlayerScores.push(calculatedScore);
       }
 
-      // Prepare score document data
-      const scoreDocData = {
+      // HIGH-3: `competitionType` is part of a Score document's identity.
+      // Normalize it ONCE and use the same value for both the lookup and the
+      // write. The lookup used to omit it entirely, so scoring a team in
+      // Competition II found its Competition I document, overwrote the
+      // category, and merged both categories' slips into one playerScores
+      // array — silently destroying the Competition I result.
+      const competitionTypeKey = scoreData.competitionType
+        ? toCompetitionTypeDisplay(scoreData.competitionType)
+        : 'Competition I';
+
+      // The full document identity, matching the unique index on Score.
+      const scoreIdentity = {
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        competition: scoreData.competitionId,
+        competitionType: competitionTypeKey
+      };
+
+      // Fresh payload per attempt — the retry loop below may run this more than
+      // once, and the merge mutates playerScores.
+      const buildScoreDocData = () => ({
         competition: scoreData.competitionId,
         teamId: scoreData.teamId,
         gender: scoreData.gender,
         ageGroup: scoreData.ageGroup,
-        competitionType: scoreData.competitionType || 'Competition I',
+        competitionType: competitionTypeKey,
         playerScores: processedPlayerScores,
         judgeDetails: scoreData.judgeDetails || {},
         timeKeeper: scoreData.timeKeeper || '',
         scorer: scoreData.scorer || '',
         remarks: scoreData.remarks || '',
         isLocked: scoreData.isLocked || false
-      };
-
-      // Implement upsert logic - find existing score record
-      const existingScore = await this.scoreRepository.findOne({
-        teamId: scoreData.teamId,
-        gender: scoreData.gender,
-        ageGroup: scoreData.ageGroup,
-        competition: scoreData.competitionId
       });
 
-      if (existingScore?.isLocked && !scoreData.isFinalSubmit) {
-        throw new ValidationError('Scores are locked and cannot be modified');
-      }
-
-      let savedScore;
-      if (existingScore) {
-        // Merge player scores if updating
-        // For each incoming player score, merge with existing player score if it exists
+      /**
+       * Merge the incoming slips onto an existing document's playerScores.
+       *
+       * Extracted so the retry loop can re-run it against freshly read state.
+       * Semantics are unchanged: judgeSlips upsert by role, per-player finalize
+       * guard, and field-level "only if provided" merging.
+       */
+      const buildMergedPlayerScores = (existingScore) => {
         const mergedPlayerScores = [...existingScore.playerScores];
-        
+
         for (const incomingPlayerScore of processedPlayerScores) {
           const existingPlayerIndex = mergedPlayerScores.findIndex(
             ps => ps.playerId?.toString() === incomingPlayerScore.playerId?.toString()
           );
-          
+
           if (existingPlayerIndex >= 0) {
             // Merge judge scores - keep existing scores and add/update new ones
             const existingPlayerScore = mergedPlayerScores[existingPlayerIndex];
@@ -2011,25 +2126,114 @@ class AdminService extends UserService {
             mergedPlayerScores.push(incomingPlayerScore);
           }
         }
-        
-        scoreDocData.playerScores = mergedPlayerScores;
-        // Keep existing document lock unless admin explicitly locks
-        if (!scoreData.isLocked) {
-          scoreDocData.isLocked = existingScore.isLocked;
+
+        return mergedPlayerScores;
+      };
+
+      // HIGH-4: panel scoring is inherently concurrent — up to five judges
+      // submit for the same performer within seconds. The old flow was
+      // read -> merge in JS -> write the WHOLE playerScores array, so the last
+      // writer silently erased the earlier judges' slips and Panel Review showed
+      // an incomplete panel with no error anywhere.
+      //
+      // Each attempt now re-reads, re-merges and commits under an optimistic
+      // concurrency guard on `__v`. A writer that loses the race matches zero
+      // documents and retries against fresh state instead of clobbering it.
+      //
+      // The merge stays in JavaScript rather than becoming an arrayFilters
+      // positional $set: it upserts judgeSlips by role and enforces the
+      // per-player finalize guard, neither of which a positional update can
+      // express. The version guard makes that merge safe without altering its
+      // semantics.
+      const MAX_SAVE_ATTEMPTS = 5;
+      let savedScore = null;
+      // Tracked outside the loop purely for the log line below — `existingScore`
+      // is scoped per attempt.
+      let didUpdateExisting = false;
+
+      for (let attempt = 1; attempt <= MAX_SAVE_ATTEMPTS && !savedScore; attempt += 1) {
+        const scoreDocData = buildScoreDocData();
+        const existingScore = await this.scoreRepository.findOne(scoreIdentity);
+
+        // HIGH-2: a locked document rejects EVERY write. `isFinalSubmit` used to
+        // short-circuit this check, which meant any caller could reopen a frozen
+        // sheet just by asserting the flag. The only way back is an explicit
+        // admin unlock (unlockScore / unlockScores), which clears isLocked.
+        //
+        // Note this is the *document* lock set by an admin (or by a Scorer's
+        // "Lock & Submit"). The separate per-player finalize lock inside
+        // buildMergedPlayerScores still honours `isFinalSubmit` /
+        // `allowFinalizedEdit`, because the Senior Judge's final submit and the
+        // Scorer's post-finalize edits both operate on unlocked documents.
+        if (existingScore?.isLocked) {
+          throw new ValidationError('Scores are locked and cannot be modified');
         }
-        
-        // Update existing record
-        savedScore = await this.scoreRepository.updateById(existingScore._id, scoreDocData);
-      } else {
-        // Create new record
-        if (scoreData.isFinalSubmit) {
-          scoreDocData.playerScores = processedPlayerScores.map((ps) => ({
-            ...ps,
-            isFinalized: true,
-            finalizedAt: ps.finalizedAt || new Date(),
-          }));
+
+        if (existingScore) {
+          scoreDocData.playerScores = buildMergedPlayerScores(existingScore);
+          // Keep existing document lock unless admin explicitly locks
+          if (!scoreData.isLocked) {
+            scoreDocData.isLocked = existingScore.isLocked;
+          }
+
+          // Optimistic-concurrency guard. Matching on the `__v` we just read
+          // means a judge whose slip was computed from stale state matches zero
+          // documents and loops instead of overwriting the winner's slips.
+          const versionGuard = { _id: existingScore._id };
+          if (typeof existingScore.__v === 'number') {
+            versionGuard.__v = existingScore.__v;
+          }
+
+          const result = await this.scoreRepository.model.updateOne(
+            versionGuard,
+            { $set: scoreDocData, $inc: { __v: 1 } }
+          );
+
+          if (result.matchedCount === 0) {
+            this.logger.warn('Concurrent score write detected; retrying against fresh state', {
+              scoreId: String(existingScore._id),
+              attempt,
+              maxAttempts: MAX_SAVE_ATTEMPTS
+            });
+            continue;
+          }
+
+          savedScore = await this.scoreRepository.findById(existingScore._id);
+          didUpdateExisting = true;
+        } else {
+          // Create new record
+          if (scoreData.isFinalSubmit) {
+            scoreDocData.playerScores = processedPlayerScores.map((ps) => ({
+              ...ps,
+              isFinalized: true,
+              finalizedAt: ps.finalizedAt || new Date(),
+            }));
+          }
+
+          try {
+            savedScore = await this.scoreRepository.create(scoreDocData);
+          } catch (createError) {
+            // Two judges raced to create the first document for this performer.
+            // The unique index rejects the loser, who retries and merges onto
+            // the winner's document instead of failing the submission.
+            const isDuplicateKey = createError?.code === 11000
+              || createError?.cause?.code === 11000;
+            if (isDuplicateKey && attempt < MAX_SAVE_ATTEMPTS) {
+              this.logger.warn('Concurrent score create detected; retrying as an update', {
+                attempt,
+                maxAttempts: MAX_SAVE_ATTEMPTS
+              });
+              continue;
+            }
+            throw createError;
+          }
         }
-        savedScore = await this.scoreRepository.create(scoreDocData);
+      }
+
+      if (!savedScore) {
+        throw new ValidationError(
+          'Could not save scores because another judge is submitting for the same performer. Please try again.'
+        );
       }
 
       this.logger.info('Scores saved successfully', {
@@ -2037,7 +2241,7 @@ class AdminService extends UserService {
         teamId: scoreData.teamId,
         gender: scoreData.gender,
         ageGroup: scoreData.ageGroup,
-        isUpdate: !!existingScore
+        isUpdate: didUpdateExisting
       });
 
       // Emit socket event for real-time updates
@@ -2251,15 +2455,20 @@ class AdminService extends UserService {
    */
   async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus) {
     try {
-      // Query the Competition model to get registered teams
+      // Query the Competition model to get registered teams.
+      // Same projection as getSubmittedTeams — without a `select` these
+      // populated documents carry e-mail addresses and minors' dates of birth
+      // into the response. Applied here AND at the mapping layer below, because
+      // `.toObject()` does not run a schema toJSON transform.
       const competition = await this.competitionRepository.findById(competitionId, {
         populate: [
           {
             path: 'registeredTeams.team',
-            populate: { path: 'coach' }
+            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
           },
           {
-            path: 'registeredTeams.players.player'
+            path: 'registeredTeams.players.player',
+            select: SUBMITTED_TEAM_PLAYER_FIELDS
           }
         ]
       });
@@ -2313,10 +2522,17 @@ class AdminService extends UserService {
           return {
             _id: regTeam.team._id,
             name: regTeam.team.name,
-            coach: regTeam.coach,
+            // Same defect class as CRIT-4: this returned the whole coach and
+            // player documents. `select: false` now hides the bcrypt hash, but
+            // coach/player e-mail and minors' dates of birth were still going
+            // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
+            // the allow-lists getSubmittedTeams projects with, so the two
+            // endpoints cannot drift apart.
+            coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
             players: regTeam.players.map(playerEntry => {
-              // Handle both Mongoose documents and plain objects
-              const playerData = playerEntry.player?.toObject ? playerEntry.player.toObject() : playerEntry.player;
+              // projectFields handles Mongoose documents and plain objects, and
+              // passes an unpopulated ObjectId ref through untouched.
+              const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
               return {
                 ...playerData,
                 ageGroup: playerEntry.ageGroup,
