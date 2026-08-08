@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ProtectedRoute from '@/middleware/protected-route';
 import RouteContext from '@/contexts/RouteContext';
+import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 import {
   Home,
@@ -36,23 +38,58 @@ export { PageLoader };
 
 import { Outlet } from 'react-router-dom';
 
+/**
+ * HIGH-W2: per-role error boundary around the routed content.
+ *
+ * The app previously had ONE boundary, at the root, so any render error
+ * replaced the entire UI — a judge mid-slip lost the screen, the socket and
+ * any unsaved section scores, recoverable only by a full reload. Scoping the
+ * boundary to the role layout contains the failure, and `resetKey` clears it
+ * on navigation so a crashed route does not stay latched.
+ *
+ * @param {{ children: React.ReactNode, homePath: string }} props
+ */
+const RouteErrorBoundary = ({ children, homePath }) => {
+  const location = useLocation();
+  return (
+    <ErrorBoundary
+      resetKey={location.pathname}
+      homePath={homePath}
+      message="This screen ran into a problem. Your session is still active — you can go back and continue."
+    >
+      {children}
+    </ErrorBoundary>
+  );
+};
+
+RouteErrorBoundary.propTypes = {
+  children: PropTypes.node,
+  homePath: PropTypes.string,
+};
+
 // Layout Components
 const PlayerLayout = () => (
   <ProtectedRoute requiredUserType="player">
-    <Outlet />
+    <RouteErrorBoundary homePath="/player/dashboard">
+      <Outlet />
+    </RouteErrorBoundary>
   </ProtectedRoute>
 );
 
 const CoachLayout = () => (
   <ProtectedRoute requiredUserType="coach">
-    <Outlet />
+    <RouteErrorBoundary homePath="/coach/dashboard">
+      <Outlet />
+    </RouteErrorBoundary>
   </ProtectedRoute>
 );
 
 const AdminLayout = () => (
   <ProtectedRoute requiredUserType="admin">
     <RouteContext.Provider value={{ routePrefix: '/admin', storagePrefix: 'admin' }}>
-      <Outlet />
+      <RouteErrorBoundary homePath="/admin/dashboard">
+        <Outlet />
+      </RouteErrorBoundary>
     </RouteContext.Provider>
   </ProtectedRoute>
 );
@@ -60,14 +97,18 @@ const AdminLayout = () => (
 const SuperAdminLayout = () => (
   <ProtectedRoute requiredUserType="superadmin">
     <RouteContext.Provider value={{ routePrefix: '/superadmin', storagePrefix: 'superadmin' }}>
-      <Outlet />
+      <RouteErrorBoundary homePath="/superadmin/dashboard">
+        <Outlet />
+      </RouteErrorBoundary>
     </RouteContext.Provider>
   </ProtectedRoute>
 );
 
 const JudgeLayout = () => (
   <ProtectedRoute requiredUserType="judge">
-    <Outlet />
+    <RouteErrorBoundary homePath="/judge/dashboard">
+      <Outlet />
+    </RouteErrorBoundary>
   </ProtectedRoute>
 );
 
