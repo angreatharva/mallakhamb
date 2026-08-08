@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
+import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -144,7 +143,6 @@ const JudgeDashboard = () => {
     if (!judgeInfo || !selectedCompetitionType) return;
     try {
       setLoading(true);
-      const token = secureStorage.getItem('judge_token');
       
       // Extract competition ID from various possible locations
       const competitionId = judgeInfo.competition?._id || 
@@ -180,11 +178,7 @@ const JudgeDashboard = () => {
         return;
       }
       
-      const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params,
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true
-      });
+      const response = await judgeAPI.getSubmittedTeams(params);
       
       logger.log('Teams fetched successfully:', { count: response.data.data?.length || 0 });
       setTeams(response.data.data || []);

@@ -14,10 +14,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Scale, User, LogOut, ArrowLeft, AlertTriangle, Pencil, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
-import { secureStorage } from '@/utils/auth/secureStorage';
+import { judgeAPI } from '@/services/public/judge.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
@@ -149,7 +147,6 @@ const JudgePanelReview = () => {
   // SR judge: save an override for another judge's score
   const handleSrEditSave = async (targetJudgeType, editedScores, newTotal) => {
     try {
-      const token = secureStorage.getItem('judge_token');
       const breakdown = {
         difficulty: editedScores.difficulty,
         combination: { total: editedScores.combination.total, checked: editedScores.combination.checked },
@@ -172,10 +169,7 @@ const JudgePanelReview = () => {
         breakdown,
         overrideBySenior: true,
       };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
+      await judgeAPI.saveScore(scoreData);
       if (socket?.connected) {
         socket.emit('score_update', {
           ...scoreData,
@@ -214,7 +208,6 @@ const JudgePanelReview = () => {
     }
     setFinalizing(true);
     try {
-      const token = secureStorage.getItem('judge_token');
       const fields = panelScoresToJudgeFields(panelScores);
       const calc = calculateAverageMarks(fields, effectivePanelSize);
       const payload = {
@@ -263,10 +256,7 @@ const JudgePanelReview = () => {
           }),
         }],
       };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, payload, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
+      await judgeAPI.saveScore(payload);
       try {
         const sKey = `judge_submitted_players_${selectedTeam._id}`;
         const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');

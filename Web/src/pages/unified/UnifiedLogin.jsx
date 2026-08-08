@@ -285,10 +285,19 @@ const UnifiedLoginInner = () => {
           }
         );
         
-        console.log('Judge login response:', response.data);
+        // MED-W6: the raw login response was logged here via console.log,
+        // putting the judge's profile and token straight into any shared or
+        // recorded dev session. Terser strips console.* from production
+        // builds, so this was never a production leak — but it bypassed the
+        // project's own logger and there is no reason to print credentials at
+        // all. Log presence, not payload, and route it through the logger.
         const { token, judge, competition } = response.data.data;
-        console.log('Destructured data:', { token: !!token, judge: !!judge, competition: !!competition });
-        
+        logger.log('Judge login response received', {
+          hasToken: !!token,
+          hasJudge: !!judge,
+          hasCompetition: !!competition,
+        });
+
         // Validate that we got the required data
         if (!token || !judge) {
           throw new Error('Invalid login response: missing token or judge data');

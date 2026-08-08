@@ -69,6 +69,18 @@ vi.mock('./useJudgePanelData', () => ({
 
 vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
+// JudgeScoring now reaches the network only through judgeAPI (HIGH-W3).
+// Mocked here so the test never pulls in api-client, which builds real axios
+// instances at module load — this suite is about hook ordering, not transport.
+vi.mock('@/services/public/judge.api', () => ({
+  judgeAPI: {
+    getJudges: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getSubmittedTeams: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getTeamScores: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    saveScore: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
 import JudgeScoring from './JudgeScoring';
 
 describe('HIGH-W1 — conditional hooks in JudgeScoring', () => {

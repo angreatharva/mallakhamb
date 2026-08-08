@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
+import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -84,7 +83,6 @@ const JudgeTeamPlayers = () => {
     if (!judgeInfo || !selectedCompetitionType || !teamId) return;
     try {
       setLoading(true);
-      const token = secureStorage.getItem('judge_token');
       
       logger.log('Fetching team with params:', {
         teamId,
@@ -94,15 +92,11 @@ const JudgeTeamPlayers = () => {
       });
       
       // Fetch team data from public API
-      const response = await axios.get(`${apiConfig.getBaseUrl()}/public/submitted-teams`, {
-        params: {
-          competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-          gender: selectedGender,
-          ageGroup: selectedAgeGroup,
-          competitionType: selectedCompetitionType,
-        },
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
+      const response = await judgeAPI.getSubmittedTeams({
+        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+        gender: selectedGender,
+        ageGroup: selectedAgeGroup,
+        competitionType: selectedCompetitionType,
       });
       const teams = response.data.data || [];
       const found = teams.find((t) => String(t._id) === String(teamId));
@@ -121,13 +115,7 @@ const JudgeTeamPlayers = () => {
 
         // 1. Try judge-specific endpoint
         try {
-          const judgePlayersRes = await axios.get(
-            `${apiConfig.getBaseUrl()}/judge/teams/${teamId}/players`,
-            {
-              headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-              withCredentials: true,
-            }
-          );
+          const judgePlayersRes = await judgeAPI.getTeamPlayers(teamId);
           const judgePlayers = judgePlayersRes.data?.data?.players || judgePlayersRes.data?.players || [];
           judgePlayers.forEach((p) => {
             if (p.hasScore) {
@@ -143,16 +131,12 @@ const JudgeTeamPlayers = () => {
 
         // 2. Query public scores as supplement
         try {
-          const scoresRes = await axios.get(`${apiConfig.getBaseUrl()}/public/scores`, {
-            params: {
-              competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-              teamId,
-              gender: selectedGender,
-              ageGroup: selectedAgeGroup,
-              competitionType: selectedCompetitionType,
-            },
-            headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-            withCredentials: true,
+          const scoresRes = await judgeAPI.getPublicScores({
+            competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+            teamId,
+            gender: selectedGender,
+            ageGroup: selectedAgeGroup,
+            competitionType: selectedCompetitionType,
           });
 
           const scoreDocs = scoresRes.data?.data || [];

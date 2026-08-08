@@ -1,8 +1,60 @@
-import { publicApi } from '../api-client.js';
+/**
+ * Judge API surface.
+ *
+ * HIGH-W3: this module previously sat on `publicApi`, which has **no request
+ * interceptor** — so it would have sent no `Authorization` header and 401'd
+ * against the routes the server authenticated in its Phase 1. Nothing imported
+ * it, so the judge pages each hand-rolled their own axios call with a manual
+ * Bearer header instead, and in doing so lost everything the interceptors on
+ * `api` provide:
+ *
+ *   - the request interceptor that attaches `Authorization` and
+ *     `x-competition-id`, derived from the role in the URL — which resolves to
+ *     `judge` on every /judge/* route, i.e. exactly the token these pages were
+ *     reading by hand
+ *   - the response interceptor that performs a single-flight silent refresh on
+ *     401 and dispatches AUTH_EXPIRED when that fails
+ *
+ * Without the second one, a judge's access token expiring between two
+ * performers produced a raw 401 that each call site swallowed into a
+ * `logger.warn`, so Panel Review rendered an empty panel as though no judge had
+ * submitted yet. No refresh was attempted, no redirect happened, and nothing
+ * surfaced the real cause.
+ *
+ * Rebuilt on `api`. Every judge-facing call belongs here.
+ */
+
+import { api } from '../api-client.js';
 
 export const judgeAPI = {
-  getCompetitions: () => publicApi.get('/public/competitions'),
-  getJudges: (params) => publicApi.get('/public/judges', { params }),
-  getSubmittedTeams: (params) => publicApi.get('/public/submitted-teams', { params }),
-  saveScore: (data) => publicApi.post('/public/save-score', data),
+  /** Anonymous on the server, but routed through `api` so one instance serves this module. */
+  getCompetitions: () => api.get('/public/competitions'),
+
+  /** Panel roster for a category. Authenticated since server Phase 1.4. */
+  getJudges: (params) => api.get('/public/judges', { params }),
+
+  /** Teams registered and submitted for a competition. Authenticated since server Phase 1.4. */
+  getSubmittedTeams: (params) => api.get('/public/submitted-teams', { params }),
+
+  /** Submit or update a judge slip. Authenticated since server Phase 1.1. */
+  saveScore: (data) => api.post('/public/save-score', data),
+
+  /**
+   * Slips already submitted for a category.
+   *
+   * Deliberately the judge-authenticated /judge/scores/team, NOT /public/scores:
+   * the public endpoint is built for the results page, so it returns only locked
+   * documents and drops every player that is not finalized — a panel still being
+   * scored comes back empty, which is exactly the state the judge pages exist to
+   * show.
+   */
+  getTeamScores: (params) => api.get('/judge/scores/team', { params }),
+
+  /** Players on a team, with per-player scored/finalized flags. */
+  getTeamPlayers: (teamId) => api.get(`/judge/teams/${teamId}/players`),
+
+  /** Public results feed, used as a supplement for already-locked scores. */
+  getPublicScores: (params) => api.get('/public/scores', { params }),
 };
+
+export default judgeAPI;

@@ -9,11 +9,28 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { judgeAPI } from '@/services/public/judge.api';
 import { ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown } from './judgeShared';
+
+/**
+ * HIGH-W3: a 401 here means the session is gone, not that the panel is empty.
+ *
+ * These loaders used to swallow every error into a `logger.warn`, so an expired
+ * token rendered Panel Review as though no judge had submitted — the Senior
+ * Judge would see no slips and either re-enter marks or wait. The API client's
+ * response interceptor already attempts a silent refresh and dispatches
+ * AUTH_EXPIRED when that fails; this makes sure the user is told rather than
+ * shown a plausible-looking lie.
+ *
+ * @param {unknown} err - Error from a judgeAPI call
+ * @returns {boolean} true when the error was an auth failure
+ */
+function isAuthFailure(err) {
+  const status = err?.response?.status;
+  return status === 401 || status === 403;
+}
 
 /**
  * A stored judgeSlip keeps only the four section totals — the A/B/C element
@@ -167,18 +184,16 @@ export function useJudgePanelData({ judgeInfo, session }) {
     if (!judgeInfo || !selectedCompetitionType) return;
     const loadPanelSize = async () => {
       try {
-        const token = secureStorage.getItem('judge_token');
         const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
-        const res = await axios.get(`${apiConfig.getBaseUrl()}/public/judges`, {
-          params: {
-            competitionId,
-            gender: selectedGender || judgeInfo.gender,
-            ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
-            competitionTypes: selectedCompetitionType,
-            apparatus: selectedApparatus,
-          },
-          headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-          withCredentials: true,
+        // HIGH-W3: routed through judgeAPI (the `api` instance) so a 401 gets a
+        // silent refresh and, failing that, an AUTH_EXPIRED redirect — instead
+        // of being swallowed below and leaving the panel silently empty.
+        const res = await judgeAPI.getJudges({
+          competitionId,
+          gender: selectedGender || judgeInfo.gender,
+          ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+          competitionTypes: selectedCompetitionType,
+          apparatus: selectedApparatus,
         });
         const judgesData = res.data?.data || [];
         const panelJudges = (Array.isArray(judgesData) ? judgesData : [])
@@ -193,6 +208,11 @@ export function useJudgePanelData({ judgeInfo, session }) {
         panelJudges.forEach((j) => { nameMap[j.judgeType] = j.name; });
         setJudgeNameMap(nameMap);
       } catch (err) {
+        if (isAuthFailure(err)) {
+          // The interceptor has already tried a silent refresh and dispatched
+          // AUTH_EXPIRED. Say so rather than leaving a silently wrong panel size.
+          toast.error('Your session expired. Please sign in again.');
+        }
         logger.warn('Could not load panel size from judges list', err);
       }
     };
@@ -209,19 +229,14 @@ export function useJudgePanelData({ judgeInfo, session }) {
   const fetchExistingScores = useCallback(async () => {
     if (!judgeInfo || !selectedPlayer || !selectedTeam) return;
     try {
-      const token = secureStorage.getItem('judge_token');
       const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
 
-      const res = await axios.get(`${apiConfig.getBaseUrl()}/judge/scores/team`, {
-        params: {
-          competitionId,
-          gender: selectedGender || judgeInfo.gender,
-          ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
-          competitionType: selectedCompetitionType,
-          apparatus: selectedApparatus,
-        },
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true,
+      const res = await judgeAPI.getTeamScores({
+        competitionId,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        competitionType: selectedCompetitionType,
+        apparatus: selectedApparatus,
       });
 
       const teams = res.data?.data || [];
@@ -293,6 +308,11 @@ export function useJudgePanelData({ judgeInfo, session }) {
         setFinalized(true);
       }
     } catch (err) {
+      if (isAuthFailure(err)) {
+        // Critical: without this the Senior Judge sees an empty panel and may
+        // re-enter marks or wait for slips that were never going to load.
+        toast.error('Your session expired — panel data could not be loaded. Please sign in again.');
+      }
       logger.warn('Could not load existing player scores:', err);
     }
   }, [judgeInfo, selectedPlayer, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);

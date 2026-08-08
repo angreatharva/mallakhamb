@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
+import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -466,7 +465,6 @@ const JudgeSlip = () => {
     if (finalized) { toast.error('Panel score is already finalized'); return; }
     setSubmitting(true);
     try {
-      const token = secureStorage.getItem('judge_token');
       const finalScore = calcFinal();
       const breakdown = {
         difficulty: scores.difficulty,
@@ -486,10 +484,9 @@ const JudgeSlip = () => {
         apparatus: selectedApparatus,
         breakdown
       };
-      await axios.post(`${apiConfig.getBaseUrl()}/public/save-score`, scoreData, {
-        headers: { ...apiConfig.getHeaders(), Authorization: `Bearer ${token}` },
-        withCredentials: true
-      });
+      // HIGH-W3: through judgeAPI so a 401 gets a silent refresh rather than
+      // surfacing as a failed submission mid-performance.
+      await judgeAPI.saveScore(scoreData);
       try {
         const sKey = `judge_submitted_players_${selectedTeam._id}`;
         const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
