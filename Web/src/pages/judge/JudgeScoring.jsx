@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X
@@ -192,29 +192,22 @@ const CheckRow = ({ checked, onChange, label, penalty }) => (
   </label>
 );
 
-const JudgeScoring = () => {
+/**
+ * The judge's own scoring slip.
+ *
+ * HIGH-W1: a Scorer must never reach this component. The Scorer/judge branch
+ * now lives in the `JudgeScoring` dispatcher at the bottom of this file, above
+ * every hook call. Do not reintroduce an early return here — the ~17 hooks
+ * below it would then run conditionally, and React throws "Rendered more hooks
+ * than during the previous render" the moment the branch flips on an existing
+ * instance.
+ */
+const JudgeSlip = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
-
-  // Check if current user is a Scorer (from navigation state or user profile)
-  const storedJudgeUser = useMemo(() => {
-    try {
-      const u = secureStorage.getItem('judge_user');
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
-
-  // If scorer, render ScorerScoring component directly without validating player selection
-  if (isScorer) {
-    return <ScorerScoring />;
-  }
 
   // Session, judge identity and the live panel feed are shared with the
   // Panel Review page — see useJudgePanelData.
@@ -1049,6 +1042,37 @@ const JudgeScoring = () => {
       <CopPdfModal isOpen={showCopModal} onClose={() => setShowCopModal(false)} />
     </div>
   );
+};
+
+/**
+ * Hook-free dispatcher for /judge/scoring (fixes HIGH-W1).
+ *
+ * Picks the Scorer view or the judge slip BEFORE any of the hooks inside
+ * `JudgeSlip` run. `useLocation` is the only hook here and is called
+ * unconditionally on every render, so this component's own hook sequence is
+ * always identical. Flipping `isScorer` swaps which CHILD is rendered, and
+ * React unmounts one and mounts the other — a clean remount rather than a
+ * hook-order violation on a single instance.
+ */
+const JudgeScoring = () => {
+  const location = useLocation();
+
+  // Read straight through rather than via useMemo. The previous `useMemo(..., [])`
+  // cached a value read once at mount, so if `secureStorage.getItem` later
+  // evicted an entry it could not decrypt, `isScorer` could change between
+  // renders of the same instance — the exact trigger described in AUDIT.md
+  // HIGH-W1. Reading on every render keeps the branch consistent with storage.
+  let storedJudgeUser = null;
+  try {
+    const raw = secureStorage.getItem('judge_user');
+    storedJudgeUser = raw ? JSON.parse(raw) : null;
+  } catch {
+    storedJudgeUser = null;
+  }
+
+  const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
+
+  return isScorer ? <ScorerScoring /> : <JudgeSlip />;
 };
 
 export default JudgeScoring;

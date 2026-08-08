@@ -1,20 +1,23 @@
 /**
  * Verification for HIGH-W1 in docs/AUDIT.md.
  *
- * JudgeScoring returns <ScorerScoring /> at line ~215, before roughly sixteen
+ * STATUS: FIXED 2026-08-07.
+ *
+ * JudgeScoring used to return <ScorerScoring /> at line ~215, before seventeen
  * hook calls. React requires an identical hook sequence on every render of a
- * component instance, so if `isScorer` changes between renders of the SAME
- * instance, React throws and the tree unmounts — and with only one root
- * ErrorBoundary (HIGH-W2) that blanks the whole app.
+ * component instance, so when `isScorer` changed between renders of the SAME
+ * instance React threw and the tree unmounted — and with only one root
+ * ErrorBoundary (HIGH-W2) that blanked the whole app.
  *
- * The first test positively demonstrates the crash against the real component.
- * The second is written with `test.fails`, so it passes while the bug exists
- * and turns red the moment the early return is lifted above the hooks — at
- * which point swap it for a plain `it` and it becomes a permanent guard.
+ * The fix split the file: `JudgeScoring` is now a hook-free dispatcher whose
+ * only hook is an unconditional `useLocation`, and the slip body lives in
+ * `JudgeSlip`. Flipping the branch swaps which CHILD renders, which React
+ * unmounts and remounts cleanly.
  *
- * Everything below the component under test is stubbed. The hook-count
- * mismatch comes from JudgeScoring's own useState/useRef calls, so stubbing
- * the child hooks does not weaken the reproduction.
+ * These are now plain `it()` regression guards asserting the fixed behaviour.
+ * Everything below the component under test is stubbed; the hook-count
+ * mismatch came from JudgeScoring's own useState/useRef calls, so stubbing the
+ * child hooks does not weaken the guard.
  */
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -81,28 +84,46 @@ describe('HIGH-W1 — conditional hooks in JudgeScoring', () => {
     consoleError.mockRestore();
   });
 
-  it('demonstrates the crash: isScorer flipping between renders throws', () => {
-    // Render 1 — a Scorer arrives from the dashboard, which passes
-    // `isScorer: true` in router state (JudgeDashboard.jsx:262).
+  it('routes a Scorer to the Scorer view', () => {
+    // A Scorer arrives from the dashboard, which passes `isScorer: true` in
+    // router state (JudgeDashboard.jsx:262).
     mockLocation = { state: { isScorer: true }, pathname: '/judge/scoring' };
-    const { rerender, getByTestId } = render(<JudgeScoring />);
+    const { getByTestId } = render(<JudgeScoring />);
 
-    // The early return took effect: none of the ~16 later hooks ran.
     expect(getByTestId('scorer-view')).toBeInTheDocument();
-
-    // Render 2 — the same component instance re-renders with router state that
-    // no longer carries the flag (browser Back, or a redirect that rebuilds
-    // state). With no stored judge to fall back on, isScorer is now false.
-    mockLocation = { state: {}, pathname: '/judge/scoring' };
-
-    expect(() => rerender(<JudgeScoring />)).toThrow(/Rendered more hooks/);
   });
 
-  it.fails('should tolerate isScorer changing between renders', () => {
+  /**
+   * The HIGH-W1 regression guard. Previously this threw
+   * "Rendered more hooks than during the previous render", because the Scorer
+   * branch returned early from inside the component that owns the ~17 hooks.
+   * The branch now lives in a hook-free dispatcher, so flipping it swaps the
+   * child component and React remounts cleanly.
+   */
+  it('tolerates isScorer changing between renders of the same instance', () => {
+    mockLocation = { state: { isScorer: true }, pathname: '/judge/scoring' };
+    const { rerender, getByTestId, queryByTestId } = render(<JudgeScoring />);
+    expect(getByTestId('scorer-view')).toBeInTheDocument();
+
+    // The same instance re-renders with router state that no longer carries the
+    // flag (browser Back, or a redirect that rebuilds state). With no stored
+    // judge to fall back on, isScorer is now false.
+    mockLocation = { state: {}, pathname: '/judge/scoring' };
+
+    expect(() => rerender(<JudgeScoring />)).not.toThrow();
+    // It really did switch branches, rather than silently re-rendering the
+    // Scorer view — otherwise this would pass without proving anything.
+    expect(queryByTestId('scorer-view')).not.toBeInTheDocument();
+  });
+
+  it('does not log a React hook-order error while switching branches', () => {
     mockLocation = { state: { isScorer: true }, pathname: '/judge/scoring' };
     const { rerender } = render(<JudgeScoring />);
 
     mockLocation = { state: {}, pathname: '/judge/scoring' };
     rerender(<JudgeScoring />);
+
+    const logged = consoleError.mock.calls.map((args) => String(args[0] ?? '')).join('\n');
+    expect(logged).not.toMatch(/Rendered more hooks|change in the order of Hooks/);
   });
 });
