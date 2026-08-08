@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,10 +9,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import AuthProvider from '@/contexts/AuthProvider';
 import AppRoutes, { PageLoader } from '@/routes';
+import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 
 function AppContent() {
   const { user, userType, loading, logout: handleLogout } = useAuth();
   const location = useLocation();
+
+  // MED-W5: verify the bundled COP tables against the server's once per load.
+  // Fire-and-forget — a failure here must never block or break scoring; the
+  // bundled tables stay in use either way. It exists so a drift is LOUD instead
+  // of silently persisting wrong scores.
+  useEffect(() => {
+    verifyCopRulesAgainstServer();
+  }, []);
 
   if (loading) {
     return <PageLoader />;

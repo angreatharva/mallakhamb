@@ -53,6 +53,12 @@ export const judgeAPI = {
   /** Players on a team, with per-player scored/finalized flags. */
   getTeamPlayers: (teamId) => api.get(`/judge/teams/${teamId}/players`),
 
+  /**
+   * COP Nov 2022 scoring constants. Anonymous and heavily cached server-side.
+   * Used to detect drift against the bundled tables (MED-W5).
+   */
+  getCopRules: () => api.get('/public/cop-rules'),
+
   /** Public results feed, used as a supplement for already-locked scores. */
   getPublicScores: (params) => api.get('/public/scores', { params }),
 };
