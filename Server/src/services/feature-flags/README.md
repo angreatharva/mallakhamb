@@ -68,6 +68,10 @@ FEATURES_FLAGS={
 Use the feature flag middleware to protect entire routes:
 
 ```javascript
+// NOTE: `feature-flag.middleware.js` was deleted in the 2026-08 audit (MED-4):
+// nothing resolved featureFlagService outside this README, and the middleware
+// had no consumer. The service itself is still registered in bootstrap.js.
+// Recover the middleware from git history if you wire this up.
 const { createFeatureFlagMiddleware } = require('../middleware');
 const container = require('../infrastructure/di-container');
 

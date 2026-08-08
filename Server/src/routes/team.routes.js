@@ -51,9 +51,23 @@ function createTeamRoutes(container) {
     next();
   };
 
+  /**
+   * LOW-5: this sat under a "Public routes" comment with no auth middleware,
+   * but `teamController.getAllTeams` calls
+   * `teamService.getTeamsByCoach(req.user._id)`. With no authenticated user
+   * that threw a TypeError and returned 500 — the route was broken for the
+   * anonymous callers the comment invited.
+   *
+   * The handler is coach-scoped, so the handler was right and the comment was
+   * wrong. Guarded to match. Nothing consumed it anonymously: `teamAPI.getAll`
+   * in the web client is re-exported by the service barrels and imported by
+   * no component; the admin and superadmin team lists use /admin/teams and
+   * /superadmin/teams instead.
+   */
+  router.get('/', authMiddleware, coachAuth, (req, res, next) => getTeamController().getAllTeams(req, res, next));
+
   // Public routes
-  router.get('/', (req, res, next) => getTeamController().getAllTeams(req, res, next));
-  router.get('/:id', teamValidator.getTeamById(), validate, (req, res, next) => 
+  router.get('/:id', teamValidator.getTeamById(), validate, (req, res, next) =>
     getTeamController().getTeamById(req, res, next)
   );
   router.get('/:id/stats', teamValidator.getTeamStats(), validate, (req, res, next) => 

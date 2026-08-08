@@ -10,7 +10,6 @@ Middleware should be applied in the following order for optimal security and fun
 2. **CORS** (`createCorsMiddleware`) - Handle cross-origin requests
 3. **Request Parsing** (express.json, express.urlencoded) - Parse request bodies
 4. **Correlation ID** (`createCorrelationMiddleware`) - Assign unique request IDs
-5. **Request Timing** (`createTimingMiddleware`) - Track request duration
 6. **IP Rate Limiting** (`createIpRateLimitMiddleware`) - Limit requests per IP
 7. **Audit Logging** (`createAuditMiddleware`) - Attach audit logging function
 8. **Authentication** (`createAuthMiddleware`) - Verify JWT tokens
@@ -135,32 +134,6 @@ app.use(correlationMiddleware);
 **Response Headers Added:**
 - `X-Correlation-ID` - Correlation ID for client tracking
 
-### 5. Timing Middleware (`timing.middleware.js`)
-
-Tracks request duration and logs slow requests.
-
-**Exports:**
-- `createTimingMiddleware(container, options)` - Main timing middleware
-- `getRequestDuration(req)` - Get request duration
-
-**Options:**
-- `slowRequestThreshold` - Threshold in ms for slow request warning (default: 1000)
-
-**Usage:**
-```javascript
-const { createTimingMiddleware } = require('./middleware');
-
-const timingMiddleware = createTimingMiddleware(container, {
-  slowRequestThreshold: 500 // Warn if request takes > 500ms
-});
-app.use(timingMiddleware);
-```
-
-**Request Properties Added:**
-- `req.startTime` - Request start timestamp
-
-**Response Headers Added:**
-- `X-Response-Time` - Request duration in milliseconds
 
 ### 6. Security Middleware (`security.middleware.js`)
 
@@ -278,7 +251,6 @@ const {
   createHelmetMiddleware,
   createCorsMiddleware,
   createCorrelationMiddleware,
-  createTimingMiddleware,
   createIpRateLimitMiddleware,
   createAuditMiddleware,
   createAuthMiddleware,
@@ -304,7 +276,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(createCorrelationMiddleware(container));
 
 // 5. Request timing
-app.use(createTimingMiddleware(container, { slowRequestThreshold: 1000 }));
 
 // 6. IP rate limiting
 app.use(createIpRateLimitMiddleware(container));
@@ -405,7 +376,7 @@ describe('Auth Middleware', () => {
 - **Requirement 1.2**: Service Layer Implementation - Middleware uses services
 - **Requirement 13.3**: Middleware Organization - Logical categorization
 - **Requirement 13.5**: Correlation ID middleware - Request tracing
-- **Requirement 13.6**: Request timing middleware - Performance tracking
+- **Requirement 13.6**: request duration is tracked by `metrics.middleware.js`. The separate `timing.middleware.js` was deleted in the 2026-08 audit (MED-4) — it was never mounted and duplicated the metrics middleware's measurement.
 - **Requirement 13.7**: Security middleware - Headers, CORS, rate limiting
 - **Requirement 13.8**: Audit logging middleware - Sensitive operations
 - **Requirement 17.1**: Rate limiting per user - User-based rate limits

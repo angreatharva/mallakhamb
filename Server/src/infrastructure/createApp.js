@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 
 const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, createAuthRateLimitMiddleware, createUserRateLimitMiddleware, createJudgeLoginRateLimitMiddleware } = require('../middleware/security.middleware');
 const { createCsrfMiddleware } = require('../middleware/csrf.middleware');
+const { createCorrelationMiddleware } = require('../middleware/correlation.middleware');
 const { errorHandler, notFoundHandler } = require('../middleware/error.middleware');
 const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('../middleware/metrics.middleware');
 const { loadRoutes } = require('../routes');
@@ -45,7 +46,17 @@ function createApp(container) {
     },
   }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-  
+
+  /**
+   * MED-4: correlation IDs. The CORS config already advertises
+   * `X-Correlation-ID` in both the allow and expose lists
+   * (security.middleware.js), but nothing generated one — so the header was
+   * promised to clients and never sent, and the logger's request-tracing story
+   * was aspirational. Mounted early so every downstream log line and error can
+   * carry the id, and it also provides `req.logger`.
+   */
+  app.use(createCorrelationMiddleware(container));
+
   // Cookie parsing
   app.use(cookieParser());
 
@@ -106,8 +117,19 @@ function createApp(container) {
   const judgeLoginLimiter = createJudgeLoginRateLimitMiddleware(container);
   loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter });
 
-  // Debug endpoints (development only)
-  if (process.env.NODE_ENV !== 'production') {
+  /**
+   * LOW-3: these were gated on `NODE_ENV !== 'production'`, which meant they
+   * were live in staging — a real, internet-reachable environment. They leak
+   * no secrets, but they do leak configuration (allowed origins, CLIENT_URL),
+   * and "not production" is not a security boundary.
+   *
+   * Now off unless ENABLE_DEBUG_ROUTES is explicitly true, and never available
+   * in production regardless of that flag.
+   */
+  const debugRoutesEnabled =
+    process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEBUG_ROUTES === 'true';
+
+  if (debugRoutesEnabled) {
     app.get('/api/debug/cors', (req, res) => {
       res.json({ 
         message: 'CORS test successful',

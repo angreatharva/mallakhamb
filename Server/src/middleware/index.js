@@ -26,10 +26,6 @@ const {
   generateCorrelationId
 } = require('./correlation.middleware');
 const {
-  createTimingMiddleware,
-  getRequestDuration
-} = require('./timing.middleware');
-const {
   createHelmetMiddleware,
   createCorsMiddleware,
   createIpRateLimitMiddleware,
@@ -61,10 +57,6 @@ const {
   auditSensitiveDataAccess,
   auditBulkExport
 } = require('./audit.middleware');
-const {
-  createFeatureFlagMiddleware,
-  attachFeatureFlagChecker
-} = require('./feature-flag.middleware');
 const {
   csrfTokenHandler,
   createCsrfMiddleware,
@@ -101,8 +93,6 @@ module.exports = {
   generateCorrelationId,
   
   // Timing
-  createTimingMiddleware,
-  getRequestDuration,
   
   // Security
   createHelmetMiddleware,
@@ -137,8 +127,6 @@ module.exports = {
   auditBulkExport,
   
   // Feature flags
-  createFeatureFlagMiddleware,
-  attachFeatureFlagChecker,
 
   // CSRF protection
   csrfTokenHandler,
