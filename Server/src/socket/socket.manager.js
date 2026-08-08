@@ -181,14 +181,119 @@ class SocketManager {
   }
 
   /**
+   * Compute the scoring rooms a single judge assignment entitles its holder to.
+   *
+   * Returns BOTH room-id forms, because the codebase addresses the same room as
+   * `scoring_Male_Under18_competition_1` (slug) and
+   * `scoring_Male_Under18_Competition I` (display). Any authorization check that
+   * handles only one form would reject legitimate judges.
+   *
+   * @param {Object} assignment - A judge assignment ({ gender, ageGroup, competitionTypes })
+   * @returns {string[]} Room ids, possibly empty
+   */
+  getRoomIdsForAssignment(assignment) {
+    const { gender, ageGroup, competitionTypes } = assignment || {};
+    if (!gender || !ageGroup) return [];
+
+    const compTypes = (competitionTypes && Array.isArray(competitionTypes) && competitionTypes.length > 0)
+      ? competitionTypes
+      : ['competition_1'];
+
+    const roomIds = [];
+    for (const compType of compTypes) {
+      const rawRoomId = `scoring_${gender}_${ageGroup}_${compType}`;
+      roomIds.push(rawRoomId);
+
+      const normRoomId = `scoring_${gender}_${ageGroup}_${this.normalizeCompetitionType(compType)}`;
+      if (normRoomId !== rawRoomId) {
+        roomIds.push(normRoomId);
+      }
+    }
+    return roomIds;
+  }
+
+  /**
+   * Normalize judge details into the assignment list used everywhere else.
+   * @param {Object} judgeDetails - Result of authorizationService.getJudgeDetails
+   * @returns {Object[]}
+   */
+  getJudgeAssignments(judgeDetails) {
+    if (!judgeDetails) return [];
+    return (judgeDetails.assignments && judgeDetails.assignments.length > 0)
+      ? judgeDetails.assignments
+      : [judgeDetails];
+  }
+
+  /**
+   * HIGH-5: is this judge socket entitled to act in `roomId`?
+   *
+   * Room membership used to be gated on ROLE alone, so any authenticated judge
+   * could join `scoring_Male_Under14_competition_1` — including one assigned to
+   * a different competition, gender or age group — and broadcast forged
+   * `score_updated` events into a live Panel Review.
+   *
+   * The entitled set is exactly the set auto-join uses, so there is only one
+   * predicate and it cannot drift. Results are cached on the socket to avoid a
+   * database read per score event; the cache is populated at connect time.
+   *
+   * @param {Socket} socket - Authenticated socket
+   * @param {string} roomId - Room the socket wants to act in
+   * @returns {Promise<boolean>}
+   */
+  async isJudgeAuthorizedForRoom(socket, roomId) {
+    if (!roomId) return false;
+
+    if (!socket.judgeRoomIds) {
+      // Auto-join may have failed or been skipped; resolve lazily.
+      await this.cacheJudgeAssignments(socket);
+    }
+
+    return socket.judgeRoomIds instanceof Set && socket.judgeRoomIds.has(roomId);
+  }
+
+  /**
+   * Resolve and cache a judge socket's assignments, entitled rooms and the
+   * judgeType per room. Safe to call more than once.
+   * @param {Socket} socket - Authenticated judge socket
+   * @returns {Promise<Object|null>} judgeDetails, or null when unavailable
+   */
+  async cacheJudgeAssignments(socket) {
+    const judgeDetails = await this.authorizationService.getJudgeDetails(socket.userId);
+
+    if (!judgeDetails) {
+      socket.judgeRoomIds = new Set();
+      socket.judgeTypeByRoom = new Map();
+      return null;
+    }
+
+    const roomIds = new Set();
+    const judgeTypeByRoom = new Map();
+
+    for (const assignment of this.getJudgeAssignments(judgeDetails)) {
+      for (const roomId of this.getRoomIdsForAssignment(assignment)) {
+        roomIds.add(roomId);
+        // A judge can hold different roles in different categories, so remember
+        // the role per room rather than assuming one global judgeType.
+        judgeTypeByRoom.set(roomId, assignment.judgeType || judgeDetails.judgeType);
+      }
+    }
+
+    socket.judgeRoomIds = roomIds;
+    socket.judgeTypeByRoom = judgeTypeByRoom;
+    socket.judgeType = judgeDetails.judgeType;
+
+    return judgeDetails;
+  }
+
+  /**
    * Auto-join judge to their assigned scoring room
    * @param {Socket} socket - Socket.IO socket instance with authenticated judge
    */
   async autoJoinJudgeRoom(socket) {
     try {
       // Fetch judge details from authorizationService to get their assignment(s)
-      const judgeDetails = await this.authorizationService.getJudgeDetails(socket.userId);
-      
+      const judgeDetails = await this.cacheJudgeAssignments(socket);
+
       if (!judgeDetails) {
         this.logger.warn('Judge details not found for auto-join', {
           socketId: socket.id,
@@ -197,9 +302,7 @@ class SocketManager {
         return;
       }
 
-      const assignments = (judgeDetails.assignments && judgeDetails.assignments.length > 0)
-        ? judgeDetails.assignments
-        : [judgeDetails];
+      const assignments = this.getJudgeAssignments(judgeDetails);
 
       for (const assignment of assignments) {
         const { gender, ageGroup, competitionTypes, apparatus, judgeType } = assignment;
@@ -219,13 +322,14 @@ class SocketManager {
           : ['competition_1'];
 
         for (const compType of compTypes) {
-          // Raw room format (e.g., scoring_Male_Under18_competition_1)
+          // Both room-id forms come from the same helper the authorization
+          // check uses, so a judge can never be auto-joined to a room they
+          // would then be refused permission to act in.
           const rawRoomId = `scoring_${gender}_${ageGroup}_${compType}`;
-          socket.join(rawRoomId);
-
-          // Normalized room format (e.g., scoring_Male_Under18_Competition I)
           const compTypeValue = this.normalizeCompetitionType(compType);
           const normRoomId = `scoring_${gender}_${ageGroup}_${compTypeValue}`;
+
+          socket.join(rawRoomId);
           if (normRoomId !== rawRoomId) {
             socket.join(normRoomId);
           }

@@ -74,9 +74,23 @@ class ScoringHandler {
       throw new Error('Room ID required');
     }
 
-    // Validate room access
+    // HIGH-5: room access was gated on ROLE alone, so any authenticated judge
+    // could join any scoring room — including one for a competition, gender or
+    // age group they are not assigned to. Admins and superadmins legitimately
+    // observe every room and have no per-category assignment, so they keep
+    // blanket access; judges are held to their actual assignments.
     const validator = async (socket, roomId) => {
-      return ['judge', 'admin', 'superadmin'].includes(socket.userType);
+      if (['admin', 'superadmin'].includes(socket.userType)) {
+        return true;
+      }
+      if (socket.userType !== 'judge') {
+        return false;
+      }
+      if (!String(roomId).startsWith('scoring_')) {
+        // Non-scoring rooms keep the previous role-based behaviour.
+        return true;
+      }
+      return this.socketManager.isJudgeAuthorizedForRoom(socket, roomId);
     };
 
     // Join the room with validation
@@ -131,9 +145,17 @@ class ScoringHandler {
     }
 
     // Room format is scoring_{gender}_{ageGroup}_{competitionType} — not competitionId.
-    // Join already gated by role; allow panel broadcast for scoring rooms.
     const isScoringRoom = String(roomId).startsWith('scoring_');
-    if (!isScoringRoom) {
+    if (isScoringRoom) {
+      // HIGH-5: this branch previously performed NO authorization at all, so any
+      // authenticated judge could broadcast a forged slip into any panel's live
+      // review screen. Membership is now checked against the judge's actual
+      // assignment, using the same predicate as auto-join.
+      const authorized = await this.socketManager.isJudgeAuthorizedForRoom(socket, roomId);
+      if (!authorized) {
+        throw new Error('Not authorized to score in this category');
+      }
+    } else {
       const competitionId = roomId.split('_')[0];
       const hasPermission = await this.authorizationService.canJudgeScore(
         socket.userId,
@@ -144,10 +166,24 @@ class ScoringHandler {
       }
     }
 
+    // HIGH-5: stamp the role from the SOCKET identity, not the payload —
+    // mirroring what Phase 1.2 did for the HTTP path in admin.controller.js.
+    // The one carve-out matches that fix: a genuine Senior Judge may broadcast a
+    // correction to another panel member's slip, because JudgePanelReview's
+    // SrEditModal is a shipped feature (JudgePanelReview.jsx:180). That power
+    // comes from the socket identity; a non-senior sending `overrideBySenior` is
+    // still stamped as themselves.
+    const assignedJudgeType =
+      (socket.judgeTypeByRoom && socket.judgeTypeByRoom.get(roomId)) || socket.judgeType || null;
+    const isSeniorJudge = assignedJudgeType === 'Senior Judge';
+    const effectiveJudgeType = (isSeniorJudge && data.overrideBySenior && judgeType)
+      ? judgeType
+      : (assignedJudgeType || judgeType);
+
     const payload = {
       playerId,
       playerName,
-      judgeType,
+      judgeType: effectiveJudgeType,
       judgeNo: judgeNo || data.judgeNo || null,
       score,
       breakdown,
@@ -178,7 +214,11 @@ class ScoringHandler {
       playerId,
       teamId,
       judgeId: socket.userId,
-      judgeType,
+      // The role actually broadcast, plus what the client claimed — a
+      // divergence between these two is the signature of an impersonation
+      // attempt and is worth being able to grep for.
+      judgeType: effectiveJudgeType,
+      claimedJudgeType: judgeType,
       score,
       hasBreakdown: !!breakdown
     });
