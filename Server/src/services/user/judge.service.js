@@ -15,6 +15,7 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const bcrypt = require('bcryptjs');
+const { getJudgeRoleMapping } = require('../../utils/scoring/judge-slip.util');
 const {
   getLockoutState,
   registerFailedAttempt,
@@ -553,15 +554,10 @@ class JudgeService extends UserService {
 
       const scores = await this.scoreRepository.find(scoreQuery);
 
-      const judgeRoleMap = {
-        'Senior Judge': { field: 'seniorJudge', role: 'SR_JUDGE' },
-        'Judge 1': { field: 'judge1', role: 'J1' },
-        'Judge 2': { field: 'judge2', role: 'J2' },
-        'Judge 3': { field: 'judge3', role: 'J3' },
-        'Judge 4': { field: 'judge4', role: 'J4' }
-      };
-
-      const judgeInfo = judgeRoleMap[judge.judgeType] || { field: 'judge1', role: 'J1' };
+      // Task 3.2: was a second hand-written copy of the panel-role mapping.
+      // If it ever disagreed with the one used to WRITE slips, a judge would
+      // submit into one slot and then be told they had not scored the player.
+      const judgeInfo = getJudgeRoleMapping(judge.judgeType);
       const scoreMap = {};
 
       for (const scoreDoc of scores || []) {
@@ -588,12 +584,13 @@ class JudgeService extends UserService {
       const Player = require('../../models/Player');
       const players = await Player.find({ team: teamId }).lean();
 
+      // CRIT-4 class: this roster used to carry `email` and `dateOfBirth`, and
+      // these are minors. A judge needs a name, a gender and a score — nothing
+      // here reads contact details (JudgeTeamPlayers.jsx:251-258).
       const playersWithScores = players.map(player => ({
         _id: player._id,
         firstName: player.firstName,
         lastName: player.lastName,
-        email: player.email,
-        dateOfBirth: player.dateOfBirth,
         gender: player.gender,
         ageGroup: player.ageGroup,
         score: scoreMap[player._id.toString()]?.score || null,

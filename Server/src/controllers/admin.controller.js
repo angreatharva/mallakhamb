@@ -11,6 +11,10 @@
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
 const { toCompetitionTypeDisplay } = require('../config/cop-rules');
+const {
+  PANEL_JUDGE_TYPES,
+  buildJudgeSlipPlayerScore,
+} = require('../utils/scoring/judge-slip.util');
 
 /**
  * @param {Object} container - DI container
@@ -324,7 +328,6 @@ function createAdminController(container) {
       // documents never do. So the presence of `judgeType` on req.user is the
       // authenticated marker of a judge principal; the body is never trusted
       // for identity.
-      const PANEL_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
       const authJudgeType = typeof req.user?.judgeType === 'string' ? req.user.judgeType : null;
       const isPanelJudge = PANEL_JUDGE_TYPES.includes(authJudgeType);
       const isSeniorJudge = authJudgeType === 'Senior Judge';
@@ -375,52 +378,22 @@ function createAdminController(container) {
       if (isSingleSlipSubmission) {
         // Keep the persisted identity consistent with the authenticated one
         scoreData.judgeType = effectiveJudgeType;
-        // This is a single judge score submission - convert to bulk format
-        const judgeFieldMap = {
-          'Senior Judge': 'seniorJudge',
-          'Judge 1': 'judge1',
-          'Judge 2': 'judge2',
-          'Judge 3': 'judge3',
-          'Judge 4': 'judge4'
-        };
-        const judgeRoleMap = {
-          'Senior Judge': 'SR_JUDGE',
-          'Judge 1': 'J1',
-          'Judge 2': 'J2',
-          'Judge 3': 'J3',
-          'Judge 4': 'J4'
-        };
-        
-        const judgeField = judgeFieldMap[effectiveJudgeType];
-        const breakdown = req.body.breakdown || {};
-        const bonus = breakdown.bonus ?? breakdown.originality ?? 0;
-        
-        // Create a single player score entry
-        scoreData.playerScores = [{
+
+        // MED-6 / task 3.2: the judgeType -> judgeScores-field / judgeSlips-role
+        // translation and the slip shape live in utils/scoring/judge-slip.util,
+        // not here. Controllers do HTTP I/O only (docs/architecture.md), and
+        // this mapping was previously written out by hand in two places that
+        // could drift apart. Resolving WHO is submitting stays above — that is
+        // an authorization decision (HIGH-1); this only builds WHAT they sent.
+        scoreData.playerScores = [buildJudgeSlipPlayerScore({
+          judgeType: effectiveJudgeType,
           playerId: req.body.playerId,
           playerName: req.body.playerName,
-          apparatus: req.body.apparatus || 'Pole Mallakhamb',
-          judgeScores: {
-            [judgeField]: req.body.score
-          },
-          breakdown,
-          // Per-judge detailed slip for Panel Review / audit (v2 judgeSlips).
-          // Carries the full breakdown (element counts, combination checklist)
-          // so re-opening this judge's slip for edit restores the exact
-          // selections, not just the section totals.
-          judgeSlips: [{
-            judgeRole: judgeRoleMap[effectiveJudgeType] || 'J1',
-            difficultyScore: breakdown.difficulty?.total || 0,
-            combinationScore: breakdown.combination?.total || 0,
-            executionScore: breakdown.execution || 0,
-            bonusScore: bonus === 0.20 ? 0.20 : 0,
-            total: req.body.score,
-            breakdown,
-            submittedAt: new Date(),
-            isChiefPrefilled: effectiveJudgeType === 'Senior Judge'
-          }]
-        }];
-        
+          apparatus: req.body.apparatus,
+          score: req.body.score,
+          breakdown: req.body.breakdown,
+        })];
+
         // Ensure required fields are present
         if (!scoreData.teamId) scoreData.teamId = req.body.teamId;
         if (!scoreData.gender) scoreData.gender = req.body.gender;
