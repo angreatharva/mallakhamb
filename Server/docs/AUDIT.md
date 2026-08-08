@@ -6,6 +6,48 @@
 
 Every finding below cites the file and line that produced it. Nothing here is speculative — where a claim depends on runtime behaviour, the code path is quoted.
 
+## Phase 1 status — COMPLETE (2026-08-06)
+
+All eight Phase 1 tasks are implemented and verified. `npm test` → **135 passing, 9 suites** (baseline was 132).
+
+The `tests/security` guards for CRIT-1, CRIT-2, CRIT-4 and HIGH-1 went red as predicted and have been **flipped to plain `test()`** asserting the secure behaviour; the broken-behaviour demonstrations were inverted. Both suites now had to be given a real authenticated judge, since the routes they exercise are no longer anonymous. **HIGH-3's guard remains `test.failing()`** — that defect is Phase 2.1 and is still open.
+
+Deviations from the plan as written, each deliberate and evidenced:
+
+| # | Deviation | Why |
+|---|---|---|
+| 1.1/1.4 | Guard is `requireRole('judge','admin','superadmin')`, not `requireJudge` | `requireJudge` locks out admins who reach the same handler via `admin.routes.js:403`; `requireAdminOrScorer` locks out the entire evaluating panel |
+| 1.2 | Senior Judge may still write another judge's slot when `overrideBySenior` is set | `JudgePanelReview.jsx:150-178` (`SrEditModal`) is a shipped feature. Gated on `req.user.judgeType === 'Senior Judge'`, never on the body flag |
+| 1.4 | `username` retained in the judges projection | `AdminJudges.jsx:518` prefills it into the edit form and re-submits it; dropping it would silently overwrite every judge's login name. Exposure closed by authentication instead |
+| 1.5 | CSRF mounted behind `CSRF_ENABLED`, **default `false`** | `api-client.js:87-94` sends the Bearer header only `if (token)`. A new tab with empty sessionStorage but a live cookie would be 403'd. Flip the flag once the SPA sends `X-CSRF-Token`. **1.5's acceptance criterion therefore holds only with the flag on.** |
+| 1.7 | Judge login uses a dedicated limiter keyed by **username**, not the shared per-IP `authLimiter` | Sharing the 10-per-15-min IP bucket would let five judge tablets behind one venue NAT throttle each other at sign-in. Username keying satisfies both of 1.7's acceptance criteria at once. Verified: 11th attempt on one account → 429, a second judge from the same IP → 200 |
+| 1.8 | `npm audit fix` only; **`--force` not run** | 18 vulns (10 high) → **1**. The `ws`, `socket.io-parser` and `resend`/`svix` chains are resolved with no `package.json` change. The remainder is `nodemailer` ≤9.0.0, whose fix is a breaking major on the e-mail transport — a separate decision |
+
+## Phase 2/3 status — BARELY STARTED (2026-08-07)
+
+Only **3.4 + LOW-1** landed. Everything else in Phase 2 and Phase 3 is still open.
+
+Done:
+- **3.4 migration CLI** — `scripts/migrate.js` wraps `MigrationRunner` (`up`/`down`/`status`). Every API assumption was verified against the real runner (`initialize`, `migrateUp`, `migrateDown`, `getStatus` and its `{total, applied, pending, migrations[]}` shape), plus `bootstrap()` → `{container}` and `databaseConnection.connect/disconnect`. Argument handling and non-zero exit codes tested.
+- **LOW-1** — **`.gitignore` had to be fixed first**: it read `scripts/`, which excludes the *directory*, and git cannot re-include a file whose parent directory is excluded — so `scripts/migrate.js` would have been silently untracked and never deployed. Now `scripts/*` plus `!` negations for the three real tools. The nine npm scripts pointing at non-existent files were deleted (each target verified missing first); all ten remaining scripts resolve.
+- **Web dependency patch** — Phase 1.8 said "both stacks" but only the Server had been done. `Web/` went from **10 vulnerabilities (4 high) → 2 moderate**, closing the `ws` / `socket.io-parser` / `form-data` advisories on the live-scoring transport (MED-W8). The residual 2 are a `react-router` chain.
+
+- **2.1 — HIGH-3 FIXED.** `competitionType` is now part of the Score identity: the unique index is `{teamId, gender, ageGroup, competition, competitionType}` (named `score_identity_unique`), and `saveScores` normalizes the value **once** and uses it for both the lookup and the write. Proven by test: scoring one team in Competition I then Competition II now yields **two** documents (8.5 and 7.2) instead of one merged document. `judge.service.js:592` was checked and is a *different* legacy key (`player`/`judge`/`competition`) — out of scope.
+  - **Migration `003_score_competition_type_identity.js`** replaces the audit's Phase 2.0. Since nobody here can profile production, the migration profiles it itself: it groups documents by the new identity, and if any collision exists it prints the offending ids and **aborts** rather than attempting an index build that would fail or a split that is impossible (the per-slip category was overwritten at write time and is unrecoverable — those results must be re-entered). `ALLOW_LOSSY_SCORE_MIGRATION=true` overrides. It looks the old index up **by name** rather than guessing, and never calls `dropIndexes()`/`syncIndexes()`.
+- **2.2 — HIGH-4 FIXED.** The read-merge-write is now a bounded retry (5 attempts) committing under an optimistic-concurrency guard on `__v`; a writer that loses the race matches zero documents and re-merges against fresh state. Concurrent *creates* are caught via duplicate-key (11000) and retried as updates. The merge itself was extracted to `buildMergedPlayerScores` and left in JavaScript deliberately — it upserts judgeSlips by role and enforces the per-player finalize guard, neither of which a positional `arrayFilters` `$set` can express. Proven by a new test: **three judges submitting simultaneously all keep their slips** (J1/J2/J3 all present), where previously the last writer erased the others.
+- **`getTeamScores` PII (CRIT-4 sibling) FIXED.** Now projects through the same `SUBMITTED_TEAM_*_FIELD_LIST` allow-lists as `getSubmittedTeams`, at **both** the populate and the mapping layer, so the two endpoints cannot drift.
+
+- **2.3 — HIGH-5 FIXED.** Scoring rooms had **no** authorization at all (`if (!isScoringRoom)` skipped the only check), and room membership was gated on role alone. Judges are now held to their actual assignment for both joining and broadcasting; admins/superadmins keep blanket access since they legitimately observe every room and carry no per-category assignment. The entitled-room set is computed by `SocketManager.getRoomIdsForAssignment` — **the same helper auto-join uses**, so a judge can never be auto-joined to a room they would then be refused in, and there is no second predicate to drift. It returns **both** room-id forms (`competition_1` and `Competition I`); handling only one would have rejected legitimate judges. Assignments are cached on the socket at connect, so there is no DB read per score event.
+  - `judgeType` on the broadcast is now stamped from the socket identity rather than the payload, mirroring Phase 1.2's HTTP fix — including the same Senior Judge carve-out, because `JudgePanelReview.jsx:180` emits another judge's role with `overrideBySenior` for the shipped `SrEditModal`. A non-senior sending that flag is still stamped as themselves. The log records both the effective and the claimed role, so impersonation attempts are greppable.
+  - New suite `tests/security/socket-scoring.security.test.js` (9 tests): cross-gender/age/category rejection, both room-id forms, auto-join ⊆ authorized, identity stamping, the non-senior override attempt, and the genuine senior override.
+
+Not started (a five-agent wave was dispatched for these and every agent was killed by an API session limit before making edits; the tree was verified clean of partial work): **2.4** account lockout, **2.5** bcrypt rounds, **2.6** constant-time login, **3.1/3.2** god-object extraction, **3.3** serve COP rules, **3.6** dead middleware, **LOW-2** API versioning, **LOW-3** debug-endpoint flag, **LOW-5** broken anonymous `GET /api/teams`, **3.5** integration tests + CI, and the `nodemailer` breaking-major advisory.
+
+**Verified green at this point:** Server `npm test` → 135 passing / 9 suites. Web `npm test` → 54 passed + 1 expected fail / 7 files, `npm run build` clean.
+> Do **not** run both suites concurrently on one machine — vitest's workers time out under the contention and produce a spurious 7-error failure that looks like a real regression.
+
+**Still open after Phase 1:** HIGH-3 (Score key), HIGH-4 (lost-update race), HIGH-5 (socket authz), the `nodemailer` advisory, and a newly found sibling of CRIT-4 — `getTeamScores` (`admin.service.js:~2427`) returns `coach` and `player.toObject()` wholesale on the authenticated `/api/judge/scores/team` and `/api/admin/scores/team` routes. `select: false` now covers the bcrypt hash there, but coach/player e-mail and minors' dates of birth still go out. Lower severity than CRIT-4 (authenticated-only), not in Phase 1's line ranges — fix with the same `projectFields` allow-list.
+
 ## Verification status
 
 CRIT-1, CRIT-2, CRIT-4, HIGH-1 and HIGH-3 are **reproduced against real code** — real router, controller, service, repository and Mongoose models on an in-memory MongoDB — in `tests/security/`. Run them with:

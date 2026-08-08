@@ -6,6 +6,17 @@
 
 Every finding cites the file and line that produced it.
 
+## Progress status (2026-08-07)
+
+**Done:**
+- **HIGH-W1 — FIXED.** `JudgeScoring` is now a hook-free dispatcher whose only hook is an unconditional `useLocation`; the slip body moved to a new `JudgeSlip` component in the same file. Flipping `isScorer` now swaps which CHILD renders (a clean unmount/remount) instead of changing the hook count on one instance. The `useMemo(..., [])` around the stored-judge read was also removed — caching a value read once at mount was part of the trigger, since a later storage eviction could flip the branch. **17 `rules-of-hooks` errors → 0; project lint 45 → 28 errors.** The `it.fails` guard in `JudgeScoring.hooks.test.jsx` went red as designed and has been flipped to plain `it()`, plus a guard asserting the branch genuinely switches (so it cannot pass vacuously) and one asserting React logs no hook-order error. Web tests: **7 files, 56 passed**; `npm run build` clean.
+- **MED-W8 — FIXED.** `npm audit fix` took `Web/` from **10 vulnerabilities (4 high) → 2 moderate**, closing the `ws`, `socket.io-parser` and `form-data` advisories on the live-scoring transport. Residual: a `react-router` chain.
+- 1.2 (`lint:ci`) and 1.4 (the HIGH-W1 test) were already done on 2026-08-05.
+
+**Not started:** HIGH-W2 (route-level error boundaries, task 1.3), HIGH-W3 (seven modules bypass the API client — verified still 6 modules + `api-client.js`), HIGH-W4 (dead cross-tab `storage` listener, still at `AuthProvider.jsx:92`), all of MED-W1–W7, all of LOW-W1–W4, and Phases 2–4.
+
+> Do **not** run the Server and Web suites concurrently — vitest's fork workers time out under the contention and report ~7 spurious "Failed to start forks worker" errors that look like a real regression.
+
 ## Verification status
 
 HIGH-W1 is **reproduced at runtime** — not merely inferred from lint — in `src/pages/judge/JudgeScoring.hooks.test.jsx`. It renders the real `JudgeScoring` with `location.state.isScorer === true`, then re-renders the same instance without the flag, and asserts React throws `Rendered more hooks than during the previous render`. Run it with:
