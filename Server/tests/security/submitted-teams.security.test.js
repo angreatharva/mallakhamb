@@ -1,20 +1,29 @@
 /**
  * Security verification for GET /api/public/submitted-teams (CRIT-4).
  *
- * admin.service.getSubmittedTeams populates registeredTeams.team.coach,
- * registeredTeams.coach and registeredTeams.players.player with NO select
- * projection, and public.routes.js:97 exposes it behind optionalAuth. That
- * puts full Coach and Player documents — bcrypt hashes, e-mail addresses and
- * minors' dates of birth — into an anonymous response.
+ * Before Phase 1, admin.service.getSubmittedTeams populated
+ * registeredTeams.team.coach, registeredTeams.coach and
+ * registeredTeams.players.player with NO select projection, and
+ * public.routes.js exposed it behind `optionalAuth` — putting full Coach and
+ * Player documents (bcrypt hashes, e-mail addresses and minors' dates of
+ * birth) into an anonymous response.
  *
- * Same convention as public-routes.security.test.js: a plain `it` proves the
- * current broken behaviour, `test.failing` pins the target state and turns red
- * when the fix lands.
+ * STATUS: FIXED in Phase 1 (tasks 1.3 + 1.4). The route now requires
+ * authentication, and the service projects an explicit allow-list at both the
+ * populate and the mapping layer — the latter matters because `.toObject()`
+ * bypasses the schema `toJSON` transform.
+ *
+ * These are now plain `test()` regression guards asserting the secure state.
+ *
+ * A NOTE ON FALSE ALL-CLEARS: during the audit an incompletely wired
+ * AdminService made this endpoint return 500, and a 500 body trivially
+ * satisfies every "does not contain a secret" assertion — the finding briefly
+ * looked fixed when it was not. Every leak assertion below therefore asserts
+ * `status === 200` AND a non-empty payload first.
  */
 
 const express = require('express');
 const request = require('supertest');
-const mongoose = require('mongoose');
 
 const createPublicRoutes = require('../../src/routes/public.routes');
 const createAdminController = require('../../src/controllers/admin.controller');
@@ -22,24 +31,37 @@ const AdminService = require('../../src/services/user/admin.service');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
+const JudgeRepository = require('../../src/repositories/judge.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Competition = require('../../models/Competition');
 const Team = require('../../models/Team');
 const Coach = require('../../models/Coach');
 const Player = require('../../models/Player');
+const Judge = require('../../models/Judge');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
+
+/** Maps an opaque bearer string to the payload a signed JWT would have carried. */
+const issuedTokens = new Map();
+
+function tokenForJudge(judgeDoc) {
+  const value = `test-token-${judgeDoc._id}`;
+  issuedTokens.set(value, { userId: String(judgeDoc._id), userType: 'judge' });
+  return value;
+}
 
 function buildApp() {
   const competitionRepository = new CompetitionRepository(noopLogger);
   const adminRepository = new AdminRepository(noopLogger);
   const scoreRepository = new ScoreRepository(noopLogger);
+  const judgeRepository = new JudgeRepository(noopLogger);
 
   const adminService = new AdminService({
     adminRepository,
     competitionRepository,
     scoreRepository,
+    judgeRepository,
     logger: noopLogger,
   });
 
@@ -53,7 +75,20 @@ function buildApp() {
         case 'config':
           return { get: () => 'test' };
         case 'tokenService':
-          return { generateToken: () => 'stub-token' };
+          return {
+            generateToken: () => 'stub-token',
+            verifyToken: (token) => {
+              const payload = issuedTokens.get(token);
+              if (!payload) {
+                const err = new Error('Token is not valid');
+                err.code = 'INVALID_TOKEN';
+                throw err;
+              }
+              return payload;
+            },
+          };
+        case 'authenticationService':
+          return { getRepositoryByType: () => judgeRepository };
         case 'adminController':
           return createAdminController(container);
         case 'publicController':
@@ -75,8 +110,11 @@ function buildApp() {
 const app = buildApp();
 
 let competitionId;
+let authHeader;
 
 beforeEach(async () => {
+  issuedTokens.clear();
+
   // Saved through the models so the real pre-save hooks hash the passwords.
   const coach = await Coach.create({
     name: 'Coach Example',
@@ -116,70 +154,90 @@ beforeEach(async () => {
   });
 
   competitionId = competition._id;
+
+  const judge = await Judge.create({
+    competition: competition._id,
+    competitionTypes: ['competition_1'],
+    gender: 'Male',
+    ageGroup: 'Under12',
+    judgeNo: 1,
+    judgeType: 'Senior Judge',
+    name: 'Senior Judge One',
+    username: 'srjudge1',
+    password: 'PlaintextSecret1',
+    isActive: true,
+  });
+
+  authHeader = `Bearer ${tokenForJudge(judge)}`;
 });
 
-describe('CRIT-4 — GET /api/public/submitted-teams leaks coach and player records', () => {
-  it('is reachable with no credentials', async () => {
+/** Fetch the roster as an authenticated judge, asserting it really carried data. */
+async function fetchAsJudge() {
+  const res = await request(app)
+    .get('/api/public/submitted-teams')
+    .set('Authorization', authHeader)
+    .query({ competitionId: competitionId.toString() });
+
+  // Fixture guard — see the false-all-clear note at the top of this file.
+  expect(res.status).toBe(200);
+  expect(res.body.success).toBe(true);
+  expect(res.body.data).toHaveLength(1);
+
+  return res;
+}
+
+describe('CRIT-4 — GET /api/public/submitted-teams (FIXED)', () => {
+  test('should require authentication', async () => {
     const res = await request(app)
       .get('/api/public/submitted-teams')
       .query({ competitionId: competitionId.toString() });
 
-    expect(res.status).toBe(200);
-    // Guards the fixture itself: an incomplete AdminService wiring returns 500
-    // here, and a 500 body trivially satisfies every "does not contain a
-    // secret" assertion below — producing a false all-clear.
-    expect(res.body.success).toBe(true);
-    expect(res.body.data).toHaveLength(1);
+    expect(res.status).toBe(401);
   });
 
-  it('demonstrates the leak: coach and player secrets are in the anonymous response', async () => {
-    const res = await request(app)
-      .get('/api/public/submitted-teams')
-      .query({ competitionId: competitionId.toString() });
+  test('the fixture really does store bcrypt hashes (pre-save hooks ran)', async () => {
+    // `password` is `select: false` since Phase 1.3, so it must be requested.
+    const storedCoach = await Coach.findOne({ email: 'coach@example.com' }).select('+password');
+    const storedPlayer = await Player.findOne({ email: 'minor@example.com' }).select('+password');
 
-    expect(res.status).toBe(200); // see the fixture note above
-    const body = JSON.stringify(res.body);
-
-    const storedCoach = await Coach.findOne({ email: 'coach@example.com' });
-    const storedPlayer = await Player.findOne({ email: 'minor@example.com' });
-
-    // Sanity: the pre-save hooks really did hash these.
     expect(storedCoach.password).toMatch(/^\$2[aby]\$/);
     expect(storedPlayer.password).toMatch(/^\$2[aby]\$/);
-
-    // The actual credentials are serialized over the wire.
-    expect(body).toContain(storedCoach.password);
-    expect(body).toContain(storedPlayer.password);
-
-    // …along with contact details and a minor's date of birth.
-    expect(body).toContain('coach@example.com');
-    expect(body).toContain('minor@example.com');
-    expect(body).toContain('2014-05-01');
   });
 
-  test.failing('should not expose any bcrypt hash', async () => {
-    const res = await request(app)
-      .get('/api/public/submitted-teams')
-      .query({ competitionId: competitionId.toString() });
-
+  test('should not expose any bcrypt hash', async () => {
+    const res = await fetchAsJudge();
     expect(JSON.stringify(res.body)).not.toMatch(/\$2[aby]\$/);
   });
 
-  test.failing("should not expose a minor's date of birth or e-mail", async () => {
-    const res = await request(app)
-      .get('/api/public/submitted-teams')
-      .query({ competitionId: competitionId.toString() });
+  test("should not expose a minor's date of birth or e-mail", async () => {
+    const res = await fetchAsJudge();
 
     const body = JSON.stringify(res.body);
     expect(body).not.toContain('minor@example.com');
     expect(body).not.toContain('2014-05-01');
   });
 
-  test.failing('should require authentication', async () => {
-    const res = await request(app)
-      .get('/api/public/submitted-teams')
-      .query({ competitionId: competitionId.toString() });
+  test('should not expose the coach e-mail', async () => {
+    const res = await fetchAsJudge();
+    expect(JSON.stringify(res.body)).not.toContain('coach@example.com');
+  });
 
-    expect(res.status).toBe(401);
+  test('still returns the fields the judge dashboard renders', async () => {
+    const res = await fetchAsJudge();
+
+    const entry = res.body.data[0];
+    // JudgeDashboard.jsx renders coach.name; JudgeTeamPlayers.jsx and
+    // ScorerScoring.jsx render player first/last name and gender. Narrowing the
+    // projection past these would break the scoring screens.
+    expect(entry.coach?.name).toBe('Coach Example');
+    expect(entry.players).toHaveLength(1);
+
+    // Each entry is { player, ageGroup, gender, apparatus, ... } — the player
+    // document is nested, which is how JudgeTeamPlayers.jsx consumes it.
+    const entryPlayer = entry.players[0].player;
+    expect(entryPlayer.firstName).toBe('Minor');
+    expect(entryPlayer.lastName).toBe('Athlete');
+    expect(entryPlayer._id).toBeTruthy();
+    expect(entry.players[0].gender).toBe('Male');
   });
 });

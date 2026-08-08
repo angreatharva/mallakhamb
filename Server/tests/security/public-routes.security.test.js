@@ -1,22 +1,29 @@
 /**
  * Security verification for the public router.
  *
- * These tests exist to PROVE the findings in docs/AUDIT.md against real
- * code — real Express router, real controller, real service, real repository,
- * real Mongoose models on an in-memory MongoDB. Nothing here is mocked except
- * the two sibling controllers the public router resolves but does not exercise.
+ * These tests PROVE the findings in docs/AUDIT.md against real code — real
+ * Express router, real auth middleware, real controller, real service, real
+ * repository, real Mongoose models on an in-memory MongoDB. Nothing is mocked
+ * except the token service (so a test can mint an identity without signing a
+ * JWT), the authentication service's repository lookup, and the two sibling
+ * controllers the public router resolves but never exercises.
  *
- * They are written as `test.failing()`: Jest treats them as passing while the
- * described behaviour is still broken, and FAILS them the moment the behaviour
- * is fixed. That keeps `npm test` green today while guaranteeing this file
- * shouts the moment a fix lands — at which point flip the `test.failing()` to
- * `test()` and it becomes a permanent regression guard.
+ * STATUS after Phase 1 (see docs/AUDIT.md):
+ *   CRIT-1  FIXED — POST /api/public/save-score now requires authentication
+ *   CRIT-2  FIXED — GET  /api/public/judges requires auth and drops the hash
+ *   HIGH-1  FIXED — the slip is bound to the authenticated judge, not the body
+ *   HIGH-3  OPEN  — the Score key still omits competitionType (Phase 2.1)
  *
- * Findings covered:
- *   CRIT-1  POST /api/public/save-score accepts unauthenticated writes
- *   CRIT-2  GET  /api/public/judges leaks bcrypt password hashes
- *   HIGH-1  the submitting judge's identity is taken from the request body
- *   HIGH-3  the Score document key omits competitionType, so categories collide
+ * The CRIT-1/CRIT-2/HIGH-1 cases are now plain `test()` regression guards: they
+ * assert the secure behaviour and must stay green forever. HIGH-3 remains a
+ * `test.failing()` — it passes while the defect exists and turns red the moment
+ * Phase 2.1 lands, which is the signal to flip it too.
+ *
+ * A NOTE ON FALSE ALL-CLEARS (learned the hard way during the audit): a
+ * "does not leak X" assertion is worthless if the endpoint errored, because an
+ * error body satisfies every `not.toContain(secret)` check. Every leak
+ * assertion below therefore asserts `status === 200` and a NON-EMPTY payload
+ * first, so it can only pass against a response that really carried the data.
  */
 
 const express = require('express');
@@ -38,7 +45,23 @@ const Score = require('../../models/Score');
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 /**
- * Build the real public router over real services.
+ * Tokens minted for the current test. Maps an opaque bearer string to the
+ * payload the real auth middleware would have decoded from a signed JWT.
+ */
+const issuedTokens = new Map();
+
+/** Mint a bearer token for a persisted judge document. */
+function tokenForJudge(judgeDoc) {
+  const value = `test-token-${judgeDoc._id}`;
+  issuedTokens.set(value, {
+    userId: String(judgeDoc._id),
+    userType: 'judge',
+  });
+  return value;
+}
+
+/**
+ * Build the real public router over real services and the REAL auth middleware.
  *
  * Only publicController and paymentController are stubbed — the public router
  * resolves them at construction time, but none of the routes under test touch
@@ -68,7 +91,22 @@ function buildApp() {
         case 'config':
           return { get: () => 'test' };
         case 'tokenService':
-          return { generateToken: () => 'stub-token' };
+          return {
+            generateToken: () => 'stub-token',
+            // Mirrors TokenService.verifyToken: returns the payload or throws.
+            verifyToken: (token) => {
+              const payload = issuedTokens.get(token);
+              if (!payload) {
+                const err = new Error('Token is not valid');
+                err.code = 'INVALID_TOKEN';
+                throw err;
+              }
+              return payload;
+            },
+          };
+        case 'authenticationService':
+          // The middleware loads the principal through this repository.
+          return { getRepositoryByType: () => judgeRepository };
         case 'adminController':
           return createAdminController(container);
         case 'publicController':
@@ -94,6 +132,22 @@ const competitionId = new mongoose.Types.ObjectId();
 const teamId = new mongoose.Types.ObjectId();
 const playerId = new mongoose.Types.ObjectId();
 
+/** Persist a judge exactly the way production does (pre-save hook hashes). */
+function createJudge({ judgeNo, judgeType, name, username }) {
+  return Judge.create({
+    competition: competitionId,
+    competitionTypes: ['competition_1', 'competition_2'],
+    gender: 'Male',
+    ageGroup: 'Under14',
+    judgeNo,
+    judgeType,
+    name,
+    username,
+    password: 'PlaintextSecret1',
+    isActive: true,
+  });
+}
+
 /** A valid score submission body, exactly as the judge UI shapes it. */
 const slip = (overrides = {}) => ({
   competition: competitionId.toString(),
@@ -115,137 +169,163 @@ const slip = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('CRIT-2 — GET /api/public/judges credential disclosure', () => {
+beforeEach(() => {
+  issuedTokens.clear();
+});
+
+describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () => {
+  let seniorJudge;
+
   beforeEach(async () => {
-    // Saved through the model so the real pre-save hook hashes the password,
-    // i.e. exactly how a judge is created in production.
-    await Judge.create({
-      competition: competitionId,
-      competitionTypes: ['competition_1'],
-      gender: 'Male',
-      ageGroup: 'Under14',
+    seniorJudge = await createJudge({
       judgeNo: 1,
       judgeType: 'Senior Judge',
       name: 'Senior Judge One',
       username: 'srjudge1',
-      password: 'PlaintextSecret1',
-      isActive: true,
     });
   });
 
-  it('confirms the endpoint is reachable with no credentials at all', async () => {
+  test('should require authentication', async () => {
     const res = await request(app)
       .get('/api/public/judges')
       .query({ competitionId: competitionId.toString() });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data).toHaveLength(1);
+    expect(res.status).toBe(401);
   });
 
-  it('confirms the stored password really is a bcrypt hash (pre-save hook ran)', async () => {
-    const judge = await Judge.findOne({ username: 'srjudge1' });
+  test('the stored password really is a bcrypt hash (pre-save hook ran)', async () => {
+    // `password` is now `select: false` (Phase 1.3), so it must be asked for
+    // explicitly — which is precisely why it no longer reaches any response.
+    const judge = await Judge.findOne({ username: 'srjudge1' }).select('+password');
     expect(judge.password).toMatch(/^\$2[aby]\$/);
     expect(judge.password).not.toBe('PlaintextSecret1');
   });
 
-  // Positive demonstration of the leak. The `test.failing` cases below assert
-  // the absence of these fields, and a `test.failing` passes for ANY thrown
-  // error — so the finding is pinned down here, where the assertion only holds
-  // if the hash is genuinely in the HTTP response body.
-  it('demonstrates the leak: the bcrypt hash is in the anonymous response body', async () => {
+  test('does not expose the password hash to an authenticated judge', async () => {
     const res = await request(app)
       .get('/api/public/judges')
+      .set('Authorization', `Bearer ${tokenForJudge(seniorJudge)}`)
       .query({ competitionId: competitionId.toString() });
 
-    const judge = res.body.data[0];
-
-    expect(judge.password).toMatch(/^\$2[aby]\$/);
-    expect(judge.username).toBe('srjudge1');
-
-    // And it matches the stored hash byte for byte — this is the real credential.
-    const stored = await Judge.findOne({ username: 'srjudge1' });
-    expect(judge.password).toBe(stored.password);
-
-    // Serialized over the wire, not just present on a Mongoose document.
-    expect(JSON.stringify(res.body)).toContain(stored.password);
-  });
-
-  test.failing('should NOT expose the password hash to an anonymous caller', async () => {
-    const res = await request(app)
-      .get('/api/public/judges')
-      .query({ competitionId: competitionId.toString() });
+    // Prove the endpoint actually returned the roster before asserting absence,
+    // otherwise an error body would satisfy the check trivially.
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
 
     expect(res.body.data[0]).not.toHaveProperty('password');
+
+    const stored = await Judge.findOne({ username: 'srjudge1' }).select('+password');
+    expect(JSON.stringify(res.body)).not.toContain(stored.password);
   });
 
-  test.failing('should NOT expose the judge username to an anonymous caller', async () => {
+  test('keeps the fields panel-size detection depends on', async () => {
     const res = await request(app)
       .get('/api/public/judges')
+      .set('Authorization', `Bearer ${tokenForJudge(seniorJudge)}`)
       .query({ competitionId: competitionId.toString() });
-
-    expect(res.body.data[0]).not.toHaveProperty('username');
-  });
-
-  test.failing('should require authentication', async () => {
-    const res = await request(app)
-      .get('/api/public/judges')
-      .query({ competitionId: competitionId.toString() });
-
-    expect(res.status).toBe(401);
-  });
-});
-
-describe('CRIT-1 — POST /api/public/save-score accepts anonymous writes', () => {
-  test.failing('should reject an unauthenticated score submission', async () => {
-    const res = await request(app).post('/api/public/save-score').send(slip());
-    expect(res.status).toBe(401);
-  });
-
-  it('demonstrates that an anonymous submission is persisted', async () => {
-    const res = await request(app).post('/api/public/save-score').send(slip());
 
     expect(res.status).toBe(200);
+    // useJudgePanelData.js and ScorerScoring.jsx filter the panel on `name`;
+    // dropping it silently breaks panel-size detection. See AUDIT.md 1.4.
+    expect(res.body.data[0].name).toBe('Senior Judge One');
+    expect(res.body.data[0].judgeType).toBe('Senior Judge');
+  });
 
-    const stored = await Score.findOne({ teamId, competition: competitionId });
-    expect(stored).not.toBeNull();
-    expect(stored.playerScores).toHaveLength(1);
-    expect(stored.playerScores[0].judgeScores.judge1).toBe(8.5);
+  /**
+   * DELIBERATE DEVIATION from the audit's suggested `{ judgeType, name, isActive }`
+   * projection. `username` is retained because AdminJudges.jsx prefills it into
+   * the edit form and re-submits it — dropping it would silently overwrite every
+   * judge's login name on the next edit. CRIT-2's username exposure is closed by
+   * authentication instead: anonymous callers get 401 (asserted above), and any
+   * authenticated judge could already read usernames via /api/judge/judges.
+   * This test documents that as an intentional decision, not an oversight.
+   */
+  test('still returns username to authenticated callers (intentional)', async () => {
+    const res = await request(app)
+      .get('/api/public/judges')
+      .set('Authorization', `Bearer ${tokenForJudge(seniorJudge)}`)
+      .query({ competitionId: competitionId.toString() });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].username).toBe('srjudge1');
   });
 });
 
-describe('HIGH-1 — judge identity is taken from the request body', () => {
-  it('demonstrates impersonation: an anonymous caller writes the Senior Judge slot and locks it', async () => {
+describe('CRIT-1 — POST /api/public/save-score rejects anonymous writes (FIXED)', () => {
+  test('should reject an unauthenticated score submission', async () => {
+    const res = await request(app).post('/api/public/save-score').send(slip());
+    expect(res.status).toBe(401);
+  });
+
+  test('an anonymous submission is not persisted', async () => {
+    await request(app).post('/api/public/save-score').send(slip());
+
+    const stored = await Score.findOne({ teamId, competition: competitionId });
+    expect(stored).toBeNull();
+  });
+
+  test('rejects a token that does not resolve to a real principal', async () => {
     const res = await request(app)
       .post('/api/public/save-score')
-      .send(slip({ judgeType: 'Senior Judge', score: 10, isFinalSubmit: true }));
+      .set('Authorization', 'Bearer forged-token')
+      .send(slip());
+
+    expect(res.status).toBe(401);
+    expect(await Score.findOne({ teamId, competition: competitionId })).toBeNull();
+  });
+});
+
+describe('HIGH-1 — the slip is bound to the authenticated judge (FIXED)', () => {
+  let judgeOne;
+  let seniorJudge;
+
+  beforeEach(async () => {
+    judgeOne = await createJudge({
+      judgeNo: 2,
+      judgeType: 'Judge 1',
+      name: 'Judge One',
+      username: 'judge1',
+    });
+    seniorJudge = await createJudge({
+      judgeNo: 1,
+      judgeType: 'Senior Judge',
+      name: 'Senior Judge One',
+      username: 'srjudge1',
+    });
+  });
+
+  test('should not let an anonymous caller write to the Senior Judge slot', async () => {
+    await request(app)
+      .post('/api/public/save-score')
+      .send(slip({ judgeType: 'Senior Judge', score: 10 }));
+
+    const stored = await Score.findOne({ teamId, competition: competitionId });
+    expect(stored).toBeNull();
+  });
+
+  /**
+   * The decisive HIGH-1 guard. Judge 1 authenticates and asserts
+   * `judgeType: 'Senior Judge'` in the body — the exact impersonation the audit
+   * described. The score must land in Judge 1's own slot.
+   */
+  test('a judge asserting another role in the body still writes their own slot', async () => {
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', `Bearer ${tokenForJudge(judgeOne)}`)
+      .send(slip({ judgeType: 'Senior Judge', score: 10 }));
 
     expect(res.status).toBe(200);
 
     const stored = await Score.findOne({ teamId, competition: competitionId });
     const performer = stored.playerScores[0];
 
-    expect(performer.judgeScores.seniorJudge).toBe(10);
-    expect(performer.isFinalized).toBe(true);
-    expect(performer.finalizedAt).toBeInstanceOf(Date);
-
-    // The slip is recorded against the Senior Judge role with no way to tell
-    // it did not come from the Senior Judge.
-    expect(performer.judgeSlips.map((s) => s.judgeRole)).toContain('SR_JUDGE');
+    expect(performer.judgeScores.judge1).toBe(10);
+    expect(performer.judgeScores.seniorJudge ?? 0).not.toBe(10);
+    expect(performer.judgeSlips.map((s) => s.judgeRole)).toContain('J1');
+    expect(performer.judgeSlips.map((s) => s.judgeRole)).not.toContain('SR_JUDGE');
   });
 
-  test.failing(
-    'should not let a caller write to the Senior Judge slot just by asserting it',
-    async () => {
-      await request(app)
-        .post('/api/public/save-score')
-        .send(slip({ judgeType: 'Senior Judge', score: 10 }));
-
-      const stored = await Score.findOne({ teamId, competition: competitionId });
-      expect(stored?.playerScores?.[0]?.judgeScores?.seniorJudge ?? 0).not.toBe(10);
-    }
-  );
-
-  test.failing('should not let an anonymous caller finalize and lock a performer', async () => {
+  test('should not let an anonymous caller finalize and lock a performer', async () => {
     await request(app)
       .post('/api/public/save-score')
       .send(slip({ judgeType: 'Senior Judge', score: 10, isFinalSubmit: true }));
@@ -253,46 +333,136 @@ describe('HIGH-1 — judge identity is taken from the request body', () => {
     const stored = await Score.findOne({ teamId, competition: competitionId });
     expect(stored?.playerScores?.[0]?.isFinalized).not.toBe(true);
   });
+
+  test('a non-senior judge cannot trigger Final Submit', async () => {
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', `Bearer ${tokenForJudge(judgeOne)}`)
+      .send(slip({ judgeType: 'Senior Judge', score: 10, isFinalSubmit: true }));
+
+    expect(res.status).toBe(403);
+
+    const stored = await Score.findOne({ teamId, competition: competitionId });
+    expect(stored?.playerScores?.[0]?.isFinalized).not.toBe(true);
+  });
+
+  test('the Senior Judge can Final Submit', async () => {
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', `Bearer ${tokenForJudge(seniorJudge)}`)
+      .send(slip({ judgeType: 'Judge 1', score: 9.1, isFinalSubmit: true }));
+
+    expect(res.status).toBe(200);
+
+    const stored = await Score.findOne({ teamId, competition: competitionId });
+    const performer = stored.playerScores[0];
+    // Bound to the Senior Judge's own slot — the body's 'Judge 1' is ignored,
+    // because `overrideBySenior` was not set.
+    expect(performer.judgeScores.seniorJudge).toBe(9.1);
+    expect(performer.isFinalized).toBe(true);
+  });
 });
 
-describe('HIGH-3 — the Score key omits competitionType, so categories collide', () => {
-  test.failing(
-    'scoring the same team in Competition II should not overwrite its Competition I document',
-    async () => {
-      await request(app)
-        .post('/api/public/save-score')
-        .send(slip({ competitionType: 'competition_1', judgeType: 'Judge 1', score: 8.5 }));
+describe('HIGH-3 — competitionType is part of the Score identity (FIXED)', () => {
+  let judgeOne;
 
-      await request(app)
-        .post('/api/public/save-score')
-        .send(slip({ competitionType: 'competition_2', judgeType: 'Judge 1', score: 7.2 }));
+  beforeEach(async () => {
+    judgeOne = await createJudge({
+      judgeNo: 2,
+      judgeType: 'Judge 1',
+      name: 'Judge One',
+      username: 'judge1',
+    });
+  });
 
-      const docs = await Score.find({ teamId, competition: competitionId });
-
-      // Expected: two documents, one per category.
-      // Actual: one document whose competitionType has been overwritten and
-      // whose playerScores now merge both categories.
-      expect(docs).toHaveLength(2);
-    }
-  );
-
-  it('demonstrates the collision: one document, last category wins', async () => {
-    await request(app)
-      .post('/api/public/save-score')
-      .send(slip({ competitionType: 'competition_1', judgeType: 'Judge 1', score: 8.5 }));
+  test('scoring the same team in Competition II does not overwrite its Competition I document', async () => {
+    const auth = `Bearer ${tokenForJudge(judgeOne)}`;
 
     await request(app)
       .post('/api/public/save-score')
-      .send(slip({ competitionType: 'competition_2', judgeType: 'Judge 2', score: 7.2 }));
+      .set('Authorization', auth)
+      .send(slip({ competitionType: 'competition_1', score: 8.5 }));
+
+    await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', auth)
+      .send(slip({ competitionType: 'competition_2', score: 7.2 }));
+
+    const docs = await Score.find({ teamId, competition: competitionId }).sort({ competitionType: 1 });
+
+    // One document per category, each keeping its own marks.
+    expect(docs).toHaveLength(2);
+    expect(docs.map((d) => d.competitionType).sort()).toEqual(['Competition I', 'Competition II']);
+
+    const byType = Object.fromEntries(docs.map((d) => [d.competitionType, d]));
+    expect(byType['Competition I'].playerScores[0].judgeScores.judge1).toBe(8.5);
+    expect(byType['Competition II'].playerScores[0].judgeScores.judge1).toBe(7.2);
+  });
+
+  test('a payload with no competitionType still defaults to Competition I', async () => {
+    const auth = `Bearer ${tokenForJudge(judgeOne)}`;
+    const body = slip({ score: 9.0 });
+    delete body.competitionType;
+
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', auth)
+      .send(body);
+
+    expect(res.status).toBe(200);
 
     const docs = await Score.find({ teamId, competition: competitionId });
-
     expect(docs).toHaveLength(1);
-    expect(docs[0].competitionType).toBe('Competition II');
+    expect(docs[0].competitionType).toBe('Competition I');
+  });
+});
 
-    // Both categories' slips are now merged onto the same performer.
+describe('HIGH-4 — concurrent judge submissions do not lose slips (FIXED)', () => {
+  let judgeOne;
+  let judgeTwo;
+  let judgeThree;
+
+  beforeEach(async () => {
+    judgeOne = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', username: 'judge1' });
+    judgeTwo = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', username: 'judge2' });
+    judgeThree = await createJudge({ judgeNo: 4, judgeType: 'Judge 3', name: 'Judge Three', username: 'judge3' });
+  });
+
+  /**
+   * The decisive HIGH-4 guard. Three judges submit for the same performer at
+   * once. Previously each read the same document, merged in JavaScript and
+   * wrote the WHOLE playerScores array, so the last writer erased the others —
+   * Panel Review then showed an incomplete panel with no error anywhere.
+   */
+  test('three simultaneous submissions all survive', async () => {
+    const submissions = [
+      { judge: judgeOne, score: 8.1, field: 'judge1' },
+      { judge: judgeTwo, score: 8.2, field: 'judge2' },
+      { judge: judgeThree, score: 8.3, field: 'judge3' },
+    ];
+
+    const responses = await Promise.all(
+      submissions.map(({ judge, score }) =>
+        request(app)
+          .post('/api/public/save-score')
+          .set('Authorization', `Bearer ${tokenForJudge(judge)}`)
+          .send(slip({ score }))
+      )
+    );
+
+    for (const res of responses) {
+      expect(res.status).toBe(200);
+    }
+
+    const docs = await Score.find({ teamId, competition: competitionId });
+    expect(docs).toHaveLength(1);
+
     const performer = docs[0].playerScores[0];
-    expect(performer.judgeScores.judge1).toBe(8.5); // from Competition I
-    expect(performer.judgeScores.judge2).toBe(7.2); // from Competition II
+    for (const { score, field } of submissions) {
+      expect(performer.judgeScores[field]).toBe(score);
+    }
+
+    // Every judge's slip is recorded, not just the last writer's.
+    expect(performer.judgeSlips.map((s) => s.judgeRole).sort()).toEqual(['J1', 'J2', 'J3']);
   });
 });
