@@ -14,6 +14,7 @@ import { AuthContext } from '@/contexts/AuthContext';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
+import { authAPI } from '@/services/auth/auth.api';
 import {
   authEventBus,
   AUTH_EXPIRED,
@@ -45,7 +46,7 @@ export default function AuthProvider({ children }) {
           const parsedUser = JSON.parse(userData);
           setUser(parsedUser);
           setUserType(currentRole);
-          return;
+          return true;
         } catch (error) {
           logger.error('Failed to parse user data:', error);
         }
@@ -79,9 +80,47 @@ export default function AuthProvider({ children }) {
   // --- Single consolidated effect for auth loading ---
   // Replaces the 3 redundant useEffects that were in App.jsx
   useEffect(() => {
-    loadAuthData();
-    setLoading(false);
-  }, [loadAuthData]);
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      const restored = loadAuthData();
+      if (restored || !currentRole) {
+        setLoading(false);
+        return;
+      }
+
+      // MED-W1: storage is empty but the httpOnly cookie may still be valid.
+      // obfuscatedStorage writes sessionStorage, which is per-tab and does not
+      // survive a tab close, while the cookie is origin-scoped and does. So a
+      // second tab — or one whose storage was evicted — rendered a logged-out
+      // UI even though the server still considered the user authenticated, and
+      // there was no way to recover short of logging in again.
+      //
+      // Ask the server who we are. A 401 just means genuinely logged out; the
+      // API client's interceptor will have already attempted a silent refresh.
+      try {
+        const { data } = await authAPI.me();
+        const me = data?.data;
+        if (cancelled || !me?.user) return;
+
+        // Only adopt a session that matches the role this URL is for — roles
+        // keep independent sessions by design.
+        if (me.userType && me.userType !== currentRole) return;
+
+        setUser(me.user);
+        setUserType(me.userType || currentRole);
+        secureStorage.setItem(`${currentRole}_user`, JSON.stringify(me.user));
+        logger.log('Session rehydrated from cookie', { role: me.userType });
+      } catch {
+        // Not authenticated. Nothing to restore; the guard redirects to login.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    bootstrap();
+    return () => { cancelled = true; };
+  }, [loadAuthData, currentRole]);
 
   // --- Cross-tab auth sync (HIGH-W4) ---
   // This used to listen for the window `storage` event, which fires only for

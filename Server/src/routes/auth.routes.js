@@ -92,6 +92,13 @@ function createAuthRoutes(container) {
    * @desc    Logout user
    * @access  Authenticated users
    */
+  /**
+   * @route   GET /api/auth/me
+   * @desc    The authenticated principal, for session rehydration (MED-W1).
+   * @access  Authenticated (cookie or Bearer)
+   */
+  router.get('/me', authMiddleware, authController.me);
+
   router.post('/logout', authMiddleware, authController.logout);
 
   /**

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import AuthProvider from './AuthProvider';
 import { MemoryRouter } from 'react-router-dom';
@@ -20,8 +20,21 @@ vi.mock('@/utils/auth/secureStorage', () => ({
 // Mock API config
 vi.mock('@/config/api.config', () => ({
   default: {
-    AUTH_COOKIE_NAME: 'access_token'
+    AUTH_COOKIE_NAME: 'access_token',
+    getBaseUrl: () => 'http://test.local/api',
+    getHeaders: () => ({}),
   }
+}));
+
+// MED-W1 added a cookie-based session bootstrap. Mocked here so this suite
+// stays about auth state rather than transport — importing the real auth.api
+// pulls in api-client, which builds axios instances at module load.
+// Rejecting by default means "no cookie session", the pre-existing behaviour
+// every test below was written against.
+vi.mock('@/services/auth/auth.api', () => ({
+  authAPI: {
+    me: vi.fn().mockRejectedValue(new Error('no session')),
+  },
 }));
 
 // Helper to access context in tests
@@ -48,6 +61,18 @@ const renderAuthProvider = (initialPath = '/admin/dashboard') => {
 };
 
 describe('AuthProvider', () => {
+  // handleLogout POSTs /auth/logout with raw fetch. Left unmocked, jsdom
+  // attempts real network I/O that does not settle within act(), so the
+  // handler never reaches its storage cleanup and the assertions below see
+  // nothing. Stubbed so the test exercises logout, not the network.
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -99,7 +124,11 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('userType').textContent).toBe('admin');
   });
 
-  it('clears state and storage on logout', () => {
+  // `handleLogout` awaits POST /auth/logout, so it is genuinely asynchronous.
+  // This previously passed synchronously only by accident: the apiConfig mock
+  // had no getBaseUrl, so the handler threw before reaching its await. Now that
+  // the mock is complete, the await actually happens and the test must wait.
+  it('clears state and storage on logout', async () => {
     secureStorage.getItem.mockImplementation((key) => {
       if (key === 'admin_user') return JSON.stringify({ name: 'Admin User' });
       return null;
@@ -110,7 +139,7 @@ describe('AuthProvider', () => {
     // Make sure we are logged in
     expect(screen.getByTestId('user').textContent).toBe('Admin User');
 
-    act(() => {
+    await act(async () => {
       screen.getByText('Logout').click();
     });
 

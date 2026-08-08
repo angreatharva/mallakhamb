@@ -23,6 +23,8 @@ const {
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
 const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
+// Shared so /auth/me and login can never disagree about what is sensitive.
+const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 
 /**
  * LOW-4: a dummy hash to compare against when the account does not exist.
@@ -45,34 +47,6 @@ const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
 const DEFAULT_LOCKOUT_MINUTES = 15;
 // Matches the model pre-save hooks and the documented BCRYPT_ROUNDS default.
 const DEFAULT_BCRYPT_ROUNDS = 12;
-
-/**
- * Fields that must never reach a client, whatever the query selected.
- *
- * The schema `toJSON` transforms are not a safety net here: BaseRepository
- * queries use `.lean()`, so results are plain objects the transform never sees,
- * and `.toObject()` does not run a toJSON transform either.
- */
-const SENSITIVE_USER_FIELDS = [
-  'password',
-  'resetPasswordToken',
-  'resetPasswordExpires',
-  'loginAttempts',
-  'lockUntil',
-];
-
-/**
- * Remove every sensitive field from a user object destined for a response.
- * @param {Object} userObject
- * @returns {Object} a copy without the sensitive fields
- */
-function stripSensitiveFields(userObject) {
-  const safe = { ...userObject };
-  for (const field of SENSITIVE_USER_FIELDS) {
-    delete safe[field];
-  }
-  return safe;
-}
 
 /**
  * Read a security setting from the config singleton.

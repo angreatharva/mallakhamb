@@ -9,6 +9,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { stripSensitiveFields } = require('../utils/data/user-projection.util');
 const {
   setAccessTokenCookie,
   setRefreshTokenCookie,
@@ -95,6 +96,32 @@ function createAuthController(container) {
     // ==================== Session ====================
 
     /** @route POST /api/auth/logout */
+    /**
+     * @route GET /api/auth/me
+     *
+     * MED-W1: the SPA keeps its session in sessionStorage while the real
+     * credential is an httpOnly cookie that outlives the tab. Open the app in a
+     * second tab and storage is empty, so the UI renders logged-out even though
+     * the server still considers the user authenticated. There was no way to
+     * ask "who am I?", so the client could not recover.
+     *
+     * `authMiddleware` has already validated the cookie (or Bearer) and loaded
+     * the principal, so this just reports it back, stripped through the same
+     * allow-list login uses — the schema toJSON transforms do not run on
+     * `.lean()` results, so this must be explicit.
+     */
+    me: asyncHandler(async (req, res) => {
+      const user = req.user?.toObject ? req.user.toObject() : { ...req.user };
+
+      res.json({
+        success: true,
+        data: {
+          user: stripSensitiveFields(user),
+          userType: req.userType,
+        },
+      });
+    }),
+
     logout: asyncHandler(async (req, res) => {
       const token = req.header('Authorization')?.replace('Bearer ', '');
       await authenticationService.logout(req.user._id, token);

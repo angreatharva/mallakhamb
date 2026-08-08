@@ -1,45 +1,58 @@
+import { useEffect } from 'react';
 import { AuthLoadingSpinner } from '@/components/auth/AuthLoadingSpinner';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useResponsive } from '../hooks/useResponsive';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { isTokenExpired } from '@/utils/auth/tokenUtils';
 import { getRoleFromPath, getLoginPathFromPath } from '@/utils/auth/roleFromPath';
 
+/**
+ * Route guard.
+ *
+ * MED-W2: this used to call `secureStorage.removeItem` in the render body.
+ * Renders must be pure — React 19 StrictMode double-invokes them in
+ * development, and a concurrent render can be discarded after the side effect
+ * has already run.
+ *
+ * The obvious fix — move the eviction into an effect — does NOT work here, and
+ * it is worth saying why because it looks correct: storage writes do not
+ * trigger a re-render, so the render that discovered the expired token would
+ * still see "token present" and sit on the loading spinner forever. That is
+ * precisely the limbo the original code was trying to avoid.
+ *
+ * So the decision is derived PURELY from reading storage (`tokenExpired`), and
+ * every check below treats an expired token as absent. The eviction becomes a
+ * genuine side effect that no longer needs to influence this render.
+ */
 const ProtectedRoute = ({ children, requiredUserType }) => {
   const { user, userType } = useAuth();
-  const { isMobile } = useResponsive();
   const location = useLocation();
 
   // Detect role and login path from current URL using centralized utility
   const storagePrefix = getRoleFromPath(location.pathname) || requiredUserType || 'admin';
   const loginPath = getLoginPathFromPath(location.pathname);
 
-  // Clear storage if token is expired to avoid infinite spinner/limbo state
-  const token = secureStorage.getItem(`${storagePrefix}_token`);
-  if (token && isTokenExpired(token)) {
-    secureStorage.removeItem(`${storagePrefix}_token`);
-    secureStorage.removeItem(`${storagePrefix}_user`);
-  }
+  // Read once. The previous version hit storage three separate times and could
+  // observe different values within a single render.
+  const storedToken = secureStorage.getItem(`${storagePrefix}_token`);
+  const storedUser = secureStorage.getItem(`${storagePrefix}_user`);
+  const tokenExpired = !!storedToken && isTokenExpired(storedToken);
 
-  // Show loading spinner while auth is being determined
-  if (user === null && userType === null) {
-    // Check if there's stored auth data for this user type using detected storage prefix
-    const currentToken = secureStorage.getItem(`${storagePrefix}_token`);
-    const userData = secureStorage.getItem(`${storagePrefix}_user`);
-    
-    if (currentToken && userData) {
-      // Auth data exists but context hasn't loaded yet, show responsive loading
-      return <AuthLoadingSpinner />;
+  // An expired token counts as no token, so the checks below fall through to
+  // the login redirect instead of waiting on a spinner that will never resolve.
+  const activeToken = tokenExpired ? null : storedToken;
+  const activeUser = tokenExpired ? null : storedUser;
+
+  // Cleanup only — deliberately gates nothing above.
+  useEffect(() => {
+    if (tokenExpired) {
+      secureStorage.removeItem(`${storagePrefix}_token`);
+      secureStorage.removeItem(`${storagePrefix}_user`);
     }
-  }
+  }, [tokenExpired, storagePrefix]);
 
-  // Also check if auth data exists in storage even if user state hasn't loaded yet
-  const activeToken = secureStorage.getItem(`${storagePrefix}_token`);
-  const userData = secureStorage.getItem(`${storagePrefix}_user`);
-  
-  // If we have stored auth data but user state is not yet loaded, show loading
-  if (!user && activeToken && userData) {
+  // Auth data exists but the context has not caught up yet — hold the route.
+  if (!user && activeToken && activeUser) {
     return <AuthLoadingSpinner />;
   }
 
@@ -53,7 +66,7 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
   if (requiredUserType && userType && userType !== requiredUserType) {
     return <Navigate to={loginPath} replace />;
   }
-  
+
   // If user exists but userType hasn't loaded yet, show loading
   if (user && !userType && requiredUserType) {
     return <AuthLoadingSpinner />;

@@ -89,8 +89,40 @@ function projectFields(doc, allowedFields) {
   return projected;
 }
 
+/**
+ * Fields that must never reach a client, whatever a query happened to select.
+ *
+ * The schema `toJSON` transforms are NOT a safety net: BaseRepository queries
+ * use `.lean()`, so results are plain objects the transform never sees, and
+ * `.toObject()` does not run a toJSON transform either. Login deliberately
+ * re-selects `password`, `loginAttempts` and `lockUntil`, so the response has
+ * to be stripped explicitly.
+ */
+const SENSITIVE_USER_FIELDS = [
+  'password',
+  'resetPasswordToken',
+  'resetPasswordExpires',
+  'loginAttempts',
+  'lockUntil',
+];
+
+/**
+ * Remove every sensitive field from a user object destined for a response.
+ * @param {Object} userObject
+ * @returns {Object} a copy without the sensitive fields
+ */
+function stripSensitiveFields(userObject) {
+  const safe = { ...userObject };
+  for (const field of SENSITIVE_USER_FIELDS) {
+    delete safe[field];
+  }
+  return safe;
+}
+
 module.exports = {
   JUDGE_PUBLIC_FIELDS,
+  SENSITIVE_USER_FIELDS,
+  stripSensitiveFields,
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_COACH_FIELD_LIST,

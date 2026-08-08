@@ -132,3 +132,58 @@ describe('ProtectedRoute', () => {
     // (In actual flow, the component rerenders without token, falling to login)
   });
 });
+
+describe('MED-W2 — the render is pure and an expired token does not strand the user', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does not touch storage while rendering', () => {
+    // The eviction used to run in the render body. React 19 StrictMode
+    // double-invokes renders and a concurrent render can be discarded after
+    // the write has already happened.
+    secureStorage.getItem.mockImplementation((key) =>
+      key.endsWith('_token') ? 'valid-token' : JSON.stringify({ name: 'A' })
+    );
+    tokenUtils.isTokenExpired.mockReturnValue(false);
+
+    renderWithContext(
+      <ProtectedRoute requiredUserType="admin"><div>Secret</div></ProtectedRoute>,
+      { user: { name: 'A' }, userType: 'admin' }
+    );
+
+    expect(secureStorage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it('redirects an expired session to login instead of spinning forever', () => {
+    // Storage writes do not re-render, so if the expired token still counted
+    // as "present" the guard would sit on the loading spinner indefinitely.
+    secureStorage.getItem.mockImplementation((key) =>
+      key.endsWith('_token') ? 'expired-token' : JSON.stringify({ name: 'A' })
+    );
+    tokenUtils.isTokenExpired.mockReturnValue(true);
+
+    renderWithContext(
+      <ProtectedRoute requiredUserType="admin"><div>Secret</div></ProtectedRoute>,
+      { user: null, userType: null }
+    );
+
+    expect(screen.getByText('Admin Login Page')).toBeInTheDocument();
+    expect(screen.queryByText('Secret')).not.toBeInTheDocument();
+  });
+
+  it('still evicts the expired entries, just in an effect', () => {
+    secureStorage.getItem.mockImplementation((key) =>
+      key.endsWith('_token') ? 'expired-token' : JSON.stringify({ name: 'A' })
+    );
+    tokenUtils.isTokenExpired.mockReturnValue(true);
+
+    renderWithContext(
+      <ProtectedRoute requiredUserType="admin"><div>Secret</div></ProtectedRoute>,
+      { user: null, userType: null }
+    );
+
+    expect(secureStorage.removeItem).toHaveBeenCalledWith('admin_token');
+    expect(secureStorage.removeItem).toHaveBeenCalledWith('admin_user');
+  });
+});
