@@ -84,6 +84,15 @@ jobs:
       - name: Lint (errors only)
         run: npm run lint:ci
 
+      # Reported, not gated. Overall coverage is ~8% because the page
+      # components have no tests at all — a pre-existing gap, not a regression.
+      # A threshold here would either be set so low it means nothing or fail
+      # every build on arrival. Watch the trend, especially on src/utils and
+      # src/services where the logic lives.
+      - name: Coverage (report only)
+        run: npm run test:coverage
+        continue-on-error: true
+
       - run: npm run build
 
   audit:

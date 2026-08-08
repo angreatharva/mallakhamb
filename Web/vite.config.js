@@ -46,6 +46,23 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary'],
+      // Only source that ships. Without this the report is dominated by
+      // config, tests and generated output, and the numbers mean nothing.
+      include: ['src/**/*.{js,jsx}'],
+      exclude: [
+        'src/**/*.test.{js,jsx}',
+        'src/setupTests.js',
+        'src/main.jsx',
+        // Presentational design-system pieces: markup and tokens, no logic
+        // worth asserting, and including them buries the code that matters.
+        'src/components/design-system/**',
+        'src/styles/**',
+        'src/assets/**',
+      ],
+    },
   },
   publicDir: 'public',
 })
