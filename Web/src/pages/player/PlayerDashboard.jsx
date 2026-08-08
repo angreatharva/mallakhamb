@@ -469,7 +469,7 @@ const PlayerDashboard = () => {
                 </div>
                 <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
                 <p className="text-white/45 text-sm">
-                  You're registered for multiple competitions. Please select one to continue.
+                  You&apos;re registered for multiple competitions. Please select one to continue.
                 </p>
               </div>
 

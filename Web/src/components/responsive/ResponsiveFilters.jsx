@@ -1,4 +1,3 @@
-import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import { useState } from 'react';
 import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';

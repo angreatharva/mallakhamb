@@ -1,4 +1,3 @@
-import React from 'react';
 import { useResponsive } from '@/hooks/useResponsive';
 import { COLORS } from '@/styles/tokens';
 

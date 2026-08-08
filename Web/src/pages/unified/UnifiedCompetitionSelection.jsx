@@ -590,7 +590,7 @@ const UnifiedCompetitionSelectionInner = () => {
           {filteredItems.length === 0 && searchQuery && (
             <GlassCard className="p-8 text-center">
               <p className="text-white/45">
-                No {config.itemLabel.toLowerCase()}s found for "{searchQuery}".
+                No {config.itemLabel.toLowerCase()}s found for &quot;{searchQuery}&quot;.
               </p>
               <button
                 onClick={() => setSearchQuery('')}

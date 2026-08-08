@@ -701,7 +701,7 @@ const Judges = () => {
                       <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
                         <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
-                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}{selectedApparatus ? ` — ${selectedApparatus.label}` : ''}</strong>. Use "Judge List" to view or edit.</p>
+                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}{selectedApparatus ? ` — ${selectedApparatus.label}` : ''}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
                       </div>
                     </div>

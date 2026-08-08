@@ -145,7 +145,7 @@ const ForgotPassword = () => {
               Forgot <GradientText>Password?</GradientText>
             </h1>
             <p className="text-white/45 text-sm leading-relaxed">
-              Enter your email and we'll send you a one-time code to reset your password.
+              Enter your email and we&apos;ll send you a one-time code to reset your password.
             </p>
           </div>
 

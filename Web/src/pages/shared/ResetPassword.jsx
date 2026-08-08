@@ -530,7 +530,7 @@ const ResetPassword = () => {
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
             {isOTPMethod ? (
               <p className="text-sm text-white/35">
-                Didn't receive OTP?{' '}
+                Didn&apos;t receive OTP?{' '}
                 <Link to="/forgot-password" className="font-semibold transition-colors duration-200 hover:opacity-80"
                   style={{ color: COLORS.saffronLight }}>
                   Request New OTP

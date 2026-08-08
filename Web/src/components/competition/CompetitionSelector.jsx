@@ -202,7 +202,7 @@ const CompetitionSelector = ({ userType }) => {
             <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
               {filteredCompetitions && filteredCompetitions.length === 0 ? (
                 <div className="py-8 text-center text-white/30 text-xs">
-                  No competitions found for "{searchQuery}"
+                  No competitions found for &quot;{searchQuery}&quot;
                 </div>
               ) : (
                 filteredCompetitions?.map((competition) => {

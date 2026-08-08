@@ -655,7 +655,7 @@ const QuoteStrip = () => (
       <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: COLORS.saffron }} aria-hidden="true" />
       <blockquote>
         <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
-          "Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India."
+          &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
         </p>
         <footer className="text-white/35 text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
       </blockquote>

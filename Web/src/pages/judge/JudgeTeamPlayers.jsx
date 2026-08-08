@@ -179,7 +179,10 @@ const JudgeTeamPlayers = () => {
               scoreMap[String(pid)] = true;
             }
           });
-        } catch (e) {}
+        } catch {
+          // Best-effort read of the local "already submitted" cache. A corrupt
+          // or missing entry just means we fall back to the server's flags.
+        }
 
         setJudgeScoreMap(scoreMap);
         setFinalizedScoreMap(finalizedMap);

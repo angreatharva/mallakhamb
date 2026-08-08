@@ -78,12 +78,11 @@ jobs:
       # ~1,800 findings, which would drown the real errors — `lint:ci` is
       # `eslint . --quiet` for exactly that reason (Web audit MED-W3).
       #
-      # NOTE: this does not gate the build yet. There are 27 pre-existing
-      # errors; flip `continue-on-error` off once they are cleared, otherwise
-      # CI is red on arrival and everyone learns to ignore it.
+      # This now GATES the build. It was advisory while 27 pre-existing errors
+      # remained (a permanently-red CI is one everybody ignores); those are
+      # cleared, so the count is zero and must stay zero.
       - name: Lint (errors only)
         run: npm run lint:ci
-        continue-on-error: true
 
       - run: npm run build
 

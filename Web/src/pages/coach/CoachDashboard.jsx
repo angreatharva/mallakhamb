@@ -477,7 +477,7 @@ const CoachDashboard = () => {
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
             <h2 className="text-2xl font-black text-white mb-2">No Team Registered</h2>
-            <p className="text-white/45 mb-6">You don't have a team registered for this competition yet.</p>
+            <p className="text-white/45 mb-6">You don&apos;t have a team registered for this competition yet.</p>
             <button onClick={() => window.location.href = '/coach/select-competition'}
               className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px] inline-flex items-center gap-2"
               style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
@@ -906,7 +906,7 @@ const CoachDashboard = () => {
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed">
-                      You will <strong>not be able to add or remove players</strong> after submission. To make any changes, you'll need to contact the admin.
+                      You will <strong>not be able to add or remove players</strong> after submission. To make any changes, you&apos;ll need to contact the admin.
                     </p>
                   </div>
                   <div className="p-3 rounded-xl" style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
@@ -1004,7 +1004,7 @@ const CoachDashboard = () => {
                         style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                         {selectedGender?.label || 'Loading...'}
                       </div>
-                      <p className="text-white/25 text-xs mt-1">Automatically set from player's registration</p>
+                      <p className="text-white/25 text-xs mt-1">Automatically set from player&apos;s registration</p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold tracking-wide uppercase mb-2"

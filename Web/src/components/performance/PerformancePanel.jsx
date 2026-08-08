@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Medal, Award, TrendingUp, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Trophy, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { publicAPI } from '@/services/index.js';
 import { COLORS } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';

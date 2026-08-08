@@ -523,7 +523,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               >
                 <p className="text-white/30 text-sm">
-                  No competitions found for "{searchQuery}"
+                  No competitions found for &quot;{searchQuery}&quot;
                 </p>
                 <button onClick={() => setSearchQuery('')}
                   className="mt-2 text-xs font-semibold transition-colors"

@@ -1,4 +1,3 @@
-import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import { useState, useEffect, useRef } from 'react';
 import { Filter, Search, X, ArrowLeft, Trophy, Medal, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -703,7 +702,7 @@ const PublicScores = () => {
                   <Search className="w-10 h-10 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
                   <p className="text-white font-bold mb-1">No players found</p>
                   <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    No results for "{searchTerm}"
+                    No results for &quot;{searchTerm}&quot;
                   </p>
                   <button onClick={() => setSearchTerm('')}
                     className="mt-4 text-sm font-bold transition-colors duration-200"
