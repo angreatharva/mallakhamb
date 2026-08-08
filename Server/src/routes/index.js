@@ -29,6 +29,14 @@ const createPublicRoutes = require('./public.routes');
 const { csrfTokenHandler } = require('../middleware/csrf.middleware');
 
 /**
+ * Current API version prefix (LOW-2). Every route is served at both
+ * `/api/<version>/...` and the unversioned `/api/...`; the unversioned alias
+ * exists so the deployed client keeps working and should be retired one
+ * release after clients move over.
+ */
+const API_VERSION = 'v1';
+
+/**
  * Load and register all application routes
  * 
  * Routes are grouped by domain with appropriate prefixes:
@@ -53,19 +61,39 @@ const { csrfTokenHandler } = require('../middleware/csrf.middleware');
 function loadRoutes(app, container, options = {}) {
   const { authLimiter, userLimiter, judgeLoginLimiter } = options;
 
+  /**
+   * LOW-2 / task 4.1 — API versioning.
+   *
+   * Everything used to be mounted directly on `app` under `/api/*`, so any
+   * breaking payload change would break every deployed client at once. Routes
+   * are now registered on ONE router that is mounted at both `/api/v1` and
+   * `/api`, so `/api/v1/...` is available for new clients while the
+   * unversioned paths keep working for the currently deployed bundle.
+   *
+   * Built once and mounted twice on purpose: constructing two routers would
+   * also construct two rate limiters, giving each logical route two
+   * independent buckets and doubling the effective limit.
+   *
+   * Order matters. `/api/v1` is mounted FIRST because `app.use('/api', ...)`
+   * also matches `/api/v1/...`. With the versioned mount first, a versioned
+   * request is handled there and never reaches the unversioned mount, so no
+   * request can traverse the limiter chain twice.
+   */
+  const apiRouter = express.Router();
+
   // ============================================================
   // HEALTH CHECK ROUTES (no authentication required)
   // ============================================================
   // These should be registered first for quick access by load balancers
   const healthRouter = createHealthRoutes(container);
-  app.use('/api/health', healthRouter);
+  apiRouter.use('/health', healthRouter);
 
   // ============================================================
   // CSRF TOKEN ENDPOINT (Requirement 17.3)
   // ============================================================
   // Clients that use cookie-based sessions can fetch a CSRF token here.
   // Bearer-token (JWT) clients are automatically exempt from CSRF checks.
-  app.get('/api/csrf-token', csrfTokenHandler);
+  apiRouter.get('/csrf-token', csrfTokenHandler);
 
   // ============================================================
   // AUTHENTICATION ROUTES (with rate limiting)
@@ -73,9 +101,9 @@ function loadRoutes(app, container, options = {}) {
   // Apply rate limiting to prevent brute force attacks
   const authRouter = createAuthRoutes(container);
   if (authLimiter) {
-    app.use('/api/auth', authLimiter, authRouter);
+    apiRouter.use('/auth', authLimiter, authRouter);
   } else {
-    app.use('/api/auth', authRouter);
+    apiRouter.use('/auth', authRouter);
   }
 
   // ============================================================
@@ -98,12 +126,12 @@ function loadRoutes(app, container, options = {}) {
     const playerAuthRouter = express.Router();
     playerAuthRouter.post('/register', authLimiter);
     playerAuthRouter.post('/login', authLimiter);
-    app.use('/api/players', playerAuthRouter);
+    apiRouter.use('/players', playerAuthRouter);
   }
   if (userLimiter) {
-    app.use('/api/players', userLimiter);
+    apiRouter.use('/players', userLimiter);
   }
-  app.use('/api/players', playerRouter);
+  apiRouter.use('/players', playerRouter);
 
   // Coach routes
   const coachRouter = createCoachRoutes(container);
@@ -111,12 +139,12 @@ function loadRoutes(app, container, options = {}) {
     const coachAuthRouter = express.Router();
     coachAuthRouter.post('/register', authLimiter);
     coachAuthRouter.post('/login', authLimiter);
-    app.use('/api/coaches', coachAuthRouter);
+    apiRouter.use('/coaches', coachAuthRouter);
   }
   if (userLimiter) {
-    app.use('/api/coaches', userLimiter);
+    apiRouter.use('/coaches', userLimiter);
   }
-  app.use('/api/coaches', coachRouter);
+  apiRouter.use('/coaches', coachRouter);
 
   // Admin routes
   const adminRouter = createAdminRoutes(container);
@@ -124,9 +152,9 @@ function loadRoutes(app, container, options = {}) {
     const adminAuthRouter = express.Router();
     adminAuthRouter.post('/register', authLimiter);
     adminAuthRouter.post('/login', authLimiter);
-    app.use('/api/admin', adminAuthRouter);
+    apiRouter.use('/admin', adminAuthRouter);
   }
-  app.use('/api/admin', adminRouter);
+  apiRouter.use('/admin', adminRouter);
 
   const superAdminRoutes = createSuperAdminRoutes(container);
   const judgeRoutes = createJudgeRoutes(container);
@@ -143,49 +171,63 @@ function loadRoutes(app, container, options = {}) {
   if (judgeLoginLimiter) {
     const judgeAuthRouter = express.Router();
     judgeAuthRouter.post('/login', judgeLoginLimiter);
-    app.use('/api/judge', judgeAuthRouter);
+    apiRouter.use('/judge', judgeAuthRouter);
   }
-  app.use('/api/superadmin', superAdminRoutes);
-  app.use('/api/judge', judgeRoutes);
+  apiRouter.use('/superadmin', superAdminRoutes);
+  apiRouter.use('/judge', judgeRoutes);
 
   // ============================================================
   // PUBLIC ROUTES (no authentication required)
   // ============================================================
   const publicRouter = createPublicRoutes(container);
-  app.use('/api/public', publicRouter);
+  apiRouter.use('/public', publicRouter);
 
   // ============================================================
   // COMPETITION ROUTES
   // ============================================================
   if (userLimiter) {
-    app.use('/api/competitions', userLimiter);
+    apiRouter.use('/competitions', userLimiter);
   }
-  app.use('/api/competitions', createCompetitionRoutes(container));
+  apiRouter.use('/competitions', createCompetitionRoutes(container));
 
   // ============================================================
   // TEAM ROUTES
   // ============================================================
   if (userLimiter) {
-    app.use('/api/teams', userLimiter);
+    apiRouter.use('/teams', userLimiter);
   }
-  app.use('/api/teams', createTeamRoutes(container));
-  app.use('/api/scoring', createScoringRoutes(container));
-  app.use('/api/webhooks', createPaymentRoutes(container));
+  apiRouter.use('/teams', createTeamRoutes(container));
+  apiRouter.use('/scoring', createScoringRoutes(container));
+  apiRouter.use('/webhooks', createPaymentRoutes(container));
 
   // ============================================================
   // LEGACY ENDPOINTS (backward compatibility)
   // ============================================================
-  app.get('/api/health-legacy', (req, res) => {
-    res.json({ 
-      message: 'Sports Event API is running!', 
-      timestamp: new Date().toISOString() 
+  apiRouter.get('/health-legacy', (req, res) => {
+    res.json({
+      message: 'Sports Event API is running!',
+      timestamp: new Date().toISOString()
     });
   });
+
+  // ============================================================
+  // MOUNT (LOW-2)
+  // ============================================================
+  // Versioned first — see the note at the top of this function. Mounting the
+  // unversioned prefix first would let `/api/v1/...` fall through the `/api`
+  // mount before reaching its own, traversing the limiter chain twice.
+  app.use(`/api/${API_VERSION}`, apiRouter);
+  app.use('/api', apiRouter);
 }
 
 /**
- * Get route groups for documentation or testing
- * 
+ * Get route groups for documentation or testing.
+ *
+ * These are the UNVERSIONED paths. Every one of them is also served under
+ * `/api/v1/...` (LOW-2); the unversioned form is kept as an alias for the
+ * currently deployed client and should be retired one release after clients
+ * move over.
+ *
  * @returns {Object} Route groups organized by domain
  */
 function getRouteGroups() {
@@ -207,5 +249,6 @@ function getRouteGroups() {
 
 module.exports = {
   loadRoutes,
-  getRouteGroups
+  getRouteGroups,
+  API_VERSION
 };
