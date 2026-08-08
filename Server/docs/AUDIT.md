@@ -66,28 +66,26 @@ Done:
 
 | Item | Why it is still open |
 |---|---|
-| **3.1 — `saveScores` only** (MED-5) | Nine of the ten scoring methods are extracted; `saveScores` is deliberately left for its own change. See below. |
 | **3.2 — slip construction in the controller** (MED-6) | Should follow `saveScores`, so the HTTP and socket paths can share one implementation. |
 | **3.5 (integration-test half)** | `tests/integration/` still holds only a README. The security suites now cover the judge submit path end to end (auth → slip → panel average → finalize → lock) against real models, which was the stated goal, but a dedicated integration suite is still worth having. |
 | **Web Phase 4.1 — delete the client COP mirror** | Now unblocked: `GET /api/public/cop-rules` exists. Requires client work and must tolerate the endpoint being absent. |
 | **Web MED-W1–W5, W7 and LOW-W1–W4** | Untouched. |
 | Residual `react-router` advisory (Web, 2 moderate) | Left with the rest of the Web medium items. |
 
-#### Note on 3.1 / 3.2 — progress
+#### Note on 3.1 — COMPLETE
 
-**Nine of the ten scoring methods are now in `ScoringService`.** `admin.service.js` is down from **3,076 to 2,593 lines**, and `admin.service` keeps thin delegating methods under the original public names, so every caller and route is untouched.
+**All ten scoring methods now live in `ScoringService`.** `admin.service.js` is down from **3,076 to 2,268 lines (-26%)**; `scoring.service.js` grew from 476 to 1,392. `admin.service` keeps thin delegates under the original public names, so every caller and route is untouched.
 
-Moved so far: `getTeamScores`, `getIndividualScores`, `getTeamRankings`, `getIndividualRankings`, `unlockScore`, `unlockScores`, `lockScores`, `recalculateScores`, `endAgeGroup`. The CRIT-4 allow-list projections moved to `utils/data/user-projection.util.js` — both services need them, and a duplicated security control is one that drifts.
+The CRIT-4 allow-list projections also moved to `utils/data/user-projection.util.js` — both services need them, and a duplicated security control is one that drifts.
 
-Two traps that were hit and handled, worth knowing before continuing:
+Three traps hit and handled, worth knowing before touching this area:
 
-- **Name collision.** `ScoringService` already had `lockScore(scoreId)` / `unlockScore(scoreId)`, live on `/api/scoring`. They are genuinely different operations from the admin ones (single id, no audit fields, different return shape). Moving the admin versions in under the same names would have silently changed what `/api/scoring` does. They are now `unlockScoreAsAdmin`, `unlockScoresForAgeGroup`, `lockScoresForAgeGroup`. **Do not "tidy" these back together.**
-- **`socketManager` is injected lazily after construction**, via bootstrap's `servicesNeedingSocket` list. `lockScores`, `unlockScores` and `endAgeGroup` emit socket notifications; `scoringService` is on that list, so they still work. Anything moved to a service NOT on that list loses its notifications silently.
+- **Name collision.** `ScoringService` already had `lockScore(scoreId)` / `unlockScore(scoreId)`, live on `/api/scoring`, doing something genuinely different from the admin versions (single id, no audit fields, different return shape). Moving admin's in under the same names would have silently changed `/api/scoring`. They are now `unlockScoreAsAdmin`, `unlockScoresForAgeGroup`, `lockScoresForAgeGroup`. **Do not "tidy" these back together** — arity is asserted in a smoke check for exactly this reason.
+- **`socketManager` is injected lazily after construction**, via bootstrap's `servicesNeedingSocket` list. `lockScores`, `unlockScores` and `endAgeGroup` emit socket notifications; `scoringService` is on that list. Anything moved to a service *not* on it loses notifications silently, with tests still green.
+- **The security harnesses construct `AdminService` by hand.** Delegation made them 500 until they were given a real `ScoringService`. The `scoring` getter guard is what made that diagnosable — it says "pass `scoringService` when constructing AdminService" instead of failing on an undefined property. Those suites now exercise the genuine router → controller → adminService → scoringService path.
 
-Passing tests do not prove DI wiring, so each stage was also checked with a bootstrap smoke run confirming the singletons, the injected collaborators, and that both APIs still resolve.
+Passing tests do not prove DI wiring, so every stage was also checked with a bootstrap smoke run confirming the singletons match, the collaborators are set, and both APIs resolve.
 
-**Still to move: `saveScores`.** Left deliberately for its own change. It is ~400 lines, owns the optimistic-concurrency retry loop and the slip merge, and is the method HIGH-3 and HIGH-4 most recently altered — the single most consequential function in the product. When it moves it will need `calculationService` (already on `ScoringService`), the shared projections (already extracted) and `buildMergedPlayerScores`, and the `tests/security` suites exercise it end to end, which is the safety net to lean on.
+**Correction to the original target:** the audit's "under 1,000 lines" for `admin.service.js` assumed scoring was a larger share of the file than it turned out to be. With all ten methods gone it sits at 2,268. Getting under 1,000 means also extracting the team, player, judge and transaction groups — a separate piece of work, and no longer about scoring.
 
-**3.2** follows: move the `judgeFieldMap`/`judgeRoleMap` slip assembly out of `admin.controller.js` so the HTTP and socket paths finally share one implementation.
-
-Note the audit's original "under 1,000 lines" target for `admin.service.js` assumed scoring was a larger share of the file than it is. With all ten scoring methods gone it lands near ~2,200; getting under 1,000 means also extracting the team, player, judge and transaction groups, which is a separate piece of work.
+**3.2 remains:** move the `judgeFieldMap`/`judgeRoleMap` slip assembly out of `admin.controller.js` into the scoring service, so the HTTP and socket paths finally share one implementation.
