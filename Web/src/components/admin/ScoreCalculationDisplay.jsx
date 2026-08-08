@@ -1,5 +1,6 @@
 // ScoreCalculationDisplay.jsx - Component to display score breakdown with calculations
 import { motion } from 'framer-motion';
+import PropTypes from 'prop-types';
 import { Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ADMIN_COLORS } from '../../styles/tokens';
 
@@ -150,6 +151,26 @@ const ScoreCalculationDisplay = ({ playerScore }) => {
             )}
         </motion.div>
     );
+};
+
+/**
+ * LOW-W2: the computed-score contract. Every field here feeds a number the
+ * admin reads as authoritative, so a rename upstream should fail loudly in
+ * development rather than render a blank or a 0.00.
+ */
+ScoreCalculationDisplay.propTypes = {
+    playerScore: PropTypes.shape({
+        playerName: PropTypes.string,
+        executionAverage: PropTypes.number,
+        baseScore: PropTypes.number,
+        // True when the 5-judge tolerance rule replaced the plain average.
+        baseScoreApplied: PropTypes.bool,
+        toleranceUsed: PropTypes.number,
+        averageMarks: PropTypes.number,
+        deduction: PropTypes.number,
+        otherDeduction: PropTypes.number,
+        finalScore: PropTypes.number,
+    }),
 };
 
 export default ScoreCalculationDisplay;

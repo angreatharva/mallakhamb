@@ -6,9 +6,16 @@
  * separate files without duplicating this markup.
  */
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { AlertTriangle, CheckCircle, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import {
+  panelScoresShape,
+  editTargetShape,
+  combinationChecklistShape,
+  pointCeilingsShape,
+} from '@/utils/scoring/scoringPropTypes';
 
 export const SCORING_PATH = '/judge/scoring';
 export const PANEL_REVIEW_PATH = '/judge/scoring/panel-review';
@@ -509,3 +516,54 @@ export const LiveDot = ({ connected, compact = false }) => (
   </div>
 );
 
+/* -------------------------------------------------------------------------- */
+/* Prop contracts (LOW-W2)                                                    */
+/*                                                                            */
+/* These components pass nested `breakdown` objects between the slip form,     */
+/* Panel Review and the two modals with no contract. Declaring it is worth     */
+/* more here than anywhere else in the app: the numbers become a competitor's  */
+/* persisted score, and a missing `combination.total` renders as 0.00 rather   */
+/* than throwing. The canonical shape is what normalizeBreakdown produces.     */
+/* -------------------------------------------------------------------------- */
+
+MismatchModal.propTypes = {
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func.isRequired,
+  panelMismatch: PropTypes.object,
+  panelScores: panelScoresShape,
+  isSeniorJudge: PropTypes.bool,
+  myJudgeType: PropTypes.string,
+  effectivePanelSize: PropTypes.number,
+  judgeNameMap: PropTypes.objectOf(PropTypes.string),
+};
+
+SrEditModal.propTypes = {
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
+  editTarget: editTargetShape,
+  combinationChecklist: combinationChecklistShape,
+  selectedApparatus: PropTypes.string,
+  pointCeilings: pointCeilingsShape,
+  // Passed in rather than imported so the modal stays presentational.
+  POINT_CEILINGS: pointCeilingsShape,
+  resolveDifficultyValue: PropTypes.func,
+  getDifficultyRequirement: PropTypes.func,
+  computeCombinationTotal: PropTypes.func,
+  selectedCompetitionType: PropTypes.string,
+};
+
+Orb.propTypes = {
+  x: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  y: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  size: PropTypes.number,
+  color: PropTypes.string,
+  delay: PropTypes.number,
+  duration: PropTypes.number,
+  blur: PropTypes.number,
+};
+
+LiveDot.propTypes = {
+  connected: PropTypes.bool,
+  compact: PropTypes.bool,
+};
