@@ -19,7 +19,14 @@ Every finding cites the file and line that produced it.
 
 **Web status: 8 files, 62 tests passing; lint 45 → 27 errors; build clean.**
 
-**Not started:** HIGH-W3 (six modules + `CompetitionContext` bypass the API client, losing silent refresh and `AUTH_EXPIRED` — verified still present), all of MED-W1–W7, all of LOW-W1–W4, and the rest of Phases 2–4.
+- **HIGH-W3 — FIXED for the judge pages (tasks 2.1–2.3).** `services/public/judge.api.js` was rebuilt on the `api` instance — it had been on `publicApi`, which has **no request interceptor**, so adopting it as-is would have sent no `Authorization` header and 401'd against the routes the server authenticated in Phase 1. Extended with `getTeamScores`, `getTeamPlayers`, `getPublicScores`. All six judge call sites (`JudgeScoring`, `JudgePanelReview`, `JudgeDashboard`, `JudgeTeamPlayers`, and both in `useJudgePanelData`) now go through it, so they get the silent single-flight refresh and `AUTH_EXPIRED` dispatch. The interceptor derives the role from the URL — `judge` on every `/judge/*` route, reading the same `judge_token` these pages read by hand — so the outgoing header is unchanged.
+  - **401/403 no longer silent.** These were swallowed into `logger.warn`, which is why an expired token showed an *empty panel* rather than an error. Now raises a toast on top of the interceptor's refresh.
+  - Removed five dead `const token = secureStorage.getItem(...)` locals. ESLint's `unused-imports` rule does not cover locals, so these were found by hand — the two remaining reads are legitimate (Socket.IO handshake needs the raw token).
+- **MED-W6 — FIXED.** The raw judge login response (token + full profile) was `console.log`'d. Terser strips `console.*` in production so it was never a production leak, but it bypassed the project logger. Now logs presence, not payload.
+
+**Still open on HIGH-W3:** `CompetitionContext.jsx` (4 call sites) and `UnifiedLogin.jsx` (1) still use axios directly. The login call arguably belongs outside the authenticated client; `CompetitionContext` does not and should follow.
+
+**Not started:** MED-W1–W5, MED-W7, all of LOW-W1–W4, and the rest of Phases 3–4.
 
 > Do **not** run the Server and Web suites concurrently — vitest's fork workers time out under the contention and report ~7 spurious "Failed to start forks worker" errors that look like a real regression.
 
