@@ -775,6 +775,263 @@ class ScoringService {
     }
   }
 
+
+  // ==========================================================================
+  // Score locking, recalculation and age-group closure
+  //
+  // Moved from admin.service.js (task 3.1 / MED-5). Behaviour unchanged.
+  //
+  // NOTE ON NAMING: this class already had `lockScore(scoreId)` and
+  // `unlockScore(scoreId)`, which are live on /api/scoring and are genuinely
+  // DIFFERENT operations — they take a single score id, write no audit fields
+  // and return the updated document. The admin variants below act on a whole
+  // age group (or record `unlockedBy`/`unlockedAt`) and return a message
+  // object, so they are named explicitly rather than overloading the originals.
+  // Collapsing them would have silently changed /api/scoring's behaviour.
+  // ==========================================================================
+
+  /**
+   * Unlock a single score document by ID (MED-4)
+   * @param {string} scoreId - Score document ID
+   * @param {string} adminId - Admin performing the unlock
+   * @returns {Promise<Object>} Unlock result
+   * @throws {NotFoundError} If score not found
+   */
+  async unlockScoreAsAdmin(scoreId, adminId) {
+    try {
+      const scoreDoc = await this.scoreRepository.findById(scoreId);
+
+      if (!scoreDoc) {
+        throw new NotFoundError('Score');
+      }
+
+      await this.scoreRepository.updateById(scoreId, {
+        isLocked: false,
+        unlockedBy: adminId,
+        unlockedAt: new Date()
+      });
+
+      this.logger.info('Score unlocked', { scoreId, adminId });
+
+      return {
+        message: 'Score unlocked successfully',
+        scoreId,
+        isLocked: false
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Unlock score error', {
+        scoreId,
+        adminId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Unlock scores for editing
+   * @param {string} competitionId - Competition ID
+   * @param {string} ageGroup - Age group
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Success message
+   */
+  async unlockScoresForAgeGroup(competitionId, ageGroup, adminId) {
+    try {
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition) {
+        throw new NotFoundError('Competition');
+      }
+
+      // Update scores to unlocked state
+      await this.scoreRepository.updateMany(
+        { competition: competitionId, ageGroup },
+        { isLocked: false, unlockedBy: adminId, unlockedAt: new Date() }
+      );
+
+      this.logger.info('Scores unlocked', { competitionId, ageGroup, adminId });
+
+      // Emit Socket.IO event
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(`competition_${competitionId}`, EventTypes.SCORES_UNLOCKED, {
+          ageGroup
+        });
+      }
+
+      return { success: true, message: 'Scores unlocked successfully' };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Unlock scores error', { 
+        competitionId, 
+        ageGroup, 
+        adminId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Lock scores
+   * @param {string} competitionId - Competition ID
+   * @param {string} ageGroup - Age group
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Success message
+   */
+  async lockScoresForAgeGroup(competitionId, ageGroup, adminId) {
+    try {
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition) {
+        throw new NotFoundError('Competition');
+      }
+
+      // Update scores to locked state
+      await this.scoreRepository.updateMany(
+        { competition: competitionId, ageGroup },
+        { isLocked: true, lockedBy: adminId, lockedAt: new Date() }
+      );
+
+      this.logger.info('Scores locked', { competitionId, ageGroup, adminId });
+
+      // Emit Socket.IO event
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(`competition_${competitionId}`, EventTypes.SCORES_LOCKED, {
+          ageGroup
+        });
+      }
+
+      return { success: true, message: 'Scores locked successfully' };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Lock scores error', { 
+        competitionId, 
+        ageGroup, 
+        adminId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Recalculate scores for an age group
+   * @param {string} competitionId - Competition ID
+   * @param {string} ageGroup - Age group
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Recalculation results
+   */
+  async recalculateScores(competitionId, ageGroup, adminId) {
+    try {
+      const scores = await this.scoreRepository.find({
+        competition: competitionId,
+        ageGroup
+      });
+
+      let recalculated = 0;
+
+      for (const scoreDoc of scores) {
+        if (scoreDoc.playerScores && scoreDoc.playerScores.length > 0) {
+          const updatedPlayerScores = scoreDoc.playerScores.map(ps => {
+            // Recalculate using CalculationService
+            const recalc = this.calculationService.calculateCompletePlayerScore(ps);
+            return recalc;
+          });
+
+          await this.scoreRepository.updateById(scoreDoc._id, {
+            playerScores: updatedPlayerScores,
+            recalculatedBy: adminId,
+            recalculatedAt: new Date()
+          });
+
+          recalculated++;
+        }
+      }
+
+      this.logger.info('Scores recalculated', { 
+        competitionId, 
+        ageGroup, 
+        recalculated, 
+        adminId 
+      });
+
+      return {
+        success: true,
+        recalculated,
+        message: `${recalculated} score documents recalculated`
+      };
+    } catch (error) {
+      this.logger.error('Recalculate scores error', { 
+        competitionId, 
+        ageGroup, 
+        adminId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * End an age group
+   * @param {string} competitionId - Competition ID
+   * @param {string} ageGroup - Age group
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Success message
+   */
+  async endAgeGroup(competitionId, ageGroup, adminId) {
+    try {
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition) {
+        throw new NotFoundError('Competition');
+      }
+
+      // Update age group status
+      const ageGroups = competition.ageGroups || [];
+      const ageGroupIndex = ageGroups.findIndex(ag => ag.name === ageGroup);
+
+      if (ageGroupIndex === -1) {
+        throw new NotFoundError('Age group');
+      }
+
+      ageGroups[ageGroupIndex].status = 'ended';
+      ageGroups[ageGroupIndex].endedAt = new Date();
+      ageGroups[ageGroupIndex].endedBy = adminId;
+
+      await this.competitionRepository.updateById(competitionId, {
+        ageGroups
+      });
+
+      // Finalize scores (lock them)
+      await this.lockScoresForAgeGroup(competitionId, ageGroup, adminId);
+
+      this.logger.info('Age group ended', { competitionId, ageGroup, adminId });
+
+      // Emit Socket.IO event
+      if (this.socketManager) {
+        this.socketManager.emitToRoom(`competition_${competitionId}`, EventTypes.AGE_GROUP_ENDED, {
+          ageGroup
+        });
+      }
+
+      return { success: true, message: `Age group ${ageGroup} ended` };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('End age group error', { 
+        competitionId, 
+        ageGroup, 
+        adminId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
 }
 
 module.exports = ScoringService;
