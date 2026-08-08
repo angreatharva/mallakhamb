@@ -6,7 +6,9 @@
  * @module controllers/public.controller
  */
 
+const crypto = require('crypto');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { getCopRulesData } = require('../config/cop-rules');
 
 /**
  * @param {Object} container - DI container
@@ -40,6 +42,35 @@ function createPublicController(container) {
         lockedOnly,
       });
       res.json({ success: true, data: scores });
+    }),
+
+    /**
+     * @route GET /api/public/cop-rules
+     *
+     * Serves the COP Nov 2022 constants so the client can stop maintaining a
+     * hand-synced copy (MED-7 / task 3.3). This is static reference data, so it
+     * is cached hard and carries a strong ETag — the tables change only when
+     * the Code of Points itself is revised.
+     */
+    getCopRules: asyncHandler(async (req, res) => {
+      const data = getCopRulesData();
+
+      // Derived from the payload, so it changes automatically whenever the
+      // rules do — no version constant to forget to bump.
+      const etag = `W/"cop-${crypto
+        .createHash('sha1')
+        .update(JSON.stringify(data))
+        .digest('hex')
+        .slice(0, 16)}"`;
+
+      res.set('ETag', etag);
+      res.set('Cache-Control', 'public, max-age=3600');
+
+      if (req.headers['if-none-match'] === etag) {
+        return res.status(304).end();
+      }
+
+      res.json({ success: true, data });
     }),
 
     /** @route GET /api/public/rankings/:competitionId/:ageGroup */

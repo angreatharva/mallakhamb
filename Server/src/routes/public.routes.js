@@ -51,6 +51,24 @@ function createPublicRoutes(container) {
   router.get('/competitions', publicController.getPublicCompetitions);
 
   /**
+   * @route   GET /api/public/cop-rules
+   * @desc    COP Nov 2022 scoring constants — ceilings, element values,
+   *          difficulty mixes, tolerance tiers, the 90s time-deduction table
+   *          and the per-apparatus combination checklists.
+   * @access  Public — deliberately anonymous. This is reference data with no
+   *          competition, team or athlete information in it, and the judge
+   *          client needs it before a session exists. It is declared here,
+   *          above the authenticated routes below, so it is never caught by a
+   *          later guard.
+   *
+   * Exists so `Web/src/utils/scoring/copRules.js` can stop mirroring these
+   * tables by hand (MED-7). The duplication matters because the client
+   * computes the slip total and posts it while the server only range-checks
+   * it, so drift silently persists WRONG SCORES.
+   */
+  router.get('/cop-rules', publicController.getCopRules);
+
+  /**
    * @route   GET /api/public/judges
    * @desc    Get the judge panel assigned to a competition/category
    * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous

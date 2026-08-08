@@ -55,25 +55,40 @@ function getDifficultyRequirement(competitionType) {
 
 // §3.4 — tolerance limit table (Chief Judge vs. avg-of-2-middle execution scores).
 // Keyed by the execution average.
+//
+// Held as data, not as an if-ladder, so GET /api/public/cop-rules can serve it
+// (task 3.3). The *table* is what drifts between the two stacks; the lookup
+// function is trivial and stays duplicated.
+const TOLERANCE_TIERS = Object.freeze([
+  Object.freeze({ minAverage: 9.00, tolerance: 0.10 }),
+  Object.freeze({ minAverage: 8.00, tolerance: 0.20 }),
+  Object.freeze({ minAverage: 7.00, tolerance: 0.30 }),
+  Object.freeze({ minAverage: 6.00, tolerance: 0.40 }),
+  Object.freeze({ minAverage: 5.00, tolerance: 0.50 }),
+]);
+const TOLERANCE_BELOW_MINIMUM = 1.00; // below 5.00
+
 function getTolerance(avgScore) {
   const s = Number(avgScore) || 0;
-  if (s >= 9.00) return 0.10;
-  if (s >= 8.00) return 0.20;
-  if (s >= 7.00) return 0.30;
-  if (s >= 6.00) return 0.40;
-  if (s >= 5.00) return 0.50;
-  return 1.00; // below 5.00
+  const tier = TOLERANCE_TIERS.find((t) => s >= t.minAverage);
+  return tier ? tier.tolerance : TOLERANCE_BELOW_MINIMUM;
 }
 
 // §3.5 — time-deduction table (overage beyond the 90s limit).
 const TIME_LIMIT_SECONDS = 90;
+const TIME_DEDUCTION_TIERS = Object.freeze([
+  Object.freeze({ maxOverageSeconds: 3, deduction: 0.20 }),
+  Object.freeze({ maxOverageSeconds: 5, deduction: 0.30 }),
+  Object.freeze({ maxOverageSeconds: 9, deduction: 0.40 }),
+]);
+// >= 10, and the 9–10 gap in the source table.
+const TIME_DEDUCTION_MAXIMUM = 0.50;
+
 function getTimeDeduction(overageSeconds) {
   const over = Number(overageSeconds) || 0;
   if (over <= 0) return 0;
-  if (over <= 3) return 0.20;
-  if (over <= 5) return 0.30;
-  if (over <= 9) return 0.40;
-  return 0.50; // >= 10 (and the 9–10 gap in the source table)
+  const tier = TIME_DEDUCTION_TIERS.find((t) => over <= t.maxOverageSeconds);
+  return tier ? tier.deduction : TIME_DEDUCTION_MAXIMUM;
 }
 
 // §5.1–5.3 — per-apparatus combination checklists. Penalties sum to 1.60.
@@ -285,6 +300,41 @@ function isApparatusAllowedForGender(apparatus, gender) {
   return true;
 }
 
+/**
+ * The serializable half of this module (task 3.3 / MED-7).
+ *
+ * `Web/src/utils/scoring/copRules.js` mirrors these tables BY HAND, and both
+ * file headers admit it. That is dangerous rather than merely untidy: the
+ * client computes the slip total and posts it, and the server only checks it
+ * against the section ceilings — it does not recompute. So a one-sided edit
+ * produces *persisted wrong scores* rather than a visible mismatch.
+ *
+ * Served by GET /api/public/cop-rules so the client can fetch the tables
+ * instead of copying them. Only DATA is included; the pure functions
+ * (resolveDifficultyValue, getTolerance, getTimeDeduction, …) are trivial and
+ * stay duplicated in code — the tables are what drift.
+ *
+ * @returns {Object} plain, JSON-safe COP constants
+ */
+function getCopRulesData() {
+  return {
+    edition: COP_EDITION,
+    pointCeilings: POINT_CEILINGS,
+    elementClassValues: ELEMENT_CLASS_VALUES,
+    difficultyRequirements: DIFFICULTY_REQUIREMENTS,
+    toleranceTiers: TOLERANCE_TIERS,
+    toleranceBelowMinimum: TOLERANCE_BELOW_MINIMUM,
+    timeLimitSeconds: TIME_LIMIT_SECONDS,
+    timeDeductionTiers: TIME_DEDUCTION_TIERS,
+    timeDeductionMaximum: TIME_DEDUCTION_MAXIMUM,
+    combinationChecklists: COMBINATION_CHECKLISTS,
+    // §1.4 — Hanging Mallakhamb is not contested by women.
+    apparatusGenderRules: {
+      'Hanging Mallakhamb': { blockedForGenders: ['Female'] },
+    },
+  };
+}
+
 module.exports = {
   COP_EDITION,
   POINT_CEILINGS,
@@ -292,10 +342,15 @@ module.exports = {
   DIFFICULTY_REQUIREMENTS,
   getDifficultyRequirement,
   resolveDifficultyValue,
+  TOLERANCE_TIERS,
+  TOLERANCE_BELOW_MINIMUM,
   getTolerance,
   TIME_LIMIT_SECONDS,
+  TIME_DEDUCTION_TIERS,
+  TIME_DEDUCTION_MAXIMUM,
   getTimeDeduction,
   COMBINATION_CHECKLISTS,
+  getCopRulesData,
   normalizeApparatus,
   getCombinationChecklist,
   toCompetitionTypeDisplay,
