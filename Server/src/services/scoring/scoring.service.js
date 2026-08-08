@@ -13,7 +13,11 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
-const { toCompetitionTypeDisplay } = require('../../config/cop-rules');
+const {
+  toCompetitionTypeDisplay,
+  toCompetitionTypeSlug,
+  validateSlipBreakdown,
+} = require('../../config/cop-rules');
 const {
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -1027,6 +1031,357 @@ class ScoringService {
         competitionId, 
         ageGroup, 
         adminId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Score writes
+  //
+  // Moved from admin.service.js (task 3.1 / MED-5). Behaviour unchanged.
+  //
+  // This is the most consequential method in the product and carries two
+  // recent fixes that must not be disturbed:
+  //   HIGH-3 — `competitionType` is part of the document identity, normalized
+  //            ONCE and used for both the lookup and the write.
+  //   HIGH-4 — the read-merge-write runs in a bounded retry under an
+  //            optimistic-concurrency guard on `__v`, so concurrent judges do
+  //            not erase each other's slips.
+  // The merge stays in JavaScript deliberately: it upserts judgeSlips by role
+  // and enforces the per-player finalize guard, neither of which a positional
+  // arrayFilters $set can express.
+  // ==========================================================================
+
+  /**
+   * Bulk save scores (legacy method)
+   * @param {Array} scores - Array of score data
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} { saved, errors }
+   */
+  async saveScores(scoreData) {
+    try {
+      // Validate required fields
+      const requiredFields = ['teamId', 'gender', 'ageGroup', 'playerScores'];
+      const missingFields = requiredFields.filter(field => !scoreData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Process each player score through calculation service
+      const processedPlayerScores = [];
+      for (const playerScore of scoreData.playerScores) {
+        // COP §3.3 — reject a slip whose breakdown exceeds the section ceilings
+        // (Difficulty ≤3.80, Combination ≤1.60, Execution ≤4.40, Bonus 0/0.20,
+        // total ≤10.00). No-op when no breakdown is supplied.
+        const capCheck = validateSlipBreakdown(playerScore.breakdown);
+        if (!capCheck.valid) {
+          throw new ValidationError(`Invalid score for ${playerScore.playerName || playerScore.playerId}: ${capCheck.error}`);
+        }
+        const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore, {
+          panelSize: scoreData.panelSize || playerScore.panelSize
+        });
+        processedPlayerScores.push(calculatedScore);
+      }
+
+      // HIGH-3: `competitionType` is part of a Score document's identity.
+      // Normalize it ONCE and use the same value for both the lookup and the
+      // write. The lookup used to omit it entirely, so scoring a team in
+      // Competition II found its Competition I document, overwrote the
+      // category, and merged both categories' slips into one playerScores
+      // array — silently destroying the Competition I result.
+      const competitionTypeKey = scoreData.competitionType
+        ? toCompetitionTypeDisplay(scoreData.competitionType)
+        : 'Competition I';
+
+      // The full document identity, matching the unique index on Score.
+      const scoreIdentity = {
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        competition: scoreData.competitionId,
+        competitionType: competitionTypeKey
+      };
+
+      // Fresh payload per attempt — the retry loop below may run this more than
+      // once, and the merge mutates playerScores.
+      const buildScoreDocData = () => ({
+        competition: scoreData.competitionId,
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        competitionType: competitionTypeKey,
+        playerScores: processedPlayerScores,
+        judgeDetails: scoreData.judgeDetails || {},
+        timeKeeper: scoreData.timeKeeper || '',
+        scorer: scoreData.scorer || '',
+        remarks: scoreData.remarks || '',
+        isLocked: scoreData.isLocked || false
+      });
+
+      /**
+       * Merge the incoming slips onto an existing document's playerScores.
+       *
+       * Extracted so the retry loop can re-run it against freshly read state.
+       * Semantics are unchanged: judgeSlips upsert by role, per-player finalize
+       * guard, and field-level "only if provided" merging.
+       */
+      const buildMergedPlayerScores = (existingScore) => {
+        const mergedPlayerScores = [...existingScore.playerScores];
+
+        for (const incomingPlayerScore of processedPlayerScores) {
+          const existingPlayerIndex = mergedPlayerScores.findIndex(
+            ps => ps.playerId?.toString() === incomingPlayerScore.playerId?.toString()
+          );
+
+          if (existingPlayerIndex >= 0) {
+            // Merge judge scores - keep existing scores and add/update new ones
+            const existingPlayerScore = mergedPlayerScores[existingPlayerIndex];
+
+            // Per-player lock after Senior Judge Final Submit. Applies to judges only;
+            // Scorer/Admin (allowFinalizedEdit) still need to record time, deductions
+            // and remarks on a finalized player before locking the sheet.
+            if (
+              existingPlayerScore.isFinalized &&
+              !scoreData.isFinalSubmit &&
+              !scoreData.allowFinalizedEdit
+            ) {
+              throw new ValidationError(
+                `Scores for ${existingPlayerScore.playerName || 'this player'} are finalized and locked`
+              );
+            }
+
+            // Merge judgeSlips by role (upsert per judge)
+            const existingSlips = Array.isArray(existingPlayerScore.judgeSlips)
+              ? [...existingPlayerScore.judgeSlips]
+              : [];
+            const incomingSlips = Array.isArray(incomingPlayerScore.judgeSlips)
+              ? incomingPlayerScore.judgeSlips
+              : [];
+            for (const slip of incomingSlips) {
+              const idx = existingSlips.findIndex(s => s.judgeRole === slip.judgeRole);
+              if (idx >= 0) existingSlips[idx] = { ...existingSlips[idx], ...slip };
+              else existingSlips.push(slip);
+            }
+            mergedPlayerScores[existingPlayerIndex] = {
+              ...existingPlayerScore,
+              ...incomingPlayerScore,
+              judgeScores: {
+                ...existingPlayerScore.judgeScores,
+                ...incomingPlayerScore.judgeScores
+              },
+              judgeSlips: existingSlips.length > 0 ? existingSlips : existingPlayerScore.judgeSlips,
+              // Update other fields only if provided
+              time: incomingPlayerScore.time || existingPlayerScore.time,
+              deduction: incomingPlayerScore.deduction !== undefined ? incomingPlayerScore.deduction : existingPlayerScore.deduction,
+              otherDeduction: incomingPlayerScore.otherDeduction !== undefined ? incomingPlayerScore.otherDeduction : existingPlayerScore.otherDeduction,
+              breakdown: incomingPlayerScore.breakdown || existingPlayerScore.breakdown,
+              panelSize: incomingPlayerScore.panelSize || scoreData.panelSize || existingPlayerScore.panelSize,
+              isFinalized: scoreData.isFinalSubmit
+                ? true
+                : (incomingPlayerScore.isFinalized ?? existingPlayerScore.isFinalized),
+              finalizedAt: scoreData.isFinalSubmit
+                ? (incomingPlayerScore.finalizedAt || new Date())
+                : (incomingPlayerScore.finalizedAt || existingPlayerScore.finalizedAt)
+            };
+          } else {
+            // New player score
+            if (scoreData.panelSize && !incomingPlayerScore.panelSize) {
+              incomingPlayerScore.panelSize = scoreData.panelSize;
+            }
+            if (scoreData.isFinalSubmit) {
+              incomingPlayerScore.isFinalized = true;
+              incomingPlayerScore.finalizedAt = incomingPlayerScore.finalizedAt || new Date();
+            }
+            mergedPlayerScores.push(incomingPlayerScore);
+          }
+        }
+
+        return mergedPlayerScores;
+      };
+
+      // HIGH-4: panel scoring is inherently concurrent — up to five judges
+      // submit for the same performer within seconds. The old flow was
+      // read -> merge in JS -> write the WHOLE playerScores array, so the last
+      // writer silently erased the earlier judges' slips and Panel Review showed
+      // an incomplete panel with no error anywhere.
+      //
+      // Each attempt now re-reads, re-merges and commits under an optimistic
+      // concurrency guard on `__v`. A writer that loses the race matches zero
+      // documents and retries against fresh state instead of clobbering it.
+      //
+      // The merge stays in JavaScript rather than becoming an arrayFilters
+      // positional $set: it upserts judgeSlips by role and enforces the
+      // per-player finalize guard, neither of which a positional update can
+      // express. The version guard makes that merge safe without altering its
+      // semantics.
+      const MAX_SAVE_ATTEMPTS = 5;
+      let savedScore = null;
+      // Tracked outside the loop purely for the log line below — `existingScore`
+      // is scoped per attempt.
+      let didUpdateExisting = false;
+
+      for (let attempt = 1; attempt <= MAX_SAVE_ATTEMPTS && !savedScore; attempt += 1) {
+        const scoreDocData = buildScoreDocData();
+        const existingScore = await this.scoreRepository.findOne(scoreIdentity);
+
+        // HIGH-2: a locked document rejects EVERY write. `isFinalSubmit` used to
+        // short-circuit this check, which meant any caller could reopen a frozen
+        // sheet just by asserting the flag. The only way back is an explicit
+        // admin unlock (unlockScore / unlockScores), which clears isLocked.
+        //
+        // Note this is the *document* lock set by an admin (or by a Scorer's
+        // "Lock & Submit"). The separate per-player finalize lock inside
+        // buildMergedPlayerScores still honours `isFinalSubmit` /
+        // `allowFinalizedEdit`, because the Senior Judge's final submit and the
+        // Scorer's post-finalize edits both operate on unlocked documents.
+        if (existingScore?.isLocked) {
+          throw new ValidationError('Scores are locked and cannot be modified');
+        }
+
+        if (existingScore) {
+          scoreDocData.playerScores = buildMergedPlayerScores(existingScore);
+          // Keep existing document lock unless admin explicitly locks
+          if (!scoreData.isLocked) {
+            scoreDocData.isLocked = existingScore.isLocked;
+          }
+
+          // Optimistic-concurrency guard. Matching on the `__v` we just read
+          // means a judge whose slip was computed from stale state matches zero
+          // documents and loops instead of overwriting the winner's slips.
+          const versionGuard = { _id: existingScore._id };
+          if (typeof existingScore.__v === 'number') {
+            versionGuard.__v = existingScore.__v;
+          }
+
+          const result = await this.scoreRepository.model.updateOne(
+            versionGuard,
+            { $set: scoreDocData, $inc: { __v: 1 } }
+          );
+
+          if (result.matchedCount === 0) {
+            this.logger.warn('Concurrent score write detected; retrying against fresh state', {
+              scoreId: String(existingScore._id),
+              attempt,
+              maxAttempts: MAX_SAVE_ATTEMPTS
+            });
+            continue;
+          }
+
+          savedScore = await this.scoreRepository.findById(existingScore._id);
+          didUpdateExisting = true;
+        } else {
+          // Create new record
+          if (scoreData.isFinalSubmit) {
+            scoreDocData.playerScores = processedPlayerScores.map((ps) => ({
+              ...ps,
+              isFinalized: true,
+              finalizedAt: ps.finalizedAt || new Date(),
+            }));
+          }
+
+          try {
+            savedScore = await this.scoreRepository.create(scoreDocData);
+          } catch (createError) {
+            // Two judges raced to create the first document for this performer.
+            // The unique index rejects the loser, who retries and merges onto
+            // the winner's document instead of failing the submission.
+            const isDuplicateKey = createError?.code === 11000
+              || createError?.cause?.code === 11000;
+            if (isDuplicateKey && attempt < MAX_SAVE_ATTEMPTS) {
+              this.logger.warn('Concurrent score create detected; retrying as an update', {
+                attempt,
+                maxAttempts: MAX_SAVE_ATTEMPTS
+              });
+              continue;
+            }
+            throw createError;
+          }
+        }
+      }
+
+      if (!savedScore) {
+        throw new ValidationError(
+          'Could not save scores because another judge is submitting for the same performer. Please try again.'
+        );
+      }
+
+      this.logger.info('Scores saved successfully', {
+        scoreId: savedScore._id,
+        teamId: scoreData.teamId,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        isUpdate: didUpdateExisting
+      });
+
+      // Emit socket event for real-time updates
+      if (this.socketManager && scoreData.gender && scoreData.ageGroup && scoreData.competitionType) {
+        // Map competition type back to frontend slug for the room ID
+        const competitionTypeForRoom = toCompetitionTypeSlug(scoreData.competitionType);
+
+        const roomId = `scoring_${scoreData.gender}_${scoreData.ageGroup}_${competitionTypeForRoom}`;
+        
+        // Emit score update for each player score
+        for (const playerScore of processedPlayerScores) {
+          // Determine which judge field was updated
+          const judgeScores = playerScore.judgeScores || {};
+          const judgeTypeMap = {
+            seniorJudge: 'Senior Judge',
+            judge1: 'Judge 1',
+            judge2: 'Judge 2',
+            judge3: 'Judge 3',
+            judge4: 'Judge 4'
+          };
+          
+          // Emit for each judge score that was provided (include full breakdown for Panel Review)
+          for (const [field, judgeType] of Object.entries(judgeTypeMap)) {
+            if (judgeScores[field] !== undefined && judgeScores[field] !== 0) {
+              this.socketManager.emitToRoom(roomId, 'score_updated', {
+                playerId: playerScore.playerId,
+                playerName: playerScore.playerName,
+                judgeType: judgeType,
+                score: judgeScores[field],
+                breakdown: playerScore.breakdown || null,
+                teamId: scoreData.teamId,
+                gender: scoreData.gender,
+                ageGroup: scoreData.ageGroup,
+                isFinalSubmit: !!scoreData.isFinalSubmit,
+                isLocked: !!scoreData.isLocked,
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+
+          if (scoreData.isFinalSubmit) {
+            this.socketManager.emitToRoom(roomId, 'scores_saved_notification', {
+              playerId: playerScore.playerId,
+              playerName: playerScore.playerName,
+              teamId: scoreData.teamId,
+              finalScore: playerScore.finalScore,
+              isFinalized: true,
+              isLocked: true,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+        
+        this.logger.info('Socket events emitted for score updates', {
+          roomId,
+          playerCount: processedPlayerScores.length
+        });
+      }
+
+      // Return proper response format
+      return {
+        scoreId: savedScore._id,
+        isLocked: savedScore.isLocked,
+        playerScores: savedScore.playerScores
+      };
+    } catch (error) {
+      this.logger.error('Save scores error', { 
+        scoreData, 
         error: error.message 
       });
       throw error;

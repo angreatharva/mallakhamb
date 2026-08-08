@@ -8,16 +8,16 @@
  * JWT), the authentication service's repository lookup, and the two sibling
  * controllers the public router resolves but never exercises.
  *
- * STATUS after Phase 1 (see docs/AUDIT.md):
- *   CRIT-1  FIXED — POST /api/public/save-score now requires authentication
- *   CRIT-2  FIXED — GET  /api/public/judges requires auth and drops the hash
- *   HIGH-1  FIXED — the slip is bound to the authenticated judge, not the body
- *   HIGH-3  OPEN  — the Score key still omits competitionType (Phase 2.1)
+ * STATUS (see docs/AUDIT.md) — all FIXED:
+ *   CRIT-1  POST /api/public/save-score requires authentication
+ *   CRIT-2  GET  /api/public/judges requires auth and drops the hash
+ *   HIGH-1  the slip is bound to the authenticated judge, not the body
+ *   HIGH-3  `competitionType` is part of the Score identity
+ *   HIGH-4  concurrent judge submissions no longer erase each other
  *
- * The CRIT-1/CRIT-2/HIGH-1 cases are now plain `test()` regression guards: they
- * assert the secure behaviour and must stay green forever. HIGH-3 remains a
- * `test.failing()` — it passes while the defect exists and turns red the moment
- * Phase 2.1 lands, which is the signal to flip it too.
+ * Every case here is a plain `test()` regression guard asserting the secure
+ * behaviour, and must stay green forever. No `test.failing()` remains in this
+ * file — each one went red as its fix landed and was converted.
  *
  * A NOTE ON FALSE ALL-CLEARS (learned the hard way during the audit): a
  * "does not leak X" assertion is worthless if the endpoint errored, because an
@@ -37,6 +37,7 @@ const CalculationService = require('../../src/services/scoring/calculation.servi
 const JudgeRepository = require('../../src/repositories/judge.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
+const ScoringService = require('../../src/services/scoring/scoring.service');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Judge = require('../../models/Judge');
@@ -73,11 +74,25 @@ function buildApp() {
   const adminRepository = new AdminRepository(noopLogger);
   const calculationService = new CalculationService(noopLogger);
 
+  // Scoring moved out of AdminService in task 3.1; adminService delegates to
+  // it, so the harness has to wire the real thing rather than a stub — these
+  // tests exercise the actual write path end to end.
+  const scoringService = new ScoringService(
+    scoreRepository,
+    null,           // competitionRepository — unused by the score-write path
+    null,           // playerRepository
+    judgeRepository,
+    null,           // socketManager
+    noopLogger,
+    calculationService
+  );
+
   const adminService = new AdminService({
     adminRepository,
     judgeRepository,
     scoreRepository,
     calculationService,
+    scoringService,
     logger: noopLogger,
   });
 
