@@ -50,6 +50,21 @@ index as non-unique so a rollback cannot wedge a working database.
 
 ---
 
+## 1b. CSRF touches every unauthenticated POST — including login
+
+Turning CRIT-3 on broke **judge login** and **silent token refresh** during
+verification, and neither was caught by 321 passing tests, lint or a clean
+build — because none of them renders the app and clicks Sign In.
+
+The rule to remember: **a POST with no Bearer token is exactly what CSRF
+rejects**, and login is the canonical example (you do not have a token until it
+succeeds). Anything posting with raw `axios` instead of the `api` instance
+sends no `X-CSRF-Token` and gets a 403.
+
+Both are fixed, and `api-client.js` is now the only file importing axios
+directly. If you add a new call, put it on the `api` instance. If you ever see
+`403 CSRF token missing`, this is why.
+
 ## 2. Environment variables
 
 | Variable | Default | Action |
