@@ -13,7 +13,13 @@ Every finding cites the file and line that produced it.
 - **MED-W8 — FIXED.** `npm audit fix` took `Web/` from **10 vulnerabilities (4 high) → 2 moderate**, closing the `ws`, `socket.io-parser` and `form-data` advisories on the live-scoring transport. Residual: a `react-router` chain.
 - 1.2 (`lint:ci`) and 1.4 (the HIGH-W1 test) were already done on 2026-08-05.
 
-**Not started:** HIGH-W2 (route-level error boundaries, task 1.3), HIGH-W3 (seven modules bypass the API client — verified still 6 modules + `api-client.js`), HIGH-W4 (dead cross-tab `storage` listener, still at `AuthProvider.jsx:92`), all of MED-W1–W7, all of LOW-W1–W4, and Phases 2–4.
+- **HIGH-W2 — FIXED (task 1.3).** Each role layout now wraps its `<Outlet/>` in its own `ErrorBoundary`, so a failure in one area no longer replaces the whole UI. Two additions make a scoped boundary actually usable: **`resetKey`** (keyed on `location.pathname`) because React never clears error state on its own — without it a boundary stays latched for the rest of the session and keeps showing the fallback even on routes that render fine; and **`homePath`**, an escape hatch to the role dashboard that does not require a reload. It is a plain anchor, not a router link, because `ErrorBoundary` is a class component that must keep working when the crash came from the router subtree. With no props the component is unchanged, which is how `App.jsx` uses it.
+- **HIGH-W4 — FIXED (task 3.2).** Replaced the dead `storage` listener with a `BroadcastChannel` (`mallakhamb:auth`), which is independent of the storage backend. Logout publishes; other tabs holding the same role clear their session. Roles stay independent, matching the existing scoped-clear behaviour. The stale `obfuscatedStorage.js` header saying it "wraps localStorage" — the one wrong word that let this ship and survive review — is corrected. New suite `authEvents.crosstab.test.js` (6 tests) asserts both directions using a second raw channel, since a channel never receives its own `postMessage`.
+  - Note: the first draft of those tests used a fixed `0ms` flush, passed in isolation and **failed once the full suite ran in parallel**. They now poll for delivery. Treat any fixed sleep in an async-delivery test as a latent flake.
+
+**Web status: 8 files, 62 tests passing; lint 45 → 27 errors; build clean.**
+
+**Not started:** HIGH-W3 (six modules + `CompetitionContext` bypass the API client, losing silent refresh and `AUTH_EXPIRED` — verified still present), all of MED-W1–W7, all of LOW-W1–W4, and the rest of Phases 2–4.
 
 > Do **not** run the Server and Web suites concurrently — vitest's fork workers time out under the contention and report ~7 spurious "Failed to start forks worker" errors that look like a real regression.
 
