@@ -26,7 +26,12 @@ Every finding cites the file and line that produced it.
 
 **Still open on HIGH-W3:** `CompetitionContext.jsx` (4 call sites) and `UnifiedLogin.jsx` (1) still use axios directly. The login call arguably belongs outside the authenticated client; `CompetitionContext` does not and should follow.
 
-**Not started:** MED-W1–W5, MED-W7, all of LOW-W1–W4, and the rest of Phases 3–4.
+- **MED-W5 — CLOSED, by detection rather than deletion.** Task 4.1 says to fetch from `GET /api/public/cop-rules` (which now exists) and delete this mirror. **The mirror is deliberately kept.** The defect is not duplication, it is *silence*: the client computes the slip total and posts it, the server only range-checks it, so drift persists a wrong score instead of erroring. Deleting the mirror would make every judge slip depend on a network fetch succeeding — on venue wifi, mid-competition. That trades a silent-drift risk for a scoring-is-down risk. The server is now authoritative for **detection**; the bundled tables stay authoritative for **availability**.
+  - The comparison is **not** a deep-equal, because the two stacks **already differ in checklist rule text** (`"…element executed from both sides"` vs `"…element from both sides"`) with no effect on any score. An alarm that is wrong on day one is one everybody learns to ignore. Scoring-relevant values are compared strictly; rule text is reported as informational.
+  - Tolerance and time deductions are checked by evaluating the **client's own functions at the server's declared boundaries**, not by comparing table shapes — that tests what happens to a score, and survives either side refactoring an if-ladder into data (which the server just did).
+  - `copRulesSync.test.js` feeds the **real server payload** through the comparator and requires the stacks to agree today, so a one-sided edit fails CI. Eleven more cases prove each drift class is caught, and one proves rule-text-only changes do not fire it.
+
+**Not started:** MED-W1–W4, MED-W7, all of LOW-W1–W4, and the rest of Phases 3–4.
 
 > Do **not** run the Server and Web suites concurrently — vitest's fork workers time out under the contention and report ~7 spurious "Failed to start forks worker" errors that look like a real regression.
 
