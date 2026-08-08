@@ -6,6 +6,11 @@
 
 Every finding below cites the file and line that produced it. Nothing here is speculative — where a claim depends on runtime behaviour, the code path is quoted.
 
+> **DEPLOYING THIS?** Read `Server/docs/RELEASE-RUNBOOK.md` first. This release
+> contains a **mandatory database migration** — HIGH-3 stays broken, and
+> second-category scoring is actively rejected, until migration 003 runs.
+
+
 ## Phase 1 status — COMPLETE (2026-08-06)
 
 All eight Phase 1 tasks are implemented and verified. `npm test` → **135 passing, 9 suites** (baseline was 132).

@@ -6,6 +6,11 @@
 
 Every finding cites the file and line that produced it.
 
+> **DEPLOYING THIS?** Read `Server/docs/RELEASE-RUNBOOK.md` first. This release
+> contains a **mandatory database migration** — HIGH-3 stays broken, and
+> second-category scoring is actively rejected, until migration 003 runs.
+
+
 ## Progress status (2026-08-07)
 
 **Done:**
