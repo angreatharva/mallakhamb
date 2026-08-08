@@ -258,6 +258,52 @@ class BaseRepository {
   }
 
   /**
+   * Update every document matching criteria.
+   *
+   * Added 2026-08-08. Two callers had been using this for a long time —
+   * the admin "lock age group" and "unlock age group" paths in the scoring
+   * service — but it did not exist on any repository, so both threw
+   * `TypeError: this.scoreRepository.updateMany is not a function` and
+   * returned 500. Nothing caught it because no test exercised those routes;
+   * the integration suite added for task 3.5 found it on its first run.
+   *
+   * Soft-delete filtered like the read methods, so a bulk update cannot
+   * silently resurrect or modify deleted rows.
+   *
+   * @param {Object} criteria - Query criteria
+   * @param {Object} updates - Fields to set
+   * @returns {Promise<{matchedCount: number, modifiedCount: number}>}
+   */
+  async updateMany(criteria = {}, updates = {}) {
+    try {
+      const queryCriteria = { ...criteria };
+      if (this.model.schema.paths.isDeleted) {
+        queryCriteria.isDeleted = { $ne: true };
+      }
+
+      const result = await this.model.updateMany(queryCriteria, { $set: updates });
+
+      this.logger.debug('Bulk update', {
+        model: this.model.modelName,
+        matched: result.matchedCount,
+        modified: result.modifiedCount,
+      });
+
+      return {
+        matchedCount: result.matchedCount ?? 0,
+        modifiedCount: result.modifiedCount ?? 0,
+      };
+    } catch (error) {
+      this.logger.error('Bulk update error', {
+        model: this.model.modelName,
+        criteria,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Count documents matching criteria
    * @param {Object} criteria - Query criteria
    * @returns {Promise<number>} Document count
