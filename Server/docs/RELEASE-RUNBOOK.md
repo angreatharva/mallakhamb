@@ -126,9 +126,15 @@ curl -s -o /dev/null -w '%{http_code}\n' https://<api>/api/debug/env         # 4
    thing the migration enables — if it errors, the migration did not run.
 3. **Admin: lock and unlock an age group.** This was returning 500 before this
    release (`BaseRepository.updateMany` did not exist) and has never worked.
-4. **Send one real e-mail** — password reset or OTP. `nodemailer` went 7.x → 9.x
-   (a breaking major). The API contract was verified, but not a live SMTP
-   handshake against your provider.
+4. **Send one real e-mail** — an OTP is easiest. `nodemailer` went 7.x → 9.x, a
+   breaking major on the transport. It is now covered by
+   `tests/integration/email/smtp-delivery.test.js`, which drives the app's own
+   EmailService through a **real SMTP conversation** (handshake, AUTH, DATA)
+   against a local server — so the protocol itself is proven.
+   **What that cannot prove is your provider**: Gmail or Resend can still
+   reject on credentials, SPF/DKIM, sender reputation or rate limits. One live
+   send is all that is needed, and it is the only step here that requires
+   production secrets.
 5. **Click through each role's dashboard.** `react-router` went 6.x → 7.x.
 6. **Open the app in a second tab.** It should stay signed in — that is the new
    `/auth/me` rehydration (MED-W1).
