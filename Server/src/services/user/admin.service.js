@@ -23,83 +23,17 @@ const { calculateIndividualScore } = require('../../utils/scoring/calculation.ut
  * exposed until it is named here.
  */
 
-// Judge panel roster. Excludes `password` (bcrypt hash) and
-// `mustResetPassword`. `username` is retained because the admin judge manager
-// renders and re-submits it (Web/src/pages/admin/AdminJudges.jsx:486,518,809)
-// and the scorer stamps it onto Score.judgeDetails
-// (Web/src/pages/judge/ScorerScoring.jsx:493).
-const JUDGE_PUBLIC_FIELDS = [
-  '_id',
-  'competition',
-  'competitionTypes',
-  'gender',
-  'ageGroup',
-  'apparatus',
-  'judgeNo',
-  'judgeType',
-  'name',
-  'username',
-  'isActive',
-  'createdAt',
-  'updatedAt',
-].join(' ');
-
-// Coach shown on a submitted-team card. Only the display name is consumed
-// (JudgeDashboard.jsx:309,426 and AdminScores.jsx:318,401).
-const SUBMITTED_TEAM_COACH_FIELDS = ['_id', 'name', 'isActive'].join(' ');
-
-// Athlete shown on a submitted-team card. Deliberately omits `email`,
-// `dateOfBirth`, `password` and the reset-token pair: these rosters include
-// minors. Consumers only read _id/firstName/lastName/gender
-// (JudgeTeamPlayers.jsx:251-258, ScorerScoring.jsx:218-222,
-// JudgeDashboard.jsx:221).
-const SUBMITTED_TEAM_PLAYER_FIELDS = [
-  '_id',
-  'firstName',
-  'lastName',
-  'gender',
-  'ageGroup',
-  'isActive',
-  'stateUnit',
-  'registrationNumber',
-].join(' ');
-
-const SUBMITTED_TEAM_PLAYER_FIELD_LIST = SUBMITTED_TEAM_PLAYER_FIELDS.split(' ');
-const SUBMITTED_TEAM_COACH_FIELD_LIST = SUBMITTED_TEAM_COACH_FIELDS.split(' ');
-
-/**
- * Reduce a populated document (Mongoose doc or plain object) to an allow-listed
- * set of fields.
- *
- * Note: `.toObject()` does NOT run a schema `toJSON` transform, so this is the
- * only thing standing between a populated coach/player and the wire when the
- * populate projection is bypassed or a document arrives pre-hydrated.
- *
- * @param {Object|null|undefined} doc - Populated document or plain object
- * @param {string[]} allowedFields - Field names to keep
- * @returns {Object|null|undefined} Projected plain object
- */
-function projectFields(doc, allowedFields) {
-  if (!doc || typeof doc !== 'object') {
-    return doc;
-  }
-
-  // An unpopulated ref is a bare ObjectId — carry it through untouched.
-  if (doc._bsontype || Buffer.isBuffer(doc)) {
-    return doc;
-  }
-
-  const source = typeof doc.toObject === 'function' ? doc.toObject() : doc;
-  const projected = {};
-
-  for (const field of allowedFields) {
-    if (source[field] !== undefined) {
-      projected[field] = source[field];
-    }
-  }
-
-  return projected;
-}
+// CRIT-4 projections moved to utils/data/user-projection.util.js (task 3.1) so
+// the scoring service shares one definition. A duplicated security control is
+// one that drifts.
+const {
+  JUDGE_PUBLIC_FIELDS,
+  SUBMITTED_TEAM_COACH_FIELDS,
+  SUBMITTED_TEAM_PLAYER_FIELDS,
+  SUBMITTED_TEAM_COACH_FIELD_LIST,
+  SUBMITTED_TEAM_PLAYER_FIELD_LIST,
+  projectFields,
+} = require('../../utils/data/user-projection.util');
 
 class AdminService extends UserService {
   /**
@@ -116,6 +50,9 @@ class AdminService extends UserService {
     this.scoreRepository = dependencies.scoreRepository;
     this.transactionRepository = dependencies.transactionRepository;
     this.calculationService = dependencies.calculationService;
+    // Task 3.1: scoring lives in ScoringService now; the methods retained on
+    // this class delegate to it.
+    this.scoringService = dependencies.scoringService;
     this.socketManager = dependencies.socketManager;
     this.authenticationService = dependencies.authenticationService;
   }
@@ -2447,278 +2384,56 @@ class AdminService extends UserService {
   }
 
   /**
-   * Get team scores with aggregation
-   * @param {string} competitionId - Competition ID
-   * @param {string} competitionType - Competition type
-   * @param {string} apparatus - Apparatus
-   * @returns {Promise<Array>} Teams with scores
+   * The scoring service the delegating methods below use.
+   *
+   * Accessed through a getter so a missing dependency fails with an
+   * actionable message at the call site instead of
+   * "Cannot read properties of undefined (reading 'getTeamScores')".
+   * Several tests construct AdminService by hand; this tells them exactly what
+   * to add.
+   *
+   * @returns {Object} ScoringService
+   */
+  get scoring() {
+    if (!this.scoringService) {
+      throw new Error(
+        'AdminService.scoringService is not set. Scoring moved to ScoringService in task 3.1 — ' +
+        'pass `scoringService` when constructing AdminService.'
+      );
+    }
+    return this.scoringService;
+  }
+
+  /**
+   * Get team scores with aggregation.
+   * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
   async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus) {
-    try {
-      // Query the Competition model to get registered teams.
-      // Same projection as getSubmittedTeams — without a `select` these
-      // populated documents carry e-mail addresses and minors' dates of birth
-      // into the response. Applied here AND at the mapping layer below, because
-      // `.toObject()` does not run a schema toJSON transform.
-      const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          {
-            path: 'registeredTeams.team',
-            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
-          },
-          {
-            path: 'registeredTeams.players.player',
-            select: SUBMITTED_TEAM_PLAYER_FIELDS
-          }
-        ]
-      });
-
-      if (!competition) {
-        this.logger.warn('Competition not found', { competitionId });
-        return [];
-      }
-
-      // Filter teams by age group and gender if provided
-      let filteredTeams = competition.registeredTeams;
-      
-      if (ageGroup || gender) {
-        filteredTeams = filteredTeams.filter(regTeam => {
-          return regTeam.players.some(playerEntry => {
-            const matchesAgeGroup = !ageGroup || playerEntry.ageGroup === ageGroup;
-            const matchesGender = !gender || playerEntry.gender === gender;
-            return matchesAgeGroup && matchesGender;
-          });
-        });
-      }
-
-      const teamsWithScores = await Promise.all(
-        filteredTeams.map(async (regTeam) => {
-          // Get scores for this team - filter by gender and ageGroup to get the correct score document
-          const scoreQuery = {
-            competition: competitionId,
-            teamId: regTeam.team._id
-          };
-          if (gender) scoreQuery.gender = gender;
-          if (ageGroup) scoreQuery.ageGroup = ageGroup;
-          if (competitionType) {
-            scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
-          }
-          
-          const scores = await this.scoreRepository.find(scoreQuery);
-
-          let playerScores = scores.flatMap(s => s.playerScores || []);
-          
-          if (apparatus) {
-            playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
-          }
-          
-          const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
-          
-          // Get the most recent score document for metadata (isLocked, timeKeeper, etc.)
-          const latestScoreDoc = scores.length > 0 ? scores.sort((a, b) => 
-            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
-          )[0] : null;
-
-          return {
-            _id: regTeam.team._id,
-            name: regTeam.team.name,
-            // Same defect class as CRIT-4: this returned the whole coach and
-            // player documents. `select: false` now hides the bcrypt hash, but
-            // coach/player e-mail and minors' dates of birth were still going
-            // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
-            // the allow-lists getSubmittedTeams projects with, so the two
-            // endpoints cannot drift apart.
-            coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
-            players: regTeam.players.map(playerEntry => {
-              // projectFields handles Mongoose documents and plain objects, and
-              // passes an unpopulated ObjectId ref through untouched.
-              const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
-              return {
-                ...playerData,
-                ageGroup: playerEntry.ageGroup,
-                gender: playerEntry.gender
-              };
-            }),
-            scores: playerScores,
-            totalScore,
-            // Include score document metadata
-            scoreMetadata: latestScoreDoc ? {
-              _id: latestScoreDoc._id,
-              isLocked: latestScoreDoc.isLocked,
-              timeKeeper: latestScoreDoc.timeKeeper,
-              scorer: latestScoreDoc.scorer,
-              remarks: latestScoreDoc.remarks,
-              competitionType: latestScoreDoc.competitionType,
-              createdAt: latestScoreDoc.createdAt,
-              updatedAt: latestScoreDoc.updatedAt
-            } : null
-          };
-        })
-      );
-
-      this.logger.info('Team scores retrieved', { competitionId, ageGroup, gender });
-
-      return teamsWithScores;
-    } catch (error) {
-      this.logger.error('Get team scores error', { 
-        competitionId, 
-        ageGroup, 
-        gender,
-        error: error.message 
-      });
-      throw error;
-    }
+    return this.scoring.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus);
   }
 
   /**
-   * Get individual player scores
-   * @param {string} competitionId - Competition ID
-   * @param {string} competitionType - Competition type
-   * @param {string} apparatus - Apparatus
-   * @returns {Promise<Array>} Players with individual scores
+   * Get individual player scores.
+   * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
   async getIndividualScores(competitionId, ageGroup, gender, competitionType, apparatus) {
-    try {
-      // Build query filters
-      const query = { competition: competitionId };
-      
-      // Only add ageGroup filter if provided
-      if (ageGroup) {
-        query.ageGroup = ageGroup;
-      }
-      if (competitionType) {
-        query.competitionType = competitionType;
-      }
-
-      const scores = await this.scoreRepository.find(query);
-
-      const playerScoresMap = new Map();
-
-      scores.forEach(scoreDoc => {
-        (scoreDoc.playerScores || []).forEach(ps => {
-          const playerId = ps.playerId?.toString();
-          if (playerId) {
-            // Apply gender filter if provided
-            if (gender && ps.playerGender && ps.playerGender !== gender) {
-              return; // Skip this player score
-            }
-            
-            // Apply apparatus filter if provided
-            if (apparatus && ps.apparatus && ps.apparatus !== apparatus) {
-              return; // Skip this player score
-            }
-            
-            if (!playerScoresMap.has(playerId)) {
-              playerScoresMap.set(playerId, {
-                playerId: ps.playerId,
-                playerName: ps.playerName,
-                playerGender: ps.playerGender,
-                playerAgeGroup: ps.playerAgeGroup,
-                scores: []
-              });
-            }
-            playerScoresMap.get(playerId).scores.push(ps);
-          }
-        });
-      });
-
-      const individualScores = Array.from(playerScoresMap.values());
-
-      this.logger.info('Individual scores retrieved', { 
-        competitionId, 
-        ageGroup, 
-        gender,
-        count: individualScores.length 
-      });
-
-      return individualScores;
-    } catch (error) {
-      this.logger.error('Get individual scores error', { 
-        competitionId, 
-        ageGroup, 
-        gender,
-        error: error.message 
-      });
-      throw error;
-    }
+    return this.scoring.getIndividualScores(competitionId, ageGroup, gender, competitionType, apparatus);
   }
 
   /**
-   * Get team rankings
-   * @param {string} competitionId - Competition ID
-   * @param {string} ageGroup - Age group
-   * @param {string} competitionType - Competition Type
-   * @param {string} apparatus - Apparatus
-   * @returns {Promise<Array>} Team rankings
+   * Get team rankings.
+   * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
   async getTeamRankings(competitionId, ageGroup, gender, competitionType, apparatus) {
-    try {
-      const teamsWithScores = await this.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus);
-
-      // Calculate rankings using CalculationService
-      const rankings = this.calculationService.calculateRankings(
-        teamsWithScores.map(t => ({
-          ...t,
-          finalScore: t.totalScore
-        }))
-      );
-
-      this.logger.info('Team rankings calculated', { 
-        competitionId, 
-        ageGroup, 
-        gender,
-        count: rankings.length 
-      });
-
-      return rankings;
-    } catch (error) {
-      this.logger.error('Get team rankings error', { 
-        competitionId, 
-        ageGroup, 
-        gender,
-        error: error.message 
-      });
-      throw error;
-    }
+    return this.scoring.getTeamRankings(competitionId, ageGroup, gender, competitionType, apparatus);
   }
 
   /**
-   * Get individual player rankings
-   * @param {string} competitionId - Competition ID
-   * @param {string} ageGroup - Age group
-   * @returns {Promise<Array>} Individual rankings
+   * Get individual player rankings.
+   * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
   async getIndividualRankings(competitionId, ageGroup) {
-    try {
-      const individualScores = await this.getIndividualScores(competitionId, ageGroup);
-
-      // Calculate final score for each player
-      const playersWithFinalScores = individualScores.map(player => {
-        const finalScore = player.scores.reduce((sum, s) => sum + (s.finalScore || 0), 0);
-        return {
-          ...player,
-          finalScore
-        };
-      });
-
-      // Calculate rankings using CalculationService
-      const rankings = this.calculationService.calculateRankings(playersWithFinalScores);
-
-      this.logger.info('Individual rankings calculated', { 
-        competitionId, 
-        ageGroup, 
-        count: rankings.length 
-      });
-
-      return rankings;
-    } catch (error) {
-      this.logger.error('Get individual rankings error', { 
-        competitionId, 
-        ageGroup, 
-        error: error.message 
-      });
-      throw error;
-    }
+    return this.scoring.getIndividualRankings(competitionId, ageGroup);
   }
 
   /**

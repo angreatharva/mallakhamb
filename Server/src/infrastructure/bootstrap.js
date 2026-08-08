@@ -151,6 +151,9 @@ function bootstrap() {
     scoreRepository: c.resolve('scoreRepository'),
     transactionRepository: c.resolve('transactionRepository'),
     calculationService: c.resolve('calculationService'),
+    // Task 3.1: scoring moved to ScoringService; adminService delegates so
+    // every existing caller and route keeps working.
+    scoringService: c.resolve('scoringService'),
     socketManager: null,
     logger: c.resolve('logger'),
     cacheService: c.resolve('cacheService'),
@@ -215,7 +218,10 @@ function bootstrap() {
     c.resolve('playerRepository'),
     c.resolve('judgeRepository'),
     null,
-    c.resolve('logger')
+    c.resolve('logger'),
+    // Task 3.1: the score-aggregation and ranking methods moved here from
+    // admin.service need the calculation service.
+    c.resolve('calculationService')
   ), 'singleton');
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
