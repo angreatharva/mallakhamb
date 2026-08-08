@@ -146,13 +146,11 @@ const AdminScoring = () => {
         
         socket.on('score_updated', handleScoreUpdate);
         socket.on('scores_saved_notification', handleScoresSaved);
-        socket.on('score_update_error', handleScoreUpdateError);
         socket.on('scores_saved_error', handleScoresSavedError);
         
         return () => { 
             socket.off('score_updated', handleScoreUpdate); 
             socket.off('scores_saved_notification', handleScoresSaved); 
-            socket.off('score_update_error', handleScoreUpdateError);
             socket.off('scores_saved_error', handleScoresSavedError);
         };
     }, [socket, players, isLocked]);

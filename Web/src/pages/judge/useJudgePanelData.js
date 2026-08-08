@@ -357,11 +357,12 @@ export function useJudgePanelData({ judgeInfo, session }) {
         navigate('/judge/dashboard');
       }
     });
-    newSocket.on('score_update_error', (error) => {
-      if (error.message === 'Only judges can update scores') {
-        toast.error('Only judges can submit scores');
-      }
-    });
+    // NOTE: there is deliberately no 'score_update_error' listener here.
+    // socket.manager surfaces every handler failure on the generic 'error'
+    // event above; the server has never emitted 'score_update_error', so a
+    // listener for it was dead code that looked live — the same trap as the
+    // cross-tab `storage` listener in HIGH-W4. Verified end to end in
+    // Server/tests/integration/socket/scoring-socket.test.js.
     newSocket.on('score_updated', (data) => {
       const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
       if (currentPlayerId && String(data.playerId) === currentPlayerId && PANEL_TYPES.includes(data.judgeType)) {
