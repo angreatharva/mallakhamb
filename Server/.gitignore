@@ -33,5 +33,14 @@ old_config/
 *.sw?
 
 
-#scripts
-scripts/
+# Operational scripts.
+#
+# Ignore the *contents* of scripts/ (`scripts/*`), not the directory itself.
+# The directory form (`scripts/`) excludes the directory, and git cannot
+# re-include a file whose parent directory is excluded — so every `!` negation
+# below would have been silently ignored. createAdmin.js and createSuperAdmin.js
+# were only ever tracked because they predate this rule (LOW-1 / task 3.4).
+scripts/*
+!scripts/createAdmin.js
+!scripts/createSuperAdmin.js
+!scripts/migrate.js
