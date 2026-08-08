@@ -1,0 +1,116 @@
+# CI for the Mallakhamb monorepo (audit task 3.5 / MED-8).
+#
+# Before this, nothing ran the test suites automatically — the audit's own
+# note was "no CI runs any of this". The two stacks are independent Render
+# services built from one repository, so they are tested as independent jobs.
+#
+# The suites are deliberately NOT run in the same job step concurrently:
+# vitest's fork workers time out under contention and produce spurious
+# "Failed to start forks worker" failures that look exactly like a real
+# regression. Separate jobs get separate runners, which avoids that.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+# A new push to the same branch cancels the previous run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server — tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # No `engines` field in either package.json; 22.x matches the
+          # version this was developed and verified against.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Server/package-lock.json
+
+      - run: npm ci
+
+      # Jest uses mongodb-memory-server, which downloads a MongoDB binary on
+      # first run. Cached so CI does not re-fetch it every time.
+      - name: Cache mongodb-memory-server binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+
+      - run: npm test
+
+  web:
+    name: Web — tests, lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Web/package-lock.json
+
+      - run: npm ci
+
+      - run: npm test
+
+      # Errors only. The design-system rules are set to 'warn' and produce
+      # ~1,800 findings, which would drown the real errors — `lint:ci` is
+      # `eslint . --quiet` for exactly that reason (Web audit MED-W3).
+      #
+      # NOTE: this does not gate the build yet. There are 27 pre-existing
+      # errors; flip `continue-on-error` off once they are cleared, otherwise
+      # CI is red on arrival and everyone learns to ignore it.
+      - name: Lint (errors only)
+        run: npm run lint:ci
+        continue-on-error: true
+
+      - run: npm run build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    # Reports rather than blocks: a newly published advisory would otherwise
+    # turn every unrelated PR red overnight. Read it, do not ignore it.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [Server, Web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack }}/package-lock.json
+
+      - run: npm ci
+
+      # Production dependencies only — dev-only advisories do not ship.
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
