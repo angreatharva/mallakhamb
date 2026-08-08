@@ -4,7 +4,8 @@ const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
-const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, createAuthRateLimitMiddleware } = require('../middleware/security.middleware');
+const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, createAuthRateLimitMiddleware, createUserRateLimitMiddleware, createJudgeLoginRateLimitMiddleware } = require('../middleware/security.middleware');
+const { createCsrfMiddleware } = require('../middleware/csrf.middleware');
 const { errorHandler, notFoundHandler } = require('../middleware/error.middleware');
 const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('../middleware/metrics.middleware');
 const { loadRoutes } = require('../routes');
@@ -48,6 +49,21 @@ function createApp(container) {
   // Cookie parsing
   app.use(cookieParser());
 
+  // CSRF protection (CRIT-3) - must sit after cookieParser so req.cookies is populated.
+  // DISABLED BY DEFAULT and gated on CSRF_ENABLED.
+  // Do not switch this on until the SPA sends X-CSRF-Token on every state-changing
+  // request: Web/src/services/api-client.js only attaches `Authorization: Bearer <token>`
+  // when a token exists in sessionStorage, so a new tab or evicted storage produces a
+  // cookie-only write that the Bearer exemption below would NOT cover. Enabling it
+  // before the client catches up would 403 real users mid-competition.
+  // skipBearerAuth stays at its default (true) so header-authenticated clients such as
+  // the judge pages are exempt.
+  const appConfig = container.resolve('config');
+  if (appConfig.get('security.csrfEnabled')) {
+    app.use(createCsrfMiddleware());
+    logger.info('CSRF protection enabled (double-submit cookie)');
+  }
+
   // NoSQL injection protection
   app.use(mongoSanitize({
     replaceWith: '_',
@@ -73,9 +89,22 @@ function createApp(container) {
   const { createAuditMiddleware } = require('../middleware/audit.middleware');
   app.use(createAuditMiddleware(container));
 
-  // Load routes with auth limiter
+  // Load routes with rate limiters (MED-2).
+  // NOTE: there is deliberately NO global/per-IP rate limiter. At a venue every judge
+  // tablet shares one NAT address, so a five-judge panel presents as a single IP and
+  // would blow through the 100 req / 15 min general IP limit mid-competition.
+  // `createIpRateLimitMiddleware` is reserved for unauthenticated endpoints only.
+  // The user limiter is keyed by the authenticated principal (req.user, or the access
+  // token when it runs ahead of the router's own auth middleware) and skips anonymous
+  // requests entirely — it never falls back to an IP key.
+  // Judge login gets its own limiter keyed by username rather than sharing the
+  // per-IP `authLimiter` bucket — otherwise one venue's NAT address would put the
+  // whole panel on a single 10-per-15-min budget at sign-in. See
+  // createJudgeLoginRateLimitMiddleware.
   const authLimiter = createAuthRateLimitMiddleware(container);
-  loadRoutes(app, container, { authLimiter });
+  const userLimiter = createUserRateLimitMiddleware(container);
+  const judgeLoginLimiter = createJudgeLoginRateLimitMiddleware(container);
+  loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter });
 
   // Debug endpoints (development only)
   if (process.env.NODE_ENV !== 'production') {

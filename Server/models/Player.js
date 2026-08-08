@@ -32,7 +32,8 @@ const playerSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: 8
+    minlength: 8,
+    select: false // Never loaded unless a query opts in with .select('+password')
   },
   team: {
     type: mongoose.Schema.Types.ObjectId,
@@ -87,7 +88,18 @@ const playerSchema = new mongoose.Schema({
     default: null
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: {
+    // Defence in depth: strip credentials from any document that is serialised
+    // directly (res.json(doc), JSON.stringify(doc)). Note this does NOT apply to
+    // .toObject() or to .lean() results.
+    transform: function(doc, ret) {
+      delete ret.password;
+      delete ret.resetPasswordToken;
+      delete ret.resetPasswordExpires;
+      return ret;
+    }
+  }
 });
 
 // Hash password before saving

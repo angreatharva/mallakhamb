@@ -169,8 +169,8 @@ class UserService {
    */
   async changePassword(userId, currentPassword, newPassword) {
     try {
-      // Get user with password
-      const user = await this.repository.findById(userId);
+      // Get user with password (`select: false` on the schema, so opt back in)
+      const user = await this.repository.findById(userId, { select: '+password' });
 
       if (!user) {
         this.logger.warn('Change password failed: User not found', { 

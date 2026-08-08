@@ -22,11 +22,13 @@ class AdminRepository extends BaseRepository {
   /**
    * Find admin by email
    * @param {string} email - Admin email
+   * @param {Object} options - Query options. Login passes { select: '+password' },
+   *   which is required because `password` is `select: false` on the schema.
    * @returns {Promise<Object|null>} Admin document or null
    */
-  async findByEmail(email) {
+  async findByEmail(email, options = {}) {
     try {
-      return await this.findOne({ email: email.toLowerCase() });
+      return await this.findOne({ email: email.toLowerCase() }, options);
     } catch (error) {
       this.logger.error('AdminRepository.findByEmail error', { email, error: error.message });
       throw error;

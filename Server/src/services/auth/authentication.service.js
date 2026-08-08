@@ -77,8 +77,9 @@ class AuthenticationService {
       const sanitizedEmail = normalizeEmail(email);
       const sanitizedUserType = sanitizeString(userType);
 
-      // Find user by type
-      const user = await this.findUserByType(sanitizedEmail, sanitizedUserType);
+      // Find user by type. `password` is `select: false` on every user schema,
+      // so the login lookup has to opt back into it or verifyPassword sees nothing.
+      const user = await this.findUserByType(sanitizedEmail, sanitizedUserType, { select: '+password' });
 
       if (!user) {
         this.logger.warn('Login failed: User not found', { email: sanitizedEmail, userType: sanitizedUserType });
@@ -508,12 +509,14 @@ class AuthenticationService {
    * Find user by email and type
    * @param {string} email - User email
    * @param {string} userType - User type
+   * @param {Object} options - Query options. Pass { select: '+password' } to load
+   *   the credential hash; it is excluded by default on every user schema.
    * @returns {Promise<Object|null>} User document or null
    */
-  async findUserByType(email, userType) {
+  async findUserByType(email, userType, options = {}) {
     try {
       const repository = this.getRepositoryByType(userType);
-      return await repository.findByEmail(email);
+      return await repository.findByEmail(email, options);
     } catch (error) {
       this.logger.error('Find user by type error', { 
         email, 

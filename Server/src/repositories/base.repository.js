@@ -182,7 +182,10 @@ class BaseRepository {
     try {
       // If password is being updated, use save() to trigger pre-save hooks
       if (updates.password !== undefined) {
-        const doc = await this.model.findById(id);
+        // `password` is `select: false` on the user schemas, so it must be
+        // explicitly re-selected or the document loads without it. Harmless on
+        // models that have no password path — Mongoose drops unknown `+` paths.
+        const doc = await this.model.findById(id).select('+password');
         if (!doc) return null;
 
         // Use set() so Mongoose tracks changes (Object.assign bypasses change tracking)
@@ -194,7 +197,10 @@ class BaseRepository {
         // Save will trigger pre-save hooks (including password hashing)
         await doc.save();
 
-        return this.toPlainObject(doc);
+        // Never hand the (re-selected) hash back to callers.
+        const plain = this.toPlainObject(doc);
+        if (plain) delete plain.password;
+        return plain;
       }
       
       // For non-password updates, use findOneAndUpdate for better performance

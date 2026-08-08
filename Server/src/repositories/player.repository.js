@@ -22,11 +22,13 @@ class PlayerRepository extends BaseRepository {
   /**
    * Find player by email
    * @param {string} email - Player email
+   * @param {Object} options - Query options. Login passes { select: '+password' },
+   *   which is required because `password` is `select: false` on the schema.
    * @returns {Promise<Object|null>} Player document or null
    */
-  async findByEmail(email) {
+  async findByEmail(email, options = {}) {
     try {
-      return await this.findOne({ email: email.toLowerCase() });
+      return await this.findOne({ email: email.toLowerCase() }, options);
     } catch (error) {
       this.logger.error('PlayerRepository.findByEmail error', { email, error: error.message });
       throw error;

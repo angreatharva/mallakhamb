@@ -48,8 +48,13 @@ class JudgeService extends UserService {
    */
   async loginJudge(username, password) {
     try {
-      // Find judge by username (case-insensitive) - gets one record
-      const judge = await this.judgeRepository.findByUsername(username.toLowerCase());
+      // Find judge by username (case-insensitive) - gets one record.
+      // `password` is `select: false` on the Judge schema, so it must be
+      // requested explicitly here or every judge login fails.
+      const judge = await this.judgeRepository.findByUsername(
+        username.toLowerCase(),
+        { select: '+password' }
+      );
       
       if (!judge) {
         this.logger.warn('Judge login failed: Judge not found', { username });

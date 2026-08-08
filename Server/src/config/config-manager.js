@@ -69,7 +69,8 @@ class ConfigManager {
         otpLength: this.getNumber('OTP_LENGTH', 6),
         otpExpiry: this.getNumber('OTP_EXPIRY_MINUTES', 10),
         maxLoginAttempts: this.getNumber('MAX_LOGIN_ATTEMPTS', 5),
-        lockoutDuration: this.getNumber('LOCKOUT_DURATION_MINUTES', 15)
+        lockoutDuration: this.getNumber('LOCKOUT_DURATION_MINUTES', 15),
+        csrfEnabled: this.getBoolean('CSRF_ENABLED', false)
       },
       razorpay: {
         keyId: this.getString('RAZORPAY_KEY_ID', ''),

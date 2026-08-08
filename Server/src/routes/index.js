@@ -45,11 +45,13 @@ const { csrfTokenHandler } = require('../middleware/csrf.middleware');
  * 
  * @param {express.Application} app - Express application instance
  * @param {Object} options - Configuration options
- * @param {Function} options.authLimiter - Rate limiter for authentication endpoints
+ * @param {Function} options.authLimiter - Rate limiter for authentication endpoints (per IP)
+ * @param {Function} options.userLimiter - Rate limiter for authenticated traffic (per user)
+ * @param {Function} options.judgeLoginLimiter - Rate limiter for judge login (per username)
  * @returns {void}
  */
 function loadRoutes(app, container, options = {}) {
-  const { authLimiter } = options;
+  const { authLimiter, userLimiter, judgeLoginLimiter } = options;
 
   // ============================================================
   // HEALTH CHECK ROUTES (no authentication required)
@@ -79,8 +81,16 @@ function loadRoutes(app, container, options = {}) {
   // ============================================================
   // USER ROUTES (players, coaches, admins)
   // ============================================================
-  // Apply rate limiting to registration and login endpoints
-  
+  // Apply rate limiting to registration and login endpoints.
+  //
+  // MED-2 — per-user rate limiting (userLimiter) is applied ONLY to the registration and
+  // management surface: /api/players, /api/coaches, /api/teams and /api/competitions.
+  // It is deliberately NOT applied to /api/judge, /api/scoring, /api/public,
+  // /api/admin or /api/superadmin, because each of those carries live scoring traffic
+  // (/api/admin/scores/save, /api/superadmin/scores/save, /api/public/save-score and the
+  // judge submit path). Throttling those during an event is a worse failure than the
+  // abuse the limiter prevents. There is no global or per-IP limiter anywhere.
+
   // Player routes
   const playerRouter = createPlayerRoutes(container);
   if (authLimiter) {
@@ -89,6 +99,9 @@ function loadRoutes(app, container, options = {}) {
     playerAuthRouter.post('/register', authLimiter);
     playerAuthRouter.post('/login', authLimiter);
     app.use('/api/players', playerAuthRouter);
+  }
+  if (userLimiter) {
+    app.use('/api/players', userLimiter);
   }
   app.use('/api/players', playerRouter);
 
@@ -99,6 +112,9 @@ function loadRoutes(app, container, options = {}) {
     coachAuthRouter.post('/register', authLimiter);
     coachAuthRouter.post('/login', authLimiter);
     app.use('/api/coaches', coachAuthRouter);
+  }
+  if (userLimiter) {
+    app.use('/api/coaches', userLimiter);
   }
   app.use('/api/coaches', coachRouter);
 
@@ -114,7 +130,21 @@ function loadRoutes(app, container, options = {}) {
 
   const superAdminRoutes = createSuperAdminRoutes(container);
   const judgeRoutes = createJudgeRoutes(container);
-  // Note: Rate limiting skipped for judges and superadmins (per requirement)
+
+  // MED-2: judge login is now rate limited. The previous note here said rate limiting
+  // was skipped for judges and superadmins "per requirement"; that left the only
+  // credential-guessing surface for the judge panel wide open (see CRIT-2 — judge
+  // usernames were publicly disclosed). The limiter is applied ONLY to POST
+  // /api/judge/login, which is unauthenticated. The rest of /api/judge — every scoring
+  // read and write a panel performs during an event — is deliberately left unlimited.
+  // Keyed by username, NOT by IP: a five-judge panel behind one venue NAT address
+  // must never throttle itself at sign-in, while guessing against any single judge
+  // account is still capped per window.
+  if (judgeLoginLimiter) {
+    const judgeAuthRouter = express.Router();
+    judgeAuthRouter.post('/login', judgeLoginLimiter);
+    app.use('/api/judge', judgeAuthRouter);
+  }
   app.use('/api/superadmin', superAdminRoutes);
   app.use('/api/judge', judgeRoutes);
 
@@ -127,11 +157,17 @@ function loadRoutes(app, container, options = {}) {
   // ============================================================
   // COMPETITION ROUTES
   // ============================================================
+  if (userLimiter) {
+    app.use('/api/competitions', userLimiter);
+  }
   app.use('/api/competitions', createCompetitionRoutes(container));
 
   // ============================================================
   // TEAM ROUTES
   // ============================================================
+  if (userLimiter) {
+    app.use('/api/teams', userLimiter);
+  }
   app.use('/api/teams', createTeamRoutes(container));
   app.use('/api/scoring', createScoringRoutes(container));
   app.use('/api/webhooks', createPaymentRoutes(container));

@@ -52,7 +52,8 @@ const judgeSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    default: ''
+    default: '',
+    select: false // Never loaded unless a query opts in with .select('+password')
   },
   mustResetPassword: {
     type: Boolean,
@@ -64,7 +65,18 @@ const judgeSchema = new mongoose.Schema({
     default: false // Default to false, will be set to true when judge has data
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: {
+    // Defence in depth: strip credentials from any document that is serialised
+    // directly (res.json(doc), JSON.stringify(doc)). Note this does NOT apply to
+    // .toObject() or to .lean() results.
+    transform: function(doc, ret) {
+      delete ret.password;
+      delete ret.resetPasswordToken;
+      delete ret.resetPasswordExpires;
+      return ret;
+    }
+  }
 });
 
 // Compound index to ensure unique judge assignments per gender/age group/competition

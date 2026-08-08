@@ -22,29 +22,32 @@ class JudgeRepository extends BaseRepository {
   /**
    * Find judge by email (username). Prefers active accounts when duplicates exist.
    * @param {string} email - Judge username/email
+   * @param {Object} options - Query options, forwarded to findByUsername
    * @returns {Promise<Object|null>} Judge document or null
    */
-  async findByEmail(email) {
-    return this.findByUsername(email);
+  async findByEmail(email, options = {}) {
+    return this.findByUsername(email, options);
   }
 
   /**
    * Find judge by username (case-insensitive).
    * Prefers an active account when the same username exists across competitions.
    * @param {string} username - Judge username
+   * @param {Object} options - Query options. Judge login passes { select: '+password' },
+   *   which is required because `password` is `select: false` on the schema.
    * @returns {Promise<Object|null>} Judge document or null
    */
-  async findByUsername(username) {
+  async findByUsername(username, options = {}) {
     try {
       const normalized = username.toLowerCase();
       const activeMatches = await this.find(
         { username: normalized, isActive: true },
-        { sort: { updatedAt: -1, createdAt: -1 }, limit: 1 }
+        { sort: { updatedAt: -1, createdAt: -1 }, limit: 1, ...options }
       );
       if (activeMatches?.length) {
         return activeMatches[0];
       }
-      return await this.findOne({ username: normalized });
+      return await this.findOne({ username: normalized }, options);
     } catch (error) {
       this.logger.error('JudgeRepository.findByUsername error', { username, error: error.message });
       throw error;

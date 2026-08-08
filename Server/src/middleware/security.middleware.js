@@ -11,6 +11,8 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
+const { COOKIE_NAMES } = require('../utils/security/cookie.util');
 
 /**
  * Generate a cryptographically secure nonce for CSP.
@@ -236,6 +238,19 @@ function createIpRateLimitMiddleware(container) {
 /**
  * Create rate limiting middleware per user (Requirement 23.6)
  * Uses environment-specific limits.
+ *
+ * MED-2: this limiter is mounted at the route-group level (see routes/index.js), which
+ * runs BEFORE each router's own authenticate middleware, so `req.user` is not populated
+ * yet. The principal is therefore resolved from the access token directly. Verifying the
+ * token is a local signature check with no database read, and a forged token cannot mint
+ * a fresh bucket: it fails verification, is treated as anonymous (and skipped), and is
+ * then rejected with 401 by the route's own auth middleware.
+ *
+ * Anonymous requests are skipped by design — this limiter must NEVER fall back to an IP
+ * key. A venue NATs every judge tablet behind one address, so an IP-keyed limit on
+ * authenticated traffic would throttle a live panel. Unauthenticated endpoints are the
+ * only place an IP limit belongs (see createIpRateLimitMiddleware).
+ *
  * @param {Object} container - DI container
  * @returns {Function} Express middleware
  */
@@ -244,15 +259,60 @@ function createUserRateLimitMiddleware(container) {
   const logger = container.resolve('logger');
   const nodeEnv = config.get('server.nodeEnv');
 
+  let tokenService = null;
+  try {
+    tokenService = container.resolve('tokenService');
+  } catch (error) {
+    logger.warn('User rate limiter: tokenService unavailable, relying on req.user only', {
+      error: error.message
+    });
+  }
+
   const { windowMs, max } = getRateLimitConfig(nodeEnv, 'user');
+
+  /**
+   * Resolve the authenticated principal id, or null when the request is anonymous.
+   * Memoized per request so skip() and keyGenerator() verify the token only once.
+   * @param {Object} req - Express request
+   * @returns {string|null}
+   */
+  const resolveUserId = (req) => {
+    if (req.rateLimitUserId !== undefined) {
+      return req.rateLimitUserId;
+    }
+
+    let userId = null;
+
+    if (req.user?._id) {
+      userId = req.user._id.toString();
+    } else if (tokenService) {
+      // Priority matches auth.middleware: httpOnly cookie > Authorization header
+      let token = (req.cookies && req.cookies[COOKIE_NAMES.ACCESS_TOKEN]) || null;
+      if (!token) {
+        const authHeader = req.header('Authorization') || '';
+        if (authHeader.startsWith('Bearer ')) {
+          token = authHeader.slice('Bearer '.length);
+        }
+      }
+      if (token) {
+        try {
+          const decoded = tokenService.verifyToken(token);
+          userId = decoded && decoded.userId != null ? String(decoded.userId) : null;
+        } catch (error) {
+          // Invalid or expired token — treat as anonymous.
+          userId = null;
+        }
+      }
+    }
+
+    req.rateLimitUserId = userId;
+    return userId;
+  };
 
   return rateLimit({
     windowMs,
     max,
-    keyGenerator: (req) => {
-      // Use user ID if authenticated, otherwise fall back to IP
-      return req.user?._id?.toString() || req.ip;
-    },
+    keyGenerator: (req) => resolveUserId(req),
     message: {
       success: false,
       error: {
@@ -263,12 +323,12 @@ function createUserRateLimitMiddleware(container) {
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
-      // Skip rate limiting for unauthenticated requests (handled by IP rate limit)
-      return !req.user;
+      // Skip rate limiting for unauthenticated requests — never key them by IP here.
+      return resolveUserId(req) === null;
     },
     handler: (req, res) => {
       logger.warn('User rate limit exceeded', {
-        userId: req.user?._id,
+        userId: resolveUserId(req),
         userType: req.userType,
         ip: req.ip,
         path: req.path,
@@ -360,6 +420,70 @@ function createAuthRateLimitMiddleware(container) {
 }
 
 /**
+ * Create a rate limiter for judge login, keyed by the submitted username.
+ *
+ * MED-2 requires judge login to be rate limited — CRIT-2 disclosed judge
+ * usernames publicly, so the password is the only remaining barrier. But the
+ * shared per-IP `authLimiter` cannot be used here: at a venue every judge
+ * tablet shares one NAT address, so a five-judge panel signing in at the start
+ * of a session would burn half a 10-per-15-min IP budget on legitimate logins,
+ * and a couple of typos would lock the panel out of the competition.
+ *
+ * Keying on the username satisfies both of the audit's acceptance criteria at
+ * once: credential guessing against any single judge account is capped at
+ * `max` attempts per window, while five judges signing in from one venue IP
+ * each get their own bucket and are never throttled by one another.
+ *
+ * A request with no username cannot authenticate anyway; those fall back to an
+ * IPv6-safe IP key so the endpoint still cannot be flooded anonymously.
+ *
+ * @param {Object} container - DI container
+ * @returns {Function} Express middleware
+ */
+function createJudgeLoginRateLimitMiddleware(container) {
+  const config = container.resolve('config');
+  const logger = container.resolve('logger');
+  const nodeEnv = config.get('server.nodeEnv');
+
+  const { windowMs, max } = getRateLimitConfig(nodeEnv, 'auth');
+
+  return rateLimit({
+    windowMs,
+    max,
+    keyGenerator: (req) => {
+      const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
+      // Namespaced so a username can never collide with the IP fallback key.
+      return username ? `judge:${username}` : `judge-ip:${ipKeyGenerator(req.ip)}`;
+    },
+    message: {
+      success: false,
+      error: {
+        message: 'Too many login attempts for this account, please try again later',
+        code: 'AUTH_RATE_LIMIT_EXCEEDED'
+      }
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      // Deliberately does not log the password; username identifies the bucket.
+      logger.warn('Judge login rate limit exceeded', {
+        username: typeof req.body?.username === 'string' ? req.body.username : undefined,
+        ip: req.ip,
+        path: req.path,
+        nodeEnv
+      });
+      res.status(429).json({
+        success: false,
+        error: {
+          message: 'Too many login attempts for this account, please try again later',
+          code: 'AUTH_RATE_LIMIT_EXCEEDED'
+        }
+      });
+    }
+  });
+}
+
+/**
  * Request size limit middleware
  * @param {string} limit - Size limit (e.g., '10mb', '1kb')
  * @returns {Object} Middleware configuration for express.json and express.urlencoded
@@ -378,6 +502,7 @@ module.exports = {
   createIpRateLimitMiddleware,
   createUserRateLimitMiddleware,
   createAuthRateLimitMiddleware,
+  createJudgeLoginRateLimitMiddleware,
   createStrictRateLimit,
   createRequestSizeLimits,
   getRateLimitConfig,

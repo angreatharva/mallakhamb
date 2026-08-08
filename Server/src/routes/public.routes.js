@@ -1,9 +1,14 @@
 /**
  * Public Routes
  *
- * Serves unauthenticated public endpoints under /api/public.
- * Optional JWT parsing is applied via optionalAuth middleware so that
- * endpoints that benefit from competition context can use it.
+ * Serves the anonymous public endpoints under /api/public
+ * (competitions, teams, scores, Razorpay webhook).
+ *
+ * The three judge-facing endpoints that also live under this prefix
+ * (/judges, /submitted-teams, /save-score) are NOT public: they require a
+ * valid JWT and a scoring role. They stay mounted here for backward
+ * compatibility with the deployed judge client, which already sends
+ * `Authorization: Bearer <token>` to all three (CRIT-1, CRIT-2, CRIT-4).
  *
  * Requirements: 1.3, 1.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9
  *
@@ -11,56 +16,18 @@
  */
 
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const createAuthMiddleware = require('../middleware/auth.middleware');
+const { requireRole } = require('../middleware/auth.middleware');
 
 /**
- * Optional authentication middleware.
- * Attempts JWT verification from the Authorization: Bearer header.
- * If valid, populates req.user and req.competitionId.
- * If absent or invalid, calls next() without error.
+ * Authorization guard for the scoring endpoints hosted under /api/public.
  *
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- * @param {Function} next - Next middleware
+ * Admits every judge role (Senior Judge, Judge 1-4 and Scorer — `judgeType`
+ * is not part of the JWT userType) plus admins and super admins, because the
+ * same controller handlers back the authenticated admin and judge routers.
+ * Anonymous callers are rejected with 401 by requireRole.
  */
-function optionalAuth(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next();
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    if (!token) {
-      return next();
-    }
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      req.user = {
-        _id: decoded.id || decoded.userId,
-        role: decoded.role || decoded.userType,
-      };
-
-      if (decoded.currentCompetition) {
-        req.competitionId = decoded.currentCompetition;
-      } else if (decoded.competitionId) {
-        req.competitionId = decoded.competitionId;
-      }
-
-      next();
-    } catch (tokenError) {
-      // Token is invalid — continue without auth context
-      next();
-    }
-  } catch (error) {
-    // Any unexpected error — continue without auth context
-    next();
-  }
-}
+const requireScoringAccess = requireRole('judge', 'admin', 'superadmin');
 
 /**
  * Initialize public routes with dependencies from DI container.
@@ -74,6 +41,7 @@ function createPublicRoutes(container) {
   const adminController = container.resolve('adminController');
   const publicController = container.resolve('publicController');
   const paymentController = container.resolve('paymentController');
+  const authenticate = createAuthMiddleware(container);
 
   /**
    * @route   GET /api/public/competitions
@@ -84,17 +52,17 @@ function createPublicRoutes(container) {
 
   /**
    * @route   GET /api/public/judges
-   * @desc    Get judge information (optional competition context)
-   * @access  Public (optional auth)
+   * @desc    Get the judge panel assigned to a competition/category
+   * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous
    */
-  router.get('/judges', optionalAuth, adminController.getJudges);
+  router.get('/judges', authenticate, requireScoringAccess, adminController.getJudges);
 
   /**
    * @route   GET /api/public/submitted-teams
-   * @desc    Get submitted teams (optional competition context)
-   * @access  Public (optional auth)
+   * @desc    Get submitted teams for a competition
+   * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous
    */
-  router.get('/submitted-teams', optionalAuth, adminController.getSubmittedTeams);
+  router.get('/submitted-teams', authenticate, requireScoringAccess, adminController.getSubmittedTeams);
 
   /**
    * @route   GET /api/public/teams
@@ -112,10 +80,10 @@ function createPublicRoutes(container) {
 
   /**
    * @route   POST /api/public/save-score
-   * @desc    Submit a score (optional auth for competition context)
-   * @access  Public (optional auth)
+   * @desc    Submit a score slip for a team/player
+   * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous
    */
-  router.post('/save-score', optionalAuth, adminController.saveScores);
+  router.post('/save-score', authenticate, requireScoringAccess, adminController.saveScores);
 
   /**
    * @route   POST /api/public/payments/razorpay/webhook

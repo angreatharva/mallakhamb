@@ -316,9 +316,65 @@ function createAdminController(container) {
         scoreData.competitionType = toCompetitionTypeDisplay(scoreData.competitionType);
       }
       
+      // ---- Who is calling? (HIGH-1) ----
+      // saveScores is shared by /api/admin, /api/super-admin, /api/judge and
+      // /api/public. `req.user` is loaded from the database by the auth
+      // middleware (auth.middleware.js:131,166) and only a Judge document
+      // carries `judgeType` (models/Judge.js:36-40) — Admin/SuperAdmin
+      // documents never do. So the presence of `judgeType` on req.user is the
+      // authenticated marker of a judge principal; the body is never trusted
+      // for identity.
+      const PANEL_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+      const authJudgeType = typeof req.user?.judgeType === 'string' ? req.user.judgeType : null;
+      const isPanelJudge = PANEL_JUDGE_TYPES.includes(authJudgeType);
+      const isSeniorJudge = authJudgeType === 'Senior Judge';
+      const isScorer = authJudgeType === 'Scorer';
+      const isAdmin =
+        req.userType === 'admin' ||
+        req.userType === 'superadmin' ||
+        ['admin', 'superadmin'].includes(req.user?.role);
+
+      // Resolve the identity a single-slip submission writes to. The body's
+      // `judgeType` is an assertion the caller controls, so a panel judge is
+      // bound to their OWN slot and any body value is discarded (HIGH-1).
+      //  - Senior Judge override: the chief judge may correct another panel
+      //    member's slip (Web/src/pages/judge/JudgePanelReview.jsx:150-178).
+      //    That power is granted from req.user, never from the body — a
+      //    non-senior judge sending `overrideBySenior` is still bound to self.
+      //  - Admin/SuperAdmin have no judgeType: they record the whole panel on
+      //    behalf of the judges, so they keep supplying it in the body.
+      //  - Anyone else (anonymous, Scorer) gets no single-slip identity.
+      let effectiveJudgeType = null;
+      if (isPanelJudge) {
+        effectiveJudgeType =
+          isSeniorJudge && req.body.overrideBySenior && PANEL_JUDGE_TYPES.includes(req.body.judgeType)
+            ? req.body.judgeType
+            : authJudgeType;
+      } else if (isAdmin && PANEL_JUDGE_TYPES.includes(req.body.judgeType)) {
+        effectiveJudgeType = req.body.judgeType;
+      }
+
+      // A single-slip payload from a principal we cannot bind to a panel role
+      // is rejected outright rather than silently falling through as a bulk
+      // write with no playerScores.
+      const isSingleSlipSubmission =
+        req.body.playerId && req.body.score !== undefined && !req.body.playerScores;
+
+      if (isSingleSlipSubmission && !effectiveJudgeType) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'Only a panel judge or an admin can submit a judge slip',
+            code: 'FORBIDDEN',
+          },
+        });
+      }
+
       // If this is a judge submitting a single score (has playerId, judgeType, score)
       // convert it to the bulk format expected by saveScores
-      if (req.body.playerId && req.body.judgeType && req.body.score !== undefined && !req.body.playerScores) {
+      if (isSingleSlipSubmission) {
+        // Keep the persisted identity consistent with the authenticated one
+        scoreData.judgeType = effectiveJudgeType;
         // This is a single judge score submission - convert to bulk format
         const judgeFieldMap = {
           'Senior Judge': 'seniorJudge',
@@ -335,7 +391,7 @@ function createAdminController(container) {
           'Judge 4': 'J4'
         };
         
-        const judgeField = judgeFieldMap[req.body.judgeType];
+        const judgeField = judgeFieldMap[effectiveJudgeType];
         const breakdown = req.body.breakdown || {};
         const bonus = breakdown.bonus ?? breakdown.originality ?? 0;
         
@@ -353,7 +409,7 @@ function createAdminController(container) {
           // so re-opening this judge's slip for edit restores the exact
           // selections, not just the section totals.
           judgeSlips: [{
-            judgeRole: judgeRoleMap[req.body.judgeType] || 'J1',
+            judgeRole: judgeRoleMap[effectiveJudgeType] || 'J1',
             difficultyScore: breakdown.difficulty?.total || 0,
             combinationScore: breakdown.combination?.total || 0,
             executionScore: breakdown.execution || 0,
@@ -361,7 +417,7 @@ function createAdminController(container) {
             total: req.body.score,
             breakdown,
             submittedAt: new Date(),
-            isChiefPrefilled: req.body.judgeType === 'Senior Judge'
+            isChiefPrefilled: effectiveJudgeType === 'Senior Judge'
           }]
         }];
         
@@ -371,9 +427,12 @@ function createAdminController(container) {
         if (!scoreData.ageGroup) scoreData.ageGroup = req.body.ageGroup;
       }
 
-      // Senior Judge final submit: lock this player's panel result
+      // Senior Judge final submit: lock this player's panel result.
+      // The authority is the authenticated principal — the previous guard
+      // compared req.body.judgeType against itself, so any caller asserting
+      // 'Senior Judge' (or omitting the field) could finalize (HIGH-1).
       if (req.body.isFinalSubmit) {
-        if (req.body.judgeType && req.body.judgeType !== 'Senior Judge') {
+        if (!isSeniorJudge && !isAdmin) {
           return res.status(403).json({
             success: false,
             error: {
@@ -398,12 +457,7 @@ function createAdminController(container) {
       // The per-player finalize lock exists to stop JUDGES revising their marks after
       // the Senior Judge's Final Submit. Scorers and Admins work downstream of that
       // lock — they record time/deductions/remarks and lock the sheet — so a finalized
-      // player must not block them.
-      const isScorer = req.userType === 'judge' && req.user?.judgeType === 'Scorer';
-      const isAdmin =
-        req.userType === 'admin' ||
-        req.userType === 'superadmin' ||
-        ['admin', 'superadmin'].includes(req.user?.role);
+      // player must not block them. (isScorer / isAdmin are resolved above.)
       scoreData.allowFinalizedEdit = isScorer || isAdmin;
 
       // Handle admin routes, superadmin routes, and judge/scorer routes
