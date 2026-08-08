@@ -60,15 +60,21 @@ function createApp(container) {
   // Cookie parsing
   app.use(cookieParser());
 
-  // CSRF protection (CRIT-3) - must sit after cookieParser so req.cookies is populated.
-  // DISABLED BY DEFAULT and gated on CSRF_ENABLED.
-  // Do not switch this on until the SPA sends X-CSRF-Token on every state-changing
-  // request: Web/src/services/api-client.js only attaches `Authorization: Bearer <token>`
-  // when a token exists in sessionStorage, so a new tab or evicted storage produces a
-  // cookie-only write that the Bearer exemption below would NOT cover. Enabling it
-  // before the client catches up would 403 real users mid-competition.
-  // skipBearerAuth stays at its default (true) so header-authenticated clients such as
-  // the judge pages are exempt.
+  // CSRF protection (CRIT-3). ENABLED by default as of 2026-08-08.
+  //
+  // It was gated off while the SPA did not send X-CSRF-Token: api-client only
+  // attaches `Authorization: Bearer` when a token exists in sessionStorage, so
+  // a fresh tab with a live cookie produced a cookie-only write that the Bearer
+  // exemption below does NOT cover, and enabling it would have 403'd real users
+  // mid-competition. The client now fetches /api/csrf-token and attaches the
+  // header on every state-changing request, with a one-shot retry when the
+  // token has expired.
+  //
+  // The client reads the token from the RESPONSE BODY rather than
+  // document.cookie, because the SPA is a separate static origin from the API
+  // (render.yaml) and JS cannot read another origin's cookies.
+  //
+  // Set CSRF_ENABLED=false to switch it off if a deployment needs to.
   const appConfig = container.resolve('config');
   if (appConfig.get('security.csrfEnabled')) {
     app.use(createCsrfMiddleware());

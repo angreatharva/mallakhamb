@@ -82,8 +82,62 @@ async function attemptSilentRefresh() {
   }
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* CSRF (CRIT-3)                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The server issues a double-submit CSRF token: it sets a `csrf-token` cookie
+ * AND returns the same value in the response body.
+ *
+ * We deliberately read it from the BODY, not from `document.cookie`. The SPA is
+ * deployed as a static site on a different origin from the API (render.yaml
+ * defines two services), and JavaScript can only read cookies for its own
+ * origin — so `document.cookie` would always be empty here. The body works
+ * regardless of topology.
+ *
+ * Held in memory only: it is not a credential, it just has to match the cookie
+ * the browser sends back, and keeping it out of storage avoids yet another
+ * thing for XSS to read.
+ */
+let csrfToken = null;
+let csrfRequest = null;
+
+/** Methods that mutate state and therefore need the CSRF header. */
+const UNSAFE_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
+/**
+ * Fetch a CSRF token once, coalescing concurrent callers.
+ * Failure is non-fatal: if CSRF is disabled server-side the header is simply
+ * unnecessary, and if it is enabled the request will 403 and surface properly.
+ * @returns {Promise<string|null>}
+ */
+async function ensureCsrfToken() {
+  if (csrfToken) return csrfToken;
+  if (csrfRequest) return csrfRequest;
+
+  csrfRequest = publicApi
+    .get('/csrf-token')
+    .then((res) => {
+      csrfToken = res?.data?.csrfToken || null;
+      return csrfToken;
+    })
+    .catch(() => null)
+    .finally(() => {
+      csrfRequest = null;
+    });
+
+  return csrfRequest;
+}
+
+/** Drop the cached token so the next unsafe request fetches a fresh one. */
+export function resetCsrfToken() {
+  csrfToken = null;
+}
+
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // --- Backward compat: still send Authorization header if we have a token ---
     // This ensures mobile clients / Postman / tests that don't use cookies
     // continue to work during migration.
@@ -98,6 +152,19 @@ api.interceptors.request.use(
         config.headers['x-competition-id'] = competitionId;
       }
     }
+
+    // CRIT-3: cookie-authenticated writes need the double-submit header.
+    // The server exempts requests carrying a Bearer token, so this only
+    // actually matters when storage is empty but the cookie is still valid —
+    // a fresh tab, or storage that was evicted. Attached whenever it is
+    // available so behaviour does not depend on that distinction.
+    if (UNSAFE_METHODS.has(String(config.method || '').toLowerCase())) {
+      const csrf = await ensureCsrfToken();
+      if (csrf) {
+        config.headers['X-CSRF-Token'] = csrf;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -118,6 +185,26 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // --- Stale CSRF token (CRIT-3) ---
+    // Tokens live 24h, so a long-lived tab will eventually present an expired
+    // one. Fetch a fresh token and retry once rather than surfacing a 403 the
+    // user cannot act on. Guarded by its own flag so it cannot loop.
+    const csrfCode = error.response?.data?.error?.code;
+    if (
+      error.response?.status === 403 &&
+      (csrfCode === 'CSRF_TOKEN_INVALID' || csrfCode === 'CSRF_TOKEN_MISSING') &&
+      originalRequest &&
+      !originalRequest._csrfRetry
+    ) {
+      originalRequest._csrfRetry = true;
+      resetCsrfToken();
+      const fresh = await ensureCsrfToken();
+      if (fresh) {
+        originalRequest.headers = { ...originalRequest.headers, 'X-CSRF-Token': fresh };
+        return api(originalRequest);
+      }
+    }
 
     // --- Silent refresh on 401 (Phase 2A) ---
     if (error.response?.status === 401 && !originalRequest._retry) {
