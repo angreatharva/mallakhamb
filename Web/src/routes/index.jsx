@@ -57,7 +57,16 @@ const RouteErrorBoundary = ({ children, homePath }) => {
       homePath={homePath}
       message="This screen ran into a problem. Your session is still active — you can go back and continue."
     >
-      {children}
+      {/*
+        * MED-W7: a Suspense boundary per role layout, not just one at the root.
+        * With only the root boundary, a slow lazy chunk blanked the ENTIRE view
+        * — navbar and shell included — instead of just the pane being loaded.
+        * Placing it inside the layout means the shell stays on screen and only
+        * the routed content shows the loader.
+        */}
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
     </ErrorBoundary>
   );
 };
@@ -114,6 +123,8 @@ const JudgeLayout = () => (
 
 export default function AppRoutes() {
   return (
+    // Outer boundary still covers the top-level public routes (Home,
+    // PublicScores, password flows), which are lazy and sit outside any layout.
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Home />} />
