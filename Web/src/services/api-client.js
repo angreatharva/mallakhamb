@@ -67,10 +67,22 @@ function onTokenRefreshed() {
  */
 async function attemptSilentRefresh() {
   try {
+    // Raw axios on purpose: going through `api` would re-enter the response
+    // interceptor and recurse on a failed refresh.
+    //
+    // But that also skips the REQUEST interceptor, so the CSRF header has to be
+    // attached by hand. Without it this POST is a cookie-only state-changing
+    // request, which CSRF rejects with 403 — silently breaking token refresh
+    // for exactly the cookie-only client MED-W1 exists to support. Caught by
+    // running the app in a browser; no unit test covered this path.
+    const csrf = await ensureCsrfToken();
     const response = await axios.post(
       `${apiConfig.getBaseUrl()}/auth/refresh`,
       {},
-      { withCredentials: true },
+      {
+        withCredentials: true,
+        headers: csrf ? { 'X-CSRF-Token': csrf } : {},
+      },
     );
     if (response.data?.success) {
       // The new access_token cookie is set by the server automatically.

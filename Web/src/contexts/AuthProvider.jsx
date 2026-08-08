@@ -23,6 +23,12 @@ import {
 } from '@/utils/auth/authEvents';
 import { getRoleFromPath, getLoginPathForRole } from '@/utils/auth/roleFromPath';
 
+/**
+ * Routes where no session is expected, so session rehydration must not run.
+ * See the note in the bootstrap effect below.
+ */
+const UNAUTHENTICATED_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
+
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userType, setUserType] = useState(null);
@@ -89,6 +95,16 @@ export default function AuthProvider({ children }) {
         return;
       }
 
+      // Never try to rehydrate on an unauthenticated entry point. Doing so
+      // 401s, which makes the API client attempt a silent refresh, which also
+      // fails and dispatches AUTH_EXPIRED, which navigates back to the login
+      // page — and the whole thing runs again. Observed as a request loop in
+      // the browser; there is simply nothing to restore on these routes.
+      if (UNAUTHENTICATED_PATHS.some((p) => location.pathname.includes(p))) {
+        setLoading(false);
+        return;
+      }
+
       // MED-W1: storage is empty but the httpOnly cookie may still be valid.
       // obfuscatedStorage writes sessionStorage, which is per-tab and does not
       // survive a tab close, while the cookie is origin-scoped and does. So a
@@ -120,6 +136,9 @@ export default function AuthProvider({ children }) {
 
     bootstrap();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- pathname is read
+  // at call time on purpose: adding it re-runs this on every navigation, which
+  // re-reads storage and can resurrect a session logout has just cleared.
   }, [loadAuthData, currentRole]);
 
   // --- Cross-tab auth sync (HIGH-W4) ---

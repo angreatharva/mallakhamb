@@ -13,8 +13,7 @@ import { useRateLimit } from '../../hooks/useRateLimit';
 import { loginSchema, judgeLoginSchema } from '@/validators/form.validator';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
-import axios from 'axios';
-import apiConfig from '@/config/api.config';
+import { judgeAPI } from '@/services/public/judge.api';
 import AccountLockoutMessage from '@/components/auth/AccountLockoutMessage';
 
 // Import design system components
@@ -273,16 +272,9 @@ const UnifiedLoginInner = () => {
       
       // Judge login uses different endpoint
       if (role === 'judge') {
-        response = await axios.post(
-          `${apiConfig.getBaseUrl()}/judge/login`,
-          { 
-            username: validation.data.username.toLowerCase(), 
-            password: validation.data.password 
-          },
-          { 
-            headers: apiConfig.getHeaders(),
-            withCredentials: true 
-          }
+        response = await judgeAPI.login(
+          validation.data.username.toLowerCase(),
+          validation.data.password
         );
         
         // MED-W6: the raw login response was logged here via console.log,

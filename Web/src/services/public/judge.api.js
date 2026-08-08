@@ -27,6 +27,15 @@
 import { api } from '../api-client.js';
 
 export const judgeAPI = {
+  /**
+   * Judge sign-in. Goes through `api` — NOT raw axios — because CRIT-3 is
+   * enforced: login is a POST with no Bearer token yet (you do not have one),
+   * so it is exactly the cookie-only case CSRF rejects. Raw axios sends no
+   * X-CSRF-Token and the server answers 403 "CSRF token missing", which breaks
+   * judge login outright. The other roles were already on `api` and unaffected.
+   */
+  login: (username, password) => api.post('/judge/login', { username, password }),
+
   /** Anonymous on the server, but routed through `api` so one instance serves this module. */
   getCompetitions: () => api.get('/public/competitions'),
 
