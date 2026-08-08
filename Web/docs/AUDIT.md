@@ -42,7 +42,10 @@ Every finding cites the file and line that produced it.
 - **LOW-W1 — FIXED.** Six unreachable page components deleted, each verified individually against `src/`, `routes/index.jsx` and `lazy-pages.js`. `UnifiedCompetitionSelection` (802 lines) became unreachable once its two re-export shims went and is superseded by the routed `CompetitionSelectionScreen`. **The audit was wrong about `UnifiedDashboard`** — `AdminDashboard.jsx:13` renders it, so it is live and was kept; deleting it would have taken out the admin dashboard.
 - **LOW-W3 — FIXED** (empty `src/utils/data/` removed). **LOW-W4** was already fixed alongside HIGH-W4.
 
-**Still open:** **LOW-W2** (sparse prop-types / no TypeScript — the scoring components still pass deeply nested `breakdown` objects with no contract). The residual 2 moderate `react-router` advisories. And `MED-W1`'s deeper question — whether to drop the Bearer copy from storage entirely now that cookies plus `/auth/me` cover the session (Web task 3.4).
+- **LOW-W2 — FIXED.** `utils/scoring/scoringPropTypes.js` declares the breakdown/panel/checklist/ceilings contracts, mirroring what `normalizeBreakdown` produces (named as the source of truth). Applied to the components that carry them. Nine tests assert the declarations actually **reject** realistic failures — a section total arriving as `"3.8"`, a panel score as a string, a checklist item missing its `penalty` — because PropTypes nobody verifies are decoration.
+- **`react-router` advisories — FIXED** by the v7 upgrade. **Web is at 0 vulnerabilities.**
+
+**Still open:** only `MED-W1`'s deeper question — whether to drop the Bearer copy from sessionStorage entirely now that cookies plus `/auth/me` cover the session (Web task 3.4). That is a design decision, not a defect.
 
 **Final Web status: 77 tests / 9 files · lint 0 errors · build clean · 10 vulnerabilities → 2 moderate.**
 

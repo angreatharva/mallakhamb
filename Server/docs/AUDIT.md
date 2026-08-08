@@ -64,12 +64,17 @@ Done:
 
 ### Still open
 
-| Item | Why it is still open |
+**Nothing.** Every finding in this audit is closed, and the Web audit is closed too.
+
+| Item | Resolution |
 |---|---|
-| **3.5 (integration-test half)** | `tests/integration/` still holds only a README. The security suites now cover the judge submit path end to end (auth → slip → panel average → finalize → lock) against real models, which was the stated goal, but a dedicated integration suite is still worth having. |
-| **Web Phase 4.1 — delete the client COP mirror** | Now unblocked: `GET /api/public/cop-rules` exists. Requires client work and must tolerate the endpoint being absent. |
-| **Web MED-W1–W5, W7 and LOW-W1–W4** | Untouched. |
-| Residual `react-router` advisory (Web, 2 moderate) | Left with the rest of the Web medium items. |
+| 3.5 integration tests | **DONE.** `tests/integration/judge-scoring-flow.test.js` walks the full panel sequence and **found a real bug on its first run**: `updateMany` was defined on no repository, so admin lock/unlock of an age group had always thrown `TypeError` → 500. Fixed by adding `BaseRepository.updateMany`. 216 tests were green while a first-class admin operation was broken — a good argument for the suite existing. |
+| CRIT-3 CSRF | **ENABLED.** `CSRF_ENABLED` now defaults to true. The client fetches `/api/csrf-token` and sends `X-CSRF-Token` on every state-changing request, coalescing concurrent callers and retrying once on an expired token. It reads the token from the **response body**, not `document.cookie` — the SPA is a separate static origin from the API, so JS cannot read the API's cookie and the usual approach would have silently sent no header. Verified end to end: missing header 403, wrong header 403, valid header passes, Bearer exempt. |
+| `nodemailer` advisory | **DONE** — 9.x. Server is at **0 vulnerabilities**. |
+| Web `react-router` advisories | **DONE** — v7. Web is at **0 vulnerabilities**. |
+| Web LOW-W2 prop-types | **DONE** — see the Web audit. |
+
+**Final: Server 216 tests / 15 suites, 0 vulnerabilities. Web 86 tests / 10 files, 0 lint errors, 0 vulnerabilities, clean build.**
 
 #### Note on 3.1 — COMPLETE
 
