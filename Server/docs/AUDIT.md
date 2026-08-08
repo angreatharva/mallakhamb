@@ -66,7 +66,6 @@ Done:
 
 | Item | Why it is still open |
 |---|---|
-| **3.2 — slip construction in the controller** (MED-6) | Should follow `saveScores`, so the HTTP and socket paths can share one implementation. |
 | **3.5 (integration-test half)** | `tests/integration/` still holds only a README. The security suites now cover the judge submit path end to end (auth → slip → panel average → finalize → lock) against real models, which was the stated goal, but a dedicated integration suite is still worth having. |
 | **Web Phase 4.1 — delete the client COP mirror** | Now unblocked: `GET /api/public/cop-rules` exists. Requires client work and must tolerate the endpoint being absent. |
 | **Web MED-W1–W5, W7 and LOW-W1–W4** | Untouched. |
@@ -88,4 +87,10 @@ Passing tests do not prove DI wiring, so every stage was also checked with a boo
 
 **Correction to the original target:** the audit's "under 1,000 lines" for `admin.service.js` assumed scoring was a larger share of the file than it turned out to be. With all ten methods gone it sits at 2,268. Getting under 1,000 means also extracting the team, player, judge and transaction groups — a separate piece of work, and no longer about scoring.
 
-**3.2 remains:** move the `judgeFieldMap`/`judgeRoleMap` slip assembly out of `admin.controller.js` into the scoring service, so the HTTP and socket paths finally share one implementation.
+#### Note on 3.2 — COMPLETE
+
+Slip assembly moved to `utils/scoring/judge-slip.util.js`. The mapping existed **twice** — `admin.controller.js` wrote slips with one copy and `judge.service.js` read scores back with a second, independently written one. A divergence would have been quiet and nasty: a judge submits into one `judgeScores` field, the read path looks in another, and the UI tells them they have not scored the performer. Both now share one definition, pinned by 17 unit tests (role/field uniqueness, the field list the validator and scoring service iterate, the all-or-nothing 0.20 bonus, `originality` as its older name, chief-prefill, and full-breakdown survival).
+
+Resolving *who* is submitting deliberately stays in the controller — that is an authorization decision (HIGH-1) needing `req.user`. The util decides only *what* the slip looks like, which is what makes it transport-agnostic.
+
+**Found while doing it:** `judge.service.getTeamPlayers` was returning `email` and `dateOfBirth` for every player — the same CRIT-4 defect class, on minors, on a judge-facing endpoint. Removed; nothing in `JudgeTeamPlayers.jsx` reads them.
