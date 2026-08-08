@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import Navbar from '@/components/layout/Navbar';
 import { CompetitionProvider } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,27 +78,14 @@ function AppContent() {
 
 
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes default stale time
-    },
-  },
-});
-
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </Router>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
+      <Router>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </Router>
     </ErrorBoundary>
   );
 }

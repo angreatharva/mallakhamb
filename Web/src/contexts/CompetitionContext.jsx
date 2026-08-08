@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import apiConfig from '@/config/api.config.js';
 import { getTokenData } from '@/utils/auth/tokenUtils.js';
 import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { logger } from '@/infrastructure/logger.js';
+import { authAPI } from '@/services/auth/auth.api.js';
 
 const CompetitionContext = createContext();
 
@@ -138,10 +137,9 @@ export const CompetitionProvider = ({ children, userType }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get(
-        `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-        { headers: { Authorization: `Bearer ${token}`, ...apiConfig.getHeaders() } }
-      );
+      // HIGH-W3: through the API client, so a 401 gets a silent refresh and an
+      // AUTH_EXPIRED dispatch instead of surfacing as "no competitions".
+      const response = await authAPI.getAssignedCompetitions();
       const responseData = response.data.data || response.data;
       const competitions = responseData.competitions || [];
       
@@ -193,11 +191,7 @@ export const CompetitionProvider = ({ children, userType }) => {
       });
 
       // Make the API call to update the token FIRST (before optimistic update)
-      const response = await axios.post(
-        `${apiConfig.getBaseUrl()}/auth/set-competition`,
-        { competitionId },
-        { headers: { Authorization: `Bearer ${token}`, ...apiConfig.getHeaders() } }
-      );
+      const response = await authAPI.setCompetition(competitionId);
 
       // Persist new token (now contains competitionId in payload)
       const newToken = response.data.data?.token || response.data.token;
@@ -264,10 +258,7 @@ export const CompetitionProvider = ({ children, userType }) => {
         setIsLoading(true);
         setError(null);
 
-        const response = await axios.get(
-          `${apiConfig.getBaseUrl()}/auth/competitions/assigned`,
-          { headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() } }
-        );
+        const response = await authAPI.getAssignedCompetitions();
 
         if (!isMounted) return;
 
@@ -293,11 +284,7 @@ export const CompetitionProvider = ({ children, userType }) => {
             setCurrentCompetition(competition);
             
             try {
-              const response = await axios.post(
-                `${apiConfig.getBaseUrl()}/auth/set-competition`,
-                { competitionId: competition._id },
-                { headers: { Authorization: `Bearer ${getToken()}`, ...apiConfig.getHeaders() } }
-              );
+              const response = await authAPI.setCompetition(competition._id);
               const newToken = response.data.data?.token || response.data.token;
               secureStorage.setItem(`${userType}_token`, newToken);
               logger.info('Competition auto-selected and token updated', { competitionId: competition._id });
