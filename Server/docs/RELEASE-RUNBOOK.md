@@ -173,9 +173,28 @@ multi-category data.
 ## 7. Verification baseline
 
 ```
-Server: 216 tests / 15 suites · 0 vulnerabilities
-Web:     86 tests / 10 files  · 0 lint errors · 0 vulnerabilities · clean build
+Server: 260 tests / 19 suites · 0 vulnerabilities
+Web:     93 tests / 11 files  · 0 lint errors · 0 vulnerabilities · clean build
 ```
+
+Beyond the suites, this release was verified by running things rather than
+trusting green checkmarks:
+
+- **The server boots** against a live database and serves — health on both
+  route prefixes, COP rules, CSRF tokens, a 401 on a guarded route, a 404
+  handler, and correlation IDs in the logs.
+- **Migration 003 was run** against a production-like index state: second-category
+  scoring blocked before, allowed after, true duplicates still rejected, and the
+  collision abort path fires.
+- **The web app was driven in a browser** through judge login. This found two
+  bugs that every test, the linter and a clean build all missed — see §1b.
+- **Socket.IO was exercised with a real client**: auto-join, panel broadcast,
+  identity stamping, and a cross-category judge refused.
+
+**Web coverage is ~8% overall** (`npm run test:coverage`). The utilities and
+middleware are covered; the page components and form validators have no tests
+at all. That is pre-existing and much wider than this branch — worth knowing
+before assuming a green suite means the UI is safe.
 
 Run both suites **sequentially, not concurrently** — vitest's fork workers time
 out under contention and produce failures that look like real regressions.
