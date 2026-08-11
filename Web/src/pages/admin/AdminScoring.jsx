@@ -12,6 +12,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { getTimeDeduction } from '@/utils/scoring/copRules';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
@@ -44,7 +45,13 @@ const AdminScoring = () => {
 
     useEffect(() => {
         const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-        const tokenKey = routePrefix === '/superadmin' ? 'admin_token' : 'admin_token';
+        // Both branches of this ternary used to read 'admin_token'. Storage is
+        // role-scoped, so on /superadmin/scoring that key is empty and the socket
+        // handshake went out with token: null — the superadmin's live score feed
+        // then fell back to the access_token cookie, which is not sent cross-site
+        // in production. Derived from the same roleFromPath map the api-client
+        // uses, so the socket and the HTTP calls cannot disagree about identity.
+        const tokenKey = `${getRoleFromPath(routePrefix) ?? 'admin'}_token`;
         const token = secureStorage.getItem(tokenKey);
         
         // Connect with authentication token
