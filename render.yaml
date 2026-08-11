@@ -21,6 +21,28 @@ services:
       # JWT Secret - Add in Render Dashboard (sensitive, min 32 chars)
       - key: JWT_SECRET
         sync: false
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      # CSRF must stay ON. The auth cookies are SameSite=None in production
+      # (the SPA and this API are different sites on the Public Suffix List),
+      # so the double-submit check is what keeps cross-site writes safe.
+      # See Server/src/utils/security/cookie.util.js.
+      - key: CSRF_ENABLED
+        value: true
+      # Razorpay - Add in Render Dashboard (sensitive). Required by
+      # services/payment/payment.service.js; the webhook secret backs the
+      # HMAC-SHA256 signature verification on /api/webhooks/razorpay.
+      # Without these, entry-fee payment and reconciliation fail at runtime.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # Optional. Backs cross-instance JWT invalidation; the app falls back to
+      # an in-memory store when unset, which is per-process and resets on deploy.
+      - key: REDIS_URL
+        sync: false
       # Email Configuration - Add in Render Dashboard (sensitive)
       - key: EMAIL_USER
         sync: false

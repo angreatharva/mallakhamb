@@ -23,6 +23,7 @@
  */
 
 const crypto = require('crypto');
+const { crossSiteCookiePolicy } = require('../utils/security/cookie.util');
 
 /** Cookie name used to store the CSRF token */
 const CSRF_COOKIE_NAME = 'csrf-token';
@@ -68,11 +69,16 @@ function safeCompare(a, b) {
 function csrfTokenHandler(req, res) {
   const token = generateCsrfToken();
 
-  // Set cookie (readable by JS so the SPA can pick it up)
+  // The secure/sameSite pair comes from the shared cookie policy rather than a
+  // literal here. This cookie is one half of a double-submit check, so if it is
+  // not returned on a cross-site request the header can never match it and every
+  // cookie-only POST — login above all — fails with 403. Keeping the policy in one
+  // place means the CSRF cookie and the auth cookies cannot drift apart, which is
+  // exactly how this broke: the auth cookies and this one each declared their own
+  // `sameSite: 'strict'`.
   res.cookie(CSRF_COOKIE_NAME, token, {
+    ...crossSiteCookiePolicy(process.env.NODE_ENV === 'production'),
     httpOnly: false,          // Must be readable by client-side JS
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   });
 
