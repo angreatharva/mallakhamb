@@ -21,6 +21,7 @@ const { requireAdmin, requireSuperAdmin, requireAdminOrScorer } = require('../mi
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
+const scoringValidator = require('../validators/scoring.validator');
 const { 
   auditUserCreated, auditUserUpdated, auditCompetitionCreated, auditCompetitionUpdated, auditCompetitionDeleted,
   auditScoreUpdated, auditUserDeleted, auditPaymentCompleted
@@ -335,16 +336,34 @@ function createAdminRoutes(container) {
   // ==================== Score Management ====================
 
   /**
-   * @route   PUT /api/admin/scores/unlock
-   * @desc    Unlock scores for editing
+   * @route   PUT /api/admin/scores/:scoreId/unlock
+   * @desc    Unlock a single score for editing
    * @access  Admin, SuperAdmin
+   *
+   * This was registered as `/scores/unlock` with the `unlockScores()` body
+   * validator, which validates `ageGroup` — the shape of the AGE-GROUP unlock
+   * (`adminService.unlockScores` → `unlockScoresForAgeGroup`). But the handler
+   * it points at calls `adminService.unlockScore(req.params.scoreId, …)`, the
+   * SINGLE-score operation (`unlockScoreAsAdmin`). With no `:scoreId` segment
+   * in the path that argument was always `undefined`, so the route could never
+   * have unlocked anything.
+   *
+   * Corrected to the path the handler, the superadmin router
+   * (`super-admin.routes.js:45`) and the web client
+   * (`admin.api.js:24` → `PUT ${basePath}/scores/${scoreId}/unlock`) all already
+   * agree on. Nothing referenced the old path — not the client, not a test, not
+   * the docs — so there is no caller to keep working.
+   *
+   * The two operations stay separate on purpose: `unlockScoreAsAdmin` and
+   * `unlockScoresForAgeGroup` are genuinely different (single id vs whole age
+   * group, different return shapes). Do not merge them.
    */
   router.put(
-    '/scores/unlock',
+    '/scores/:scoreId/unlock',
     authMiddleware,
     authorize,
     validateCompetitionContext,
-    adminValidator.unlockScores(),
+    scoringValidator.getScoreById(),
     handleValidationErrors,
     auditScoreUpdated,
     adminController.unlockScores

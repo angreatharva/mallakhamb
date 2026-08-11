@@ -181,4 +181,65 @@ describe('Admin Routes - Auth Guards', () => {
       });
     }
   );
+
+  /**
+   * The unlock route was registered as `/scores/unlock`, with a body validator
+   * for `ageGroup`, while `adminController.unlockScores` reads
+   * `req.params.scoreId` and calls the single-score `unlockScoreAsAdmin`. With
+   * no `:scoreId` segment that argument was always undefined, so an admin
+   * unlock could not work — and the web client
+   * (`admin.api.js` → `PUT ${basePath}/scores/${scoreId}/unlock`) was 404ing
+   * against a path the router never declared.
+   */
+  describe('PUT /api/admin/scores/:scoreId/unlock', () => {
+    const scoreId = '507f1f77bcf86cd799439011'; // valid ObjectId for the param validator
+    const route = `/api/admin/scores/${scoreId}/unlock`;
+
+    it('is declared — the client path is no longer a 404', async () => {
+      const response = await request(app)
+        .put(route)
+        .set('Authorization', 'Bearer fake-token')
+        .set('Role', 'admin')
+        .set('x-competition-id', 'comp-1');
+
+      expect(response.status).not.toBe(404);
+      expect(response.status).toBe(200);
+    });
+
+    it('blocks unauthenticated requests', async () => {
+      const response = await request(app).put(route);
+      expect(response.status).toBe(401);
+    });
+
+    it('blocks a non-admin role', async () => {
+      const response = await request(app)
+        .put(route)
+        .set('Authorization', 'Bearer fake-token')
+        .set('Role', 'coach');
+      expect(response.status).toBe(403);
+    });
+
+    it('rejects a malformed scoreId', async () => {
+      const response = await request(app)
+        .put('/api/admin/scores/not-an-objectid/unlock')
+        .set('Authorization', 'Bearer fake-token')
+        .set('Role', 'admin')
+        .set('x-competition-id', 'comp-1');
+
+      expect(response.status).toBe(400);
+    });
+
+    it('no longer serves the old body-based path', async () => {
+      // Kept explicit: the old path could never unlock anything, and nothing
+      // referenced it. If someone re-adds it, this says why that is wrong.
+      const response = await request(app)
+        .put('/api/admin/scores/unlock')
+        .set('Authorization', 'Bearer fake-token')
+        .set('Role', 'admin')
+        .set('x-competition-id', 'comp-1')
+        .send({ ageGroup: 'Under14' });
+
+      expect(response.status).toBe(404);
+    });
+  });
 });
