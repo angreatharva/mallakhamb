@@ -17,6 +17,13 @@ const {
 const bcrypt = require('bcryptjs');
 const { getJudgeRoleMapping } = require('../../utils/scoring/judge-slip.util');
 const {
+  SUBMITTED_TEAM_COACH_FIELDS,
+  SUBMITTED_TEAM_PLAYER_FIELDS,
+  SUBMITTED_TEAM_COACH_FIELD_LIST,
+  SUBMITTED_TEAM_PLAYER_FIELD_LIST,
+  projectFields,
+} = require('../../utils/data/user-projection.util');
+const {
   getLockoutState,
   registerFailedAttempt,
   clearedLockoutState,
@@ -461,35 +468,70 @@ class JudgeService extends UserService {
         gender: judge.gender,
         isSubmitted: true
       }, {
-        populate: 'coach',
+        // Same CRIT-4 class as getTeamPlayers: `populate: 'coach'` with no
+        // projection handed the judge the whole coach document.
+        populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS },
         select: 'name ageGroup gender coach isSubmitted'
       });
 
-      // Fetch players for each team and add scoring status
-      const teamsWithStatus = await Promise.all(
-        teams.map(async (team) => {
-          // Fetch players for this team
-          const Player = require('../../models/Player');
-          const players = await Player.find({ team: team._id }).lean();
-          
-          const scoredPlayers = await this.scoreRepository.count({
-            team: team._id,
-            judge: judgeId
-          });
+      const teamIds = teams.map((team) => team._id);
 
-          return {
-            _id: team._id,
-            name: team.name,
-            ageGroup: team.ageGroup,
-            gender: team.gender,
-            coach: team.coach,
-            players,
-            totalPlayers: players.length,
-            scoredPlayers,
-            scoringComplete: scoredPlayers === players.length
-          };
-        })
-      );
+      // Two batched queries replace the 2N this loop used to issue (a
+      // Player.find AND a score count per team). The Player model was also
+      // require()d inside the loop body, re-resolving the module on every
+      // iteration and bypassing the repository layer.
+      //
+      // The player projection matters independently of performance: this is a
+      // judge-facing endpoint and `Player.find(...).lean()` with no select
+      // returned every minor's `email` and `dateOfBirth`. `.lean()` means the
+      // schema toJSON transform never runs, so the allow-list is the only thing
+      // standing between those fields and the wire.
+      const [players, judgeScores] = await Promise.all([
+        this.playerRepository.find(
+          { team: { $in: teamIds } },
+          { select: `team ${SUBMITTED_TEAM_PLAYER_FIELDS}` }
+        ),
+        this.scoreRepository.find(
+          { team: { $in: teamIds }, judge: judgeId },
+          { select: 'team' }
+        ),
+      ]);
+
+      const playersByTeam = new Map();
+      for (const player of players) {
+        const key = String(player.team);
+        const bucket = playersByTeam.get(key);
+        const projected = projectFields(player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
+        if (bucket) {
+          bucket.push(projected);
+        } else {
+          playersByTeam.set(key, [projected]);
+        }
+      }
+
+      const scoredCountByTeam = new Map();
+      for (const score of judgeScores) {
+        const key = String(score.team);
+        scoredCountByTeam.set(key, (scoredCountByTeam.get(key) || 0) + 1);
+      }
+
+      const teamsWithStatus = teams.map((team) => {
+        const key = String(team._id);
+        const teamPlayers = playersByTeam.get(key) || [];
+        const scoredPlayers = scoredCountByTeam.get(key) || 0;
+
+        return {
+          _id: team._id,
+          name: team.name,
+          ageGroup: team.ageGroup,
+          gender: team.gender,
+          coach: projectFields(team.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
+          players: teamPlayers,
+          totalPlayers: teamPlayers.length,
+          scoredPlayers,
+          scoringComplete: scoredPlayers === teamPlayers.length
+        };
+      });
 
       return teamsWithStatus;
     } catch (error) {

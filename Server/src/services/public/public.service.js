@@ -13,6 +13,11 @@ const COMPETITION_TYPE_MAP = {
 };
 
 const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
+const {
+  SUBMITTED_TEAM_PLAYER_FIELDS,
+  SUBMITTED_TEAM_PLAYER_FIELD_LIST,
+  projectFields,
+} = require('../../utils/data/user-projection.util');
 
 class PublicService {
   /**
@@ -162,8 +167,12 @@ class PublicService {
             select: 'name description isActive',
           },
           {
+            // CRIT-4 class: this selected `dateOfBirth` and the mapping below
+            // returned the whole populated player, so an ANONYMOUS endpoint
+            // published every registered athlete's date of birth — and these
+            // rosters are largely minors. Narrowed to the shared allow-list.
             path: 'registeredTeams.players.player',
-            select: 'firstName lastName gender dateOfBirth',
+            select: SUBMITTED_TEAM_PLAYER_FIELDS,
           },
         ],
       });
@@ -181,7 +190,11 @@ class PublicService {
           description: rt.team.description,
           isActive: rt.team.isActive,
           players: (rt.players || []).map((p) => ({
-            player: p.player,
+            // Projected again at the mapping layer, not just in the populate:
+            // BaseRepository uses `.lean()` and `.toObject()` does not run a
+            // schema toJSON transform, so a widened populate elsewhere would
+            // otherwise flow straight to the wire.
+            player: projectFields(p.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST),
             ageGroup: p.ageGroup,
             gender: p.gender,
           })),

@@ -14,6 +14,13 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const { sanitizeTeamData } = require('../../utils/validation/sanitization.util');
+const {
+  SUBMITTED_TEAM_COACH_FIELDS,
+  SUBMITTED_TEAM_PLAYER_FIELDS,
+  SUBMITTED_TEAM_COACH_FIELD_LIST,
+  SUBMITTED_TEAM_PLAYER_FIELD_LIST,
+  projectFields,
+} = require('../../utils/data/user-projection.util');
 const EventTypes = require('../../socket/events/event-types');
 
 class TeamService {
@@ -273,10 +280,16 @@ class TeamService {
         return cached;
       }
 
-      // Fetch from database
+      // CRIT-4 class: this response used to carry every player's `email` and
+      // `dateOfBirth` plus the coach's `email`. Team rosters are largely minors,
+      // and the route serving this was anonymous, so the whole roster was
+      // readable by walking /api/public/teams for ids. Both the populate
+      // projection and the hand-built mapping below are narrowed — the mapping
+      // matters independently because `.lean()`/`.toObject()` mean a schema
+      // `toJSON` transform never runs on these documents.
       const team = await this.teamRepository.findById(teamId, {
         populate: [
-          { path: 'coach', select: 'name firstName lastName email' }
+          { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
         ]
       });
 
@@ -286,29 +299,17 @@ class TeamService {
       }
 
       // Get players for this team (players reference teams, not the other way around)
-      const players = await this.playerRepository.find({ team: teamId });
+      const players = await this.playerRepository.find(
+        { team: teamId },
+        { select: SUBMITTED_TEAM_PLAYER_FIELDS }
+      );
 
       // Build comprehensive team response similar to admin service
       const teamWithDetails = {
         _id: team._id,
         name: team.name,
-        coach: team.coach ? {
-          _id: team.coach._id,
-          name: team.coach.name,
-          firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
-          lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
-          email: team.coach.email
-        } : null,
-        players: players.map(p => ({
-          _id: p._id,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email,
-          ageGroup: p.ageGroup,
-          gender: p.gender,
-          dateOfBirth: p.dateOfBirth,
-          isActive: p.isActive
-        })),
+        coach: projectFields(team.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
+        players: players.map(p => projectFields(p, SUBMITTED_TEAM_PLAYER_FIELD_LIST)),
         playerCount: players.length,
         description: team.description,
         isActive: team.isActive,

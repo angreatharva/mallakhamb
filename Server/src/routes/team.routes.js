@@ -66,11 +66,23 @@ function createTeamRoutes(container) {
    */
   router.get('/', authMiddleware, coachAuth, (req, res, next) => getTeamController().getAllTeams(req, res, next));
 
-  // Public routes
-  router.get('/:id', teamValidator.getTeamById(), validate, (req, res, next) =>
+  /**
+   * These two sat under a "Public routes" comment with no auth middleware, and
+   * `getTeamById` returns a full roster. Team rosters are largely minors, and
+   * their ids are anonymously discoverable via GET /api/public/teams, so the
+   * pair formed a walkable chain to every athlete's record.
+   *
+   * The payload is now allow-listed in teamService.getTeamById, but that alone
+   * would still publish the roster to anyone; authentication is the other half.
+   * Nothing consumed these anonymously — `teamAPI.getById`/`getStats` are
+   * re-exported by the web service barrels and imported by no component — so
+   * requiring a session breaks no shipped caller. Deliberately NOT coach-scoped
+   * like `GET /`: admins, superadmins and judges legitimately read team detail.
+   */
+  router.get('/:id', authMiddleware, teamValidator.getTeamById(), validate, (req, res, next) =>
     getTeamController().getTeamById(req, res, next)
   );
-  router.get('/:id/stats', teamValidator.getTeamStats(), validate, (req, res, next) => 
+  router.get('/:id/stats', authMiddleware, teamValidator.getTeamStats(), validate, (req, res, next) =>
     getTeamController().getTeamStats(req, res, next)
   );
 
