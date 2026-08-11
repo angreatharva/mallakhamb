@@ -69,7 +69,10 @@ Done:
 
 ### Still open
 
-**Nothing.** Every finding in this audit is closed, and the Web audit is closed too.
+**Nothing from THIS audit.** But see the second-pass section below — a later
+review found four issues this audit did not cover, including a fourth instance
+of the CRIT-4 leak class and a route that could never have worked. Do not read
+"both audits closed" as "the codebase is clean".
 
 | Item | Resolution |
 |---|---|
@@ -104,3 +107,93 @@ Slip assembly moved to `utils/scoring/judge-slip.util.js`. The mapping existed *
 Resolving *who* is submitting deliberately stays in the controller — that is an authorization decision (HIGH-1) needing `req.user`. The util decides only *what* the slip looks like, which is what makes it transport-agnostic.
 
 **Found while doing it:** `judge.service.getTeamPlayers` was returning `email` and `dateOfBirth` for every player — the same CRIT-4 defect class, on minors, on a judge-facing endpoint. Removed; nothing in `JudgeTeamPlayers.jsx` reads them.
+
+---
+
+# Second pass — cross-stack audit (2026-08-11)
+
+**Scope:** a fresh full-stack audit covering what the first pass did not — **cross-stack contract correctness, deployment topology, and the hot scoring path**. The first audit was security-first and read each stack largely on its own terms.
+
+**The starting baseline was fully green**, which is the point worth remembering: Server 264 tests / 20 suites, Web 93 tests / 11 files, 0 lint errors, clean build. **Every issue below was invisible to all of it.** These are contract, topology and data-exposure defects, not logic defects — no amount of unit testing in the current style would have surfaced them.
+
+**Closing baseline:** Server **283 tests / 22 suites**, Web **97 tests / 11 files**, 0 lint errors, clean build.
+
+## P0-1 — SameSite=Strict made the deployed topology unreachable
+
+`csrfTokenHandler` set the `csrf-token` cookie `SameSite=Strict`, and `csrf.middleware.js` 403s when the **cookie** is absent.
+
+`render.yaml` deploys two services — `mallakhamb-web.onrender.com` (SPA) and `mallakhamb.onrender.com` (API). **`onrender.com` is on the Public Suffix List**, so those are two different registrable domains and every SPA→API request is cross-site. A `SameSite=Strict` cookie is never returned on such a request.
+
+Consequences:
+
+- The httpOnly auth cookies were **stored and never sent**. Cookie auth, `POST /auth/refresh` and `GET /auth/me` rehydration have been inert in production since Phase 2A shipped; the app runs entirely on the backward-compat Bearer token in sessionStorage (`jwt.expiresIn` = 24h).
+- Once CSRF was enabled, **login would 403 for every role**. Login is a POST with no Bearer token yet, so the Bearer exemption does not apply, and the cookie half of the double-submit could never come back.
+
+CSRF is **not mounted on `master`**, so this was a merge blocker rather than a live outage. **None of it reproduces locally** — `localhost:5173 → localhost:5000` is same-site, so every dev run, test, lint and build passes.
+
+**Fixed.** `crossSiteCookiePolicy(isProduction)` in `utils/security/cookie.util.js` is now the single source for the `secure`/`sameSite` pair: `{secure:true, sameSite:'none'}` in production, `{secure:false, sameSite:'lax'}` in dev. `csrf.middleware.js` reuses it rather than declaring its own literal — the drift between two independently-written literals is exactly how this arose. `CSRF_ENABLED=true` is now declared in `render.yaml` instead of relying on a code default.
+
+Two rules that must survive future edits:
+
+- **`SameSite=None` and `Secure` travel together.** Browsers drop the cookie if one is set without the other, so they are returned as a pair.
+- **Never disable CSRF while cookies are `SameSite=None`.** That combination is the genuinely unsafe one; the double-submit check is what makes cross-site cookies acceptable.
+
+Guarded by `tests/security/cookie-policy.security.test.js` (9 tests). The cross-site behaviour itself still cannot be asserted locally — a Render preview login is the only real proof.
+
+## P1-2 — Two more anonymous CRIT-4 leaks, then a third found while fixing them
+
+`GET /api/teams/:id` sat under a `// Public routes` comment with **no auth middleware**, and `teamService.getTeamById` returned every player's `email` and `dateOfBirth` plus the coach's `email`. Team rosters are largely minors.
+
+The ids were anonymously discoverable, so the endpoints composed into a chain requiring no credentials at all:
+
+1. `GET /api/public/competitions` → competition ids
+2. `GET /api/public/teams?competitionId=…` → team ids
+3. `GET /api/teams/:id` → full roster with email + date of birth
+
+`public.service.getPublicTeams` also selected `dateOfBirth` and returned the whole populated player object, so **it leaked DOB anonymously on its own**.
+
+**A third instance was found while batching the N+1 in `judge.service.getAvailableTeams`**: `Player.find({ team }).lean()` with **no projection**, plus `populate: 'coach'` with no select — shipping minors' email and DOB, and the full coach document, to every judge. This one was never listed in either audit.
+
+**Fixed.** All three now project through the shared allow-lists in `utils/data/user-projection.util.js` at both the populate and the mapping layer, and `GET /api/teams/:id` / `:id/stats` require authentication. Nothing consumed them anonymously — `teamAPI.getById`/`getStats` are re-exported by the web service barrels and imported by no component.
+
+> **The generalisable rule:** any `.find()` or `populate` without an explicit `select` on a user collection is a candidate. `.lean()` and `.toObject()` both mean a schema `toJSON` transform never runs, so the projection is the only control.
+
+Guarded by `tests/security/team-detail.security.test.js`, which asserts a real 200 and a non-empty payload **before** asserting absence — a 500 body satisfies every `not.toContain`, and that false all-clear has already happened once here.
+
+## P2-3 — `PUT /api/admin/scores/unlock` could never have worked
+
+Registered with no `:scoreId` segment and the `unlockScores()` validator, which validates `body.ageGroup` — the shape of the **age-group** operation. But the handler it pointed at calls `adminService.unlockScore(req.params.scoreId, …)`, the **single-score** operation. The id was therefore always `undefined`.
+
+Meanwhile the web client had always called `PUT ${basePath}/scores/${scoreId}/unlock`, which the admin router did not declare — a 404. It resolved only under `/superadmin`, whose router does declare it. The client was right; the route was wrong.
+
+**Fixed** to `/scores/:scoreId/unlock`, matching the handler, the superadmin router and the client. Nothing referenced the old path — not the client, not a test, not the docs.
+
+**`unlockScoreAsAdmin` (one id) and `unlockScoresForAgeGroup` / `lockScoresForAgeGroup` (a whole age group) remain genuinely different operations. Do not merge them.** Both are now exercised end to end by `tests/integration/admin-score-lock-cycle.test.js`.
+
+## P2-4 — Three N+1 query patterns, one on the score-save path
+
+| Location | Was | Now |
+|---|---|---|
+| `scoring.service.validatePlayerScores` | `await findById` per player, **sequential** — a 12-player team paid 12 serial round-trips before every save, during a live event | one `$in` query + a `Set` |
+| `super-admin.service.getAllTeams` | `find({team})` per team (1 + N, unpaginated) | `groupPlayersByTeam` — one `$in` query + a `Map` |
+| `judge.service.getAvailableTeams` | `Player.find` **and** a score `count` per team (2N), with `require('Player')` **inside the loop body**, bypassing the repository | two batched queries, `require` hoisted, repository used |
+
+## P2-5 — `render.yaml` declared no payment or cache configuration
+
+No `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET`, no `REDIS_URL`, no `CSRF_ENABLED`, no `JWT_EXPIRES_IN` — while `payment.service.js` and the webhook HMAC verify require the Razorpay values. A fresh environment came up with payments silently broken. Now declared as `sync: false` (declared, value withheld) with comments explaining what each is for.
+
+## P3 — Cleanup
+
+- `createAdminAPI` advertised `getProfile` and `addScore`; neither path is declared by any router and neither had a caller. Removed. `register` and `getAllPlayers` exist under `/admin` but **not** `/superadmin`, so `super-admin.api.js` now drops them explicitly rather than inheriting 404s.
+- `tests/setup.js` passed `useNewUrlParser` / `useUnifiedTopology`, removed in driver v4 — two deprecation warnings per suite, burying real output across the whole run. Removed.
+- The web catch-all route was `<Navigate to="/" replace />`, so a stale deep link looked exactly like a successful navigation and `replace` removed the Back button as a way out. Now a real 404 view.
+
+## Checked and found correct — do not "fix" these
+
+Recorded because each looked wrong on a first read and cost time to clear:
+
+- **`super-admin.routes.js` and `admin.routes.js` guards.** Superadmin is covered by `router.use(auth, requireSuperAdmin)` (line 12); admin routes use the `authorize` alias for `requireAdmin` (line 40), which a grep for `requireAdmin` will not show. Scoring is covered by `router.use(authMiddleware)`.
+- **Route ordering.** `/teams/submitted` is correctly registered before `/teams/:teamId` in both routers.
+- **API versioning.** `/api/v1` is mounted before `/api`, built once and mounted twice, so limiters are not duplicated.
+- **React Router v7** (7.18.2, up from v6). The app uses only the declarative `BrowserRouter`/`Routes`/`useNavigate` surface; v7's breaking changes are in the data-router APIs (`json`, `defer`, `RouterProvider`) which this app does not use. No migration needed.
+- **Dead pages.** There are none. `UnifiedDashboard` is live — `AdminDashboard`/`SuperAdminDashboard` render it, and it hosts `AdminScores`, `AdminJudges`, `AdminTransactions` and `SuperAdminManagement` as tabs.

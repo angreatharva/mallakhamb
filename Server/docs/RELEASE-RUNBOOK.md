@@ -65,6 +65,44 @@ Both are fixed, and `api-client.js` is now the only file importing axios
 directly. If you add a new call, put it on the `api` instance. If you ever see
 `403 CSRF token missing`, this is why.
 
+## 1c. The cookies are cross-site in production — and nothing local shows it
+
+**Read this before changing any cookie option.**
+
+`render.yaml` deploys the SPA and the API as two services:
+`mallakhamb-web.onrender.com` and `mallakhamb.onrender.com`. **`onrender.com` is
+on the Public Suffix List**, so those are two different registrable domains and
+**every SPA→API request is cross-site**.
+
+Both the auth cookies and the CSRF cookie were `SameSite=Strict`, which a
+browser will not return on a cross-site request. That had two effects, one
+silent and one fatal:
+
+- **Silent:** the httpOnly access/refresh cookies were stored and never sent, so
+  cookie auth, `POST /auth/refresh` and `GET /auth/me` have been inert in
+  production since Phase 2A. The app has been running on the backward-compat
+  Bearer token in sessionStorage the whole time.
+- **Fatal, once CSRF is on:** the double-submit check needs the cookie half.
+  Login is a POST with no Bearer token yet (see §1b), so it is not exempt — and
+  with the cookie never returned, **every login would 403**.
+
+Fixed by `crossSiteCookiePolicy()` in `src/utils/security/cookie.util.js`, the
+single source for the `secure`/`sameSite` pair. `csrf.middleware.js` now reuses
+it instead of declaring its own literal.
+
+**Operational rules:**
+
+- `SameSite=None` and `Secure` **travel together** — browsers drop the cookie if
+  one is set without the other. Do not set them independently.
+- **Never set `CSRF_ENABLED=false` while cookies are `SameSite=None`.** That is
+  the genuinely unsafe combination; the double-submit check is what makes
+  cross-site cookies acceptable. If you must disable CSRF as a rollback, treat
+  it as temporary and understand you are accepting CSRF exposure.
+- **This class of bug cannot be caught locally.** `localhost:5173 →
+  localhost:5000` is *same-site*, so dev, tests, lint and build all pass while
+  production is broken. The only real verification is a browser login against
+  the deployed origins — see §4.
+
 ## 2. Environment variables
 
 | Variable | Default | Action |
@@ -74,6 +112,9 @@ directly. If you add a new call, put it on the `api` instance. If you ever see
 | `ALLOW_LOSSY_SCORE_MIGRATION` | unset | Only for the migration escape hatch above. |
 | `MAX_LOGIN_ATTEMPTS` / `LOCKOUT_DURATION_MINUTES` | `5` / `15` | Previously inert; **now actually enforced**. Confirm the values suit you. |
 | `BCRYPT_ROUNDS` | `12` | Now also used by the password-reset path, which previously hardcoded 10. |
+| `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET` | unset | **Now declared in `render.yaml` as `sync: false`.** Declaring is not setting — confirm real values exist in the Render dashboard or entry-fee payment and webhook HMAC verification fail at runtime. |
+| `REDIS_URL` | unset | Optional. Without it, cross-instance JWT invalidation falls back to an in-memory store that is per-process and resets on every deploy. |
+| `JWT_EXPIRES_IN` | `24h` | Now declared explicitly. This is the lifetime users actually get, since the 15-minute cookie is not usable cross-site (§1c). |
 
 ---
 
@@ -116,16 +157,33 @@ curl -s https://<api>/api/public/cop-rules | grep -c pointCeilings           # 1
 
 # Debug routes must be gone
 curl -s -o /dev/null -w '%{http_code}\n' https://<api>/api/debug/env         # 404
+
+# The cookie policy must be cross-site capable (§1c).
+# BOTH 'SameSite=None' and 'Secure' must appear. Either alone means broken login.
+curl -si https://<api>/api/csrf-token | grep -i 'set-cookie'
+# expect: csrf-token=...; Path=/; Secure; SameSite=None
+
+# The team roster must no longer be anonymously readable
+curl -s -o /dev/null -w '%{http_code}\n' https://<api>/api/teams/<any-team-id>  # 401
 ```
 
 **By hand, in this order:**
 
+0. **Log in as any role, in a real browser, on the deployed web origin.**
+   Do this *first* — it is the gate for everything else. This is the only check
+   that can detect the §1c cross-site cookie failure, because no local run,
+   test, lint or build reproduces it. A `403 CSRF token missing` here means the
+   cookie policy is wrong; see §6 for the immediate rollback.
 1. **Judge login, then submit a slip.** The single most important path. Confirm
    the score appears in Panel Review for the other judges.
 2. **Score the same team in a second category.** This is the HIGH-3 fix and the
    thing the migration enables — if it errors, the migration did not run.
 3. **Admin: lock and unlock an age group.** This was returning 500 before this
    release (`BaseRepository.updateMany` did not exist) and has never worked.
+   Then **unlock a single score as a superadmin** from the Scoring screen: the
+   admin router's `/scores/unlock` had no `:scoreId` segment while its handler
+   read `req.params.scoreId`, so that path passed `undefined` and could never
+   have unlocked anything. Now `/scores/:scoreId/unlock`, matching the client.
 4. **Send one real e-mail** — an OTP is easiest. `nodemailer` went 7.x → 9.x, a
    breaking major on the transport. It is now covered by
    `tests/integration/email/smtp-delivery.test.js`, which drives the app's own
@@ -164,6 +222,20 @@ curl -s -o /dev/null -w '%{http_code}\n' https://<api>/api/debug/env         # 4
 The application code is safe to roll back at any point — nothing depends on the
 new index existing.
 
+**If login 403s after deploy (smoke test 4.0 fails):** that is the §1c cookie
+policy, and it locks every user out of every role at once, so treat it as an
+outage rather than a bug to debug in place.
+
+The fastest mitigation is `CSRF_ENABLED=false` in the Render dashboard, which
+restarts the service and takes effect without a redeploy. **Understand the
+trade:** cookies remain `SameSite=None` while the double-submit check is off, so
+you are accepting CSRF exposure to restore access. Authenticated writes still
+carry a Bearer token, which is what the app actually runs on. Treat it as
+temporary, and fix the cookie policy rather than leaving the flag off.
+
+Reverting the deploy also works and is cleaner if you are not mid-event, since
+CSRF is not mounted on the previous release at all.
+
 **The migration is the exception.** After `migrate:up`, a rollback to the
 previous release leaves the new index in place, which is harmless: the old code
 writes documents that satisfy it. Do **not** run `migrate:down` to "clean up"
@@ -179,9 +251,15 @@ multi-category data.
 ## 7. Verification baseline
 
 ```
-Server: 260 tests / 19 suites · 0 vulnerabilities
-Web:     93 tests / 11 files  · 0 lint errors · 0 vulnerabilities · clean build
+Server: 283 tests / 22 suites · 0 vulnerabilities
+Web:     97 tests / 11 files  · 0 lint errors · 0 vulnerabilities · clean build
 ```
+
+Updated 2026-08-11 by the cross-stack second-pass audit (see `docs/AUDIT.md`).
+**Its headline finding is §1c, and the baseline above cannot prove it** — the
+suites were fully green while production cookie auth was inert and login would
+have 403'd on the first CSRF-enabled deploy. Smoke test 4.0 is the only check
+that covers it.
 
 Beyond the suites, this release was verified by running things rather than
 trusting green checkmarks:

@@ -261,3 +261,81 @@ Manual checks after Phase 2 and 3:
 1. Log in as a judge, let the access token expire, then load Panel Review — expect a silent refresh, not an empty panel.
 2. Log out in one tab; the second tab should not keep rendering an authenticated UI.
 3. Open the app in a fresh tab while a valid cookie exists — expect the session to rehydrate, not a login redirect.
+
+---
+
+# Second pass — cross-stack audit (2026-08-11)
+
+A fresh audit covering **frontend↔backend contract correctness** rather than
+frontend quality, which is what this document's first pass covered. Full
+findings and the server half are in `Server/docs/AUDIT.md`.
+
+Baseline moved from 93 tests / 11 files to **97 tests / 11 files**, lint still 0
+errors, build still clean.
+
+## W-1 — Superadmin live scoring opened its socket with a null token
+
+`AdminScoring.jsx:47` read:
+
+```js
+const tokenKey = routePrefix === '/superadmin' ? 'admin_token' : 'admin_token';
+```
+
+**Both branches identical.** Storage is role-scoped, so a superadmin session
+holds `superadmin_token` and `admin_token` is empty — the Socket.IO handshake
+went out with `token: null`. `/superadmin/scoring` is a real route
+(`routes/index.jsx:184`), and the HTTP calls were unaffected because the
+api-client derives the role from the URL correctly, so only the live feed broke.
+
+It fell back to the `access_token` cookie, which per the server audit's P0-1 is
+not sent cross-site in production — so in production the superadmin's live score
+feed authenticated as nobody.
+
+**Fixed** by deriving the key from `getRoleFromPath`, already the single source
+of truth for this mapping. Guarded in `roleFromPath.test.js`, including an
+explicit assertion that the two roles never resolve to the same key.
+
+> Lint cannot catch an identical-branch ternary, and no test mounted this
+> component. It was found by reading the file, not by tooling.
+
+## W-2 — The API surface advertised endpoints that do not exist
+
+`superAdminAPI` spread `createAdminAPI('/superadmin')` wholesale, inheriting
+`register`, `getProfile`, `getAllPlayers` and `addScore`. Under `/superadmin`
+none of those paths are declared by the router.
+
+`getProfile` and `addScore` are declared by **no** router at either base path and
+had no callers — removed outright. `register` and `getAllPlayers` are valid
+under `/admin` but not `/superadmin`, so `super-admin.api.js` now destructures
+them off the inherited surface explicitly, with a comment naming the real
+alternatives (`createAdmin`, `addPlayerToTeam`).
+
+Separately, `adminAPI.unlockScores` was calling
+`PUT /admin/scores/${scoreId}/unlock`, which the admin router did not declare —
+a 404. **The client was right and the route was wrong**; the server side was
+corrected rather than the client. It was not user-visible because the Unlock
+button is gated on `routePrefix === '/superadmin'` (`AdminScoring.jsx:596`), and
+the superadmin router does declare that path.
+
+## W-3 — The catch-all route hid navigation failures
+
+`routes/index.jsx` ended with `<Route path="*" element={<Navigate to="/" replace />} />`,
+so any unmatched URL landed silently on the home page. A stale or mistyped deep
+link was indistinguishable from a successful navigation, and because the
+redirect used `replace`, Back could not return the user to where they came from.
+
+Replaced with `pages/shared/NotFound.jsx`, which names the path that failed and
+honours the role prefix where there is one — a dead `/judge/*` link offers judge
+sign-in rather than the public home page, which matters at a venue.
+
+## Checked and found correct
+
+- **React Router v7** (7.18.2, up from v6): the app uses only the declarative
+  `BrowserRouter`/`Routes`/`useNavigate` surface. v7's breaking changes are in
+  the data-router APIs (`json`, `defer`, `RouterProvider`), none of which this
+  app uses. All tests and the build pass. **No migration needed.**
+- **Dead pages: none.** `UnifiedDashboard` is live — `AdminDashboard` and
+  `SuperAdminDashboard` render it, and it hosts `AdminScores`, `AdminJudges`,
+  `AdminTransactions` and `SuperAdminManagement` as tabs. Only
+  `JudgeScoring.hooks.test` is unreferenced, which is correct for a test file.
+- **Raw axios**: `api-client.js` is still the only file importing axios directly.
