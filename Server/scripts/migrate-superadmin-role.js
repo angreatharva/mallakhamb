@@ -6,9 +6,27 @@
  * role naming convention used across the full stack.
  * 
  * Usage:
- *   node src/migrations/migrate-superadmin-role.js
- * 
+ *   node scripts/migrate-superadmin-role.js
+ *
  * Requires MONGODB_URI environment variable (or loads from .env).
+ *
+ * NOT a MigrationRunner migration, which is why it lives in scripts/ alongside
+ * createAdmin.js rather than in src/migrations/. It exports no up/down, opens
+ * its own mongoose connection and calls mongoose.disconnect() and process.exit()
+ * at module scope.
+ *
+ * While it sat in src/migrations/ it broke the runner outright:
+ * validateMigrationOrder rejects any filename not matching ###_name.js, and it
+ * runs BEFORE the execution loop — so `npm run migrate:up` aborted having
+ * applied nothing, which is why production showed 0 of 4 applied. Renaming it
+ * to conform would have been worse than the abort: loadMigration's require()
+ * executes module scope, so it would have connected, mutated, and torn down the
+ * runner's own connection mid-batch, exactly when the runner needed it to roll
+ * back.
+ *
+ * Almost certainly a no-op now — the super_admin to superadmin rename landed in
+ * Phase 1 and the Admin role enum no longer accepts 'super_admin'. Kept as a
+ * record and because it is safely idempotent (it counts first and exits early).
  */
 
 require('dotenv').config();

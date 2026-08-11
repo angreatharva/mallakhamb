@@ -44,3 +44,4 @@ scripts/*
 !scripts/createAdmin.js
 !scripts/createSuperAdmin.js
 !scripts/migrate.js
+!scripts/migrate-superadmin-role.js
