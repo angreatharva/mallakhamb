@@ -27,8 +27,18 @@ services:
       # (the SPA and this API are different sites on the Public Suffix List),
       # so the double-submit check is what keeps cross-site writes safe.
       # See Server/src/utils/security/cookie.util.js.
+      #
+      # DEFAULT IS TRUE — config-manager.js:73 turns CSRF on when this variable
+      # is absent, so leaving it unset in the dashboard is the secure state.
+      #
+      # Deliberately `sync: false` rather than `value: true`, so the DASHBOARD
+      # owns it. Runbook §6 rolls a CSRF-caused login outage back by flipping
+      # this to false, which restarts the service without a redeploy and keeps
+      # every other fix in place — the alternative, rolling back the deploy,
+      # would also revert the roster PII fixes. A Blueprint-owned `value:` would
+      # let the next sync silently reset that mitigation mid-incident.
       - key: CSRF_ENABLED
-        value: true
+        sync: false
       # Razorpay - Add in Render Dashboard (sensitive). Required by
       # services/payment/payment.service.js; the webhook secret backs the
       # HMAC-SHA256 signature verification on /api/webhooks/razorpay.
