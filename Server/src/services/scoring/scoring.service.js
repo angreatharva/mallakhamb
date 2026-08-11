@@ -442,13 +442,32 @@ class ScoringService {
   async validatePlayerScores(playerScores) {
     const errors = [];
 
+    // Existence is resolved in ONE query rather than a findById per entry.
+    // This runs on the score-save path during a live event, and the previous
+    // shape was a sequential `await` inside the loop — a twelve-player team
+    // paid twelve serial round-trips before the write even started.
+    // Only `isActive` is read, so the projection stays minimal.
+    const playerIds = playerScores.map((ps) => ps.playerId).filter(Boolean);
+    const activePlayerIds = new Set();
+
+    if (playerIds.length > 0) {
+      const players = await this.playerRepository.find(
+        { _id: { $in: playerIds } },
+        { select: '_id isActive' }
+      );
+      for (const player of players) {
+        if (player.isActive) {
+          activePlayerIds.add(String(player._id));
+        }
+      }
+    }
+
     for (let i = 0; i < playerScores.length; i++) {
       const ps = playerScores[i];
 
       // Validate player exists
       if (ps.playerId) {
-        const player = await this.playerRepository.findById(ps.playerId);
-        if (!player || !player.isActive) {
+        if (!activePlayerIds.has(String(ps.playerId))) {
           errors.push(`Player at index ${i} not found or inactive`);
         }
       } else {

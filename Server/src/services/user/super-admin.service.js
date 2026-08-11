@@ -166,10 +166,15 @@ class SuperAdminService {
       populate: 'coach'
     });
     
-    // Fetch players for each team
+    // Fetch every team's players in ONE query and group them in memory, rather
+    // than a find() per team. Promise.all made the round-trips concurrent but
+    // there were still 1 + N of them, and this list is unpaginated — the query
+    // count grew with the size of the event.
+    const playersByTeam = await this.groupPlayersByTeam(teams.map((t) => t._id));
+
     const teamsWithPlayers = await Promise.all(
       teams.map(async (team) => {
-        const players = await this.playerRepository.find({ team: team._id });
+        const players = playersByTeam.get(String(team._id)) || [];
         return {
           _id: team._id,
           name: team.name,
@@ -199,6 +204,37 @@ class SuperAdminService {
     
     return teamsWithPlayers;
   }
+  /**
+   * Load the players for many teams in a single query, grouped by team id.
+   *
+   * Replaces the `find({ team })`-per-team pattern this file used in several
+   * places. Keys are stringified because `team` comes back as an ObjectId and
+   * `Map` lookups are by identity.
+   *
+   * @param {Array<import('mongoose').Types.ObjectId|string>} teamIds
+   * @returns {Promise<Map<string, Object[]>>} team id → its players
+   */
+  async groupPlayersByTeam(teamIds) {
+    const grouped = new Map();
+    if (!teamIds || teamIds.length === 0) {
+      return grouped;
+    }
+
+    const players = await this.playerRepository.find({ team: { $in: teamIds } });
+
+    for (const player of players) {
+      const key = String(player.team);
+      const bucket = grouped.get(key);
+      if (bucket) {
+        bucket.push(player);
+      } else {
+        grouped.set(key, [player]);
+      }
+    }
+
+    return grouped;
+  }
+
   async deleteTeam(teamId) { return this.teamRepository.updateById(teamId, { isActive: false }); }
   async deleteJudge(judgeId) { return this.judgeRepository.deleteById(judgeId); }
 
