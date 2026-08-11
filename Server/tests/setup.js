@@ -11,10 +11,10 @@ beforeAll(async () => {
   const mongoUri = mongoServer.getUri();
   
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // No options: `useNewUrlParser` and `useUnifiedTopology` have had no effect
+    // since driver v4 and only emitted a deprecation warning — twice per suite,
+    // which buried real output across the whole run.
+    await mongoose.connect(mongoUri);
   }
 });
 

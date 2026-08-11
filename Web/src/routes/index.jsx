@@ -31,6 +31,7 @@ import {
   ResetPassword,
   PublicScores,
   UnifiedRegister,
+  NotFound,
 } from './lazy-pages';
 
 import { AuthLoadingSpinner as PageLoader } from '@/components/auth/AuthLoadingSpinner';
@@ -184,7 +185,13 @@ export default function AppRoutes() {
           <Route path="scoring" element={<AdminScoring />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/*
+          * Was `<Navigate to="/" replace />`, which swallowed every unmatched
+          * URL into the home page — a stale deep link looked exactly like a
+          * successful navigation, and `replace` removed the Back button as a
+          * way out.
+          */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );
