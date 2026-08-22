@@ -274,6 +274,20 @@ function createAdminRoutes(container) {
   );
 
   /**
+   * @route   PATCH /api/admin/judge-accounts/:accountId
+   * @desc    Set the real address on a migrated judge account
+   * @access  Admin, SuperAdmin
+   */
+  router.patch(
+    '/judge-accounts/:accountId',
+    authMiddleware,
+    authorize,
+    adminValidator.updateJudgeAccount(),
+    handleValidationErrors,
+    adminController.updateJudgeAccount
+  );
+
+  /**
    * @route   GET /api/admin/judges/summary
    * @desc    Get all judges summary
    * @access  Admin, SuperAdmin, Scorer

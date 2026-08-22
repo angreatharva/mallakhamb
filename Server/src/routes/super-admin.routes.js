@@ -64,6 +64,7 @@ function createSuperAdminRoutes(container) {
 
   // Judge management routes (reuse admin controller methods)
   router.get('/judge-accounts', adminController.searchJudgeAccounts);
+  router.patch('/judge-accounts/:accountId', adminController.updateJudgeAccount);
   router.get('/judges', adminController.getJudges);
   router.post('/judges', adminController.createSingleJudge);
   router.put('/judges/:judgeId', adminController.updateJudge);
