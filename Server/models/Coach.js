@@ -20,6 +20,17 @@ const coachSchema = new mongoose.Schema({
       message: 'Please enter a valid email'
     }
   },
+  /**
+   * Contact number. Same defect as Player.phone: the coach registration form
+   * collects it, the client sends it, and strict mode silently discarded it
+   * because the field was not declared here. Optional for the same reason —
+   * existing coaches have no phone and must not fail validation on save.
+   */
+  phone: {
+    type: String,
+    trim: true,
+    default: null
+  },
   password: {
     type: String,
     required: [true, 'Password is required'],

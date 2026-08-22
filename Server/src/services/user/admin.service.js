@@ -34,6 +34,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
+const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
 class AdminService extends UserService {
   /**
@@ -1032,7 +1033,7 @@ class AdminService extends UserService {
       });
 
       // Filter submitted teams (only teams fully submitted by coach)
-      let submittedTeams = competition.registeredTeams.filter(regTeam => regTeam.isSubmitted === true && regTeam.isActive !== false);
+      let submittedTeams = (competition.registeredTeams || []).filter(isSubmittedRegistration);
       
       this.logger.info('Submitted teams (before additional filters)', { 
         count: submittedTeams.length 

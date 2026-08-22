@@ -254,11 +254,42 @@ const array = (field, options = {}) => {
     .withMessage(`${field} must be an array with ${minLength} to ${maxLength} items`);
 };
 
+/**
+ * Validate a contact number.
+ *
+ * Permissive on punctuation and deliberately not locale-locked — separators,
+ * a leading +, and an optional country code all pass — but the digit count has
+ * to look like a real number. `sanitizeUserData` strips everything outside
+ * `[\d+\-() ]` before the value reaches the model, so the check here is about
+ * substance, not characters.
+ *
+ * @param {string} field - Body field name
+ * @param {{ isOptional?: boolean }} [options]
+ * @returns {import('express-validator').ValidationChain}
+ */
+const phone = (field = 'phone', options = {}) => {
+  const { isOptional = false } = options;
+  const chain = isOptional
+    ? body(field).optional({ values: 'falsy' })
+    : body(field).notEmpty().withMessage('Phone number is required');
+
+  return chain
+    .trim()
+    .custom((value) => {
+      const digits = String(value).replace(/\D/g, '');
+      if (digits.length < 10 || digits.length > 15) {
+        throw new Error('Phone number must contain between 10 and 15 digits');
+      }
+      return true;
+    });
+};
+
 module.exports = {
   objectId,
   mongoId: objectId,
   email,
   password,
+  phone,
   pagination,
   dateRange,
   date,

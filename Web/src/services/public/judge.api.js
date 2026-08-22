@@ -67,9 +67,6 @@ export const judgeAPI = {
    * Used to detect drift against the bundled tables (MED-W5).
    */
   getCopRules: () => api.get('/public/cop-rules'),
-
-  /** Public results feed, used as a supplement for already-locked scores. */
-  getPublicScores: (params) => api.get('/public/scores', { params }),
 };
 
 export default judgeAPI;

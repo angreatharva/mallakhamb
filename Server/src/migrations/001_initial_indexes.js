@@ -53,12 +53,35 @@ async function up() {
     await Judge.collection.createIndex({ gender: 1, ageGroup: 1, judgeNo: 1, competition: 1 }, { unique: true });
     await Judge.collection.createIndex({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
     await Judge.collection.createIndex({ competitionTypes: 1 });
-    // Partial index for username - only index non-empty usernames
+
+    // Username lookup index — deliberately NOT unique.
+    //
+    // This was `unique: true` and it could never build: a judge holds ONE
+    // DOCUMENT PER ASSIGNMENT, all sharing one username, so anyone judging two
+    // age groups at the same meet collides with themselves. That is not bad
+    // data, it is the model — `judge.service.loginJudge` returns every matching
+    // row as `allAssignments`, `authorizationService.getJudgeDetails` builds
+    // `assignments` the same way, and `SocketManager.getRoomIdsForAssignment`
+    // iterates them to decide which scoring rooms the judge may join. Enforcing
+    // uniqueness here would make the second assignment impossible to create and
+    // break multi-category judging outright.
+    //
+    // Uniqueness of a judge SLOT is already enforced correctly by the two
+    // compound indexes above ({gender, ageGroup, judgeNo, competition} and
+    // {gender, ageGroup, judgeType, competition}). Username is the shared login
+    // identity across a person's assignments, not a key.
+    //
+    // The drop is required for re-runnability, not just defensiveness: MongoDB
+    // rejects createIndex with the same key pattern and different options
+    // (IndexOptionsConflict) instead of replacing the index.
+    const judgeIndexes = await Judge.collection.indexes();
+    if (judgeIndexes.some((ix) => ix.name === 'username_1_competition_1' && ix.unique)) {
+      await Judge.collection.dropIndex('username_1_competition_1');
+    }
     await Judge.collection.createIndex(
-      { username: 1, competition: 1 }, 
-      { 
-        unique: true,
-        partialFilterExpression: { 
+      { username: 1, competition: 1 },
+      {
+        partialFilterExpression: {
           username: { $exists: true, $gt: '' }
         }
       }

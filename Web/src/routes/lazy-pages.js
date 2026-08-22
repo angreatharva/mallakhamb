@@ -21,6 +21,7 @@ export const JudgeDashboard = lazy(() => import('@/pages/judge/JudgeDashboard'))
 export const JudgeTeamPlayers = lazy(() => import('@/pages/judge/JudgeTeamPlayers'));
 export const JudgeScoring = lazy(() => import('@/pages/judge/JudgeScoring'));
 export const JudgePanelReview = lazy(() => import('@/pages/judge/JudgePanelReview'));
+export const JudgeSequence = lazy(() => import('@/pages/judge/JudgeSequence'));
 export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword'));
 export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));
 export const NotFound = lazy(() => import('@/pages/shared/NotFound'));

@@ -24,6 +24,10 @@ const {
   projectFields,
 } = require('../../utils/data/user-projection.util');
 const {
+  findSubmittedRegistration,
+  registeredPlayerIds,
+} = require('../../utils/data/team-visibility.util');
+const {
   getLockoutState,
   registerFailedAttempt,
   clearedLockoutState,
@@ -570,18 +574,24 @@ class JudgeService extends UserService {
         throw new NotFoundError('Team');
       }
 
-      // Verify team has been submitted by coach for this competition
+      // Verify the coach has actually entered this team — final submit AND
+      // fees paid (see team-visibility.util for why those are one flag).
+      //
+      // This used to be wrapped in `if (compId) { if (comp) { ... } }`, so a
+      // judge with no competition on their assignment, or one whose competition
+      // had been deleted, skipped the check entirely and got the roster of a
+      // team the coach was still drafting. A missing competition is now a
+      // refusal, not a bypass: there is no state in which "we could not tell"
+      // should resolve to "show it".
       const compId = judge.competition?._id || judge.competition;
-      if (compId) {
-        const comp = await this.competitionRepository.findById(compId);
-        if (comp) {
-          const regTeam = (comp.registeredTeams || []).find(
-            rt => rt.team && (rt.team._id ? rt.team._id.toString() : rt.team.toString()) === teamId.toString()
-          );
-          if (!regTeam || regTeam.isSubmitted !== true) {
-            throw new AuthorizationError('Team has not been submitted by coach yet');
-          }
-        }
+      if (!compId) {
+        throw new AuthorizationError('Judge is not assigned to a competition');
+      }
+
+      const comp = await this.competitionRepository.findById(compId);
+      const registration = findSubmittedRegistration(comp, teamId);
+      if (!registration) {
+        throw new AuthorizationError('Team has not been submitted by coach yet');
       }
 
       // Find score documents for this team and judge's category
@@ -622,23 +632,47 @@ class JudgeService extends UserService {
         }
       }
 
-      // Fetch players for this team
-      const Player = require('../../models/Player');
-      const players = await Player.find({ team: teamId }).lean();
+      // Fetch the athletes the coach ENTERED, not everyone on the team.
+      //
+      // `Player.team` is roster membership and is written the moment a coach
+      // drags an athlete onto a team — before any submission, and for athletes
+      // who are never entered at all. Querying by it returned the whole squad,
+      // so a submitted team leaked every draft athlete alongside its six real
+      // entries. The registration's own player list is the entry.
+      const registeredIds = registeredPlayerIds(registration);
+      const players = registeredIds.size === 0
+        ? []
+        : await this.playerRepository.find(
+          { _id: { $in: [...registeredIds] }, team: teamId },
+          { select: SUBMITTED_TEAM_PLAYER_FIELDS }
+        );
+
+      // The category recorded at entry time wins over the athlete's own
+      // profile: a player can be entered in a different age group than their
+      // default (play-up), and the judge must see the one being judged.
+      const categoryByPlayer = new Map();
+      for (const entry of registration.players || []) {
+        const pid = entry?.player?._id ? String(entry.player._id) : String(entry?.player || '');
+        if (pid) categoryByPlayer.set(pid, entry);
+      }
 
       // CRIT-4 class: this roster used to carry `email` and `dateOfBirth`, and
       // these are minors. A judge needs a name, a gender and a score — nothing
       // here reads contact details (JudgeTeamPlayers.jsx:251-258).
-      const playersWithScores = players.map(player => ({
-        _id: player._id,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        gender: player.gender,
-        ageGroup: player.ageGroup,
-        score: scoreMap[player._id.toString()]?.score || null,
-        isFinalized: !!scoreMap[player._id.toString()]?.isFinalized,
-        hasScore: !!scoreMap[player._id.toString()]?.hasScore
-      }));
+      const playersWithScores = players.map(player => {
+        const key = player._id.toString();
+        const entry = categoryByPlayer.get(key);
+        return {
+          _id: player._id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          gender: entry?.gender || player.gender,
+          ageGroup: entry?.ageGroup || player.ageGroup,
+          score: scoreMap[key]?.score || null,
+          isFinalized: !!scoreMap[key]?.isFinalized,
+          hasScore: !!scoreMap[key]?.hasScore
+        };
+      });
 
       return {
         team: {

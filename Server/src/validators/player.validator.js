@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { objectId, email, password, enumValue, date } = require('./common.validator');
+const { objectId, email, password, phone, enumValue, date } = require('./common.validator');
 
 /**
  * Validation rules for player endpoints
@@ -25,6 +25,7 @@ const createPlayer = () => {
       .withMessage('Last name must be between 2 and 50 characters')
       .escape(),
     email('email'),
+    phone('phone'),
     body('dateOfBirth')
       .trim()
       .notEmpty()
@@ -83,6 +84,9 @@ const updatePlayer = () => {
       .isEmail()
       .withMessage('Please provide a valid email address')
       .toLowerCase(),
+    // Optional here so the accounts that predate the schema field can have a
+    // number filled in later, without every other update carrying one.
+    phone('phone', { isOptional: true }),
     body('dateOfBirth')
       .optional()
       .trim()

@@ -27,6 +27,7 @@ import {
   JudgeTeamPlayers,
   JudgeScoring,
   JudgePanelReview,
+  JudgeSequence,
   ForgotPassword,
   ResetPassword,
   PublicScores,
@@ -173,6 +174,12 @@ export default function AppRoutes() {
           <Route path="team/:teamId" element={<JudgeTeamPlayers />} />
           <Route path="scoring" element={<JudgeScoring />} />
           <Route path="scoring/panel-review" element={<JudgePanelReview />} />
+          {/*
+            * Running order. Rendered for any judge who navigates here, but the
+            * page itself bounces anyone who is not a Senior Judge or Scorer,
+            * and the server rejects the writes regardless of what renders.
+            */}
+          <Route path="sequence" element={<JudgeSequence />} />
         </Route>
 
         {/* SuperAdmin Routes */}

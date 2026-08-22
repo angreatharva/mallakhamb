@@ -98,9 +98,18 @@ judgeSchema.index({ gender: 1, ageGroup: 1, judgeNo: 1, competition: 1 }, { uniq
 judgeSchema.index({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
 judgeSchema.index({ competitionTypes: 1 });
 
-// Unique index for username per competition, but only for non-empty usernames
-judgeSchema.index({ username: 1, competition: 1 }, { 
-  unique: true, 
+// Username lookup index per competition, for non-empty usernames only.
+//
+// NOT unique, and it must never become unique again. A judge holds one document
+// per assignment and they all share a username, so a person judging two age
+// groups at one meet has two rows here — see the two compound indexes above,
+// which are what actually enforce "one judge per slot per category", and
+// `judge.service.loginJudge`, which reads every row as `allAssignments`.
+//
+// This carried `unique: true` until 2026-08-21. It never took effect in
+// production (`autoIndex: false`), and migration 001 aborted with E11000 the
+// first time anyone tried to build it against real data.
+judgeSchema.index({ username: 1, competition: 1 }, {
   sparse: true,
   partialFilterExpression: { username: { $ne: '' } }
 });

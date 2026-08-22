@@ -25,6 +25,25 @@ const playerSchema = new mongoose.Schema({
       message: 'Please enter a valid email'
     }
   },
+  /**
+   * Contact number.
+   *
+   * The registration form has always collected this and the client has always
+   * sent it, but the field was absent from this schema — so Mongoose's default
+   * strict mode dropped it on the floor without an error, and every player
+   * registered before this was added has no phone number on record. There is
+   * nothing to backfill from; the values were never written anywhere.
+   *
+   * Deliberately NOT `required`. Those existing documents would fail validation
+   * on their next save (joining a team, a profile edit), which would break
+   * accounts that did nothing wrong. Registration enforces it at the API
+   * boundary instead — see playerValidators.createPlayer().
+   */
+  phone: {
+    type: String,
+    trim: true,
+    default: null
+  },
   dateOfBirth: {
     type: Date,
     required: [true, 'Date of birth is required']

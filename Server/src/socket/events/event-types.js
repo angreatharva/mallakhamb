@@ -29,6 +29,11 @@ module.exports = {
   SCORE_SUBMITTED: 'score_submitted',
   SCORE_DELETED: 'score_deleted',
 
+  // Running order (lot draw + Senior Judge / Scorer drag sequence).
+  // Broadcast into the category's scoring room so every judge on the panel
+  // re-sorts without a refresh.
+  PERFORMANCE_ORDER_UPDATED: 'performance_order_updated',
+
   // Notification events
   NOTIFICATION: 'notification',
   COMPETITION_UPDATE: 'competition_update',

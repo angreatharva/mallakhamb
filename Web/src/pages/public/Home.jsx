@@ -404,8 +404,8 @@ const HeroSection = () => {
         <h1 className="font-black leading-none tracking-tight mb-4" style={{ perspective: '800px' }}>
           {[
             { text: 'Bhausaheb', gradient: false, delay: 0.4 },
-            { text: 'Navodit', gradient: true, delay: 0.52 },
-            { text: 'Ranade', gradient: true, delay: 0.64 },
+            { text: 'Ranade', gradient: false, delay: 0.52 },
+            { text: 'Navodit ', gradient: true, delay: 0.64 },
           ].map(({ text, gradient, delay }) => (
             <motion.span
               key={text}

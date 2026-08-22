@@ -18,6 +18,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
+const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
 class PublicService {
   /**
@@ -65,9 +66,20 @@ class PublicService {
    * Get public scores for a competition with optional filters.
    * Returns score docs for EVERY registered team that matches the category
    * filters — public results are never scoped to a single team.
-   * Returns score docs that match filters — including unlocked drafts that already
-   * have judge marks (document-level isLocked is no longer required; Senior Judge
-   * Final Submit locks per-player via isFinalized).
+   *
+   * A result reaches this page only after BOTH signoffs, in order:
+   *
+   *   1. the Senior Judge's Final Submit, which sets `isFinalized` on that
+   *      player's row (scoring.service `isFinalSubmit`), and
+   *   2. the Scorer's "Save & Lock", which sets `isLocked` on the whole score
+   *      document (scoring.service, `isLocked` in the save payload).
+   *
+   * Both are required and neither is negotiable from the request. The
+   * document filter used to honour a `lockedOnly` query parameter that
+   * defaulted to true — but this endpoint is ANONYMOUS, so
+   * `?lockedOnly=false` was a published bypass: anyone could read a panel's
+   * un-locked working scores mid-event, which is precisely the disclosure the
+   * lock exists to prevent. There is no caller-supplied override any more.
    *
    * @param {string} [competitionId]
    * @param {Object} [filters]
@@ -75,22 +87,12 @@ class PublicService {
    * @param {string} [filters.ageGroup]
    * @param {string} [filters.competitionType]
    * @param {string} [filters.apparatus]
-   * @param {boolean|string} [filters.lockedOnly] - when true, only isLocked docs
    * @returns {Promise<Array>}
    */
   async getPublicScores(competitionId, filters = {}) {
     try {
-      const query = {};
-
-      // Public scores must ONLY show locked score documents (saved & locked by Scorer/Admin)
-      const lockedOnly =
-        filters.lockedOnly === true ||
-        filters.lockedOnly === 'true' ||
-        filters.lockedOnly === '1' ||
-        filters.lockedOnly === undefined; // Default to true for public scores
-      if (lockedOnly) {
-        query.isLocked = true;
-      }
+      // Gate 2 — the Scorer has saved AND locked this sheet.
+      const query = { isLocked: true };
 
       if (competitionId) {
         query.competition = competitionId;
@@ -114,8 +116,11 @@ class PublicService {
 
       const formattedScores = scores.map((score) => {
         const scoreObj = score.toObject ? score.toObject() : score;
+        // Gate 1 — the Senior Judge has Final Submitted this athlete. Applied
+        // per row, not per document: locking a sheet does not retroactively
+        // publish a performer the Senior Judge never signed off.
         let playerScores = (scoreObj.playerScores || [])
-          .filter((ps) => ps.isFinalized === true) // ONLY show player scores finalized by Senior Judge
+          .filter((ps) => ps.isFinalized === true)
           .map((ps) => this.enrichPlayerScore(ps));
         
         // Filter by apparatus if specified
@@ -183,7 +188,7 @@ class PublicService {
       }
 
       const teams = (competition.registeredTeams || [])
-        .filter((rt) => rt.isActive && rt.team && rt.isSubmitted === true)
+        .filter((rt) => rt.team && isSubmittedRegistration(rt))
         .map((rt) => ({
           _id: rt.team._id,
           name: rt.team.name,

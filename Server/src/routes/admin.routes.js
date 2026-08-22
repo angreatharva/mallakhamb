@@ -22,6 +22,7 @@ const { validateCompetitionContext } = require('../middleware/competition-contex
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
 const scoringValidator = require('../validators/scoring.validator');
+const performanceOrderValidator = require('../validators/performance-order.validator');
 const { 
   auditUserCreated, auditUserUpdated, auditCompetitionCreated, auditCompetitionUpdated, auditCompetitionDeleted,
   auditScoreUpdated, auditUserDeleted, auditPaymentCompleted
@@ -42,6 +43,7 @@ function createAdminRoutes(container) {
   
   // Get controller from DI container
   const adminController = container.resolve('adminController');
+  const performanceOrderController = container.resolve('performanceOrderController');
 
   // ==================== Public Authentication Routes ====================
 
@@ -485,6 +487,73 @@ function createAdminRoutes(container) {
     adminValidator.recalculateScores(),
     handleValidationErrors,
     adminController.recalculateScores
+  );
+
+  // ==================== Running Order / Lots ====================
+  //
+  // Drawing lots is an ADMIN privilege — `authorize` here is requireAdmin,
+  // which admits admin and superadmin. The Senior Judge and Scorer reach the
+  // reorder endpoints through /api/judge instead, where a second check
+  // confirms they are on the panel they are reordering.
+
+  /**
+   * @route   GET /api/admin/lots
+   * @desc    Teams + athletes for a category in running order
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/lots',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    performanceOrderValidator.getOrder(),
+    handleValidationErrors,
+    performanceOrderController.getOrder
+  );
+
+  /**
+   * @route   POST /api/admin/lots/draw
+   * @desc    Draw lots for a category (random team order, optionally athletes)
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/lots/draw',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    performanceOrderValidator.drawLots(),
+    handleValidationErrors,
+    performanceOrderController.drawLots
+  );
+
+  /**
+   * @route   PUT /api/admin/lots/teams
+   * @desc    Set the team running order
+   * @access  Admin, SuperAdmin
+   */
+  router.put(
+    '/lots/teams',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    performanceOrderValidator.setTeamOrder(),
+    handleValidationErrors,
+    performanceOrderController.setTeamOrder
+  );
+
+  /**
+   * @route   PUT /api/admin/lots/players
+   * @desc    Set the athlete running order inside one team
+   * @access  Admin, SuperAdmin
+   */
+  router.put(
+    '/lots/players',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    performanceOrderValidator.setPlayerOrder(),
+    handleValidationErrors,
+    performanceOrderController.setPlayerOrder
   );
 
   // ==================== Age Group Management ====================

@@ -4,7 +4,7 @@ import {
   ShieldHalf, Mars, Users, Venus, Target, Shield,
   Menu, X, LogOut, Play, CheckCircle, XCircle, LayoutDashboard,
   Users2, Trophy, Gavel, ReceiptIndianRupee, Settings,
-  TrendingUp, UserCheck
+  TrendingUp, UserCheck, ListOrdered
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -22,6 +22,7 @@ const AdminTeams = lazy(() => import('../admin/AdminTeams'));
 const AdminScores = lazy(() => import('../admin/AdminScores'));
 const AdminJudges = lazy(() => import('../admin/AdminJudges'));
 const AdminTransactions = lazy(() => import('../admin/AdminTransactions'));
+const AdminLots = lazy(() => import('../admin/AdminLots'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
@@ -257,12 +258,14 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'management', label: 'Management', icon: Settings },
     { id: 'teams', label: 'Teams', icon: Users2 },
+    { id: 'lots', label: 'Lots', icon: ListOrdered },
     { id: 'scores', label: 'Scores', icon: Trophy },
     { id: 'judges', label: 'Judges', icon: Gavel },
     { id: 'transactions', label: 'Transactions', icon: ReceiptIndianRupee },
   ] : [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'teams', label: 'Teams', icon: Users2 },
+    { id: 'lots', label: 'Lots', icon: ListOrdered },
     { id: 'scores', label: 'Scores', icon: Trophy },
     { id: 'judges', label: 'Judges', icon: Gavel },
     { id: 'transactions', label: 'Transactions', icon: ReceiptIndianRupee },
@@ -616,6 +619,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <SuperAdminManagement />;
         case 'teams':
           return <AdminTeams routePrefix={routePrefix} storagePrefix={storagePrefix} />;
+        case 'lots':
+          return <AdminLots />;
         case 'scores':
           return <AdminScores routePrefix={routePrefix} storagePrefix={storagePrefix} />;
         case 'judges':
@@ -631,6 +636,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return renderAdminDashboard();
         case 'teams':
           return <AdminTeams />;
+        case 'lots':
+          return <AdminLots />;
         case 'scores':
           return <AdminScores />;
         case 'judges':

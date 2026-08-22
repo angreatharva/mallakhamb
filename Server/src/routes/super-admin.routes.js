@@ -1,6 +1,8 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireSuperAdmin } = require('../middleware/auth.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
+const performanceOrderValidator = require('../validators/performance-order.validator');
 
 function createSuperAdminRoutes(container) {
   const router = express.Router();
@@ -49,6 +51,17 @@ function createSuperAdminRoutes(container) {
   router.post('/competition/age-group/start', adminController.startAgeGroup);
   router.post('/age-groups/start', adminController.startAgeGroup);
   
+  // Running order / lot draw. Same handlers as /api/admin; the whole router is
+  // already behind `auth, requireSuperAdmin` (line 12), so no extra guard is
+  // needed here. Unlike the admin router these have no
+  // `validateCompetitionContext` — a superadmin is not scoped to one
+  // competition and sends `competitionId` explicitly.
+  const performanceOrderController = container.resolve('performanceOrderController');
+  router.get('/lots', performanceOrderValidator.getOrder(), handleValidationErrors, performanceOrderController.getOrder);
+  router.post('/lots/draw', performanceOrderValidator.drawLots(), handleValidationErrors, performanceOrderController.drawLots);
+  router.put('/lots/teams', performanceOrderValidator.setTeamOrder(), handleValidationErrors, performanceOrderController.setTeamOrder);
+  router.put('/lots/players', performanceOrderValidator.setPlayerOrder(), handleValidationErrors, performanceOrderController.setPlayerOrder);
+
   // Judge management routes (reuse admin controller methods)
   router.get('/judges', adminController.getJudges);
   router.post('/judges', adminController.createSingleJudge);

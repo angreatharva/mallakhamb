@@ -31,15 +31,21 @@ function createPublicController(container) {
       res.json({ success: true, data: teams });
     }),
 
-    /** @route GET /api/public/scores */
+    /**
+     * @route GET /api/public/scores
+     *
+     * Only the category filters are read off the query string. `lockedOnly`
+     * used to be forwarded too, which let an anonymous caller ask for
+     * un-locked sheets — see the note on publicService.getPublicScores. What
+     * is published is a server decision, not a request parameter.
+     */
     getPublicScores: asyncHandler(async (req, res) => {
-      const { competitionId, gender, ageGroup, competitionType, apparatus, lockedOnly } = req.query;
+      const { competitionId, gender, ageGroup, competitionType, apparatus } = req.query;
       const scores = await publicService.getPublicScores(competitionId, {
         gender,
         ageGroup,
         competitionType,
         apparatus,
-        lockedOnly,
       });
       res.json({ success: true, data: scores });
     }),

@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- CSP: unsafe-inline/unsafe-eval required for React/Vite in development -->
     <!-- For production: Consider implementing nonce-based CSP -->
+    <!--
+      frame-ancestors is deliberately NOT in the policy below. Browsers ignore
+      that directive when it arrives via <meta> and log an error for it on every
+      single page load, which buried real console output. It only works as a
+      response header, so it is set in two places instead:
+        - render.yaml, for the deployed static site
+        - vite.config.js `server.headers`, so dev matches production
+    -->
+    <!-- (X-Frame-Options: DENY is also set in render.yaml for older browsers.) -->
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
                    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; 
@@ -14,7 +23,6 @@
                    font-src 'self' data:; 
                    connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://*.onrender.com https://*.ngrok-free.app https://*.ngrok.io http://localhost:* ws://localhost:* wss://*.onrender.com wss://*.ngrok-free.app wss://*.ngrok.io;
                    frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;
-                   frame-ancestors 'none';
                    base-uri 'self';
                    form-action 'self' https://api.razorpay.com;">
     <meta name="csrf-token" content="">

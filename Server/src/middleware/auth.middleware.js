@@ -282,6 +282,46 @@ const requireAdminOrScorer = (req, res, next) => {
 };
 
 /**
+ * Middleware for the running-order endpoints under /api/judge.
+ *
+ * Only the Senior Judge and the Scorer set a panel's running order — the four
+ * evaluation judges read it. Admins and superadmins reach the same handlers
+ * through their own routers, so this guard covers the judge case only.
+ *
+ * This is a ROLE check, not an assignment check: it cannot tell whether this
+ * Senior Judge belongs to the category being reordered, because the category
+ * is in the body. `PerformanceOrderService.assertJudgeMaySequence` does that
+ * second half. Both are required — dropping either one lets the Senior Judge
+ * of Under-14 Male re-sequence Under-18 Female.
+ */
+const requireSequenceManager = (req, res, next) => {
+  if (!req.user || !req.userType) {
+    return res.status(401).json({
+      success: false,
+      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }
+    });
+  }
+
+  const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' ||
+                  (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
+
+  const canSequence = req.userType === 'judge' &&
+                      ['Senior Judge', 'Scorer'].includes(req.user.judgeType);
+
+  if (!isAdmin && !canSequence) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        message: 'Access denied. Only the Senior Judge or Scorer can set the running order.',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      }
+    });
+  }
+
+  next();
+};
+
+/**
  * Middleware to check if user is a player
  */
 const requirePlayer = requireRole('player');
@@ -344,3 +384,4 @@ module.exports.requireAdmin = requireAdmin;
 module.exports.requireSuperAdmin = requireSuperAdmin;
 module.exports.requireJudge = requireJudge;
 module.exports.requireAdminOrScorer = requireAdminOrScorer;
+module.exports.requireSequenceManager = requireSequenceManager;

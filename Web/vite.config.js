@@ -16,7 +16,13 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Allow external connections
     port: 5173,
-    allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app'] // Restrict allowed hosts for security (resolves MED-15)
+    allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app'], // Restrict allowed hosts for security (resolves MED-15)
+    // frame-ancestors only works as a response header — a <meta> CSP cannot
+    // carry it. index.html says so; render.yaml sets the same header for the
+    // deployed site. This keeps dev honest rather than protected-in-prod-only.
+    headers: {
+      'Content-Security-Policy': "frame-ancestors 'none'"
+    }
   },
   build: {
     sourcemap: false, // Disable source maps in production for security
@@ -46,6 +52,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     css: true,
+    // Scoped to src so Vitest never tries to run the Playwright specs in e2e/,
+    // which its default glob would otherwise match on `*.spec.js`.
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary'],

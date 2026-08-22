@@ -122,6 +122,12 @@ function buildApp() {
           return createAdminController(container);
         case 'publicController':
         case 'paymentController':
+        // Not under test here, but the admin router resolves it at build time.
+        // Returning a bare `{}` makes every handler `undefined`, and Express
+        // throws "Route.get() requires a callback function" while the router
+        // is being CONSTRUCTED — which fails the whole suite at load rather
+        // than in one test.
+        case 'performanceOrderController':
           return new Proxy({}, { get: () => (req, res) => res.json({ success: true }) });
         default:
           return {};

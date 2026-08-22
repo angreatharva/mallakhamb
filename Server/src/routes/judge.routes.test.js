@@ -1,0 +1,174 @@
+const request = require('supertest');
+const express = require('express');
+
+/**
+ * Guard coverage for the judge running-order routes.
+ *
+ * The rule under test: every judge on a panel may READ the running order, but
+ * only the Senior Judge and the Scorer may WRITE it. This is the role half of
+ * the check — the assignment half (is this Senior Judge on THIS panel?) lives
+ * in PerformanceOrderService.assertJudgeMaySequence and is covered in
+ * tests/unit/performance-order.service.test.js. Both halves are required.
+ */
+
+// This mock must export every guard judge.routes.js imports at module scope.
+// A missing guard resolves to `undefined` and Express throws
+// "Route.put() requires a callback function" while the router is being BUILT,
+// failing the whole suite at load time rather than in one test. Keep the shape
+// in sync with module.exports at the bottom of src/middleware/auth.middleware.js.
+jest.mock('../middleware/auth.middleware', () => {
+  const createAuthMiddleware = () => (req, res, next) => {
+    if (!req.header('Authorization')) {
+      return res.status(401).json({ message: 'No authorization token provided' });
+    }
+    req.userType = req.header('Role') || 'judge';
+    req.user = {
+      _id: 'user-1',
+      name: 'Test User',
+      judgeType: req.header('JudgeType') || undefined,
+      role: req.header('Role') || undefined,
+    };
+    next();
+  };
+
+  const requireRole = (...allowedRoles) => (req, res, next) => {
+    const roles = allowedRoles.flat();
+    if (req.user && (roles.includes(req.userType) || roles.includes(req.user.role))) {
+      return next();
+    }
+    return res.status(403).json({ message: 'Insufficient permissions' });
+  };
+
+  // Mirrors the real guard.
+  const requireSequenceManager = (req, res, next) => {
+    if (!req.user || !req.userType) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const isAdmin = ['admin', 'superadmin'].includes(req.userType) ||
+                    (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
+    const canSequence = req.userType === 'judge' &&
+                        ['Senior Judge', 'Scorer'].includes(req.user.judgeType);
+    if (!isAdmin && !canSequence) {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    next();
+  };
+
+  createAuthMiddleware.requireRole = requireRole;
+  createAuthMiddleware.requireAdmin = requireRole('admin', 'superadmin');
+  createAuthMiddleware.requireSuperAdmin = requireRole('superadmin');
+  createAuthMiddleware.requireJudge = requireRole('judge');
+  createAuthMiddleware.requirePlayer = requireRole('player');
+  createAuthMiddleware.requireCoach = requireRole('coach');
+  createAuthMiddleware.requireAdminOrScorer = (req, res, next) => next();
+  createAuthMiddleware.requireSequenceManager = requireSequenceManager;
+  createAuthMiddleware.createAuthMiddleware = createAuthMiddleware;
+  createAuthMiddleware.authenticate = createAuthMiddleware;
+
+  return createAuthMiddleware;
+});
+
+const mockContainer = {
+  resolve: jest.fn((key) => {
+    if (key === 'logger') return { debug: jest.fn(), info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+    if (key === 'config') return { get: jest.fn() };
+    if (typeof key === 'string' && key.endsWith('Controller')) {
+      return new Proxy({}, { get: () => (req, res) => res.status(200).json({ success: true }) });
+    }
+    return {};
+  }),
+};
+
+const createJudgeRoutes = require('./judge.routes');
+
+const app = express();
+app.use(express.json());
+app.use('/api/judge', createJudgeRoutes(mockContainer));
+
+const VALID_CATEGORY = { gender: 'Male', ageGroup: 'Under14', competitionType: 'competition_1' };
+
+describe('GET /api/judge/lots', () => {
+  it('blocks unauthenticated requests', async () => {
+    const response = await request(app).get('/api/judge/lots').query(VALID_CATEGORY);
+    expect(response.status).toBe(401);
+  });
+
+  it('allows an evaluation judge to READ the order', async () => {
+    // The four evaluation judges have to see the order they are judging to.
+    const response = await request(app)
+      .get('/api/judge/lots')
+      .query(VALID_CATEGORY)
+      .set('Authorization', 'Bearer fake-token')
+      .set('Role', 'judge')
+      .set('JudgeType', 'Judge 2');
+
+    expect(response.status).toBe(200);
+  });
+
+  it('rejects a request missing the category', async () => {
+    const response = await request(app)
+      .get('/api/judge/lots')
+      .set('Authorization', 'Bearer fake-token')
+      .set('Role', 'judge')
+      .set('JudgeType', 'Senior Judge');
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe.each([
+  ['/api/judge/lots/teams', { ...VALID_CATEGORY, teamIds: ['507f1f77bcf86cd799439011'] }],
+  ['/api/judge/lots/players', {
+    ...VALID_CATEGORY,
+    teamId: '507f1f77bcf86cd799439011',
+    playerIds: ['507f1f77bcf86cd799439012'],
+  }],
+])('PUT %s', (route, body) => {
+  const send = (headers = {}) => {
+    let req = request(app).put(route).send(body);
+    Object.entries(headers).forEach(([k, v]) => { req = req.set(k, v); });
+    return req;
+  };
+
+  it('blocks unauthenticated requests', async () => {
+    const response = await send();
+    expect(response.status).toBe(401);
+  });
+
+  it('blocks a coach', async () => {
+    const response = await send({ Authorization: 'Bearer fake-token', Role: 'coach' });
+    expect(response.status).toBe(403);
+  });
+
+  it('blocks an evaluation judge on the panel', async () => {
+    const response = await send({
+      Authorization: 'Bearer fake-token', Role: 'judge', JudgeType: 'Judge 1',
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it('allows the Senior Judge', async () => {
+    const response = await send({
+      Authorization: 'Bearer fake-token', Role: 'judge', JudgeType: 'Senior Judge',
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it('allows the Scorer', async () => {
+    const response = await send({
+      Authorization: 'Bearer fake-token', Role: 'judge', JudgeType: 'Scorer',
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it('rejects a malformed id list even from the Senior Judge', async () => {
+    const response = await request(app)
+      .put(route)
+      .send({ ...body, teamIds: ['not-an-objectid'], playerIds: ['not-an-objectid'] })
+      .set('Authorization', 'Bearer fake-token')
+      .set('Role', 'judge')
+      .set('JudgeType', 'Senior Judge');
+
+    expect(response.status).toBe(400);
+  });
+});

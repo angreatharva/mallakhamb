@@ -16,6 +16,7 @@
 
 const express = require('express');
 const { body } = require('express-validator');
+const { phone } = require('../validators/common.validator');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
@@ -37,6 +38,7 @@ function createCoachRoutes(container) {
   const registerValidation = [
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
+    phone('phone'),
     body('password')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters long')

@@ -11,6 +11,7 @@ const TeamRepository = require('../repositories/team.repository');
 const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
+const PerformanceOrderRepository = require('../repositories/performance-order.repository');
 
 const CacheService = require('../services/cache/cache.service');
 const CacheWarmer = require('../services/cache/cache-warmer');
@@ -26,6 +27,7 @@ const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
 const CompetitionService = require('../services/competition/competition.service');
 const RegistrationService = require('../services/competition/registration.service');
+const PerformanceOrderService = require('../services/competition/performance-order.service');
 const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
@@ -43,6 +45,7 @@ const createPlayerController = require('../controllers/player.controller');
 const createJudgeController = require('../controllers/judge.controller');
 const createSuperAdminController = require('../controllers/super_admin.controller');
 const createPaymentController = require('../controllers/payment.controller');
+const createPerformanceOrderController = require('../controllers/performance-order.controller');
 
 const HealthMonitor = require('./health-monitor');
 const MetricsCollector = require('./metrics-collector');
@@ -88,6 +91,7 @@ function bootstrap() {
   container.register('scoreRepository', (c) => new ScoreRepository(c.resolve('logger')), 'singleton');
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
+  container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('featureFlagService', (c) => new FeatureFlagService(c.resolve('config'), c.resolve('logger')), 'singleton');
@@ -212,6 +216,22 @@ function bootstrap() {
     null,
     c.resolve('logger')
   ), 'singleton');
+  // Depends on adminService for `getSubmittedTeams`, which is the single
+  // definition of "which teams are in this category" — the same one the judge
+  // dashboard renders. Registered after it, and the dependency is one-way
+  // (adminService knows nothing about running order), so the container's
+  // circular-dependency detector stays quiet.
+  container.register('performanceOrderService', (c) => new PerformanceOrderService({
+    performanceOrderRepository: c.resolve('performanceOrderRepository'),
+    adminService: c.resolve('adminService'),
+    judgeRepository: c.resolve('judgeRepository'),
+    // Injected lazily after the HTTP server exists — see servicesNeedingSocket
+    // in initializeSocketIO. A service missing from that list loses its
+    // broadcasts silently, which here would mean the other judges' tablets
+    // never re-sort.
+    socketManager: null,
+    logger: c.resolve('logger'),
+  }), 'singleton');
   container.register('scoringService', (c) => new ScoringService(
     c.resolve('scoreRepository'),
     c.resolve('competitionRepository'),
@@ -235,6 +255,7 @@ function bootstrap() {
   container.register('judgeController', (c) => createJudgeController(c), 'singleton');
   container.register('superAdminController', (c) => createSuperAdminController(c), 'singleton');
   container.register('paymentController', (c) => createPaymentController(c), 'singleton');
+  container.register('performanceOrderController', (c) => createPerformanceOrderController(c), 'singleton');
 
   container.register('cacheWarmer', (c) => new CacheWarmer(
     c.resolve('competitionService'),
@@ -280,6 +301,11 @@ function initializeSocketIO(httpServer) {
     'teamService',
     'judgeService',
     'adminService',
+    // Broadcasts `performance_order_updated` so a Senior Judge's drag lands on
+    // every other tablet in the panel. Omitting it here does not fail loudly:
+    // `broadcast()` no-ops on a null socketManager and the save still succeeds,
+    // so the only symptom is judges quietly seeing a stale running order.
+    'performanceOrderService',
   ];
 
   for (const serviceName of servicesNeedingSocket) {

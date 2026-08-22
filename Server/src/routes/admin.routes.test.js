@@ -70,7 +70,13 @@ const mockContainer = {
   resolve: jest.fn((key) => {
     if (key === 'logger') return { debug: jest.fn(), info: jest.fn(), error: jest.fn(), warn: jest.fn() };
     if (key === 'config') return { get: jest.fn() };
-    if (key === 'adminController') {
+    // Every controller the router resolves must answer with a handler for any
+    // property, not just `adminController`. Returning a bare `{}` here makes
+    // each handler `undefined`, and Express throws "Route.get() requires a
+    // callback function" while the router is being BUILT — failing the whole
+    // suite at load time rather than in one test. Matching on the suffix means
+    // adding a controller to the router cannot reintroduce that trap.
+    if (typeof key === 'string' && key.endsWith('Controller')) {
       return new Proxy({}, {
         get: (target, prop) => {
           if (prop === 'registerAdmin') return (req, res) => res.status(201).json({ success: true });

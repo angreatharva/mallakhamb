@@ -8,9 +8,10 @@
 
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
-const { requireJudge } = require('../middleware/auth.middleware');
+const { requireJudge, requireSequenceManager } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const judgeValidator = require('../validators/judge.validator');
+const performanceOrderValidator = require('../validators/performance-order.validator');
 
 /**
  * Initialize judge routes with dependencies from DI container
@@ -22,6 +23,7 @@ function createJudgeRoutes(container) {
   const router = express.Router();
   const judgeController = container.resolve('judgeController');
   const adminController = container.resolve('adminController');
+  const performanceOrderController = container.resolve('performanceOrderController');
   const authenticate = createAuthMiddleware(container);
 
   // Authentication
@@ -131,6 +133,54 @@ function createJudgeRoutes(container) {
     authenticate,
     requireJudge,
     adminController.saveScores
+  );
+
+  // ==================== Running Order ====================
+
+  /**
+   * @route  GET /api/judge/lots
+   * @desc   The category's running order.
+   * @access ANY judge on the panel — the four evaluation judges have to be
+   *         able to read the order they are judging to, they just cannot
+   *         change it. `requireJudge`, not `requireSequenceManager`.
+   */
+  router.get('/lots',
+    authenticate,
+    requireJudge,
+    performanceOrderValidator.getOrder(),
+    handleValidationErrors,
+    performanceOrderController.getOrder
+  );
+
+  /**
+   * @route  PUT /api/judge/lots/teams
+   * @desc   Re-sequence the teams by drag-and-drop.
+   * @access Senior Judge / Scorer of THIS panel. The middleware checks the
+   *         role; the controller then calls
+   *         `assertJudgeMaySequence`, which checks the assignment. Both are
+   *         needed — see the note on requireSequenceManager.
+   */
+  router.put('/lots/teams',
+    authenticate,
+    requireJudge,
+    requireSequenceManager,
+    performanceOrderValidator.setTeamOrder(),
+    handleValidationErrors,
+    performanceOrderController.setTeamOrder
+  );
+
+  /**
+   * @route  PUT /api/judge/lots/players
+   * @desc   Re-sequence one team's athletes by drag-and-drop.
+   * @access Senior Judge / Scorer of THIS panel (see above).
+   */
+  router.put('/lots/players',
+    authenticate,
+    requireJudge,
+    requireSequenceManager,
+    performanceOrderValidator.setPlayerOrder(),
+    handleValidationErrors,
+    performanceOrderController.setPlayerOrder
   );
 
   return router;

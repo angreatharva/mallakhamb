@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import {
   Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
 } from 'lucide-react';
@@ -7,6 +8,12 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
+import { judgeLotsAPI } from '@/services/ordering/lots.api';
+import {
+  indexPerformanceOrder,
+  applyRunningOrder,
+  eventMatchesCategory,
+} from '@/utils/ordering/performanceOrder';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -50,6 +57,10 @@ const JudgeTeamPlayers = () => {
   const [loading, setLoading] = useState(!location.state?.team);
   const [judgeScoreMap, setJudgeScoreMap] = useState({}); // { playerId: true } for players this judge has scored
   const [finalizedScoreMap, setFinalizedScoreMap] = useState({}); // { playerId: finalScore|true } for finalized scores
+  // Athlete running order for this category, set by the panel's Senior Judge or
+  // Scorer (or drawn by an admin). Empty until loaded; anyone without a stored
+  // position falls back to name order.
+  const [orderIndex, setOrderIndex] = useState(() => ({ teams: new Map(), players: new Map() }));
 
   const selectedCompetitionType =
     location.state?.competitionType || sessionStorage.getItem('judge_selected_comp_type') || '';
@@ -129,17 +140,28 @@ const JudgeTeamPlayers = () => {
           logger.warn('Judge-specific endpoint fallback:', e.message);
         }
 
-        // 2. Query public scores as supplement
+        // 2. Supplement from the judge-authenticated team feed.
+        //
+        // This used to read /public/scores, which is the RESULTS feed: it
+        // returns only sheets the Scorer has locked, and drops every athlete
+        // the Senior Judge has not Final Submitted. A panel mid-session is
+        // exactly the state that feed is built to hide, so as a supplement it
+        // contributed nothing until the scoring was already over.
         try {
-          const scoresRes = await judgeAPI.getPublicScores({
+          const scoresRes = await judgeAPI.getTeamScores({
             competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-            teamId,
             gender: selectedGender,
             ageGroup: selectedAgeGroup,
             competitionType: selectedCompetitionType,
           });
 
-          const scoreDocs = scoresRes.data?.data || [];
+          // The feed returns every team in the category; take ours by id
+          // rather than trusting position.
+          const teamRows = scoresRes.data?.data || [];
+          const ourTeam = teamRows.find((t) => String(t._id) === String(teamId));
+          const scoreDocs = ourTeam
+            ? [{ playerScores: ourTeam.scores || [], isLocked: ourTeam.scoreMetadata?.isLocked === true }]
+            : [];
           const judgeRoleMap = {
             'Senior Judge': { field: 'seniorJudge', role: 'SR_JUDGE' },
             'Judge 1': { field: 'judge1', role: 'J1' },
@@ -161,14 +183,17 @@ const JudgeTeamPlayers = () => {
                 if (hasScore) {
                   scoreMap[String(pid)] = true;
                 }
+                // A locked sheet is closed to everyone, so its rows read as
+                // finalized here even if the Senior Judge never signed one off
+                // individually — the judge cannot edit it either way.
                 if (ps.isFinalized || doc.isLocked) {
-                  finalizedMap[String(pid)] = ps.finalScore ?? doc.finalScore ?? true;
+                  finalizedMap[String(pid)] = ps.finalScore ?? true;
                 }
               }
             });
           });
         } catch (e) {
-          logger.warn('Public scores endpoint fallback:', e.message);
+          logger.warn('Team scores supplement unavailable:', e.message);
         }
 
         // 3. Merge locally saved submitted player IDs for instant session persistence
@@ -203,15 +228,62 @@ const JudgeTeamPlayers = () => {
     if (judgeInfo && selectedCompetitionType) fetchTeam();
   }, [judgeInfo, selectedCompetitionType, fetchTeam]);
 
+  const categoryParams = useMemo(() => {
+    const competitionId = judgeInfo?.competition?._id || judgeInfo?.competition;
+    if (!competitionId || !selectedGender || !selectedAgeGroup || !selectedCompetitionType) return null;
+    return {
+      competitionId,
+      gender: selectedGender,
+      ageGroup: selectedAgeGroup,
+      competitionType: selectedCompetitionType,
+    };
+  }, [judgeInfo, selectedGender, selectedAgeGroup, selectedCompetitionType]);
+
+  /**
+   * Load the athlete running order. Failure is intentionally quiet — the order
+   * is presentation, and a judge should still get their roster (in name order)
+   * rather than an error, mid-session.
+   */
+  const fetchOrder = useCallback(async () => {
+    if (!categoryParams) return;
+    try {
+      const response = await judgeLotsAPI.getOrder(categoryParams);
+      setOrderIndex(indexPerformanceOrder(response.data?.data));
+    } catch (error) {
+      logger.warn('Could not load athlete running order; falling back to name order', error);
+    }
+  }, [categoryParams]);
+
+  useEffect(() => { fetchOrder(); }, [fetchOrder]);
+
+  // Live re-sort when the Senior Judge or Scorer re-sequences this team.
+  useEffect(() => {
+    if (!categoryParams) return;
+
+    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const token = secureStorage.getItem('judge_token');
+    const socket = io(socketUrl, { auth: { token }, withCredentials: true });
+
+    const roomId = `scoring_${categoryParams.gender}_${categoryParams.ageGroup}_${categoryParams.competitionType}`;
+    socket.on('connect', () => socket.emit('join_scoring_room', { roomId }));
+
+    socket.on('performance_order_updated', (event) => {
+      if (!eventMatchesCategory(event, categoryParams)) return;
+      setOrderIndex(indexPerformanceOrder(event));
+    });
+
+    return () => socket.disconnect();
+  }, [categoryParams]);
+
   const handleLogout = async () => {
     clearCompetitionContext?.();
     await logout(navigate);
     toast.success('Logged out successfully');
   };
 
-  const players = (() => {
+  const orderedPlayers = (() => {
     if (!team || !judgeInfo) return [];
-    
+
     logger.log('Filtering players:', {
       totalPlayers: team.players?.length,
       filterGender: selectedGender,
@@ -251,6 +323,13 @@ const JudgeTeamPlayers = () => {
         };
       });
   })();
+
+  // Athlete positions are stored per team, so the lookup key is
+  // "<teamId>:<playerId>" — see indexPerformanceOrder.
+  const players = applyRunningOrder(orderedPlayers, orderIndex.players, {
+    key: (player) => `${String(teamId)}:${String(player.id)}`,
+    name: (player) => player.name,
+  });
 
   const handlePlayerSelect = (player) => {
     if (player.isFinalized) {
@@ -348,7 +427,7 @@ const JudgeTeamPlayers = () => {
             </div>
           ) : players.length > 0 ? (
             <div className="space-y-2 pb-12">
-              {players.map((player) => {
+              {players.map((player, orderIdx) => {
                 const isLocked = player.isFinalized;
                 const isSubmitted = player.hasScore;
 
@@ -366,6 +445,19 @@ const JudgeTeamPlayers = () => {
                     }`}
                   >
                     <div className="flex items-center gap-4">
+                      {/* Running position within the team. The lot number, when
+                          one was drawn, sits underneath — the two diverge as
+                          soon as the panel re-sequences. */}
+                      <span className="flex flex-col items-center justify-center w-8 flex-shrink-0">
+                        <span className="text-sm font-black" style={{ color: J.purpleLight }}>
+                          {orderIdx + 1}
+                        </span>
+                        {player.lotNo != null && (
+                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            Lot {player.lotNo}
+                          </span>
+                        )}
+                      </span>
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
                         isLocked
                           ? 'bg-green-500/20 border-green-500/40'

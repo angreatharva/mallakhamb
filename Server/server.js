@@ -26,6 +26,23 @@ databaseConnection.connect().catch(error => {
 const app = createApp(container);
 const server = http.createServer(app);
 
+/**
+ * Keep-alive timeouts.
+ *
+ * Node closes an idle keep-alive socket after 5 seconds by default. A client
+ * that reuses a socket in the instant the server is closing it gets ECONNRESET
+ * with no response — the request never reached the app, so nothing is logged
+ * server-side and the caller sees an unexplained network error. It shows up
+ * under sustained sequential traffic: bulk seeding hit it twice, and a judge
+ * scoring steadily through a session is the same access pattern.
+ *
+ * 65s outlives the 60s idle timeout used by common proxies (Render, ALB), so
+ * the proxy discards the connection first, on its own terms. headersTimeout
+ * must exceed keepAliveTimeout or the race simply moves one layer up.
+ */
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
+
 // Initialize Socket.IO
 const socketManager = initializeSocketIO(server);
 const io = socketManager.getIO();

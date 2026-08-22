@@ -107,6 +107,42 @@ const getRoleConfig = (role) => {
 
 // ─── Field definitions ────────────────────────────────────────────────────────
 
+/**
+ * Shared phone rules. Mirrors the server's `phone()` validator
+ * (Server/src/validators/common.validator.js): separators and a country code
+ * are fine, but the digit count has to be plausible. Checked here too so the
+ * user is told at the field rather than by a rejected submit.
+ */
+const PHONE_RULES = {
+  required: 'Phone number is required',
+  validate: (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 15) {
+      return 'Enter a valid phone number (10–15 digits)';
+    }
+    return true;
+  },
+};
+
+/**
+ * Password rules, matching the server exactly
+ * (Server/src/validators/common.validator.js `password()`, and the `minlength: 8`
+ * on both models).
+ *
+ * This form previously asked for six characters and checked nothing else, so a
+ * password like "secret" passed every field-level check and was then rejected
+ * by the API — the user got a toast about a rule the form had just told them
+ * they satisfied. ResetPassword.jsx already asked for eight; registration was
+ * the odd one out.
+ */
+const PASSWORD_RULES = {
+  required: 'Password is required',
+  minLength: { value: 8, message: 'Password must be at least 8 characters' },
+  validate: (value) =>
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(String(value ?? '')) ||
+    'Password needs an uppercase letter, a lowercase letter, and a number',
+};
+
 const COACH_FIELDS = [
   {
     name: 'name',
@@ -136,7 +172,7 @@ const COACH_FIELDS = [
     icon: Phone,
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
-    rules: { required: 'Phone number is required' },
+    rules: PHONE_RULES,
   },
 ];
 
@@ -180,7 +216,7 @@ const PLAYER_FIELDS = [
     icon: Phone,
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
-    rules: { required: 'Phone number is required' },
+    rules: PHONE_RULES,
   },
   {
     name: 'dateOfBirth',
@@ -234,8 +270,27 @@ const UnifiedRegisterInner = () => {
     try {
       const apiService = role === 'coach' ? coachAPI : playerAPI;
       const response = await apiService.register(data);
-      const { token } = response.data;
-      const userData = response.data[role]; // coach or player object
+
+      /*
+       * The API wraps every auth payload as `{ success, data: { user, token } }`
+       * (Server/src/utils/security/login-response.util.js), and the register
+       * path returns the account under `user` rather than `player`/`coach`.
+       *
+       * This used to read `response.data.token` and `response.data[role]`, so
+       * both came back undefined: `undefined` went into storage, the auth
+       * context never got a user, and ProtectedRoute bounced the redirect to
+       * the login page. Registration succeeded server-side, which is why it
+       * looked like a routing quirk rather than a bug.
+       *
+       * Same unwrapping as UnifiedLogin, on purpose — these two must not drift.
+       */
+      const payload = response.data?.data || response.data || {};
+      const { token } = payload;
+      const userData = payload[role] || payload.user || payload.profile;
+
+      if (!token || !userData) {
+        throw new Error('Invalid registration response: missing token or user data');
+      }
 
       // Store token immediately for player (mirrors existing PlayerRegister behaviour)
       if (role === 'player') {
@@ -251,7 +306,7 @@ const UnifiedRegisterInner = () => {
       setTimeout(() => navigate(destination), 100);
     } catch (error) {
       logger.error(`${role} registration error:`, error);
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.response?.data?.message || error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -567,7 +622,7 @@ const UnifiedRegisterInner = () => {
                   id={`${role}-reg-password`}
                   icon={Lock}
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                   autoComplete="new-password"
                   error={errors.password?.message}
                   aria-required="true"
@@ -584,10 +639,7 @@ const UnifiedRegisterInner = () => {
                         : <Eye className="w-4 h-4 text-white/25" />}
                     </button>
                   }
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: { value: 6, message: 'Password must be at least 6 characters' },
-                  })}
+                  {...register('password', PASSWORD_RULES)}
                 />
                 <AnimatePresence>
                   {errors.password && (

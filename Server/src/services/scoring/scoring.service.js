@@ -25,6 +25,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
+const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
 class ScoringService {
   /**
@@ -555,9 +556,16 @@ class ScoringService {
         return [];
       }
 
-      // Filter teams by age group and gender if provided
-      let filteredTeams = competition.registeredTeams;
-      
+      // Only teams the coach has actually entered — final submit AND fees
+      // paid. This filter was missing entirely, and this method backs
+      // /api/judge/scores/team and /api/admin/scores/team, so the Scorer's
+      // team list and the admin scoring screen both showed teams a coach had
+      // merely saved as a draft: a half-built roster, sitting alongside real
+      // entries with nothing to distinguish it, waiting to be scored.
+      // getSubmittedTeams (the judge dashboard's list) has always filtered
+      // this way; the two lists must agree.
+      let filteredTeams = (competition.registeredTeams || []).filter(isSubmittedRegistration);
+
       if (ageGroup || gender) {
         filteredTeams = filteredTeams.filter(regTeam => {
           return regTeam.players.some(playerEntry => {

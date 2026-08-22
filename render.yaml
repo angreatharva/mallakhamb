@@ -95,6 +95,13 @@ services:
       - path: /*
         name: X-Frame-Options
         value: DENY
+      # The modern equivalent of the line above, and the only place
+      # frame-ancestors can live: browsers ignore it inside the <meta> CSP in
+      # index.html and log an error for it on every page load. Vite sets the
+      # same header in development (Web/vite.config.js).
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors 'none'
       - path: /*
         name: X-Content-Type-Options
         value: nosniff

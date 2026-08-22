@@ -8,7 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import customRules from './eslint-rules/index.js'
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores(['dist', 'coverage', 'test-results', 'playwright-report']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -63,6 +63,17 @@ export default defineConfig([
     },
     rules: {
       'no-import-assign': 'off',
+    },
+  },
+  {
+    // Playwright specs and their config run in Node, not the browser — they
+    // read process.env and never touch the DOM outside page.evaluate().
+    files: ['e2e/**/*.{js,jsx}', 'playwright.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
     },
   },
 ])

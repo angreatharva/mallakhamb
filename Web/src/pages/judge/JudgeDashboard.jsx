@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter
+  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
+import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -14,6 +16,14 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
+import {
+  indexPerformanceOrder,
+  applyRunningOrder,
+  eventMatchesCategory,
+} from '@/utils/ordering/performanceOrder';
+
+/** Judge roles that may set the panel's running order (server: SEQUENCE_JUDGE_TYPES). */
+const SEQUENCE_JUDGE_TYPES = ['Senior Judge', 'Scorer'];
 
 // Design tokens for judge theme
 const J = {
@@ -74,6 +84,11 @@ const JudgeDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  // Lookup maps from the category's running order. Empty until it loads, at
+  // which point every team without a stored position falls back to name order —
+  // which is what this list used to be, so nothing regresses when no lots have
+  // been drawn.
+  const [orderIndex, setOrderIndex] = useState(() => ({ teams: new Map(), players: new Map() }));
   
   const [showModal, setShowModal] = useState(() => {
     return !sessionStorage.getItem('judge_category_selected');
@@ -200,6 +215,63 @@ const JudgeDashboard = () => {
     }
   }, [judgeInfo, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup]);
 
+  // The category this judge is currently working in. Also the socket room key.
+  const categoryParams = useMemo(() => {
+    if (!judgeInfo || !selectedCompetitionType) return null;
+    const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
+    const gender = selectedGender || judgeInfo.gender;
+    const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+    if (!competitionId || !gender || !ageGroup) return null;
+    return { competitionId, gender, ageGroup, competitionType: selectedCompetitionType };
+  }, [judgeInfo, selectedCompetitionType, selectedGender, selectedAgeGroup]);
+
+  /**
+   * Load the running order set by the panel's Senior Judge / Scorer, or drawn
+   * by an admin.
+   *
+   * A failure here is deliberately quiet: the order is presentation, and
+   * blocking or alarming a judge because it could not be read would be worse
+   * than showing the previous alphabetical list.
+   */
+  const fetchOrder = useCallback(async () => {
+    if (!categoryParams) return;
+    try {
+      const response = await judgeLotsAPI.getOrder(categoryParams);
+      setOrderIndex(indexPerformanceOrder(response.data?.data));
+    } catch (error) {
+      logger.warn('Could not load running order; falling back to name order', error);
+    }
+  }, [categoryParams]);
+
+  useEffect(() => { fetchOrder(); }, [fetchOrder]);
+
+  // Live re-sort. The Senior Judge dragging a team on /judge/sequence, or an
+  // admin drawing lots, has to land here without the judge reloading —
+  // otherwise two people on the same panel disagree about who performs next.
+  useEffect(() => {
+    if (!categoryParams) return;
+
+    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const token = secureStorage.getItem('judge_token');
+    const socket = io(socketUrl, { auth: { token }, withCredentials: true });
+
+    const roomId = `scoring_${categoryParams.gender}_${categoryParams.ageGroup}_${categoryParams.competitionType}`;
+    socket.on('connect', () => socket.emit('join_scoring_room', { roomId }));
+
+    socket.on('performance_order_updated', (event) => {
+      if (!eventMatchesCategory(event, categoryParams)) return;
+      // The event carries the whole order, so it is applied directly rather
+      // than triggering a refetch — one fewer round trip per drag, and every
+      // judge in the room gets the same payload.
+      setOrderIndex(indexPerformanceOrder(event));
+      toast.success(
+        event.reason === 'lots_drawn' ? 'Lots drawn — order updated' : 'Running order updated'
+      );
+    });
+
+    return () => socket.disconnect();
+  }, [categoryParams]);
+
   const handleLogout = async () => {
     clearCompetitionContext?.();
     await logout(navigate);
@@ -298,8 +370,16 @@ const JudgeDashboard = () => {
   const isAgeGroupSelected = availableAgeGroups.length <= 1 || !!selectedAgeGroup;
   const isSelectionComplete = selectedCompetitionType && isApparatusSelected && isGenderSelected && isAgeGroupSelected;
 
-  const filteredTeams = teams.filter(team => 
-    team.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const canSequence = SEQUENCE_JUDGE_TYPES.includes(judgeInfo.judgeType);
+
+  // Running order first, then the search filter — filtering first would be
+  // equivalent here but sorting the full list keeps the positions shown next to
+  // each team meaningful while a search is active.
+  const filteredTeams = applyRunningOrder(teams, orderIndex.teams, {
+    key: (team) => String(team._id),
+    name: (team) => team.name,
+  }).filter(team =>
+    team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (team.coach?.name && team.coach.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
@@ -342,12 +422,24 @@ const JudgeDashboard = () => {
             <h1 className="text-2xl font-black text-white">Dashboard</h1>
             
             {!showModal && selectedCompetitionType && (
-              <button 
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors">
-                <Filter className="w-4 h-4" />
-                Change Category
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Only the Senior Judge and the Scorer set the running order.
+                    The other judges see the result but get no entry point. */}
+                {canSequence && (
+                  <button
+                    onClick={() => navigate('/judge/sequence')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
+                    <ListOrdered className="w-4 h-4" />
+                    Set Sequence
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                  <Filter className="w-4 h-4" />
+                  Change Category
+                </button>
+              </div>
             )}
           </div>
 
@@ -398,10 +490,10 @@ const JudgeDashboard = () => {
               </div>
             ) : filteredTeams.length > 0 ? (
               <div className="space-y-4 pb-12">
-                {filteredTeams.map(team => {
+                {filteredTeams.map((team, orderIdx) => {
                   const teamPlayers = getFilteredPlayersForTeam(team);
                   const scoredCount = teamPlayers.filter((e) => e.isFinalized).length;
-                  
+
                   return (
                     <button
                       key={team._id}
@@ -413,8 +505,25 @@ const JudgeDashboard = () => {
                         borderColor: 'rgba(255,255,255,0.08)'
                       }}
                     >
-                      <div className="flex items-center justify-between p-5">
-                        <div className="min-w-0">
+                      <div className="flex items-center justify-between p-5 gap-3">
+                        <div className="min-w-0 flex items-center gap-3">
+                          {/* Running position, with the drawn lot underneath.
+                              These diverge the moment anyone re-sequences, so
+                              both are shown rather than one standing in for the
+                              other. */}
+                          <span className="flex flex-col items-center justify-center w-10 flex-shrink-0">
+                            <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
+                              style={{ background: 'rgba(168,85,247,0.18)', color: J.purpleLight }}>
+                              {orderIdx + 1}
+                            </span>
+                            {team.lotNo != null && (
+                              <span className="text-[9px] mt-0.5 font-bold tracking-wider uppercase"
+                                style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                Lot {team.lotNo}
+                              </span>
+                            )}
+                          </span>
+                          <div className="min-w-0">
                           <p className="font-bold text-lg text-white truncate">{team.name}</p>
                           <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
                             Coach: {team.coach?.name || 'N/A'}
@@ -424,6 +533,7 @@ const JudgeDashboard = () => {
                               {scoredCount} of {teamPlayers.length} scored
                             </p>
                           )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <span className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/70 font-semibold">
