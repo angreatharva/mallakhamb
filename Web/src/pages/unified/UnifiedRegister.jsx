@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
   ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
-  UserCheck, UserPlus, Users,
+  UserCheck, UserPlus, Users, Scale, MapPin, Hash,
   BarChart2, Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,19 +22,22 @@ import { useReducedMotion } from '../../components/design-system/animations';
 
 // API services
 import { coachAPI, playerAPI } from '@/services/api';
+import { judgeAPI } from '@/services/public/judge.api';
 
 const EASE = [0.22, 1, 0.36, 1];
 
 /**
  * Detect user role from route path.
  * @param {string} pathname - Current route pathname (e.g. "/coach/register")
- * @returns {'coach'|'player'} Detected role
+ * @returns {'coach'|'player'|'judge'} Detected role
  */
 const detectRoleFromPath = (pathname) => {
   const match = pathname.match(/^\/([^/]+)/);
   if (!match) return 'coach';
   const segment = match[1].toLowerCase();
-  return segment === 'player' ? 'player' : 'coach';
+  if (segment === 'player') return 'player';
+  if (segment === 'judge') return 'judge';
+  return 'coach';
 };
 
 /**
@@ -62,6 +65,7 @@ const getRoleConfig = (role) => {
         {/* Role-specific icon but same size and positioning */}
         {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
         {role === 'player' && <UserPlus className="w-10 h-10" style={{ color }} aria-hidden="true" />}
+        {role === 'judge' && <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />}
       </div>
     </motion.div>
   );
@@ -80,6 +84,12 @@ const getRoleConfig = (role) => {
       description: 'Register as a player, join your team, and compete in Mallakhamb.',
       accessLabel: 'Player Registration',
     },
+    judge: {
+      title: 'Judge',
+      subtitle: 'Registration',
+      description: 'Create your judge account. An organiser will add you to a competition panel.',
+      accessLabel: 'Judge Registration',
+    },
   };
 
   const content = roleContent[role] || roleContent.coach;
@@ -95,7 +105,7 @@ const getRoleConfig = (role) => {
     buttonText: 'Create Account',
     ornament: UnifiedOrnament,
     background: HexGrid, // Same background for all
-    icon: role === 'coach' ? UserCheck : UserPlus,
+    icon: role === 'coach' ? UserCheck : role === 'judge' ? Scale : UserPlus,
     features: [
       { icon: BarChart2, label: 'Secure' },
       { icon: Users, label: 'Reliable' },
@@ -230,6 +240,76 @@ const PLAYER_FIELDS = [
   // gender is rendered separately as a ThemedSelect
 ];
 
+/**
+ * Judge registration fields.
+ *
+ * Name, address and phone identify the person; the three judging credentials
+ * are optional and are what an organiser sees when searching for someone to
+ * seat on a panel. Nothing here grants any access — an account with no panel
+ * assignment can read nothing about any competition.
+ */
+const JUDGE_FIELDS = [
+  {
+    name: 'name',
+    label: 'Full Name',
+    type: 'text',
+    icon: User,
+    placeholder: 'Enter your full name',
+    autoComplete: 'name',
+    rules: { required: 'Name is required' },
+  },
+  {
+    name: 'email',
+    label: 'Email Address',
+    type: 'email',
+    icon: Mail,
+    placeholder: 'judge@example.com',
+    autoComplete: 'email',
+    rules: {
+      required: 'Email is required',
+      pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' },
+    },
+  },
+  {
+    name: 'phone',
+    label: 'Phone Number',
+    type: 'tel',
+    icon: Phone,
+    placeholder: 'Enter your phone number',
+    autoComplete: 'tel',
+    rules: PHONE_RULES,
+  },
+  {
+    name: 'stateUnit',
+    label: 'State / Unit',
+    type: 'text',
+    icon: MapPin,
+    placeholder: 'e.g. Maharashtra',
+    rules: {},
+    half: true,
+  },
+  {
+    name: 'registrationNumber',
+    label: 'MFI Reg. No.',
+    type: 'text',
+    icon: Hash,
+    placeholder: 'Optional',
+    rules: {},
+    half: true,
+  },
+  // certificationLevel is rendered separately as a ThemedSelect
+];
+
+/** Where each role lands once it has an account. */
+const HOME_AFTER_REGISTER = {
+  coach: '/coach/create-team',
+  player: '/player/select-team',
+  // A new judge is on no panel yet, so the profile — which lists the panels
+  // they hold and explains that an organiser assigns them — is the only screen
+  // with anything to say.
+  judge: '/judge/profile',
+};
+
 // ─── Inner component (uses theme context) ─────────────────────────────────────
 
 /**
@@ -261,14 +341,14 @@ const UnifiedRegisterInner = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && userType === role) {
-      navigate(role === 'coach' ? '/coach/create-team' : '/player/select-team');
+      navigate(HOME_AFTER_REGISTER[role] || '/');
     }
   }, [user, userType, role, navigate]);
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const apiService = role === 'coach' ? coachAPI : playerAPI;
+      const apiService = role === 'coach' ? coachAPI : role === 'judge' ? judgeAPI : playerAPI;
       const response = await apiService.register(data);
 
       /*
@@ -298,10 +378,16 @@ const UnifiedRegisterInner = () => {
         secureStorage.setItem('player_user', JSON.stringify(userData));
       }
 
+      // The judge pages read their identity from storage rather than context.
+      if (role === 'judge') {
+        secureStorage.setItem('judge_token', token);
+        secureStorage.setItem('judge_user', JSON.stringify(userData));
+      }
+
       login(userData, token, role);
       toast.success('Registration successful!');
 
-      const destination = role === 'coach' ? '/coach/create-team' : '/player/select-team';
+      const destination = HOME_AFTER_REGISTER[role] || '/';
       // Small delay ensures storage is committed before navigation
       setTimeout(() => navigate(destination), 100);
     } catch (error) {
@@ -315,7 +401,7 @@ const UnifiedRegisterInner = () => {
   const BackgroundComponent = config.background;
   const OrnamentComponent = config.ornament;
   const IconComponent = config.icon;
-  const fields = role === 'coach' ? COACH_FIELDS : PLAYER_FIELDS;
+  const fields = role === 'coach' ? COACH_FIELDS : role === 'judge' ? JUDGE_FIELDS : PLAYER_FIELDS;
 
   // Group half-width player fields into pairs
   const renderFields = () => {
@@ -606,6 +692,30 @@ const UnifiedRegisterInner = () => {
                       </motion.p>
                     )}
                   </AnimatePresence>
+                </div>
+              )}
+
+              {/* Certification level (judge only) */}
+              {role === 'judge' && (
+                <div>
+                  <label
+                    htmlFor="judge-reg-certificationLevel"
+                    className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
+                    style={{ color: `${theme.colors.primary}90` }}
+                  >
+                    Certification Level
+                  </label>
+                  <ThemedSelect
+                    id="judge-reg-certificationLevel"
+                    placeholder="Select level (optional)"
+                    options={[
+                      { value: 'National', label: 'National' },
+                      { value: 'State', label: 'State' },
+                      { value: 'District', label: 'District' },
+                      { value: 'Club', label: 'Club' },
+                    ]}
+                    {...register('certificationLevel')}
+                  />
                 </div>
               )}
 

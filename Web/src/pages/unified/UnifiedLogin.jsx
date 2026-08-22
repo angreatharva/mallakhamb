@@ -145,9 +145,12 @@ const getRoleConfig = (role) => {
       { icon: Users, label: 'Reliable' },
       { icon: Settings, label: 'Modern' },
     ], // Same features for all
-    usesEmail: role !== 'judge', // Only judge uses username
-    registerLink: (role === 'coach' || role === 'player') ? `/${role}/register` : null,
-    forgotPasswordLink: role !== 'judge' ? '/forgot-password' : null,
+    // Judges hold their own accounts now and sign in with their email like
+    // everyone else. The old usernames were generated from the panel slot
+    // (J1-M-U14-1), which is why they could collide across meets.
+    usesEmail: true,
+    registerLink: ['coach', 'player', 'judge'].includes(role) ? `/${role}/register` : null,
+    forgotPasswordLink: '/forgot-password',
   };
 };
 
@@ -273,7 +276,7 @@ const UnifiedLoginInner = () => {
       // Judge login uses different endpoint
       if (role === 'judge') {
         response = await judgeAPI.login(
-          validation.data.username.toLowerCase(),
+          validation.data.email.toLowerCase(),
           validation.data.password
         );
         
@@ -298,7 +301,7 @@ const UnifiedLoginInner = () => {
         // Extract competition context from judge profile
         const competitionId = competition?._id;
         const competitionName = competition?.name;
-        
+
         // Store user data
         secureStorage.setItem('judge_user', JSON.stringify(judge));
         
@@ -312,16 +315,24 @@ const UnifiedLoginInner = () => {
         }
         
         login(judge, token, 'judge');
-        
-        // Display success message with competition details
-        if (competitionName) {
-          toast.success(`Welcome ${judge.name}! Assigned to ${competitionName}`);
-        } else {
-          toast.success(`Welcome ${judge.name}!`);
-        }
-        
+
         sessionStorage.removeItem('judge_category_selected');
         reset();
+
+        // A judge nobody has put on a panel yet has nothing to score. Send
+        // them to their profile, which explains the state, rather than to a
+        // dashboard that can only render empty.
+        if (!competitionId) {
+          toast.success(`Welcome ${judge.name}!`);
+          navigate('/judge/profile');
+          return;
+        }
+
+        toast.success(
+          competitionName
+            ? `Welcome ${judge.name}! Assigned to ${competitionName}`
+            : `Welcome ${judge.name}!`
+        );
         navigate('/judge/dashboard');
         return;
       }

@@ -80,10 +80,14 @@ export const loginSchema = z.object({
   password: passwordSchema,
 });
 
+/**
+ * Judges sign in with their own email address, like every other role. This
+ * asked for a `username` until judges got accounts of their own; the usernames
+ * it validated were generated from the panel slot and belonged to the meet,
+ * not to the person.
+ */
 export const judgeLoginSchema = z.object({
-  username: z.string()
-    .min(1, 'Username is required')
-    .max(50, 'Username is too long'),
+  email: emailSchema,
   password: passwordSchema,
 });
 

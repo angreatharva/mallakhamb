@@ -34,7 +34,26 @@ export const judgeAPI = {
    * X-CSRF-Token and the server answers 403 "CSRF token missing", which breaks
    * judge login outright. The other roles were already on `api` and unaffected.
    */
-  login: (username, password) => api.post('/judge/login', { username, password }),
+  login: (email, password) => api.post('/judge/login', { email, password }),
+
+  /**
+   * Judge self-registration. A new account sits on no panel, so it grants no
+   * access to any competition until an organiser assigns it.
+   */
+  register: (data) => api.post('/judge/register', data),
+
+  /** The judge's own account, with every panel they sit on. */
+  getProfile: () => api.get('/judge/profile'),
+
+  /** Update the judge's own account. Panel assignments are not editable here. */
+  updateProfile: (data) => api.put('/judge/profile', data),
+
+  /** Change the judge's own password; requires the current one. */
+  changePassword: (currentPassword, newPassword) =>
+    api.put('/judge/profile/password', { currentPassword, newPassword }),
+
+  /** Every panel this judge sits on, across competitions. */
+  getAssignments: () => api.get('/judge/assignments'),
 
   /** Anonymous on the server, but routed through `api` so one instance serves this module. */
   getCompetitions: () => api.get('/public/competitions'),

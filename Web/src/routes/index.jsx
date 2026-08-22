@@ -24,6 +24,7 @@ import {
   AdminScoring,
   JudgeLogin,
   JudgeDashboard,
+  JudgeProfile,
   JudgeTeamPlayers,
   JudgeScoring,
   JudgePanelReview,
@@ -169,8 +170,10 @@ export default function AppRoutes() {
         {/* Judge Routes */}
         <Route path="/judge" element={<Navigate to="/judge/login" replace />} />
         <Route path="/judge/login" element={<JudgeLogin />} />
+        <Route path="/judge/register" element={<UnifiedRegister />} />
         <Route path="/judge" element={<JudgeLayout />}>
           <Route path="dashboard" element={<JudgeDashboard />} />
+          <Route path="profile" element={<JudgeProfile />} />
           <Route path="team/:teamId" element={<JudgeTeamPlayers />} />
           <Route path="scoring" element={<JudgeScoring />} />
           <Route path="scoring/panel-review" element={<JudgePanelReview />} />
