@@ -95,35 +95,36 @@ class PerformanceOrderService {
    * Confirm a judge actually sits on the panel they are trying to sequence,
    * in a role that is allowed to.
    *
-   * A judge can hold several assignment documents under one username (one per
-   * gender/age-group/category), and `req.user` is only the document they
-   * happened to authenticate against — so checking `req.user.gender` alone
-   * would refuse legitimate re-sequences. Every active assignment sharing the
-   * username is considered, exactly like the socket auto-join does.
+   * A judge can hold several seats (one per gender/age-group/category), and
+   * `req.user` is the person, not a seat — so the question "may THIS judge
+   * reorder THIS panel" can only be answered by looking at every seat they
+   * hold and finding one that covers the category being reordered.
    *
-   * @param {Object} judgeUser - `req.user` for a judge
+   * @param {Object} judgeUser - `req.user` for a judge (a JudgeAccount)
    * @param {Object} identity - result of buildIdentity
+   * @param {Array} [preloadedAssignments] - `req.judgeAssignments`, if the
+   *   caller already has them
    * @returns {Promise<Object>} the matching assignment
    * @throws {AuthorizationError}
    */
-  async assertJudgeMaySequence(judgeUser, identity) {
+  async assertJudgeMaySequence(judgeUser, identity, preloadedAssignments = null) {
     if (!judgeUser) {
       throw new AuthorizationError('Authentication required');
     }
 
-    let assignments = [judgeUser];
-    if (judgeUser.username && judgeUser.competition) {
-      const all = await this.judgeRepository.find({
-        username: String(judgeUser.username).toLowerCase(),
-        competition: judgeUser.competition,
+    // The principal is a judge ACCOUNT, so every seat it holds is looked up by
+    // that account. The auth middleware has usually done this already and
+    // passes the result in; the lookup here is the fallback for callers that
+    // have not (and for the unit tests).
+    const assignments = preloadedAssignments?.length
+      ? preloadedAssignments
+      : await this.judgeRepository.find({
+        judgeAccount: judgeUser._id,
+        competition: identity.competition,
         isActive: { $ne: false },
       });
-      if (all && all.length > 0) {
-        assignments = all;
-      }
-    }
 
-    const match = assignments.find((a) => {
+    const match = (assignments || []).find((a) => {
       if (!SEQUENCE_JUDGE_TYPES.includes(a.judgeType)) return false;
       if (a.gender !== identity.gender) return false;
       if (a.ageGroup !== identity.ageGroup) return false;

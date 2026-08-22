@@ -195,7 +195,7 @@ class TokenService {
    * @param {string|null} [family] - Token family UUID (null = new family)
    * @returns {Promise<{ token: string, family: string }>}
    */
-  async generateRefreshToken(userId, userType, family = null) {
+  async generateRefreshToken(userId, userType, family = null, competitionId = null) {
     const rawToken = crypto.randomBytes(40).toString('hex');
     const tokenHash = this._hashToken(rawToken);
     const tokenFamily = family || crypto.randomUUID();
@@ -208,6 +208,11 @@ class TokenService {
       userType,
       family: tokenFamily,
       expiresAt,
+      // Carried so rotation can re-issue an access token with the SAME
+      // competition claim. Without it a silent refresh handed a judge a token
+      // with no competition context, and the next request they made was
+      // refused for a context they had never lost.
+      competitionId: competitionId || null,
     });
 
     this.logger.debug('Refresh token generated', { userId, userType, family: tokenFamily });
@@ -259,12 +264,14 @@ class TokenService {
     const accessToken = this.generateToken(
       tokenRecord.userId.toString(),
       tokenRecord.userType,
+      tokenRecord.competitionId ? tokenRecord.competitionId.toString() : null,
     );
 
     const { token: newRefreshToken, family } = await this.generateRefreshToken(
       tokenRecord.userId,
       tokenRecord.userType,
       tokenRecord.family, // same family
+      tokenRecord.competitionId,
     );
 
     this.logger.info('Refresh token rotated', {

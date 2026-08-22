@@ -8,6 +8,7 @@
  */
 
 const { AuthorizationError, NotFoundError } = require('../../errors');
+const { loadAssignments } = require('../../utils/data/judge-assignment.util');
 
 class AuthorizationService {
   /**
@@ -25,12 +26,15 @@ class AuthorizationService {
     adminRepository,
     judgeRepository,
     competitionRepository,
-    logger
+    logger,
+    // Appended, not inserted — this constructor is wired positionally.
+    judgeAccountRepository = null
   ) {
     this.playerRepository = playerRepository;
     this.coachRepository = coachRepository;
     this.adminRepository = adminRepository;
     this.judgeRepository = judgeRepository;
+    this.judgeAccountRepository = judgeAccountRepository;
     this.competitionRepository = competitionRepository;
     this.logger = logger;
 
@@ -372,9 +376,13 @@ class AuthorizationService {
         );
 
       case 'judge':
-        // Judge has access to their assigned competition
-        return user.competition && 
-          user.competition.toString() === competitionId.toString();
+        // A judge principal is an account, so the competitions they may reach
+        // are the ones their seats are in. This is a synchronous check, so it
+        // reads assignments the caller has already loaded (`req.judgeAssignments`
+        // shape) rather than issuing a query of its own.
+        return (user.assignments || []).some(
+          (a) => String(a.competition) === String(competitionId)
+        );
 
       case 'coach':
       case 'player':
@@ -393,38 +401,28 @@ class AuthorizationService {
    * @param {string} competitionId - Competition ID
    * @returns {Promise<boolean>} True if judge can score
    */
-  async canJudgeScore(judgeId, competitionId) {
+  async canJudgeScore(judgeAccountId, competitionId) {
     try {
-      // Get judge
-      const judge = await this.judgeRepository.findById(judgeId);
+      const assignments = await loadAssignments(
+        this.judgeRepository,
+        judgeAccountId,
+        competitionId
+      );
 
-      if (!judge) {
-        this.logger.warn('Judge not found', { judgeId });
+      if (assignments.length === 0) {
+        this.logger.warn('Judge not assigned to competition', {
+          judgeAccountId,
+          competitionId,
+        });
         return false;
       }
 
-      // Check if judge is active
-      if (!judge.isActive) {
-        this.logger.warn('Judge is not active', { judgeId });
-        return false;
-      }
-
-      // Check if judge is assigned to this competition
-      if (judge.competition && judge.competition.toString() === competitionId.toString()) {
-        return true;
-      }
-
-      this.logger.warn('Judge not assigned to competition', { 
-        judgeId, 
-        competitionId,
-        judgeCompetition: judge.competition 
-      });
-      return false;
+      return true;
     } catch (error) {
-      this.logger.error('Can judge score check error', { 
-        judgeId, 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Can judge score check error', {
+        judgeAccountId,
+        competitionId,
+        error: error.message
       });
       return false;
     }
@@ -435,53 +433,49 @@ class AuthorizationService {
    * @param {string} judgeId - Judge ID
    * @returns {Promise<Object|null>} Judge document with assignment details or null
    */
-  async getJudgeDetails(judgeId) {
+  async getJudgeDetails(judgeAccountId) {
     try {
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge) {
-        this.logger.warn('Judge not found for details fetch', { judgeId });
+      const account = this.judgeAccountRepository
+        ? await this.judgeAccountRepository.findById(judgeAccountId)
+        : null;
+
+      const assignments = await loadAssignments(this.judgeRepository, judgeAccountId);
+
+      // A registered judge on no panel is a real principal with nothing to do:
+      // the socket auto-join iterates `assignments` and joins no rooms, which
+      // is exactly right.
+      if (!account && assignments.length === 0) {
+        this.logger.warn('Judge not found for details fetch', { judgeAccountId });
         return null;
       }
 
-      // Find all assignments for this judge username within the competition
-      let assignments = [judge];
-      if (judge.username && judge.competition) {
-        const all = await this.judgeRepository.find({
-          username: judge.username.toLowerCase(),
-          competition: judge.competition,
-          isActive: { $ne: false }
-        });
-        if (all && all.length > 0) {
-          assignments = all;
-        }
-      }
+      const primary = assignments[0] || {};
 
-      // Return judge with all assignment details
       return {
-        _id: judge._id,
-        name: judge.name,
-        username: judge.username,
-        judgeType: judge.judgeType,
-        gender: judge.gender,
-        ageGroup: judge.ageGroup,
-        competitionTypes: judge.competitionTypes || [],
-        apparatus: judge.apparatus,
-        competition: judge.competition,
-        isActive: judge.isActive,
-        judgeNo: judge.judgeNo,
+        _id: judgeAccountId,
+        name: account?.name || '',
+        email: account?.email || null,
+        judgeType: primary.judgeType || null,
+        gender: primary.gender || null,
+        ageGroup: primary.ageGroup || null,
+        competitionTypes: primary.competitionTypes || [],
+        apparatus: primary.apparatus || null,
+        competition: primary.competition || null,
+        isActive: account ? account.isActive !== false : true,
+        judgeNo: primary.judgeNo || null,
         assignments: assignments.map(a => ({
           gender: a.gender,
           ageGroup: a.ageGroup,
           competitionTypes: a.competitionTypes || [],
           apparatus: a.apparatus,
           judgeType: a.judgeType,
-          judgeNo: a.judgeNo
+          judgeNo: a.judgeNo,
+          competition: a.competition,
         }))
       };
     } catch (error) {
       this.logger.error('Get judge details error', {
-        judgeId,
+        judgeAccountId,
         error: error.message
       });
       return null;

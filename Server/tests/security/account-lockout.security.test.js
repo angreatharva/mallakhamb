@@ -15,10 +15,12 @@ const CoachRepository = require('../../src/repositories/coach.repository');
 const PlayerRepository = require('../../src/repositories/player.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
 const JudgeRepository = require('../../src/repositories/judge.repository');
+const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 
 const Coach = require('../../models/Coach');
 const Judge = require('../../models/Judge');
+const JudgeAccount = require('../../models/JudgeAccount');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
@@ -121,41 +123,49 @@ describe('MED-1 — account lockout is enforced (FIXED)', () => {
 
 describe('MED-1 — judge login is covered too', () => {
   let judgeService;
-  const USERNAME = 'lockjudge1';
+  const EMAIL = 'lockjudge1@club.in';
 
   beforeEach(async () => {
     judgeService = new JudgeService({
       judgeRepository: new JudgeRepository(noopLogger),
+      judgeAccountRepository: new JudgeAccountRepository(noopLogger),
       competitionRepository: new CompetitionRepository(noopLogger),
       logger: noopLogger,
     });
 
+    const account = await JudgeAccount.create({
+      name: 'Lock Judge',
+      email: EMAIL,
+      password: PASSWORD,
+      isActive: true,
+    });
+
     await Judge.create({
+      judgeAccount: account._id,
       competition: new (require('mongoose').Types.ObjectId)(),
       competitionTypes: ['competition_1'],
       gender: 'Male',
       ageGroup: 'Under14',
       judgeNo: 1,
       judgeType: 'Judge 1',
-      name: 'Lock Judge',
-      username: USERNAME,
-      password: PASSWORD,
       isActive: true,
     });
   });
 
   test('judge login locks after the configured attempts', async () => {
-    // Judges are the live-event critical path AND their usernames were
-    // publicly disclosed by CRIT-2, so the password is the only barrier left.
+    // Judges are the live-event critical path, and the password is the only
+    // barrier on the account.
     for (let i = 0; i < 4; i += 1) {
-      await expect(judgeService.loginJudge(USERNAME, WRONG)).rejects.toThrow(/Invalid credentials/);
+      await expect(judgeService.loginJudge(EMAIL, WRONG)).rejects.toThrow(/Invalid credentials/);
     }
 
-    await expect(judgeService.loginJudge(USERNAME, WRONG)).rejects.toThrow(/locked/i);
+    await expect(judgeService.loginJudge(EMAIL, WRONG)).rejects.toThrow(/locked/i);
 
-    const judge = await Judge.findOne({ username: USERNAME }).select('+loginAttempts +lockUntil');
-    expect(judge.loginAttempts).toBe(5);
-    expect(judge.lockUntil).toBeInstanceOf(Date);
+    // One budget for the person, not one per seat: the counter lives on the
+    // account, so holding three seats no longer means three times the guesses.
+    const account = await JudgeAccount.findOne({ email: EMAIL }).select('+loginAttempts +lockUntil');
+    expect(account.loginAttempts).toBe(5);
+    expect(account.lockUntil).toBeInstanceOf(Date);
   });
 });
 

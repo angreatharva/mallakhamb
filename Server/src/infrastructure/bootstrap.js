@@ -108,7 +108,8 @@ function bootstrap() {
     c.resolve('coachRepository'),
     c.resolve('adminRepository'),
     c.resolve('emailService'),
-    c.resolve('judgeRepository')
+    c.resolve('judgeRepository'),
+    c.resolve('judgeAccountRepository')
   ), 'singleton');
   container.register('authenticationService', (c) => new AuthenticationService(
     c.resolve('playerRepository'),
@@ -118,7 +119,8 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('tokenService'),
     c.resolve('otpService'),
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('judgeAccountRepository')
   ), 'singleton');
   container.register('authorizationService', (c) => new AuthorizationService(
     c.resolve('playerRepository'),
@@ -126,7 +128,8 @@ function bootstrap() {
     c.resolve('adminRepository'),
     c.resolve('judgeRepository'),
     c.resolve('competitionRepository'),
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('judgeAccountRepository')
   ), 'singleton');
   container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository')), 'singleton');
 
@@ -198,6 +201,7 @@ function bootstrap() {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
       judgeRepository: c.resolve('judgeRepository'),
+      judgeAccountRepository: c.resolve('judgeAccountRepository'),
       competitionRepository: c.resolve('competitionRepository'),
       teamRepository: c.resolve('teamRepository'),
       playerRepository: c.resolve('playerRepository'),

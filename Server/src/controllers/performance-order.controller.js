@@ -52,7 +52,10 @@ function competitionFrom(req) {
     req.body?.competitionId ||
     req.body?.competition ||
     req.user?.currentCompetition ||
-    req.user?.competition
+    req.user?.competition ||
+    // A judge principal is an account, so the competition lives on their
+    // assignments rather than on the user document.
+    req.judgeAssignments?.[0]?.competition
   );
 }
 
@@ -80,7 +83,11 @@ function createPerformanceOrderController(container) {
   const authorizeWrite = async (req, identityFilters, competitionId) => {
     if (req.userType !== 'judge') return;
     const identity = performanceOrderService.buildIdentity(competitionId, identityFilters);
-    await performanceOrderService.assertJudgeMaySequence(req.user, identity);
+    await performanceOrderService.assertJudgeMaySequence(
+      req.user,
+      identity,
+      req.judgeAssignments
+    );
   };
 
   return {

@@ -24,6 +24,10 @@ function createUserRepositoryResolver(repositories) {
     coachRepository,
     adminRepository,
     judgeRepository = null,
+    // The judge PRINCIPAL is an account (models/JudgeAccount.js); the judge
+    // repository serves panel assignments, which are not logins. Callers that
+    // predate the split pass only `judgeRepository`, so it stays the fallback.
+    judgeAccountRepository = null,
   } = repositories;
 
   /**
@@ -41,11 +45,13 @@ function createUserRepositoryResolver(repositories) {
         return coachRepository;
       case 'admin':
         return adminRepository;
-      case 'judge':
-        if (!judgeRepository) {
+      case 'judge': {
+        const repository = judgeAccountRepository || judgeRepository;
+        if (!repository) {
           throw new Error(`Judge repository not available in this context`);
         }
-        return judgeRepository;
+        return repository;
+      }
       default:
         throw new Error(`Invalid user type: ${userType}`);
     }

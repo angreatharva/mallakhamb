@@ -32,6 +32,7 @@ const CompetitionRepository = require('../../src/repositories/competition.reposi
 const AdminRepository = require('../../src/repositories/admin.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
 const JudgeRepository = require('../../src/repositories/judge.repository');
+const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Competition = require('../../models/Competition');
@@ -39,15 +40,18 @@ const Team = require('../../models/Team');
 const Coach = require('../../models/Coach');
 const Player = require('../../models/Player');
 const Judge = require('../../models/Judge');
+const JudgeAccount = require('../../models/JudgeAccount');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 /** Maps an opaque bearer string to the payload a signed JWT would have carried. */
 const issuedTokens = new Map();
 
-function tokenForJudge(judgeDoc) {
-  const value = `test-token-${judgeDoc._id}`;
-  issuedTokens.set(value, { userId: String(judgeDoc._id), userType: 'judge' });
+function tokenForJudge(principal) {
+  // The judge principal is the account, not the panel seat.
+  const account = principal?.account || principal;
+  const value = `test-token-${account._id}`;
+  issuedTokens.set(value, { userId: String(account._id), userType: 'judge' });
   return value;
 }
 
@@ -56,12 +60,14 @@ function buildApp() {
   const adminRepository = new AdminRepository(noopLogger);
   const scoreRepository = new ScoreRepository(noopLogger);
   const judgeRepository = new JudgeRepository(noopLogger);
+  const judgeAccountRepository = new JudgeAccountRepository(noopLogger);
 
   const adminService = new AdminService({
     adminRepository,
     competitionRepository,
     scoreRepository,
     judgeRepository,
+    judgeAccountRepository,
     logger: noopLogger,
   });
 
@@ -87,8 +93,10 @@ function buildApp() {
               return payload;
             },
           };
+        case 'judgeRepository':
+          return judgeRepository;
         case 'authenticationService':
-          return { getRepositoryByType: () => judgeRepository };
+          return { getRepositoryByType: () => judgeAccountRepository };
         case 'adminController':
           return createAdminController(container);
         case 'publicController':
@@ -155,20 +163,25 @@ beforeEach(async () => {
 
   competitionId = competition._id;
 
-  const judge = await Judge.create({
+  const judgeAccount = await JudgeAccount.create({
+    name: 'Senior Judge One',
+    email: 'srjudge1@club.in',
+    password: 'PlaintextSecret1',
+    isActive: true,
+  });
+
+  await Judge.create({
+    judgeAccount: judgeAccount._id,
     competition: competition._id,
     competitionTypes: ['competition_1'],
     gender: 'Male',
     ageGroup: 'Under12',
     judgeNo: 1,
     judgeType: 'Senior Judge',
-    name: 'Senior Judge One',
-    username: 'srjudge1',
-    password: 'PlaintextSecret1',
     isActive: true,
   });
 
-  authHeader = `Bearer ${tokenForJudge(judge)}`;
+  authHeader = `Bearer ${tokenForJudge(judgeAccount)}`;
 });
 
 /** Fetch the roster as an authenticated judge, asserting it really carried data. */

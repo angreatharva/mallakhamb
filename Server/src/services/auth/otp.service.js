@@ -22,7 +22,7 @@ class OTPService {
    * @param {EmailService} emailService - Email service instance (optional)
    * @param {JudgeRepository} judgeRepository - Judge repository (optional)
    */
-  constructor(configManager, logger, playerRepository, coachRepository, adminRepository, emailService = null, judgeRepository = null) {
+  constructor(configManager, logger, playerRepository, coachRepository, adminRepository, emailService = null, judgeRepository = null, judgeAccountRepository = null) {
     this.config = configManager;
     this.logger = logger;
     this.playerRepository = playerRepository;
@@ -30,12 +30,15 @@ class OTPService {
     this.adminRepository = adminRepository;
     this.emailService = emailService;
 
-    // Shared repository resolver (MED-13) — now includes judge type
+    // Shared repository resolver (MED-13) — now includes judge type. An OTP is
+    // written to and read from the judge's ACCOUNT; a panel seat has no
+    // address to send one to.
     this._repoResolver = createUserRepositoryResolver({
       playerRepository,
       coachRepository,
       adminRepository,
       judgeRepository,
+      judgeAccountRepository,
     });
   }
 

@@ -22,10 +22,16 @@ function createJudgeController(container) {
   return {
     // ==================== Auth ====================
 
-    /** @route POST /api/judge/login */
+    /**
+     * @route POST /api/judge/login
+     * @desc  Judges sign in with their own email address, like every other
+     *        role. `username` is still read from the body so a client that has
+     *        not been redeployed yet gets a clear "invalid credentials" rather
+     *        than a validation error about a field it does not send.
+     */
     login: asyncHandler(async (req, res) => {
-      const { username, password } = req.body;
-      const result = await judgeService.loginJudge(username, password);
+      const { email, username, password } = req.body;
+      const result = await judgeService.loginJudge(email || username, password);
       await sendLoginResponse({
         res, tokenService, isProduction,
         data: result, userType: 'judge',
@@ -117,9 +123,16 @@ function createJudgeController(container) {
       res.json({ success: true, data: teams });
     }),
 
-    /** @route GET /api/judge/teams/:teamId/players */
+    /**
+     * @route GET /api/judge/teams/:teamId/players
+     * @desc  The roster, scored against the seat the judge is working from.
+     *        gender/ageGroup narrow it when the judge holds several seats.
+     */
     getTeamPlayers: asyncHandler(async (req, res) => {
-      const result = await judgeService.getTeamPlayers(req.user._id, req.params.teamId);
+      const result = await judgeService.getTeamPlayers(req.user._id, req.params.teamId, {
+        gender: req.query.gender,
+        ageGroup: req.query.ageGroup,
+      });
       res.json({ success: true, data: result });
     }),
 

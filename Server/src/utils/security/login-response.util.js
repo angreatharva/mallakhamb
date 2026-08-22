@@ -44,9 +44,16 @@ async function sendLoginResponse({
   // 2. Generate and set refresh token cookie
   const userObj = data.user || data.admin || data.coach || data.player || data.judge || data[userType];
   const userId = userObj?._id || userObj?.id;
+  // The competition this session is scoped to, when the login result carries
+  // one (judges land straight in their assigned meet). Recorded on the refresh
+  // record so rotation can re-issue an access token with the same claim.
+  const competitionId = data.competition?._id || data.competition || userObj?.competition || null;
+
   const { token: refreshToken } = await tokenService.generateRefreshToken(
     userId?.toString(),
     userType,
+    null,
+    competitionId ? String(competitionId) : null,
   );
   setRefreshTokenCookie(res, refreshToken, isProduction);
 

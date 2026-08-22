@@ -25,12 +25,14 @@ const AdminService = require('../../src/services/user/admin.service');
 const ScoringService = require('../../src/services/scoring/scoring.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const JudgeRepository = require('../../src/repositories/judge.repository');
+const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Judge = require('../../models/Judge');
+const JudgeAccount = require('../../models/JudgeAccount');
 const Competition = require('../../models/Competition');
 const Score = require('../../models/Score');
 
@@ -38,15 +40,22 @@ const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 const issuedTokens = new Map();
 
-/** Mint a bearer token for a persisted principal. */
+/**
+ * Mint a bearer token for a persisted principal.
+ *
+ * For a judge the principal is the ACCOUNT, so this accepts the
+ * `{ judge, account }` pair createJudge returns as well as a bare document.
+ */
 function tokenFor(doc, userType = 'judge') {
-  const value = `test-token-${doc._id}`;
-  issuedTokens.set(value, { userId: String(doc._id), userType });
+  const principal = doc?.account || doc;
+  const value = `test-token-${principal._id}`;
+  issuedTokens.set(value, { userId: String(principal._id), userType });
   return value;
 }
 
 function buildApp() {
   const judgeRepository = new JudgeRepository(noopLogger);
+  const judgeAccountRepository = new JudgeAccountRepository(noopLogger);
   const scoreRepository = new ScoreRepository(noopLogger);
   const adminRepository = new AdminRepository(noopLogger);
   const calculationService = new CalculationService(noopLogger);
@@ -67,6 +76,7 @@ function buildApp() {
   const adminService = new AdminService({
     adminRepository,
     judgeRepository,
+    judgeAccountRepository,
     scoreRepository,
     calculationService,
     scoringService,
@@ -97,8 +107,10 @@ function buildApp() {
               return payload;
             },
           };
+        case 'judgeRepository':
+          return judgeRepository;
         case 'authenticationService':
-          return { getRepositoryByType: () => judgeRepository };
+          return { getRepositoryByType: () => judgeAccountRepository };
         case 'adminController':
           return createAdminController(container);
         case 'publicController':
@@ -123,19 +135,27 @@ const competitionId = new mongoose.Types.ObjectId();
 const teamId = new mongoose.Types.ObjectId();
 const playerId = new mongoose.Types.ObjectId();
 
-function createJudge({ judgeNo, judgeType, name, username }) {
-  return Judge.create({
+/** A registered judge (the person) seated on the Under14 Male panel. */
+async function createJudge({ judgeNo, judgeType, name, email }) {
+  const account = await JudgeAccount.create({
+    name,
+    email,
+    password: 'PlaintextSecret1',
+    isActive: true,
+  });
+
+  const judge = await Judge.create({
+    judgeAccount: account._id,
     competition: competitionId,
     competitionTypes: ['competition_1', 'competition_2'],
     gender: 'Male',
     ageGroup: 'Under14',
     judgeNo,
     judgeType,
-    name,
-    username,
-    password: 'PlaintextSecret1',
     isActive: true,
   });
+
+  return { judge, account };
 }
 
 /** A slip as the judge UI shapes it. */
@@ -179,9 +199,9 @@ describe('judge scoring flow — a full panel sequence', () => {
       endDate: new Date('2026-09-03T00:00:00.000Z'),
     });
 
-    senior = await createJudge({ judgeNo: 1, judgeType: 'Senior Judge', name: 'Senior One', username: 'sr1' });
-    j1 = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', username: 'j1' });
-    j2 = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', username: 'j2' });
+    senior = await createJudge({ judgeNo: 1, judgeType: 'Senior Judge', name: 'Senior One', email: 'sr1@club.in' });
+    j1 = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', email: 'j1@club.in' });
+    j2 = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', email: 'j2@club.in' });
   });
 
   test('auth → three slips → finalize → lock, end to end', async () => {

@@ -15,6 +15,7 @@ const {
   PANEL_JUDGE_TYPES,
   buildJudgeSlipPlayerScore,
 } = require('../utils/scoring/judge-slip.util');
+const { resolveAssignment } = require('../utils/data/judge-assignment.util');
 
 /**
  * @param {Object} container - DI container
@@ -223,7 +224,7 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/judges */
     getJudges: asyncHandler(async (req, res) => {
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
       const { gender, ageGroup, competitionTypes, apparatus } = req.query;
       const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes, apparatus });
       res.json({ success: true, data: judges });
@@ -270,7 +271,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/judges/summary */
     getAllJudgesSummary: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
       const summary = await adminService.getAllJudgesSummary(competitionId);
       res.json({ success: true, data: summary });
     }),
@@ -295,7 +296,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/scores/team */
     getTeamScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
+      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
       const scores = await adminService.getTeamScores(
         competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus
       );
@@ -336,13 +337,26 @@ function createAdminController(container) {
       
       // ---- Who is calling? (HIGH-1) ----
       // saveScores is shared by /api/admin, /api/super-admin, /api/judge and
-      // /api/public. `req.user` is loaded from the database by the auth
-      // middleware (auth.middleware.js:131,166) and only a Judge document
-      // carries `judgeType` (models/Judge.js:36-40) — Admin/SuperAdmin
-      // documents never do. So the presence of `judgeType` on req.user is the
-      // authenticated marker of a judge principal; the body is never trusted
-      // for identity.
-      const authJudgeType = typeof req.user?.judgeType === 'string' ? req.user.judgeType : null;
+      // /api/public. A judge principal is an ACCOUNT, and the panel role that
+      // account holds depends on the category being scored: the same person is
+      // routinely Senior Judge in one age group and Judge 2 in another. So the
+      // role is resolved from the assignment matching THIS payload's category,
+      // never from the body (which the caller controls) and never from whichever
+      // assignment row happened to come back first.
+      //
+      // `req.judgeAssignments` is attached by the auth middleware and is empty
+      // for a registered judge nobody has put on a panel — such a caller
+      // resolves to no role and is refused below.
+      const authAssignment = req.userType === 'judge'
+        ? resolveAssignment(req.judgeAssignments, {
+          competition: scoreData.competition || req.competitionId,
+          gender: scoreData.gender,
+          ageGroup: scoreData.ageGroup,
+          competitionType: req.body.competitionType,
+          apparatus: req.body.apparatus,
+        })
+        : null;
+      const authJudgeType = typeof authAssignment?.judgeType === 'string' ? authAssignment.judgeType : null;
       const isPanelJudge = PANEL_JUDGE_TYPES.includes(authJudgeType);
       const isSeniorJudge = authJudgeType === 'Senior Judge';
       const isScorer = authJudgeType === 'Scorer';
@@ -448,7 +462,7 @@ function createAdminController(container) {
       scoreData.allowFinalizedEdit = isScorer || isAdmin;
 
       // Handle admin routes, superadmin routes, and judge/scorer routes
-      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition;
+      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
       
       if (!competitionId) {
         return res.status(400).json({

@@ -90,12 +90,19 @@ class AuthenticationService {
     competitionRepository,
     tokenService,
     otpService,
-    logger
+    logger,
+    // Appended rather than inserted: the DI container wires this constructor
+    // positionally, and every existing caller passes eight arguments.
+    judgeAccountRepository = null
   ) {
     this.playerRepository = playerRepository;
     this.coachRepository = coachRepository;
     this.adminRepository = adminRepository;
     this.judgeRepository = judgeRepository;
+    // A judge login is an account, not a panel seat. Falls back to the
+    // assignment repository for the harnesses that construct this service with
+    // the old argument list.
+    this.judgeAccountRepository = judgeAccountRepository || judgeRepository;
     this.competitionRepository = competitionRepository;
     this.tokenService = tokenService;
     this.otpService = otpService;
@@ -112,6 +119,7 @@ class AuthenticationService {
       coachRepository,
       adminRepository,
       judgeRepository,
+      judgeAccountRepository: this.judgeAccountRepository,
     });
   }
 
@@ -656,8 +664,10 @@ class AuthenticationService {
         return { user, userType: 'admin' };
       }
 
-      // Try judge (uses username field)
-      user = await this.judgeRepository.findByEmail(email);
+      // Try judge. This looks in the account collection now, which is what
+      // finally makes password reset work for judges: a panel seat never had
+      // an address to send an OTP to.
+      user = await this.judgeAccountRepository.findByEmail(email);
       if (user) {
         return { user, userType: 'judge' };
       }

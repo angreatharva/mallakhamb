@@ -16,6 +16,11 @@
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 const { COOKIE_NAMES, setAccessTokenCookie } = require('../utils/security/cookie.util');
+const {
+  loadAssignments,
+  hasAnyRole,
+  SEQUENCE_JUDGE_TYPES,
+} = require('../utils/data/judge-assignment.util');
 
 /**
  * Create authentication middleware
@@ -26,6 +31,15 @@ function createAuthMiddleware(container) {
   const tokenService = container.resolve('tokenService');
   const authenticationService = container.resolve('authenticationService');
   const logger = container.resolve('logger');
+  // Judge panel assignments. Resolved defensively: several test harnesses build
+  // a minimal container, and a judge with no resolvable assignments must fail
+  // closed (no roles) rather than blow up the whole middleware.
+  let judgeRepository = null;
+  try {
+    judgeRepository = container.resolve('judgeRepository');
+  } catch {
+    judgeRepository = null;
+  }
   const config = container.resolve('config');
   const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
 
@@ -171,6 +185,28 @@ function createAuthMiddleware(container) {
         req.user.currentCompetition = decoded.competitionId;
       }
 
+      /**
+       * A judge principal is an ACCOUNT (models/JudgeAccount.js). Everything
+       * that used to read a panel field straight off `req.user` — judgeType,
+       * gender, ageGroup — now reads the assignments this account holds, and
+       * picks the one matching the category being acted on.
+       *
+       * Loaded once here rather than per guard, because a request commonly
+       * passes through two of them (requireJudge then requireSequenceManager)
+       * plus a controller.
+       *
+       * A judge nobody has assigned yet gets an empty array. That is a normal
+       * state — anyone can register — and every consumer must treat it as "no
+       * access", never as "unrestricted".
+       */
+      if (decoded.userType === 'judge') {
+        req.judgeAssignments = await loadAssignments(
+          judgeRepository,
+          user._id,
+          decoded.competitionId || null
+        );
+      }
+
       // --- Token Rotation (Requirement 17.7) ---
       // If the token is older than the rotation threshold, issue a new one.
       // The new token is set as an httpOnly cookie (preferred) and also in
@@ -266,7 +302,10 @@ const requireAdminOrScorer = (req, res, next) => {
   const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' || 
                  (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
                  
-  const isScorer = req.userType === 'judge' && req.user.judgeType === 'Scorer';
+  // "Is this judge a Scorer anywhere?" — one person can be Scorer for one
+  // category and an evaluation judge in another, and `req.user` is an account,
+  // not a panel row.
+  const isScorer = req.userType === 'judge' && hasAnyRole(req.judgeAssignments, ['Scorer']);
 
   if (!isAdmin && !isScorer) {
     return res.status(403).json({ 
@@ -305,8 +344,12 @@ const requireSequenceManager = (req, res, next) => {
   const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' ||
                   (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
 
+  // Any assignment in a sequencing role gets past this guard; whether it is
+  // the RIGHT panel is settled by assertJudgeMaySequence, as described above.
+  // Checking a single row here used to refuse a judge who is Senior Judge in
+  // the category being reordered but authenticated against a different one.
   const canSequence = req.userType === 'judge' &&
-                      ['Senior Judge', 'Scorer'].includes(req.user.judgeType);
+                      hasAnyRole(req.judgeAssignments, SEQUENCE_JUDGE_TYPES);
 
   if (!isAdmin && !canSequence) {
     return res.status(403).json({

@@ -36,12 +36,14 @@ const AdminService = require('../../src/services/user/admin.service');
 const ScoringService = require('../../src/services/scoring/scoring.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const JudgeRepository = require('../../src/repositories/judge.repository');
+const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Judge = require('../../models/Judge');
+const JudgeAccount = require('../../models/JudgeAccount');
 const Admin = require('../../models/Admin');
 const Competition = require('../../models/Competition');
 const Score = require('../../models/Score');
@@ -62,6 +64,7 @@ const playerId = new mongoose.Types.ObjectId();
 
 function buildApp() {
   const judgeRepository = new JudgeRepository(noopLogger);
+  const judgeAccountRepository = new JudgeAccountRepository(noopLogger);
   const scoreRepository = new ScoreRepository(noopLogger);
   const adminRepository = new AdminRepository(noopLogger);
   const competitionRepository = new CompetitionRepository(noopLogger);
@@ -80,6 +83,7 @@ function buildApp() {
   const adminService = new AdminService({
     adminRepository,
     judgeRepository,
+    judgeAccountRepository,
     scoreRepository,
     competitionRepository,
     calculationService,
@@ -111,12 +115,16 @@ function buildApp() {
               return payload;
             },
           };
+        case 'judgeRepository':
+          // The middleware loads a judge's panel seats from here.
+          return judgeRepository;
         case 'authenticationService':
           return {
             // The auth middleware resolves the principal by userType; admins
-            // and judges both authenticate through this router pair.
+            // and judges both authenticate through this router pair. A judge
+            // principal is an account, not a panel seat.
             getRepositoryByType: (type) =>
-              type === 'judge' ? judgeRepository : adminRepository,
+              type === 'judge' ? judgeAccountRepository : adminRepository,
           };
         case 'adminController':
           return createAdminController(container);
@@ -198,16 +206,21 @@ describe('admin score lock/unlock cycle', () => {
       role: 'admin',
     });
 
-    judge = await Judge.create({
+    judge = await JudgeAccount.create({
+      name: 'Senior One',
+      email: 'sr1@club.in',
+      password: 'PlaintextSecret1',
+      isActive: true,
+    });
+
+    await Judge.create({
+      judgeAccount: judge._id,
       competition: competitionId,
       competitionTypes: ['competition_1'],
       gender: 'Male',
       ageGroup: 'Under14',
       judgeNo: 1,
       judgeType: 'Senior Judge',
-      name: 'Senior One',
-      username: 'sr1',
-      password: 'PlaintextSecret1',
       isActive: true,
     });
 

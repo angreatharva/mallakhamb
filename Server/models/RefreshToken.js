@@ -36,6 +36,18 @@ const refreshTokenSchema = new mongoose.Schema(
     },
 
     /**
+     * The competition the session was scoped to, if any.
+     *
+     * Rotation re-issues the access token from this record, and without the
+     * competition it re-issued one WITHOUT the claim — so a judge whose token
+     * refreshed mid-event silently lost their competition context.
+     */
+    competitionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+
+    /**
      * Token family identifier (UUID).
      * All tokens issued through rotation within a single login session
      * share the same family. Revoking by family invalidates the entire chain.

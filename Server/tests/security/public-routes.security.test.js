@@ -35,6 +35,7 @@ const createAdminController = require('../../src/controllers/admin.controller');
 const AdminService = require('../../src/services/user/admin.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const JudgeRepository = require('../../src/repositories/judge.repository');
+const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const ScoreRepository = require('../../src/repositories/score.repository');
 const AdminRepository = require('../../src/repositories/admin.repository');
 const ScoringService = require('../../src/services/scoring/scoring.service');
@@ -52,11 +53,17 @@ const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
  */
 const issuedTokens = new Map();
 
-/** Mint a bearer token for a persisted judge document. */
-function tokenForJudge(judgeDoc) {
-  const value = `test-token-${judgeDoc._id}`;
+/**
+ * Mint a bearer token for a judge.
+ *
+ * The principal is the ACCOUNT, not the panel seat: accepts either the
+ * `{ judge, account }` pair createJudge returns, or an account document.
+ */
+function tokenForJudge(principal) {
+  const account = principal?.account || principal;
+  const value = `test-token-${account._id}`;
   issuedTokens.set(value, {
-    userId: String(judgeDoc._id),
+    userId: String(account._id),
     userType: 'judge',
   });
   return value;
@@ -71,6 +78,7 @@ function tokenForJudge(judgeDoc) {
  */
 function buildApp() {
   const judgeRepository = new JudgeRepository(noopLogger);
+  const judgeAccountRepository = new JudgeAccountRepository(noopLogger);
   const scoreRepository = new ScoreRepository(noopLogger);
   const adminRepository = new AdminRepository(noopLogger);
   const calculationService = new CalculationService(noopLogger);
@@ -91,6 +99,7 @@ function buildApp() {
   const adminService = new AdminService({
     adminRepository,
     judgeRepository,
+    judgeAccountRepository,
     scoreRepository,
     calculationService,
     scoringService,
@@ -120,9 +129,13 @@ function buildApp() {
               return payload;
             },
           };
+        case 'judgeRepository':
+          // The middleware loads the judge's panel seats from here.
+          return judgeRepository;
         case 'authenticationService':
-          // The middleware loads the principal through this repository.
-          return { getRepositoryByType: () => judgeRepository };
+          // The middleware loads the principal through this repository — a
+          // judge principal is an account.
+          return { getRepositoryByType: () => judgeAccountRepository };
         case 'adminController':
           return createAdminController(container);
         case 'publicController':
@@ -204,12 +217,13 @@ describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () =
   let seniorAccount;
 
   beforeEach(async () => {
-    ({ judge: seniorJudge, account: seniorAccount } = await createJudge({
+    seniorJudge = await createJudge({
       judgeNo: 1,
       judgeType: 'Senior Judge',
       name: 'Senior Judge One',
       email: 'srjudge1@club.in',
-    }));
+    });
+    seniorAccount = seniorJudge.account;
   });
 
   test('should require authentication', async () => {
@@ -309,18 +323,18 @@ describe('HIGH-1 — the slip is bound to the authenticated judge (FIXED)', () =
   let seniorJudge;
 
   beforeEach(async () => {
-    ({ judge: judgeOne } = await createJudge({
+    judgeOne = await createJudge({
       judgeNo: 2,
       judgeType: 'Judge 1',
       name: 'Judge One',
       email: 'judge1@club.in',
-    }));
-    ({ judge: seniorJudge } = await createJudge({
+    });
+    seniorJudge = await createJudge({
       judgeNo: 1,
       judgeType: 'Senior Judge',
       name: 'Senior Judge One',
       email: 'srjudge1@club.in',
-    }));
+    });
   });
 
   test('should not let an anonymous caller write to the Senior Judge slot', async () => {
@@ -352,6 +366,74 @@ describe('HIGH-1 — the slip is bound to the authenticated judge (FIXED)', () =
     expect(performer.judgeScores.seniorJudge ?? 0).not.toBe(10);
     expect(performer.judgeSlips.map((s) => s.judgeRole)).toContain('J1');
     expect(performer.judgeSlips.map((s) => s.judgeRole)).not.toContain('SR_JUDGE');
+  });
+
+  /**
+   * The case the judge-account split introduces, and the one most likely to be
+   * got wrong: ONE person holding two seats in two categories.
+   *
+   * Under-14 Male they are Judge 4; Under-16 Female they are Judge 2. Scoring
+   * the Under-16 panel must write J2, because the role is a property of the
+   * category, not of whichever assignment row a lookup returned first.
+   */
+  test('a judge holding two seats writes the role that matches the category', async () => {
+    // Judge 3 on the Under-14 Male panel that the other tests in this block
+    // already staff, so the two seats do not collide on the slot index.
+    const dualRole = await createJudge({
+      judgeNo: 5,
+      judgeType: 'Judge 4',
+      name: 'Dual Role',
+      email: 'dual@club.in',
+    });
+
+    await Judge.create({
+      judgeAccount: dualRole.account._id,
+      competition: competitionId,
+      competitionTypes: ['competition_1', 'competition_2'],
+      gender: 'Female',
+      ageGroup: 'Under16',
+      judgeNo: 3,
+      judgeType: 'Judge 2',
+      isActive: true,
+    });
+
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', `Bearer ${tokenForJudge(dualRole)}`)
+      .send(slip({ gender: 'Female', ageGroup: 'Under16', score: 7.4 }));
+
+    expect(res.status).toBe(200);
+
+    const stored = await Score.findOne({ teamId, competition: competitionId, ageGroup: 'Under16' });
+    const performer = stored.playerScores[0];
+
+    expect(performer.judgeScores.judge2).toBe(7.4);
+    expect(performer.judgeScores.seniorJudge ?? 0).not.toBe(7.4);
+    expect(performer.judgeSlips.map((s) => s.judgeRole)).toEqual(['J2']);
+  });
+
+  /**
+   * Anyone may register as a judge. Until an admin seats them on a panel they
+   * hold no role anywhere, so there is nothing for a slip to bind to and the
+   * write must be refused outright rather than falling through as a bulk save.
+   */
+  test('a registered judge on no panel cannot submit a slip', async () => {
+    const account = await JudgeAccount.create({
+      name: 'Unassigned Judge',
+      email: 'nobody@club.in',
+      password: 'PlaintextSecret1',
+      isActive: true,
+    });
+
+    const res = await request(app)
+      .post('/api/public/save-score')
+      .set('Authorization', `Bearer ${tokenForJudge(account)}`)
+      .send(slip({ score: 9.9 }));
+
+    expect(res.status).toBe(403);
+
+    const stored = await Score.findOne({ teamId, competition: competitionId });
+    expect(stored).toBeNull();
   });
 
   test('should not let an anonymous caller finalize and lock a performer', async () => {
@@ -396,12 +478,12 @@ describe('HIGH-3 — competitionType is part of the Score identity (FIXED)', () 
   let judgeOne;
 
   beforeEach(async () => {
-    ({ judge: judgeOne } = await createJudge({
+    judgeOne = await createJudge({
       judgeNo: 2,
       judgeType: 'Judge 1',
       name: 'Judge One',
       email: 'judge1@club.in',
-    }));
+    });
   });
 
   test('scoring the same team in Competition II does not overwrite its Competition I document', async () => {
@@ -452,9 +534,9 @@ describe('HIGH-4 — concurrent judge submissions do not lose slips (FIXED)', ()
   let judgeThree;
 
   beforeEach(async () => {
-    ({ judge: judgeOne } = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', email: 'judge1@club.in' }));
-    ({ judge: judgeTwo } = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', email: 'judge2@club.in' }));
-    ({ judge: judgeThree } = await createJudge({ judgeNo: 4, judgeType: 'Judge 3', name: 'Judge Three', email: 'judge3@club.in' }));
+    judgeOne = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', email: 'judge1@club.in' });
+    judgeTwo = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', email: 'judge2@club.in' });
+    judgeThree = await createJudge({ judgeNo: 4, judgeType: 'Judge 3', name: 'Judge Three', email: 'judge3@club.in' });
   });
 
   /**

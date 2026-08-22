@@ -19,6 +19,7 @@ const mongoose = require('mongoose');
 const { bootstrap, initializeSocketIO } = require('../../../src/infrastructure/bootstrap');
 const EventTypes = require('../../../src/socket/events/event-types');
 const Judge = require('../../../models/Judge');
+const JudgeAccount = require('../../../models/JudgeAccount');
 
 let httpServer;
 let container;
@@ -80,19 +81,30 @@ function waitFor(socket, event, ms = 1200) {
 
 const competitionId = new mongoose.Types.ObjectId();
 
-function createJudge({ judgeNo, judgeType, username, gender = 'Male', ageGroup = 'Under14' }) {
-  return Judge.create({
+/**
+ * A registered judge seated on a panel. The socket identity is the ACCOUNT —
+ * the seats are what the auto-join reads to decide which rooms to join.
+ */
+async function createJudge({ judgeNo, judgeType, username, gender = 'Male', ageGroup = 'Under14' }) {
+  const account = await JudgeAccount.create({
+    name: `${judgeType} ${username}`,
+    email: `${username}@club.in`,
+    password: 'JudgeSecret1',
+    isActive: true,
+  });
+
+  const judge = await Judge.create({
+    judgeAccount: account._id,
     competition: competitionId,
     competitionTypes: ['competition_1'],
     gender,
     ageGroup,
     judgeNo,
     judgeType,
-    name: `${judgeType} ${username}`,
-    username,
-    password: 'JudgeSecret1',
     isActive: true,
   });
+
+  return { judge, account };
 }
 
 beforeAll(async () => {
@@ -124,9 +136,10 @@ afterAll(async () => {
   if (manager?.io) manager.io.close();
 });
 
-/** Real JWT for a persisted judge. */
-function tokenFor(judge) {
-  return container.resolve('tokenService').generateToken(String(judge._id), 'judge', competitionId);
+/** Real JWT for a persisted judge — subject is the account. */
+function tokenFor(principal) {
+  const account = principal?.account || principal;
+  return container.resolve('tokenService').generateToken(String(account._id), 'judge', String(competitionId));
 }
 
 describe('socket authentication', () => {

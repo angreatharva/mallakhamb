@@ -178,9 +178,11 @@ describe('scoringService.getTeamScores — scorer and admin scoring lists', () =
 });
 
 describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', () => {
-  const buildService = ({ competition, judge, players = [] }) =>
+  // The judge principal is an account; the seats it holds come back from the
+  // assignment repository.
+  const buildService = ({ competition, assignments = [], players = [] }) =>
     new JudgeService({
-      judgeRepository: { findById: jest.fn(async () => judge) },
+      judgeRepository: { find: jest.fn(async () => assignments) },
       competitionRepository: { findById: jest.fn(async () => competition) },
       teamRepository: { findById: jest.fn(async (id) => ({ _id: id, name: 'Team', coach: {}, competition: 'comp-1' })) },
       playerRepository: { find: jest.fn(async (query) => players.filter((p) => query._id.$in.includes(p._id))) },
@@ -188,10 +190,10 @@ describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', ()
       logger: noopLogger,
     });
 
-  const judge = { _id: 'j1', judgeType: 'Judge 1', gender: 'Male', ageGroup: 'Under14', competition: 'comp-1' };
+  const seat = { _id: 'seat-1', judgeAccount: 'j1', judgeType: 'Judge 1', gender: 'Male', ageGroup: 'Under14', competition: 'comp-1' };
 
   it('refuses a drafted team', async () => {
-    const service = buildService({ competition: competitionWithADraft(), judge });
+    const service = buildService({ competition: competitionWithADraft(), assignments: [seat] });
 
     await expect(service.getTeamPlayers('j1', DRAFT_TEAM)).rejects.toThrow(AuthorizationError);
   });
@@ -199,16 +201,15 @@ describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', ()
   it('refuses when the competition cannot be loaded, instead of skipping the check', async () => {
     // The guard used to be `if (compId) { if (comp) { ... } }`. A deleted or
     // unreadable competition silently disabled it and served the roster.
-    const service = buildService({ competition: null, judge });
+    const service = buildService({ competition: null, assignments: [seat] });
 
     await expect(service.getTeamPlayers('j1', DRAFT_TEAM)).rejects.toThrow(AuthorizationError);
   });
 
-  it('refuses a judge with no competition assignment', async () => {
-    const service = buildService({
-      competition: competitionWithADraft(),
-      judge: { ...judge, competition: null },
-    });
+  it('refuses a registered judge nobody has put on a panel', async () => {
+    // Anyone can register as a judge. Until an admin seats them, they must not
+    // be able to read a roster of minors.
+    const service = buildService({ competition: competitionWithADraft(), assignments: [] });
 
     await expect(service.getTeamPlayers('j1', ENTERED_TEAM)).rejects.toThrow(AuthorizationError);
   });
@@ -219,7 +220,7 @@ describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', ()
     // never entered appeared on the judge's screen next to the real entries.
     const service = buildService({
       competition: competitionWithADraft(),
-      judge,
+      assignments: [seat],
       players: [
         { _id: 'p-entered', firstName: 'Entered', lastName: 'Athlete', gender: 'Male', ageGroup: 'Under14' },
         { _id: 'p-never-entered', firstName: 'Bench', lastName: 'Athlete', gender: 'Male', ageGroup: 'Under14' },
@@ -232,7 +233,7 @@ describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', ()
   });
 
   it('never asks the database for athletes outside the entry list', async () => {
-    const service = buildService({ competition: competitionWithADraft(), judge, players: [] });
+    const service = buildService({ competition: competitionWithADraft(), assignments: [seat], players: [] });
     await service.getTeamPlayers('j1', ENTERED_TEAM);
 
     const [query] = service.playerRepository.find.mock.calls[0];

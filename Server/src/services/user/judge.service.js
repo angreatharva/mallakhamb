@@ -1,18 +1,24 @@
 /**
  * Judge Service
- * 
- * Business logic for judge operations including authentication,
- * competition management, and scoring interface.
- * 
+ *
+ * Everything a judge does inside a competition: sign in, see the teams in
+ * their category, read a team's athletes, submit a score.
+ *
+ * The judge PRINCIPAL is a JudgeAccount (models/JudgeAccount.js) and the panel
+ * seats they hold are Judge documents (models/Judge.js). Every method here
+ * takes an account id and resolves the assignment that covers the category
+ * being acted on — see utils/data/judge-assignment.util.js. A registered judge
+ * with no assignments is a normal state: they can sign in and see nothing.
+ *
  * Requirements: 1.5, 1.8, 4.3, 4.4, 4.5
  */
 
 const UserService = require('./user.service');
-const { 
-  NotFoundError, 
-  AuthenticationError, 
-  AuthorizationError, 
-  BusinessRuleError 
+const {
+  NotFoundError,
+  AuthenticationError,
+  AuthorizationError,
+  BusinessRuleError
 } = require('../../errors');
 const bcrypt = require('bcryptjs');
 const { getJudgeRoleMapping } = require('../../utils/scoring/judge-slip.util');
@@ -27,6 +33,11 @@ const {
   findSubmittedRegistration,
   registeredPlayerIds,
 } = require('../../utils/data/team-visibility.util');
+const {
+  loadAssignments,
+  resolveAssignment,
+  competitionsFor,
+} = require('../../utils/data/judge-assignment.util');
 const {
   getLockoutState,
   registerFailedAttempt,
@@ -59,6 +70,18 @@ function judgeSecuritySetting(key, fallback) {
   }
 }
 
+/** Shape one assignment for the client. */
+const toClientAssignment = (assignment) => ({
+  _id: assignment._id,
+  competition: assignment.competition,
+  gender: assignment.gender,
+  ageGroup: assignment.ageGroup,
+  competitionTypes: assignment.competitionTypes,
+  apparatus: assignment.apparatus,
+  judgeType: assignment.judgeType,
+  judgeNo: assignment.judgeNo,
+});
+
 class JudgeService extends UserService {
   /**
    * Create a judge service
@@ -71,8 +94,9 @@ class JudgeService extends UserService {
       'judge',
       dependencies.cacheService
     );
-    
+
     this.judgeRepository = dependencies.judgeRepository;
+    this.judgeAccountRepository = dependencies.judgeAccountRepository;
     this.competitionRepository = dependencies.competitionRepository;
     this.teamRepository = dependencies.teamRepository;
     this.playerRepository = dependencies.playerRepository;
@@ -82,72 +106,78 @@ class JudgeService extends UserService {
   }
 
   /**
-   * Authenticate judge with competition context
-   * @param {string} username - Judge username
+   * Authenticate a judge by email.
+   *
+   * Judges used to sign in with a username the admin generated from the slot
+   * (`J1-M-U14-1`). Two competitions produced the same string for two
+   * different people and the lookup was global, so a judge could be refused
+   * their own account. Sign-in is now the person's own address, like every
+   * other role.
+   *
+   * Signing in with no assignments succeeds and yields a token with NO
+   * competition claim — the judge sees an empty dashboard until an admin puts
+   * them on a panel, which is the whole access model.
+   *
+   * @param {string} email - Judge email
    * @param {string} password - Judge password
-   * @returns {Promise<Object>} { judge, token, competition }
+   * @returns {Promise<Object>} { judge, token, competition, competitions }
    * @throws {AuthenticationError} If credentials invalid
-   * @throws {AuthorizationError} If not assigned to competition
    */
-  async loginJudge(username, password) {
+  async loginJudge(email, password) {
     try {
-      // Find judge by username (case-insensitive) - gets one record.
-      // `password` is `select: false` on the Judge schema, so it must be
-      // requested explicitly here or every judge login fails.
-      // MED-1: the lockout counters are `select: false`, so request them here
-      // alongside the password or enforcement silently does nothing.
-      const judge = await this.judgeRepository.findByUsername(
-        username.toLowerCase(),
+      const normalizedEmail = String(email || '').trim().toLowerCase();
+
+      // `password` and the lockout counters are `select: false` on the
+      // account schema, so they must be requested explicitly or authentication
+      // silently sees nothing to check.
+      const account = await this.judgeAccountRepository.findByEmail(
+        normalizedEmail,
         { select: '+password +loginAttempts +lockUntil' }
       );
 
-      if (!judge) {
-        // LOW-4: equalize timing so an unknown username is not distinguishable
+      if (!account) {
+        // LOW-4: equalize timing so an unknown address is not distinguishable
         // from a wrong password by response latency.
         await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
-        this.logger.warn('Judge login failed: Judge not found', { username });
+        this.logger.warn('Judge login failed: account not found', { email: normalizedEmail });
         throw new AuthenticationError('Invalid credentials');
       }
 
-      // Check if active — treat missing isActive as inactive only when explicitly false
-      if (judge.isActive === false) {
+      if (account.isActive === false) {
         this.logger.warn('Judge login failed: Account inactive', {
-          judgeId: judge._id,
-          username
+          judgeAccountId: account._id,
+          email: normalizedEmail,
         });
         throw new AuthenticationError('Account is inactive');
       }
 
-      // MED-1: judge credentials were publicly disclosed by CRIT-2, so the
-      // password is the only remaining barrier on this account. Refuse a locked
-      // account before spending a comparison.
-      const lockout = getLockoutState(judge);
+      // MED-1: refuse a locked account before spending a comparison.
+      const lockout = getLockoutState(account);
       if (lockout.isLocked) {
         this.logger.warn('Judge login failed: Account locked', {
-          judgeId: judge._id,
-          username,
+          judgeAccountId: account._id,
+          email: normalizedEmail,
           remainingMinutes: lockout.remainingMinutes,
         });
         throw new AuthenticationError(lockoutMessage(lockout.remainingMinutes));
       }
 
-      // Verify password
-      const isPasswordValid = await bcrypt.compare(password, judge.password);
+      const isPasswordValid = await bcrypt.compare(password || '', account.password || '');
 
       if (!isPasswordValid) {
-        const next = registerFailedAttempt(judge, {
+        const next = registerFailedAttempt(account, {
           maxAttempts: judgeSecuritySetting('security.maxLoginAttempts', DEFAULT_MAX_LOGIN_ATTEMPTS),
           lockoutMinutes: judgeSecuritySetting('security.lockoutDuration', DEFAULT_LOCKOUT_MINUTES),
         });
 
-        await this.persistJudgeLockoutState(judge._id, {
+        await this.persistJudgeLockoutState(account._id, {
           loginAttempts: next.loginAttempts,
           lockUntil: next.lockUntil,
         });
 
         this.logger.warn('Judge login failed: Invalid password', {
-          judgeId: judge._id,
-          username,
+          judgeAccountId: account._id,
+          email: normalizedEmail,
           attempts: next.loginAttempts,
           locked: next.isLocked,
         });
@@ -159,271 +189,174 @@ class JudgeService extends UserService {
       }
 
       // Clear the counter on success so nobody carries a stale tally forward.
-      if (judge.loginAttempts || judge.lockUntil) {
-        await this.persistJudgeLockoutState(judge._id, clearedLockoutState());
+      if (account.loginAttempts || account.lockUntil) {
+        await this.persistJudgeLockoutState(account._id, clearedLockoutState());
       }
 
-      // Use judge's assigned competition
-      const competitionId = judge.competition;
+      const assignments = await loadAssignments(this.judgeRepository, account._id);
+      const competitionIds = competitionsFor(assignments);
 
-      // Get competition details
-      const competition = await this.competitionRepository.findById(competitionId);
-      
-      if (!competition) {
-        throw new NotFoundError('Competition');
-      }
+      // A judge assigned to exactly one meet lands straight in it. Assigned to
+      // several, they start in the most recent and can switch; assigned to
+      // none, there is no competition context to hand out at all.
+      const activeCompetitionId = competitionIds[0] || null;
+      const competitions = competitionIds.length > 0
+        ? await this.competitionRepository.find(
+          { _id: { $in: competitionIds } },
+          { select: '_id name level place startDate endDate status apparatusConfig' }
+        )
+        : [];
+      const competition = competitions.find(
+        (c) => String(c._id) === String(activeCompetitionId)
+      ) || null;
 
-      // Find ALL judge records with the same username and competition (for multi-assignment support)
-      const allAssignments = await this.judgeRepository.find({
-        username: username.toLowerCase(),
-        competition: competitionId,
-        isActive: { $ne: false } // Only include active assignments
-      });
-
-      this.logger.info('Judge logged in successfully', { 
-        judgeId: judge._id, 
-        competitionId,
-        username,
-        totalAssignments: allAssignments.length,
-        ageGroups: [...new Set(allAssignments.map(a => a.ageGroup))],
-        genders: [...new Set(allAssignments.map(a => a.gender))]
-      });
-
-      // Generate token with competition context
-      const token = this.tokenService.generateToken(
-        judge._id, 
-        'judge', 
-        competitionId
+      const activeAssignments = assignments.filter(
+        (a) => String(a.competition) === String(activeCompetitionId)
       );
+
+      const token = this.tokenService.generateToken(
+        String(account._id),
+        'judge',
+        activeCompetitionId ? String(activeCompetitionId) : null
+      );
+
+      this.logger.info('Judge logged in successfully', {
+        judgeAccountId: account._id,
+        email: normalizedEmail,
+        competitionId: activeCompetitionId,
+        totalAssignments: assignments.length,
+        competitions: competitionIds.length,
+      });
+
+      const primary = activeAssignments[0] || null;
 
       return {
         judge: {
-          _id: judge._id,
-          name: judge.name,
-          username: judge.username,
-          judgeType: judge.judgeType,
-          judgeNo: judge.judgeNo,
-          ageGroup: judge.ageGroup,
-          gender: judge.gender,
-          competitionTypes: judge.competitionTypes,
-          // NEW: Include all assignments for this judge
-          allAssignments: allAssignments.map(a => ({
-            _id: a._id,
-            gender: a.gender,
-            ageGroup: a.ageGroup,
-            competitionTypes: a.competitionTypes,
-            apparatus: a.apparatus,
-            judgeType: a.judgeType,
-            judgeNo: a.judgeNo
-          }))
+          _id: account._id,
+          name: account.name,
+          email: account.email,
+          mustResetPassword: !!account.mustResetPassword,
+          competition: activeCompetitionId,
+          // Convenience copies of the primary seat. The authoritative answer
+          // for "which role am I in THIS category" is allAssignments — the
+          // server resolves it per category and ignores anything the client
+          // asserts.
+          judgeType: primary?.judgeType || null,
+          judgeNo: primary?.judgeNo || null,
+          gender: primary?.gender || null,
+          ageGroup: primary?.ageGroup || null,
+          competitionTypes: primary?.competitionTypes || [],
+          allAssignments: activeAssignments.map(toClientAssignment),
         },
         token,
-        competition: {
-          _id: competition._id,
-          name: competition.name,
-          level: competition.level,
-          place: competition.place,
-          startDate: competition.startDate,
-          endDate: competition.endDate,
-          status: competition.status,
-          apparatusConfig: competition.apparatusConfig
-        }
+        competition,
+        competitions,
       };
     } catch (error) {
-      if (error instanceof AuthenticationError || 
-          error instanceof AuthorizationError || 
+      if (error instanceof AuthenticationError ||
+          error instanceof AuthorizationError ||
           error instanceof NotFoundError) {
         throw error;
       }
-      this.logger.error('Judge login error', { 
-        username, 
-        error: error.message 
+      this.logger.error('Judge login error', {
+        email,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Get judge profile
-   * @param {string} judgeId - Judge ID
-   * @returns {Promise<Object>} Judge profile
+   * Assignments held by this account, optionally within one competition.
+   * @param {string} judgeAccountId
+   * @param {string} [competitionId]
+   * @returns {Promise<Array>}
    */
-  async getJudgeProfile(judgeId) {
-    try {
-      const judge = await this.judgeRepository.findById(judgeId, {
-        populate: 'competition'
-      });
-
-      if (!judge) {
-        throw new NotFoundError('Judge');
-      }
-
-      // Remove password from response
-      const { password, ...profile } = judge;
-
-      return profile;
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Get judge profile error', { 
-        judgeId, 
-        error: error.message 
-      });
-      throw error;
-    }
+  async getAssignments(judgeAccountId, competitionId = null) {
+    return loadAssignments(this.judgeRepository, judgeAccountId, competitionId);
   }
 
   /**
-   * Update judge profile
-   * @param {string} judgeId - Judge ID
-   * @param {Object} updates - Profile updates
-   * @returns {Promise<Object>} Updated profile
+   * Competitions this judge is assigned to.
+   * @param {string} judgeAccountId
+   * @returns {Promise<Array>} Assigned competitions (empty when unassigned)
    */
-  async updateJudgeProfile(judgeId, updates) {
+  async getAssignedCompetitions(judgeAccountId) {
     try {
-      // Prevent updating sensitive fields
-      const { 
-        password, 
-        competition, 
-        judgeNo, 
-        judgeType, 
-        ...allowedUpdates 
-      } = updates;
+      const assignments = await this.getAssignments(judgeAccountId);
+      const competitionIds = competitionsFor(assignments);
+      if (competitionIds.length === 0) return [];
 
-      const updatedJudge = await this.judgeRepository.updateById(
-        judgeId, 
-        allowedUpdates
-      );
-
-      if (!updatedJudge) {
-        throw new NotFoundError('Judge');
-      }
-
-      // Remove password from response
-      const { password: _, ...profile } = updatedJudge;
-
-      // Invalidate cache
-      if (this.cacheService) {
-        this.cacheService.delete(`user:judge:${judgeId}`);
-      }
-
-      this.logger.info('Judge profile updated', { 
-        judgeId, 
-        updatedFields: Object.keys(allowedUpdates) 
-      });
-
-      return profile;
+      return await this.competitionRepository.find({ _id: { $in: competitionIds } });
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Update judge profile error', { 
-        judgeId, 
-        error: error.message 
+      this.logger.error('Get assigned competitions error', {
+        judgeAccountId,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Get assigned competitions for judge
-   * @param {string} judgeId - Judge ID
-   * @returns {Promise<Array>} Assigned competitions
-   */
-  async getAssignedCompetitions(judgeId) {
-    try {
-      const judge = await this.judgeRepository.findById(judgeId, {
-        populate: 'competition'
-      });
-
-      if (!judge) {
-        throw new NotFoundError('Judge');
-      }
-
-      // Return as array for consistency (judge has single competition)
-      return judge.competition ? [judge.competition] : [];
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Get assigned competitions error', { 
-        judgeId, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Set competition context (generate new token)
-   * @param {string} judgeId - Judge ID
-   * @param {string} competitionId - Competition ID
+   * Switch the judge's active competition, issuing a token scoped to it.
+   *
+   * @param {string} judgeAccountId
+   * @param {string} competitionId
    * @returns {Promise<Object>} { token, competition }
+   * @throws {AuthorizationError} If the judge holds no seat at that meet
    */
-  async setCompetitionContext(judgeId, competitionId) {
+  async setCompetitionContext(judgeAccountId, competitionId) {
     try {
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge) {
-        throw new NotFoundError('Judge');
-      }
+      const assignments = await this.getAssignments(judgeAccountId, competitionId);
 
-      // Verify assignment
-      if (judge.competition.toString() !== competitionId.toString()) {
+      if (assignments.length === 0) {
         throw new AuthorizationError('Not assigned to this competition');
       }
 
       const competition = await this.competitionRepository.findById(competitionId);
-      
       if (!competition) {
         throw new NotFoundError('Competition');
       }
 
-      // Generate new token with competition context
+      // The third argument is the competition id itself, not an object holding
+      // one — TokenService.generateToken spreads `{ competitionId }` into the
+      // claim, so passing an object produced a claim no consumer could read.
       const token = this.tokenService.generateToken(
-        judgeId, 
-        'judge', 
-        { competitionId }
+        String(judgeAccountId),
+        'judge',
+        String(competitionId)
       );
 
-      this.logger.info('Competition context set', { judgeId, competitionId });
+      this.logger.info('Competition context set', { judgeAccountId, competitionId });
 
       return { token, competition };
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      this.logger.error('Set competition context error', { 
-        judgeId, 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Set competition context error', {
+        judgeAccountId,
+        competitionId,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Get competition details for judge
-   * @param {string} judgeId - Judge ID
-   * @param {string} competitionId - Competition ID
-   * @returns {Promise<Object>} Competition details
+   * Competition details, for a judge assigned to it.
+   * @param {string} judgeAccountId
+   * @param {string} competitionId
+   * @returns {Promise<Object>}
    */
-  async getCompetitionDetails(judgeId, competitionId) {
+  async getCompetitionDetails(judgeAccountId, competitionId) {
     try {
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge) {
-        throw new NotFoundError('Judge');
-      }
-
-      // Verify access
-      if (judge.competition.toString() !== competitionId.toString()) {
+      const assignments = await this.getAssignments(judgeAccountId, competitionId);
+      if (assignments.length === 0) {
         throw new AuthorizationError('Not assigned to this competition');
       }
 
       const competition = await this.competitionRepository.findById(competitionId);
-      
       if (!competition) {
         throw new NotFoundError('Competition');
       }
@@ -433,43 +366,47 @@ class JudgeService extends UserService {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      this.logger.error('Get competition details error', { 
-        judgeId, 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Get competition details error', {
+        judgeAccountId,
+        competitionId,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Get teams available for scoring (filtered by assigned age group)
-   * @param {string} judgeId - Judge ID
-   * @param {string} competitionId - Competition ID
-   * @param {string} ageGroup - Age group filter (optional)
+   * Teams the judge may score, in one of their categories.
+   *
+   * @param {string} judgeAccountId
+   * @param {string} competitionId
+   * @param {string} [ageGroup] - Which of the judge's categories to list
    * @returns {Promise<Array>} Teams with scoring status
    */
-  async getAvailableTeams(judgeId, competitionId, ageGroup = null) {
+  async getAvailableTeams(judgeAccountId, competitionId, ageGroup = null) {
     try {
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge) {
-        throw new NotFoundError('Judge');
+      const assignments = await this.getAssignments(judgeAccountId, competitionId);
+
+      // Registered, but on no panel. Not an error — there is simply nothing to
+      // judge. Returning an empty list keeps the dashboard honest instead of
+      // showing an error the judge cannot act on.
+      if (assignments.length === 0) {
+        return [];
       }
 
-      // Use judge's assigned age group if not provided
-      const targetAgeGroup = ageGroup || judge.ageGroup;
+      const assignment = ageGroup
+        ? assignments.find((a) => a.ageGroup === ageGroup)
+        : assignments[0];
 
-      // Check if judge is assigned to this age group
-      if (judge.ageGroup !== targetAgeGroup) {
+      if (!assignment) {
         throw new AuthorizationError('Not assigned to this age group');
       }
 
       // Get teams for age group and gender
       const teams = await this.teamRepository.find({
         competition: competitionId,
-        ageGroup: targetAgeGroup,
-        gender: judge.gender,
+        ageGroup: assignment.ageGroup,
+        gender: assignment.gender,
         isSubmitted: true
       }, {
         // Same CRIT-4 class as getTeamPlayers: `populate: 'coach'` with no
@@ -496,7 +433,7 @@ class JudgeService extends UserService {
           { select: `team ${SUBMITTED_TEAM_PLAYER_FIELDS}` }
         ),
         this.scoreRepository.find(
-          { team: { $in: teamIds }, judge: judgeId },
+          { team: { $in: teamIds }, judge: judgeAccountId },
           { select: 'team' }
         ),
       ]);
@@ -542,30 +479,27 @@ class JudgeService extends UserService {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      this.logger.error('Get available teams error', { 
-        judgeId, 
-        competitionId, 
-        ageGroup, 
-        error: error.message 
+      this.logger.error('Get available teams error', {
+        judgeAccountId,
+        competitionId,
+        ageGroup,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Get team players with existing scores
-   * @param {string} judgeId - Judge ID
-   * @param {string} teamId - Team ID
+   * A team's entered athletes, with this judge's scoring status per athlete.
+   *
+   * @param {string} judgeAccountId
+   * @param {string} teamId
+   * @param {Object} [category] - { gender, ageGroup } when the judge holds
+   *   several seats and the client knows which one is on screen
    * @returns {Promise<Object>} { team, players }
    */
-  async getTeamPlayers(judgeId, teamId) {
+  async getTeamPlayers(judgeAccountId, teamId, category = {}) {
     try {
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge) {
-        throw new NotFoundError('Judge');
-      }
-
       const team = await this.teamRepository.findById(teamId, {
         populate: 'coach competition'
       });
@@ -574,42 +508,45 @@ class JudgeService extends UserService {
         throw new NotFoundError('Team');
       }
 
-      // Verify the coach has actually entered this team — final submit AND
-      // fees paid (see team-visibility.util for why those are one flag).
-      //
-      // This used to be wrapped in `if (compId) { if (comp) { ... } }`, so a
-      // judge with no competition on their assignment, or one whose competition
-      // had been deleted, skipped the check entirely and got the roster of a
-      // team the coach was still drafting. A missing competition is now a
-      // refusal, not a bypass: there is no state in which "we could not tell"
-      // should resolve to "show it".
-      const compId = judge.competition?._id || judge.competition;
+      const assignments = await this.getAssignments(judgeAccountId);
+
+      // A judge with no seat has no business reading a roster of minors.
+      // Previously this fell out of a missing competition and was treated as
+      // "we could not tell" — which resolved to "show it".
+      if (assignments.length === 0) {
+        throw new AuthorizationError('Judge is not assigned to a competition');
+      }
+
+      const assignment = resolveAssignment(assignments, {
+        gender: category.gender,
+        ageGroup: category.ageGroup,
+      }) || assignments[0];
+
+      const compId = assignment.competition?._id || assignment.competition;
       if (!compId) {
         throw new AuthorizationError('Judge is not assigned to a competition');
       }
 
+      // Verify the coach has actually entered this team — final submit AND
+      // fees paid (see team-visibility.util for why those are one flag).
       const comp = await this.competitionRepository.findById(compId);
       const registration = findSubmittedRegistration(comp, teamId);
       if (!registration) {
         throw new AuthorizationError('Team has not been submitted by coach yet');
       }
 
-      // Find score documents for this team and judge's category
-      const scoreQuery = {
+      // Find score documents for this team and the judge's category
+      const scores = await this.scoreRepository.find({
         teamId: teamId,
-        gender: judge.gender,
-        ageGroup: judge.ageGroup
-      };
-      if (judge.competition) {
-        scoreQuery.competition = judge.competition._id || judge.competition;
-      }
-
-      const scores = await this.scoreRepository.find(scoreQuery);
+        gender: assignment.gender,
+        ageGroup: assignment.ageGroup,
+        competition: compId,
+      });
 
       // Task 3.2: was a second hand-written copy of the panel-role mapping.
       // If it ever disagreed with the one used to WRITE slips, a judge would
       // submit into one slot and then be told they had not scored the player.
-      const judgeInfo = getJudgeRoleMapping(judge.judgeType);
+      const judgeInfo = getJudgeRoleMapping(assignment.judgeType);
       const scoreMap = {};
 
       for (const scoreDoc of scores || []) {
@@ -687,10 +624,10 @@ class JudgeService extends UserService {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      this.logger.error('Get team players error', { 
-        judgeId, 
-        teamId, 
-        error: error.message 
+      this.logger.error('Get team players error', {
+        judgeAccountId,
+        teamId,
+        error: error.message
       });
       throw error;
     }
@@ -698,43 +635,43 @@ class JudgeService extends UserService {
 
   /**
    * Save individual score
-   * @param {string} judgeId - Judge ID
+   * @param {string} judgeAccountId
    * @param {Object} scoreData - Score data
    * @returns {Promise<Object>} Saved score
    */
-  async saveIndividualScore(judgeId, scoreData) {
+  async saveIndividualScore(judgeAccountId, scoreData) {
     try {
       const { playerId, teamId, competitionId, score, notes } = scoreData;
 
-      // Verify judge assignment
-      const judge = await this.judgeRepository.findById(judgeId);
-      
-      if (!judge || judge.competition.toString() !== competitionId.toString()) {
-        throw new AuthorizationError('Not authorized to score this competition');
-      }
-
-      // Get player and team
       const player = await this.playerRepository.findById(playerId);
-      
+
       if (!player) {
         throw new NotFoundError('Player');
       }
 
       const team = await this.teamRepository.findById(teamId);
-      
+
       if (!team) {
         throw new NotFoundError('Team');
       }
 
-      // Check if judge assigned to this age group and gender
-      if (judge.ageGroup !== team.ageGroup || judge.gender !== team.gender) {
+      // The judge must hold a seat covering exactly the category this team is
+      // being scored in — not merely "a seat at this meet".
+      const assignments = await this.getAssignments(judgeAccountId, competitionId);
+      const assignment = resolveAssignment(assignments, {
+        competition: competitionId,
+        gender: team.gender,
+        ageGroup: team.ageGroup,
+      });
+
+      if (!assignment) {
         throw new AuthorizationError('Not assigned to this age group/gender');
       }
 
       // Check if already scored
       const existingScore = await this.scoreRepository.findOne({
         player: playerId,
-        judge: judgeId,
+        judge: judgeAccountId,
         competition: competitionId
       });
 
@@ -751,7 +688,7 @@ class JudgeService extends UserService {
       const savedScore = await this.scoreRepository.create({
         player: playerId,
         team: teamId,
-        judge: judgeId,
+        judge: judgeAccountId,
         competition: competitionId,
         ageGroup: team.ageGroup,
         gender: team.gender,
@@ -762,7 +699,7 @@ class JudgeService extends UserService {
       });
 
       this.logger.info('Score saved', {
-        judgeId,
+        judgeAccountId,
         playerId,
         teamId,
         score,
@@ -772,14 +709,14 @@ class JudgeService extends UserService {
       // Emit Socket.IO event
       if (this.socketManager) {
         this.socketManager.emitToRoom(
-          `competition_${competitionId}`, 
-          'score_submitted', 
+          `competition_${competitionId}`,
+          'score_submitted',
           {
             scoreId: savedScore._id,
             playerId,
             teamId,
-            judgeId,
-            judgeType: judge.judgeType,
+            judgeId: judgeAccountId,
+            judgeType: assignment.judgeType,
             ageGroup: team.ageGroup,
             gender: team.gender,
             score: savedScore.score,
@@ -790,15 +727,15 @@ class JudgeService extends UserService {
 
       return savedScore;
     } catch (error) {
-      if (error instanceof AuthorizationError || 
-          error instanceof NotFoundError || 
+      if (error instanceof AuthorizationError ||
+          error instanceof NotFoundError ||
           error instanceof BusinessRuleError) {
         throw error;
       }
-      this.logger.error('Save individual score error', { 
-        judgeId, 
-        scoreData, 
-        error: error.message 
+      this.logger.error('Save individual score error', {
+        judgeAccountId,
+        scoreData,
+        error: error.message
       });
       throw error;
     }
@@ -806,21 +743,21 @@ class JudgeService extends UserService {
 
   /**
    * Update individual score
-   * @param {string} judgeId - Judge ID
+   * @param {string} judgeAccountId
    * @param {string} scoreId - Score ID
    * @param {Object} updates - Score updates
    * @returns {Promise<Object>} Updated score
    */
-  async updateIndividualScore(judgeId, scoreId, updates) {
+  async updateIndividualScore(judgeAccountId, scoreId, updates) {
     try {
       const score = await this.scoreRepository.findById(scoreId);
-      
+
       if (!score) {
         throw new NotFoundError('Score');
       }
 
       // Verify ownership
-      if (score.judge.toString() !== judgeId.toString()) {
+      if (score.judge.toString() !== judgeAccountId.toString()) {
         throw new AuthorizationError('Not authorized to update this score');
       }
 
@@ -842,22 +779,22 @@ class JudgeService extends UserService {
         updatedAt: new Date()
       });
 
-      this.logger.info('Score updated', { 
-        judgeId, 
-        scoreId, 
-        updates: Object.keys(updates) 
+      this.logger.info('Score updated', {
+        judgeAccountId,
+        scoreId,
+        updates: Object.keys(updates)
       });
 
       // Emit Socket.IO event
       if (this.socketManager) {
         this.socketManager.emitToRoom(
-          `competition_${score.competition}`, 
-          'score_updated', 
+          `competition_${score.competition}`,
+          'score_updated',
           {
             scoreId,
             playerId: score.player,
             teamId: score.team,
-            judgeId,
+            judgeId: judgeAccountId,
             newScore: updatedScore.score,
             timestamp: updatedScore.updatedAt
           }
@@ -866,15 +803,15 @@ class JudgeService extends UserService {
 
       return updatedScore;
     } catch (error) {
-      if (error instanceof NotFoundError || 
-          error instanceof AuthorizationError || 
+      if (error instanceof NotFoundError ||
+          error instanceof AuthorizationError ||
           error instanceof BusinessRuleError) {
         throw error;
       }
-      this.logger.error('Update individual score error', { 
-        judgeId, 
-        scoreId, 
-        error: error.message 
+      this.logger.error('Update individual score error', {
+        judgeAccountId,
+        scoreId,
+        error: error.message
       });
       throw error;
     }
@@ -882,14 +819,14 @@ class JudgeService extends UserService {
 
   /**
    * Get scores submitted by judge
-   * @param {string} judgeId - Judge ID
+   * @param {string} judgeAccountId
    * @param {string} competitionId - Competition ID
    * @returns {Promise<Array>} Scores
    */
-  async getMyScores(judgeId, competitionId) {
+  async getMyScores(judgeAccountId, competitionId) {
     try {
       const scores = await this.scoreRepository.find({
-        judge: judgeId,
+        judge: judgeAccountId,
         competition: competitionId
       }, {
         populate: ['player', 'team'],
@@ -898,10 +835,10 @@ class JudgeService extends UserService {
 
       return scores;
     } catch (error) {
-      this.logger.error('Get my scores error', { 
-        judgeId, 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Get my scores error', {
+        judgeAccountId,
+        competitionId,
+        error: error.message
       });
       throw error;
     }
@@ -915,27 +852,24 @@ class JudgeService extends UserService {
    * neither is wanted for a counter bump, and a validation error on an
    * unrelated legacy field must never turn a failed login into a 500.
    *
-   * NOTE: a judge may hold several documents (one per assignment) sharing a
-   * username. `findByUsername` authenticates against one of them, so the
-   * counter is kept on that record. This is a known limitation: an attacker
-   * could get the full attempt budget per assignment. Recorded rather than
-   * silently ignored — closing it means keying lockout on the username, which
-   * is a larger change than this task.
+   * The counter lives on the ACCOUNT, so a judge holding several seats now has
+   * one attempt budget rather than one per seat — the limitation this method
+   * used to document is closed.
    *
    * Failures are logged and swallowed: losing an increment beats breaking
    * judge login during an event.
    *
-   * @param {*} judgeId
+   * @param {*} judgeAccountId
    * @param {{loginAttempts: number, lockUntil: Date|null}} state
    * @returns {Promise<void>}
    */
-  async persistJudgeLockoutState(judgeId, state) {
+  async persistJudgeLockoutState(judgeAccountId, state) {
     try {
-      if (!this.judgeRepository?.model?.updateOne) return;
-      await this.judgeRepository.model.updateOne({ _id: judgeId }, { $set: state });
+      if (!this.judgeAccountRepository?.model?.updateOne) return;
+      await this.judgeAccountRepository.model.updateOne({ _id: judgeAccountId }, { $set: state });
     } catch (error) {
       this.logger.error('Failed to persist judge lockout state', {
-        judgeId: String(judgeId),
+        judgeAccountId: String(judgeAccountId),
         error: error.message,
       });
     }
@@ -943,4 +877,3 @@ class JudgeService extends UserService {
 }
 
 module.exports = JudgeService;
-
