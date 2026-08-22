@@ -24,7 +24,7 @@ import {
   J, EASE_OUT, Orb, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
   playerIdOf, normalizeBreakdown,
 } from './judgeShared';
-import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
+import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
 const CopPdfModal = ({ isOpen, onClose }) => {
@@ -224,6 +224,20 @@ const JudgeSlip = () => {
   const judgeInfo = useJudgeInfo();
   const { panelScores, setPanelScores, finalized, socket, isConnected } = useJudgePanelData({ judgeInfo, session });
 
+  /**
+   * The seat this judge holds for the category being scored. A judge working
+   * two panels is a different role in each, so the slip, the panel lookup and
+   * the badge all have to follow the category — not the account's first seat.
+   */
+  const mySeat = resolveJudgeSeat(judgeInfo, {
+    gender: selectedGender,
+    ageGroup: selectedAgeGroup,
+    competitionType: selectedCompetitionType,
+    apparatus: selectedApparatus,
+  });
+  const myJudgeType = mySeat?.judgeType;
+
+
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showCopModal, setShowCopModal] = useState(false);
@@ -373,7 +387,7 @@ const JudgeSlip = () => {
   // on this page instead of redirecting and leave submitted/editable as-is.
   useEffect(() => {
     if (!judgeInfo || restoredRef.current) return;
-    const myScore = panelScores[judgeInfo.judgeType];
+    const myScore = panelScores[myJudgeType];
     if (!myScore) return;
     restoredRef.current = true;
     if (myScore.breakdown) {
@@ -475,7 +489,7 @@ const JudgeSlip = () => {
       };
       const scoreData = {
         playerId: playerIdOf(selectedPlayer), playerName: selectedPlayer.name,
-        judgeType: judgeInfo.judgeType, judgeNo: judgeInfo.judgeNo, score: parseFloat(finalScore),
+        judgeType: myJudgeType, judgeNo: mySeat?.judgeNo, score: parseFloat(finalScore),
         teamId: selectedTeam._id,
         gender: selectedGender || judgeInfo.gender,
         ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
@@ -498,14 +512,14 @@ const JudgeSlip = () => {
       if (socket?.connected) {
         socket.emit('score_update', {
           ...scoreData,
-          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`
+          roomId: `scoring_${selectedGender || mySeat?.gender}_${selectedAgeGroup || mySeat?.ageGroup}_${selectedCompetitionType}`
         });
       }
 
       setPanelScores(prev => ({
         ...prev,
-        [judgeInfo.judgeType]: {
-          judgeType: judgeInfo.judgeType,
+        [myJudgeType]: {
+          judgeType: myJudgeType,
           score: finalScore,
           breakdown: normalizeBreakdown(breakdown, finalScore),
           timestamp: new Date().toISOString()
@@ -564,7 +578,7 @@ const JudgeSlip = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{judgeInfo.judgeType}</p>
+                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">

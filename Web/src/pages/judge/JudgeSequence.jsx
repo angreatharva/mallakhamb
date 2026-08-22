@@ -6,6 +6,7 @@ import { ArrowLeft, ListOrdered, Users, ChevronDown, ChevronRight, Info, Save } 
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
@@ -94,7 +95,11 @@ const JudgeSequence = () => {
     }
     try {
       const judge = JSON.parse(storedJudge);
-      if (!SEQUENCE_JUDGE_TYPES.includes(judge.judgeType)) {
+      // The role that matters is the one held in THIS category: a judge can
+      // chair Under-14 Male and merely score Under-16 Female, and only the
+      // first of those may re-sequence.
+      const seat = resolveJudgeSeat(judge, category);
+      if (!SEQUENCE_JUDGE_TYPES.includes(seat?.judgeType)) {
         toast.error('Only the Senior Judge or Scorer can set the running order');
         navigate('/judge/dashboard');
         return;
@@ -106,7 +111,7 @@ const JudgeSequence = () => {
       toast.error('Invalid session. Please login again.');
       navigate('/judge/login');
     }
-  }, [navigate]);
+  }, [navigate, category]);
 
   const competitionId = judgeInfo?.competition?._id || judgeInfo?.competition;
 
@@ -234,7 +239,7 @@ const JudgeSequence = () => {
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">Running Order</p>
-            <p className="text-xs truncate" style={{ color: J.purpleLight }}>{judgeInfo.judgeType}</p>
+            <p className="text-xs truncate" style={{ color: J.purpleLight }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
           </div>
           {saving && <span className="ml-auto text-xs text-white/40">Saving…</span>}
         </div>

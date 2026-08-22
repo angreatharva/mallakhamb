@@ -125,6 +125,54 @@ export function useJudgeSession(locationState) {
 }
 
 /**
+ * Which seat does this judge hold for the category on screen?
+ *
+ * A judge account can sit on several panels — Senior Judge in Under-14 Male,
+ * Judge 2 in Under-16 Female — so "my role" is a property of the category
+ * being scored, not of the account. The server resolves it the same way and
+ * ignores whatever the client asserts (see admin.controller saveScores), so
+ * this exists to keep the UI honest: which slip is mine, which controls I get,
+ * what my badge says.
+ *
+ * Falls back to the account's primary seat, which is the only seat for the
+ * overwhelming majority of judges.
+ *
+ * @param {object|null} judgeInfo - The stored judge, with `allAssignments`
+ * @param {object} category - { gender, ageGroup, competitionType, apparatus }
+ * @returns {object|null}
+ */
+export function resolveJudgeSeat(judgeInfo, category = {}) {
+  if (!judgeInfo) return null;
+
+  const seats = judgeInfo.allAssignments?.length ? judgeInfo.allAssignments : [judgeInfo];
+
+  const match = seats.find((seat) => {
+    if (category.gender && seat.gender !== category.gender) return false;
+    if (category.ageGroup && seat.ageGroup !== category.ageGroup) return false;
+    if (category.competitionType) {
+      const types = Array.isArray(seat.competitionTypes) ? seat.competitionTypes : [];
+      // An empty list means "every category in this gender/age group" — a
+      // Scorer is routinely created without competition types.
+      if (types.length > 0 && !types.includes(category.competitionType)) return false;
+    }
+    if (category.apparatus && seat.apparatus && seat.apparatus !== category.apparatus) return false;
+    return true;
+  });
+
+  return match || seats[0] || null;
+}
+
+/**
+ * The panel role this judge holds for the category on screen.
+ * @param {object|null} judgeInfo
+ * @param {object} category
+ * @returns {string|null}
+ */
+export function judgeRoleFor(judgeInfo, category = {}) {
+  return resolveJudgeSeat(judgeInfo, category)?.judgeType || judgeInfo?.judgeType || null;
+}
+
+/**
  * Read the logged-in judge from storage, bouncing to login if it is missing
  * or unreadable.
  */
@@ -332,7 +380,7 @@ export function useJudgePanelData({ judgeInfo, session }) {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      const roomId = `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`;
+      const roomId = `scoring_${selectedGender || judgeInfo.gender}_${selectedAgeGroup || judgeInfo.ageGroup}_${selectedCompetitionType}`;
       if (joinedRoomRef.current !== roomId) {
         newSocket.emit('join_scoring_room', { roomId });
         joinedRoomRef.current = roomId;
@@ -414,6 +462,13 @@ export function useJudgePanelData({ judgeInfo, session }) {
     effectivePanelSize,
     orderedPanelEntries,
     allPanelSubmitted: effectivePanelSize > 0 && panelScoresCount >= effectivePanelSize,
-    isSeniorJudge: judgeInfo?.judgeType === 'Senior Judge',
+    // Senior Judge OF THIS CATEGORY. A judge who chairs one panel and merely
+    // scores on another must not get the chief's controls on the second.
+    isSeniorJudge: resolveJudgeSeat(judgeInfo, {
+      gender: selectedGender,
+      ageGroup: selectedAgeGroup,
+      competitionType: selectedCompetitionType,
+      apparatus: selectedApparatus,
+    })?.judgeType === 'Senior Judge',
   };
 }

@@ -34,7 +34,7 @@ import {
   J, EASE_OUT, Orb, LiveDot, MismatchModal, SrEditModal,
   SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown,
 } from './judgeShared';
-import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
+import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
 const JudgePanelReview = () => {
   const navigate = useNavigate();
@@ -55,6 +55,19 @@ const JudgePanelReview = () => {
   } = session;
 
   const judgeInfo = useJudgeInfo();
+
+  /**
+   * The seat held for THIS category. A judge who is Senior Judge on one panel
+   * and an evaluation judge on another gets the chief's controls only where
+   * they actually are the chief.
+   */
+  const mySeat = resolveJudgeSeat(judgeInfo, {
+    gender: selectedGender,
+    ageGroup: selectedAgeGroup,
+    competitionType: selectedCompetitionType,
+    apparatus: selectedApparatus,
+  });
+  const myJudgeType = mySeat?.judgeType;
   const {
     panelScores,
     setPanelScores,
@@ -89,7 +102,7 @@ const JudgePanelReview = () => {
   // the Senior Judge (who resolves it) and any judge whose own slip differs
   // from theirs. A judge who already agrees with the Senior Judge is not part
   // of the disagreement and is left alone.
-  const isMismatchedJudge = panelMismatch.judgesNeedingReview.includes(judgeInfo?.judgeType);
+  const isMismatchedJudge = panelMismatch.judgesNeedingReview.includes(myJudgeType);
   const shouldSeeMismatch = hasMismatch && panelScoresCount > 0 && (isSeniorJudge || isMismatchedJudge);
 
   useEffect(() => {
@@ -161,8 +174,8 @@ const JudgePanelReview = () => {
         judgeNo: judgeInfo.judgeNo,
         score: parseFloat(newTotal),
         teamId: selectedTeam._id,
-        gender: selectedGender || judgeInfo.gender,
-        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        gender: selectedGender || mySeat?.gender,
+        ageGroup: selectedAgeGroup || mySeat?.ageGroup,
         competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         apparatus: selectedApparatus,
@@ -173,7 +186,7 @@ const JudgePanelReview = () => {
       if (socket?.connected) {
         socket.emit('score_update', {
           ...scoreData,
-          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
+          roomId: `scoring_${selectedGender || mySeat?.gender}_${selectedAgeGroup || mySeat?.ageGroup}_${selectedCompetitionType}`,
         });
       }
       setPanelScores((prev) => ({
@@ -212,12 +225,12 @@ const JudgePanelReview = () => {
       const calc = calculateAverageMarks(fields, effectivePanelSize);
       const payload = {
         teamId: selectedTeam._id,
-        gender: selectedGender || judgeInfo.gender,
-        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        gender: selectedGender || mySeat?.gender,
+        ageGroup: selectedAgeGroup || mySeat?.ageGroup,
         competitionType: selectedCompetitionType,
         competitionId: judgeInfo.competition?._id || judgeInfo.competition,
         isFinalSubmit: true,
-        judgeType: judgeInfo.judgeType,
+        judgeType: myJudgeType,
         panelSize: effectivePanelSize,
         playerScores: [{
           playerId: playerIdOf(selectedPlayer),
@@ -233,7 +246,7 @@ const JudgePanelReview = () => {
           panelSize: effectivePanelSize,
           isFinalized: true,
           finalizedAt: new Date().toISOString(),
-          breakdown: panelScores[judgeInfo.judgeType]?.breakdown || {},
+          breakdown: panelScores[myJudgeType]?.breakdown || {},
           judgeSlips: Object.values(panelScores).map((entry) => {
             const roleMap = {
               'Senior Judge': 'SR_JUDGE',
@@ -267,7 +280,7 @@ const JudgePanelReview = () => {
       }
       if (socket?.connected) {
         socket.emit('scores_saved', {
-          roomId: `scoring_${judgeInfo.gender}_${judgeInfo.ageGroup}_${selectedCompetitionType}`,
+          roomId: `scoring_${selectedGender || mySeat?.gender}_${selectedAgeGroup || mySeat?.ageGroup}_${selectedCompetitionType}`,
           playerId: playerIdOf(selectedPlayer),
           scores: { finalScore: calc.average, panelSize: effectivePanelSize },
         });
@@ -309,7 +322,7 @@ const JudgePanelReview = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{judgeInfo.judgeType}</p>
+                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
@@ -399,8 +412,8 @@ const JudgePanelReview = () => {
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#EF4444' }} />
                 <span className="text-sm font-bold text-white">
                   {[
-                    (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[judgeInfo?.judgeType]?.difficulty) && 'Difficulty',
-                    (isSeniorJudge ? panelMismatch.combinationMismatch : panelMismatch.judgeMismatchDetails?.[judgeInfo?.judgeType]?.combination) && 'Combination',
+                    (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.difficulty) && 'Difficulty',
+                    (isSeniorJudge ? panelMismatch.combinationMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.combination) && 'Combination',
                     panelMismatch.toleranceMismatch && 'Tolerance',
                   ].filter(Boolean).join(' · ')} mismatch detected
                 </span>
@@ -410,12 +423,12 @@ const JudgePanelReview = () => {
           )}
 
           {/* Detailed per-judge slips — SR judge sees all cards, others only their own */}
-          {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 0 && (
+          {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 0 && (
             <div className="rounded-xl border p-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
             </div>
           )}
-          {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === judgeInfo?.judgeType) && panelScoresCount > 1 && (
+          {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 1 && (
             <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.15)' }}>
               <Lock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(192,132,252,0.6)' }} />
               <p className="text-xs" style={{ color: 'rgba(192,132,252,0.6)' }}>
@@ -425,9 +438,9 @@ const JudgePanelReview = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-            {(isSeniorJudge ? orderedPanelEntries : orderedPanelEntries.filter(([jt]) => jt === judgeInfo?.judgeType)).map(([judge, data]) => {
+            {(isSeniorJudge ? orderedPanelEntries : orderedPanelEntries.filter(([jt]) => jt === myJudgeType)).map(([judge, data]) => {
               const b = normalizeBreakdown(data.breakdown, data.score);
-              const isYou = judge === judgeInfo?.judgeType;
+              const isYou = judge === myJudgeType;
               const checkedMap = b.combination.checked || {};
               // Slips loaded from the server carry only the section total, so
               // listing "failed" items there would be a guess, not a fact.
@@ -582,7 +595,7 @@ const JudgePanelReview = () => {
         panelMismatch={panelMismatch}
         panelScores={panelScores}
         isSeniorJudge={isSeniorJudge}
-        myJudgeType={judgeInfo?.judgeType}
+        myJudgeType={myJudgeType}
         effectivePanelSize={effectivePanelSize}
         judgeNameMap={judgeNameMap}
       />

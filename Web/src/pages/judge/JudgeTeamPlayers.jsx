@@ -15,6 +15,7 @@ import {
   eventMatchesCategory,
 } from '@/utils/ordering/performanceOrder';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
@@ -380,7 +381,13 @@ const JudgeTeamPlayers = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>{judgeInfo.judgeType}</p>
+              <p className="text-xs truncate" style={{ color: J.purpleLight }}>
+                {resolveJudgeSeat(judgeInfo, {
+                  gender: selectedGender,
+                  ageGroup: selectedAgeGroup,
+                  competitionType: selectedCompetitionType,
+                })?.judgeType}
+              </p>
             </div>
           </div>
           <button onClick={handleLogout}

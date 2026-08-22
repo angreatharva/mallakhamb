@@ -65,6 +65,8 @@ vi.mock('./useJudgePanelData', () => ({
     socket: null,
     isConnected: false,
   }),
+  // Real behaviour, minus the module: a judge with one seat resolves to it.
+  resolveJudgeSeat: (judgeInfo) => judgeInfo,
 }));
 
 vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }));

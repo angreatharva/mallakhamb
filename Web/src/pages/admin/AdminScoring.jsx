@@ -474,7 +474,9 @@ const AdminScoring = () => {
                 teamId: selectedTeam._id, teamName: selectedTeam.name, coachName: selectedTeam.coach?.name, coachEmail: selectedTeam.coach?.email,
                 gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType, timeKeeper, scorer, remarks, isLocked: shouldLock,
                 playerScores: players.map(p => { const r = calculateAverageMarks(scores[p.id]); return { playerId: p.id, playerName: p.name, time: scores[p.id].time, judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 }, executionAverage: r.executionAvg, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied, toleranceUsed: r.tolerance, averageMarks: r.average, deduction: parseFloat(scores[p.id].deduction) || 0, otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0, finalScore: parseFloat(calculateFinalScore(scores[p.id])) }; }),
-                judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, username: j.username }))
+                // Judges hold accounts now: the panel record keeps the
+                // person's address, not the old slot-derived username.
+                judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
             };
             
             // Add competition ID for superadmin
@@ -662,7 +664,7 @@ const AdminScoring = () => {
                                                 {judge.judgeType}
                                             </span>
                                             <p className="font-bold text-white text-sm">{judge.name}</p>
-                                            <p className="text-xs text-white/40">@{judge.username}</p>
+                                            <p className="text-xs text-white/40">{judge.email}</p>
                                         </div>
                                     );
                                 })}

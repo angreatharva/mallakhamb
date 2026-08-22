@@ -490,7 +490,9 @@ const ScorerScoring = () => {
             finalScore: parseFloat(calculateFinalScore(scores[p.id]))
           };
         }),
-        judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, username: j.username }))
+        // Judges hold accounts now, so the panel record keeps the person's
+        // address rather than the slot-derived username it used to stamp here.
+        judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
       };
 
       if (competitionId) {
@@ -633,7 +635,7 @@ const ScorerScoring = () => {
                           {jud.judgeType}
                         </span>
                         <p className="font-bold text-white text-xs truncate">{jud.name}</p>
-                        <p className="text-[10px] text-white/40 truncate">@{jud.username}</p>
+                        <p className="text-[10px] text-white/40 truncate">{jud.email}</p>
                       </div>
                     );
                   })}

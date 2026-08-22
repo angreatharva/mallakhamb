@@ -10,6 +10,7 @@ import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
@@ -362,7 +363,7 @@ const JudgeDashboard = () => {
   // gender rule (Women's competitions exclude Hanging Mallakhamb, §11 / 1.8.2).
   const apparatusOptions = (
     (selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]) || []
-  ).filter(app => isApparatusAllowedForGender(app, judgeInfo.gender));
+  ).filter(app => isApparatusAllowedForGender(app, selectedGender || judgeInfo.gender));
 
   const needsApparatus = apparatusOptions.length > 0;
   const isApparatusSelected = !needsApparatus || !!selectedApparatus;
@@ -370,7 +371,20 @@ const JudgeDashboard = () => {
   const isAgeGroupSelected = availableAgeGroups.length <= 1 || !!selectedAgeGroup;
   const isSelectionComplete = selectedCompetitionType && isApparatusSelected && isGenderSelected && isAgeGroupSelected;
 
-  const canSequence = SEQUENCE_JUDGE_TYPES.includes(judgeInfo.judgeType);
+  /**
+   * The seat held for the category currently selected on this screen. A judge
+   * can chair one panel and merely score on another, so "am I the Senior
+   * Judge" is only answerable once a category is chosen.
+   */
+  const mySeat = resolveJudgeSeat(judgeInfo, {
+    gender: selectedGender || judgeInfo.gender,
+    ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+    competitionType: selectedCompetitionType,
+    apparatus: selectedApparatus,
+  });
+  const myJudgeType = mySeat?.judgeType;
+
+  const canSequence = SEQUENCE_JUDGE_TYPES.includes(myJudgeType);
 
   // Running order first, then the search filter — filtering first would be
   // equivalent here but sorting the full list keeps the positions shown next to
@@ -401,7 +415,7 @@ const JudgeDashboard = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>{judgeInfo.judgeType}</p>
+              <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
             </div>
           </div>
           <button onClick={handleLogout}
@@ -640,16 +654,26 @@ const JudgeDashboard = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
                       .filter(ct => {
-                        // If judge has specific competition types assigned, filter to those
-                        if (judgeInfo.competitionTypes && judgeInfo.competitionTypes.length > 0) {
-                          return judgeInfo.competitionTypes.includes(ct.value);
-                        }
-                        // For scorers without competitionTypes assigned, show all types
-                        if (judgeInfo.judgeType === 'Scorer') {
+                        // Every seat this judge holds in the chosen gender and
+                        // age group has a say: someone seated for Competition I
+                        // and Competition III must be offered both, and a seat
+                        // with no competition types (routine for a Scorer)
+                        // covers all of them.
+                        const seats = (judgeInfo.allAssignments?.length
+                          ? judgeInfo.allAssignments
+                          : [judgeInfo]
+                        ).filter((seat) => {
+                          const gender = selectedGender || judgeInfo.gender;
+                          const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+                          if (gender && seat.gender && seat.gender !== gender) return false;
+                          if (ageGroup && seat.ageGroup && seat.ageGroup !== ageGroup) return false;
                           return true;
-                        }
-                        // For other judges without competitionTypes, use their assigned types
-                        return judgeInfo.competitionTypes?.includes(ct.value);
+                        });
+
+                        return seats.some((seat) => {
+                          const types = seat.competitionTypes || [];
+                          return types.length === 0 || types.includes(ct.value);
+                        });
                       })
                       .map(ct => (
                         <SelectBtn key={ct.value} selected={selectedCompetitionType === ct.value}
