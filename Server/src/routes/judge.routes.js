@@ -33,6 +33,18 @@ function createJudgeRoutes(container) {
     judgeController.login
   );
 
+  /**
+   * @route  POST /api/judge/register
+   * @desc   Judge self-registration, the same way a coach or player registers.
+   * @access Public — a new account holds no assignments, and an account with
+   *         no assignments can read nothing about any competition.
+   */
+  router.post('/register',
+    judgeValidator.register(),
+    handleValidationErrors,
+    judgeController.register
+  );
+
   // Profile Management
   router.get('/profile',
     authenticate,
@@ -46,6 +58,25 @@ function createJudgeRoutes(container) {
     judgeValidator.updateProfile(),
     handleValidationErrors,
     judgeController.updateProfile
+  );
+
+  router.put('/profile/password',
+    authenticate,
+    requireJudge,
+    judgeValidator.changePassword(),
+    handleValidationErrors,
+    judgeController.changePassword
+  );
+
+  /**
+   * @route  GET /api/judge/assignments
+   * @desc   Every panel this judge sits on, across competitions.
+   * @access The judge themselves.
+   */
+  router.get('/assignments',
+    authenticate,
+    requireJudge,
+    judgeController.getAssignments
   );
 
   // Competition Management

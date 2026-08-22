@@ -7,7 +7,9 @@
  */
 
 const { body, param, query } = require('express-validator');
-const { email, mongoId } = require('./common.validator');
+const { email, mongoId, password, phone } = require('./common.validator');
+
+const CERTIFICATION_LEVELS = ['National', 'State', 'District', 'Club'];
 
 /**
  * Validate judge login
@@ -28,7 +30,37 @@ const login = () => {
 };
 
 /**
- * Validate profile update
+ * Validate judge self-registration.
+ *
+ * Same rules as the coach registration form (coach.routes.js) so the two
+ * cannot tell a user different things about the same password.
+ */
+const register = () => {
+  return [
+    body('name')
+      .trim()
+      .notEmpty()
+      .withMessage('Name is required')
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Name must be between 2 and 100 characters'),
+    email('email'),
+    phone('phone'),
+    password('password'),
+    body('stateUnit').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+    body('registrationNumber').optional({ values: 'falsy' }).trim().isLength({ max: 50 }),
+    body('certificationLevel')
+      .optional({ values: 'falsy' })
+      .isIn(CERTIFICATION_LEVELS)
+      .withMessage(`Certification level must be one of: ${CERTIFICATION_LEVELS.join(', ')}`),
+  ];
+};
+
+/**
+ * Validate profile update.
+ *
+ * Every field optional — the profile page saves one section at a time. Note
+ * there is no `password` rule here on purpose: password changes go through
+ * changePassword(), which also demands the current password.
  */
 const updateProfile = () => {
   return [
@@ -36,14 +68,36 @@ const updateProfile = () => {
       .optional()
       .trim()
       .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters')
-      .escape(),
-    body('username')
-      .optional()
-      .trim()
-      .isLength({ min: 3, max: 50 })
-      .withMessage('Username must be between 3 and 50 characters')
-      .toLowerCase()
+      .withMessage('Name must be between 2 and 100 characters'),
+    body('email').optional().trim().isEmail().withMessage('Please provide a valid email address').toLowerCase(),
+    phone('phone', { isOptional: true }),
+    body('stateUnit').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+    body('registrationNumber').optional({ values: 'falsy' }).trim().isLength({ max: 50 }),
+    body('certificationLevel')
+      .optional({ values: 'falsy' })
+      .isIn(CERTIFICATION_LEVELS)
+      .withMessage(`Certification level must be one of: ${CERTIFICATION_LEVELS.join(', ')}`),
+    body('photo')
+      .optional({ nullable: true })
+      .isString()
+      .isLength({ max: 400000 })
+      .withMessage('Photo must be smaller than 300 KB')
+      .custom((value) => {
+        if (value && !/^data:image\/(png|jpe?g|webp);base64,/.test(value)) {
+          throw new Error('Photo must be a PNG, JPEG or WebP data URL');
+        }
+        return true;
+      }),
+  ];
+};
+
+/**
+ * Validate a self-service password change.
+ */
+const changePassword = () => {
+  return [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    password('newPassword'),
   ];
 };
 
@@ -131,6 +185,8 @@ const updateIndividualScore = () => {
 
 module.exports = {
   login,
+  register,
+  changePassword,
   updateProfile,
   setCompetitionContext,
   getCompetitionDetails,

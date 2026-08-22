@@ -6,6 +6,7 @@ const PlayerRepository = require('../repositories/player.repository');
 const CoachRepository = require('../repositories/coach.repository');
 const AdminRepository = require('../repositories/admin.repository');
 const JudgeRepository = require('../repositories/judge.repository');
+const JudgeAccountRepository = require('../repositories/judge-account.repository');
 const CompetitionRepository = require('../repositories/competition.repository');
 const TeamRepository = require('../repositories/team.repository');
 const ScoreRepository = require('../repositories/score.repository');
@@ -25,6 +26,7 @@ const CoachService = require('../services/user/coach.service');
 const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
+const JudgeAccountService = require('../services/user/judge-account.service');
 const CompetitionService = require('../services/competition/competition.service');
 const RegistrationService = require('../services/competition/registration.service');
 const PerformanceOrderService = require('../services/competition/performance-order.service');
@@ -86,6 +88,9 @@ function bootstrap() {
   container.register('coachRepository', (c) => new CoachRepository(c.resolve('logger')), 'singleton');
   container.register('adminRepository', (c) => new AdminRepository(c.resolve('logger')), 'singleton');
   container.register('judgeRepository', (c) => new JudgeRepository(c.resolve('logger')), 'singleton');
+  // The judge as a PERSON. `judgeRepository` above serves panel assignments;
+  // the two are different collections and must not be swapped by mistake.
+  container.register('judgeAccountRepository', (c) => new JudgeAccountRepository(c.resolve('logger')), 'singleton');
   container.register('competitionRepository', (c) => new CompetitionRepository(c.resolve('logger')), 'singleton');
   container.register('teamRepository', (c) => new TeamRepository(c.resolve('logger')), 'singleton');
   container.register('scoreRepository', (c) => new ScoreRepository(c.resolve('logger')), 'singleton');
@@ -202,6 +207,13 @@ function bootstrap() {
       cacheService: c.resolve('cacheService'),
     });
   }, 'singleton');
+  container.register('judgeAccountService', (c) => new JudgeAccountService({
+    judgeAccountRepository: c.resolve('judgeAccountRepository'),
+    judgeRepository: c.resolve('judgeRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    tokenService: c.resolve('tokenService'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
   container.register('registrationService', (c) => new RegistrationService(
     c.resolve('competitionRepository'),
     c.resolve('teamRepository'),

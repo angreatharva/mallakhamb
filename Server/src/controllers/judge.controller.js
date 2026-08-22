@@ -13,6 +13,7 @@ const { sendLoginResponse } = require('../utils/security/login-response.util');
 
 function createJudgeController(container) {
   const judgeService = container.resolve('judgeService');
+  const judgeAccountService = container.resolve('judgeAccountService');
   const tokenService = container.resolve('tokenService');
   const config = container.resolve('config');
   const logger = container.resolve('logger');
@@ -32,18 +33,50 @@ function createJudgeController(container) {
       });
     }),
 
+    /**
+     * @route POST /api/judge/register
+     * @desc  Judge self-registration. The account starts with no assignments,
+     *        so it grants no access to any competition until an admin puts it
+     *        on a panel.
+     */
+    register: asyncHandler(async (req, res) => {
+      const result = await judgeAccountService.register(req.body);
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: result, userType: 'judge',
+        statusCode: 201,
+        message: 'Registration successful',
+      });
+    }),
+
     // ==================== Profile ====================
 
     /** @route GET /api/judge/profile */
     getProfile: asyncHandler(async (req, res) => {
-      const profile = await judgeService.getJudgeProfile(req.user._id);
+      const profile = await judgeAccountService.getProfile(req.user._id);
       res.json({ success: true, data: profile });
     }),
 
     /** @route PUT /api/judge/profile */
     updateProfile: asyncHandler(async (req, res) => {
-      const profile = await judgeService.updateJudgeProfile(req.user._id, req.body);
+      const profile = await judgeAccountService.updateProfile(req.user._id, req.body);
       res.json({ success: true, data: profile, message: 'Profile updated successfully' });
+    }),
+
+    /** @route PUT /api/judge/profile/password */
+    changePassword: asyncHandler(async (req, res) => {
+      await judgeAccountService.changePassword(
+        req.user._id,
+        req.body.currentPassword,
+        req.body.newPassword
+      );
+      res.json({ success: true, message: 'Password changed successfully' });
+    }),
+
+    /** @route GET /api/judge/assignments */
+    getAssignments: asyncHandler(async (req, res) => {
+      const assignments = await judgeAccountService.getAssignments(req.user._id);
+      res.json({ success: true, data: assignments });
     }),
 
     // ==================== Competition Context ====================
