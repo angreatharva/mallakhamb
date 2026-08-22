@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Users, Filter, UserPlus, Save, Edit, X, Trash2 } from 'lucide-react';
+import { Users, Filter, UserPlus, Save, Edit, X, Trash2, Search, Copy, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { adminAPI, superAdminAPI } from '@/services/api';
@@ -102,12 +102,12 @@ const LoadingState = ({ label }) => (
 );
 
 const EMPTY_JUDGE_FORM = [
-  { judgeNo: 1, judgeType: 'Senior Judge', name: '', username: '', password: '' },
-  { judgeNo: 2, judgeType: 'Judge 1', name: '', username: '', password: '' },
-  { judgeNo: 3, judgeType: 'Judge 2', name: '', username: '', password: '' },
-  { judgeNo: 4, judgeType: 'Judge 3', name: '', username: '', password: '' },
-  { judgeNo: 5, judgeType: 'Judge 4', name: '', username: '', password: '' },
-  { judgeNo: 6, judgeType: 'Scorer', name: '', username: '', password: '' },
+  { judgeNo: 1, judgeType: 'Senior Judge', account: null },
+  { judgeNo: 2, judgeType: 'Judge 1', account: null },
+  { judgeNo: 3, judgeType: 'Judge 2', account: null },
+  { judgeNo: 4, judgeType: 'Judge 3', account: null },
+  { judgeNo: 5, judgeType: 'Judge 4', account: null },
+  { judgeNo: 6, judgeType: 'Scorer', account: null },
 ];
 
 const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo, judgeType }));
@@ -115,10 +115,131 @@ const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo,
 const SUPPORT_JUDGE_TYPES = ['Scorer'];
 const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
 
-const USERNAME_PREFIX_BY_NO = { 6: 'SC' };
+const REGISTER_PATH = '/judge/register';
 
-// ─── Edit Judge Modal ─────────────────────────────────────────────────────────
-const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, generateUsername, generatePassword }) => (
+/** Where a judge who has not registered yet is told to go. */
+const registerUrl = () =>
+  (typeof window !== 'undefined' ? `${window.location.origin}${REGISTER_PATH}` : REGISTER_PATH);
+
+// ─── Judge picker ─────────────────────────────────────────────────────────────
+
+/**
+ * Search the registered judges and pick one for a slot.
+ *
+ * Admins no longer create judge logins — judges register themselves and this is
+ * the only way a seat is filled. That means "no results" is a real, expected
+ * state with a real answer (send them the registration link), so it is handled
+ * here rather than left as a dead end.
+ */
+const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false }) => {
+  const [term, setTerm] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    const query = term.trim();
+    if (query.length < 2) {
+      setResults([]);
+      setSearching(false);
+      return undefined;
+    }
+
+    // Debounced: this fires on every keystroke and hits the database.
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await api.searchJudgeAccounts(query);
+        setResults(response.data.data || []);
+        setTouched(true);
+      } catch (error) {
+        logger.error('Judge search failed:', error);
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [term, api]);
+
+  if (value) {
+    return (
+      <div className="rounded-xl border p-3 flex items-center justify-between gap-3"
+        style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white truncate">{value.name}</p>
+          <p className="text-xs text-white/40 truncate">{value.email}</p>
+        </div>
+        <DarkBtn size="sm" variant="ghost" onClick={onClear}>
+          <X className="w-3.5 h-3.5" />
+          Change
+        </DarkBtn>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <DarkInput
+        placeholder="Search registered judges by name or email"
+        value={term}
+        autoFocus={autoFocus}
+        onChange={(e) => setTerm(e.target.value)}
+        rightElement={<Search className="w-4 h-4 text-white/30" />}
+      />
+
+      {searching && <p className="text-xs mt-1.5" style={{ color: ADMIN_COLORS.gold }}>Searching…</p>}
+
+      {results.length > 0 && (
+        <div className="mt-2 rounded-xl border overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          {results.map((account) => (
+            <button
+              key={account._id}
+              onClick={() => { onSelect(account); setTerm(''); setResults([]); }}
+              className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors border-b last:border-b-0 min-h-[44px]"
+              style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}
+            >
+              <p className="text-sm font-semibold text-white">{account.name}</p>
+              <p className="text-xs text-white/40">
+                {account.email}
+                {account.stateUnit && <span> · {account.stateUnit}</span>}
+                {account.certificationLevel && <span> · {account.certificationLevel}</span>}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {touched && !searching && term.trim().length >= 2 && results.length === 0 && (
+        <div className="mt-2 p-3 rounded-xl border text-xs"
+          style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30`, color: ADMIN_COLORS.gold }}>
+          <p className="font-bold mb-1">No registered judge matches that.</p>
+          <p className="text-white/50">
+            Judges create their own accounts. Send them the registration link and search again
+            once they have signed up.
+          </p>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(registerUrl());
+              toast.success('Registration link copied');
+            }}
+            className="mt-2 inline-flex items-center gap-1.5 font-bold min-h-[32px]"
+            style={{ color: ADMIN_COLORS.saffronLight }}
+          >
+            <Copy className="w-3.5 h-3.5" />
+            {registerUrl()}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Assign Judge Modal ───────────────────────────────────────────────────────
+
+const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel }) => (
   <AnimatePresence>
     {judge && (
       <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -132,7 +253,9 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
           <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <div>
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
-              <h3 className="text-xl font-black text-white mt-0.5">{judge.name ? 'Edit Judge' : 'Add Judge'}</h3>
+              <h3 className="text-xl font-black text-white mt-0.5">
+                {judge.name ? 'Replace Judge' : 'Assign Judge'}
+              </h3>
             </div>
             <button onClick={onCancel} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
               <X className="w-5 h-5 text-white/60" />
@@ -144,44 +267,21 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
               {judge.gender && <> · {judge.gender}</>}
               {judge.ageGroup && <> · {judge.ageGroup}</>}
             </div>
-            <DarkInput label="Name" required value={formData.name}
-              onChange={(e) => {
-                const n = e.target.value;
-                setFormData(prev => ({
-                  ...prev, name: n,
-                  username: (!prev.username || prev.username.toLowerCase() === generateUsername(prev.name, judge?.judgeNo).toLowerCase())
-                    ? (n ? generateUsername(n, judge?.judgeNo) : '') : prev.username
-                }));
-              }}
-              placeholder="Enter judge name" />
-            <DarkInput label="Username" required value={formData.username}
-              onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-              placeholder="Enter username or click Auto"
-              hint={formData.name ? 'Click "Auto" to generate from name.' : 'Enter a name first.'}
-              rightElement={
-                <DarkBtn size="sm" variant="purple" disabled={!formData.name.trim()}
-                  onClick={() => {
-                    if (formData.name.trim()) {
-                      const u = generateUsername(formData.name, judge?.judgeNo);
-                      setFormData(prev => ({ ...prev, username: u }));
-                      toast.success(`Username: ${u}`);
-                    }
-                  }}>Auto</DarkBtn>
-              } />
-            <DarkInput label="Password" required={!judge?.name} value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder={judge?.name ? 'Leave blank to keep current password' : 'Enter password'}
-              hint={judge?.name ? 'Enter a new password only if you want to change it.' : undefined}
-              rightElement={
-                <DarkBtn size="sm" variant="ghost"
-                  onClick={() => setFormData(prev => ({ ...prev, password: generatePassword() }))}>Gen</DarkBtn>
-              } />
+
+            {judge.name && (
+              <p className="text-xs text-white/40">
+                Currently <span className="text-white/70 font-semibold">{judge.name}</span>. Choosing
+                someone else replaces them in this slot.
+              </p>
+            )}
+
+            <JudgeSearch api={api} value={selected} onSelect={setSelected} onClear={() => setSelected(null)} autoFocus />
           </div>
           <div className="flex gap-3 p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <DarkBtn variant="ghost" onClick={onCancel} className="flex-1">Cancel</DarkBtn>
-            <DarkBtn variant="success" onClick={onSave} className="flex-1">
+            <DarkBtn variant="success" onClick={onSave} disabled={!selected} className="flex-1">
               <Save className="w-4 h-4" />
-              {judge.name ? 'Update' : 'Add Judge'}
+              {judge.name ? 'Replace' : 'Assign'}
             </DarkBtn>
           </div>
         </motion.div>
@@ -190,13 +290,79 @@ const EditJudgeModal = ({ judge, formData, setFormData, onSave, onCancel, genera
   </AnimatePresence>
 );
 
+// ─── Fix migrated account modal ───────────────────────────────────────────────
+
+/**
+ * Judges carried over from the old credential rows have a placeholder address
+ * (see migration 006) and cannot sign in until it is corrected. This is the
+ * only thing an admin may change about someone else's account, and the server
+ * refuses it once the address is real.
+ */
+const FixEmailModal = ({ account, api, onSaved, onCancel }) => {
+  const [email, setEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setEmail(''); }, [account]);
+
+  const save = async () => {
+    if (!email.trim()) { toast.error('Enter the judge\'s email address'); return; }
+    setSaving(true);
+    try {
+      await api.updateJudgeAccount(account._id, { email: email.trim() });
+      toast.success('Email updated — the judge can now sign in and set a password');
+      onSaved();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not update the address');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {account && (
+        <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={(e) => e.target === e.currentTarget && onCancel()}>
+          <motion.div className="w-full max-w-md rounded-3xl border overflow-hidden"
+            style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
+            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}>
+            <div className="p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <h3 className="text-xl font-black text-white">Set {account.name}&apos;s email</h3>
+              <p className="text-white/40 text-xs mt-1">
+                This judge was migrated from the old logins and has a placeholder address, so they
+                cannot sign in yet. Once you set the real one they can reset their own password.
+              </p>
+            </div>
+            <div className="p-6">
+              <DarkInput label="Email address" required type="email" value={email}
+                placeholder="judge@example.com"
+                onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="flex gap-3 p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <DarkBtn variant="ghost" onClick={onCancel} className="flex-1">Cancel</DarkBtn>
+              <DarkBtn variant="success" onClick={save} disabled={saving} className="flex-1">
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving…' : 'Save'}
+              </DarkBtn>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
+
 const Judges = () => {
-  const { routePrefix, storagePrefix } = useRouteContext();
+  const { routePrefix } = useRouteContext();
   const { currentCompetition } = useCompetition();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
-  const { isMobile } = useResponsive();
+  useResponsive();
 
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
@@ -220,7 +386,8 @@ const Judges = () => {
   const [judges, setJudges] = useState([]);
   const [judgeFormData, setJudgeFormData] = useState(() => EMPTY_JUDGE_FORM.map((j) => ({ ...j })));
   const [editingJudge, setEditingJudge] = useState(null);
-  const [editFormData, setEditFormData] = useState({ name: '', username: '', password: '' });
+  const [editSelection, setEditSelection] = useState(null);
+  const [fixingAccount, setFixingAccount] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
@@ -243,11 +410,11 @@ const Judges = () => {
   const hasGender = !!selectedGender;
   const hasAgeGroup = !!selectedAgeGroup;
   const hasCompetitionType = !!selectedCompetitionType;
-  
+
   const apparatusOptions = selectedCompetitionType && competitionForAgeGroups?.apparatusConfig?.[selectedCompetitionType.value]
     ? competitionForAgeGroups.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app }))
     : [];
-    
+
   const hasApparatus = apparatusOptions.length === 0 || !!selectedApparatus;
   const ladderComplete = hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && hasCompetitionType && hasApparatus;
 
@@ -312,37 +479,19 @@ const Judges = () => {
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedAgeGroup]);
-  
+
   useEffect(() => {
     setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedCompetitionType]);
 
-  const getAgeGroupCode = (ageGroup) => {
-    if (!ageGroup) return '';
-    if (ageGroup.startsWith('Under')) return `U${ageGroup.replace('Under', '')}`;
-    if (ageGroup.startsWith('Above')) return `A${ageGroup.replace('Above', '')}`;
-    return ageGroup;
-  };
-
-  const getCompetitionTypeNum = (type) => {
-    const match = type?.match(/competition_(\d+)/);
-    return match ? match[1] : '';
-  };
-
-  const generateUsername = (name, judgeNo = null) => {
-    if (!name?.trim() || !selectedGender?.value || !selectedAgeGroup?.value || !selectedCompetitionType?.value) return '';
-    const prefix = judgeNo
-      ? (USERNAME_PREFIX_BY_NO[judgeNo] || `J${judgeNo}`)
-      : name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
-    const genderCode = selectedGender.value === 'Female' ? 'F' : 'M';
-    const ageCode = getAgeGroupCode(selectedAgeGroup.value);
-    const compCode = getCompetitionTypeNum(selectedCompetitionType.value);
-    return `${prefix}-${genderCode}-${ageCode}-${compCode}`;
-  };
-
-  // Ensure the judge list always shows all slots (5 panel + Scorer)
+  /**
+   * Ensure the judge list always shows all six slots.
+   *
+   * "Filled" means a registered judge is in the slot. It used to mean the admin
+   * had typed a name into it.
+   */
   const padJudgeSlots = (apiJudges) => {
     const list = Array.isArray(apiJudges) ? apiJudges : [];
     return JUDGE_SLOTS.map(slot => {
@@ -355,23 +504,17 @@ const Judges = () => {
           judgeType: slot.judgeType,
           gender: found.gender || selectedGender?.value,
           ageGroup: found.ageGroup || selectedAgeGroup?.value,
-          isEmpty: !found.name?.trim(),
+          isEmpty: !found.judgeAccount,
         };
       }
       return {
         ...slot,
         name: '',
-        username: '',
         isEmpty: true,
         gender: selectedGender?.value,
         ageGroup: selectedAgeGroup?.value,
       };
     });
-  };
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   };
 
   const buildJudgeQueryParams = (overrides = {}) => {
@@ -394,11 +537,11 @@ const Judges = () => {
   const checkForExistingJudges = async (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) => {
     if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return false;
     try {
-      const response = await api.getJudges(buildJudgeQueryParams({ 
+      const response = await api.getJudges(buildJudgeQueryParams({
         competitionTypes: compTypeOption.value,
         apparatus: apparatusOption?.value
       }));
-      return (response.data.data || []).filter(j => j._id && j.name?.trim()).length > 0;
+      return (response.data.data || []).filter(j => j._id && j.judgeAccount).length > 0;
     } catch { return false; }
   };
 
@@ -410,7 +553,7 @@ const Judges = () => {
     if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return;
     setLoadingJudges(true);
     try {
-      const response = await api.getJudges(buildJudgeQueryParams({ 
+      const response = await api.getJudges(buildJudgeQueryParams({
         competitionTypes: compTypeOption.value,
         apparatus: apparatusOption?.value
       }));
@@ -460,38 +603,54 @@ const Judges = () => {
     await loadJudgeList(selectedCompetitionType);
   }, [selectedCompetitionType, selectedGender, selectedAgeGroup, selectedCompetition, judgeType, api, isSuperAdmin]);
 
-  const handleJudgeFormChange = (index, field, value) => {
-    const updated = [...judgeFormData];
-    updated[index][field] = value;
-    setJudgeFormData(updated);
+  const setSlotAccount = (index, account) => {
+    setJudgeFormData((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], account };
+      return updated;
+    });
   };
 
   const handleSaveJudges = async () => {
     if (!ladderComplete) { toast.error('Please complete all filters: competition, action, gender, age group, and competition type'); return; }
-    const validJudges = judgeFormData.filter(j => j.name.trim() && j.password.trim());
+
+    const staffed = judgeFormData.filter((j) => j.account);
     const missingRequired = REQUIRED_JUDGE_TYPES.filter(
-      (type) => !validJudges.some((j) => j.judgeType === type)
+      (type) => !staffed.some((j) => j.judgeType === type)
     );
     if (missingRequired.length > 0) {
       toast.error(`${missingRequired.join(', ')} ${missingRequired.length === 1 ? 'is' : 'are'} required`);
       return;
     }
+
+    // One person cannot hold two seats on the same panel — their single slip
+    // would be averaged in twice. The server refuses it too; catching it here
+    // means the admin is told before half the panel is written.
+    const seen = new Set();
+    const duplicate = staffed.find((j) => {
+      if (seen.has(j.account._id)) return true;
+      seen.add(j.account._id);
+      return false;
+    });
+    if (duplicate) {
+      toast.error(`${duplicate.account.name} is already on this panel`);
+      return;
+    }
+
     const judgesExist = await checkForExistingJudges();
     if (judgesExist) { toast.error('Judges already exist. Use "Judge List" to edit.'); return; }
+
     try {
-      const cleanedJudges = validJudges.map(j => ({
-        judgeNo: j.judgeNo,
-        judgeType: j.judgeType,
-        name: j.name.trim(),
-        username: (j.username.trim() || generateUsername(j.name, j.judgeNo)).trim(),
-        password: j.password.trim(),
-      }));
       const judgesData = {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionTypes: [selectedCompetitionType.value],
         apparatus: selectedApparatus?.value || null,
-        judges: cleanedJudges,
+        judges: staffed.map((j) => ({
+          judgeNo: j.judgeNo,
+          judgeType: j.judgeType,
+          judgeAccount: j.account._id,
+        })),
         ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
       };
       const response = await api.saveJudges(judgesData);
@@ -512,54 +671,32 @@ const Judges = () => {
   const handleEditJudge = (judge) => {
     if (ageGroupStarted) { toast.error('Cannot edit judges. Age group has been started.'); return; }
     setEditingJudge(judge);
-    // Never prefill password with the stored hash — leave blank; only send if user enters a new one
-    setEditFormData({
-      name: judge.name || '',
-      username: judge.username || (judge.name ? generateUsername(judge.name, judge.judgeNo) : ''),
-      password: '',
-    });
+    setEditSelection(null);
   };
 
   const handleDeleteJudge = async (judge) => {
-    if (!judge._id || !judge.name) { toast.error('Cannot delete an empty judge slot'); return; }
+    if (!judge._id || !judge.judgeAccount) { toast.error('Cannot delete an empty judge slot'); return; }
     if (ageGroupStarted) { toast.error('Cannot delete judges. Age group has been started.'); return; }
     if (REQUIRED_JUDGE_TYPES.includes(judge.judgeType)) {
       toast.error(`${judge.judgeType} is required and cannot be deleted`);
       return;
     }
-    if (!window.confirm(`Delete judge "${judge.name}"?`)) return;
+    if (!window.confirm(`Remove ${judge.name} from this panel?`)) return;
     try {
       await api.deleteJudge(judge._id);
-      toast.success('Judge deleted');
+      toast.success('Judge removed from the panel');
       fetchJudges();
-    } catch (error) { toast.error(error.response?.data?.message || 'Failed to delete judge'); }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to remove judge'); }
   };
 
-  const handleUpdateJudge = async () => {
-    if (!editFormData.name.trim()) { toast.error('Please fill in name'); return; }
-    if (!editFormData.username?.trim()) { toast.error('Please provide a username'); return; }
+  const handleAssignJudge = async () => {
+    if (!editSelection) { toast.error('Choose a registered judge'); return; }
     const isNewSlot = !editingJudge._id || editingJudge.isEmpty;
-    if (isNewSlot && !editFormData.password.trim()) {
-      toast.error('Please provide a password');
-      return;
-    }
     try {
-      const updatedData = {
-        name: editFormData.name.trim(),
-        username: editFormData.username.trim(),
-      };
-      // Only update password when the user entered a new one
-      if (editFormData.password.trim()) {
-        updatedData.password = editFormData.password.trim();
-      }
       if (!isNewSlot) {
-        await api.updateJudge(editingJudge._id, updatedData);
-        toast.success('Judge updated!');
+        await api.updateJudge(editingJudge._id, { judgeAccount: editSelection._id });
+        toast.success('Judge replaced');
       } else {
-        if (!updatedData.password) {
-          toast.error('Please provide a password');
-          return;
-        }
         await api.createSingleJudge({
           gender: editingJudge.gender || selectedGender?.value,
           ageGroup: editingJudge.ageGroup || selectedAgeGroup?.value,
@@ -567,17 +704,17 @@ const Judges = () => {
           apparatus: selectedApparatus?.value || null,
           judgeNo: editingJudge.judgeNo,
           judgeType: editingJudge.judgeType,
-          ...updatedData,
+          judgeAccount: editSelection._id,
           ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
         });
-        toast.success('Judge added!');
+        toast.success('Judge assigned');
       }
       fetchJudges();
       setEditingJudge(null);
-      setEditFormData({ name: '', username: '', password: '' });
+      setEditSelection(null);
     } catch (error) {
-      logger.error('Update judge error:', error);
-      toast.error(error.response?.data?.message || 'Failed to save judge');
+      logger.error('Assign judge error:', error);
+      toast.error(error.response?.data?.message || 'Failed to assign judge');
     }
   };
 
@@ -592,14 +729,30 @@ const Judges = () => {
 
   return (
     <div className="space-y-6">
-      <EditJudgeModal judge={editingJudge} formData={editFormData} setFormData={setEditFormData}
-        onSave={handleUpdateJudge} onCancel={() => { setEditingJudge(null); setEditFormData({ name: '', username: '', password: '' }); }}
-        generateUsername={generateUsername} generatePassword={generatePassword} />
+      <AssignJudgeModal
+        judge={editingJudge}
+        api={api}
+        selected={editSelection}
+        setSelected={setEditSelection}
+        onSave={handleAssignJudge}
+        onCancel={() => { setEditingJudge(null); setEditSelection(null); }}
+      />
+      <FixEmailModal
+        account={fixingAccount}
+        api={api}
+        onSaved={() => { setFixingAccount(null); fetchJudges(); }}
+        onCancel={() => setFixingAccount(null)}
+      />
 
       <FadeIn>
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
-          <h2 className="text-2xl font-black text-white mb-6">Manage Judges</h2>
+          <h2 className="text-2xl font-black text-white mb-2">Manage Judges</h2>
+          <p className="text-white/35 text-sm mb-6">
+            Judges create their own accounts at{' '}
+            <span className="text-white/60">{REGISTER_PATH}</span> — here you choose which of them
+            sits on each panel.
+          </p>
 
           {isSuperAdmin && (
             <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
@@ -693,9 +846,9 @@ const Judges = () => {
               {/* Add Judge Form */}
               {judgeType === 'add' && (
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-4">Add Judges</h3>
+                  <h3 className="text-lg font-bold text-white mb-4">Staff the Panel</h3>
                   {!ladderComplete ? (
-                    <EmptyState icon={UserPlus} title="Complete all filters first" desc="Select judge action, gender, age group, and competition type to add judges." />
+                    <EmptyState icon={UserPlus} title="Complete all filters first" desc="Select judge action, gender, age group, and competition type to staff a panel." />
                   ) : judgesExistForSelection ? (
                     <div className="text-center py-8">
                       <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
@@ -708,17 +861,17 @@ const Judges = () => {
                   ) : (
                     <div>
                       <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.blue}10`, borderColor: `${ADMIN_COLORS.blue}30` }}>
-                        <p className="text-white/70">Adding judges for: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
+                        <p className="text-white/70">Staffing: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
                           {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
                           {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
                         </p>
-                        <p className="text-white/50 text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 & Scorer · Judge 3 & Judge 4 optional</p>
+                        <p className="text-white/50 text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 &amp; Scorer · Judge 3 &amp; Judge 4 optional</p>
                       </div>
                       <div className="space-y-4">
                         {judgeFormData.map((judge, index) => {
                           const badge = judgeTypeBadge(judge.judgeType);
                           return (
-                            <div key={index} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                            <div key={judge.judgeNo} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-2 mb-4">
                                 <span className="text-sm font-bold text-white">{judge.judgeNo}</span>
                                 <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
@@ -726,19 +879,12 @@ const Judges = () => {
                                   <span className="text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>* Required</span>
                                 )}
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <DarkInput placeholder="Enter judge name" value={judge.name}
-                                  onChange={(e) => { const n = e.target.value; handleJudgeFormChange(index, 'name', n); if (n) handleJudgeFormChange(index, 'username', generateUsername(n, judge.judgeNo)); }} />
-                                <DarkInput placeholder="Auto-generated username" value={judge.username}
-                                  onChange={(e) => handleJudgeFormChange(index, 'username', e.target.value)} />
-                                <div className="flex gap-2">
-                                  <div className="flex-1">
-                                    <DarkInput placeholder="Password" value={judge.password}
-                                      onChange={(e) => handleJudgeFormChange(index, 'password', e.target.value)} />
-                                  </div>
-                                  <DarkBtn size="sm" variant="ghost" onClick={() => handleJudgeFormChange(index, 'password', generatePassword())}>Gen</DarkBtn>
-                                </div>
-                              </div>
+                              <JudgeSearch
+                                api={api}
+                                value={judge.account}
+                                onSelect={(account) => setSlotAccount(index, account)}
+                                onClear={() => setSlotAccount(index, null)}
+                              />
                             </div>
                           );
                         })}
@@ -780,7 +926,7 @@ const Judges = () => {
                       title="Complete all filters to view judges"
                       desc="Select judge action, gender, age group, and competition type."
                     />
-                  ) : judges.some(j => j.name?.trim()) ? (
+                  ) : judges.some(j => j.judgeAccount) ? (
                     <div>
                       <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
                         <span className="text-white/70">Judge panel for: </span>
@@ -788,11 +934,11 @@ const Judges = () => {
                         {selectedCompetitionType && <span className="text-white/50 ml-2">· {selectedCompetitionType.label}</span>}
                       </div>
                       <div className="space-y-3">
-                        {judges.map((judge, index) => {
+                        {judges.map((judge) => {
                           const badge = judgeTypeBadge(judge.judgeType);
-                          const canDelete = judge.name?.trim() && !REQUIRED_JUDGE_TYPES.includes(judge.judgeType);
+                          const canDelete = !!judge.judgeAccount && !REQUIRED_JUDGE_TYPES.includes(judge.judgeType);
                           return (
-                            <div key={index} className="rounded-xl border p-4 flex items-center justify-between gap-4"
+                            <div key={judge.judgeNo} className="rounded-xl border p-4 flex items-center justify-between gap-4"
                               style={{ background: judge.isEmpty ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badge.bg }}>
@@ -802,19 +948,30 @@ const Judges = () => {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-sm font-bold text-white">{judge.name || <span className="text-white/30 italic">Empty Slot</span>}</span>
                                     <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
-                                    {judge.name
-                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Active</span>
+                                    {judge.judgeAccount
+                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Assigned</span>
                                       : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}>Available</span>}
+                                    {judge.isPlaceholderEmail && (
+                                      <button
+                                        onClick={() => setFixingAccount({ _id: judge.judgeAccount, name: judge.name })}
+                                        className="px-2 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1 min-h-[24px]"
+                                        style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}
+                                        title="This judge cannot sign in until their real address is set"
+                                      >
+                                        <AlertTriangle className="w-3 h-3" />
+                                        Needs email
+                                      </button>
+                                    )}
                                   </div>
-                                  {judge.username && <p className="text-xs text-white/40 mt-0.5">@{judge.username}</p>}
+                                  {judge.email && <p className="text-xs text-white/40 mt-0.5">{judge.email}</p>}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                <DarkBtn size="sm" variant={judge.name ? 'purple' : 'success'} disabled={ageGroupStarted} onClick={() => handleEditJudge(judge)}>
+                                <DarkBtn size="sm" variant={judge.judgeAccount ? 'purple' : 'success'} disabled={ageGroupStarted} onClick={() => handleEditJudge(judge)}>
                                   <Edit className="w-3.5 h-3.5" />
-                                  {judge.name ? 'Edit' : 'Add'}
+                                  {judge.judgeAccount ? 'Replace' : 'Assign'}
                                 </DarkBtn>
-                                {judge.name && !ageGroupStarted && (
+                                {judge.judgeAccount && !ageGroupStarted && (
                                   <DarkBtn size="sm" variant="danger" disabled={!canDelete} onClick={() => handleDeleteJudge(judge)}>
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </DarkBtn>
@@ -828,7 +985,7 @@ const Judges = () => {
                   ) : (
                     <EmptyState icon={Users}
                       title="No judges found"
-                      desc={`No judge panel for ${selectedGender?.label} — ${selectedAgeGroup?.label}${selectedCompetitionType ? ` · ${selectedCompetitionType.label}` : ''}. Switch to "Add Judge" to create one.`}
+                      desc={`No judge panel for ${selectedGender?.label} — ${selectedAgeGroup?.label}${selectedCompetitionType ? ` · ${selectedCompetitionType.label}` : ''}. Switch to "Add Judge" to staff one.`}
                     />
                   )}
                 </div>
