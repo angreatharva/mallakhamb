@@ -41,6 +41,7 @@ const ScoringService = require('../../src/services/scoring/scoring.service');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
 const Judge = require('../../models/Judge');
+const JudgeAccount = require('../../models/JudgeAccount');
 const Score = require('../../models/Score');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
@@ -147,20 +148,30 @@ const competitionId = new mongoose.Types.ObjectId();
 const teamId = new mongoose.Types.ObjectId();
 const playerId = new mongoose.Types.ObjectId();
 
-/** Persist a judge exactly the way production does (pre-save hook hashes). */
-function createJudge({ judgeNo, judgeType, name, username }) {
-  return Judge.create({
+/**
+ * Persist a judge exactly the way production does: an account for the person
+ * (pre-save hook hashes the password) and an assignment for the panel slot.
+ */
+async function createJudge({ judgeNo, judgeType, name, email }) {
+  const account = await JudgeAccount.create({
+    name,
+    email,
+    password: 'PlaintextSecret1',
+    isActive: true,
+  });
+
+  const judge = await Judge.create({
+    judgeAccount: account._id,
     competition: competitionId,
     competitionTypes: ['competition_1', 'competition_2'],
     gender: 'Male',
     ageGroup: 'Under14',
     judgeNo,
     judgeType,
-    name,
-    username,
-    password: 'PlaintextSecret1',
     isActive: true,
   });
+
+  return { judge, account };
 }
 
 /** A valid score submission body, exactly as the judge UI shapes it. */
@@ -190,14 +201,15 @@ beforeEach(() => {
 
 describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () => {
   let seniorJudge;
+  let seniorAccount;
 
   beforeEach(async () => {
-    seniorJudge = await createJudge({
+    ({ judge: seniorJudge, account: seniorAccount } = await createJudge({
       judgeNo: 1,
       judgeType: 'Senior Judge',
       name: 'Senior Judge One',
-      username: 'srjudge1',
-    });
+      email: 'srjudge1@club.in',
+    }));
   });
 
   test('should require authentication', async () => {
@@ -209,11 +221,12 @@ describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () =
   });
 
   test('the stored password really is a bcrypt hash (pre-save hook ran)', async () => {
-    // `password` is now `select: false` (Phase 1.3), so it must be asked for
-    // explicitly — which is precisely why it no longer reaches any response.
-    const judge = await Judge.findOne({ username: 'srjudge1' }).select('+password');
-    expect(judge.password).toMatch(/^\$2[aby]\$/);
-    expect(judge.password).not.toBe('PlaintextSecret1');
+    // Credentials live on the account now, not on the panel slot. `password`
+    // is `select: false` there too, so it must be asked for explicitly — which
+    // is precisely why it no longer reaches any response.
+    const account = await JudgeAccount.findById(seniorAccount._id).select('+password');
+    expect(account.password).toMatch(/^\$2[aby]\$/);
+    expect(account.password).not.toBe('PlaintextSecret1');
   });
 
   test('does not expose the password hash to an authenticated judge', async () => {
@@ -229,7 +242,7 @@ describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () =
 
     expect(res.body.data[0]).not.toHaveProperty('password');
 
-    const stored = await Judge.findOne({ username: 'srjudge1' }).select('+password');
+    const stored = await JudgeAccount.findById(seniorAccount._id).select('+password');
     expect(JSON.stringify(res.body)).not.toContain(stored.password);
   });
 
@@ -247,22 +260,23 @@ describe('CRIT-2 — GET /api/public/judges credential disclosure (FIXED)', () =
   });
 
   /**
-   * DELIBERATE DEVIATION from the audit's suggested `{ judgeType, name, isActive }`
-   * projection. `username` is retained because AdminJudges.jsx prefills it into
-   * the edit form and re-submits it — dropping it would silently overwrite every
-   * judge's login name on the next edit. CRIT-2's username exposure is closed by
-   * authentication instead: anonymous callers get 401 (asserted above), and any
-   * authenticated judge could already read usernames via /api/judge/judges.
-   * This test documents that as an intentional decision, not an oversight.
+   * The panel roster used to carry a `username` because AdminJudges.jsx
+   * prefilled it into an edit form and re-submitted it. Judges now hold their
+   * own accounts, so there is no login name on a panel slot to leak at all —
+   * the roster is a name and an address, and the address is a working contact
+   * detail rather than half of a credential pair.
    */
-  test('still returns username to authenticated callers (intentional)', async () => {
+  test('carries the person, not a credential', async () => {
     const res = await request(app)
       .get('/api/public/judges')
       .set('Authorization', `Bearer ${tokenForJudge(seniorJudge)}`)
       .query({ competitionId: competitionId.toString() });
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].username).toBe('srjudge1');
+    expect(res.body.data[0].name).toBe('Senior Judge One');
+    expect(res.body.data[0].email).toBe('srjudge1@club.in');
+    expect(res.body.data[0]).not.toHaveProperty('username');
+    expect(res.body.data[0]).not.toHaveProperty('password');
   });
 });
 
@@ -295,18 +309,18 @@ describe('HIGH-1 — the slip is bound to the authenticated judge (FIXED)', () =
   let seniorJudge;
 
   beforeEach(async () => {
-    judgeOne = await createJudge({
+    ({ judge: judgeOne } = await createJudge({
       judgeNo: 2,
       judgeType: 'Judge 1',
       name: 'Judge One',
-      username: 'judge1',
-    });
-    seniorJudge = await createJudge({
+      email: 'judge1@club.in',
+    }));
+    ({ judge: seniorJudge } = await createJudge({
       judgeNo: 1,
       judgeType: 'Senior Judge',
       name: 'Senior Judge One',
-      username: 'srjudge1',
-    });
+      email: 'srjudge1@club.in',
+    }));
   });
 
   test('should not let an anonymous caller write to the Senior Judge slot', async () => {
@@ -382,12 +396,12 @@ describe('HIGH-3 — competitionType is part of the Score identity (FIXED)', () 
   let judgeOne;
 
   beforeEach(async () => {
-    judgeOne = await createJudge({
+    ({ judge: judgeOne } = await createJudge({
       judgeNo: 2,
       judgeType: 'Judge 1',
       name: 'Judge One',
-      username: 'judge1',
-    });
+      email: 'judge1@club.in',
+    }));
   });
 
   test('scoring the same team in Competition II does not overwrite its Competition I document', async () => {
@@ -438,9 +452,9 @@ describe('HIGH-4 — concurrent judge submissions do not lose slips (FIXED)', ()
   let judgeThree;
 
   beforeEach(async () => {
-    judgeOne = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', username: 'judge1' });
-    judgeTwo = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', username: 'judge2' });
-    judgeThree = await createJudge({ judgeNo: 4, judgeType: 'Judge 3', name: 'Judge Three', username: 'judge3' });
+    ({ judge: judgeOne } = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', name: 'Judge One', email: 'judge1@club.in' }));
+    ({ judge: judgeTwo } = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', email: 'judge2@club.in' }));
+    ({ judge: judgeThree } = await createJudge({ judgeNo: 4, judgeType: 'Judge 3', name: 'Judge Three', email: 'judge3@club.in' }));
   });
 
   /**

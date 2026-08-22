@@ -11,13 +11,16 @@
  * so nobody widens or narrows a list on a guess.
  */
 
-// Judge panel roster. Excludes `password` (bcrypt hash) and
-// `mustResetPassword`. `username` is retained because the admin judge manager
-// renders and re-submits it (Web/src/pages/admin/AdminJudges.jsx:486,518,809)
-// and the scorer stamps it onto Score.judgeDetails
-// (Web/src/pages/judge/ScorerScoring.jsx:493).
+// Judge panel roster — the ASSIGNMENT, plus the reference to the person.
+//
+// `name`/`username`/`password` are no longer projected: identity moved to
+// JudgeAccount, and the display name now arrives by populating `judgeAccount`
+// and flattening it (see flattenJudgeAccount below), so consumers that read
+// `judge.name` keep working while nothing reads a credential off this document
+// ever again.
 const JUDGE_PUBLIC_FIELDS = [
   '_id',
+  'judgeAccount',
   'competition',
   'competitionTypes',
   'gender',
@@ -25,12 +28,49 @@ const JUDGE_PUBLIC_FIELDS = [
   'apparatus',
   'judgeNo',
   'judgeType',
-  'name',
-  'username',
   'isActive',
   'createdAt',
   'updatedAt',
 ].join(' ');
+
+// The person behind an assignment, as shown on a panel card or in the admin's
+// assignment search. No phone, no photo, no credentials.
+const JUDGE_ACCOUNT_CARD_FIELDS = [
+  '_id',
+  'name',
+  'email',
+  'stateUnit',
+  'certificationLevel',
+  'isPlaceholderEmail',
+].join(' ');
+
+/**
+ * Flatten a populated `judgeAccount` onto the assignment.
+ *
+ * Every judge-facing consumer reads `judge.name` — the panel-size lookup in
+ * useJudgePanelData, the admin judge list, the dashboard's "minimum judges"
+ * gate. Rather than change all of them to reach into a nested object, the
+ * populated account's display fields are copied up, and the account object is
+ * kept alongside for callers that need the id.
+ *
+ * @param {Object} judge - Assignment document with `judgeAccount` populated
+ * @returns {Object}
+ */
+const flattenJudgeAccount = (judge) => {
+  if (!judge) return judge;
+  const account = judge.judgeAccount;
+  if (!account || typeof account !== 'object') {
+    return { ...judge, name: '', email: null };
+  }
+  return {
+    ...judge,
+    judgeAccount: account._id,
+    account,
+    name: account.name || '',
+    email: account.email || null,
+    isPlaceholderEmail: !!account.isPlaceholderEmail,
+  };
+};
 
 // Coach shown on a submitted-team card. Only the display name is consumed
 // (JudgeDashboard.jsx:309,426 and AdminScores.jsx:318,401).
@@ -121,6 +161,8 @@ function stripSensitiveFields(userObject) {
 
 module.exports = {
   JUDGE_PUBLIC_FIELDS,
+  JUDGE_ACCOUNT_CARD_FIELDS,
+  flattenJudgeAccount,
   SENSITIVE_USER_FIELDS,
   stripSensitiveFields,
   SUBMITTED_TEAM_COACH_FIELDS,

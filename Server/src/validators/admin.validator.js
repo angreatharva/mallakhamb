@@ -206,21 +206,12 @@ const saveJudges = () => {
     body('judges.*.judgeType')
       .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
       .withMessage('Invalid judge type'),
-    body('judges.*.name')
-      .trim()
-      .customSanitizer(value => value || '')
-      .isLength({ max: 100 })
-      .withMessage('Judge name must not exceed 100 characters'),
-    body('judges.*.username')
-      .trim()
-      .customSanitizer(value => value || '')
-      .toLowerCase()
-      .isLength({ max: 50 })
-      .withMessage('Username must not exceed 50 characters'),
-    body('judges.*.password')
-      .customSanitizer(value => value || '')
-      .isLength({ max: 100 })
-      .withMessage('Password must not exceed 100 characters')
+    // The slot is filled by choosing a registered judge. Admins no longer set
+    // names or passwords — those belong to the judge's own account.
+    body('judges.*.judgeAccount')
+      .optional({ values: 'falsy' })
+      .isMongoId()
+      .withMessage('Invalid judge account ID')
   ];
 };
 
@@ -247,24 +238,11 @@ const createSingleJudge = () => {
     body('judgeType')
       .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
       .withMessage('Invalid judge type'),
-    body('name')
-      .trim()
+    body('judgeAccount')
       .notEmpty()
-      .withMessage('Name is required')
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters'),
-    body('username')
-      .trim()
-      .notEmpty()
-      .withMessage('Username is required')
-      .toLowerCase()
-      .isLength({ min: 2, max: 50 })
-      .withMessage('Username must be between 2 and 50 characters'),
-    body('password')
-      .notEmpty()
-      .withMessage('Password is required')
-      .isLength({ min: 6, max: 100 })
-      .withMessage('Password must be between 6 and 100 characters'),
+      .withMessage('A registered judge must be selected')
+      .isMongoId()
+      .withMessage('Invalid judge account ID'),
     body('competition')
       .optional()
       .isMongoId()
@@ -278,21 +256,11 @@ const createSingleJudge = () => {
 const updateJudge = () => {
   return [
     objectId('judgeId', 'param'),
-    body('name')
-      .optional()
-      .trim()
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters'),
-    body('username')
-      .optional()
-      .trim()
-      .toLowerCase()
-      .isLength({ min: 2, max: 50 })
-      .withMessage('Username must be between 2 and 50 characters'),
-    body('password')
-      .optional()
-      .isLength({ min: 6, max: 100 })
-      .withMessage('Password must be between 6 and 100 characters'),
+    // Editing a slot means changing who sits in it.
+    body('judgeAccount')
+      .optional({ values: 'falsy' })
+      .isMongoId()
+      .withMessage('Invalid judge account ID'),
     body('isActive')
       .optional()
       .isBoolean()

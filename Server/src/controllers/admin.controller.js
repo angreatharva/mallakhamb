@@ -22,6 +22,7 @@ const {
  */
 function createAdminController(container) {
   const adminService = container.resolve('adminService');
+  const judgeAccountService = container.resolve('judgeAccountService');
   const tokenService = container.resolve('tokenService');
   const config = container.resolve('config');
   const logger = container.resolve('logger');
@@ -251,6 +252,19 @@ function createAdminController(container) {
     deleteJudge: asyncHandler(async (req, res) => {
       await adminService.deleteJudge(req.params.judgeId, req.competitionId);
       res.json({ success: true, message: 'Judge deleted successfully' });
+    }),
+
+    /**
+     * @route GET /api/admin/judge-accounts?q=
+     * @desc  Registered judges an admin may put on a panel.
+     *
+     * Judges are not created here — they register themselves — so this search
+     * is the only way a slot gets filled. An empty result means the person has
+     * not registered yet.
+     */
+    searchJudgeAccounts: asyncHandler(async (req, res) => {
+      const accounts = await judgeAccountService.searchAccounts(req.query.q);
+      res.json({ success: true, data: accounts });
     }),
 
     /** @route GET /api/admin/judges/summary */

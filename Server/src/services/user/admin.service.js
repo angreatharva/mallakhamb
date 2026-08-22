@@ -28,6 +28,8 @@ const { calculateIndividualScore } = require('../../utils/scoring/calculation.ut
 // one that drifts.
 const {
   JUDGE_PUBLIC_FIELDS,
+  JUDGE_ACCOUNT_CARD_FIELDS,
+  flattenJudgeAccount,
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_COACH_FIELD_LIST,
@@ -48,6 +50,9 @@ class AdminService extends UserService {
     this.competitionRepository = dependencies.competitionRepository;
     this.teamRepository = dependencies.teamRepository;
     this.judgeRepository = dependencies.judgeRepository;
+    // The people behind the assignments. Separate collection, separate
+    // repository — see models/JudgeAccount.js.
+    this.judgeAccountRepository = dependencies.judgeAccountRepository;
     this.scoreRepository = dependencies.scoreRepository;
     this.transactionRepository = dependencies.transactionRepository;
     this.calculationService = dependencies.calculationService;
@@ -1493,9 +1498,14 @@ class AdminService extends UserService {
 
       for (const judgeData of judges) {
         try {
-          if (!judgeData.name?.trim()) {
+          // An entry with no account is an untouched slot in the admin's form,
+          // not an error — the same role the empty `name` check used to play.
+          const judgeAccountId = judgeData.judgeAccount || judgeData.judgeAccountId;
+          if (!judgeAccountId) {
             continue;
           }
+
+          await this.assertAssignableJudgeAccount(judgeAccountId);
 
           // Look for existing judge in the SAME slot (gender + ageGroup + judgeNo + competition)
           let existing = null;
@@ -1514,16 +1524,27 @@ class AdminService extends UserService {
             existing = await this.judgeRepository.findOne(query);
           }
 
-          // NOTE: We do NOT search by username alone anymore
-          // This allows the same person to be assigned to multiple age groups/genders
-          // They will have separate judge records with the same username
+          // One person cannot hold two slots on the same panel — that would
+          // make them, say, both Senior Judge and Judge 1, and their single
+          // slip would then be counted twice in the panel average.
+          await this.assertNotAlreadyOnPanel({
+            judgeAccountId,
+            competitionId,
+            gender: judgeData.gender,
+            ageGroup: judgeData.ageGroup,
+            competitionTypes: judgeData.competitionTypes,
+            apparatus: judgeData.apparatus,
+            excludeJudgeId: existing?._id,
+          });
 
-          const hasCompleteData = !!(judgeData.name && judgeData.username && judgeData.password);
           const judgeDataWithStatus = {
             ...judgeData,
+            judgeAccount: judgeAccountId,
             competition: competitionId,
-            isActive: hasCompleteData
+            // A slot is live exactly when a registered judge fills it.
+            isActive: true
           };
+          delete judgeDataWithStatus.judgeAccountId;
 
           if (existing) {
             // Update existing judge in this specific slot
@@ -1596,21 +1617,92 @@ class AdminService extends UserService {
       // /api/judge/judges and /api/public/judges all land on this method.
       const judges = await this.judgeRepository.find(query, {
         select: JUDGE_PUBLIC_FIELDS,
+        populate: { path: 'judgeAccount', select: JUDGE_ACCOUNT_CARD_FIELDS },
         sort: { createdAt: -1 }
       });
 
-      this.logger.info('Judges retrieved', { 
-        competitionId, 
-        count: judges.length 
+      const flattened = judges.map(flattenJudgeAccount);
+
+      this.logger.info('Judges retrieved', {
+        competitionId,
+        count: judges.length
       });
 
-      return judges;
+      return flattened;
     } catch (error) {
-      this.logger.error('Get judges error', { 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Get judges error', {
+        competitionId,
+        error: error.message
       });
       throw error;
+    }
+  }
+
+  /**
+   * Assert that a judge account exists and may be put on a panel.
+   * @param {string} judgeAccountId
+   * @returns {Promise<Object>} The account
+   * @throws {NotFoundError|BusinessRuleError}
+   */
+  async assertAssignableJudgeAccount(judgeAccountId) {
+    if (!this.judgeAccountRepository) {
+      throw new BusinessRuleError('Judge account repository is not configured');
+    }
+
+    const account = await this.judgeAccountRepository.findById(judgeAccountId);
+    if (!account) {
+      throw new NotFoundError('Judge account');
+    }
+    if (account.isActive === false) {
+      throw new BusinessRuleError('That judge account is deactivated');
+    }
+    return account;
+  }
+
+  /**
+   * Refuse to seat one person twice on the same panel.
+   *
+   * "The same panel" is the category a slip is written against: competition +
+   * gender + age group + competition type (+ apparatus). Two slots there for
+   * one judge would have that judge's single opinion counted twice in the
+   * panel average, which the scoring maths has no way to detect.
+   *
+   * @param {Object} args
+   * @returns {Promise<void>}
+   * @throws {BusinessRuleError}
+   */
+  async assertNotAlreadyOnPanel({
+    judgeAccountId,
+    competitionId,
+    gender,
+    ageGroup,
+    competitionTypes,
+    apparatus,
+    excludeJudgeId = null,
+  }) {
+    if (!judgeAccountId || !competitionId || !gender || !ageGroup) return;
+
+    const query = {
+      judgeAccount: judgeAccountId,
+      competition: competitionId,
+      gender,
+      ageGroup,
+    };
+    const types = Array.isArray(competitionTypes) ? competitionTypes : [competitionTypes].filter(Boolean);
+    if (types.length > 0) {
+      query.competitionTypes = { $in: types };
+    }
+    if (apparatus) {
+      query.apparatus = apparatus;
+    }
+
+    const held = await this.judgeRepository.find(query, { select: '_id judgeType' });
+    const clash = held.find((row) => String(row._id) !== String(excludeJudgeId || ''));
+
+    if (clash) {
+      throw new BusinessRuleError(
+        `That judge is already on this panel as ${clash.judgeType}`
+      );
     }
   }
 
@@ -1622,8 +1714,26 @@ class AdminService extends UserService {
    */
   async createSingleJudge(judgeData, adminId) {
     try {
+      const judgeAccountId = judgeData.judgeAccount || judgeData.judgeAccountId;
+      if (!judgeAccountId) {
+        throw new ValidationError('A registered judge must be selected for this slot');
+      }
+
+      await this.assertAssignableJudgeAccount(judgeAccountId);
+      await this.assertNotAlreadyOnPanel({
+        judgeAccountId,
+        competitionId: judgeData.competition,
+        gender: judgeData.gender,
+        ageGroup: judgeData.ageGroup,
+        competitionTypes: judgeData.competitionTypes,
+        apparatus: judgeData.apparatus,
+      });
+
+      const payload = { ...judgeData, judgeAccount: judgeAccountId, isActive: true };
+      delete payload.judgeAccountId;
+
       const judge = await this.judgeRepository.create({
-        ...judgeData,
+        ...payload,
         createdBy: adminId
       });
 
@@ -1631,10 +1741,10 @@ class AdminService extends UserService {
 
       return judge;
     } catch (error) {
-      this.logger.error('Create judge error', { 
-        judgeData, 
-        adminId, 
-        error: error.message 
+      this.logger.error('Create judge error', {
+        judgeData,
+        adminId,
+        error: error.message
       });
       throw error;
     }
@@ -1655,11 +1765,32 @@ class AdminService extends UserService {
         throw new NotFoundError('Judge');
       }
 
+      // An admin edits a slot by changing WHO is in it. Name, username and
+      // password are no longer theirs to set — those live on the judge's own
+      // account and only the judge can change them.
+      const { name, username, password, ...safeUpdates } = updates;
       const payload = {
-        ...updates,
+        ...safeUpdates,
         updatedBy: adminId,
         updatedAt: new Date(),
       };
+
+      const nextAccountId = updates.judgeAccount || updates.judgeAccountId;
+      if (nextAccountId) {
+        await this.assertAssignableJudgeAccount(nextAccountId);
+        await this.assertNotAlreadyOnPanel({
+          judgeAccountId: nextAccountId,
+          competitionId: judge.competition,
+          gender: judge.gender,
+          ageGroup: judge.ageGroup,
+          competitionTypes: judge.competitionTypes,
+          apparatus: judge.apparatus,
+          excludeJudgeId: judgeId,
+        });
+        payload.judgeAccount = nextAccountId;
+        payload.isActive = true;
+      }
+      delete payload.judgeAccountId;
 
       // Legacy Scorer docs used judgeNo 7 (before Time Keeper was removed) — migrate to 6 when safe
       if (judge.judgeType === 'Scorer' && Number(judge.judgeNo) === 7) {
@@ -1744,16 +1875,23 @@ class AdminService extends UserService {
         return { summary: [], totalJudges: 0, activeJudges: 0, byCompetition: {} };
       }
 
+      // "A judge" here means a filled slot. That used to be tested by a
+      // non-empty `name` typed in by the admin; it is now the presence of a
+      // registered account in the slot.
+      const filled = { competition: compId, judgeAccount: { $ne: null } };
       const [totalJudges, activeJudges] = await Promise.all([
-        this.judgeRepository.count({ competition: compId, name: { $ne: '', $exists: true } }),
-        this.judgeRepository.count({ competition: compId, isActive: true, name: { $ne: '', $exists: true } })
+        this.judgeRepository.count(filled),
+        this.judgeRepository.count({ ...filled, isActive: true })
       ]);
 
       // Get all judges for this competition
-      const judges = await this.judgeRepository.find(
+      const judges = (await this.judgeRepository.find(
         { competition: compId },
-        { select: 'name email gender ageGroup competitionTypes isActive' }
-      );
+        {
+          select: 'judgeAccount gender ageGroup competitionTypes judgeType judgeNo isActive',
+          populate: { path: 'judgeAccount', select: JUDGE_ACCOUNT_CARD_FIELDS },
+        }
+      )).map(flattenJudgeAccount);
 
       // Get judges by competition for backward compatibility
       const allJudges = await this.judgeRepository.find({}, {
@@ -1793,8 +1931,8 @@ class AdminService extends UserService {
       // Add judges to their respective age groups and competition types
       judges.forEach(judge => {
         if (!judge.gender || !judge.ageGroup) return;
-        // Skip judges with empty names
-        if (!judge.name || !judge.name.trim()) return;
+        // Skip empty slots — a panel position nobody has been assigned to.
+        if (!judge.judgeAccount) return;
 
         const key = `${judge.gender}_${judge.ageGroup}`;
         if (!summaryMap.has(key)) {
@@ -1844,7 +1982,7 @@ class AdminService extends UserService {
           const judges = entry.competitionTypes[ct].judges || [];
           const requiredTypes = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
           entry.competitionTypes[ct].hasMinimumJudges = requiredTypes.every(
-            (type) => judges.some((j) => j.judgeType === type && j.name?.trim())
+            (type) => judges.some((j) => j.judgeType === type)
           );
         });
       });

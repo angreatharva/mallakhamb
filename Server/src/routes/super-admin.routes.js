@@ -63,6 +63,7 @@ function createSuperAdminRoutes(container) {
   router.put('/lots/players', performanceOrderValidator.setPlayerOrder(), handleValidationErrors, performanceOrderController.setPlayerOrder);
 
   // Judge management routes (reuse admin controller methods)
+  router.get('/judge-accounts', adminController.searchJudgeAccounts);
   router.get('/judges', adminController.getJudges);
   router.post('/judges', adminController.createSingleJudge);
   router.put('/judges/:judgeId', adminController.updateJudge);

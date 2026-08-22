@@ -157,6 +157,7 @@ function bootstrap() {
     competitionRepository: c.resolve('competitionRepository'),
     teamRepository: c.resolve('teamRepository'),
     judgeRepository: c.resolve('judgeRepository'),
+    judgeAccountRepository: c.resolve('judgeAccountRepository'),
     scoreRepository: c.resolve('scoreRepository'),
     transactionRepository: c.resolve('transactionRepository'),
     calculationService: c.resolve('calculationService'),

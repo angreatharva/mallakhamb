@@ -262,6 +262,18 @@ function createAdminRoutes(container) {
   );
 
   /**
+   * @route   GET /api/admin/judge-accounts
+   * @desc    Search registered judges to assign to a panel slot
+   * @access  Admin, SuperAdmin
+   */
+  router.get(
+    '/judge-accounts',
+    authMiddleware,
+    authorize,
+    adminController.searchJudgeAccounts
+  );
+
+  /**
    * @route   GET /api/admin/judges/summary
    * @desc    Get all judges summary
    * @access  Admin, SuperAdmin, Scorer

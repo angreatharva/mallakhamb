@@ -1,7 +1,35 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+// Required for its side effect: registering the JudgeAccount schema. Every
+// panel query populates `judgeAccount`, and a populate against an unregistered
+// model throws MissingSchemaError at request time rather than at startup.
+require('./JudgeAccount');
 
+/**
+ * Judge — a panel ASSIGNMENT, not a person.
+ *
+ * One document per slot: (competition x gender x ageGroup x judgeNo). Who
+ * fills the slot lives in models/JudgeAccount.js and is referenced by
+ * `judgeAccount` below. The `name`, `username` and `password` fields are
+ * leftovers from when this document was also the login; they are written by
+ * nothing and read by nothing after migration 006, and migration 007 removes
+ * them.
+ */
 const judgeSchema = new mongoose.Schema({
+  /**
+   * The registered judge filling this slot.
+   *
+   * Null means an empty slot — the panel exists but nobody has been assigned.
+   * Nothing about the slot grants access; access is granted by an account
+   * pointing at it, which is why `isActive` now simply tracks whether this is
+   * set.
+   */
+  judgeAccount: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JudgeAccount',
+    default: null,
+    index: true
+  },
   competition: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Competition',
@@ -98,20 +126,21 @@ judgeSchema.index({ gender: 1, ageGroup: 1, judgeNo: 1, competition: 1 }, { uniq
 judgeSchema.index({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
 judgeSchema.index({ competitionTypes: 1 });
 
-// Username lookup index per competition, for non-empty usernames only.
+// "Which panels does this judge sit on at this meet?" — the lookup behind
+// login, the socket room auto-join and the running-order permission check.
 //
-// NOT unique, and it must never become unique again. A judge holds one document
-// per assignment and they all share a username, so a person judging two age
-// groups at one meet has two rows here — see the two compound indexes above,
-// which are what actually enforce "one judge per slot per category", and
-// `judge.service.loginJudge`, which reads every row as `allAssignments`.
+// NOT unique, and it must never become unique: one person legitimately holds
+// several assignments at one meet (Senior Judge in Under14, Judge 2 in
+// Under16). The two compound indexes above are what enforce "one judge per
+// slot per category".
 //
-// This carried `unique: true` until 2026-08-21. It never took effect in
-// production (`autoIndex: false`), and migration 001 aborted with E11000 the
-// first time anyone tried to build it against real data.
-judgeSchema.index({ username: 1, competition: 1 }, {
+// This replaces an index on { username, competition }. The username it keyed
+// was slot-derived (`J1-M-U14-1`), so two competitions generated the same
+// string for two different people, and the global `findByUsername` lookup
+// could return the wrong person's row.
+judgeSchema.index({ judgeAccount: 1, competition: 1 }, {
   sparse: true,
-  partialFilterExpression: { username: { $ne: '' } }
+  partialFilterExpression: { judgeAccount: { $type: 'objectId' } }
 });
 
 // Normalize legacy Scorer records created when Time Keeper occupied slot 6 (judgeNo 7)
