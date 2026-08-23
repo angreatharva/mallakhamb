@@ -17,7 +17,6 @@ const {
   NotFoundError,
   ValidationError,
   AuthenticationError,
-  BusinessRuleError,
 } = require('../../errors');
 const { normalizeEmail, sanitizeUserData } = require('../../utils/validation/sanitization.util');
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
@@ -153,8 +152,8 @@ class JudgeAccountService {
   /**
    * Update the judge's own profile.
    *
-   * Only EDITABLE_PROFILE_FIELDS are applied — a body carrying `password`,
-   * `isActive` or `isPlaceholderEmail` cannot escalate anything.
+   * Only EDITABLE_PROFILE_FIELDS are applied — a body carrying `password` or
+   * `isActive` cannot escalate anything.
    *
    * @param {string} accountId
    * @param {Object} updates
@@ -176,13 +175,11 @@ class JudgeAccountService {
 
     if (allowed.email) {
       allowed.email = normalizeEmail(allowed.email);
-      if (allowed.email !== account.email) {
-        if (await this.judgeAccountRepository.isEmailTaken(allowed.email, accountId)) {
-          throw new ConflictError('Email already registered');
-        }
-        // Setting a real address is exactly what clears the migrated-account
-        // flag; nothing else in the app writes it back to true.
-        allowed.isPlaceholderEmail = false;
+      if (
+        allowed.email !== account.email
+        && await this.judgeAccountRepository.isEmailTaken(allowed.email, accountId)
+      ) {
+        throw new ConflictError('Email already registered');
       }
     }
 
@@ -234,10 +231,7 @@ class JudgeAccountService {
 
     // updateById routes password writes through document.save(), so the
     // model's pre-save hook does the hashing — do not hash here as well.
-    await this.judgeAccountRepository.updateById(accountId, {
-      password: newPassword,
-      mustResetPassword: false,
-    });
+    await this.judgeAccountRepository.updateById(accountId, { password: newPassword });
 
     this.logger.info('Judge password changed', { judgeAccountId: accountId });
   }
@@ -249,61 +243,6 @@ class JudgeAccountService {
    */
   async searchAccounts(query) {
     return this.judgeAccountRepository.searchAssignable(query);
-  }
-
-  /**
-   * Correct the name or address of a MIGRATED account (admin only).
-   *
-   * Judges brought across from the old credential rows have a synthetic
-   * address (see migrations/006) and cannot sign in until someone puts the
-   * real one in. Only an account still flagged `isPlaceholderEmail` can be
-   * edited this way — once it holds a real address it belongs to the judge,
-   * and an admin has no business changing it.
-   *
-   * @param {string} accountId
-   * @param {{name?: string, email?: string}} updates
-   * @returns {Promise<Object>}
-   * @throws {NotFoundError|BusinessRuleError|ConflictError}
-   */
-  async adminFixPlaceholderAccount(accountId, updates) {
-    const account = await this.judgeAccountRepository.findById(accountId);
-    if (!account) {
-      throw new NotFoundError('Judge account');
-    }
-
-    if (!account.isPlaceholderEmail) {
-      throw new BusinessRuleError(
-        'This judge manages their own account. Ask them to sign in and update it.'
-      );
-    }
-
-    const sanitized = sanitizeUserData(updates || {});
-    const payload = {};
-    if (sanitized.name) payload.name = sanitized.name;
-
-    if (sanitized.email) {
-      const email = normalizeEmail(sanitized.email);
-      if (await this.judgeAccountRepository.isEmailTaken(email, accountId)) {
-        throw new ConflictError('Email already registered');
-      }
-      payload.email = email;
-      payload.isPlaceholderEmail = false;
-      // The judge has never chosen a password on this account, so make them.
-      payload.mustResetPassword = true;
-    }
-
-    if (Object.keys(payload).length === 0) {
-      return stripSensitiveFields(account);
-    }
-
-    const updated = await this.judgeAccountRepository.updateById(accountId, payload);
-
-    this.logger.info('Migrated judge account corrected by admin', {
-      judgeAccountId: accountId,
-      updatedFields: Object.keys(payload),
-    });
-
-    return stripSensitiveFields(updated);
   }
 }
 

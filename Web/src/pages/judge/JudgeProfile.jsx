@@ -355,17 +355,6 @@ const JudgeProfileInner = () => {
               <p className="text-white/40 text-sm truncate">{profile?.email}</p>
             </div>
           </div>
-
-          {profile?.isPlaceholderEmail && (
-            <div
-              className="mt-5 p-3 rounded-xl border text-sm"
-              style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.3)', color: '#FDE68A' }}
-            >
-              This account was carried over from the old judge logins and still has a
-              placeholder address. Set your real email below so you can sign in with it and
-              reset your own password.
-            </div>
-          )}
         </GlassCard>
 
         {/* Account details */}

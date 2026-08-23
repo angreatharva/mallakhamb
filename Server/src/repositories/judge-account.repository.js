@@ -9,7 +9,7 @@ const BaseRepository = require('./base.repository');
 const JudgeAccount = require('../../models/JudgeAccount');
 
 /** Fields safe to return from the admin's judge search. */
-const ASSIGNABLE_FIELDS = '_id name email stateUnit certificationLevel isPlaceholderEmail';
+const ASSIGNABLE_FIELDS = '_id name email stateUnit certificationLevel';
 
 class JudgeAccountRepository extends BaseRepository {
   /**
@@ -63,9 +63,6 @@ class JudgeAccountRepository extends BaseRepository {
    *
    * Matches name OR email, case-insensitively, anchored at a word start so a
    * three-letter query does not scan the whole collection for substrings.
-   * Placeholder-email accounts ARE returned: they are real judges migrated
-   * from the old credential rows, and the admin screen shows them with a badge
-   * so the address can be corrected.
    *
    * @param {string} query - Free-text search term
    * @param {number} [limit=20]

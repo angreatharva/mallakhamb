@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Users, Filter, UserPlus, Save, Edit, X, Trash2, Search, Copy, AlertTriangle } from 'lucide-react';
+import { Users, Filter, UserPlus, Save, Edit, X, Trash2, Search, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { adminAPI, superAdminAPI } from '@/services/api';
@@ -290,71 +290,6 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel 
   </AnimatePresence>
 );
 
-// ─── Fix migrated account modal ───────────────────────────────────────────────
-
-/**
- * Judges carried over from the old credential rows have a placeholder address
- * (see migration 006) and cannot sign in until it is corrected. This is the
- * only thing an admin may change about someone else's account, and the server
- * refuses it once the address is real.
- */
-const FixEmailModal = ({ account, api, onSaved, onCancel }) => {
-  const [email, setEmail] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { setEmail(''); }, [account]);
-
-  const save = async () => {
-    if (!email.trim()) { toast.error('Enter the judge\'s email address'); return; }
-    setSaving(true);
-    try {
-      await api.updateJudgeAccount(account._id, { email: email.trim() });
-      toast.success('Email updated — the judge can now sign in and set a password');
-      onSaved();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not update the address');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {account && (
-        <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={(e) => e.target === e.currentTarget && onCancel()}>
-          <motion.div className="w-full max-w-md rounded-3xl border overflow-hidden"
-            style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}>
-            <div className="p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-              <h3 className="text-xl font-black text-white">Set {account.name}&apos;s email</h3>
-              <p className="text-white/40 text-xs mt-1">
-                This judge was migrated from the old logins and has a placeholder address, so they
-                cannot sign in yet. Once you set the real one they can reset their own password.
-              </p>
-            </div>
-            <div className="p-6">
-              <DarkInput label="Email address" required type="email" value={email}
-                placeholder="judge@example.com"
-                onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="flex gap-3 p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-              <DarkBtn variant="ghost" onClick={onCancel} className="flex-1">Cancel</DarkBtn>
-              <DarkBtn variant="success" onClick={save} disabled={saving} className="flex-1">
-                <Save className="w-4 h-4" />
-                {saving ? 'Saving…' : 'Save'}
-              </DarkBtn>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const Judges = () => {
@@ -387,7 +322,6 @@ const Judges = () => {
   const [judgeFormData, setJudgeFormData] = useState(() => EMPTY_JUDGE_FORM.map((j) => ({ ...j })));
   const [editingJudge, setEditingJudge] = useState(null);
   const [editSelection, setEditSelection] = useState(null);
-  const [fixingAccount, setFixingAccount] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
@@ -737,13 +671,6 @@ const Judges = () => {
         onSave={handleAssignJudge}
         onCancel={() => { setEditingJudge(null); setEditSelection(null); }}
       />
-      <FixEmailModal
-        account={fixingAccount}
-        api={api}
-        onSaved={() => { setFixingAccount(null); fetchJudges(); }}
-        onCancel={() => setFixingAccount(null)}
-      />
-
       <FadeIn>
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
@@ -951,17 +878,6 @@ const Judges = () => {
                                     {judge.judgeAccount
                                       ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Assigned</span>
                                       : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}>Available</span>}
-                                    {judge.isPlaceholderEmail && (
-                                      <button
-                                        onClick={() => setFixingAccount({ _id: judge.judgeAccount, name: judge.name })}
-                                        className="px-2 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1 min-h-[24px]"
-                                        style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}
-                                        title="This judge cannot sign in until their real address is set"
-                                      >
-                                        <AlertTriangle className="w-3 h-3" />
-                                        Needs email
-                                      </button>
-                                    )}
                                   </div>
                                   {judge.email && <p className="text-xs text-white/40 mt-0.5">{judge.email}</p>}
                                 </div>

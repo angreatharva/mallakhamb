@@ -235,7 +235,6 @@ class JudgeService extends UserService {
           _id: account._id,
           name: account.name,
           email: account.email,
-          mustResetPassword: !!account.mustResetPassword,
           competition: activeCompetitionId,
           // Convenience copies of the primary seat. The authoritative answer
           // for "which role am I in THIS category" is allAssignments — the

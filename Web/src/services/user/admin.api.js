@@ -37,8 +37,6 @@ export const createAdminAPI = (basePath = '/admin') => ({
    * filled — an empty result means that person has not signed up yet.
    */
   searchJudgeAccounts: (q) => api.get(`${basePath}/judge-accounts`, { params: { q } }),
-  /** Set a real address on a judge migrated from the old credential rows. */
-  updateJudgeAccount: (accountId, data) => api.patch(`${basePath}/judge-accounts/${accountId}`, data),
   startAgeGroup: (data) => api.post(`${basePath}/age-groups/start`, data),
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),
   unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),

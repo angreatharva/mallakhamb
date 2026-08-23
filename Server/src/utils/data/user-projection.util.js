@@ -41,7 +41,6 @@ const JUDGE_ACCOUNT_CARD_FIELDS = [
   'email',
   'stateUnit',
   'certificationLevel',
-  'isPlaceholderEmail',
 ].join(' ');
 
 /**
@@ -68,7 +67,6 @@ const flattenJudgeAccount = (judge) => {
     account,
     name: account.name || '',
     email: account.email || null,
-    isPlaceholderEmail: !!account.isPlaceholderEmail,
   };
 };
 

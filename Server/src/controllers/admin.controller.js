@@ -268,20 +268,6 @@ function createAdminController(container) {
       res.json({ success: true, data: accounts });
     }),
 
-    /**
-     * @route PATCH /api/admin/judge-accounts/:accountId
-     * @desc  Put a real address on a judge migrated from the old credential
-     *        rows. Refused once the account holds one — from then on it is the
-     *        judge's to manage.
-     */
-    updateJudgeAccount: asyncHandler(async (req, res) => {
-      const account = await judgeAccountService.adminFixPlaceholderAccount(
-        req.params.accountId,
-        { name: req.body.name, email: req.body.email }
-      );
-      res.json({ success: true, data: account, message: 'Judge account updated' });
-    }),
-
     /** @route GET /api/admin/judges/summary */
     getAllJudgesSummary: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)

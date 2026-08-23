@@ -144,30 +144,13 @@ describe('updateProfile', () => {
     await service.updateProfile(ACCOUNT_ID, {
       name: 'Pat M',
       stateUnit: 'Maharashtra',
-      // None of these may be honoured from a profile body.
+      // Neither of these may be honoured from a profile body.
       password: 'Hacked123',
       isActive: false,
-      isPlaceholderEmail: true,
     });
 
     const [, applied] = judgeAccountRepository.updateById.mock.calls[0];
     expect(applied).toEqual({ name: 'Pat M', stateUnit: 'Maharashtra' });
-  });
-
-  it('clears the placeholder flag when a migrated judge sets a real address', async () => {
-    const { service, judgeAccountRepository } = buildService({
-      accounts: [{
-        _id: ACCOUNT_ID,
-        name: 'Pat',
-        email: 'j1-m-u14-1.abc123@judges.invalid',
-        isPlaceholderEmail: true,
-      }],
-    });
-
-    await service.updateProfile(ACCOUNT_ID, { email: 'pat@club.in' });
-
-    const [, applied] = judgeAccountRepository.updateById.mock.calls[0];
-    expect(applied).toEqual({ email: 'pat@club.in', isPlaceholderEmail: false });
   });
 
   it('refuses to move to an address another judge already holds', async () => {
@@ -208,7 +191,6 @@ describe('changePassword', () => {
 
     expect(judgeAccountRepository.updateById).toHaveBeenCalledWith(ACCOUNT_ID, {
       password: 'NewPass123',
-      mustResetPassword: false,
     });
   });
 });

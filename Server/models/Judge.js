@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 // Required for its side effect: registering the JudgeAccount schema. Every
 // panel query populates `judgeAccount`, and a populate against an unregistered
 // model throws MissingSchemaError at request time rather than at startup.
@@ -10,10 +9,8 @@ require('./JudgeAccount');
  *
  * One document per slot: (competition x gender x ageGroup x judgeNo). Who
  * fills the slot lives in models/JudgeAccount.js and is referenced by
- * `judgeAccount` below. The `name`, `username` and `password` fields are
- * leftovers from when this document was also the login; they are written by
- * nothing and read by nothing after migration 006, and migration 007 removes
- * them.
+ * `judgeAccount` below. This document carries NO credentials and no personal
+ * details — a seat is not a login, and nothing here identifies a person.
  */
 const judgeSchema = new mongoose.Schema({
   /**
@@ -66,59 +63,12 @@ const judgeSchema = new mongoose.Schema({
     enum: ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'],
     required: [true, 'Judge type is required']
   },
-  name: {
-    type: String,
-    default: '',
-    trim: true
-  },
-  username: {
-    type: String,
-    default: '',
-    trim: true,
-    lowercase: true,
-    sparse: true // This allows multiple empty values while maintaining uniqueness for non-empty values
-  },
-  password: {
-    type: String,
-    default: '',
-    select: false // Never loaded unless a query opts in with .select('+password')
-  },
-  /**
-   * Account lockout counters (MED-1). `select: false` keeps them out of every
-   * response and every populate; a login lookup must opt in explicitly.
-   */
-  loginAttempts: {
-    type: Number,
-    default: 0,
-    select: false
-  },
-  lockUntil: {
-    type: Date,
-    default: null,
-    select: false
-  },
-  mustResetPassword: {
-    type: Boolean,
-    default: false,
-    // Flag to enforce password change at first login (set when temporary password is generated)
-  },
   isActive: {
     type: Boolean,
-    default: false // Default to false, will be set to true when judge has data
+    default: false // True once a registered judge fills the slot
   }
 }, {
-  timestamps: true,
-  toJSON: {
-    // Defence in depth: strip credentials from any document that is serialised
-    // directly (res.json(doc), JSON.stringify(doc)). Note this does NOT apply to
-    // .toObject() or to .lean() results.
-    transform: function(doc, ret) {
-      delete ret.password;
-      delete ret.resetPasswordToken;
-      delete ret.resetPasswordExpires;
-      return ret;
-    }
-  }
+  timestamps: true
 });
 
 // Compound index to ensure unique judge assignments per gender/age group/competition
@@ -134,10 +84,10 @@ judgeSchema.index({ competitionTypes: 1 });
 // Under16). The two compound indexes above are what enforce "one judge per
 // slot per category".
 //
-// This replaces an index on { username, competition }. The username it keyed
-// was slot-derived (`J1-M-U14-1`), so two competitions generated the same
-// string for two different people, and the global `findByUsername` lookup
-// could return the wrong person's row.
+// This replaces an index on { username, competition }. That username was
+// slot-derived (`J1-M-U14-1`), so two competitions generated the same string
+// for two different people and a global lookup could return the wrong
+// person's row — which is a large part of why credentials left this document.
 judgeSchema.index({ judgeAccount: 1, competition: 1 }, {
   sparse: true,
   partialFilterExpression: { judgeAccount: { $type: 'objectId' } }
@@ -150,41 +100,5 @@ judgeSchema.pre('validate', function(next) {
   }
   next();
 });
-
-// Pre-save hook to hash password
-judgeSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
-  if (!this.isModified('password')) {
-    return next();
-  }
-
-  // Don't hash if password is empty
-  if (!this.password || this.password === '') {
-    return next();
-  }
-
-  // Skip hashing if password is already hashed (bcrypt format check)
-  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$') || this.password.startsWith('$2y$')) {
-    if (this.password.length >= 59 && this.password.length <= 60) {
-      // Already hashed, skip
-      return next();
-    }
-  }
-
-  try {
-    // Generate salt and hash password
-    const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Compare password method
-judgeSchema.methods.comparePassword = async function(candidatePassword) {
-  if (!this.password) return false;
-  return await bcrypt.compare(candidatePassword, this.password);
-};
 
 module.exports = mongoose.model('Judge', judgeSchema);

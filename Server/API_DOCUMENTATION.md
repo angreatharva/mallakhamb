@@ -334,7 +334,7 @@ Judge (Scoring Level)
 **Admin** — `role: 'admin' | 'super_admin'`, `competitions[]`, `isActive`, `minlength: 12`  
 **Coach** — `email`, `password` (hashed), `team`, `isActive`, `minlength: 12`  
 **Player** — `firstName`, `lastName`, `email`, `dateOfBirth`, `gender`, `team`, `ageGroup`, `isActive`, `minlength: 12`  
-**JudgeAccount** — the judge as a PERSON: `name`, `email` (unique, the login), `phone`, `password` (hashed), `stateUnit`, `registrationNumber`, `certificationLevel`, `photo`, `isPlaceholderEmail`, `mustResetPassword`, `isActive`  
+**JudgeAccount** — the judge as a PERSON: `name`, `email` (unique, the login), `phone`, `password` (hashed), `stateUnit`, `registrationNumber`, `certificationLevel`, `photo`, `isActive`  
 **Judge** — a panel ASSIGNMENT, not a login: `judgeAccount` -> JudgeAccount, `competition`, `competitionTypes[]`, `gender`, `ageGroup`, `apparatus`, `judgeNo`, `judgeType`, `isActive`  
 **Competition** — `name`, `level`, `place`, `year`, `startDate`, `endDate`, `status`, `admins[]`, `registeredTeams[]` (embedded), `ageGroups[]`, `competitionTypes[]`, `startedAgeGroups[]`  
 **Team** — `name`, `coach`, `description`, `competition`, `isActive`  
@@ -795,7 +795,6 @@ pointing at it. The two are never the same record:
 | `PUT /api/judge/profile/password` | Judge | Change password (current password required) |
 | `GET /api/judge/assignments` | Judge | Every panel they sit on, across competitions |
 | `GET /api/admin/judge-accounts?q=` | Admin | Search registered judges to seat on a panel |
-| `PATCH /api/admin/judge-accounts/:id` | Admin | Set the real address on a MIGRATED account only |
 
 Consequences worth knowing:
 
@@ -804,8 +803,8 @@ Consequences worth knowing:
 - The panel role a slip is written to is resolved from the assignment matching
   the category being scored, never from the request body — one person can be
   Senior Judge in one age group and Judge 2 in another.
-- Judges migrated by `006_judge_accounts_backfill` carry an `@judges.invalid`
-  address and cannot sign in until an admin replaces it.
+- Admins cannot create judge logins or set judge passwords at all. A judge who
+  has not registered cannot be seated; send them `/judge/register`.
 
 **Step 6: Start Age Group Competition**
 - Endpoint: `POST /api/admin/age-groups/:ageGroup/start`

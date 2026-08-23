@@ -54,35 +54,31 @@ async function up() {
     await Judge.collection.createIndex({ gender: 1, ageGroup: 1, judgeType: 1, competition: 1 }, { unique: true });
     await Judge.collection.createIndex({ competitionTypes: 1 });
 
-    // Username lookup index — deliberately NOT unique.
+    // "Which panels does this judge sit on?" — the lookup behind login, the
+    // socket room auto-join and the running-order permission check.
     //
-    // This was `unique: true` and it could never build: a judge holds ONE
-    // DOCUMENT PER ASSIGNMENT, all sharing one username, so anyone judging two
-    // age groups at the same meet collides with themselves. That is not bad
-    // data, it is the model — `judge.service.loginJudge` returns every matching
-    // row as `allAssignments`, `authorizationService.getJudgeDetails` builds
-    // `assignments` the same way, and `SocketManager.getRoomIdsForAssignment`
-    // iterates them to decide which scoring rooms the judge may join. Enforcing
-    // uniqueness here would make the second assignment impossible to create and
-    // break multi-category judging outright.
+    // Deliberately NOT unique: a judge holds ONE DOCUMENT PER SEAT, all
+    // pointing at one account, so anyone judging two age groups at the same
+    // meet would collide with themselves. That is the model, not bad data.
+    // Uniqueness of a judge SLOT is enforced by the two compound indexes above
+    // ({gender, ageGroup, judgeNo, competition} and
+    // {gender, ageGroup, judgeType, competition}).
     //
-    // Uniqueness of a judge SLOT is already enforced correctly by the two
-    // compound indexes above ({gender, ageGroup, judgeNo, competition} and
-    // {gender, ageGroup, judgeType, competition}). Username is the shared login
-    // identity across a person's assignments, not a key.
-    //
-    // The drop is required for re-runnability, not just defensiveness: MongoDB
+    // This key used to be {username, competition}. Judges hold their own
+    // accounts now (models/JudgeAccount.js) and the seat carries no
+    // credentials, so any stale build of the old index is dropped — MongoDB
     // rejects createIndex with the same key pattern and different options
-    // (IndexOptionsConflict) instead of replacing the index.
+    // (IndexOptionsConflict) rather than replacing it, so the drop is required
+    // for re-runnability, not just tidiness.
     const judgeIndexes = await Judge.collection.indexes();
-    if (judgeIndexes.some((ix) => ix.name === 'username_1_competition_1' && ix.unique)) {
+    if (judgeIndexes.some((ix) => ix.name === 'username_1_competition_1')) {
       await Judge.collection.dropIndex('username_1_competition_1');
     }
     await Judge.collection.createIndex(
-      { username: 1, competition: 1 },
+      { judgeAccount: 1, competition: 1 },
       {
         partialFilterExpression: {
-          username: { $exists: true, $gt: '' }
+          judgeAccount: { $type: 'objectId' }
         }
       }
     );

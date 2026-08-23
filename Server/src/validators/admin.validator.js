@@ -279,30 +279,6 @@ const deleteJudge = () => {
 };
 
 /**
- * Validate the admin correction of a migrated judge account.
- *
- * Name and address only — an admin cannot set a judge's password, and the
- * service refuses the request outright once the account is no longer a
- * migration placeholder.
- */
-const updateJudgeAccount = () => {
-  return [
-    objectId('accountId', 'param'),
-    body('name')
-      .optional()
-      .trim()
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters'),
-    body('email')
-      .optional()
-      .trim()
-      .isEmail()
-      .withMessage('Please provide a valid email address')
-      .toLowerCase(),
-  ];
-};
-
-/**
  * Validate assign judge to competition
  */
 const assignJudgeToCompetition = () => {
@@ -587,7 +563,6 @@ module.exports = {
   createSingleJudge,
   updateJudge,
   deleteJudge,
-  updateJudgeAccount,
   assignJudgeToCompetition,
   
   // Score Management
