@@ -332,9 +332,9 @@ Judge (Scoring Level)
 ### Collections
 
 **Admin** — `role: 'admin' | 'super_admin'`, `competitions[]`, `isActive`, `minlength: 12`  
-**Coach** — `email`, `password` (hashed), `team`, `isActive`, `minlength: 12`  
+**Coach** — `firstName`, `lastName`, `email`, `password` (hashed), `phone`, `team`, `isActive`  
 **Player** — `firstName`, `lastName`, `email`, `dateOfBirth`, `gender`, `team`, `ageGroup`, `isActive`, `minlength: 12`  
-**JudgeAccount** — the judge as a PERSON: `name`, `email` (unique, the login), `phone`, `password` (hashed), `stateUnit`, `registrationNumber`, `certificationLevel`, `photo`, `isActive`  
+**JudgeAccount** — the judge as a PERSON: `firstName`, `lastName`, `email` (unique, the login), `phone`, `password` (hashed), `stateUnit`, `registrationNumber`, `certificationLevel`, `photo`, `isActive`  
 **Judge** — a panel ASSIGNMENT, not a login: `judgeAccount` -> JudgeAccount, `competition`, `competitionTypes[]`, `gender`, `ageGroup`, `apparatus`, `judgeNo`, `judgeType`, `isActive`  
 **Competition** — `name`, `level`, `place`, `year`, `startDate`, `endDate`, `status`, `admins[]`, `registeredTeams[]` (embedded), `ageGroups[]`, `competitionTypes[]`, `startedAgeGroups[]`  
 **Team** — `name`, `coach`, `description`, `competition`, `isActive`  
@@ -805,6 +805,10 @@ Consequences worth knowing:
   Senior Judge in one age group and Judge 2 in another.
 - Admins cannot create judge logins or set judge passwords at all. A judge who
   has not registered cannot be seated; send them `/judge/register`.
+- Coaches and judges are stored as `firstName` + `lastName` (like players).
+  Responses still carry a composed `name` for display — it is derived at the
+  response boundary, not stored. Migration `006_split_person_names` splits the
+  old single `name` on existing coach documents.
 
 **Step 6: Start Age Group Competition**
 - Endpoint: `POST /api/admin/age-groups/:ageGroup/start`

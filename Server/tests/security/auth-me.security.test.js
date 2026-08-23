@@ -70,7 +70,7 @@ describe('GET /api/auth/me', () => {
 
   beforeEach(async () => {
     issuedTokens.clear();
-    coach = await Coach.create({ name: 'Me Coach', email: EMAIL, password: PASSWORD });
+    coach = await Coach.create({ firstName: 'Me', lastName: 'Coach', email: EMAIL, password: PASSWORD });
   });
 
   test('requires authentication', async () => {

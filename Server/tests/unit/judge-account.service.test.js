@@ -60,7 +60,8 @@ function buildService({ accounts = [], assignments = [], competitions = [] } = {
 }
 
 const REGISTRATION = {
-  name: 'Pat Mhatre',
+  firstName: 'Pat',
+  lastName: 'Mhatre',
   email: 'Pat@Club.IN',
   phone: '9876543210',
   password: 'Judge1234',
@@ -73,12 +74,21 @@ describe('register', () => {
     const result = await service.register(REGISTRATION);
 
     expect(judgeAccountRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'pat@club.in', name: 'Pat Mhatre' })
+      expect.objectContaining({ email: 'pat@club.in', firstName: 'Pat', lastName: 'Mhatre' })
     );
     // A brand new judge sits on no panel, so the token must not claim a
     // competition — that claim is what gates every scoring route.
     expect(tokenService.generateToken).toHaveBeenCalledWith(ACCOUNT_ID, 'judge');
     expect(result.token).toBe('signed-token');
+  });
+
+  it('returns a composed display name for the client', async () => {
+    const { service } = buildService();
+
+    const result = await service.register(REGISTRATION);
+
+    // The judge pages greet the signed-in judge with one string.
+    expect(result.user.name).toBe('Pat Mhatre');
   });
 
   it('never returns the password hash', async () => {
@@ -101,7 +111,7 @@ describe('register', () => {
 describe('getProfile', () => {
   it('returns the account with its assignments resolved to competitions', async () => {
     const { service } = buildService({
-      accounts: [{ _id: ACCOUNT_ID, name: 'Pat', email: 'pat@club.in', password: 'hash' }],
+      accounts: [{ _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in', password: 'hash' }],
       assignments: [
         { _id: 'a1', competition: 'comp-1', gender: 'Male', ageGroup: 'Under14', judgeType: 'Senior Judge' },
       ],
@@ -125,7 +135,7 @@ describe('getProfile', () => {
 
   it('returns an empty assignment list for a judge nobody has put on a panel', async () => {
     const { service } = buildService({
-      accounts: [{ _id: ACCOUNT_ID, name: 'Pat', email: 'pat@club.in' }],
+      accounts: [{ _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in' }],
       assignments: [],
     });
 
@@ -138,11 +148,12 @@ describe('getProfile', () => {
 describe('updateProfile', () => {
   it('applies only the editable fields and ignores everything else', async () => {
     const { service, judgeAccountRepository } = buildService({
-      accounts: [{ _id: ACCOUNT_ID, name: 'Pat', email: 'pat@club.in' }],
+      accounts: [{ _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in' }],
     });
 
     await service.updateProfile(ACCOUNT_ID, {
-      name: 'Pat M',
+      firstName: 'Pat',
+      lastName: 'Mhatre',
       stateUnit: 'Maharashtra',
       // Neither of these may be honoured from a profile body.
       password: 'Hacked123',
@@ -150,14 +161,14 @@ describe('updateProfile', () => {
     });
 
     const [, applied] = judgeAccountRepository.updateById.mock.calls[0];
-    expect(applied).toEqual({ name: 'Pat M', stateUnit: 'Maharashtra' });
+    expect(applied).toEqual({ firstName: 'Pat', lastName: 'Mhatre', stateUnit: 'Maharashtra' });
   });
 
   it('refuses to move to an address another judge already holds', async () => {
     const { service } = buildService({
       accounts: [
-        { _id: ACCOUNT_ID, name: 'Pat', email: 'pat@club.in' },
-        { _id: 'other', name: 'Sam', email: 'sam@club.in' },
+        { _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in' },
+        { _id: 'other', firstName: 'Sam', lastName: 'Rao', email: 'sam@club.in' },
       ],
     });
 

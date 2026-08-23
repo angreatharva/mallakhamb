@@ -37,11 +37,26 @@ const JUDGE_PUBLIC_FIELDS = [
 // assignment search. No phone, no photo, no credentials.
 const JUDGE_ACCOUNT_CARD_FIELDS = [
   '_id',
-  'name',
+  'firstName',
+  'lastName',
   'email',
   'stateUnit',
   'certificationLevel',
 ].join(' ');
+
+/**
+ * A person's display name, composed from the two stored halves.
+ *
+ * People are stored as `firstName` + `lastName` — one field could not be split
+ * back apart reliably, and the registration forms ask for both. Everything that
+ * DISPLAYS a person still wants one string, so composition happens once, here,
+ * at the response boundary.
+ *
+ * @param {Object|null} doc
+ * @returns {string}
+ */
+const fullName = (doc) =>
+  [doc?.firstName, doc?.lastName].filter(Boolean).join(' ').trim();
 
 /**
  * Flatten a populated `judgeAccount` onto the assignment.
@@ -65,14 +80,18 @@ const flattenJudgeAccount = (judge) => {
     ...judge,
     judgeAccount: account._id,
     account,
-    name: account.name || '',
+    firstName: account.firstName || '',
+    lastName: account.lastName || '',
+    name: fullName(account),
     email: account.email || null,
   };
 };
 
 // Coach shown on a submitted-team card. Only the display name is consumed
-// (JudgeDashboard.jsx:309,426 and AdminScores.jsx:318,401).
-const SUBMITTED_TEAM_COACH_FIELDS = ['_id', 'name', 'isActive'].join(' ');
+// (JudgeDashboard.jsx:309,426 and AdminScores.jsx:318,401) — `name` is not a
+// stored field any more, it is composed by projectFields below, which is why
+// the FIELD_LIST names it and the select does not.
+const SUBMITTED_TEAM_COACH_FIELDS = ['_id', 'firstName', 'lastName', 'isActive'].join(' ');
 
 // Athlete shown on a submitted-team card. Deliberately omits `email`,
 // `dateOfBirth`, `password` and the reset-token pair: these rosters include
@@ -91,7 +110,8 @@ const SUBMITTED_TEAM_PLAYER_FIELDS = [
 ].join(' ');
 
 const SUBMITTED_TEAM_PLAYER_FIELD_LIST = SUBMITTED_TEAM_PLAYER_FIELDS.split(' ');
-const SUBMITTED_TEAM_COACH_FIELD_LIST = SUBMITTED_TEAM_COACH_FIELDS.split(' ');
+// `name` is derived, not selected — see projectFields.
+const SUBMITTED_TEAM_COACH_FIELD_LIST = [...SUBMITTED_TEAM_COACH_FIELDS.split(' '), 'name'];
 
 /**
  * Reduce a populated document (Mongoose doc or plain object) to an allow-listed
@@ -119,6 +139,15 @@ function projectFields(doc, allowedFields) {
   const projected = {};
 
   for (const field of allowedFields) {
+    // `name` is composed, not stored: people are `firstName` + `lastName` now,
+    // while roughly twenty consumers across both stacks render `coach.name`.
+    // Composing it here — the one place every coach card passes through —
+    // keeps all of them working without twenty edits that could each go wrong.
+    if (field === 'name' && source.name === undefined) {
+      const composed = fullName(source);
+      if (composed) projected.name = composed;
+      continue;
+    }
     if (source[field] !== undefined) {
       projected[field] = source[field];
     }
@@ -161,6 +190,7 @@ module.exports = {
   JUDGE_PUBLIC_FIELDS,
   JUDGE_ACCOUNT_CARD_FIELDS,
   flattenJudgeAccount,
+  fullName,
   SENSITIVE_USER_FIELDS,
   stripSensitiveFields,
   SUBMITTED_TEAM_COACH_FIELDS,

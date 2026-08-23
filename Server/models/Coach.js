@@ -2,10 +2,25 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const coachSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
-    required: [true, 'Name is required'],
+    required: [true, 'First name is required'],
     trim: true
+  },
+  /**
+   * Deliberately NOT `required`, for the same reason Player.phone is not.
+   *
+   * Coaches registered before the name split have a single `name` string, and
+   * migration 008 gives a one-word name an empty last name — a `required`
+   * String rejects '', so those accounts would fail validation on their next
+   * save (a profile edit, a team change) for something they did nothing wrong
+   * about. Registration enforces both halves at the API boundary instead, in
+   * coach.routes.js.
+   */
+  lastName: {
+    type: String,
+    trim: true,
+    default: ''
   },
   email: {
     type: String,

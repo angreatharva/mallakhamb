@@ -125,7 +125,7 @@ beforeEach(async () => {
 
   // Saved through the models so the real pre-save hooks hash the passwords.
   const coach = await Coach.create({
-    name: 'Coach Example',
+    firstName: 'Coach', lastName: 'Example',
     email: 'coach@example.com',
     password: 'CoachSecret1',
   });
@@ -164,7 +164,7 @@ beforeEach(async () => {
   competitionId = competition._id;
 
   const judgeAccount = await JudgeAccount.create({
-    name: 'Senior Judge One',
+    firstName: 'Senior', lastName: 'Judge One',
     email: 'srjudge1@club.in',
     password: 'PlaintextSecret1',
     isActive: true,

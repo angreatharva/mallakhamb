@@ -1,3 +1,4 @@
+const { fullName } = require('../../utils/data/user-projection.util');
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
 const { calculatePlayerAdditionAmount } = require('../../config/payment.config');
@@ -59,7 +60,17 @@ class SuperAdminService {
   async updateAdmin(adminId, payload) { return this.adminRepository.updateById(adminId, payload); }
   async deleteAdmin(adminId) { return this.adminRepository.deleteById(adminId); }
 
-  async getAllCoaches() { return this.coachRepository.find({}, { sort: { createdAt: -1 } }); }
+  /**
+   * Every coach, for the superadmin's management table.
+   *
+   * The table renders one name per row, so the two stored halves are composed
+   * here — `.lean()` results carry no virtuals, which is why this is a map and
+   * not a schema virtual.
+   */
+  async getAllCoaches() {
+    const coaches = await this.coachRepository.find({}, { sort: { createdAt: -1 } });
+    return coaches.map((coach) => ({ ...coach, name: fullName(coach) }));
+  }
   async updateCoachStatus(coachId, isActive) { return this.coachRepository.updateById(coachId, { isActive }); }
 
   async getAllTeams(filters = {}) {
@@ -140,9 +151,9 @@ class SuperAdminService {
             name: team.name,
             coach: team.coach ? {
               _id: team.coach._id,
-              name: team.coach.name,
-              firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
-              lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
+              firstName: team.coach.firstName || '',
+              lastName: team.coach.lastName || '',
+              name: fullName(team.coach),
               email: team.coach.email
             } : null,
             playerCount: playersWithAgeGroups.length,
@@ -180,9 +191,9 @@ class SuperAdminService {
           name: team.name,
           coach: team.coach ? {
             _id: team.coach._id,
-            name: team.coach.name,
-            firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
-            lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
+            firstName: team.coach.firstName || '',
+            lastName: team.coach.lastName || '',
+            name: fullName(team.coach),
             email: team.coach.email
           } : null,
           playerCount: players.length,
@@ -833,9 +844,9 @@ class SuperAdminService {
 
     // Fetch team with coach populated to get coach name for transaction
     const teamWithCoach = await this.teamRepository.findById(canonicalTeamId, {
-      populate: { path: 'coach', select: 'name' }
+      populate: { path: 'coach', select: 'firstName lastName' }
     });
-    const coachName = teamWithCoach?.coach?.name || 'Unknown Coach';
+    const coachName = fullName(teamWithCoach?.coach) || 'Unknown Coach';
 
     // Validate age group is available for the competition
     const validAgeGroup = (competition.ageGroups || []).some(

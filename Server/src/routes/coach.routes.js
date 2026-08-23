@@ -36,7 +36,11 @@ function createCoachRoutes(container) {
 
   // Validation middleware
   const registerValidation = [
-    body('name').trim().notEmpty().withMessage('Name is required'),
+    // Both halves are required at the API boundary. The schema leaves
+    // `lastName` optional so coaches migrated from the single `name` field
+    // (migration 008) do not fail validation on their next save.
+    body('firstName').trim().notEmpty().withMessage('First name is required'),
+    body('lastName').trim().notEmpty().withMessage('Last name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
     phone('phone'),
     body('password')

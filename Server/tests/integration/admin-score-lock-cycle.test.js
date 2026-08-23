@@ -207,7 +207,7 @@ describe('admin score lock/unlock cycle', () => {
     });
 
     judge = await JudgeAccount.create({
-      name: 'Senior One',
+      firstName: 'Senior', lastName: 'One',
       email: 'sr1@club.in',
       password: 'PlaintextSecret1',
       isActive: true,

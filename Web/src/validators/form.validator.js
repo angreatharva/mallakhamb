@@ -109,7 +109,9 @@ export const playerRegisterSchema = z.object({
 });
 
 export const coachRegisterSchema = z.object({
-  name: nameSchema,
+  // Coaches and judges are stored as two name halves, like players.
+  firstName: nameSchema,
+  lastName: nameSchema,
   email: emailSchema,
   phone: phoneSchema,
   password: passwordSchema,

@@ -61,7 +61,7 @@ beforeEach(async () => {
   });
 
   const coach = await Coach.create({
-    name: 'Extraction Coach',
+    firstName: 'Extraction', lastName: 'Coach',
     email: 'extraction-coach@example.com',
     password: 'CoachSecret1',
   });

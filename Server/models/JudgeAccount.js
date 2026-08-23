@@ -17,10 +17,16 @@ const bcrypt = require('bcryptjs');
  * as a coach account is, and the two must not drift apart.
  */
 const judgeAccountSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
-    required: [true, 'Name is required'],
+    required: [true, 'First name is required'],
     trim: true
+  },
+  // Not `required` — see the equivalent note in models/Coach.js.
+  lastName: {
+    type: String,
+    trim: true,
+    default: ''
   },
   email: {
     type: String,
@@ -130,7 +136,7 @@ const judgeAccountSchema = new mongoose.Schema({
 
 // Backs the admin's "find a registered judge" search. Not unique — `email`
 // already carries that.
-judgeAccountSchema.index({ name: 1 });
+judgeAccountSchema.index({ firstName: 1, lastName: 1 });
 
 // Hash password before saving
 judgeAccountSchema.pre('save', async function(next) {

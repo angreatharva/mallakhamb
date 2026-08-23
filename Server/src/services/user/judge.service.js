@@ -28,6 +28,7 @@ const {
   SUBMITTED_TEAM_COACH_FIELD_LIST,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
+  fullName,
 } = require('../../utils/data/user-projection.util');
 const {
   findSubmittedRegistration,
@@ -233,7 +234,9 @@ class JudgeService extends UserService {
       return {
         judge: {
           _id: account._id,
-          name: account.name,
+          firstName: account.firstName,
+          lastName: account.lastName,
+          name: fullName(account),
           email: account.email,
           competition: activeCompetitionId,
           // Convenience copies of the primary seat. The authoritative answer
@@ -500,7 +503,12 @@ class JudgeService extends UserService {
   async getTeamPlayers(judgeAccountId, teamId, category = {}) {
     try {
       const team = await this.teamRepository.findById(teamId, {
-        populate: 'coach competition'
+        populate: [
+          // Projected, not bare: an unprojected coach populate is how CRIT-4
+          // put coach credentials on a judge's screen in the first place.
+          { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS },
+          { path: 'competition' },
+        ]
       });
 
       if (!team) {
@@ -614,7 +622,7 @@ class JudgeService extends UserService {
         team: {
           _id: team._id,
           name: team.name,
-          coach: team.coach,
+          coach: projectFields(team.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
           competition: team.competition
         },
         players: playersWithScores

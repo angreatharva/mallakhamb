@@ -27,7 +27,8 @@ const playerFixture = (overrides = {}) => ({
 });
 
 const coachFixture = (overrides = {}) => ({
-  name: 'Test Coach',
+  firstName: 'Test',
+  lastName: 'Coach',
   email: `coach-${Math.random().toString(36).slice(2)}@example.com`,
   password: 'CorrectHorse1!',
   ...overrides,

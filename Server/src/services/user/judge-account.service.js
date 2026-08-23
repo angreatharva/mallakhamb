@@ -19,11 +19,12 @@ const {
   AuthenticationError,
 } = require('../../errors');
 const { normalizeEmail, sanitizeUserData } = require('../../utils/validation/sanitization.util');
-const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
+const { stripSensitiveFields, fullName } = require('../../utils/data/user-projection.util');
 
 /** Fields a judge may set on themselves. Everything else is ignored. */
 const EDITABLE_PROFILE_FIELDS = [
-  'name',
+  'firstName',
+  'lastName',
   'phone',
   'email',
   'stateUnit',
@@ -78,7 +79,8 @@ class JudgeAccountService {
     }
 
     const account = await this.judgeAccountRepository.create({
-      name: sanitized.name,
+      firstName: sanitized.firstName,
+      lastName: sanitized.lastName || '',
       email,
       phone: sanitized.phone || null,
       password: payload.password,
@@ -95,7 +97,9 @@ class JudgeAccountService {
     this.logger.info('Judge account registered', { judgeAccountId: account._id });
 
     return {
-      user: stripSensitiveFields(account),
+      // `name` is composed for the client: the judge pages greet the signed-in
+      // judge by one string.
+      user: { ...stripSensitiveFields(account), name: fullName(account) },
       token,
     };
   }
@@ -114,6 +118,7 @@ class JudgeAccountService {
 
     return {
       ...stripSensitiveFields(account),
+      name: fullName(account),
       assignments: await this.getAssignments(accountId),
     };
   }

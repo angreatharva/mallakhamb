@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const EventTypes = require('../../socket/events/event-types');
 const { toCompetitionTypeSlug, toCompetitionTypeDisplay } = require('../../config/cop-rules');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
+const { fullName } = require('../../utils/data/user-projection.util');
 
 /** Judge roles allowed to set the running order for their own panel. */
 const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
@@ -228,7 +229,7 @@ class PerformanceOrderService {
       return {
         _id: team._id,
         name: team.name,
-        coachName: team.coach?.name || '',
+        coachName: team.coach?.name || fullName(team.coach) || '',
         lotNo: teamLots.get(teamId) ?? null,
         position: teamPositions.has(teamId) ? teamPositions.get(teamId) : null,
         players: this.sortByStoredPosition(players, (p) => p.name),

@@ -166,8 +166,10 @@ const playerId = new mongoose.Types.ObjectId();
  * (pre-save hook hashes the password) and an assignment for the panel slot.
  */
 async function createJudge({ judgeNo, judgeType, name, email }) {
+  const [firstName, ...rest] = name.split(' ');
   const account = await JudgeAccount.create({
-    name,
+    firstName,
+    lastName: rest.join(' ') || 'Judge',
     email,
     password: 'PlaintextSecret1',
     isActive: true,
@@ -419,7 +421,7 @@ describe('HIGH-1 — the slip is bound to the authenticated judge (FIXED)', () =
    */
   test('a registered judge on no panel cannot submit a slip', async () => {
     const account = await JudgeAccount.create({
-      name: 'Unassigned Judge',
+      firstName: 'Unassigned', lastName: 'Judge',
       email: 'nobody@club.in',
       password: 'PlaintextSecret1',
       isActive: true,

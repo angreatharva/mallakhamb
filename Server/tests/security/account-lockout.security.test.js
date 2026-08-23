@@ -52,7 +52,7 @@ describe('MED-1 — account lockout is enforced (FIXED)', () => {
   beforeEach(async () => {
     auth = buildAuthService();
     // Saved through the model so the real pre-save hook hashes the password.
-    await Coach.create({ name: 'Lockout Coach', email: EMAIL, password: PASSWORD });
+    await Coach.create({ firstName: 'Lockout', lastName: 'Coach', email: EMAIL, password: PASSWORD });
   });
 
   test('a wrong password increments the stored counter', async () => {
@@ -134,7 +134,7 @@ describe('MED-1 — judge login is covered too', () => {
     });
 
     const account = await JudgeAccount.create({
-      name: 'Lock Judge',
+      firstName: 'Lock', lastName: 'Judge',
       email: EMAIL,
       password: PASSWORD,
       isActive: true,
@@ -174,7 +174,7 @@ describe('LOW-4 — login does not leak account existence by timing', () => {
 
   beforeEach(async () => {
     auth = buildAuthService();
-    await Coach.create({ name: 'Timing Coach', email: EMAIL, password: PASSWORD });
+    await Coach.create({ firstName: 'Timing', lastName: 'Coach', email: EMAIL, password: PASSWORD });
   });
 
   /**

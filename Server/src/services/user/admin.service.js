@@ -35,6 +35,7 @@ const {
   SUBMITTED_TEAM_COACH_FIELD_LIST,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
+  fullName,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
@@ -834,7 +835,9 @@ class AdminService extends UserService {
             name: team.name,
             coach: team.coach ? {
               _id: team.coach._id,
-              name: team.coach.name,
+              firstName: team.coach.firstName,
+              lastName: team.coach.lastName,
+              name: fullName(team.coach),
               email: team.coach.email
             } : null,
             playerCount: playersWithAgeGroups.length,
@@ -955,9 +958,9 @@ class AdminService extends UserService {
           name: team.name,
           coach: team.coach ? {
             _id: team.coach._id,
-            name: team.coach.name,
-            firstName: team.coach.firstName || team.coach.name?.split(' ')[0] || '',
-            lastName: team.coach.lastName || team.coach.name?.split(' ').slice(1).join(' ') || '',
+            firstName: team.coach.firstName || '',
+            lastName: team.coach.lastName || '',
+            name: fullName(team.coach),
             email: team.coach.email
           } : null,
           players: players.map(p => ({
@@ -1159,8 +1162,10 @@ class AdminService extends UserService {
         // toJSON transform, so the allow-list is applied explicitly here as
         // well as in the populate projection above.
         coach: projectFields(
-          (regTeam.coach && regTeam.coach.name) ? regTeam.coach :
-          (regTeam.team && regTeam.team.coach && regTeam.team.coach.name) ? regTeam.team.coach :
+          // "Which of these two is the populated coach?" — whichever one has a
+          // name on it. Tested on firstName now that the name is two fields.
+          (regTeam.coach && regTeam.coach.firstName) ? regTeam.coach :
+          (regTeam.team && regTeam.team.coach && regTeam.team.coach.firstName) ? regTeam.team.coach :
           regTeam.coach,
           SUBMITTED_TEAM_COACH_FIELD_LIST
         ),
@@ -2323,7 +2328,11 @@ class AdminService extends UserService {
       this.logger.info('Transactions retrieved', { total });
 
       return {
-        transactions,
+        // The table shows one name per row (AdminTransactions.jsx), so the two
+        // stored halves are composed here.
+        transactions: transactions.map((tx) => (
+          tx.coach ? { ...tx, coach: { ...tx.coach, name: fullName(tx.coach) } } : tx
+        )),
         total,
         page,
         pages: Math.ceil(total / limit)
@@ -2352,7 +2361,9 @@ class AdminService extends UserService {
 
       this.logger.info('Transaction details retrieved', { transactionId });
 
-      return transaction;
+      return transaction.coach
+        ? { ...transaction, coach: { ...transaction.coach, name: fullName(transaction.coach) } }
+        : transaction;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;

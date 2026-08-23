@@ -87,7 +87,8 @@ const competitionId = new mongoose.Types.ObjectId();
  */
 async function createJudge({ judgeNo, judgeType, username, gender = 'Male', ageGroup = 'Under14' }) {
   const account = await JudgeAccount.create({
-    name: `${judgeType} ${username}`,
+    firstName: judgeType.replace(/\s+/g, ''),
+    lastName: username,
     email: `${username}@club.in`,
     password: 'JudgeSecret1',
     isActive: true,

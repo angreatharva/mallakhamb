@@ -9,6 +9,7 @@
 
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
+const { fullName } = require('../../utils/data/user-projection.util');
 const { calculateTeamPaymentAmount } = require('../../config/payment.config');
 
 class CoachService extends UserService {
@@ -1107,6 +1108,9 @@ class CoachService extends UserService {
 
       return {
         ...team,
+        // People are stored as two name halves; anything that displays one
+        // string composes it at the boundary.
+        coach: team?.coach ? { ...team.coach, name: fullName(team.coach) } : team?.coach,
         players
       };
     } catch (error) {

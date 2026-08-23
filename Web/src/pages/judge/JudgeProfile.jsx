@@ -205,7 +205,8 @@ const JudgeProfileInner = () => {
       setProfile(data);
       setPhoto(data.photo || null);
       resetProfile({
-        name: data.name || '',
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
         email: data.email || '',
         phone: data.phone || '',
         stateUnit: data.stateUnit || '',
@@ -364,15 +365,29 @@ const JudgeProfileInner = () => {
           </SectionHeading>
 
           <form onSubmit={handleProfileSubmit(onSaveProfile)} noValidate className="space-y-4">
-            <Field id="judge-profile-name" label="Full Name" error={profileErrors.name?.message}>
-              <ThemedInput
-                id="judge-profile-name"
-                icon={User}
-                placeholder="Your full name"
-                error={profileErrors.name?.message}
-                {...registerProfile('name', { required: 'Name is required' })}
-              />
-            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field id="judge-profile-firstName" label="First Name" error={profileErrors.firstName?.message}>
+                <ThemedInput
+                  id="judge-profile-firstName"
+                  icon={User}
+                  placeholder="First name"
+                  autoComplete="given-name"
+                  error={profileErrors.firstName?.message}
+                  {...registerProfile('firstName', { required: 'First name is required' })}
+                />
+              </Field>
+
+              <Field id="judge-profile-lastName" label="Last Name" error={profileErrors.lastName?.message}>
+                <ThemedInput
+                  id="judge-profile-lastName"
+                  icon={User}
+                  placeholder="Last name"
+                  autoComplete="family-name"
+                  error={profileErrors.lastName?.message}
+                  {...registerProfile('lastName', { required: 'Last name is required' })}
+                />
+              </Field>
+            </div>
 
             <Field id="judge-profile-email" label="Email Address" error={profileErrors.email?.message}>
               <ThemedInput

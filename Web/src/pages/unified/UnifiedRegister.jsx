@@ -155,13 +155,24 @@ const PASSWORD_RULES = {
 
 const COACH_FIELDS = [
   {
-    name: 'name',
-    label: 'Full Name',
+    name: 'firstName',
+    label: 'First Name',
     type: 'text',
     icon: User,
-    placeholder: 'Enter your full name',
-    autoComplete: 'name',
-    rules: { required: 'Name is required' },
+    placeholder: 'First name',
+    autoComplete: 'given-name',
+    rules: { required: 'First name is required' },
+    half: true,
+  },
+  {
+    name: 'lastName',
+    label: 'Last Name',
+    type: 'text',
+    icon: User,
+    placeholder: 'Last name',
+    autoComplete: 'family-name',
+    rules: { required: 'Last name is required' },
+    half: true,
   },
   {
     name: 'email',
@@ -250,13 +261,24 @@ const PLAYER_FIELDS = [
  */
 const JUDGE_FIELDS = [
   {
-    name: 'name',
-    label: 'Full Name',
+    name: 'firstName',
+    label: 'First Name',
     type: 'text',
     icon: User,
-    placeholder: 'Enter your full name',
-    autoComplete: 'name',
-    rules: { required: 'Name is required' },
+    placeholder: 'First name',
+    autoComplete: 'given-name',
+    rules: { required: 'First name is required' },
+    half: true,
+  },
+  {
+    name: 'lastName',
+    label: 'Last Name',
+    type: 'text',
+    icon: User,
+    placeholder: 'Last name',
+    autoComplete: 'family-name',
+    rules: { required: 'Last name is required' },
+    half: true,
   },
   {
     name: 'email',

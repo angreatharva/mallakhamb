@@ -117,7 +117,7 @@ beforeEach(async () => {
   issuedTokens.clear();
 
   coachDoc = await Coach.create({
-    name: 'Team Coach',
+    firstName: 'Team', lastName: 'Coach',
     email: COACH_EMAIL,
     password: 'CoachSecret1',
   });

@@ -46,12 +46,18 @@ const login = () => {
  */
 const register = () => {
   return [
-    body('name')
+    body('firstName')
       .trim()
       .notEmpty()
-      .withMessage('Name is required')
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters'),
+      .withMessage('First name is required')
+      .isLength({ min: 2, max: 50 })
+      .withMessage('First name must be between 2 and 50 characters'),
+    body('lastName')
+      .trim()
+      .notEmpty()
+      .withMessage('Last name is required')
+      .isLength({ min: 1, max: 50 })
+      .withMessage('Last name must be at most 50 characters'),
     email('email'),
     phone('phone'),
     password('password'),
@@ -73,11 +79,16 @@ const register = () => {
  */
 const updateProfile = () => {
   return [
-    body('name')
+    body('firstName')
       .optional()
       .trim()
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters'),
+      .isLength({ min: 2, max: 50 })
+      .withMessage('First name must be between 2 and 50 characters'),
+    body('lastName')
+      .optional()
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('Last name must be at most 50 characters'),
     body('email').optional().trim().isEmail().withMessage('Please provide a valid email address').toLowerCase(),
     phone('phone', { isOptional: true }),
     body('stateUnit').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),

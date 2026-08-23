@@ -137,8 +137,10 @@ const playerId = new mongoose.Types.ObjectId();
 
 /** A registered judge (the person) seated on the Under14 Male panel. */
 async function createJudge({ judgeNo, judgeType, name, email }) {
+  const [firstName, ...rest] = name.split(' ');
   const account = await JudgeAccount.create({
-    name,
+    firstName,
+    lastName: rest.join(' ') || 'Judge',
     email,
     password: 'PlaintextSecret1',
     isActive: true,
