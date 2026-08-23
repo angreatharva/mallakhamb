@@ -429,17 +429,32 @@ function createAuthRateLimitMiddleware(container) {
  * of a session would burn half a 10-per-15-min IP budget on legitimate logins,
  * and a couple of typos would lock the panel out of the competition.
  *
- * Keying on the username satisfies both of the audit's acceptance criteria at
+ * Keying on the ACCOUNT satisfies both of the audit's acceptance criteria at
  * once: credential guessing against any single judge account is capped at
  * `max` attempts per window, while five judges signing in from one venue IP
  * each get their own bucket and are never throttled by one another.
  *
- * A request with no username cannot authenticate anyway; those fall back to an
- * IPv6-safe IP key so the endpoint still cannot be flooded anonymously.
+ * The identifier is the judge's email now that judges hold their own accounts;
+ * `username` is still read so a client that has not been redeployed keeps its
+ * own bucket rather than silently falling back to the shared IP one — which
+ * would put the whole venue back on a single budget.
+ *
+ * A request with no identifier cannot authenticate anyway; those fall back to
+ * an IPv6-safe IP key so the endpoint still cannot be flooded anonymously.
  *
  * @param {Object} container - DI container
  * @returns {Function} Express middleware
  */
+/**
+ * The account a judge login attempt is aimed at, lower-cased.
+ * @param {import('express').Request} req
+ * @returns {string} The identifier, or '' when the body carries none
+ */
+function judgeLoginIdentifier(req) {
+  const raw = req.body?.email || req.body?.username;
+  return typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+}
+
 function createJudgeLoginRateLimitMiddleware(container) {
   const config = container.resolve('config');
   const logger = container.resolve('logger');
@@ -451,9 +466,9 @@ function createJudgeLoginRateLimitMiddleware(container) {
     windowMs,
     max,
     keyGenerator: (req) => {
-      const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
-      // Namespaced so a username can never collide with the IP fallback key.
-      return username ? `judge:${username}` : `judge-ip:${ipKeyGenerator(req.ip)}`;
+      const identifier = judgeLoginIdentifier(req);
+      // Namespaced so an account can never collide with the IP fallback key.
+      return identifier ? `judge:${identifier}` : `judge-ip:${ipKeyGenerator(req.ip)}`;
     },
     message: {
       success: false,
@@ -465,9 +480,9 @@ function createJudgeLoginRateLimitMiddleware(container) {
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
-      // Deliberately does not log the password; username identifies the bucket.
+      // Deliberately does not log the password; the identifier names the bucket.
       logger.warn('Judge login rate limit exceeded', {
-        username: typeof req.body?.username === 'string' ? req.body.username : undefined,
+        identifier: judgeLoginIdentifier(req) || undefined,
         ip: req.ip,
         path: req.path,
         nodeEnv
