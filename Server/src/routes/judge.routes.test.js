@@ -22,12 +22,17 @@ jest.mock('../middleware/auth.middleware', () => {
       return res.status(401).json({ message: 'No authorization token provided' });
     }
     req.userType = req.header('Role') || 'judge';
+    // A judge principal is an ACCOUNT; the panel seats it holds are attached
+    // separately by the real middleware, and that is what the guards read.
     req.user = {
-      _id: 'user-1',
+      _id: 'account-1',
       name: 'Test User',
-      judgeType: req.header('JudgeType') || undefined,
       role: req.header('Role') || undefined,
     };
+    const judgeType = req.header('JudgeType');
+    req.judgeAssignments = judgeType
+      ? [{ _id: 'seat-1', judgeType, gender: 'Male', ageGroup: 'Under14', competitionTypes: ['competition_1'] }]
+      : [];
     next();
   };
 
@@ -39,7 +44,9 @@ jest.mock('../middleware/auth.middleware', () => {
     return res.status(403).json({ message: 'Insufficient permissions' });
   };
 
-  // Mirrors the real guard.
+  // Mirrors the real guard, including the fact that it reads the judge's
+  // SEATS rather than a role on the principal — a judge can chair one panel
+  // and merely score on another.
   const requireSequenceManager = (req, res, next) => {
     if (!req.user || !req.userType) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -47,7 +54,8 @@ jest.mock('../middleware/auth.middleware', () => {
     const isAdmin = ['admin', 'superadmin'].includes(req.userType) ||
                     (req.user.role && ['admin', 'superadmin'].includes(req.user.role));
     const canSequence = req.userType === 'judge' &&
-                        ['Senior Judge', 'Scorer'].includes(req.user.judgeType);
+                        (req.judgeAssignments || []).some((a) =>
+                          ['Senior Judge', 'Scorer'].includes(a.judgeType));
     if (!isAdmin && !canSequence) {
       return res.status(403).json({ message: 'Insufficient permissions' });
     }

@@ -334,7 +334,8 @@ Judge (Scoring Level)
 **Admin** — `role: 'admin' | 'super_admin'`, `competitions[]`, `isActive`, `minlength: 12`  
 **Coach** — `email`, `password` (hashed), `team`, `isActive`, `minlength: 12`  
 **Player** — `firstName`, `lastName`, `email`, `dateOfBirth`, `gender`, `team`, `ageGroup`, `isActive`, `minlength: 12`  
-**Judge** — `competition`, `competitionTypes[]`, `gender`, `ageGroup`, `judgeNo`, `judgeType`, `username`, `password`, `mustResetPassword`, `isActive`  
+**JudgeAccount** — the judge as a PERSON: `name`, `email` (unique, the login), `phone`, `password` (hashed), `stateUnit`, `registrationNumber`, `certificationLevel`, `photo`, `isPlaceholderEmail`, `mustResetPassword`, `isActive`  
+**Judge** — a panel ASSIGNMENT, not a login: `judgeAccount` -> JudgeAccount, `competition`, `competitionTypes[]`, `gender`, `ageGroup`, `apparatus`, `judgeNo`, `judgeType`, `isActive`  
 **Competition** — `name`, `level`, `place`, `year`, `startDate`, `endDate`, `status`, `admins[]`, `registeredTeams[]` (embedded), `ageGroups[]`, `competitionTypes[]`, `startedAgeGroups[]`  
 **Team** — `name`, `coach`, `description`, `competition`, `isActive`  
 **Score** — `competition`, `teamId`, `gender`, `ageGroup`, `competitionType`, `playerScores[]`, `isLocked`  
@@ -349,7 +350,8 @@ Judge (Scoring Level)
 | Score | `(teamId, gender, ageGroup, competition)` | — |
 | Judge | `(gender, ageGroup, judgeNo, competition)` | Unique |
 | Judge | `(gender, ageGroup, judgeType, competition)` | Unique |
-| Judge | `(username, competition)` | Unique sparse |
+| Judge | `(judgeAccount, competition)` | Sparse — one judge may hold several seats at one meet |
+| JudgeAccount | `email` | Unique |
 | Player | `email` | — |
 | Coach | `email` | — |
 | Admin | `email` | — |
@@ -753,7 +755,9 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 - Required for each Gender + Age Group + Competition Type:
   - Minimum 3 judges (1 Senior + 2 Judges)
   - Maximum 5 judges (1 Senior + 4 Judges)
-  - Each judge: name, username, password, judgeType, judgeNo
+  - Each judge: `judgeAccount` (the id of a REGISTERED judge), judgeType, judgeNo
+  - Admins do not create judge logins. Judges register themselves at
+    `POST /api/judge/register`; find them with `GET /api/admin/judge-accounts?q=`
 
 **Judge Types:**
 1. Senior Judge (Base Score)
@@ -772,13 +776,36 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
     {
       "judgeNo": 1,
       "judgeType": "Senior Judge",
-      "name": "Judge Name 1",
-      "username": "judge1",
-      "password": "SecurePass123!"
+      "judgeAccount": "665f1c2a9b1e4a0012ab34cd"
     }
   ]
 }
 ```
+
+### Judge Accounts (identity vs. assignment)
+
+A judge is a person with an account, and a panel seat is a separate document
+pointing at it. The two are never the same record:
+
+| Endpoint | Who | What |
+|----------|-----|------|
+| `POST /api/judge/register` | Anyone | Create a judge account (name, email, phone, password, optional judging credentials) |
+| `POST /api/judge/login` | Judge | Sign in with email + password |
+| `GET/PUT /api/judge/profile` | Judge | Their own account, with every seat they hold |
+| `PUT /api/judge/profile/password` | Judge | Change password (current password required) |
+| `GET /api/judge/assignments` | Judge | Every panel they sit on, across competitions |
+| `GET /api/admin/judge-accounts?q=` | Admin | Search registered judges to seat on a panel |
+| `PATCH /api/admin/judge-accounts/:id` | Admin | Set the real address on a MIGRATED account only |
+
+Consequences worth knowing:
+
+- An account with no assignments grants no access to any competition data.
+  Registration therefore needs no approval step.
+- The panel role a slip is written to is resolved from the assignment matching
+  the category being scored, never from the request body — one person can be
+  Senior Judge in one age group and Judge 2 in another.
+- Judges migrated by `006_judge_accounts_backfill` carry an `@judges.invalid`
+  address and cannot sign in until an admin replaces it.
 
 **Step 6: Start Age Group Competition**
 - Endpoint: `POST /api/admin/age-groups/:ageGroup/start`
@@ -790,8 +817,10 @@ Example: 10 players = ₹500 + (10 × ₹100) = ₹1,500
 
 **Step 1: Judge Login**
 - Endpoint: `POST /api/judge/login`
-- Credentials: username + password
-- Returns: JWT with competition context automatically
+- Credentials: email + password (the judge's own account)
+- Returns: JWT with competition context when the judge holds a seat. A judge
+  with no assignments signs in successfully and gets a token with NO
+  competition claim — they can read nothing until an admin seats them.
 
 **Step 2: View Available Teams**
 - Endpoint: `GET /api/judge/teams`
@@ -1414,7 +1443,8 @@ The old-config migration brings remaining functionality from `Server/old-config/
 #### 3. Judge Login by Username
 
 **Updated Endpoint:**
-- `POST /api/judge/login` now accepts `username` instead of `email`
+- `POST /api/judge/login` accepts `email` (judges own their accounts; the old
+  slot-derived usernames were removed — see the Judge Accounts section)
 
 **Changes:**
 - `JudgeService.loginJudge` updated to use `username` parameter
