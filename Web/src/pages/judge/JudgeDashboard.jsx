@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
@@ -182,9 +182,18 @@ const JudgeDashboard = () => {
   // been drawn.
   const [orderIndex, setOrderIndex] = useState(() => ({ teams: new Map(), players: new Map() }));
   
-  const [showModal, setShowModal] = useState(() => {
-    return !sessionStorage.getItem('judge_category_selected');
-  });
+  /**
+   * The category picker starts CLOSED and is opened only once we know this
+   * judge has seats to pick between (below).
+   *
+   * It used to open on mount and be suppressed afterwards for a judge with no
+   * seats — but suppressing a mounted `AnimatePresence` child only starts an
+   * exit animation, and until that finishes the modal is still a full-screen
+   * `z-50` overlay. Verified in a browser: it was invisible and still
+   * swallowing clicks on the empty state underneath.
+   */
+  const [showModal, setShowModal] = useState(false);
+  const autoOpenedPickerRef = useRef(false);
 
   /**
    * The seats this judge holds, fetched rather than read from storage.
@@ -215,6 +224,17 @@ const JudgeDashboard = () => {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Open the picker once, for a judge who has somewhere to be. Waits for the
+  // fetch so an unseated judge never sees it; falls back to the stored session
+  // so a failed fetch does not lock a seated judge out of choosing.
+  useEffect(() => {
+    if (autoOpenedPickerRef.current || assignmentsLoading) return;
+    const seatCount = assignments.length || (judgeInfo?.allAssignments?.length ?? 0);
+    if (seatCount === 0 || sessionStorage.getItem('judge_category_selected')) return;
+    autoOpenedPickerRef.current = true;
+    setShowModal(true);
+  }, [assignmentsLoading, assignments, judgeInfo]);
 
   const competitionTypes = [
     { value: 'competition_1', label: 'Competition I', sub: 'Team' },
@@ -738,7 +758,7 @@ const JudgeDashboard = () => {
 
       {/* Selection Modal */}
       <AnimatePresence>
-        {showModal && hasSeats && (
+        {showModal && (
           <motion.div 
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

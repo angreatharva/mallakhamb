@@ -11,6 +11,7 @@
     "test:coverage": "jest --coverage",
     "create-admin": "node scripts/createAdmin.js",
     "create-superadmin": "node scripts/createSuperAdmin.js",
+    "seed-judges": "node scripts/seedJudges.js",
     "migrate:up": "node scripts/migrate.js up",
     "migrate:down": "node scripts/migrate.js down",
     "migrate:status": "node scripts/migrate.js status"
