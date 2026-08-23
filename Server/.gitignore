@@ -45,3 +45,4 @@ scripts/*
 !scripts/createSuperAdmin.js
 !scripts/migrate.js
 !scripts/migrate-superadmin-role.js
+!scripts/seedJudges.js
