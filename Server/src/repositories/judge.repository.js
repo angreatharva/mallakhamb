@@ -20,36 +20,26 @@ class JudgeRepository extends BaseRepository {
   }
 
   /**
-   * Find judge by email (username). Prefers active accounts when duplicates exist.
-   * @param {string} email - Judge username/email
-   * @param {Object} options - Query options, forwarded to findByUsername
-   * @returns {Promise<Object|null>} Judge document or null
+   * Find every seat held by a judge account.
+   *
+   * This replaces `findByUsername`/`findByEmail`, which authenticated against
+   * this collection. They are gone rather than deprecated: the username they
+   * looked up was generated from the panel slot, so the lookup could return a
+   * different person's row, and after migration 007 the field does not exist.
+   * Judge login goes through JudgeAccountRepository.
+   *
+   * @param {string} judgeAccountId
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} The judge's assignments
    */
-  async findByEmail(email, options = {}) {
-    return this.findByUsername(email, options);
-  }
-
-  /**
-   * Find judge by username (case-insensitive).
-   * Prefers an active account when the same username exists across competitions.
-   * @param {string} username - Judge username
-   * @param {Object} options - Query options. Judge login passes { select: '+password' },
-   *   which is required because `password` is `select: false` on the schema.
-   * @returns {Promise<Object|null>} Judge document or null
-   */
-  async findByUsername(username, options = {}) {
+  async findByAccount(judgeAccountId, options = {}) {
     try {
-      const normalized = username.toLowerCase();
-      const activeMatches = await this.find(
-        { username: normalized, isActive: true },
-        { sort: { updatedAt: -1, createdAt: -1 }, limit: 1, ...options }
-      );
-      if (activeMatches?.length) {
-        return activeMatches[0];
-      }
-      return await this.findOne({ username: normalized }, options);
+      return await this.find({ judgeAccount: judgeAccountId, isActive: { $ne: false } }, options);
     } catch (error) {
-      this.logger.error('JudgeRepository.findByUsername error', { username, error: error.message });
+      this.logger.error('JudgeRepository.findByAccount error', {
+        judgeAccountId,
+        error: error.message,
+      });
       throw error;
     }
   }
