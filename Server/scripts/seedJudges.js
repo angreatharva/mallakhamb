@@ -15,18 +15,22 @@ const JudgeAccount = require('../models/JudgeAccount');
  * Creating an account grants nothing on its own: an admin still has to seat
  * each judge on a panel before they can see or score anything.
  *
- * THE EMAIL IS THE LOGIN and the only password-reset route, so it has to be the
- * judge's own. The roster below follows the convention already in use
- * (`ravi.g@gmail.com`): first name, dot, first letter of the surname. The phone
- * numbers are placeholders. Correct either from /judge/profile — the judge can
- * change their own — or by editing this file and re-running, which skips anyone
- * already registered.
- *
- *   node scripts/seedJudges.js              # dry run: prints what it would do
- *   node scripts/seedJudges.js --commit     # actually writes
+ *   node scripts/seedJudges.js                        # dry run: prints what it would do
+ *   node scripts/seedJudges.js --commit               # actually writes
+ *   node scripts/seedJudges.js --reset-passwords      # + reset existing roster judges
  *
  * Idempotent: a judge whose email already exists is reported and skipped, so
- * re-running after fixing one row is safe.
+ * re-running after adding a name is safe. Ravi Gaikwad registered himself and
+ * is deliberately absent from ROSTER; if he is ever added back, the skip picks
+ * him up rather than creating a second account.
+ *
+ * `--reset-passwords` exists because an earlier version of this script issued
+ * RANDOM passwords, printed once. Anyone seeded by it holds a credential
+ * nobody has a record of, and no way to recover it either — the addresses are
+ * derived rather than real, so password reset cannot reach them. The flag puts
+ * the documented password back on accounts that are already there. It only
+ * touches judges named in ROSTER: judges who registered themselves own their
+ * own passwords and are never rewritten.
  */
 
 /** Shared across the roster; individual rows may override any field. */
@@ -35,59 +39,78 @@ const DEFAULTS = {
   certificationLevel: 'National',
 };
 
-const PLACEHOLDER = 'REPLACE_ME';
-
+/**
+ * Only names live here. The email, phone and password are DERIVED below, so a
+ * new judge is one line and there is no second place to make a typo.
+ */
 const ROSTER = [
-  { firstName: 'Vinayak', lastName: 'Dhamne', email: 'vinayak.d@gmail.com', phone: '9820714503' },
-  { firstName: 'Yatin', lastName: 'Nachre', email: 'yatin.n@gmail.com', phone: '9821336074' },
-  { firstName: 'Mayur', lastName: 'Pashte', email: 'mayur.p@gmail.com', phone: '9769428135' },
-  { firstName: 'Suraj', lastName: 'Turte', email: 'suraj.t@gmail.com', phone: '9702581649' },
-  { firstName: 'Rajesh', lastName: 'Amrale', email: 'rajesh.a@gmail.com', phone: '9833065927' },
-  { firstName: 'Preetesh', lastName: 'Gamre', email: 'preetesh.g@gmail.com', phone: '9930147286' },
-  { firstName: 'Laxman', lastName: 'Sawant', email: 'laxman.s@gmail.com', phone: '9892473610' },
+  { firstName: 'Vinayak', lastName: 'Dhamne' },
+  { firstName: 'Yatin', lastName: 'Nachre' },
+  { firstName: 'Suraj', lastName: 'Turte' },
+  { firstName: 'Mayur', lastName: 'Pashte' },
+  { firstName: 'Preetesh', lastName: 'Gamre' },
+  { firstName: 'Laxman', lastName: 'Sawant' },
 ];
 
 /**
- * A password the judge is expected to change.
+ * `firstname.<first letter of surname>@gmail.com`, matching the address Ravi
+ * Gaikwad already registered with (ravi.g@gmail.com).
  *
- * Random per account rather than one shared string: a roster that all opens
- * with the same password is one leaked note away from anyone scoring as
- * anyone. Satisfies the server rule of 8+ chars with upper, lower and a digit.
+ * THE EMAIL IS THE LOGIN and the only password-reset route. These are derived,
+ * not confirmed — if a judge does not actually hold the address, they can sign
+ * in with the password below but can never recover the account. Correct it from
+ * /judge/profile (the judge can change their own) or fix it here before
+ * committing.
+ *
+ * @param {{firstName: string, lastName: string}} judge
+ * @returns {string}
  */
-function temporaryPassword() {
-  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lower = 'abcdefghijkmnopqrstuvwxyz';
-  const digits = '23456789';
-  const all = upper + lower + digits;
-  const pick = (set) => set[crypto.randomInt(0, set.length)];
+function emailFor({ firstName, lastName }) {
+  return `${firstName.toLowerCase()}.${lastName[0].toLowerCase()}@gmail.com`;
+}
 
-  const chars = [pick(upper), pick(lower), pick(digits)];
-  while (chars.length < 10) chars.push(pick(all));
+/**
+ * `Firstname@2026`.
+ *
+ * Deliberately predictable so the roster can be handed out verbally — which
+ * also means anyone who knows a judge's name can derive their password. It is
+ * a starting credential, not a secret: every judge should change it from
+ * /judge/profile before they score anything that counts.
+ *
+ * Satisfies the server rule of 8+ characters with an upper, a lower and a
+ * digit (validators/common.validator.js).
+ *
+ * @param {{firstName: string}} judge
+ * @returns {string}
+ */
+function passwordFor({ firstName }) {
+  const capitalised = firstName[0].toUpperCase() + firstName.slice(1).toLowerCase();
+  return `${capitalised}@2026`;
+}
 
-  // Shuffle so the guaranteed characters are not always in the same position.
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(0, i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join('');
+/**
+ * A plausible Indian mobile number: 10 digits, starting 6-9.
+ *
+ * Placeholders, and random per run — nobody supplied real numbers. Nothing in
+ * the app sends to them today (phone is display-only), so a wrong number is
+ * inert rather than dangerous, and each judge can correct their own from
+ * /judge/profile.
+ *
+ * @returns {string}
+ */
+function randomIndianMobile() {
+  const first = '6789'[crypto.randomInt(0, 4)];
+  let rest = '';
+  while (rest.length < 9) rest += crypto.randomInt(0, 10);
+  return first + rest;
 }
 
 async function seedJudges() {
   const commit = process.argv.includes('--commit');
-  const allowPlaceholders = process.argv.includes('--allow-placeholders');
+  const resetPasswords = process.argv.includes('--reset-passwords');
 
   if (!process.env.MONGODB_URI) {
     console.error('❌ MONGODB_URI not found. Check Server/.env');
-    process.exit(1);
-  }
-
-  const unfilled = ROSTER.filter((j) => j.email === PLACEHOLDER || j.phone === PLACEHOLDER);
-  if (unfilled.length > 0 && !allowPlaceholders) {
-    console.error(`❌ ${unfilled.length} judge(s) still have a ${PLACEHOLDER} email or phone.`);
-    console.error('   Edit ROSTER in this file with their real details first.');
-    console.error('   An address is the login AND the only password-reset route, so a');
-    console.error('   made-up one leaves that judge unable to recover their account.');
-    console.error('   (Override with --allow-placeholders if you know what you are doing.)');
     process.exit(1);
   }
 
@@ -97,49 +120,77 @@ async function seedJudges() {
 
   const created = [];
   const skipped = [];
+  const reset = [];
 
   for (const judge of ROSTER) {
-    const email = String(judge.email).toLowerCase().trim();
+    const email = emailFor(judge);
     const existing = await JudgeAccount.findOne({ email });
 
     if (existing) {
-      skipped.push({ name: `${existing.firstName} ${existing.lastName}`, email, reason: 'already registered' });
+      if (!resetPasswords) {
+        skipped.push({
+          name: `${existing.firstName} ${existing.lastName}`,
+          email,
+          reason: 'already registered',
+        });
+        continue;
+      }
+
+      const password = passwordFor(judge);
+      if (commit) {
+        // Through the document, not updateOne: the pre-save hook is what
+        // hashes it, and a raw update would store the plaintext.
+        existing.password = password;
+        await existing.save();
+      }
+      reset.push({ name: `${existing.firstName} ${existing.lastName}`, email, password });
       continue;
     }
 
-    const password = temporaryPassword();
+    const password = passwordFor(judge);
+    const phone = randomIndianMobile();
 
     if (commit) {
       await JudgeAccount.create({
         ...DEFAULTS,
         ...judge,
         email,
+        phone,
         password,
         isActive: true,
       });
     }
 
-    created.push({ name: `${judge.firstName} ${judge.lastName}`, email, password });
+    created.push({ name: `${judge.firstName} ${judge.lastName}`, email, phone, password });
   }
 
   if (skipped.length > 0) {
     console.log('Skipped (already registered):');
     console.table(skipped);
+    console.log('Pass --reset-passwords to put the documented password back on these.\n');
+  }
+
+  if (reset.length > 0) {
+    console.log(commit ? 'Password reset:' : 'Would reset the password of:');
+    console.table(reset);
   }
 
   if (created.length > 0) {
-    console.log(commit ? 'Created — give each judge their password, once:' : 'Would create:');
+    console.log(commit ? 'Created:' : 'Would create:');
     console.table(created);
     if (commit) {
-      console.log('These passwords are not stored anywhere in readable form and cannot be');
-      console.log('printed again. Ask each judge to change theirs from /judge/profile.\n');
+      console.log('Passwords follow the Firstname@2026 pattern, so anyone who knows a');
+      console.log('judge\'s name can work theirs out. Ask each of them to change it from');
+      console.log('/judge/profile.\n');
     }
   } else {
     console.log('Nothing to create — every judge on the roster is already registered.\n');
   }
 
-  console.log(`${created.length} to create, ${skipped.length} skipped.`);
-  if (!commit && created.length > 0) {
+  console.log(
+    `${created.length} to create, ${reset.length} to reset, ${skipped.length} skipped.`
+  );
+  if (!commit && (created.length > 0 || reset.length > 0)) {
     console.log('Re-run with --commit to write them.');
   }
 
