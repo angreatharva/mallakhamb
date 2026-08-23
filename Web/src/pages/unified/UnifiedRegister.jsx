@@ -326,10 +326,9 @@ const JUDGE_FIELDS = [
 const HOME_AFTER_REGISTER = {
   coach: '/coach/create-team',
   player: '/player/select-team',
-  // A new judge is on no panel yet, so the profile — which lists the panels
-  // they hold and explains that an organiser assigns them — is the only screen
-  // with anything to say.
-  judge: '/judge/profile',
+  // A new judge is on no panel yet; the dashboard says so and shows the seats
+  // as soon as an organiser adds them.
+  judge: '/judge/dashboard',
 };
 
 // ─── Inner component (uses theme context) ─────────────────────────────────────

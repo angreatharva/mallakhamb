@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered
+  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -52,6 +52,97 @@ const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   );
 };
 
+const COMPETITION_TYPE_LABELS = {
+  competition_1: 'Competition I',
+  competition_2: 'Competition II',
+  competition_3: 'Competition III',
+};
+
+/** "Under14" reads badly next to a gender; "U14" does not. */
+const ageLabel = (ageGroup = '') => ageGroup.replace('Under', 'U').replace('Above', 'A');
+
+/**
+ * Every panel this judge sits on, grouped by meet.
+ *
+ * Lives on the dashboard because it answers the first question a judge has on
+ * opening the app — "what am I judging today, and in what role" — and because
+ * the category picker below it only makes sense once you can see the seats it
+ * is picking between. Read-only: only an organiser can seat a judge.
+ */
+const PanelAssignments = ({ assignments, loading }) => {
+  if (loading) {
+    return (
+      <div className="rounded-2xl border p-5 mb-6"
+        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+        <span className="text-sm text-white/40">Loading your assignments…</span>
+      </div>
+    );
+  }
+
+  if (!assignments || assignments.length === 0) return null;
+
+  const byCompetition = assignments.reduce((acc, seat) => {
+    const competition = seat.competition || {};
+    const key = competition._id || String(seat.competition) || 'unknown';
+    if (!acc[key]) acc[key] = { competition, seats: [] };
+    acc[key].seats.push(seat);
+    return acc;
+  }, {});
+
+  return (
+    <FadeIn delay={0.05}>
+      <div className="rounded-2xl border p-5 mb-6"
+        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Scale className="w-4 h-4 flex-shrink-0" style={{ color: J.purple }} aria-hidden="true" />
+          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
+            Panel Assignments
+          </span>
+          <span className="ml-auto text-xs text-white/30">Set by the organiser</span>
+        </div>
+
+        <div className="space-y-5">
+          {Object.entries(byCompetition).map(([key, { competition, seats }]) => (
+            <div key={key}>
+              {competition.name && (
+                <p className="text-sm font-bold text-white mb-2">
+                  {competition.name}
+                  {competition.year && <span className="text-white/40 font-normal"> · {competition.year}</span>}
+                  {competition.place && <span className="text-white/40 font-normal"> · {competition.place}</span>}
+                </p>
+              )}
+              <div className="space-y-2">
+                {seats.map((seat) => (
+                  <div key={seat._id}
+                    className="rounded-xl border p-3 flex items-center justify-between gap-3 flex-wrap"
+                    style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">
+                        {seat.gender} · {ageLabel(seat.ageGroup)}
+                        {seat.apparatus && <span className="text-white/40"> · {seat.apparatus}</span>}
+                      </p>
+                      <p className="text-xs text-white/40 mt-0.5">
+                        {(seat.competitionTypes?.length
+                          ? seat.competitionTypes.map((t) => COMPETITION_TYPE_LABELS[t] || t)
+                          : ['All categories']
+                        ).join(' · ')}
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap"
+                      style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
+                      {seat.judgeType}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </FadeIn>
+  );
+};
+
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   const reduced = useReducedMotion();
   return (
@@ -95,9 +186,35 @@ const JudgeDashboard = () => {
     return !sessionStorage.getItem('judge_category_selected');
   });
 
+  /**
+   * The seats this judge holds, fetched rather than read from storage.
+   *
+   * The stored session only carries the seats that existed at login and only
+   * for the active meet; an organiser seating someone mid-event is exactly the
+   * case where a stale list is worst.
+   */
+  const [assignments, setAssignments] = useState([]);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+
   // Available options based on judge assignment(s)
   const [availableGenders, setAvailableGenders] = useState([]);
   const [availableAgeGroups, setAvailableAgeGroups] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    judgeAPI.getAssignments()
+      .then((response) => {
+        if (!cancelled) setAssignments(response.data?.data || []);
+      })
+      .catch((error) => {
+        // Not fatal: the category picker still works off the stored session.
+        logger.warn('Could not load panel assignments', error);
+      })
+      .finally(() => {
+        if (!cancelled) setAssignmentsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const competitionTypes = [
     { value: 'competition_1', label: 'Competition I', sub: 'Team' },
@@ -386,6 +503,12 @@ const JudgeDashboard = () => {
 
   const canSequence = SEQUENCE_JUDGE_TYPES.includes(myJudgeType);
 
+  // Anyone can register as a judge; being seated on a panel is a separate act
+  // by an organiser. Until that happens there is no category to pick and no
+  // team to score, so the picker is suppressed in favour of an explanation.
+  const hasSeats = assignmentsLoading || assignments.length > 0
+    || (judgeInfo.allAssignments?.length ?? 0) > 0;
+
   // Running order first, then the search filter — filtering first would be
   // equivalent here but sorting the full list keeps the positions shown next to
   // each team meaningful while a search is active.
@@ -418,13 +541,22 @@ const JudgeDashboard = () => {
               <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
             </div>
           </div>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
-            style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
-            aria-label="Logout">
-            <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => navigate('/judge/profile')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-purple-500/10"
+              style={{ borderColor: 'rgba(168,85,247,0.3)', color: J.purpleLight }}
+              aria-label="Your profile">
+              <UserCircle className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Profile</span>
+            </button>
+            <button onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+              aria-label="Logout">
+              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -433,7 +565,10 @@ const JudgeDashboard = () => {
         {/* Top Section */}
         <FadeIn delay={0}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h1 className="text-2xl font-black text-white">Dashboard</h1>
+            <div>
+              <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
+              <h1 className="text-2xl font-black text-white">{judgeInfo.name}</h1>
+            </div>
             
             {!showModal && selectedCompetitionType && (
               <div className="flex flex-wrap items-center gap-2">
@@ -480,6 +615,30 @@ const JudgeDashboard = () => {
             </div>
           )}
         </FadeIn>
+
+        {/* Every panel this judge sits on */}
+        {!showModal && <PanelAssignments assignments={assignments} loading={assignmentsLoading} />}
+
+        {/* Registered, but on no panel yet */}
+        {!hasSeats && (
+          <FadeIn delay={0.1}>
+            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-white/5 bg-white/5">
+              <Scale className="w-12 h-12 mb-4 text-white/20" />
+              <p className="text-lg font-bold text-white/70">No panel assignments yet</p>
+              <p className="text-sm text-white/40 mt-2 max-w-sm">
+                Your account is ready. An organiser adds you to a competition panel — the
+                categories you are judging will appear here once they do. Sign in again after
+                that to start scoring.
+              </p>
+              <button
+                onClick={() => navigate('/judge/profile')}
+                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
+                <UserCircle className="w-4 h-4" />
+                View your profile
+              </button>
+            </div>
+          </FadeIn>
+        )}
 
         {/* Search & Team List */}
         {!showModal && selectedCompetitionType && (
@@ -579,7 +738,7 @@ const JudgeDashboard = () => {
 
       {/* Selection Modal */}
       <AnimatePresence>
-        {showModal && (
+        {showModal && hasSeats && (
           <motion.div 
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

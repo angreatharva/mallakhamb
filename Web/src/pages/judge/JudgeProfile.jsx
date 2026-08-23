@@ -21,16 +21,6 @@ const CERTIFICATION_LEVELS = [
   { value: 'Club', label: 'Club' },
 ];
 
-const COMPETITION_TYPE_LABELS = {
-  competition_1: 'Competition I',
-  competition_2: 'Competition II',
-  competition_3: 'Competition III',
-};
-
-/** "Under14" reads badly next to a gender; "U14" does not. */
-const ageLabel = (ageGroup = '') =>
-  ageGroup.replace('Under', 'U').replace('Above', 'A');
-
 /**
  * Downscale a chosen image before it is sent.
  *
@@ -90,84 +80,6 @@ const Field = ({ id, label, icon, error, children }) => {
       </label>
       {children}
       {error && <p className="text-xs mt-1.5" style={{ color: '#EF4444' }} role="alert">{error}</p>}
-    </div>
-  );
-};
-
-/**
- * The panels this judge sits on.
- *
- * Read-only by design: a judge cannot put themselves on a panel, and seeing
- * exactly which categories they hold — and in which role — is what makes the
- * "I signed in and there is nothing here" state explicable.
- */
-const Assignments = ({ assignments }) => {
-  const theme = useTheme();
-
-  if (assignments.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <Scale className="w-10 h-10 mx-auto mb-3 text-white/15" />
-        <p className="text-white/60 font-semibold">No panel assignments yet</p>
-        <p className="text-white/30 text-sm mt-1 max-w-sm mx-auto">
-          Your account is ready. An organiser adds you to a competition panel — once they
-          do, the categories you are judging appear here and on your dashboard.
-        </p>
-      </div>
-    );
-  }
-
-  // Grouped by meet: a judge working two competitions should see two blocks,
-  // not one flat list they have to decode.
-  const byCompetition = assignments.reduce((acc, assignment) => {
-    const competition = assignment.competition || {};
-    const key = competition._id || String(assignment.competition) || 'unknown';
-    if (!acc[key]) {
-      acc[key] = { competition, seats: [] };
-    }
-    acc[key].seats.push(assignment);
-    return acc;
-  }, {});
-
-  return (
-    <div className="space-y-6">
-      {Object.entries(byCompetition).map(([key, { competition, seats }]) => (
-        <div key={key}>
-          <p className="text-sm font-bold text-white mb-3">
-            {competition.name || 'Competition'}
-            {competition.year && <span className="text-white/40 font-normal"> · {competition.year}</span>}
-            {competition.place && <span className="text-white/40 font-normal"> · {competition.place}</span>}
-          </p>
-          <div className="space-y-2">
-            {seats.map((seat) => (
-              <div
-                key={seat._id}
-                className="rounded-xl border p-3 flex items-center justify-between gap-3 flex-wrap"
-                style={{ background: 'rgba(255,255,255,0.03)', borderColor: theme.colors.border }}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">
-                    {seat.gender} · {ageLabel(seat.ageGroup)}
-                    {seat.apparatus && <span className="text-white/40"> · {seat.apparatus}</span>}
-                  </p>
-                  <p className="text-xs text-white/40 mt-0.5">
-                    {(seat.competitionTypes?.length
-                      ? seat.competitionTypes.map((t) => COMPETITION_TYPE_LABELS[t] || t)
-                      : ['All categories']
-                    ).join(' · ')}
-                  </p>
-                </div>
-                <span
-                  className="px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap"
-                  style={{ background: `${theme.colors.primary}20`, color: theme.colors.primaryLight }}
-                >
-                  {seat.judgeType}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 };
@@ -302,19 +214,17 @@ const JudgeProfileInner = () => {
     );
   }
 
-  const assignments = profile?.assignments || [];
-
   return (
     <div className="min-h-dvh px-4 py-8" style={{ background: theme.colors.background }}>
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <button
-            onClick={() => navigate(assignments.length > 0 ? '/judge/dashboard' : '/judge/login')}
+            onClick={() => navigate('/judge/dashboard')}
             className="flex items-center gap-2 text-white/50 hover:text-white/80 transition-colors text-sm min-h-[44px]"
           >
             <ArrowLeft className="w-4 h-4" />
-            {assignments.length > 0 ? 'Dashboard' : 'Sign out'}
+            Dashboard
           </button>
         </div>
 
@@ -457,14 +367,6 @@ const JudgeProfileInner = () => {
           </form>
         </GlassCard>
 
-        {/* Assignments */}
-        <GlassCard className="p-6">
-          <SectionHeading hint="Set by the competition organiser — you cannot change these yourself.">
-            Panel assignments
-          </SectionHeading>
-          <Assignments assignments={assignments} />
-        </GlassCard>
-
         {/* Password */}
         <GlassCard className="p-6">
           <SectionHeading hint="Your current password is required — an open session alone is not enough.">
@@ -542,9 +444,9 @@ const JudgeProfileInner = () => {
  * JudgeProfile — the judge's own account.
  *
  * Judges register themselves and own their credentials now; this is where they
- * manage them. The panel assignments section is read-only: only an organiser
- * can seat a judge, and an account with no seats has no access to any
- * competition data at all.
+ * manage them. The panels they sit on are shown on the dashboard instead —
+ * that is the first thing a judge needs on opening the app, and it is not
+ * something they can change from here in any case.
  */
 const JudgeProfile = () => (
   <ThemeProvider role="judge">

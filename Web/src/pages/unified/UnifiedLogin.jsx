@@ -319,15 +319,9 @@ const UnifiedLoginInner = () => {
         sessionStorage.removeItem('judge_category_selected');
         reset();
 
-        // A judge nobody has put on a panel yet has nothing to score. Send
-        // them to their profile, which explains the state, rather than to a
-        // dashboard that can only render empty.
-        if (!competitionId) {
-          toast.success(`Welcome ${judge.name}!`);
-          navigate('/judge/profile');
-          return;
-        }
-
+        // The dashboard is the judge's home whether or not anyone has seated
+        // them yet: it lists the panels they hold, and explains the empty case
+        // rather than leaving them on a screen with nothing to do.
         toast.success(
           competitionName
             ? `Welcome ${judge.name}! Assigned to ${competitionName}`
