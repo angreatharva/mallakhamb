@@ -16,9 +16,12 @@
     "test:e2e:headed": "playwright test e2e/register-player.spec.js --headed",
     "test:e2e:coach": "playwright test e2e/register-coach.spec.js",
     "test:e2e:coach:headed": "playwright test e2e/register-coach.spec.js --headed",
-    "seed:roster": "playwright test e2e/register-roster.spec.js",
-    "seed:roster:headed": "playwright test e2e/register-roster.spec.js --headed",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "seed:players": "playwright test e2e/register-players.spec.js",
+    "seed:players:headed": "playwright test e2e/register-players.spec.js --headed",
+    "seed:coaches": "playwright test e2e/register-coaches.spec.js",
+    "seed:judges": "playwright test e2e/register-judges.spec.js",
+    "seed:ui": "playwright test e2e/register-players.spec.js e2e/register-coaches.spec.js e2e/register-judges.spec.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -11,8 +11,8 @@ import { apiGet, submitAndReadOutcome } from './browser.js';
 /**
  * Fill and submit the coach registration form.
  *
- * The coach form takes a single `name`, not first/last — that is the model
- * (Server/models/Coach.js), not an oversight in the fixture.
+ * Coaches are `firstName` + `lastName`, like players and judges — the single
+ * `name` field this used to fill is gone (Server/models/Coach.js).
  *
  * @param {import('@playwright/test').Page} page
  * @param {Object} coach
@@ -22,7 +22,8 @@ export const submitCoachRegistration = async (page, coach) => {
   await page.goto('/coach/register');
   await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible();
 
-  await page.locator('#coach-reg-name').fill(coach.name);
+  await page.locator('#coach-reg-firstName').fill(coach.firstName);
+  await page.locator('#coach-reg-lastName').fill(coach.lastName);
   await page.locator('#coach-reg-email').fill(coach.email);
   await page.locator('#coach-reg-phone').fill(coach.phone);
   await page.locator('#coach-reg-password').fill(coach.password);
@@ -31,7 +32,8 @@ export const submitCoachRegistration = async (page, coach) => {
   const outcome = await submitAndReadOutcome(
     page,
     '/coaches/register',
-    page.getByRole('button', { name: /create account/i })
+    page.getByRole('button', { name: /create account/i }),
+    'coach'
   );
   if (outcome !== 'registered') return outcome;
 
@@ -90,7 +92,8 @@ export const tryCoachSignIn = async (page, coach) => {
 export const assertCoachProfilePersisted = async (page, coach) => {
   const profile = await apiGet(page, '/coaches/profile');
 
-  expect(profile.name).toBe(coach.name);
+  expect(profile.firstName).toBe(coach.firstName);
+  expect(profile.lastName).toBe(coach.lastName);
   expect(profile.email).toBe(coach.email.toLowerCase());
 
   // Coach.phone had the same silent-drop defect as Player.phone: collected by
@@ -121,6 +124,10 @@ export const createTeam = async (page, coach) => {
   // Creating a team lands back on competition selection, this time with a team
   // to register.
   await expect(page).toHaveURL(/\/coach\/select-competition/, { timeout: 20_000 });
+
+  // Returned so a bulk run can assert the team it asked for is the team it got,
+  // the way joinTeam does for players.
+  return coach.teamName;
 };
 
 /**

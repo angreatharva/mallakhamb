@@ -37,7 +37,8 @@ export const submitRegistration = async (page, player) => {
   const outcome = await submitAndReadOutcome(
     page,
     '/players/register',
-    page.getByRole('button', { name: /create account/i })
+    page.getByRole('button', { name: /create account/i }),
+    'player'
   );
   if (outcome !== 'registered') return outcome;
 

@@ -15,7 +15,9 @@ import {
 
 /**
  * Seeds every player in `support/roster.js` through the real UI: register,
- * join their team, verify what was stored.
+ * join their team, verify what was stored. Each successful registration's
+ * request body is recorded for the database seeder (see `support/browser.js`
+ * CAPTURE_PATH and `Server/scripts/seedAccounts.js`).
  *
  * Idempotent and self-repairing. An existing account is not a failure — the
  * spec signs in, and finishes whatever is still outstanding. That matters
@@ -28,9 +30,9 @@ import {
  * but deliberately NOT in serial mode: the players are independent, and serial
  * would abandon the rest of the squad over one flaky registration.
  *
- *   npm --prefix Web run seed:roster
- *   TEAM=SGAM-C npm --prefix Web run seed:roster
- *   TEAM=SGAM-C AGE_GROUP=Under10 npm --prefix Web run seed:roster
+ *   npm --prefix Web run seed:players
+ *   TEAM=SGAM-C npm --prefix Web run seed:players
+ *   TEAM=SGAM-C AGE_GROUP=Under10 npm --prefix Web run seed:players
  */
 
 const roster = selectedRoster();

@@ -4,7 +4,8 @@
  * Every field is overridable from the environment so the same spec can onboard
  * any coach without editing code:
  *
- *   COACH_NAME       full name — the Coach model has one `name`, not first/last
+ *   COACH_FIRST_NAME first name
+ *   COACH_LAST_NAME  last name
  *   COACH_EMAIL      email / login id
  *   COACH_PHONE      phone number
  *   COACH_PASSWORD   password, min 8 chars, needs upper + lower + digit
@@ -17,7 +18,8 @@
  */
 
 const DEFAULTS = {
-  name: 'Yatin Nachre',
+  firstName: 'Yatin',
+  lastName: 'Nachre',
   email: 'yatin.n@gmail.com',
   phone: '8451888899',
   password: 'Yatin@2026',
@@ -40,13 +42,14 @@ const uniquify = (email, tag) => {
 
 /**
  * Resolve the coach to onboard, env overrides winning over the defaults.
- * @returns {{name: string, email: string, phone: string, password: string,
+ * @returns {{firstName: string, lastName: string, email: string, phone: string, password: string,
  *            teamName: string, teamDescription: string,
  *            competitionName: string, competitionPlace: string}}
  */
 export const resolveCoach = () => {
   const coach = {
-    name: process.env.COACH_NAME || DEFAULTS.name,
+    firstName: process.env.COACH_FIRST_NAME || DEFAULTS.firstName,
+    lastName: process.env.COACH_LAST_NAME || DEFAULTS.lastName,
     email: process.env.COACH_EMAIL || DEFAULTS.email,
     phone: process.env.COACH_PHONE || DEFAULTS.phone,
     password: process.env.COACH_PASSWORD || DEFAULTS.password,

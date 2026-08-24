@@ -22,34 +22,78 @@ Vite dev server, and reuses it if `localhost:5173` is already served:
 npm --prefix Server start
 ```
 
-Three specs:
+Five specs — three that seed a roster, two that scrutinise one account in depth:
 
 | Spec | For |
 | --- | --- |
-| `register-roster` | Seeding the standing squad. Idempotent, many players. |
+| `register-players` | Seeding the standing squad. Idempotent, 70 players. |
+| `register-coaches` | Seeding coaches and their teams. |
+| `register-judges` | Seeding judges. Registration only — seating them is an admin act. |
 | `register-player` | Scrutinising the player flow with one ad-hoc player. |
-| `register-coach` | The coach flow: register, create a team, enter a competition. |
+| `register-coach` | The coach flow in full: register, create a team, enter a competition. |
 
 The UI steps live in `support/`, split by what they touch — `browser.js` for the
-plumbing every role shares, `player-flows.js` and `coach-flows.js` for the
-screens themselves. A form change should need edits in exactly one of them.
+plumbing every role shares, `player-flows.js`, `coach-flows.js` and
+`judge-flows.js` for the screens themselves. A form change should need edits in
+exactly one of them. `people.js` holds the one thing all three rosters agree on:
+how an account's email and password are derived from a name.
 
-## register-roster
+## Seeding the database without a browser
+
+Each successful registration's **request body** is recorded to
+`Server/scripts/seed/registrations.generated.json`, and
+`Server/scripts/seedAccounts.js` replays those payloads straight into MongoDB.
+
+```bash
+npm --prefix Web run seed:ui              # 1. register through the UI, capturing
+npm --prefix Server run seed              # 2. dry run: what would be written
+npm --prefix Server run seed -- --commit  # 3. write them
+```
+
+That order is the point. The seeder does not describe what an account is made
+of, it replays what the form actually sent — so it cannot invent a field the UI
+does not send, or miss one it does. A seeder that restates the fields by hand
+drifts the moment a form changes, silently; the judge seeder this replaced did
+exactly that twice.
+
+Use the database path when you want the accounts without waiting for a browser:
+restoring a wiped dev database, or setting up a second machine from a capture.
+The capture is **not committed** — it holds plaintext passwords and describes one
+environment. Regenerate it by running the UI specs.
+
+## register-players
 
 Registers everyone in `support/roster.js` and puts them on their team — 70
 players across SGAM-A, SGAM-B and SGAM-C.
 
 ```bash
-npm --prefix Web run seed:roster
+npm --prefix Web run seed:players
 ```
 
 Narrow it, or watch it happen in a real browser window:
 
 ```bash
-TEAM=SGAM-C npm --prefix Web run seed:roster
-TEAM=SGAM-C AGE_GROUP=Under10 npm --prefix Web run seed:roster
-npm --prefix Web run seed:roster:headed
+TEAM=SGAM-C npm --prefix Web run seed:players
+TEAM=SGAM-C AGE_GROUP=Under10 npm --prefix Web run seed:players
+npm --prefix Web run seed:players:headed
 ```
+
+## register-coaches and register-judges
+
+Same shape, smaller rosters (`support/coach-roster.js`, `support/judge-roster.js`),
+and `ONLY=<name>` narrows either to one person:
+
+```bash
+npm --prefix Web run seed:coaches
+npm --prefix Web run seed:judges
+ONLY=Laxman npm --prefix Web run seed:judges
+```
+
+Coaches stop after creating their team: entering it into a competition costs an
+entry fee and has a deadline, so it stays a deliberate act (`register-coach`
+does it in full). Judges stop at the account, because that is all a judge can do
+for themselves — an admin seats them on a panel afterwards, and until then a
+judge signs in to an empty dashboard. That is the correct finished state.
 
 ### Idempotent and self-repairing
 

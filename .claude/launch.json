@@ -11,7 +11,7 @@
     {
       "name": "api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "server"],
       "cwd": "Server",
       "port": 5000
     }

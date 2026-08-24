@@ -1,6 +1,26 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 
 /** Plumbing shared by every flow, regardless of role. */
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Where the captured registration payloads are written.
+ *
+ * This file is the contract between the two seeding paths: the UI run records
+ * exactly what each form POSTed, and `Server/scripts/seedAccounts.js` replays
+ * those payloads straight into the database. The seeder therefore cannot
+ * invent a field the form does not send, or miss one it does — which is how
+ * the old judge seeder drifted into writing a shape the app had stopped using.
+ *
+ * Not committed: it holds plaintext passwords, and it is a record of one
+ * environment's state rather than source. Regenerate it by running the UI
+ * specs.
+ */
+export const CAPTURE_PATH = resolve(HERE, '../../../Server/scripts/seed/registrations.generated.json');
 
 /** The API origin, for reading back what the UI actually stored. */
 export const API_BASE = process.env.E2E_API_URL || 'http://localhost:5000/api';
@@ -92,6 +112,37 @@ export const apiGet = async (page, path) => {
 };
 
 /**
+ * Record one successful registration, keyed by role and email.
+ *
+ * Read-modify-write per capture rather than buffering: Playwright specs can be
+ * interrupted, and a run that seeded forty players before dying should still
+ * leave forty usable rows behind.
+ *
+ * @param {string} role - 'player' | 'coach' | 'judge'
+ * @param {Object} payload - the exact request body the form sent
+ */
+const captureRegistration = (role, payload) => {
+  let captured = { capturedAt: null, registrations: [] };
+  try {
+    captured = JSON.parse(readFileSync(CAPTURE_PATH, 'utf8'));
+  } catch {
+    // First capture of this environment — start a fresh file.
+  }
+
+  const email = String(payload.email || '').toLowerCase();
+  const rest = captured.registrations.filter(
+    (r) => !(r.role === role && String(r.payload.email).toLowerCase() === email)
+  );
+
+  captured.registrations = [...rest, { role, payload }];
+  captured.capturedAt = new Date().toISOString();
+
+  mkdirSync(dirname(CAPTURE_PATH), { recursive: true });
+  writeFileSync(CAPTURE_PATH, `${JSON.stringify(captured, null, 2)}
+`);
+};
+
+/**
  * Click submit and read the outcome off the API response rather than a toast.
  *
  * The toast is the obvious thing to assert on and the wrong one: it is
@@ -103,9 +154,11 @@ export const apiGet = async (page, path) => {
  * @param {import('@playwright/test').Page} page
  * @param {string} endpoint - substring identifying the register call
  * @param {import('@playwright/test').Locator} submit
+ * @param {string} [role] - when given, the request body is captured for the
+ *   database seeder (see CAPTURE_PATH)
  * @returns {Promise<'registered'|'already-exists'>}
  */
-export const submitAndReadOutcome = async (page, endpoint, submit) => {
+export const submitAndReadOutcome = async (page, endpoint, submit, role = null) => {
   const responsePromise = page.waitForResponse(
     (r) => r.url().includes(endpoint) && r.request().method() === 'POST',
     { timeout: 20_000 }
@@ -119,6 +172,19 @@ export const submitAndReadOutcome = async (page, endpoint, submit) => {
     response.status(),
     `POST ${endpoint} failed: ${await response.text()}`
   ).toBe(201);
+
+  if (role) {
+    // The REQUEST body, not the roster entry: this is the whole point of the
+    // capture. What the form actually sends is the only honest description of
+    // what an account is made of.
+    try {
+      captureRegistration(role, JSON.parse(response.request().postData() || '{}'));
+    } catch (error) {
+      // A failed capture must not fail a registration that already succeeded —
+      // the account exists either way, and the seeder says when it is stale.
+      console.warn(`Could not capture the ${role} payload: ${error.message}`);
+    }
+  }
 
   return REGISTERED;
 };

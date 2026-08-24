@@ -37,7 +37,7 @@ import {
 const coach = resolveCoach();
 
 test.describe('coach onboarding', () => {
-  test(`registers ${coach.name}, creates ${coach.teamName}, enters a competition`, async ({ page }) => {
+  test(`registers ${coach.firstName} ${coach.lastName}, creates ${coach.teamName}, enters a competition`, async ({ page }) => {
     const consoleErrors = watchConsole(page);
 
     await test.step('fill and submit the registration form', async () => {
@@ -71,7 +71,7 @@ test.describe('coach onboarding', () => {
     });
 
     await test.step('land on the dashboard', async () => {
-      await expect(page.getByText(coach.name.split(' ')[0], { exact: false }).first())
+      await expect(page.getByText(coach.firstName, { exact: false }).first())
         .toBeVisible({ timeout: 20_000 });
       console.log(`Onboarded coach: ${coach.email}`);
     });

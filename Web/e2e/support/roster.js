@@ -2,10 +2,8 @@
  * The seed roster: every player `register-roster.spec.js` puts into the app.
  *
  * Email and password are DERIVED from the name, not written out per entry, so
- * the conventions are enforced rather than described:
- *
- *   email    firstname.<first letter of surname>@gmail.com, lowercase
- *   password <Firstname>@2026
+ * the conventions are enforced rather than described — see `people.js`, which
+ * defines them once for the player, coach and judge rosters alike.
  *
  * Add a player by adding a name, a phone, a date of birth and a team. The
  * checks at the bottom of this file run on import and will refuse a roster with
@@ -39,6 +37,8 @@
  * These are fictional people for a development database. Do not point this at
  * anything that matters.
  */
+
+import { derive, validateRoster } from './people.js';
 
 /**
  * @typedef {Object} RosterEntry
@@ -155,66 +155,13 @@ const ENTRIES = [
   { firstName: 'Shreyas', lastName: 'Khot', gender: 'Male', dateOfBirth: '2002-12-14', phone: '7450646584', ageGroup: 'Above18', teamName: 'SGAM-C' }, // 23
 ];
 
-/** @param {RosterEntry} entry */
-const emailFor = ({ firstName, lastName }) =>
-  `${firstName}.${lastName[0]}@gmail.com`.toLowerCase();
-
-/** @param {RosterEntry} entry */
-const passwordFor = ({ firstName }) => `${firstName}@2026`;
-
 /** @type {(RosterEntry & {email: string, password: string})[]} */
-export const ROSTER = ENTRIES.map((entry) => ({
-  ...entry,
-  email: emailFor(entry),
-  password: passwordFor(entry),
-}));
+export const ROSTER = derive(ENTRIES);
 
-// ─── Import-time checks ───────────────────────────────────────────────────────
-// Cheap here, expensive later: a colliding email surfaces as a mystery "already
-// registered" skip halfway through a 70-player run, and a short password as an
-// API validation error with nothing pointing back to this file.
-
-const seen = new Map();
-for (const player of ROSTER) {
-  const clash = seen.get(player.email);
-  if (clash) {
-    throw new Error(
-      `Roster email collision: "${player.email}" is produced by both ` +
-      `${clash.firstName} ${clash.lastName} and ${player.firstName} ${player.lastName}. ` +
-      'Change one of the first names.'
-    );
-  }
-  seen.set(player.email, player);
-
-  // Mirrors the server's password rules (Server/src/validators/common.validator.js)
-  // and the register form's (Web/src/pages/unified/UnifiedRegister.jsx).
-  if (player.password.length < 8) {
-    throw new Error(
-      `"${player.password}" is ${player.password.length} characters; the server ` +
-      'requires 8. Use a longer first name for ' +
-      `${player.firstName} ${player.lastName}.`
-    );
-  }
-
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(player.password)) {
-    throw new Error(
-      `"${player.password}" needs an uppercase letter, a lowercase letter and a ` +
-      `number. Check the capitalisation of ${player.firstName}.`
-    );
-  }
-
-  if (!/^\d{10}$/.test(player.phone)) {
-    throw new Error(
-      `${player.firstName} ${player.lastName} has phone "${player.phone}"; expected 10 digits.`
-    );
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(player.dateOfBirth)) {
-    throw new Error(
-      `${player.firstName} ${player.lastName} has dateOfBirth "${player.dateOfBirth}"; expected yyyy-mm-dd.`
-    );
-  }
-}
+// Conventions and the import-time checks live in people.js, shared with the
+// coach and judge rosters — a rule enforced in one place cannot drift between
+// three copies of it.
+validateRoster(ROSTER, { label: 'Player roster', requireDateOfBirth: true });
 
 /**
  * Narrow the roster with env vars — `TEAM=SGAM-C`, `AGE_GROUP=Under10`, or both.

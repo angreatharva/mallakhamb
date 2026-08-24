@@ -45,4 +45,8 @@ scripts/*
 !scripts/createSuperAdmin.js
 !scripts/migrate.js
 !scripts/migrate-superadmin-role.js
-!scripts/seedJudges.js
+!scripts/seedAccounts.js
+
+# scripts/seed/registrations.generated.json is NOT allow-listed above, and that
+# is deliberate: it holds plaintext passwords, and it records one environment's
+# state rather than source. Regenerate it with `npm --prefix Web run seed:ui`.
