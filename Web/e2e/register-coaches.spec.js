@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { selectedCoaches } from './support/coach-roster.js';
 import {
   ALREADY_EXISTS,
+  apiGet,
   clearSession,
   expectNoConsoleErrors,
   watchConsole,
@@ -65,8 +66,16 @@ test.describe('coach seeding', () => {
       const created = await createTeam(page, coach);
       expect(created).toBe(coach.teamName);
 
-      await expect(page.getByText(coach.firstName, { exact: false }).first())
-        .toBeVisible({ timeout: 20_000 });
+      // Read the team back rather than looking for it on screen: creating one
+      // lands on competition selection, which shows arenas, not the coach or
+      // their squad. "The form accepted it" and "the database kept it" are
+      // different claims, and only the second one matters to a later player
+      // run — a player can only join a team that really exists.
+      const teams = await apiGet(page, '/coaches/teams');
+      expect(
+        teams.map((t) => t.name),
+        `${coach.email} has no team named ${coach.teamName} on the server`
+      ).toContain(coach.teamName);
 
       console.log(`${coach.email} → ${created}`);
       expectNoConsoleErrors(consoleErrors);

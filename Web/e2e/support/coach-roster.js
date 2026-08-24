@@ -27,11 +27,21 @@ import { derive, onlyMatching, validateRoster } from './people.js';
  * @property {string} [teamDescription]
  */
 
-/** @type {CoachEntry[]} */
+/**
+ * One coach per team the player roster uses.
+ *
+ * The team names are not free choice: `roster.js` puts 70 players into SGAM-A,
+ * SGAM-B and SGAM-C, and a player can only join a team that exists. Seeding
+ * coaches who create differently-named teams leaves every player run failing on
+ * "No team named SGAM-A was offered" — so the two rosters are cross-checked at
+ * the bottom of roster.js.
+ *
+ * @type {CoachEntry[]}
+ */
 const ENTRIES = [
-  { firstName: 'Yatin', lastName: 'Nachre', phone: '8451888899', teamName: 'AIGM-A', teamDescription: 'AIGM Team A' },
-  { firstName: 'Sagar', lastName: 'Bhoite', phone: '9702118345', teamName: 'AIGM-B', teamDescription: 'AIGM Team B' },
-  { firstName: 'Nilesh', lastName: 'Kamble', phone: '8779236401', teamName: 'AIGM-C', teamDescription: 'AIGM Team C' },
+  { firstName: 'Yatin', lastName: 'Nachre', phone: '8451888899', teamName: 'SGAM-A', teamDescription: 'SGAM Team A' },
+  { firstName: 'Sagar', lastName: 'Bhoite', phone: '9702118345', teamName: 'SGAM-B', teamDescription: 'SGAM Team B' },
+  { firstName: 'Nilesh', lastName: 'Kamble', phone: '8779236401', teamName: 'SGAM-C', teamDescription: 'SGAM Team C' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);

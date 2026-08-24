@@ -38,7 +38,8 @@
  * anything that matters.
  */
 
-import { derive, validateRoster } from './people.js';
+import { COACH_ROSTER } from './coach-roster.js';
+import { derive, fullName, onlyMatching, validateRoster } from './people.js';
 
 /**
  * @typedef {Object} RosterEntry
@@ -163,14 +164,33 @@ export const ROSTER = derive(ENTRIES);
 // three copies of it.
 validateRoster(ROSTER, { label: 'Player roster', requireDateOfBirth: true });
 
+/*
+ * A player can only join a team that exists, and teams are created by the
+ * coaches in coach-roster.js. Checking the two line up here turns a mismatch
+ * into an import error naming the team, instead of seventy timeouts on
+ * "No team named SGAM-A was offered" an hour into a run.
+ */
+const coachedTeams = new Set(COACH_ROSTER.map((coach) => coach.teamName));
+for (const player of ROSTER) {
+  if (!coachedTeams.has(player.teamName)) {
+    throw new Error(
+      `${fullName(player)} is rostered for "${player.teamName}", which no coach in ` +
+      `coach-roster.js creates. Known teams: ${[...coachedTeams].join(', ')}. ` +
+      'Add a coach for it, or move the player.'
+    );
+  }
+}
+
 /**
- * Narrow the roster with env vars — `TEAM=SGAM-C`, `AGE_GROUP=Under10`, or both.
- * Unset seeds everyone.
+ * Narrow the roster with env vars — `TEAM=SGAM-C`, `AGE_GROUP=Under10`,
+ * `ONLY=Purva`, or any combination. Unset seeds everyone.
  * @returns {typeof ROSTER}
  */
 export const selectedRoster = () => {
   const { TEAM, AGE_GROUP } = process.env;
-  let filtered = ROSTER;
+  // ONLY works the same way on all three rosters — a one-person re-run should
+  // not need a different flag depending on which role you are seeding.
+  let filtered = onlyMatching(ROSTER);
 
   if (TEAM) {
     filtered = filtered.filter((p) => p.teamName === TEAM);

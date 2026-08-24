@@ -4,16 +4,22 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "cwd": "Web",
       "port": 5173
     },
     {
       "name": "api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "server"],
+      "runtimeArgs": [
+        "start"
+      ],
       "cwd": "Server",
-      "port": 5000
+      "port": 5000,
+      "//": "Plain node, not nodemon: a watcher restarting mid-run is indistinguishable from the API being down."
     }
   ]
 }

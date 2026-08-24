@@ -1,0 +1,11 @@
+{
+  "//": "The API writes Winston logs into logs/ while it runs. Without this ignore nodemon watches those files, restarts on every write, and the server spends its life restarting — which surfaces as random ERR_CONNECTION_REFUSED for whatever is talking to it. Found while seeding 70 players through the UI: a third of them failed on a connection the server had just dropped.",
+  "ignore": [
+    "logs/*",
+    "coverage/*",
+    "tests/*",
+    "scripts/seed/*",
+    "tmp-*.js"
+  ],
+  "ext": "js,json"
+}
