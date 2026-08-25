@@ -83,12 +83,7 @@ class ConfigManager {
       features: {
         enableCaching: this.getBoolean('ENABLE_CACHING', true),
         enableMetrics: this.getBoolean('ENABLE_METRICS', true),
-        enableNgrok: this.getBoolean('NGROK_ENABLED', false),
         flags: this.getFeatureFlags()
-      },
-      ngrok: {
-        enabled: this.getBoolean('NGROK_ENABLED', false),
-        authToken: this.getString('NGROK_AUTH_TOKEN', '')
       },
       redis: {
         url: this.getString('REDIS_URL', ''),
@@ -180,11 +175,6 @@ class ConfigManager {
       if (!this.config.server.corsOrigins || this.config.server.corsOrigins.length === 0) {
         errors.push('CORS_ORIGINS must be configured in production');
       }
-    }
-
-    // Validate ngrok configuration
-    if (this.config.features.enableNgrok && !this.config.ngrok.authToken) {
-      errors.push('NGROK_AUTH_TOKEN is required when NGROK_ENABLED is true');
     }
 
     if (errors.length > 0) {

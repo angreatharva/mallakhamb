@@ -47,9 +47,7 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
-    "@ngrok/ngrok": "^1.7.0",
     "@types/jest": "^30.0.0",
-    "fast-check": "^4.7.0",
     "jest": "^30.4.2",
     "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.0.2",

@@ -200,7 +200,7 @@ All routes share one `<Suspense fallback={<PageLoader />}>` (`src/routes/index.j
 - **LOW-W2 — Sparse type safety.** `prop-types` appears in 15 of 146 source files; there is no TypeScript. The scoring components pass deeply nested `breakdown` objects with no contract.
 - **LOW-W3 — Empty directory.** `src/utils/data/` contains no files.
 - **LOW-W4 — Stale documentation in code.** `obfuscatedStorage.js:6` describes `localStorage`; the module uses `sessionStorage` (root cause of HIGH-W4).
-- **Not a finding:** there is no `dangerouslySetInnerHTML` anywhere, and the single `innerHTML` assignment (`utils/ui/imageUtils.js:286`) writes a static string with no interpolated data. `SafeText`/`sanitize` is used in one component only, but React's default escaping means this is redundancy rather than exposure.
+- **Not a finding:** there is no `dangerouslySetInnerHTML` anywhere, and the single `innerHTML` assignment (`utils/ui/imageUtils.js:286`, since deleted as dead code) wrote a static string with no interpolated data. `SafeText`/`sanitize` is used in one component only, but React's default escaping means this is redundancy rather than exposure.
 
 ---
 

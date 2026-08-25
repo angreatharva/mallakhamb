@@ -79,7 +79,6 @@ Web/
 │   │   ├── apiConfig.js         # Base URL from VITE_API_URL
 │   │   ├── cn.js                # clsx + tailwind-merge helper
 │   │   ├── errorHandler.js      # Centralised toast error handler
-│   │   ├── imageUtils.js
 │   │   ├── logger.js            # Dev-only console wrapper (silent in production)
 │   │   ├── responsive.js        # Breakpoint utilities
 │   │   ├── sanitize.js          # DOMPurify sanitizeInput / sanitizeObject
@@ -144,7 +143,7 @@ App.jsx
 | `/forgot-password` | ForgotPassword | Public |
 | `/reset-password/:token` | ResetPassword | Public |
 | `/player/login` | PlayerLogin | Public |
-| `/player/register` | PlayerRegister | Public |
+| `/player/register` | UnifiedRegister | Public |
 | `/player/select-team` | PlayerSelectTeam | player |
 | `/player/dashboard` | PlayerDashboard | player |
 | `/coach/login` | CoachLogin | Public |

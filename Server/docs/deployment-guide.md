@@ -83,7 +83,6 @@ To generate a Gmail App Password:
 |---|---|---|
 | `ENABLE_CACHING` | `true` | Enable in-memory cache |
 | `ENABLE_METRICS` | `true` | Enable metrics collection |
-| `ENABLE_NGROK` | `false` | Enable ngrok tunnel (development only) |
 
 ### Payment (Razorpay)
 
@@ -117,7 +116,6 @@ DB_POOL_MAX=100
 
 ENABLE_CACHING=true
 ENABLE_METRICS=true
-ENABLE_NGROK=false
 ```
 
 ---

@@ -393,7 +393,7 @@ const UnifiedRegisterInner = () => {
         throw new Error('Invalid registration response: missing token or user data');
       }
 
-      // Store token immediately for player (mirrors existing PlayerRegister behaviour)
+      // Store the token immediately for a player, before the redirect.
       if (role === 'player') {
         secureStorage.setItem('player_token', token);
         secureStorage.setItem('player_user', JSON.stringify(userData));

@@ -24,7 +24,6 @@
     "seed:ui": "playwright test e2e/register-players.spec.js e2e/register-coaches.spec.js e2e/register-judges.spec.js"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
     "axios": "^1.6.2",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",

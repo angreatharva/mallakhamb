@@ -114,7 +114,6 @@ The configuration is organized into logical groups:
 ### Feature Flags
 - `features.enableCaching` - Enable caching (default: true)
 - `features.enableMetrics` - Enable metrics collection (default: true)
-- `features.enableNgrok` - Enable ngrok tunnel (default: false)
 
 ## Environment Variables
 
@@ -171,8 +170,6 @@ CACHE_MAX_SIZE=1000
 # Features
 ENABLE_CACHING=true
 ENABLE_METRICS=true
-NGROK_ENABLED=false
-NGROK_AUTH_TOKEN=your-ngrok-token
 ```
 
 ## Validation

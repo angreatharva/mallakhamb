@@ -207,12 +207,10 @@ Register services in the DI container:
 const container = require('./infrastructure/di-container');
 const configManager = require('./config/config-manager');
 const Logger = require('./infrastructure/logger');
-const { 
-  TokenService, 
-  OTPService, 
-  AuthenticationService, 
-  AuthorizationService 
-} = require('./services/auth');
+const TokenService = require('./services/auth/token.service');
+const OTPService = require('./services/auth/otp.service');
+const AuthenticationService = require('./services/auth/authentication.service');
+const AuthorizationService = require('./services/auth/authorization.service');
 
 // Register dependencies
 container.register('configManager', () => configManager, 'singleton');

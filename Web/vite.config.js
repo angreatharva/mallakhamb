@@ -39,7 +39,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['framer-motion', 'react-hot-toast'],
           'form-vendor': ['react-hook-form'],
-          'icons': ['lucide-react', '@heroicons/react'],
+          'icons': ['lucide-react'],
           'utils': ['axios', 'jwt-decode', 'crypto-js', 'dompurify']
         }
       }

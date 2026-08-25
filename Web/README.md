@@ -96,11 +96,10 @@ Web/
     │   │                          # tokenUtils, authEvents, redirectUtils
     │   ├── scoring/               # copRules.js, competitionFee.js
     │   ├── security/sanitize.js   #
-    │   └── ui/                    # cn, responsive, imageUtils, designTokenWarnings
+    │   └── ui/                    # cn, responsive
     ├── styles/tokens.js           # DESIGN_TOKENS
     ├── validators/form.validator.js
     ├── config/api.config.js
-    ├── errors/error-handler.js
     └── infrastructure/logger.js
 ```
 
