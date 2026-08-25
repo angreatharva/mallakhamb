@@ -224,42 +224,26 @@ App.jsx
 
 ## Security Utilities
 
-### Redirect Validation (`utils/redirectUtils.js`)
+### Redirect validation — removed (August 25, 2026)
 
-Prevents open redirect vulnerabilities by validating navigation paths against a whitelist.
+`utils/redirectUtils.js` held a path whitelist guarding against open redirects.
+It was deleted because nothing ever called it, and because an unwired guard does
+not stay correct: its whitelist had already drifted, still listing
+`/judge/scoring-old` while missing `/judge/register`, `/judge/profile`,
+`/judge/sequence` and `/admin/lots`. Wired up as it stood, it would have blocked
+legitimate navigation rather than an attack.
 
-**Available Functions:**
+There is no open-redirect sink in this app to guard. The only assignment to
+`window.location.href` outside that file is a hardcoded literal
+(`CoachDashboard.jsx`), and the one non-literal `navigate()` target — the judge
+pages' `returnTo` — is a path the app itself writes
+(`JudgeTeamPlayers.jsx`), travelling through router state into React Router,
+which resolves it same-origin.
 
-```javascript
-import { safeRedirect, safeLocationRedirect, isValidRedirectPath } from '../utils/redirectUtils';
-
-// 1. Safe navigation with React Router
-const navigate = useNavigate();
-safeRedirect('/player/dashboard', navigate); // Allowed
-safeRedirect('https://evil.com', navigate, '/'); // Blocked, redirects to '/'
-
-// 2. Safe window.location redirect
-safeLocationRedirect('/admin/dashboard'); // Allowed
-safeLocationRedirect('javascript:alert(1)', '/'); // Blocked, redirects to '/'
-
-// 3. Manual path validation
-if (isValidRedirectPath(userInput)) {
-  navigate(userInput);
-} else {
-  toast.error('Invalid redirect path');
-}
-```
-
-**When to Use:**
-- Redirecting based on URL parameters (e.g., `?redirect=/player/dashboard`)
-- Processing OAuth callbacks or external authentication flows
-- Handling deep links from emails or notifications
-- Any navigation triggered by user input or external data
-
-**Whitelist Coverage:**
-- All static routes (login pages, dashboards, etc.)
-- Dynamic routes via regex patterns (`/admin/dashboard/:tab`, `/reset-password/:token`)
-- Query strings and hashes are automatically stripped during validation
+**When this needs revisiting:** the moment a redirect target comes from
+somewhere the user controls — a `?returnTo=` query parameter, say — validate it
+at that call site, against the router's own route table rather than a
+hand-maintained copy of it.
 
 ### XSS Prevention (`components/SafeText.jsx`)
 
@@ -415,8 +399,11 @@ Remaining priority areas:
 - Judge names in scoring interfaces
 - Any user-provided text content
 
-**#18 — Redirect validation whitelist** ✅ FIXED (March 22, 2026)  
-Created `src/utils/redirectUtils.js` with path validation against a whitelist. Provides three utilities:
+**#18 — Redirect validation whitelist** ✅ FIXED (March 22, 2026) · ⛔ REVERTED (August 25, 2026)  
+Created `src/utils/redirectUtils.js` with path validation against a whitelist,
+then deleted: nothing imported it, and there is no user-controlled redirect
+target in the app for it to guard. See "Redirect validation — removed" above.
+The utilities it provided were:
 
 ```javascript
 import { safeRedirect, safeLocationRedirect, isValidRedirectPath } from '../utils/redirectUtils';

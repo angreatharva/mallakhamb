@@ -93,7 +93,7 @@ Web/
     ├── middleware/                # protected-route.jsx
     ├── utils/
     │   ├── auth/                  # obfuscatedStorage, secureStorage, roleFromPath,
-    │   │                          # tokenUtils, authEvents, redirectUtils
+    │   │                          # tokenUtils, authEvents
     │   ├── scoring/               # copRules.js, competitionFee.js
     │   ├── security/sanitize.js   #
     │   └── ui/                    # cn, responsive

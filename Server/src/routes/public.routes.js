@@ -18,6 +18,8 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/auth.middleware');
+const { handleValidationErrors } = require('../middleware/validation.middleware');
+const publicValidator = require('../validators/public.validator');
 
 /**
  * Authorization guard for the scoring endpoints hosted under /api/public.
@@ -87,14 +89,24 @@ function createPublicRoutes(container) {
    * @desc    Get public team listings
    * @access  Public
    */
-  router.get('/teams', publicController.getPublicTeams);
+  router.get(
+    '/teams',
+    publicValidator.getPublicTeams(),
+    handleValidationErrors,
+    publicController.getPublicTeams
+  );
 
   /**
    * @route   GET /api/public/scores
    * @desc    Get public score data
    * @access  Public
    */
-  router.get('/scores', publicController.getPublicScores);
+  router.get(
+    '/scores',
+    publicValidator.getPublicScores(),
+    handleValidationErrors,
+    publicController.getPublicScores
+  );
 
   /**
    * @route   POST /api/public/save-score

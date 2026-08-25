@@ -6,17 +6,24 @@ const mongoose = require('mongoose');
  */
 
 /**
- * Validate MongoDB ObjectId
+ * Validate MongoDB ObjectId.
+ *
+ * @param {string} field
+ * @param {'param'|'body'|'query'} [location]
+ * @param {{isOptional?: boolean}} [options] - `isOptional` validates the FORMAT
+ *   when the value is present and accepts its absence. Use it for a filter the
+ *   endpoint genuinely works without; omitting it makes the field required.
  */
-const objectId = (field, location = 'param') => {
-  const validator = location === 'param' ? param(field) : 
-                    location === 'body' ? body(field) : 
+const objectId = (field, location = 'param', options = {}) => {
+  const validator = location === 'param' ? param(field) :
+                    location === 'body' ? body(field) :
                     query(field);
-  
-  return validator
-    .trim()
-    .notEmpty()
-    .withMessage(`${field} is required`)
+
+  const chain = options.isOptional
+    ? validator.optional({ values: 'falsy' }).trim()
+    : validator.trim().notEmpty().withMessage(`${field} is required`);
+
+  return chain
     .custom((value) => {
       if (!mongoose.Types.ObjectId.isValid(value)) {
         throw new Error(`Invalid ${field} format`);
