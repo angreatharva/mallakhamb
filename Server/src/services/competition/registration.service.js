@@ -274,15 +274,24 @@ class RegistrationService {
         throw new ConflictError('Player is already in this registration');
       }
 
-      // Add player to registration
-      registration.players.push({
-        player: playerId,
-        ageGroup,
-        gender
-      });
+      /*
+       * Written through the repository, not by mutating `registration` and
+       * calling `competition.save()`. That document is `.lean()` — a plain
+       * object with no `save` — so this path threw a TypeError and 500'd.
+       *
+       * The repository's targeted `$push` also avoids rewriting the whole
+       * `registeredTeams` array, which is megabytes at a national meet and
+       * which two coaches editing two squads at once would clobber.
+       */
+      const added = await this.competitionRepository.addPlayerToRegistration(
+        competitionId,
+        teamId,
+        { player: playerId, ageGroup, gender }
+      );
 
-      // Save competition
-      await competition.save();
+      if (!added) {
+        throw new NotFoundError('Team registration');
+      }
 
       // Invalidate cache
       this.cacheService.delete(`competition:${competitionId}`);
@@ -296,7 +305,10 @@ class RegistrationService {
         gender
       });
 
-      return competition;
+      // Re-read: `competition` above is the state from BEFORE the write, so
+      // returning it would hand the caller a squad without the athlete they
+      // just added.
+      return this.competitionRepository.findById(competitionId);
     } catch (error) {
       if (error instanceof NotFoundError || 
           error instanceof ConflictError || 
@@ -345,13 +357,13 @@ class RegistrationService {
         throw new BusinessRuleError('Cannot modify submitted registration');
       }
 
-      // Remove player
-      registration.players = registration.players.filter(
-        p => !p.player || p.player.toString() !== playerId.toString()
+      // Through the repository for the same reason as the add path above: the
+      // document is lean, so `.save()` does not exist on it.
+      await this.competitionRepository.removePlayerFromRegistration(
+        competitionId,
+        teamId,
+        playerId
       );
-
-      // Save competition
-      await competition.save();
 
       // Invalidate cache
       this.cacheService.delete(`competition:${competitionId}`);
@@ -363,7 +375,8 @@ class RegistrationService {
         playerId
       });
 
-      return competition;
+      // Re-read, as in the add path: the local copy predates the write.
+      return this.competitionRepository.findById(competitionId);
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof BusinessRuleError) {
         throw error;

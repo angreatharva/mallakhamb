@@ -673,7 +673,16 @@ class ScoringService {
         query.ageGroup = ageGroup;
       }
       if (competitionType) {
-        query.competitionType = competitionType;
+        /*
+         * Normalized, exactly as getTeamScores does it.
+         *
+         * A Score stores the DISPLAY form ("Competition I"); the client sends
+         * the slug ("competition_1"). This filter used the raw value, so the
+         * slug matched no document and the endpoint answered `[]` — with a 200,
+         * so the individual results table simply rendered empty next to a fully
+         * populated team table fed by getTeamScores, which does normalize.
+         */
+        query.competitionType = toCompetitionTypeDisplay(competitionType);
       }
 
       const scores = await this.scoreRepository.find(query);

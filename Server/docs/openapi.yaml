@@ -4701,64 +4701,6 @@ paths:
       security:
         - bearerAuth: []
         - cookieAuth: []
-  /api/admin/dashboard/competition/{competitionId}:
-    get:
-      tags:
-        - Admin
-      summary: Per-age-group overview
-      operationId: adminCompetitionOverview
-      parameters:
-        - name: competitionId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Competition id
-      responses:
-        "200":
-          description: Overview
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data: {}
-                  message:
-                    type: string
-        "401":
-          description: Missing, invalid, expired or logged-out token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: Authenticated, but the principal lacks the required role
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: Resource not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Unhandled server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      description: |-
-        **Known defect — every `teamCount` and `playerCount` comes back 0.** The counts filter `Team` and `Player` by `competition` and `ageGroup`, and neither schema carries those fields. It also issues two unindexed collection scans per age group rather than one aggregation.
-        
-        **Roles:** admin, superadmin
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
   /api/admin/system/health:
     get:
       tags:
@@ -5265,7 +5207,7 @@ paths:
     get:
       tags:
         - Admin
-      summary: Athletes, filtered and paginated
+      summary: Athletes entered in the competition, filtered and paginated
       operationId: adminListPlayers
       parameters:
         - name: X-Competition-Id
@@ -5305,7 +5247,7 @@ paths:
               - Under18
               - Above16
               - Above18
-          description: Age group
+          description: Age group, as entered
         - name: gender
           in: query
           required: false
@@ -5314,20 +5256,23 @@ paths:
             enum:
               - Male
               - Female
-          description: Gender
+          description: Gender, as entered
         - name: teamId
           in: query
           required: false
           schema:
             type: string
             format: objectid
-          description: Team
+          description: Only athletes entered by this team
         - name: status
           in: query
           required: false
           schema:
             type: string
-          description: Status
+            enum:
+              - active
+              - inactive
+          description: Athlete account state
       responses:
         "200":
           description: Athletes
@@ -5379,7 +5324,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
-        **Known defect — currently returns an empty page.** The handler filters `Player` by `competition`, and the Player schema has no such field: entry is recorded in `Competition.registeredTeams`, not on the athlete. Mongoose passes the unknown path through, so MongoDB matches nothing and cannot use an index doing it. Use `GET /api/admin/teams` or `GET /api/admin/teams/submitted` to read a competition's athletes.
+        Reads the competition's entries (`registeredTeams`), so each row carries the athlete's category, apparatus and team, plus the entry's submission and payment state.
+        
+        Paginated in the database. `status` filters on the athlete's ACCOUNT state, which is the only status this data models — there is no per-entry status.
         
         **Roles:** admin, superadmin
         
@@ -8424,107 +8371,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: "**Roles:** judge"
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
-  /api/judge/teams:
-    get:
-      tags:
-        - Judge
-      summary: Teams to be judged in a category
-      operationId: judgeTeams
-      parameters:
-        - name: gender
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - Male
-              - Female
-          description: Category gender
-        - name: ageGroup
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - Under10
-              - Under12
-              - Under14
-              - Under16
-              - Under18
-              - Above16
-              - Above18
-          description: Category age group
-        - name: competitionType
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - competition_1
-              - competition_2
-              - competition_3
-              - Competition I
-              - Competition II
-              - Competition III
-          description: Competition I / II / III (slug or display form)
-        - name: apparatus
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - Pole Mallakhamb
-              - Hanging Mallakhamb
-              - Rope Mallakhamb
-          description: Apparatus filter
-      responses:
-        "200":
-          description: Teams
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/SubmittedTeam"
-                  message:
-                    type: string
-        "400":
-          description: Request failed validation — `error.details` names the field
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: Missing, invalid, expired or logged-out token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: Authenticated, but the principal lacks the required role
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Unhandled server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      description: |-
-        **Known defect — always returns an empty list.** The handler queries `Team` by `competition`, `ageGroup`, `gender` and `isSubmitted`; the Team schema carries none of those. Use `GET /api/public/submitted-teams`, which is what the judge client actually calls.
-        
-        **Roles:** judge
       security:
         - bearerAuth: []
         - cookieAuth: []

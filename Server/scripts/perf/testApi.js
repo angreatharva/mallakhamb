@@ -299,13 +299,26 @@ async function run() {
     group('Admin — reads');
     await step('GET /api/admin/dashboard/stats', admin.get('/api/admin/dashboard/stats'));
     await step('GET /api/admin/dashboard', admin.get('/api/admin/dashboard'));
-    await step(`GET /api/admin/dashboard/competition/${competitionId}`,
-      admin.get(`/api/admin/dashboard/competition/${competitionId}`));
+    await step('GET /api/admin/dashboard/competition/:id is retired',
+      admin.get(`/api/admin/dashboard/competition/${competitionId}`), { expect: [404] });
     await step('GET /api/admin/system/health', admin.get('/api/admin/system/health'));
     const adminTeams = await step('GET /api/admin/teams', admin.get('/api/admin/teams', { query: { page: 1, limit: 10 } }));
     const submitted = await step('GET /api/admin/teams/submitted',
       admin.get('/api/admin/teams/submitted', { query: CATEGORY }));
-    await step('GET /api/admin/players', admin.get('/api/admin/players', { query: { page: 1, limit: 10 } }));
+
+    // Used to return an empty page always — it filtered Player by a
+    // `competition` field the schema does not have.
+    const playerPage = await step('GET /api/admin/players',
+      admin.get('/api/admin/players', { query: { page: 1, limit: 10 } }));
+    record('admin/players returns entered athletes',
+      playerPage?.total > 0 ? 'PASS' : 'FAIL',
+      { reason: playerPage?.total > 0 ? undefined : `total ${playerPage?.total ?? 'n/a'}` });
+    await step('GET /api/admin/players (filtered by category)',
+      admin.get('/api/admin/players', {
+        query: { page: 1, limit: 10, gender: CATEGORY.gender, ageGroup: CATEGORY.ageGroup },
+      }));
+    await step('GET /api/admin/players rejects an unmodelled status',
+      admin.get('/api/admin/players', { query: { status: 'disqualified' } }), { expect: [400] });
     await step('GET /api/admin/age-groups/status', admin.get('/api/admin/age-groups/status'));
     await step('GET /api/admin/transactions', admin.get('/api/admin/transactions'));
     await step('GET /api/admin/transactions/summary', admin.get('/api/admin/transactions/summary'));
@@ -323,7 +336,24 @@ async function run() {
 
     // ================= Panel seating =================
     group('Panel');
-    await step('GET /api/admin/judge-accounts', admin.get('/api/admin/judge-accounts', { query: { q: 'Judge' } }));
+    /*
+     * Searching by NAME must work. The query matched a `name` field that
+     * migration 006 replaced with firstName/lastName, so only the e-mail branch
+     * ever fired — and this search is the only way an admin fills a seat.
+     */
+    const byFirstName = await step('GET /api/admin/judge-accounts (by first name)',
+      admin.get('/api/admin/judge-accounts', { query: { q: 'Judge0' } }));
+    record('judge search matches a first name',
+      Array.isArray(byFirstName) && byFirstName.length > 0 ? 'PASS' : 'FAIL',
+      { reason: byFirstName?.length ? undefined : 'no match for the seeded judge\'s first name' });
+    record('judge search still composes a display name',
+      byFirstName?.[0]?.name ? 'PASS' : 'FAIL',
+      { reason: byFirstName?.[0]?.name ? undefined : 'result has no `name` — the admin picker renders it' });
+
+    await step('GET /api/admin/judge-accounts (by last name)',
+      admin.get('/api/admin/judge-accounts', { query: { q: 'Perf' } }));
+    await step('GET /api/admin/judge-accounts (by e-mail)',
+      admin.get('/api/admin/judge-accounts', { query: { q: 'perf.judge1' } }));
     const panel = await step('GET /api/admin/judges', admin.get('/api/admin/judges', { query: CATEGORY }));
     await step('GET /api/admin/judges/summary', admin.get('/api/admin/judges/summary'));
     await step('GET /api/judge/assignments', judge.get('/api/judge/assignments'));
@@ -351,9 +381,16 @@ async function run() {
 
     // ================= Scoring =================
     group('Scoring');
-    await step('POST /api/admin/age-groups/start',
-      admin.post('/api/admin/age-groups/start', CATEGORY),
-      { skipOn: [400, 404] });
+    // Used to 500 on `competition.save()` against a lean document.
+    await step('POST /api/admin/age-groups/start', admin.post('/api/admin/age-groups/start', CATEGORY));
+    // The duplicate guard is now part of the write, so a second attempt is a
+    // clean 400 rather than a race two admins could both win.
+    await step('POST /api/admin/age-groups/start refuses a second start',
+      admin.post('/api/admin/age-groups/start', CATEGORY), { expect: [400, 409, 422] });
+    const ageGroupState = await step('GET /api/admin/age-groups/status',
+      admin.get('/api/admin/age-groups/status'));
+    record('the started category is recorded',
+      JSON.stringify(ageGroupState || '').includes(CATEGORY.ageGroup) ? 'PASS' : 'FAIL');
 
     const scoringTeam = submitted?.find((t) =>
       t.players?.some((p) => p.gender === CATEGORY.gender && p.ageGroup === CATEGORY.ageGroup));
@@ -414,10 +451,35 @@ async function run() {
       record('scoring flow', 'SKIP', { reason: `no submitted team in ${CATEGORY.gender} ${CATEGORY.ageGroup}` });
     }
 
-    await step('GET /api/admin/scores/team', admin.get('/api/admin/scores/team', { query: CATEGORY }));
-    await step('GET /api/admin/scores/individual', admin.get('/api/admin/scores/individual', { query: CATEGORY }));
+    const teamScores = await step('GET /api/admin/scores/team',
+      admin.get('/api/admin/scores/team', { query: CATEGORY }));
     await step('GET /api/judge/scores/team', judge.get('/api/judge/scores/team', { query: CATEGORY }));
-    await step('GET /api/judge/teams', judge.get('/api/judge/teams', { query: CATEGORY }));
+    await step('GET /api/judge/teams is retired', judge.get('/api/judge/teams', { query: CATEGORY }),
+      { expect: [404] });
+
+    /*
+     * The slug form must now return the same athletes as the display form.
+     * getTeamScores normalized `competition_1` to `Competition I` and
+     * getIndividualScores did not, so the individual table read empty beside a
+     * populated team table.
+     */
+    const individualSlug = await step('GET /api/admin/scores/individual (slug)',
+      admin.get('/api/admin/scores/individual', { query: CATEGORY }));
+    const individualDisplay = await step('GET /api/admin/scores/individual (display form)',
+      admin.get('/api/admin/scores/individual', {
+        query: { ...CATEGORY, competitionType: 'Competition I' },
+      }));
+
+    if (Array.isArray(individualSlug) && Array.isArray(individualDisplay)) {
+      const agrees = individualSlug.length === individualDisplay.length;
+      record('scores/individual agrees on slug and display form', agrees ? 'PASS' : 'FAIL', {
+        reason: agrees ? undefined : `slug ${individualSlug.length} vs display ${individualDisplay.length}`,
+      });
+      const populated = individualSlug.length > 0 || !Array.isArray(teamScores) || teamScores.length === 0;
+      record('scores/individual is not empty while scores/team has rows', populated ? 'PASS' : 'FAIL', {
+        reason: populated ? undefined : `team ${teamScores.length} rows, individual 0`,
+      });
+    }
 
     // ================= Rankings =================
     group('Rankings');

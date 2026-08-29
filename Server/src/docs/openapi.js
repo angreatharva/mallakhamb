@@ -1102,17 +1102,10 @@ function buildPaths() {
     responses: { 200: ok('Stats', ref('DashboardStats')), ...VALIDATION_ERROR, ...NOT_FOUND },
   }));
 
-  add('/api/admin/dashboard/competition/{competitionId}', 'get', op({
-    tag: 'Admin', roles: 'admin, superadmin', operationId: 'adminCompetitionOverview',
-    summary: 'Per-age-group overview',
-    description:
-      '**Known defect — every `teamCount` and `playerCount` comes back 0.** The counts '
-      + 'filter `Team` and `Player` by `competition` and `ageGroup`, and neither schema '
-      + 'carries those fields. It also issues two unindexed collection scans per age '
-      + 'group rather than one aggregation.',
-    parameters: [pathParam('competitionId', 'Competition id')],
-    responses: { 200: ok('Overview'), ...NOT_FOUND },
-  }));
+  // GET /api/admin/dashboard/competition/{competitionId} was RETIRED. Its
+  // per-age-group counts filtered Team and Player by fields neither schema has,
+  // so every count it returned was 0, at two unindexed collection scans per age
+  // group. Nothing called it. Use /api/admin/dashboard/stats.
 
   add('/api/admin/system/health', 'get', op({
     tag: 'Admin', roles: 'admin, superadmin', operationId: 'adminSystemHealth',
@@ -1174,20 +1167,19 @@ function buildPaths() {
 
   add('/api/admin/players', 'get', op({
     tag: 'Admin', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminListPlayers',
-    summary: 'Athletes, filtered and paginated',
+    summary: 'Athletes entered in the competition, filtered and paginated',
     description:
-      '**Known defect — currently returns an empty page.** The handler filters '
-      + '`Player` by `competition`, and the Player schema has no such field: entry '
-      + 'is recorded in `Competition.registeredTeams`, not on the athlete. Mongoose '
-      + 'passes the unknown path through, so MongoDB matches nothing and cannot use '
-      + 'an index doing it. Use `GET /api/admin/teams` or '
-      + '`GET /api/admin/teams/submitted` to read a competition\'s athletes.',
+      'Reads the competition\'s entries (`registeredTeams`), so each row carries the '
+      + 'athlete\'s category, apparatus and team, plus the entry\'s submission and '
+      + 'payment state.\n\n'
+      + 'Paginated in the database. `status` filters on the athlete\'s ACCOUNT state, '
+      + 'which is the only status this data models — there is no per-entry status.',
     parameters: [
       ...PAGINATION_QUERY,
-      queryParam('ageGroup', S.ageGroup, 'Age group'),
-      queryParam('gender', S.gender, 'Gender'),
-      queryParam('teamId', S.id, 'Team'),
-      queryParam('status', S.str, 'Status'),
+      queryParam('ageGroup', S.ageGroup, 'Age group, as entered'),
+      queryParam('gender', S.gender, 'Gender, as entered'),
+      queryParam('teamId', S.id, 'Only athletes entered by this team'),
+      queryParam('status', { type: 'string', enum: ['active', 'inactive'] }, 'Athlete account state'),
     ],
     responses: { 200: ok('Athletes', inline({ players: { type: 'array', items: ref('Player') }, total: S.int, page: S.int, pages: S.int })), ...VALIDATION_ERROR },
   }));
@@ -1515,17 +1507,10 @@ function buildPaths() {
     responses: { 200: ok('Context set', ref('LoginResponse')), ...VALIDATION_ERROR },
   }));
 
-  add('/api/judge/teams', 'get', op({
-    tag: 'Judge', roles: 'judge', operationId: 'judgeTeams',
-    summary: 'Teams to be judged in a category',
-    description:
-      '**Known defect — always returns an empty list.** The handler queries `Team` by '
-      + '`competition`, `ageGroup`, `gender` and `isSubmitted`; the Team schema carries '
-      + 'none of those. Use `GET /api/public/submitted-teams`, which is what the judge '
-      + 'client actually calls.',
-    parameters: CATEGORY_QUERY,
-    responses: { 200: ok('Teams', { type: 'array', items: ref('SubmittedTeam') }), ...VALIDATION_ERROR },
-  }));
+  // GET /api/judge/teams was RETIRED. It queried Team by competition,
+  // ageGroup, gender and isSubmitted — none of them paths on Team — so it
+  // returned an empty list to every caller. Use /api/public/submitted-teams,
+  // which is what the judge client already calls.
 
   add('/api/judge/teams/{teamId}/players', 'get', op({
     tag: 'Judge', roles: 'judge', operationId: 'judgeTeamPlayers',

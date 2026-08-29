@@ -71,13 +71,6 @@ function createAdminController(container) {
       res.json({ success: true, data: stats });
     }),
 
-    /** @route GET /api/admin/dashboard/competition/:competitionId */
-    getCompetitionOverview: asyncHandler(async (req, res) => {
-      const { competitionId } = req.params;
-      const overview = await adminService.getCompetitionOverview(competitionId);
-      res.json({ success: true, data: overview });
-    }),
-
     /** @route GET /api/admin/system/health */
     getSystemHealth: asyncHandler(async (req, res) => {
       const health = await adminService.getSystemHealth();
@@ -161,14 +154,23 @@ function createAdminController(container) {
 
     // ==================== Player Management ====================
 
-    /** @route GET /api/admin/players */
+    /**
+     * @route GET /api/admin/players
+     *
+     * Athletes ENTERED in the competition, read from `registeredTeams`. The
+     * service used to filter the Player collection by a `competition` field
+     * that schema does not have, so this always returned an empty page.
+     */
     getAllPlayers: asyncHandler(async (req, res) => {
       const { page, limit, ageGroup, gender, teamId, status } = req.query;
       const filters = {};
       if (ageGroup) filters.ageGroup = ageGroup;
       if (gender) filters.gender = gender;
       if (teamId) filters.team = teamId;
-      if (status) filters.status = status;
+      // `status` is the athlete's ACCOUNT state; there is no per-entry status.
+      // Passed as a boolean so the repository does not have to know the
+      // query-string vocabulary.
+      if (status) filters.isActive = status === 'active';
 
       const pagination = { page: parseInt(page) || 1, limit: parseInt(limit) || 10 };
       const result = await adminService.getAllPlayers(req.competitionId, filters, pagination);

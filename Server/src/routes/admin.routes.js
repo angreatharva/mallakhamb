@@ -89,17 +89,18 @@ function createAdminRoutes(container) {
     adminController.getDashboardStats
   );
 
-  /**
-   * @route   GET /api/admin/dashboard/competition/:competitionId
-   * @desc    Get competition overview
-   * @access  Admin, SuperAdmin
+  /*
+   * GET /api/admin/dashboard/competition/:competitionId is gone.
+   *
+   * Its per-age-group `teamCount` and `playerCount` came from counting `Team`
+   * and `Player` by `{competition, ageGroup}` — fields neither schema has — so
+   * every count it ever returned was 0, at a cost of two unindexed collection
+   * scans per age group (26 queries for a 12-category meet).
+   *
+   * Retired rather than rewritten: nothing calls it. It appears nowhere in the
+   * Web client, in no test and in no script, and the counts it was meant to
+   * show overlap GET /api/admin/dashboard/stats, which works.
    */
-  router.get(
-    '/dashboard/competition/:competitionId',
-    authMiddleware,
-    authorize,
-    adminController.getCompetitionOverview
-  );
 
   /**
    * @route   GET /api/admin/system/health

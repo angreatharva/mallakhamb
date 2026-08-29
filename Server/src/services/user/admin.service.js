@@ -624,59 +624,6 @@ class AdminService extends UserService {
     }
   }
 
-  /**
-   * Get competition overview with age groups and registration status
-   * @param {string} competitionId - Competition ID
-   * @returns {Promise<Object>} Competition overview
-   * @throws {NotFoundError} If competition not found
-   */
-  async getCompetitionOverview(competitionId) {
-    try {
-      const competition = await this.competitionRepository.findById(competitionId);
-      if (!competition) {
-        throw new NotFoundError('Competition');
-      }
-
-      // Get registration status by age group
-      const ageGroups = competition.ageGroups || [];
-      const ageGroupStats = await Promise.all(
-        ageGroups.map(async (ageGroup) => {
-          const teamCount = await this.teamRepository.count({
-            competition: competitionId,
-            ageGroup: ageGroup.name
-          });
-          const playerCount = await this.playerRepository.count({
-            competition: competitionId,
-            ageGroup: ageGroup.name
-          });
-          return {
-            name: ageGroup.name,
-            teamCount,
-            playerCount,
-            status: ageGroup.status || 'pending'
-          };
-        })
-      );
-
-      this.logger.info('Competition overview retrieved', { competitionId });
-
-      return {
-        competition,
-        ageGroups: ageGroupStats,
-        registrationStatus: competition.registrationStatus || 'open',
-        scoringProgress: competition.scoringProgress || 0
-      };
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Get competition overview error', { 
-        competitionId, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
 
   /**
    * Get system health status
@@ -1329,18 +1276,26 @@ class AdminService extends UserService {
   async getAllPlayers(competitionId, filters = {}, pagination = {}) {
     try {
       const { page = 1, limit = 10 } = pagination;
-      const criteria = { competition: competitionId, ...filters };
 
+      /*
+       * Read from the competition's entries, not from the Player collection.
+       *
+       * This used to be `playerRepository.find({ competition, ...filters })`.
+       * Player has no `competition` path — entry is recorded in
+       * `Competition.registeredTeams` — so Mongoose passed the unknown field
+       * through, MongoDB matched nothing (unindexed, so a full scan doing it),
+       * and the endpoint returned an empty page however many athletes were
+       * entered. It answered 200 throughout, so it read as "no athletes yet".
+       *
+       * `filters.team` rather than `filters.teamId`: the controller maps the
+       * query's `teamId` onto `team` before it gets here.
+       */
       const skip = (page - 1) * limit;
-      const [players, total] = await Promise.all([
-        this.playerRepository.find(criteria, { 
-          skip, 
-          limit, 
-          sort: { createdAt: -1 },
-          populate: ['team']
-        }),
-        this.playerRepository.count(criteria)
-      ]);
+      const { players, total } = await this.competitionRepository.findEnteredPlayers(
+        competitionId,
+        filters,
+        { skip, limit }
+      );
 
       this.logger.info('All players retrieved', { competitionId, total });
 
@@ -2267,30 +2222,29 @@ class AdminService extends UserService {
         throw new NotFoundError(`Age group ${gender} ${ageGroup} not found in competition`);
       }
 
-      // Check if already started
-      const alreadyStarted = competition.startedAgeGroups?.some(
-        started => started.gender === gender && 
-                   started.ageGroup === ageGroup && 
-                   started.competitionType === competitionType
-      );
-
-      if (alreadyStarted) {
-        throw new ValidationError(`${competitionType} for ${gender} ${ageGroup} has already been started`);
-      }
-
-      // Add to startedAgeGroups array
-      if (!competition.startedAgeGroups) {
-        competition.startedAgeGroups = [];
-      }
-
-      competition.startedAgeGroups.push({
+      /*
+       * The "already started" check IS the write.
+       *
+       * This used to read the competition, test `startedAgeGroups` in memory,
+       * push, and call `competition.save()`. Two things were wrong with that.
+       * The document came from `competitionRepository.findById`, which is
+       * `.lean()`, so `.save()` did not exist and every call was a 500. And
+       * even hydrated, the check and the write were separate: two admins
+       * opening two categories at once would each write back the array as they
+       * read it, silently erasing one of the two.
+       *
+       * The repository does both in one conditional update, so a second attempt
+       * modifies nothing and is reported as already started.
+       */
+      const started = await this.competitionRepository.startAgeGroup(competitionId, {
         gender,
         ageGroup,
         competitionType,
-        startedAt: new Date()
       });
 
-      await competition.save();
+      if (!started) {
+        throw new ValidationError(`${competitionType} for ${gender} ${ageGroup} has already been started`);
+      }
 
       this.logger.info('Competition type started', { 
         competitionId, 
