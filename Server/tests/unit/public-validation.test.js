@@ -1,16 +1,21 @@
 /**
  * Validation on the anonymous public endpoints.
  *
- * Two claims worth pinning, because they pull in opposite directions:
+ * Three claims worth pinning:
  *
  *   1. A malformed `competitionId` is refused at the edge, with a message
  *      naming the query parameter — not Mongoose's `Invalid _id: ...`, which
  *      names an internal field and only appears after a database round trip.
  *
- *   2. NO `competitionId` is still valid. `/scores` returns every published
- *      score that way and `/teams` returns an empty list; requiring the field
- *      would turn two working calls into 400s. This is the half that a
- *      well-meaning tightening of the rule would break silently.
+ *   2. `/scores` REQUIRES a competition. It used not to, and this file used to
+ *      pin that: omitting it returned every published score in the database,
+ *      unpaginated, to an anonymous caller — 19.5 MB on one 1000-team fixture,
+ *      unbounded across several competitions. Both callers in the web client
+ *      always send it, so nothing that worked now 400s. The old expectation is
+ *      inverted below rather than deleted, so the reversal is visible.
+ *
+ *   3. `/teams` still accepts no competition, because it answers with an empty
+ *      list rather than with everything, and so has no equivalent failure mode.
  */
 
 const { validationResult } = require('express-validator');
@@ -37,16 +42,6 @@ describe.each([
     expect(await runChain(build(), { competitionId: '6a8a9286fe57edf060353b19' })).toEqual([]);
   });
 
-  it('accepts no competition id at all', async () => {
-    // The endpoints work without it. If this ever fails, the public score and
-    // team listings have started 400ing for every caller that omits the filter.
-    expect(await runChain(build(), {})).toEqual([]);
-  });
-
-  it('accepts an empty competition id, which a client sends as ?competitionId=', async () => {
-    expect(await runChain(build(), { competitionId: '' })).toEqual([]);
-  });
-
   it('refuses a malformed competition id, naming the query parameter', async () => {
     const errors = await runChain(build(), { competitionId: 'not-an-id' });
 
@@ -60,6 +55,45 @@ describe.each([
   it('refuses an id of the right length that is not hex', async () => {
     expect(await runChain(build(), { competitionId: 'z'.repeat(24) }))
       .toEqual(['Invalid competitionId format']);
+  });
+});
+
+describe('the two endpoints differ on a MISSING competition', () => {
+  const missing = [{}, { competitionId: '' }];
+
+  it.each(missing)('getPublicScores refuses %j', async (query) => {
+    // Claim 2. Without this the endpoint answers with every published score in
+    // the database — see the header note.
+    const errors = await runChain(publicValidator.getPublicScores(), query);
+    expect(errors).toContain('competitionId is required');
+  });
+
+  it.each(missing)('getPublicTeams still accepts %j', async (query) => {
+    // Claim 3. It returns an empty list, not everything, so requiring it here
+    // would turn a working call into a 400 for no gain.
+    expect(await runChain(publicValidator.getPublicTeams(), query)).toEqual([]);
+  });
+});
+
+describe('getPublicScores teamId', () => {
+  it('accepts a well-formed team id', async () => {
+    expect(await runChain(publicValidator.getPublicScores(), {
+      competitionId: '6a8a9286fe57edf060353b19',
+      teamId: '6a8a9286fe57edf060353b1a',
+    })).toEqual([]);
+  });
+
+  it('is optional', async () => {
+    expect(await runChain(publicValidator.getPublicScores(), {
+      competitionId: '6a8a9286fe57edf060353b19',
+    })).toEqual([]);
+  });
+
+  it('refuses a malformed team id', async () => {
+    expect(await runChain(publicValidator.getPublicScores(), {
+      competitionId: '6a8a9286fe57edf060353b19',
+      teamId: 'not-an-id',
+    })).toEqual(['Invalid teamId format']);
   });
 });
 

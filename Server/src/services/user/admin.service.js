@@ -1067,12 +1067,29 @@ class AdminService extends UserService {
         scoreQuery.competitionType = toCompetitionTypeDisplay(filters.competitionType);
       }
 
-      const scoreDocs = await this.scoreRepository.find(scoreQuery);
+      /*
+       * Only the fields the loop below reads.
+       *
+       * This response does not return score documents at all — it returns a
+       * per-athlete `isFinalized` / `finalScore` / `hasScore` flag derived from
+       * them. Loading whole documents to compute three booleans pulled every
+       * judge slip and every COP breakdown in the category across the wire from
+       * MongoDB for nothing.
+       */
+      const scoreDocs = await this.scoreRepository.find(scoreQuery, {
+        select: 'teamId isLocked playerScores.playerId playerScores.isFinalized '
+          + 'playerScores.finalizedAt playerScores.finalScore playerScores.averageMarks '
+          + 'playerScores.deduction playerScores.otherDeduction playerScores.judgeScores '
+          + 'playerScores.panelSize '
+          // `judgeRole` alone, because the only thing asked of judgeSlips below
+          // is whether the array is non-empty. Selecting the slips whole would
+          // bring back the COP breakdowns this projection exists to avoid.
+          + 'playerScores.judgeSlips.judgeRole',
+      });
       const finalizedByPlayer = new Map();
       const scoredByPlayer = new Map();
       for (const doc of scoreDocs || []) {
         const teamKey = doc.teamId?.toString();
-        let needsRepair = false;
         for (const ps of doc.playerScores || []) {
           const pid = ps.playerId?.toString();
           if (!pid) continue;
@@ -1099,19 +1116,24 @@ class AdminService extends UserService {
             resolvedFinal = afterDeductions(ps.averageMarks);
           }
           if ((resolvedFinal == null || resolvedFinal === 0) && ps.judgeScores) {
+            /*
+             * Recompute for DISPLAY only.
+             *
+             * This block used to also write the repaired values back —
+             * `needsRepair = true` and an `updateById` at the end of the loop —
+             * to fix stale 0.00 finals left by the old 3-judge Senior+J1+J2
+             * bug. That made a GET take a write lock, on the endpoint the judge
+             * dashboard polls throughout an event.
+             *
+             * The repair is now a migration (007_repair_zero_final_scores),
+             * which does it once, offline, for every affected row rather than
+             * only the ones somebody happens to look at. The display fallback
+             * stays because it is also what shows a correct number for a panel
+             * still being scored, which no migration can pre-compute.
+             */
             const recomputed = calculateIndividualScore(ps.judgeScores, ps.panelSize);
             if (recomputed.averageMarks > 0) {
               resolvedFinal = afterDeductions(recomputed.averageMarks);
-              // Repair stale 0.00 finals left by the old 3-judge Senior+J1+J2 bug
-              if (ps.isFinalized) {
-                ps.finalScore = resolvedFinal;
-                ps.averageMarks = recomputed.averageMarks;
-                ps.executionAverage = recomputed.executionAverage;
-                ps.baseScore = recomputed.baseScore;
-                ps.baseScoreApplied = recomputed.baseScoreApplied;
-                ps.toleranceUsed = recomputed.toleranceUsed;
-                needsRepair = true;
-              }
             }
           }
 
@@ -1124,19 +1146,6 @@ class AdminService extends UserService {
           }
           if (ps.isFinalized || (ps.judgeScores && Object.values(ps.judgeScores).some((v) => Number(v) > 0)) || (ps.judgeSlips && ps.judgeSlips.length > 0)) {
             scoredByPlayer.set(key, true);
-          }
-        }
-        if (needsRepair && doc._id) {
-          try {
-            const plainScores = (doc.playerScores || []).map((ps) =>
-              typeof ps.toObject === 'function' ? ps.toObject() : { ...ps }
-            );
-            await this.scoreRepository.updateById(doc._id, { playerScores: plainScores });
-          } catch (repairErr) {
-            this.logger.warn('Failed to repair zero finalScore on read', {
-              scoreId: doc._id,
-              error: repairErr.message,
-            });
           }
         }
       }
@@ -1158,7 +1167,30 @@ class AdminService extends UserService {
         isSubmitted: regTeam.isSubmitted,
         submittedAt: regTeam.submittedAt,
         paymentStatus: regTeam.paymentStatus,
-        players: regTeam.players.map(playerEntry => {
+        /*
+         * Only the athletes in the CATEGORY that was asked for.
+         *
+         * The team-level filter above keeps a team when ANY of its athletes
+         * matches, and this then returned that team's ENTIRE roster. Since a
+         * squad is mixed, asking for Male Under-14 returned essentially every
+         * athlete in the meet — 10,000 rows on a 1000-team fixture where the
+         * category holds about 830.
+         *
+         * Both consumers already filter to exactly this
+         * (JudgeDashboard.getFilteredPlayersForTeam, and the apparatus picker
+         * beside it), so the rows being dropped here are rows the client
+         * discards on arrival.
+         *
+         * Deliberately gender + ageGroup ONLY. `apparatus` and
+         * `competitionType` are matched client-side by `isRegisteredFor`, which
+         * understands the three shapes the field has been written in; a second,
+         * simpler implementation here would disagree with it on the older ones.
+         */
+        players: regTeam.players.filter(playerEntry => {
+          if (filters.gender && playerEntry.gender !== filters.gender) return false;
+          if (filters.ageGroup && playerEntry.ageGroup !== filters.ageGroup) return false;
+          return true;
+        }).map(playerEntry => {
           // Handle both Mongoose documents and plain objects
           const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
           const playerId = playerData?._id?.toString();
@@ -2353,32 +2385,40 @@ class AdminService extends UserService {
       const { page = 1, limit = 10 } = pagination;
 
       const skip = (page - 1) * limit;
+
+      /*
+       * The competition is NOT populated here any more.
+       *
+       * It used to be — with `registeredTeams.players.player` populated inside
+       * it — which meant every row of a ten-row page carried the ENTIRE
+       * competition: every entered team, every athlete in every entry. That is
+       * ~3 MB per row, so a single page of transactions was tens of megabytes.
+       * It never showed up in the benchmark because the fixture has no
+       * transactions, which is exactly how a payload like this survives.
+       *
+       * What the screen actually does with it (AdminTransactions.jsx) is find
+       * the ONE registration matching `tx.team._id` and read its athletes'
+       * name, ageGroup, gender and apparatus. So that is what is assembled
+       * below, per transaction, from one extra query for the whole page.
+       */
       const [transactions, total] = await Promise.all([
-        this.transactionRepository.find(filters, { 
-          skip, 
-          limit, 
+        this.transactionRepository.find(filters, {
+          skip,
+          limit,
           sort: { createdAt: -1 },
-          populate: [
-            {
-              path: 'competition',
-              populate: {
-                path: 'registeredTeams.players.player',
-                select: 'firstName lastName name gender'
-              }
-            },
-            'team',
-            'coach'
-          ]
+          populate: ['team', 'coach']
         }),
         this.transactionRepository.count(filters)
       ]);
+
+      const withEntries = await this.attachTransactionSquads(transactions);
 
       this.logger.info('Transactions retrieved', { total });
 
       return {
         // The table shows one name per row (AdminTransactions.jsx), so the two
         // stored halves are composed here.
-        transactions: transactions.map((tx) => (
+        transactions: withEntries.map((tx) => (
           tx.coach ? { ...tx, coach: { ...tx.coach, name: fullName(tx.coach) } } : tx
         )),
         total,
@@ -2389,6 +2429,86 @@ class AdminService extends UserService {
       this.logger.error('Get transactions error', { error: error.message });
       throw error;
     }
+  }
+
+  /**
+   * Attach each transaction's own squad, and nothing else's.
+   *
+   * Replaces populating the whole competition onto every row. One query for the
+   * page's competitions, one for the page's athletes, then each transaction
+   * gets the single registration matching its team — shaped as
+   * `competition.registeredTeams: [thatOneEntry]` so AdminTransactions.jsx's
+   * existing lookup keeps working unchanged.
+   *
+   * @param {Object[]} transactions
+   * @returns {Promise<Object[]>}
+   */
+  async attachTransactionSquads(transactions) {
+    if (!transactions.length) return transactions;
+
+    const competitionIds = [...new Set(
+      transactions.map((tx) => tx.competition?.toString()).filter(Boolean)
+    )];
+    if (competitionIds.length === 0) return transactions;
+
+    const competitions = await this.competitionRepository.find(
+      { _id: { $in: competitionIds } },
+      { select: 'name year place registeredTeams' }
+    );
+    const competitionById = new Map(competitions.map((c) => [c._id.toString(), c]));
+
+    // The entries this page actually refers to — team by team, not the whole
+    // meet.
+    const wanted = new Map();
+    for (const tx of transactions) {
+      const competition = competitionById.get(tx.competition?.toString());
+      const teamId = tx.team?._id?.toString() || tx.team?.toString();
+      if (!competition || !teamId) continue;
+      const entry = (competition.registeredTeams || [])
+        .find((rt) => rt.team?.toString() === teamId);
+      if (entry) wanted.set(`${tx._id}`, { competition, entry });
+    }
+
+    const playerIds = [...new Set(
+      [...wanted.values()].flatMap(({ entry }) =>
+        (entry.players || []).map((p) => p.player?.toString()).filter(Boolean))
+    )];
+    const players = playerIds.length
+      ? await this.playerRepository.find(
+        { _id: { $in: playerIds } },
+        { select: 'firstName lastName gender' }
+      )
+      : [];
+    const playerById = new Map(players.map((p) => [p._id.toString(), p]));
+
+    return transactions.map((tx) => {
+      const match = wanted.get(`${tx._id}`);
+      if (!match) return tx;
+      const { competition, entry } = match;
+
+      return {
+        ...tx,
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          year: competition.year,
+          place: competition.place,
+          registeredTeams: [{
+            ...entry,
+            players: (entry.players || []).map((p) => {
+              const player = playerById.get(p.player?.toString());
+              return {
+                ...p,
+                player: player
+                  ? { _id: player._id, firstName: player.firstName, lastName: player.lastName,
+                    gender: player.gender, name: fullName(player) }
+                  : p.player,
+              };
+            }),
+          }],
+        },
+      };
+    });
   }
 
   /**

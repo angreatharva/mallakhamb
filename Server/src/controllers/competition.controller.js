@@ -62,7 +62,13 @@ function createCompetitionController(container) {
 
     /** @route GET /api/competitions/:id */
     getCompetitionById: asyncHandler(async (req, res) => {
-      const competition = await competitionService.getCompetitionById(req.params.id);
+      // `?include=registeredTeams` opts into the entry list, which is the bulk
+      // of the document (3.0 MB on a 1000-team meet) and which most callers of
+      // this endpoint do not want.
+      const include = String(req.query.include || '').split(',').map((s) => s.trim());
+      const competition = await competitionService.getCompetitionById(req.params.id, {
+        includeRegisteredTeams: include.includes('registeredTeams'),
+      });
       res.json({ success: true, data: competition });
     }),
 

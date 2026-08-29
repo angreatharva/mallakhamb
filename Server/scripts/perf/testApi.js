@@ -177,8 +177,14 @@ async function run() {
     if (!competitionId) throw new Error('No competition to test against — seed first.');
     process.stderr.write(`  competition: ${competitionId}\n`);
 
-    await step('GET /api/public/teams', anon.get('/api/public/teams', { query: { competition: competitionId } }));
-    await step('GET /api/public/scores', anon.get('/api/public/scores', { query: { competition: competitionId } }));
+    await step('GET /api/public/teams', anon.get('/api/public/teams', { query: { competitionId } }));
+    await step('GET /api/public/scores', anon.get('/api/public/scores', { query: { competitionId } }));
+    // An anonymous caller may no longer ask for every published score in the
+    // database in one request.
+    await step('GET /api/public/scores requires a competition',
+      anon.get('/api/public/scores'), { expect: [400] });
+    await step('GET /api/public/scores accepts a teamId',
+      anon.get('/api/public/scores', { query: { competitionId, teamId: '6a8a9286fe57edf060353b1a' } }));
 
     // The three endpoints under /api/public that are NOT public. A 401 here is
     // the expected, correct answer — this asserts the guard, not the payload.
@@ -332,6 +338,28 @@ async function run() {
     }
     const submitted = await step('GET /api/admin/teams/submitted',
       admin.get('/api/admin/teams/submitted', { query: CATEGORY }));
+
+    /*
+     * A category request must return that category's athletes and no others.
+     * It used to return every team's whole mixed roster, which the client then
+     * filtered — most of the payload was rows the browser threw away.
+     */
+    if (Array.isArray(submitted)) {
+      const entries = submitted.flatMap((t) => t.players || []);
+      const onlyCategory = entries.every(
+        (e) => e.gender === CATEGORY.gender && e.ageGroup === CATEGORY.ageGroup
+      );
+      record('submitted-teams returns only the requested category', onlyCategory ? 'PASS' : 'FAIL', {
+        reason: onlyCategory ? undefined
+          : `${entries.filter((e) => e.gender !== CATEGORY.gender || e.ageGroup !== CATEGORY.ageGroup).length} of ${entries.length} rows are other categories`,
+      });
+
+      const unfiltered = await admin.get('/api/admin/teams/submitted');
+      const allEntries = (unfiltered.body?.data || []).flatMap((t) => t.players || []);
+      record('submitted-teams still returns every athlete when unfiltered',
+        allEntries.length >= entries.length ? 'PASS' : 'FAIL',
+        { reason: `${allEntries.length} unfiltered vs ${entries.length} in category` });
+    }
 
     // Used to return an empty page always — it filtered Player by a
     // `competition` field the schema does not have.
@@ -521,8 +549,19 @@ async function run() {
       admin.put('/api/admin/scores/lock', { ageGroup: CATEGORY.ageGroup }));
     await step('POST /api/admin/scores/recalculate',
       admin.post('/api/admin/scores/recalculate', { ageGroup: CATEGORY.ageGroup }));
-    await step('GET /api/public/scores after locking',
-      anon.get('/api/public/scores', { query: { competition: competitionId, ...CATEGORY } }));
+    const published = await step('GET /api/public/scores after locking',
+      anon.get('/api/public/scores', { query: { competitionId, ...CATEGORY } }));
+
+    // The COP breakdown behind each slip is for the judge who owns it, not for
+    // the results page — it is 43% of a row and nothing public renders it.
+    const slips = (published || []).flatMap((s) => s.playerScores || [])
+      .flatMap((ps) => ps.judgeSlips || []);
+    if (slips.length) {
+      const stripped = slips.every((slip) => slip.breakdown === undefined);
+      record('public scores omit per-slip COP breakdowns', stripped ? 'PASS' : 'FAIL');
+      const totalsKept = slips.every((slip) => slip.total !== undefined);
+      record('public scores keep the slip section totals', totalsKept ? 'PASS' : 'FAIL');
+    }
 
     // ================= Superadmin =================
     group('Super admin');

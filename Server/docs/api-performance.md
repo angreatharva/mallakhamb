@@ -1,7 +1,7 @@
 # API performance: measurements, defects and a plan
 
-> **Status — Phases 0 and 1 are done.** See [§5 Results](#5-results-after-phases-0-and-1)
-> for the before/after. The measurements in §1–§4 below are the BASELINE that
+> **Status — Phases 0, 1 and 2 are done.** See [§5](#5-results-after-phases-0-and-1) and
+> [§5b](#5b-results-after-phase-2) for the before/after. The measurements in §1–§4 below are the BASELINE that
 > motivated the work; they are kept as recorded rather than rewritten, so the
 > results can be checked against them.
 
@@ -141,7 +141,7 @@ Verified: searching a judge's actual first name returns 0 results; only e-mail
 matches. Since admins cannot create judge logins, this search is the **only** way
 a panel seat gets filled.
 
-### 1.5 — `GET /api/public/scores` with no `competitionId` returns everything — **OPEN** (Phase 2)
+### 1.5 — `GET /api/public/scores` with no `competitionId` returns everything — **FIXED**
 
 The parameter is `competitionId`; `competition` is silently ignored. With no
 recognised id, the endpoint returns every published score in the database,
@@ -242,7 +242,7 @@ query for each, builds the full response, and **then** slices `page`/`limit` out
 of the finished array. Asking for 10 rows costs the same as asking for all 1000 —
 hence `limit=10` and `limit=100` having near-identical timings.
 
-### C. Whole-document reads of an unbounded embedded array
+### C. Whole-document reads of an unbounded embedded array — **PARTLY FIXED**
 
 `Competition.registeredTeams` embeds every entry and every athlete in every
 entry. Any `competitionRepository.findById` therefore loads the entire meet.
@@ -258,12 +258,12 @@ beyond any real Mallakhamb competition, so the 16 MB limit is *not* a reason to
 restructure. The reason to restructure, if it ever becomes one, is that every
 read of any part of the meet pays for all 2.87 MB of it.
 
-### D. Unbounded responses
+### D. Unbounded responses — **PARTLY FIXED**
 
 No endpoint in the list above except `/api/admin/teams` and `/api/admin/players`
 takes a limit at all. `/api/public/scores` is anonymous and unbounded.
 
-### E. Write-on-read
+### E. Write-on-read — **FIXED**
 
 `getSubmittedTeams` (`admin.service.js:1158-1170`) repairs stale `finalScore`
 values by writing back during a GET. It fires only on legacy rows, but it makes a
@@ -356,7 +356,7 @@ Expected after Phase 1, at 1000 teams: the five worst rows drop from
 300–600 ms to roughly 30–60 ms, and — the part that matters in production —
 from ~1,000 network round trips to 2–3.
 
-### Phase 2 — Bound the payloads (2–3 days)
+### Phase 2 — Bound the payloads — **DONE**
 
 **2.1 Paginate `/api/public/scores`.** Default `limit=100`, `max=500`, and
 require `competitionId`. This is anonymous and currently unbounded; it is the
@@ -477,12 +477,105 @@ name, that the teams page respects `limit` and page 2 differs from page 1.
 
 Jest: **454 passed**, unchanged.
 
+---
+
+## 5b. Results after Phase 2
+
+### First: the earlier payload figures were too low
+
+The fixture wrote `judgeSlips: []`. Real slips carry a COP breakdown — the
+A/B/C element counts and the combination checklist — and that is 43% of a
+playerScores row. Every payload number in §2 therefore understated production.
+`seedScale.js` now writes realistic slips, so the Phase 2 baseline below is
+measured against a heavier and more honest fixture than the Phase 1 one.
+**Do not compare these against §2 directly**; compare within this table.
+
+### Payload at 1000 teams (10,000 athletes, 6,000 score documents)
+
+| Endpoint | Before | After | Change |
+|---|---:|---:|---|
+| `GET /api/public/scores` (no `competitionId`) | 19,483 KB | **400** | refused |
+| `GET /api/competitions/:id` | 2,965 KB | **2 KB** | −99.9% |
+| `GET /api/admin/teams/submitted` | 4,235 KB | **936 KB** | −78% |
+| `GET /api/public/submitted-teams` | 4,235 KB | **936 KB** | −78% |
+| `GET /api/public/scores` (competition) | 19,483 KB | **12,605 KB** | −35% |
+| `GET /api/public/scores` (category) | 3,245 KB | **2,099 KB** | −35% |
+| `GET /api/admin/transactions` | ~3 MB **per row** | one entry per row | not re-measured — see below |
+
+### What changed, and why each was safe
+
+**`/api/public/scores` now requires `competitionId`.** Without one it returned
+every published score in the database, anonymously and unpaginated. Both callers
+in the web client always send it.
+
+**It also honours `teamId`, which it had been ignoring.** `PerformancePanel`
+has always sent one and does not filter client-side, so *it was rendering every
+athlete in the competition under a single team's heading*. This is a correctness
+fix that happens to also cut the payload.
+
+**Per-slip `breakdown` is stripped from public scores.** It exists so the judge
+who wrote a slip can re-open it and restore their exact selections. The results
+page reads only the four section totals, which are kept.
+
+**`/api/admin/teams/submitted` filters athletes by the requested category.** It
+filtered *teams* by category and then returned each team's whole mixed roster —
+10,000 rows for a category holding about 830. Both consumers
+(`JudgeDashboard.getFilteredPlayersForTeam` and the apparatus picker beside it)
+already discarded the rest on arrival. Filtering is on gender and ageGroup only:
+apparatus is matched client-side by `isRegisteredFor`, which understands the
+three shapes that field has been written in, and a second implementation here
+would disagree with it on the older ones.
+
+**`/api/competitions/:id` excludes `registeredTeams` unless asked.**
+`?include=registeredTeams` opts back in. Nothing in the web client calls this
+endpoint at all. It was also caching the full 3 MB document for five minutes.
+
+**`/api/admin/transactions` no longer embeds the whole competition per row.**
+It populated `competition` *with `registeredTeams.players.player`* on **every
+transaction of every page** — roughly 3 MB a row, so a ten-row page ran to tens
+of megabytes. The screen uses exactly one registration from it, so that is what
+is sent now. This never appeared in any benchmark because the fixture has no
+transactions; it was found by reading the populate, not by measuring.
+
+**The write-on-read repair is gone**, replaced by migration
+`007_repair_zero_final_scores`. A GET no longer takes a write lock on the
+endpoint the judge dashboard polls, and the repair now covers every affected row
+rather than only the ones somebody opens.
+
+### Verification
+
+`perf:test`: **137 checks, 0 failures.** New cases assert that public scores
+refuse a missing competition, that they carry slip totals but not breakdowns,
+and that a category request returns only that category's athletes while an
+unfiltered one still returns everything.
+
+Jest: **457 passed.**
+
+### Two things Phase 2 did not fix
+
+`GET /api/admin/scores/team` is unchanged at 4.3 MB. Its slips **cannot** be
+stripped: the judge panel-review edit flow reads `slip.breakdown` to restore a
+judge's selections (`useJudgePanelData.slipToBreakdown`). Bounding it needs the
+category-level projection that Phase 3 would enable, not a projection here.
+
+`GET /api/competitions/:id/registrations` is unchanged at 3.9 MB. It is
+admin-only, unused by the web client, and is *by definition* the entry list, so
+there is nothing to trim — it needs pagination, which is Phase 3 work.
+
+### Unrelated finding: `migrate up` cannot reach migration 007
+
+`005_judge_account_indexes` fails with `Index already exists with a different
+name: email_1` on any database where Mongoose's `autoIndex` created `email_1`
+from the schema's `unique: true` before the migration ran. The runner then rolls
+back and never reaches 006 or 007. Migration 007 is correct in isolation
+(verified: two broken rows repaired, zero remaining), but **it will not run via
+`npm run migrate:up` until 005 is made tolerant of a pre-existing index**, the
+way 002 already is for the judge username index. Pre-existing; not introduced
+here.
+
 ### What is left
 
-Phase 2 (bound the payloads) and Phase 3 (structural) are untouched.
-`/api/public/scores` still returns 7.4 MB unpaginated, and
-`/api/admin/teams/submitted` still returns 4.2 MB — those are now the largest
-remaining problems, and they are payload problems rather than query problems.
+Phase 3 (structural) is untouched, and on this evidence is still not urgent.
 
 ---
 

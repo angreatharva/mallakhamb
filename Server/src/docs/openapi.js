@@ -979,7 +979,15 @@ function buildPaths() {
   add('/api/competitions/{id}', 'get', op({
     tag: 'Competitions', operationId: 'getCompetition',
     summary: 'Competition by id',
-    parameters: [pathParam('id', 'Competition id')],
+    description:
+      'The entry list is **excluded by default** — ask for it with '
+      + '`?include=registeredTeams`. `registeredTeams` embeds every entered team and '
+      + 'every athlete in every entry, which is 3.0 MB on a 1000-team meet against '
+      + '2 KB for the competition itself.',
+    parameters: [
+      pathParam('id', 'Competition id'),
+      queryParam('include', { type: 'string', enum: ['registeredTeams'] }, 'Comma-separated extras to embed'),
+    ],
     responses: { 200: ok('Competition', ref('Competition')), ...NOT_FOUND },
   }));
 
@@ -1131,9 +1139,13 @@ function buildPaths() {
     tag: 'Admin', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminSubmittedTeams',
     summary: 'Submitted teams with per-athlete scoring state',
     description:
-      'The judge dashboard\'s team list. Returns every submitted team, its roster, and '
-      + 'for each athlete whether the Senior Judge has finalized them and what the '
-      + 'resolved final is.',
+      'The judge dashboard\'s team list. Returns every submitted team and, for each '
+      + 'athlete, whether the Senior Judge has finalized them and what the resolved '
+      + 'final is.\n\n'
+      + 'When `gender` and `ageGroup` are supplied, `players` contains **only that '
+      + 'category\'s athletes**. It previously returned each matching team\'s entire '
+      + 'mixed roster, which the client then filtered — 10,000 rows where the category '
+      + 'held 830. Omit the filters to get every athlete.',
     parameters: CATEGORY_QUERY,
     responses: { 200: ok('Teams', { type: 'array', items: ref('SubmittedTeam') }), ...VALIDATION_ERROR },
   }));
@@ -1413,6 +1425,11 @@ function buildPaths() {
   add('/api/admin/transactions', 'get', op({
     tag: 'Payments', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminTransactions',
     summary: 'Payments, filtered and paginated',
+    description:
+      'Each row carries `competition.registeredTeams` containing **only that '
+      + 'transaction\'s own entry**, with its athletes named. The whole competition '
+      + 'used to be embedded on every row — roughly 3 MB each, so a ten-row page ran to '
+      + 'tens of megabytes.',
     parameters: [
       ...PAGINATION_QUERY,
       queryParam('status', S.str, 'Payment status'),
@@ -1686,10 +1703,17 @@ function buildPaths() {
       'Two gates: the Scorer has LOCKED the sheet, and the Senior Judge has finalized '
       + 'that athlete. The second is applied per row — locking a sheet does not '
       + 'retroactively publish a performer nobody signed off.\n\n'
-      + 'The parameter is `competitionId`. **Omitting it returns every published score '
-      + 'in the system, unpaginated** — measured at 3.7 MB across 3,000 score documents '
-      + 'for a single 500-team meet.',
-    parameters: [queryParam('competitionId', S.id, 'Competition id — omit at your peril, see above'), ...CATEGORY_QUERY],
+      + '`competitionId` is **required**. It used to be optional, and omitting it '
+      + 'returned every published score in the database — 19.5 MB on one 1000-team '
+      + 'meet, with no bound across competitions.\n\n'
+      + 'Each `judgeSlips[]` entry carries its section totals but **not** its '
+      + '`breakdown` (the A/B/C element counts and combination checklist). That exists '
+      + 'so the judge who wrote a slip can re-open it for edit, and is 43% of a row.',
+    parameters: [
+      queryParam('competitionId', S.id, 'Competition id', true),
+      queryParam('teamId', S.id, 'Restrict to one team\'s athletes'),
+      ...CATEGORY_QUERY,
+    ],
     responses: { 200: ok('Published scores', { type: 'array', items: ref('Score') }), ...VALIDATION_ERROR },
   }));
 

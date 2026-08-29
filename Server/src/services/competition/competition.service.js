@@ -270,10 +270,26 @@ class CompetitionService {
    * @returns {Promise<Object>} Competition
    * @throws {NotFoundError} If competition not found
    */
-  async getCompetitionById(competitionId) {
+  async getCompetitionById(competitionId, options = {}) {
+    /*
+     * The entry list is OPT-IN.
+     *
+     * `registeredTeams` embeds every entered team and every athlete in every
+     * entry, so this endpoint returned 3.0 MB on a 1000-team fixture — to a
+     * caller that usually wants a name, a date and a status. Worse, the whole
+     * 3 MB was then held in the in-process cache for five minutes.
+     *
+     * Callers that genuinely need the roster ask for it with
+     * `?include=registeredTeams`. Nothing in the web client calls this endpoint
+     * at all (admins use /api/admin/*, superadmins /api/superadmin/*), so the
+     * narrower default breaks no shipped caller.
+     */
+    const includeRegisteredTeams = options.includeRegisteredTeams === true;
+
     try {
-      // Try cache first
-      const cacheKey = `competition:${competitionId}`;
+      // The variants must not share a cache entry, or whichever ran first
+      // decides what the other one gets.
+      const cacheKey = `competition:${competitionId}${includeRegisteredTeams ? ':full' : ''}`;
       const cached = this.cacheService.get(cacheKey);
 
       if (cached) {
@@ -282,11 +298,14 @@ class CompetitionService {
 
       // Fetch from database
       const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          { path: 'admins', select: 'name email' },
-          { path: 'registeredTeams.team', select: 'name' },
-          { path: 'registeredTeams.coach', select: 'name email' }
-        ]
+        ...(includeRegisteredTeams ? {} : { select: '-registeredTeams' }),
+        populate: includeRegisteredTeams
+          ? [
+            { path: 'admins', select: 'name email' },
+            { path: 'registeredTeams.team', select: 'name' },
+            { path: 'registeredTeams.coach', select: 'name email' }
+          ]
+          : [{ path: 'admins', select: 'name email' }]
       });
 
       if (!competition || competition.isDeleted) {

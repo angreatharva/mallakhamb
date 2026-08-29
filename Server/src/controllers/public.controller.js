@@ -40,8 +40,11 @@ function createPublicController(container) {
      * is published is a server decision, not a request parameter.
      */
     getPublicScores: asyncHandler(async (req, res) => {
-      const { competitionId, gender, ageGroup, competitionType, apparatus } = req.query;
+      const { competitionId, teamId, gender, ageGroup, competitionType, apparatus } = req.query;
       const scores = await publicService.getPublicScores(competitionId, {
+        // `teamId` has always been sent by PerformancePanel and was dropped
+        // here, so that component rendered the whole competition.
+        teamId,
         gender,
         ageGroup,
         competitionType,

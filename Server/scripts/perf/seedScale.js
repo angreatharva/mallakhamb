@@ -32,6 +32,7 @@ const JudgeAccount = require('../../models/JudgeAccount');
 const Competition = require('../../models/Competition');
 const Admin = require('../../models/Admin');
 const Score = require('../../models/Score');
+const { COMBINATION_CHECKLISTS } = require('../../src/config/cop-rules');
 
 const PERF_URI = process.env.PERF_MONGODB_URI || 'mongodb://127.0.0.1:27017/mallakhamb_perf';
 
@@ -155,7 +156,34 @@ async function insertBatched(model, docs, size = 1000) {
 }
 
 /**
- * One judge slip, as the calculation service would leave it.
+ * The COP breakdown a judge's slip actually carries.
+ *
+ * Built from the real checklist, because the SIZE of this object is the point:
+ * it is the bulk of a score document, and an earlier version of this seeder
+ * wrote `judgeSlips: []`, which made every payload measurement understate the
+ * production response by a wide margin. A benchmark fixture that is smaller
+ * than reality is worse than no fixture — it says the endpoint is fine.
+ *
+ * @param {string} apparatus
+ * @param {number} total - the slip's score
+ */
+function buildBreakdown(apparatus, total) {
+  const checklist = COMBINATION_CHECKLISTS[apparatus] || COMBINATION_CHECKLISTS['Pole Mallakhamb'];
+  const checked = {};
+  // Deterministic: every third item unchecked, so the object is realistically
+  // mixed rather than uniform.
+  checklist.forEach((item, i) => { checked[item.id] = i % 3 !== 0; });
+
+  return {
+    difficulty: { aClass: 4, bClass: 6, cClass: 1, total: 3.8 },
+    combination: { checked, total: 1.4 },
+    execution: Number(Math.max(0, total - 5.2).toFixed(2)),
+    bonus: 0,
+  };
+}
+
+/**
+ * One athlete's row, as the calculation service would leave it.
  * @param {Object} player
  * @param {string} apparatus
  */
@@ -169,6 +197,27 @@ function buildPlayerScore(player, apparatus, index, finalized) {
     judge2: Number((base + 0.2).toFixed(2)),
   };
   const average = Number(((marks.judge1 + marks.judge2) / 2).toFixed(3));
+
+  // One slip per seat that scored, matching what the judge client posts.
+  const judgeSlips = [
+    ['SR_JUDGE', marks.seniorJudge],
+    ['J1', marks.judge1],
+    ['J2', marks.judge2],
+  ].map(([judgeRole, total]) => {
+    const breakdown = buildBreakdown(apparatus, total);
+    return {
+      judgeRole,
+      difficultyScore: breakdown.difficulty.total,
+      combinationScore: breakdown.combination.total,
+      executionScore: breakdown.execution,
+      bonusScore: 0,
+      total,
+      breakdown,
+      submittedAt: new Date(),
+      isChiefPrefilled: judgeRole === 'SR_JUDGE',
+    };
+  });
+
   return {
     playerId: player._id,
     playerName: `${player.firstName} ${player.lastName}`,
@@ -176,7 +225,7 @@ function buildPlayerScore(player, apparatus, index, finalized) {
     playerAgeGroup: player.ageGroup,
     apparatus,
     judgeScores: marks,
-    judgeSlips: [],
+    judgeSlips,
     averageMarks: average,
     executionAverage: average,
     baseScore: average,
