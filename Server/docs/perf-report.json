@@ -1,0 +1,2570 @@
+{
+  "generatedAt": "2026-08-29T17:06:18.895Z",
+  "host": {
+    "platform": "win32",
+    "cpus": 16,
+    "node": "v22.20.0"
+  },
+  "scales": [
+    25,
+    100,
+    500,
+    1000
+  ],
+  "iterations": 8,
+  "playersPerTeam": 10,
+  "runs": [
+    {
+      "teams": 25,
+      "fixture": {
+        "database": "mallakhamb_perf",
+        "competitionId": "6a9310e89c833a7cec0120b2",
+        "teams": 25,
+        "athletes": 250,
+        "coaches": 25,
+        "categories": 12,
+        "panelSeats": 72,
+        "scoreDocuments": 150,
+        "scoresLocked": true,
+        "seconds": 1.1,
+        "password": "Perftest@2026",
+        "principals": {
+          "superadmin": {
+            "email": "perf.superadmin@perf.example.com",
+            "name": "Perf Superadmin"
+          },
+          "admin": {
+            "email": "perf.admin@perf.example.com",
+            "name": "Perf Admin"
+          },
+          "coach": {
+            "email": "perf.coach1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Coach1"
+          },
+          "judge": {
+            "email": "perf.judge1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Judge1"
+          },
+          "player": {
+            "email": "perf.player1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Player1"
+          }
+        }
+      },
+      "rows": [
+        {
+          "name": "GET /api/health/live",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1,
+          "p95": 1.7,
+          "max": 1.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/health/ready",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.3,
+          "p95": 2.5,
+          "max": 2.5,
+          "kb": 0.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/csrf-token",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.1,
+          "p95": 2.7,
+          "max": 2.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/public/cop-rules",
+          "tag": "public",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.3,
+          "p95": 2.5,
+          "max": 2.5,
+          "kb": 2.5,
+          "rows": null
+        },
+        {
+          "name": "GET /api/auth/me",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 2.6,
+          "p95": 3.9,
+          "max": 3.9,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/stats",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 5.9,
+          "p95": 8.7,
+          "max": 8.7,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/competition/:id",
+          "tag": "admin",
+          "growsWith": "age groups",
+          "status": 200,
+          "p50": 17.4,
+          "p95": 19.6,
+          "max": 19.6,
+          "kb": 74.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/dashboard",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 14.5,
+          "p95": 20.4,
+          "max": 20.4,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/stats",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 4.5,
+          "p95": 6.7,
+          "max": 6.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 18.7,
+          "p95": 21.5,
+          "max": 21.5,
+          "kb": 19.7,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/admin/teams (limit 100)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 15.8,
+          "p95": 18.3,
+          "max": 18.3,
+          "kb": 49.3,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/admin/players (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 4.5,
+          "p95": 6.4,
+          "max": 6.4,
+          "kb": 0.1,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/superadmin/teams",
+          "tag": "superadmin",
+          "growsWith": "teams",
+          "status": 200,
+          "p50": 7.9,
+          "p95": 13.7,
+          "max": 13.7,
+          "kb": 48.1,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/superadmin/coaches",
+          "tag": "superadmin",
+          "growsWith": "coaches",
+          "status": 200,
+          "p50": 3.6,
+          "p95": 4.9,
+          "max": 4.9,
+          "kb": 6.4,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (category)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 13.7,
+          "p95": 15.9,
+          "max": 15.9,
+          "kb": 105.9,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (no filter)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 15.6,
+          "p95": 23,
+          "max": 23,
+          "kb": 105.3,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/public/submitted-teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 15.3,
+          "p95": 23.7,
+          "max": 23.7,
+          "kb": 105.9,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/judge/teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 6.6,
+          "p95": 7.7,
+          "max": 7.7,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 16.3,
+          "p95": 22.8,
+          "max": 22.8,
+          "kb": 57.5,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/judge/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 17.5,
+          "p95": 18.6,
+          "max": 18.6,
+          "kb": 57.5,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/admin/scores/individual",
+          "tag": "scoring",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 3.9,
+          "p95": 5.8,
+          "max": 5.8,
+          "kb": 22.5,
+          "rows": 42
+        },
+        {
+          "name": "GET /api/admin/scores/individual (slug — known empty)",
+          "tag": "scoring",
+          "growsWith": "nothing (defect)",
+          "status": 200,
+          "p50": 3.2,
+          "p95": 4.4,
+          "max": 4.4,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/rankings/team",
+          "tag": "rankings",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 15.7,
+          "p95": 18.4,
+          "max": 18.4,
+          "kb": 58.2,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/admin/rankings/individual",
+          "tag": "rankings",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 4.8,
+          "p95": 6.6,
+          "max": 6.6,
+          "kb": 23.6,
+          "rows": 42
+        },
+        {
+          "name": "GET /api/admin/judges",
+          "tag": "panel",
+          "growsWith": "panel seats",
+          "status": 200,
+          "p50": 5.9,
+          "p95": 13.8,
+          "max": 13.8,
+          "kb": 3.3,
+          "rows": 6
+        },
+        {
+          "name": "GET /api/admin/judges/summary",
+          "tag": "panel",
+          "growsWith": "ALL judges, every competition",
+          "status": 200,
+          "p50": 11.3,
+          "p95": 12.4,
+          "max": 12.4,
+          "kb": 20.8,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/judge-accounts",
+          "tag": "panel",
+          "growsWith": "judge accounts",
+          "status": 200,
+          "p50": 3.5,
+          "p95": 5,
+          "max": 5,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/lots",
+          "tag": "lots",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 13,
+          "p95": 21.2,
+          "max": 21.2,
+          "kb": 16.8,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/public/competitions",
+          "tag": "public",
+          "growsWith": "competitions",
+          "status": 200,
+          "p50": 2.9,
+          "p95": 3.7,
+          "max": 3.7,
+          "kb": 0.5,
+          "rows": 1
+        },
+        {
+          "name": "GET /api/public/teams",
+          "tag": "public",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 8.5,
+          "p95": 11.5,
+          "max": 11.5,
+          "kb": 48.4,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/public/scores (all, unfiltered)",
+          "tag": "public",
+          "growsWith": "ALL score documents",
+          "status": 200,
+          "p50": 10.5,
+          "p95": 13.6,
+          "max": 13.6,
+          "kb": 183.7,
+          "rows": 150
+        },
+        {
+          "name": "GET /api/public/scores (competition)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 10.2,
+          "p95": 12.6,
+          "max": 12.6,
+          "kb": 183.7,
+          "rows": 150
+        },
+        {
+          "name": "GET /api/public/scores (category)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 5.4,
+          "p95": 7.6,
+          "max": 7.6,
+          "kb": 30.7,
+          "rows": 25
+        },
+        {
+          "name": "GET /api/coaches/dashboard",
+          "tag": "coach",
+          "growsWith": "own squad",
+          "status": 200,
+          "p50": 10.1,
+          "p95": 15,
+          "max": 15,
+          "kb": 4.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/coaches/search-players",
+          "tag": "coach",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 6.2,
+          "p95": 10.3,
+          "max": 10.3,
+          "kb": 3.1,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/competitions/:id",
+          "tag": "competitions",
+          "growsWith": "entries (whole doc)",
+          "status": 200,
+          "p50": 4.3,
+          "p95": 6.4,
+          "max": 6.4,
+          "kb": 75.8,
+          "rows": null
+        },
+        {
+          "name": "GET /api/competitions/:id/registrations",
+          "tag": "competitions",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 10.4,
+          "p95": 11.9,
+          "max": 11.9,
+          "kb": 96.6,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 3.8,
+          "p95": 5,
+          "max": 5,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions/summary",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 2.4,
+          "p95": 3.8,
+          "max": 3.8,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams/:teamId",
+          "tag": "admin",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 6.1,
+          "p95": 23.3,
+          "max": 23.3,
+          "kb": 2.6,
+          "rows": null
+        },
+        {
+          "name": "GET /api/teams/:id",
+          "tag": "teams",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 2.5,
+          "p95": 3.3,
+          "max": 3.3,
+          "kb": 3.2,
+          "rows": 10
+        }
+      ]
+    },
+    {
+      "teams": 100,
+      "fixture": {
+        "database": "mallakhamb_perf",
+        "competitionId": "6a9310f08d18086524ef7ed7",
+        "teams": 100,
+        "athletes": 1000,
+        "coaches": 100,
+        "categories": 12,
+        "panelSeats": 72,
+        "scoreDocuments": 600,
+        "scoresLocked": true,
+        "seconds": 1.5,
+        "password": "Perftest@2026",
+        "principals": {
+          "superadmin": {
+            "email": "perf.superadmin@perf.example.com",
+            "name": "Perf Superadmin"
+          },
+          "admin": {
+            "email": "perf.admin@perf.example.com",
+            "name": "Perf Admin"
+          },
+          "coach": {
+            "email": "perf.coach1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Coach1"
+          },
+          "judge": {
+            "email": "perf.judge1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Judge1"
+          },
+          "player": {
+            "email": "perf.player1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Player1"
+          }
+        }
+      },
+      "rows": [
+        {
+          "name": "GET /api/health/live",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1,
+          "p95": 1.1,
+          "max": 1.1,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/health/ready",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.6,
+          "p95": 2.7,
+          "max": 2.7,
+          "kb": 0.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/csrf-token",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 0.9,
+          "p95": 1.3,
+          "max": 1.3,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/public/cop-rules",
+          "tag": "public",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.5,
+          "p95": 2.4,
+          "max": 2.4,
+          "kb": 2.5,
+          "rows": null
+        },
+        {
+          "name": "GET /api/auth/me",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 2.4,
+          "p95": 3.7,
+          "max": 3.7,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/stats",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 9.7,
+          "p95": 12.2,
+          "max": 12.2,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/competition/:id",
+          "tag": "admin",
+          "growsWith": "age groups",
+          "status": 200,
+          "p50": 25.3,
+          "p95": 32.6,
+          "max": 32.6,
+          "kb": 290.4,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/dashboard",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 27.2,
+          "p95": 32.1,
+          "max": 32.1,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/stats",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 4.7,
+          "p95": 6.3,
+          "max": 6.3,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 49.1,
+          "p95": 61.6,
+          "max": 61.6,
+          "kb": 19.7,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/admin/teams (limit 100)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 48.5,
+          "p95": 67,
+          "max": 67,
+          "kb": 196.9,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/players (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 5.5,
+          "p95": 7.1,
+          "max": 7.1,
+          "kb": 0.1,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/superadmin/teams",
+          "tag": "superadmin",
+          "growsWith": "teams",
+          "status": 200,
+          "p50": 18,
+          "p95": 21.6,
+          "max": 21.6,
+          "kb": 192.3,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/superadmin/coaches",
+          "tag": "superadmin",
+          "growsWith": "coaches",
+          "status": 200,
+          "p50": 5.3,
+          "p95": 11.1,
+          "max": 11.1,
+          "kb": 25.7,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (category)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 35.4,
+          "p95": 41,
+          "max": 41,
+          "kb": 423.5,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (no filter)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 41,
+          "p95": 44,
+          "max": 44,
+          "kb": 421,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/public/submitted-teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 33.4,
+          "p95": 51.7,
+          "max": 51.7,
+          "kb": 423.5,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/judge/teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 8,
+          "p95": 9.8,
+          "max": 9.8,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 47,
+          "p95": 56.8,
+          "max": 56.8,
+          "kb": 229.5,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/judge/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 39.7,
+          "p95": 45.8,
+          "max": 45.8,
+          "kb": 229.5,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/scores/individual",
+          "tag": "scoring",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 7.7,
+          "p95": 12.4,
+          "max": 12.4,
+          "kb": 89.4,
+          "rows": 167
+        },
+        {
+          "name": "GET /api/admin/scores/individual (slug — known empty)",
+          "tag": "scoring",
+          "growsWith": "nothing (defect)",
+          "status": 200,
+          "p50": 3.1,
+          "p95": 5,
+          "max": 5,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/rankings/team",
+          "tag": "rankings",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 39.7,
+          "p95": 47.9,
+          "max": 47.9,
+          "kb": 232.4,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/rankings/individual",
+          "tag": "rankings",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 6.2,
+          "p95": 9.2,
+          "max": 9.2,
+          "kb": 93.8,
+          "rows": 167
+        },
+        {
+          "name": "GET /api/admin/judges",
+          "tag": "panel",
+          "growsWith": "panel seats",
+          "status": 200,
+          "p50": 4.4,
+          "p95": 5.6,
+          "max": 5.6,
+          "kb": 3.3,
+          "rows": 6
+        },
+        {
+          "name": "GET /api/admin/judges/summary",
+          "tag": "panel",
+          "growsWith": "ALL judges, every competition",
+          "status": 200,
+          "p50": 13.4,
+          "p95": 26.6,
+          "max": 26.6,
+          "kb": 20.8,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/judge-accounts",
+          "tag": "panel",
+          "growsWith": "judge accounts",
+          "status": 200,
+          "p50": 3.1,
+          "p95": 5,
+          "max": 5,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/lots",
+          "tag": "lots",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 28.2,
+          "p95": 37.6,
+          "max": 37.6,
+          "kb": 66,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/public/competitions",
+          "tag": "public",
+          "growsWith": "competitions",
+          "status": 200,
+          "p50": 2.1,
+          "p95": 2.8,
+          "max": 2.8,
+          "kb": 0.5,
+          "rows": 1
+        },
+        {
+          "name": "GET /api/public/teams",
+          "tag": "public",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 21,
+          "p95": 28.5,
+          "max": 28.5,
+          "kb": 193.5,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/public/scores (all, unfiltered)",
+          "tag": "public",
+          "growsWith": "ALL score documents",
+          "status": 200,
+          "p50": 31.1,
+          "p95": 61.3,
+          "max": 61.3,
+          "kb": 735.3,
+          "rows": 600
+        },
+        {
+          "name": "GET /api/public/scores (competition)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 29.8,
+          "p95": 33.7,
+          "max": 33.7,
+          "kb": 735.3,
+          "rows": 600
+        },
+        {
+          "name": "GET /api/public/scores (category)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 10.2,
+          "p95": 12.6,
+          "max": 12.6,
+          "kb": 122.4,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/coaches/dashboard",
+          "tag": "coach",
+          "growsWith": "own squad",
+          "status": 200,
+          "p50": 15.5,
+          "p95": 47.8,
+          "max": 47.8,
+          "kb": 4.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/coaches/search-players",
+          "tag": "coach",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 5.5,
+          "p95": 9.4,
+          "max": 9.4,
+          "kb": 3.1,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/competitions/:id",
+          "tag": "competitions",
+          "growsWith": "entries (whole doc)",
+          "status": 200,
+          "p50": 6.5,
+          "p95": 8.4,
+          "max": 8.4,
+          "kb": 298.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/competitions/:id/registrations",
+          "tag": "competitions",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 26.1,
+          "p95": 33.2,
+          "max": 33.2,
+          "kb": 386.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 4.2,
+          "p95": 5,
+          "max": 5,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions/summary",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 2.8,
+          "p95": 4.1,
+          "max": 4.1,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams/:teamId",
+          "tag": "admin",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 9.5,
+          "p95": 18,
+          "max": 18,
+          "kb": 2.6,
+          "rows": null
+        },
+        {
+          "name": "GET /api/teams/:id",
+          "tag": "teams",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 2.5,
+          "p95": 3.7,
+          "max": 3.7,
+          "kb": 3.2,
+          "rows": 10
+        }
+      ]
+    },
+    {
+      "teams": 500,
+      "fixture": {
+        "database": "mallakhamb_perf",
+        "competitionId": "6a9310fea8598d10e3ef5545",
+        "teams": 500,
+        "athletes": 5000,
+        "coaches": 500,
+        "categories": 12,
+        "panelSeats": 72,
+        "scoreDocuments": 3000,
+        "scoresLocked": true,
+        "seconds": 8.1,
+        "password": "Perftest@2026",
+        "principals": {
+          "superadmin": {
+            "email": "perf.superadmin@perf.example.com",
+            "name": "Perf Superadmin"
+          },
+          "admin": {
+            "email": "perf.admin@perf.example.com",
+            "name": "Perf Admin"
+          },
+          "coach": {
+            "email": "perf.coach1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Coach1"
+          },
+          "judge": {
+            "email": "perf.judge1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Judge1"
+          },
+          "player": {
+            "email": "perf.player1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Player1"
+          }
+        }
+      },
+      "rows": [
+        {
+          "name": "GET /api/health/live",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.1,
+          "p95": 1.3,
+          "max": 1.3,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/health/ready",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.6,
+          "p95": 3.5,
+          "max": 3.5,
+          "kb": 0.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/csrf-token",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1,
+          "p95": 1.7,
+          "max": 1.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/public/cop-rules",
+          "tag": "public",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.4,
+          "p95": 2,
+          "max": 2,
+          "kb": 2.5,
+          "rows": null
+        },
+        {
+          "name": "GET /api/auth/me",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 2.3,
+          "p95": 3.4,
+          "max": 3.4,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/stats",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 30.7,
+          "p95": 49.2,
+          "max": 49.2,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/competition/:id",
+          "tag": "admin",
+          "growsWith": "age groups",
+          "status": 200,
+          "p50": 60.4,
+          "p95": 78.5,
+          "max": 78.5,
+          "kb": 1442.7,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/dashboard",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 123.7,
+          "p95": 205.7,
+          "max": 205.7,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/stats",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 5.3,
+          "p95": 7.4,
+          "max": 7.4,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 227.5,
+          "p95": 323.4,
+          "max": 323.4,
+          "kb": 19.7,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/admin/teams (limit 100)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 207.9,
+          "p95": 228.2,
+          "max": 228.2,
+          "kb": 196.9,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/players (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 6,
+          "p95": 6.7,
+          "max": 6.7,
+          "kb": 0.1,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/superadmin/teams",
+          "tag": "superadmin",
+          "growsWith": "teams",
+          "status": 200,
+          "p50": 69.9,
+          "p95": 73.1,
+          "max": 73.1,
+          "kb": 961.8,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/superadmin/coaches",
+          "tag": "superadmin",
+          "growsWith": "coaches",
+          "status": 200,
+          "p50": 9.8,
+          "p95": 10.9,
+          "max": 10.9,
+          "kb": 128.4,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (category)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 137.8,
+          "p95": 157.1,
+          "max": 157.1,
+          "kb": 2117.6,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (no filter)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 178.8,
+          "p95": 206.8,
+          "max": 206.8,
+          "kb": 2104.7,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/public/submitted-teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 119,
+          "p95": 176.8,
+          "max": 176.8,
+          "kb": 2117.6,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/judge/teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 6.9,
+          "p95": 10.8,
+          "max": 10.8,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 196.2,
+          "p95": 215.9,
+          "max": 215.9,
+          "kb": 1146.5,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/judge/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 186.2,
+          "p95": 231.8,
+          "max": 231.8,
+          "kb": 1146.5,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/admin/scores/individual",
+          "tag": "scoring",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 20.1,
+          "p95": 26,
+          "max": 26,
+          "kb": 445.6,
+          "rows": 833
+        },
+        {
+          "name": "GET /api/admin/scores/individual (slug — known empty)",
+          "tag": "scoring",
+          "growsWith": "nothing (defect)",
+          "status": 200,
+          "p50": 5.4,
+          "p95": 8.8,
+          "max": 8.8,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/rankings/team",
+          "tag": "rankings",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 201.2,
+          "p95": 254.1,
+          "max": 254.1,
+          "kb": 1161.4,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/admin/rankings/individual",
+          "tag": "rankings",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 23.6,
+          "p95": 24.8,
+          "max": 24.8,
+          "kb": 468.2,
+          "rows": 833
+        },
+        {
+          "name": "GET /api/admin/judges",
+          "tag": "panel",
+          "growsWith": "panel seats",
+          "status": 200,
+          "p50": 4.8,
+          "p95": 7.5,
+          "max": 7.5,
+          "kb": 3.3,
+          "rows": 6
+        },
+        {
+          "name": "GET /api/admin/judges/summary",
+          "tag": "panel",
+          "growsWith": "ALL judges, every competition",
+          "status": 200,
+          "p50": 31.8,
+          "p95": 48.1,
+          "max": 48.1,
+          "kb": 20.8,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/judge-accounts",
+          "tag": "panel",
+          "growsWith": "judge accounts",
+          "status": 200,
+          "p50": 3.2,
+          "p95": 4.6,
+          "max": 4.6,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/lots",
+          "tag": "lots",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 104.8,
+          "p95": 141.4,
+          "max": 141.4,
+          "kb": 328.4,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/public/competitions",
+          "tag": "public",
+          "growsWith": "competitions",
+          "status": 200,
+          "p50": 2.1,
+          "p95": 6.5,
+          "max": 6.5,
+          "kb": 0.5,
+          "rows": 1
+        },
+        {
+          "name": "GET /api/public/teams",
+          "tag": "public",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 86,
+          "p95": 118.1,
+          "max": 118.1,
+          "kb": 967.7,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/public/scores (all, unfiltered)",
+          "tag": "public",
+          "growsWith": "ALL score documents",
+          "status": 200,
+          "p50": 121,
+          "p95": 140.8,
+          "max": 140.8,
+          "kb": 3681.4,
+          "rows": 3000
+        },
+        {
+          "name": "GET /api/public/scores (competition)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 135.1,
+          "p95": 181.2,
+          "max": 181.2,
+          "kb": 3681.4,
+          "rows": 3000
+        },
+        {
+          "name": "GET /api/public/scores (category)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 31.3,
+          "p95": 36.4,
+          "max": 36.4,
+          "kb": 612.1,
+          "rows": 500
+        },
+        {
+          "name": "GET /api/coaches/dashboard",
+          "tag": "coach",
+          "growsWith": "own squad",
+          "status": 200,
+          "p50": 33.9,
+          "p95": 52.3,
+          "max": 52.3,
+          "kb": 4.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/coaches/search-players",
+          "tag": "coach",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 14.3,
+          "p95": 19.2,
+          "max": 19.2,
+          "kb": 3.1,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/competitions/:id",
+          "tag": "competitions",
+          "growsWith": "entries (whole doc)",
+          "status": 200,
+          "p50": 18.2,
+          "p95": 26.2,
+          "max": 26.2,
+          "kb": 1483.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/competitions/:id/registrations",
+          "tag": "competitions",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 92.7,
+          "p95": 110.6,
+          "max": 110.6,
+          "kb": 1930.7,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 4,
+          "p95": 5.7,
+          "max": 5.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions/summary",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 2.8,
+          "p95": 5.7,
+          "max": 5.7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams/:teamId",
+          "tag": "admin",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 10.7,
+          "p95": 14.4,
+          "max": 14.4,
+          "kb": 2.6,
+          "rows": null
+        },
+        {
+          "name": "GET /api/teams/:id",
+          "tag": "teams",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 2.4,
+          "p95": 4,
+          "max": 4,
+          "kb": 3.2,
+          "rows": 10
+        }
+      ]
+    },
+    {
+      "teams": 1000,
+      "fixture": {
+        "database": "mallakhamb_perf",
+        "competitionId": "6a93112aaf41a20bab5e2294",
+        "teams": 1000,
+        "athletes": 10000,
+        "coaches": 1000,
+        "categories": 12,
+        "panelSeats": 72,
+        "scoreDocuments": 6000,
+        "scoresLocked": true,
+        "seconds": 29.9,
+        "password": "Perftest@2026",
+        "principals": {
+          "superadmin": {
+            "email": "perf.superadmin@perf.example.com",
+            "name": "Perf Superadmin"
+          },
+          "admin": {
+            "email": "perf.admin@perf.example.com",
+            "name": "Perf Admin"
+          },
+          "coach": {
+            "email": "perf.coach1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Coach1"
+          },
+          "judge": {
+            "email": "perf.judge1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Judge1"
+          },
+          "player": {
+            "email": "perf.player1@perf.example.com",
+            "firstName": "Perf",
+            "lastName": "Player1"
+          }
+        }
+      },
+      "rows": [
+        {
+          "name": "GET /api/health/live",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.5,
+          "p95": 7,
+          "max": 7,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/health/ready",
+          "tag": "health",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.3,
+          "p95": 2.7,
+          "max": 2.7,
+          "kb": 0.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/csrf-token",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 0.9,
+          "p95": 1.2,
+          "max": 1.2,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/public/cop-rules",
+          "tag": "public",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 1.5,
+          "p95": 2.2,
+          "max": 2.2,
+          "kb": 2.5,
+          "rows": null
+        },
+        {
+          "name": "GET /api/auth/me",
+          "tag": "auth",
+          "growsWith": "nothing",
+          "status": 200,
+          "p50": 2.5,
+          "p95": 4.3,
+          "max": 4.3,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/stats",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 62.7,
+          "p95": 89.3,
+          "max": 89.3,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/dashboard/competition/:id",
+          "tag": "admin",
+          "growsWith": "age groups",
+          "status": 200,
+          "p50": 123.7,
+          "p95": 173.5,
+          "max": 173.5,
+          "kb": 2883.2,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/dashboard",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 243.6,
+          "p95": 296.3,
+          "max": 296.3,
+          "kb": 0.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/superadmin/stats",
+          "tag": "superadmin",
+          "growsWith": "everything",
+          "status": 200,
+          "p50": 4.4,
+          "p95": 5.4,
+          "max": 5.4,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 530.9,
+          "p95": 573.1,
+          "max": 573.1,
+          "kb": 19.7,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/admin/teams (limit 100)",
+          "tag": "admin",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 545.1,
+          "p95": 599.1,
+          "max": 599.1,
+          "kb": 196.9,
+          "rows": 100
+        },
+        {
+          "name": "GET /api/admin/players (page 1, limit 10)",
+          "tag": "admin",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 12.2,
+          "p95": 21.5,
+          "max": 21.5,
+          "kb": 0.1,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/superadmin/teams",
+          "tag": "superadmin",
+          "growsWith": "teams",
+          "status": 200,
+          "p50": 109.5,
+          "p95": 128.3,
+          "max": 128.3,
+          "kb": 1923.7,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/superadmin/coaches",
+          "tag": "superadmin",
+          "growsWith": "coaches",
+          "status": 200,
+          "p50": 14.4,
+          "p95": 18.1,
+          "max": 18.1,
+          "kb": 256.9,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (category)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 266.3,
+          "p95": 302.3,
+          "max": 302.3,
+          "kb": 4235.1,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/admin/teams/submitted (no filter)",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 353,
+          "p95": 373.2,
+          "max": 373.2,
+          "kb": 4209.4,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/public/submitted-teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 245,
+          "p95": 276.3,
+          "max": 276.3,
+          "kb": 4235.1,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/judge/teams",
+          "tag": "scoring",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 5.6,
+          "p95": 8.9,
+          "max": 8.9,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 363.6,
+          "p95": 391.8,
+          "max": 391.8,
+          "kb": 2293.3,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/judge/scores/team",
+          "tag": "scoring",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 368.9,
+          "p95": 467.2,
+          "max": 467.2,
+          "kb": 2293.3,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/admin/scores/individual",
+          "tag": "scoring",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 39.1,
+          "p95": 43.6,
+          "max": 43.6,
+          "kb": 891.8,
+          "rows": 1667
+        },
+        {
+          "name": "GET /api/admin/scores/individual (slug — known empty)",
+          "tag": "scoring",
+          "growsWith": "nothing (defect)",
+          "status": 200,
+          "p50": 8.8,
+          "p95": 10.8,
+          "max": 10.8,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/rankings/team",
+          "tag": "rankings",
+          "growsWith": "teams (one query each)",
+          "status": 200,
+          "p50": 353.2,
+          "p95": 428.5,
+          "max": 428.5,
+          "kb": 2323.3,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/admin/rankings/individual",
+          "tag": "rankings",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 35.7,
+          "p95": 54.1,
+          "max": 54.1,
+          "kb": 937.6,
+          "rows": 1667
+        },
+        {
+          "name": "GET /api/admin/judges",
+          "tag": "panel",
+          "growsWith": "panel seats",
+          "status": 200,
+          "p50": 5.4,
+          "p95": 10.7,
+          "max": 10.7,
+          "kb": 3.3,
+          "rows": 6
+        },
+        {
+          "name": "GET /api/admin/judges/summary",
+          "tag": "panel",
+          "growsWith": "ALL judges, every competition",
+          "status": 200,
+          "p50": 52.9,
+          "p95": 72.4,
+          "max": 72.4,
+          "kb": 20.8,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/judge-accounts",
+          "tag": "panel",
+          "growsWith": "judge accounts",
+          "status": 200,
+          "p50": 3.3,
+          "p95": 5.2,
+          "max": 5.2,
+          "kb": 0,
+          "rows": 0
+        },
+        {
+          "name": "GET /api/admin/lots",
+          "tag": "lots",
+          "growsWith": "entries + scores",
+          "status": 200,
+          "p50": 227.5,
+          "p95": 275.8,
+          "max": 275.8,
+          "kb": 656.9,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/public/competitions",
+          "tag": "public",
+          "growsWith": "competitions",
+          "status": 200,
+          "p50": 1.8,
+          "p95": 3.4,
+          "max": 3.4,
+          "kb": 0.5,
+          "rows": 1
+        },
+        {
+          "name": "GET /api/public/teams",
+          "tag": "public",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 160.8,
+          "p95": 212.4,
+          "max": 212.4,
+          "kb": 1935.5,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/public/scores (all, unfiltered)",
+          "tag": "public",
+          "growsWith": "ALL score documents",
+          "status": 200,
+          "p50": 230.3,
+          "p95": 306.8,
+          "max": 306.8,
+          "kb": 7364,
+          "rows": 6000
+        },
+        {
+          "name": "GET /api/public/scores (competition)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 261,
+          "p95": 316.2,
+          "max": 316.2,
+          "kb": 7364,
+          "rows": 6000
+        },
+        {
+          "name": "GET /api/public/scores (category)",
+          "tag": "public",
+          "growsWith": "score documents",
+          "status": 200,
+          "p50": 53.3,
+          "p95": 80.4,
+          "max": 80.4,
+          "kb": 1224.9,
+          "rows": 1000
+        },
+        {
+          "name": "GET /api/coaches/dashboard",
+          "tag": "coach",
+          "growsWith": "own squad",
+          "status": 200,
+          "p50": 55.8,
+          "p95": 76.2,
+          "max": 76.2,
+          "kb": 4.3,
+          "rows": null
+        },
+        {
+          "name": "GET /api/coaches/search-players",
+          "tag": "coach",
+          "growsWith": "athletes",
+          "status": 200,
+          "p50": 30.6,
+          "p95": 42.8,
+          "max": 42.8,
+          "kb": 3.1,
+          "rows": 10
+        },
+        {
+          "name": "GET /api/competitions/:id",
+          "tag": "competitions",
+          "growsWith": "entries (whole doc)",
+          "status": 200,
+          "p50": 33.1,
+          "p95": 40.5,
+          "max": 40.5,
+          "kb": 2964.7,
+          "rows": null
+        },
+        {
+          "name": "GET /api/competitions/:id/registrations",
+          "tag": "competitions",
+          "growsWith": "entries",
+          "status": 200,
+          "p50": 204.1,
+          "p95": 223.1,
+          "max": 223.1,
+          "kb": 3861.4,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 5,
+          "p95": 9.9,
+          "max": 9.9,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/transactions/summary",
+          "tag": "payments",
+          "growsWith": "transactions",
+          "status": 200,
+          "p50": 3.6,
+          "p95": 5.8,
+          "max": 5.8,
+          "kb": 0.1,
+          "rows": null
+        },
+        {
+          "name": "GET /api/admin/teams/:teamId",
+          "tag": "admin",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 25.2,
+          "p95": 31.1,
+          "max": 31.1,
+          "kb": 2.6,
+          "rows": null
+        },
+        {
+          "name": "GET /api/teams/:id",
+          "tag": "teams",
+          "growsWith": "one squad",
+          "status": 200,
+          "p50": 4.1,
+          "p95": 6.2,
+          "max": 6.2,
+          "kb": 3.2,
+          "rows": 10
+        }
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "name": "GET /api/admin/teams (limit 100)",
+      "tag": "admin",
+      "growsWith": "entries",
+      "kb": 49.3,
+      "rows": 25,
+      "byScale": {
+        "25": 18.3,
+        "100": 67,
+        "500": 228.2,
+        "1000": 599.1
+      },
+      "growth": "32.7x LINEAR+"
+    },
+    {
+      "name": "GET /api/admin/teams (page 1, limit 10)",
+      "tag": "admin",
+      "growsWith": "entries",
+      "kb": 19.7,
+      "rows": 10,
+      "byScale": {
+        "25": 21.5,
+        "100": 61.6,
+        "500": 323.4,
+        "1000": 573.1
+      },
+      "growth": "26.7x sublinear"
+    },
+    {
+      "name": "GET /api/judge/scores/team",
+      "tag": "scoring",
+      "growsWith": "teams (one query each)",
+      "kb": 57.5,
+      "rows": 25,
+      "byScale": {
+        "25": 18.6,
+        "100": 45.8,
+        "500": 231.8,
+        "1000": 467.2
+      },
+      "growth": "25.1x sublinear"
+    },
+    {
+      "name": "GET /api/admin/rankings/team",
+      "tag": "rankings",
+      "growsWith": "teams (one query each)",
+      "kb": 58.2,
+      "rows": 25,
+      "byScale": {
+        "25": 18.4,
+        "100": 47.9,
+        "500": 254.1,
+        "1000": 428.5
+      },
+      "growth": "23.3x sublinear"
+    },
+    {
+      "name": "GET /api/admin/scores/team",
+      "tag": "scoring",
+      "growsWith": "teams (one query each)",
+      "kb": 57.5,
+      "rows": 25,
+      "byScale": {
+        "25": 22.8,
+        "100": 56.8,
+        "500": 215.9,
+        "1000": 391.8
+      },
+      "growth": "17.2x sublinear"
+    },
+    {
+      "name": "GET /api/admin/teams/submitted (no filter)",
+      "tag": "scoring",
+      "growsWith": "entries + scores",
+      "kb": 105.3,
+      "rows": 25,
+      "byScale": {
+        "25": 23,
+        "100": 44,
+        "500": 206.8,
+        "1000": 373.2
+      },
+      "growth": "16.2x sublinear"
+    },
+    {
+      "name": "GET /api/public/scores (competition)",
+      "tag": "public",
+      "growsWith": "score documents",
+      "kb": 183.7,
+      "rows": 150,
+      "byScale": {
+        "25": 12.6,
+        "100": 33.7,
+        "500": 181.2,
+        "1000": 316.2
+      },
+      "growth": "25.1x sublinear"
+    },
+    {
+      "name": "GET /api/public/scores (all, unfiltered)",
+      "tag": "public",
+      "growsWith": "ALL score documents",
+      "kb": 183.7,
+      "rows": 150,
+      "byScale": {
+        "25": 13.6,
+        "100": 61.3,
+        "500": 140.8,
+        "1000": 306.8
+      },
+      "growth": "22.6x sublinear"
+    },
+    {
+      "name": "GET /api/admin/teams/submitted (category)",
+      "tag": "scoring",
+      "growsWith": "entries + scores",
+      "kb": 105.9,
+      "rows": 25,
+      "byScale": {
+        "25": 15.9,
+        "100": 41,
+        "500": 157.1,
+        "1000": 302.3
+      },
+      "growth": "19.0x sublinear"
+    },
+    {
+      "name": "GET /api/superadmin/dashboard",
+      "tag": "superadmin",
+      "growsWith": "everything",
+      "kb": 0.3,
+      "rows": null,
+      "byScale": {
+        "25": 20.4,
+        "100": 32.1,
+        "500": 205.7,
+        "1000": 296.3
+      },
+      "growth": "14.5x sublinear"
+    },
+    {
+      "name": "GET /api/public/submitted-teams",
+      "tag": "scoring",
+      "growsWith": "entries + scores",
+      "kb": 105.9,
+      "rows": 25,
+      "byScale": {
+        "25": 23.7,
+        "100": 51.7,
+        "500": 176.8,
+        "1000": 276.3
+      },
+      "growth": "11.7x sublinear"
+    },
+    {
+      "name": "GET /api/admin/lots",
+      "tag": "lots",
+      "growsWith": "entries + scores",
+      "kb": 16.8,
+      "rows": 25,
+      "byScale": {
+        "25": 21.2,
+        "100": 37.6,
+        "500": 141.4,
+        "1000": 275.8
+      },
+      "growth": "13.0x sublinear"
+    },
+    {
+      "name": "GET /api/competitions/:id/registrations",
+      "tag": "competitions",
+      "growsWith": "entries",
+      "kb": 96.6,
+      "rows": null,
+      "byScale": {
+        "25": 11.9,
+        "100": 33.2,
+        "500": 110.6,
+        "1000": 223.1
+      },
+      "growth": "18.7x sublinear"
+    },
+    {
+      "name": "GET /api/public/teams",
+      "tag": "public",
+      "growsWith": "entries",
+      "kb": 48.4,
+      "rows": 25,
+      "byScale": {
+        "25": 11.5,
+        "100": 28.5,
+        "500": 118.1,
+        "1000": 212.4
+      },
+      "growth": "18.5x sublinear"
+    },
+    {
+      "name": "GET /api/admin/dashboard/competition/:id",
+      "tag": "admin",
+      "growsWith": "age groups",
+      "kb": 74.3,
+      "rows": null,
+      "byScale": {
+        "25": 19.6,
+        "100": 32.6,
+        "500": 78.5,
+        "1000": 173.5
+      },
+      "growth": "8.9x flat"
+    },
+    {
+      "name": "GET /api/superadmin/teams",
+      "tag": "superadmin",
+      "growsWith": "teams",
+      "kb": 48.1,
+      "rows": 25,
+      "byScale": {
+        "25": 13.7,
+        "100": 21.6,
+        "500": 73.1,
+        "1000": 128.3
+      },
+      "growth": "9.4x flat"
+    },
+    {
+      "name": "GET /api/admin/dashboard/stats",
+      "tag": "admin",
+      "growsWith": "entries",
+      "kb": 0.3,
+      "rows": null,
+      "byScale": {
+        "25": 8.7,
+        "100": 12.2,
+        "500": 49.2,
+        "1000": 89.3
+      },
+      "growth": "10.3x sublinear"
+    },
+    {
+      "name": "GET /api/public/scores (category)",
+      "tag": "public",
+      "growsWith": "score documents",
+      "kb": 30.7,
+      "rows": 25,
+      "byScale": {
+        "25": 7.6,
+        "100": 12.6,
+        "500": 36.4,
+        "1000": 80.4
+      },
+      "growth": "10.6x sublinear"
+    },
+    {
+      "name": "GET /api/coaches/dashboard",
+      "tag": "coach",
+      "growsWith": "own squad",
+      "kb": 4.3,
+      "rows": null,
+      "byScale": {
+        "25": 15,
+        "100": 47.8,
+        "500": 52.3,
+        "1000": 76.2
+      },
+      "growth": "5.1x flat"
+    },
+    {
+      "name": "GET /api/admin/judges/summary",
+      "tag": "panel",
+      "growsWith": "ALL judges, every competition",
+      "kb": 20.8,
+      "rows": null,
+      "byScale": {
+        "25": 12.4,
+        "100": 26.6,
+        "500": 48.1,
+        "1000": 72.4
+      },
+      "growth": "5.8x flat"
+    },
+    {
+      "name": "GET /api/admin/rankings/individual",
+      "tag": "rankings",
+      "growsWith": "score documents",
+      "kb": 23.6,
+      "rows": 42,
+      "byScale": {
+        "25": 6.6,
+        "100": 9.2,
+        "500": 24.8,
+        "1000": 54.1
+      },
+      "growth": "8.2x flat"
+    },
+    {
+      "name": "GET /api/admin/scores/individual",
+      "tag": "scoring",
+      "growsWith": "score documents",
+      "kb": 22.5,
+      "rows": 42,
+      "byScale": {
+        "25": 5.8,
+        "100": 12.4,
+        "500": 26,
+        "1000": 43.6
+      },
+      "growth": "7.5x flat"
+    },
+    {
+      "name": "GET /api/coaches/search-players",
+      "tag": "coach",
+      "growsWith": "athletes",
+      "kb": 3.1,
+      "rows": 10,
+      "byScale": {
+        "25": 10.3,
+        "100": 9.4,
+        "500": 19.2,
+        "1000": 42.8
+      },
+      "growth": "4.2x flat"
+    },
+    {
+      "name": "GET /api/competitions/:id",
+      "tag": "competitions",
+      "growsWith": "entries (whole doc)",
+      "kb": 75.8,
+      "rows": null,
+      "byScale": {
+        "25": 6.4,
+        "100": 8.4,
+        "500": 26.2,
+        "1000": 40.5
+      },
+      "growth": "6.3x flat"
+    },
+    {
+      "name": "GET /api/admin/teams/:teamId",
+      "tag": "admin",
+      "growsWith": "one squad",
+      "kb": 2.6,
+      "rows": null,
+      "byScale": {
+        "25": 23.3,
+        "100": 18,
+        "500": 14.4,
+        "1000": 31.1
+      },
+      "growth": "1.3x flat"
+    },
+    {
+      "name": "GET /api/admin/players (page 1, limit 10)",
+      "tag": "admin",
+      "growsWith": "athletes",
+      "kb": 0.1,
+      "rows": 0,
+      "byScale": {
+        "25": 6.4,
+        "100": 7.1,
+        "500": 6.7,
+        "1000": 21.5
+      },
+      "growth": "3.4x flat"
+    },
+    {
+      "name": "GET /api/superadmin/coaches",
+      "tag": "superadmin",
+      "growsWith": "coaches",
+      "kb": 6.4,
+      "rows": 25,
+      "byScale": {
+        "25": 4.9,
+        "100": 11.1,
+        "500": 10.9,
+        "1000": 18.1
+      },
+      "growth": "3.7x flat"
+    },
+    {
+      "name": "GET /api/admin/scores/individual (slug — known empty)",
+      "tag": "scoring",
+      "growsWith": "nothing (defect)",
+      "kb": 0,
+      "rows": 0,
+      "byScale": {
+        "25": 4.4,
+        "100": 5,
+        "500": 8.8,
+        "1000": 10.8
+      },
+      "growth": "2.5x flat"
+    },
+    {
+      "name": "GET /api/admin/judges",
+      "tag": "panel",
+      "growsWith": "panel seats",
+      "kb": 3.3,
+      "rows": 6,
+      "byScale": {
+        "25": 13.8,
+        "100": 5.6,
+        "500": 7.5,
+        "1000": 10.7
+      },
+      "growth": "0.8x flat"
+    },
+    {
+      "name": "GET /api/admin/transactions",
+      "tag": "payments",
+      "growsWith": "transactions",
+      "kb": 0.1,
+      "rows": null,
+      "byScale": {
+        "25": 5,
+        "100": 5,
+        "500": 5.7,
+        "1000": 9.9
+      },
+      "growth": "2.0x flat"
+    },
+    {
+      "name": "GET /api/judge/teams",
+      "tag": "scoring",
+      "growsWith": "entries + scores",
+      "kb": 0,
+      "rows": 0,
+      "byScale": {
+        "25": 7.7,
+        "100": 9.8,
+        "500": 10.8,
+        "1000": 8.9
+      },
+      "growth": "1.2x flat"
+    },
+    {
+      "name": "GET /api/health/live",
+      "tag": "health",
+      "growsWith": "nothing",
+      "kb": 0.1,
+      "rows": null,
+      "byScale": {
+        "25": 1.7,
+        "100": 1.1,
+        "500": 1.3,
+        "1000": 7
+      },
+      "growth": "4.1x flat"
+    },
+    {
+      "name": "GET /api/teams/:id",
+      "tag": "teams",
+      "growsWith": "one squad",
+      "kb": 3.2,
+      "rows": 10,
+      "byScale": {
+        "25": 3.3,
+        "100": 3.7,
+        "500": 4,
+        "1000": 6.2
+      },
+      "growth": "1.9x flat"
+    },
+    {
+      "name": "GET /api/admin/transactions/summary",
+      "tag": "payments",
+      "growsWith": "transactions",
+      "kb": 0.1,
+      "rows": null,
+      "byScale": {
+        "25": 3.8,
+        "100": 4.1,
+        "500": 5.7,
+        "1000": 5.8
+      },
+      "growth": "1.5x flat"
+    },
+    {
+      "name": "GET /api/superadmin/stats",
+      "tag": "superadmin",
+      "growsWith": "everything",
+      "kb": 0.1,
+      "rows": null,
+      "byScale": {
+        "25": 6.7,
+        "100": 6.3,
+        "500": 7.4,
+        "1000": 5.4
+      },
+      "growth": "0.8x flat"
+    },
+    {
+      "name": "GET /api/admin/judge-accounts",
+      "tag": "panel",
+      "growsWith": "judge accounts",
+      "kb": 0,
+      "rows": 0,
+      "byScale": {
+        "25": 5,
+        "100": 5,
+        "500": 4.6,
+        "1000": 5.2
+      },
+      "growth": "1.0x flat"
+    },
+    {
+      "name": "GET /api/auth/me",
+      "tag": "auth",
+      "growsWith": "nothing",
+      "kb": 0.3,
+      "rows": null,
+      "byScale": {
+        "25": 3.9,
+        "100": 3.7,
+        "500": 3.4,
+        "1000": 4.3
+      },
+      "growth": "1.1x flat"
+    },
+    {
+      "name": "GET /api/public/competitions",
+      "tag": "public",
+      "growsWith": "competitions",
+      "kb": 0.5,
+      "rows": 1,
+      "byScale": {
+        "25": 3.7,
+        "100": 2.8,
+        "500": 6.5,
+        "1000": 3.4
+      },
+      "growth": "0.9x flat"
+    },
+    {
+      "name": "GET /api/health/ready",
+      "tag": "health",
+      "growsWith": "nothing",
+      "kb": 0.2,
+      "rows": null,
+      "byScale": {
+        "25": 2.5,
+        "100": 2.7,
+        "500": 3.5,
+        "1000": 2.7
+      },
+      "growth": "1.1x flat"
+    },
+    {
+      "name": "GET /api/public/cop-rules",
+      "tag": "public",
+      "growsWith": "nothing",
+      "kb": 2.5,
+      "rows": null,
+      "byScale": {
+        "25": 2.5,
+        "100": 2.4,
+        "500": 2,
+        "1000": 2.2
+      },
+      "growth": "0.9x flat"
+    },
+    {
+      "name": "GET /api/csrf-token",
+      "tag": "auth",
+      "growsWith": "nothing",
+      "kb": 0.1,
+      "rows": null,
+      "byScale": {
+        "25": 2.7,
+        "100": 1.3,
+        "500": 1.7,
+        "1000": 1.2
+      },
+      "growth": "0.4x flat"
+    }
+  ]
+}

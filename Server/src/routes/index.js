@@ -24,6 +24,7 @@ const createJudgeRoutes = require('./judge.routes');
 const createSuperAdminRoutes = require('./super-admin.routes');
 const createPaymentRoutes = require('./payment.routes');
 const createPublicRoutes = require('./public.routes');
+const createDocsRoutes = require('./docs.routes');
 
 // CSRF token endpoint
 const { csrfTokenHandler } = require('../middleware/csrf.middleware');
@@ -87,6 +88,20 @@ function loadRoutes(app, container, options = {}) {
   // These should be registered first for quick access by load balancers
   const healthRouter = createHealthRoutes(container);
   apiRouter.use('/health', healthRouter);
+
+  // ============================================================
+  // API DOCUMENTATION (Swagger UI)
+  // ============================================================
+  // Off unless ENABLE_API_DOCS=true, and never in production, for the same
+  // reason as the debug routes in createApp: the document is a complete map of
+  // every route, role and required header, and publishing it anonymously hands
+  // that map to everyone. Mounted on `apiRouter` so it is reachable at both
+  // /api/docs and /api/v1/docs.
+  const docsEnabled =
+    process.env.NODE_ENV !== 'production' && process.env.ENABLE_API_DOCS === 'true';
+  if (docsEnabled) {
+    apiRouter.use('/docs', createDocsRoutes(container));
+  }
 
   // ============================================================
   // CSRF TOKEN ENDPOINT (Requirement 17.3)

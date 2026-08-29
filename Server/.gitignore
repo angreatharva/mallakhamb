@@ -75,3 +75,25 @@ scripts/lib/*
 !scripts/seed/
 scripts/seed/*
 !scripts/seed/panel-plan.json
+
+# The API documentation and performance harness (scripts/perf/). Same nesting
+# rule as scripts/lib above: re-include the directory, exclude its contents,
+# then name the files.
+#
+# routes.generated.json is NOT allow-listed — it is a build artefact of
+# extract-routes.js, regenerated in a second from the live router, and a stale
+# committed copy would be believed.
+!scripts/perf/
+scripts/perf/*
+!scripts/perf/extract-routes.js
+!scripts/perf/seedScale.js
+!scripts/perf/testApi.js
+!scripts/perf/benchmarkApi.js
+!scripts/perf/countQueries.js
+!scripts/perf/probe.js
+!scripts/perf/lib/
+scripts/perf/lib/*
+!scripts/perf/lib/client.js
+!scripts/perf/lib/harness-server.js
+
+!scripts/generateOpenApi.js

@@ -47,13 +47,17 @@ class RequestCoalescingMiddleware {
       return false;
     }
 
-    // Don't coalesce health check endpoints
-    if (req.path.startsWith('/health')) {
-      return false;
-    }
-
-    // Don't coalesce metrics endpoints
-    if (req.path.startsWith('/metrics')) {
+    /*
+     * Health and metrics are exempt — a liveness probe must measure THIS
+     * request, not ride on one already in flight.
+     *
+     * The tests below used to be `startsWith('/health')` and
+     * `startsWith('/metrics')`. This middleware is mounted app-wide
+     * (createApp.js), so `req.path` is the full path — `/api/health/live`,
+     * `/api/v1/health/metrics` — and neither prefix ever matched. Both
+     * exemptions were dead, and the metrics endpoint was being coalesced.
+     */
+    if (/^\/api(\/v\d+)?\/(health|metrics)(\/|$)/.test(req.path)) {
       return false;
     }
 
@@ -90,6 +94,18 @@ class RequestCoalescingMiddleware {
           // Wait for the in-flight request to complete
           const result = await this.inFlightRequests.get(requestKey);
 
+          /*
+           * Only a JSON response can be replayed — we captured `data`, not the
+           * bytes. A handler that answered with res.send / res.end / a redirect
+           * (the Prometheus metrics format, the docs page, a 304 from an ETag)
+           * gives us nothing to replay, so this request does its own work
+           * instead. Falling through is always correct here; replaying is the
+           * optimisation.
+           */
+          if (!result.replayable) {
+            return next();
+          }
+
           // Send the cached result
           res.status(result.status).json(result.data);
         } catch (error) {
@@ -120,10 +136,40 @@ class RequestCoalescingMiddleware {
 
       // Override res.json to capture the response and resolve the promise
       res.json = function(data) {
-        const result = { status: statusCode, data };
+        const result = { status: statusCode, data, replayable: true };
         resolvePromise(result);
         return originalJson(data);
       };
+
+      /*
+       * Settle on 'finish' no matter how the response was produced.
+       *
+       * Resolving ONLY inside the res.json override meant any handler that
+       * answered another way — res.send, res.end, a redirect, a 304 from an
+       * ETag — left this promise pending forever. The `.finally()` below then
+       * never ran, so the key was never deleted, and every subsequent identical
+       * GET awaited a promise that would never settle: the request hung until
+       * the client gave up, and the entry leaked.
+       *
+       * It was not hypothetical. `GET /api/health/metrics?format=prometheus`
+       * answers with res.send, so it served exactly ONE scrape and then hung
+       * for the life of the process.
+       *
+       * 'finish' fires after the response is fully flushed, and resolving an
+       * already-resolved promise is a no-op, so the JSON path is unaffected.
+       */
+      res.on('finish', () => {
+        resolvePromise({ status: res.statusCode, data: null, replayable: false });
+      });
+
+      /*
+       * A client that disconnects mid-flight never fires 'finish'. Settle on
+       * 'close' too, or an aborted request leaves the same permanently-pending
+       * entry this whole comment is about.
+       */
+      res.on('close', () => {
+        resolvePromise({ status: res.statusCode, data: null, replayable: false });
+      });
 
       // Store the original next function to intercept errors
       const originalNext = next;
