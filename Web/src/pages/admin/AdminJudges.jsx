@@ -130,8 +130,15 @@ const registerUrl = () =>
  * the only way a seat is filled. That means "no results" is a real, expected
  * state with a real answer (send them the registration link), so it is handled
  * here rather than left as a dead end.
+ *
+ * `taken` maps an account id to the seat that person already holds on this
+ * panel. Those results are shown but not selectable: one person cannot sit
+ * twice on a panel — their single slip would be counted twice in the average —
+ * and the server refuses it. Refusing it here as well means the admin finds out
+ * while they are choosing, rather than after filling in five slots and pressing
+ * Save.
  */
-const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false }) => {
+const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken = {} }) => {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -194,21 +201,33 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false }) => {
       {results.length > 0 && (
         <div className="mt-2 rounded-xl border overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          {results.map((account) => (
+          {results.map((account) => {
+            const heldSeat = taken[account._id];
+            return (
             <button
               key={account._id}
+              disabled={!!heldSeat}
+              title={heldSeat ? `Already ${heldSeat} on this panel` : undefined}
               onClick={() => { onSelect(account); setTerm(''); setResults([]); }}
-              className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors border-b last:border-b-0 min-h-[44px]"
-              style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}
+              className="w-full text-left px-3 py-2.5 transition-colors border-b last:border-b-0 min-h-[44px] disabled:cursor-not-allowed enabled:hover:bg-white/5"
+              style={{ borderColor: ADMIN_COLORS.darkBorderSubtle, opacity: heldSeat ? 0.45 : 1 }}
             >
-              <p className="text-sm font-semibold text-white">{account.name}</p>
+              <p className="text-sm font-semibold text-white">
+                {account.name}
+                {heldSeat && (
+                  <span className="ml-2 text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>
+                    already {heldSeat}
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-white/40">
                 {account.email}
                 {account.stateUnit && <span> · {account.stateUnit}</span>}
                 {account.certificationLevel && <span> · {account.certificationLevel}</span>}
               </p>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -239,7 +258,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false }) => {
 
 // ─── Assign Judge Modal ───────────────────────────────────────────────────────
 
-const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel }) => (
+const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel, takenSeats = {} }) => (
   <AnimatePresence>
     {judge && (
       <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -275,7 +294,14 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel 
               </p>
             )}
 
-            <JudgeSearch api={api} value={selected} onSelect={setSelected} onClear={() => setSelected(null)} autoFocus />
+            <JudgeSearch
+              api={api}
+              value={selected}
+              taken={takenSeats}
+              onSelect={setSelected}
+              onClear={() => setSelected(null)}
+              autoFocus
+            />
           </div>
           <div className="flex gap-3 p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <DarkBtn variant="ghost" onClick={onCancel} className="flex-1">Cancel</DarkBtn>
@@ -345,8 +371,24 @@ const Judges = () => {
   const hasAgeGroup = !!selectedAgeGroup;
   const hasCompetitionType = !!selectedCompetitionType;
 
+  /*
+   * "All apparatus" seats one panel for the whole category — the same judges
+   * score Pole, Hanging and Rope — and is the first option because it is the
+   * common arrangement.
+   *
+   * Without it the picker was mandatory whenever the competition declared any
+   * apparatus, so EVERY panel came out apparatus-scoped. An athlete entered
+   * for three apparatus then had a panel for one of them and none for the
+   * other two: their slips were refused with "Only a panel judge or an admin
+   * can submit a judge slip", because the judge genuinely held no seat for
+   * that apparatus. Choosing this leaves the seat's apparatus null, which
+   * `assignmentCoversCategory` reads as covering all of them.
+   */
   const apparatusOptions = selectedCompetitionType && competitionForAgeGroups?.apparatusConfig?.[selectedCompetitionType.value]
-    ? competitionForAgeGroups.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app }))
+    ? [
+      { value: '', label: 'All apparatus' },
+      ...competitionForAgeGroups.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app })),
+    ]
     : [];
 
   const hasApparatus = apparatusOptions.length === 0 || !!selectedApparatus;
@@ -666,6 +708,17 @@ const Judges = () => {
       <AssignJudgeModal
         judge={editingJudge}
         api={api}
+        /*
+         * Everyone already seated on this panel except the slot being
+         * replaced — replacing Judge 1 with the Senior Judge would put one
+         * person's single slip into the average twice.
+         */
+        takenSeats={Object.fromEntries(
+          judges
+            .filter((seated) => seated.judgeNo !== editingJudge?.judgeNo)
+            .map((seated) => [seated.judgeAccount?._id || seated.judgeAccount, seated.judgeType])
+            .filter(([id]) => id)
+        )}
         selected={editSelection}
         setSelected={setEditSelection}
         onSave={handleAssignJudge}
@@ -797,6 +850,24 @@ const Judges = () => {
                       <div className="space-y-4">
                         {judgeFormData.map((judge, index) => {
                           const badge = judgeTypeBadge(judge.judgeType);
+                          /*
+                           * Who this slot may NOT pick: anyone filling another
+                           * slot in this form, and anyone already seated on the
+                           * panel from an earlier save. Both are the same rule
+                           * — one person, one seat per panel — and the server
+                           * enforces it either way; this is so the admin is
+                           * told while choosing rather than on Save.
+                           */
+                          const taken = {};
+                          judgeFormData.forEach((other, otherIndex) => {
+                            if (otherIndex !== index && other.account?._id) {
+                              taken[other.account._id] = other.judgeType;
+                            }
+                          });
+                          judges.forEach((seated) => {
+                            const id = seated.judgeAccount?._id || seated.judgeAccount;
+                            if (id && seated.judgeType !== judge.judgeType) taken[id] = seated.judgeType;
+                          });
                           return (
                             <div key={judge.judgeNo} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-2 mb-4">
@@ -809,6 +880,7 @@ const Judges = () => {
                               <JudgeSearch
                                 api={api}
                                 value={judge.account}
+                                taken={taken}
                                 onSelect={(account) => setSlotAccount(index, account)}
                                 onClear={() => setSlotAccount(index, null)}
                               />

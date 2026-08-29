@@ -70,7 +70,7 @@ test.describe('player onboarding', () => {
     }
 
     await test.step('join a team', async () => {
-      const joined = await joinTeam(page, player.teamName);
+      const joined = await joinTeam(page, player);
       console.log(`Joined team: ${joined}`);
     });
 

@@ -79,7 +79,14 @@ export const judgeAPI = {
   getTeamScores: (params) => api.get('/judge/scores/team', { params }),
 
   /** Players on a team, with per-player scored/finalized flags. */
-  getTeamPlayers: (teamId) => api.get(`/judge/teams/${teamId}/players`),
+  /*
+   * The roster, scored FOR A CATEGORY. `params` carries gender, ageGroup and
+   * competitionType, and all three matter: without them the server resolves an
+   * arbitrary one of the judge's seats and returns both competition types'
+   * scores, so an athlete finalized in Competition I reads as finalized in
+   * Competition II and can never be scored there.
+   */
+  getTeamPlayers: (teamId, params) => api.get(`/judge/teams/${teamId}/players`, { params }),
 
   /**
    * COP Nov 2022 scoring constants. Anonymous and heavily cached server-side.

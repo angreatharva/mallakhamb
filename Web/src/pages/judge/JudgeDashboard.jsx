@@ -17,6 +17,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
+import { apparatusInUse, isRegisteredFor } from '@/utils/scoring/apparatus';
 import {
   indexPerformanceOrder,
   applyRunningOrder,
@@ -52,97 +53,6 @@ const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   );
 };
 
-const COMPETITION_TYPE_LABELS = {
-  competition_1: 'Competition I',
-  competition_2: 'Competition II',
-  competition_3: 'Competition III',
-};
-
-/** "Under14" reads badly next to a gender; "U14" does not. */
-const ageLabel = (ageGroup = '') => ageGroup.replace('Under', 'U').replace('Above', 'A');
-
-/**
- * Every panel this judge sits on, grouped by meet.
- *
- * Lives on the dashboard because it answers the first question a judge has on
- * opening the app — "what am I judging today, and in what role" — and because
- * the category picker below it only makes sense once you can see the seats it
- * is picking between. Read-only: only an organiser can seat a judge.
- */
-const PanelAssignments = ({ assignments, loading }) => {
-  if (loading) {
-    return (
-      <div className="rounded-2xl border p-5 mb-6"
-        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
-        <span className="text-sm text-white/40">Loading your assignments…</span>
-      </div>
-    );
-  }
-
-  if (!assignments || assignments.length === 0) return null;
-
-  const byCompetition = assignments.reduce((acc, seat) => {
-    const competition = seat.competition || {};
-    const key = competition._id || String(seat.competition) || 'unknown';
-    if (!acc[key]) acc[key] = { competition, seats: [] };
-    acc[key].seats.push(seat);
-    return acc;
-  }, {});
-
-  return (
-    <FadeIn delay={0.05}>
-      <div className="rounded-2xl border p-5 mb-6"
-        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Scale className="w-4 h-4 flex-shrink-0" style={{ color: J.purple }} aria-hidden="true" />
-          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
-            Panel Assignments
-          </span>
-          <span className="ml-auto text-xs text-white/30">Set by the organiser</span>
-        </div>
-
-        <div className="space-y-5">
-          {Object.entries(byCompetition).map(([key, { competition, seats }]) => (
-            <div key={key}>
-              {competition.name && (
-                <p className="text-sm font-bold text-white mb-2">
-                  {competition.name}
-                  {competition.year && <span className="text-white/40 font-normal"> · {competition.year}</span>}
-                  {competition.place && <span className="text-white/40 font-normal"> · {competition.place}</span>}
-                </p>
-              )}
-              <div className="space-y-2">
-                {seats.map((seat) => (
-                  <div key={seat._id}
-                    className="rounded-xl border p-3 flex items-center justify-between gap-3 flex-wrap"
-                    style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white">
-                        {seat.gender} · {ageLabel(seat.ageGroup)}
-                        {seat.apparatus && <span className="text-white/40"> · {seat.apparatus}</span>}
-                      </p>
-                      <p className="text-xs text-white/40 mt-0.5">
-                        {(seat.competitionTypes?.length
-                          ? seat.competitionTypes.map((t) => COMPETITION_TYPE_LABELS[t] || t)
-                          : ['All categories']
-                        ).join(' · ')}
-                      </p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap"
-                      style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
-                      {seat.judgeType}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </FadeIn>
-  );
-};
-
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   const reduced = useReducedMotion();
   return (
@@ -172,7 +82,19 @@ const JudgeDashboard = () => {
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
   const [selectedGender, setSelectedGender] = useState(() => sessionStorage.getItem('judge_selected_gender') || '');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(() => sessionStorage.getItem('judge_selected_age_group') || '');
-  const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || 'Pole Mallakhamb');
+  /*
+   * No apparatus chosen yet, which is NOT the same as Pole.
+   *
+   * Empty means "this panel judges whatever each athlete is entered for" — the
+   * normal state of a category until the judge narrows it, and the only honest
+   * value before anybody has picked. This defaulted to 'Pole Mallakhamb', and
+   * the default was then handed to the roster in navigation state, which
+   * filtered its athletes by it: every women's category in a Rope meet read as
+   * "No eligible players", because none of them are on Pole. JudgeTeamPlayers
+   * already treats empty as "all" for exactly this reason; the default here was
+   * the half that kept overriding it.
+   */
+  const [selectedApparatus, setSelectedApparatus] = useState(() => sessionStorage.getItem('judge_selected_apparatus') || '');
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -423,13 +345,10 @@ const JudgeDashboard = () => {
     return team.players
       .filter(e => {
         if (!e.player || e.player.gender !== gender || e.ageGroup !== ageGroup) return false;
-        if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
-          const apps = e.apparatus[selectedCompetitionType];
-          if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
-            return false;
-          }
-        }
-        return true;
+        // isRegisteredFor reads every shape `apparatus` has been stored in; the
+        // inline object lookup this replaced silently matched everything when a
+        // coach had written a bare name.
+        return isRegisteredFor(e, selectedCompetitionType, selectedApparatus);
       });
   };
 
@@ -498,9 +417,31 @@ const JudgeDashboard = () => {
 
   // Apparatus options for the selected competition type, filtered by the COP
   // gender rule (Women's competitions exclude Hanging Mallakhamb, §11 / 1.8.2).
-  const apparatusOptions = (
-    (selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]) || []
-  ).filter(app => isApparatusAllowedForGender(app, selectedGender || judgeInfo.gender));
+  /*
+   * What the judge can be asked to judge, in order of authority:
+   *
+   *   1. the competition's own apparatusConfig for this competition type;
+   *   2. failing that, whatever the athletes in this category are actually
+   *      registered for.
+   *
+   * The fallback is not a nicety. No seeded competition declares an
+   * apparatusConfig, so (1) is empty, the picker never rendered, and the slip
+   * fell back to its hardcoded Pole checklist — including for the Above16 Rope
+   * athletes. Deriving from the registrations means the picker appears exactly
+   * when there is a real choice to make.
+   */
+  const configuredApparatus =
+    (selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]) || [];
+  const registeredApparatus = apparatusInUse(
+    teams.flatMap((team) => (team.players || []).filter(
+      (e) => e.player
+        && e.player.gender === (selectedGender || judgeInfo.gender)
+        && e.ageGroup === (selectedAgeGroup || judgeInfo.ageGroup)
+    )),
+    selectedCompetitionType
+  );
+  const apparatusOptions = (configuredApparatus.length > 0 ? configuredApparatus : registeredApparatus)
+    .filter(app => isApparatusAllowedForGender(app, selectedGender || judgeInfo.gender));
 
   const needsApparatus = apparatusOptions.length > 0;
   const isApparatusSelected = !needsApparatus || !!selectedApparatus;
@@ -637,7 +578,6 @@ const JudgeDashboard = () => {
         </FadeIn>
 
         {/* Every panel this judge sits on */}
-        {!showModal && <PanelAssignments assignments={assignments} loading={assignmentsLoading} />}
 
         {/* Registered, but on no panel yet */}
         {!hasSeats && (

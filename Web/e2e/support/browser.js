@@ -16,6 +16,23 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  * invent a field the form does not send, or miss one it does — which is how
  * the old judge seeder drifted into writing a shape the app had stopped using.
  *
+ * Three sections, in the order the seeder must apply them:
+ *
+ *   registrations  {role, payload}          the accounts
+ *   teams          {coachEmail, payload}    the team each coach created
+ *   memberships    {playerEmail, teamName}  which team each player joined
+ *   entries        {teamName, competition}  which meet each team entered
+ *   squads         {playerEmail, ageGroup}  each athlete's place in that entry
+ *
+ * The last two are written by `build-squads.spec.js`. `Server/scripts/
+ * captureEnvironment.js` writes the same two sections by reading a working
+ * database, for the parts of an environment no form posts in one go — a panel
+ * being the obvious one.
+ *
+ * An account alone is not a usable database. Dropping `teams` and replaying
+ * only registrations gives you coaches stuck on /coach/create-team and players
+ * with nothing to join, which is exactly what the seeder used to produce.
+ *
  * Not committed: it holds plaintext passwords, and it is a record of one
  * environment's state rather than source. Regenerate it by running the UI
  * specs.
@@ -112,34 +129,158 @@ export const apiGet = async (page, path) => {
 };
 
 /**
- * Record one successful registration, keyed by role and email.
+ * The meet's id, looked up by place.
  *
- * Read-modify-write per capture rather than buffering: Playwright specs can be
- * interrupted, and a run that seeded forty players before dying should still
- * leave forty usable rows behind.
+ * The three seeded meets share a name and a year and differ only by place, so
+ * the place is the only thing that identifies one — and the SCREENS cannot tell
+ * them apart either: the navbar's picker labels the current meet
+ * "<name> <year>", which reads identically for all three. Anything that needs
+ * to be sure which one it is on has to ask the API.
  *
- * @param {string} role - 'player' | 'coach' | 'judge'
- * @param {Object} payload - the exact request body the form sent
+ * @param {import('@playwright/test').Page} page - signed in as anyone
+ * @param {string} place
  */
-const captureRegistration = (role, payload) => {
-  let captured = { capturedAt: null, registrations: [] };
+export const competitionIdFor = async (page, place) => {
+  const competitions = await apiGet(page, '/public/competitions');
+  const list = competitions?.competitions || competitions || [];
+  const found = list.find((c) => c.place === place);
+  expect(found, `No competition in ${place}. Known: ${list.map((c) => c.place).join(', ')}`).toBeTruthy();
+  return found._id;
+};
+
+/** The shape of an empty capture, and the list of sections it holds. */
+const EMPTY_CAPTURE = {
+  capturedAt: null,
+  registrations: [],
+  teams: [],
+  memberships: [],
+  entries: [],
+  squads: [],
+};
+
+/**
+ * Read-modify-write one section of the capture file.
+ *
+ * Per event rather than buffered to the end: Playwright specs get interrupted,
+ * and a run that seeded forty players before dying should still leave forty
+ * usable rows behind.
+ *
+ * `dedupe` decides what counts as the same event, so re-running a spec updates
+ * a row instead of appending a second one — the seeder replays the file
+ * top-to-bottom and would otherwise write the same person twice.
+ *
+ * @param {'registrations'|'teams'|'memberships'} section
+ * @param {Object} entry
+ * @param {(existing: Object) => boolean} dedupe - true for rows `entry` replaces
+ */
+const capture = (section, entry, dedupe) => {
+  let captured = EMPTY_CAPTURE;
   try {
-    captured = JSON.parse(readFileSync(CAPTURE_PATH, 'utf8'));
+    captured = { ...EMPTY_CAPTURE, ...JSON.parse(readFileSync(CAPTURE_PATH, 'utf8')) };
   } catch {
     // First capture of this environment — start a fresh file.
   }
 
-  const email = String(payload.email || '').toLowerCase();
-  const rest = captured.registrations.filter(
-    (r) => !(r.role === role && String(r.payload.email).toLowerCase() === email)
-  );
-
-  captured.registrations = [...rest, { role, payload }];
+  captured[section] = [...captured[section].filter((row) => !dedupe(row)), entry];
   captured.capturedAt = new Date().toISOString();
 
   mkdirSync(dirname(CAPTURE_PATH), { recursive: true });
   writeFileSync(CAPTURE_PATH, `${JSON.stringify(captured, null, 2)}
 `);
+};
+
+/**
+ * Record one successful registration, keyed by role and email.
+ *
+ * @param {string} role - 'player' | 'coach' | 'judge'
+ * @param {Object} payload - the exact request body the form sent
+ */
+const captureRegistration = (role, payload) => {
+  const email = String(payload.email || '').toLowerCase();
+  capture(
+    'registrations',
+    { role, payload },
+    (row) => row.role === role && String(row.payload.email).toLowerCase() === email
+  );
+};
+
+/**
+ * Record a team a coach created.
+ *
+ * An account on its own is not a usable seed: a coach with no team cannot be
+ * signed in past /coach/create-team, and every player in roster.js joins a team
+ * by name. Before this, `seedAccounts.js` restored the three coaches and no
+ * teams, so a replayed database had nothing for seventy players to join.
+ *
+ * Keyed by the OWNER's email, not by team name — Team.name is unique per coach,
+ * not globally, and the seeder needs to know whose team it is anyway.
+ *
+ * @param {string} coachEmail - the coach who owns it
+ * @param {Object} payload - the request body POST /coaches/team sent
+ */
+export const captureTeam = (coachEmail, payload) => {
+  const owner = String(coachEmail).toLowerCase();
+  capture('teams', { coachEmail: owner, payload }, (row) => row.coachEmail === owner);
+};
+
+/**
+ * Record a team entering a competition.
+ *
+ * Keyed by team name and the competition's {name, place, year}, for the reason
+ * captureMembership gives: the request carries ObjectIds, and an ObjectId means
+ * nothing in the database the seeder writes to.
+ *
+ * @param {string} coachEmail - the coach who owns the team
+ * @param {string} teamName
+ * @param {{name: string, place: string, year: number}} competition
+ */
+export const captureEntry = (coachEmail, teamName, competition) => {
+  const owner = String(coachEmail).toLowerCase();
+  capture(
+    'entries',
+    { competition, teamName, coachEmail: owner, isSubmitted: false, paymentStatus: 'pending' },
+    (row) => row.teamName === teamName && row.competition?.place === competition.place
+  );
+};
+
+/**
+ * Record one athlete's place in a squad: which group, which apparatus.
+ *
+ * This is the row that decides what a judge sees. A team can be entered in a
+ * competition and still show up as "no eligible players" on every panel,
+ * because eligibility is this — gender, age group and apparatus — not team
+ * membership.
+ *
+ * @param {string} playerEmail
+ * @param {string} teamName
+ * @param {{name: string, place: string, year: number}} competition
+ * @param {{gender: string, ageGroup: string, apparatus: string}} place
+ */
+export const captureSquad = (playerEmail, teamName, competition, place) => {
+  const player = String(playerEmail).toLowerCase();
+  capture(
+    'squads',
+    { competition, teamName, playerEmail: player, ...place },
+    (row) => row.playerEmail === player && row.competition?.place === competition.place
+  );
+};
+
+/**
+ * Record a player joining a team, by team NAME.
+ *
+ * Deliberately not the request body. Every other capture in this file is the
+ * literal payload the form sent, because that is the only honest description of
+ * what the app does — but POST /players/team/join sends `{ teamId }`, and an
+ * ObjectId means nothing in the fresh database the seeder writes to. Replaying
+ * it would point players at a team that does not exist there, or worse, at
+ * whatever now holds that id. The name is the part that survives the trip.
+ *
+ * @param {string} playerEmail
+ * @param {string} teamName - as shown on the selection screen
+ */
+export const captureMembership = (playerEmail, teamName) => {
+  const player = String(playerEmail).toLowerCase();
+  capture('memberships', { playerEmail: player, teamName }, (row) => row.playerEmail === player);
 };
 
 /**

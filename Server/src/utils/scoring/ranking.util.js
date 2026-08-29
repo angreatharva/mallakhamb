@@ -8,6 +8,7 @@
  */
 
 const { applyTieBreaker, areTied } = require('./tie-breaker.util');
+const { apparatusKey } = require('../../config/cop-rules');
 
 /**
  * Calculate team rankings with tie-breaker support
@@ -92,6 +93,38 @@ function calculateIndividualRankings(players, competitionType = 'Competition II'
   });
 
   return rankedPlayers;
+}
+
+/**
+ * Individual rankings, one standing PER APPARATUS.
+ *
+ * Pole competes against Pole and Rope against Rope: they are different events
+ * judged on different score sheets (ten combination requirements against
+ * seven), so a single table mixing them ranks people who never competed
+ * against each other. An athlete entered for three apparatus appears in three
+ * standings, each with its own rank.
+ *
+ * Returns one flat list so every existing caller keeps working — the ranks
+ * inside it are per apparatus, and `apparatus` says which standing each row
+ * belongs to.
+ *
+ * @param {Array<Object>} players
+ * @param {string} competitionType
+ * @returns {Array<Object>} players with an apparatus-relative `rank`
+ */
+function calculateIndividualRankingsByApparatus(players, competitionType = 'Competition II') {
+  if (!players || players.length === 0) return [];
+
+  const groups = new Map();
+  for (const player of players) {
+    const key = apparatusKey(player.apparatus);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(player);
+  }
+
+  return [...groups.values()].flatMap(
+    (group) => calculateIndividualRankings(group, competitionType)
+  );
 }
 
 /**
@@ -256,6 +289,7 @@ function calculateRankStatistics(rankedItems) {
 }
 
 module.exports = {
+  calculateIndividualRankingsByApparatus,
   calculateTeamRankings,
   calculateIndividualRankings,
   getTopTeams,

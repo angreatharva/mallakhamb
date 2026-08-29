@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { apiGet, submitAndReadOutcome } from './browser.js';
+import { apiGet, captureMembership, submitAndReadOutcome } from './browser.js';
 
 /**
  * The player onboarding steps, as reusable pieces.
@@ -112,11 +112,20 @@ export const assertProfilePersisted = async (page, player) => {
 
 /**
  * Pick a team from /player/select-team and join it.
+ *
+ * Takes the whole player rather than just a team name so the join can be
+ * recorded for the database seeder — a player row with `team: null` is not the
+ * player the UI run produced, and the seeder has no other way to know which of
+ * the three SGAM squads this one belongs to.
+ *
  * @param {import('@playwright/test').Page} page
- * @param {string|null} teamName - exact name, or null to take the first offered
+ * @param {Object} player - uses `email` and `teamName`; a null `teamName` takes
+ *   the first team offered, which is what the single-player walkthrough does
  * @returns {Promise<string>} the team actually joined
  */
-export const joinTeam = async (page, teamName) => {
+export const joinTeam = async (page, player) => {
+  const { email, teamName = null } = player;
+
   const locateCard = async () => {
     await expect(page.getByRole('heading', { name: 'Select Your Team' })).toBeVisible();
 
@@ -156,6 +165,10 @@ export const joinTeam = async (page, teamName) => {
 
     try {
       await expect(page).toHaveURL(/\/player\/dashboard/, { timeout: 15_000 });
+      // Landing on the dashboard is the confirmation the join stuck, so record
+      // it here rather than off the response — the retry above exists precisely
+      // because a 200 with a faltered redirect is not a finished join.
+      captureMembership(email, joined);
       return joined;
     } catch (error) {
       if (attempt === 3) throw error;

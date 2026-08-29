@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { apiGet, submitAndReadOutcome } from './browser.js';
+import { apiGet, captureTeam, submitAndReadOutcome } from './browser.js';
 
 /**
  * The coach onboarding steps, as reusable pieces.
@@ -107,6 +107,11 @@ export const assertCoachProfilePersisted = async (page, coach) => {
 
 /**
  * Fill in /coach/create-team and submit.
+ *
+ * The request body is captured for the database seeder, the same way
+ * registration is: a coach without a team is half an account, and the seeder
+ * has no other way to learn that SGAM-A belongs to Rajesh.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {Object} coach - uses `teamName` and optional `teamDescription`
  */
@@ -119,11 +124,25 @@ export const createTeam = async (page, coach) => {
     await page.locator('#team-desc').fill(coach.teamDescription);
   }
 
+  const created = page.waitForResponse(
+    (r) => r.url().includes('/coaches/team') && r.request().method() === 'POST',
+    { timeout: 20_000 }
+  );
   await page.getByRole('button', { name: /^create team$/i }).click();
+  const response = await created;
 
   // Creating a team lands back on competition selection, this time with a team
   // to register.
   await expect(page).toHaveURL(/\/coach\/select-competition/, { timeout: 20_000 });
+
+  if (response.ok()) {
+    try {
+      captureTeam(coach.email, JSON.parse(response.request().postData() || '{}'));
+    } catch (error) {
+      // The team exists either way; a failed capture must not fail the run.
+      console.warn(`Could not capture ${coach.teamName}: ${error.message}`);
+    }
+  }
 
   // Returned so a bulk run can assert the team it asked for is the team it got,
   // the way joinTeam does for players.

@@ -66,7 +66,7 @@ test.describe('roster seeding', () => {
           `${player.email} is already registered and on a team`
         );
 
-        const repaired = await joinTeam(page, player.teamName);
+        const repaired = await joinTeam(page, player);
         expect(repaired).toBe(player.teamName);
         console.log(`${player.email} → ${repaired} (existing account, team was missing)`);
 
@@ -79,7 +79,7 @@ test.describe('roster seeding', () => {
       // Registration signs them in, so the profile is readable straight away.
       await assertProfilePersisted(page, player);
 
-      const joined = await joinTeam(page, player.teamName);
+      const joined = await joinTeam(page, player);
       expect(joined).toBe(player.teamName);
 
       await expect(page.getByText(player.firstName, { exact: false }).first())

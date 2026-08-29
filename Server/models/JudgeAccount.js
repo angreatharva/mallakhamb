@@ -120,6 +120,19 @@ const judgeAccountSchema = new mongoose.Schema({
     default: null
   }
 }, {
+  /**
+   * Named explicitly, because the default pluralisation of the model name
+   * ('judgeaccounts') buried the people under an implementation detail. A judge
+   * IS a person; `judges` is where you would look for one. The panel-slot model
+   * that used to hold this name now says what it actually is, in
+   * models/Judge.js — `judgeassignments`.
+   *
+   * Changing this moves where documents are read and written. Anything already
+   * sitting in a `judgeaccounts` collection has to be renamed across with it
+   * (`db.judgeaccounts.renameCollection('judges')`) or it silently disappears
+   * from the app.
+   */
+  collection: 'judges',
   timestamps: true,
   toJSON: {
     // Defence in depth: strip credentials from any document that is serialised

@@ -249,10 +249,17 @@ function createAdminController(container) {
       res.json({ success: true, data: judge, message: 'Judge updated successfully' });
     }),
 
-    /** @route DELETE /api/admin/judges/:judgeId */
+    /**
+     * @route DELETE /api/admin/judges/:judgeId
+     * @desc  Remove whoever is in a panel seat, leaving the seat itself.
+     *
+     * The second argument is the ADMIN doing it — it was `req.competitionId`,
+     * so every "Judge deleted" line in the log named a competition where it
+     * claimed to name a person.
+     */
     deleteJudge: asyncHandler(async (req, res) => {
-      await adminService.deleteJudge(req.params.judgeId, req.competitionId);
-      res.json({ success: true, message: 'Judge deleted successfully' });
+      await adminService.deleteJudge(req.params.judgeId, req.user._id);
+      res.json({ success: true, message: 'Judge removed from the panel' });
     }),
 
     /**

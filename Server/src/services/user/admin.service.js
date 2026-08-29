@@ -1107,15 +1107,30 @@ class AdminService extends UserService {
           if (!pid) continue;
           const key = `${teamKey}:${pid}`;
 
-          // Resolve display final: stored value, else averageMarks, else recompute from slips
+          /*
+           * Resolve the final to display: the stored value, else the average
+           * less the Scorer's deductions, else the same thing recomputed from
+           * the slips.
+           *
+           * The deductions belong in every one of those branches. The time
+           * penalty is read off a stopwatch and a Senior Judge's late ruling
+           * has no field on a slip, so neither can be recovered from
+           * judgeScores — falling back to a bare average hands back a mark the
+           * athlete did not earn.
+           */
+          const afterDeductions = (average) => Math.max(
+            0,
+            average - (Number(ps.deduction) || 0) - (Number(ps.otherDeduction) || 0)
+          );
+
           let resolvedFinal = typeof ps.finalScore === 'number' ? ps.finalScore : null;
           if ((resolvedFinal == null || resolvedFinal === 0) && ps.averageMarks > 0) {
-            resolvedFinal = ps.averageMarks;
+            resolvedFinal = afterDeductions(ps.averageMarks);
           }
           if ((resolvedFinal == null || resolvedFinal === 0) && ps.judgeScores) {
             const recomputed = calculateIndividualScore(ps.judgeScores, ps.panelSize);
             if (recomputed.averageMarks > 0) {
-              resolvedFinal = recomputed.averageMarks;
+              resolvedFinal = afterDeductions(recomputed.averageMarks);
               // Repair stale 0.00 finals left by the old 3-judge Senior+J1+J2 bug
               if (ps.isFinalized) {
                 ps.finalScore = resolvedFinal;
@@ -1606,7 +1621,26 @@ class AdminService extends UserService {
    */
   async getJudges(competitionId, filters = {}) {
     try {
-      const query = { competition: competitionId };
+      /*
+       * Live seats only.
+       *
+       * `isActive` is set exactly when a registered judge fills the slot, and
+       * cleared when one is removed — so this is the difference between a seat
+       * and a seat that used to exist. Without it, removing Judge 4 from a
+       * 5-seat panel changed nothing that mattered: `deleteJudge` is a soft
+       * delete, it leaves `judgeAccount` pointing at the person, and the row
+       * kept coming back here with a name on it. The judge screens count the
+       * named rows to decide the panel size (Web/src/pages/judge/
+       * useJudgePanelData.js), so the shrunk panel went on scoring by the
+       * 5-judge method — a believable number produced the wrong way, which is
+       * the worst shape a scoring bug can take.
+       *
+       * Slots that never had anybody in them are excluded too, and that is
+       * harmless: the admin's Judge List pads all six seats back in
+       * (`padJudgeSlots`), so an empty slot is drawn from the layout rather
+       * than from a document.
+       */
+      const query = { competition: competitionId, isActive: true };
       if (filters.gender) query.gender = filters.gender;
       if (filters.ageGroup) query.ageGroup = filters.ageGroup;
       if (filters.competitionTypes) {
@@ -1615,7 +1649,19 @@ class AdminService extends UserService {
           : [filters.competitionTypes];
         query.competitionTypes = { $in: types };
       }
-      if (filters.apparatus) query.apparatus = filters.apparatus;
+      /*
+       * A seat with no apparatus judges every apparatus in its category.
+       *
+       * This used to be an exact match, which made a category-wide panel
+       * invisible the moment a judge picked an apparatus: the seats say null,
+       * the query asked for 'Rope Mallakhamb', nothing came back, and the
+       * caller inferred the panel size from however many slips happened to
+       * have arrived. A seat that DOES name an apparatus is still matched
+       * exactly, so a per-apparatus panel keeps working alongside.
+       */
+      if (filters.apparatus) {
+        query.apparatus = { $in: [filters.apparatus, null, ''] };
+      }
 
       // CRIT-2: without a projection this returns every judge's bcrypt hash.
       // Applied here (not in the controller) because /api/admin/judges,
@@ -1697,8 +1743,16 @@ class AdminService extends UserService {
     if (types.length > 0) {
       query.competitionTypes = { $in: types };
     }
+    /*
+     * A seat with no apparatus judges every apparatus in its category, so it
+     * clashes with a new seat whatever apparatus that names. Matching the
+     * apparatus exactly let one person hold two seats as long as the seats
+     * disagreed about apparatus — chief for the whole category, and Judge 1
+     * for Rope — which is the same person's slip counted twice on every Rope
+     * routine.
+     */
     if (apparatus) {
-      query.apparatus = apparatus;
+      query.apparatus = { $in: [apparatus, null, ''] };
     }
 
     const held = await this.judgeRepository.find(query, { select: '_id judgeType' });
@@ -1845,10 +1899,26 @@ class AdminService extends UserService {
         throw new NotFoundError('Judge');
       }
 
+      /*
+       * Removing a judge VACATES THE SEAT rather than deleting the document.
+       *
+       * The slot itself is part of the panel's layout — one document per
+       * (competition, gender, ageGroup, judgeNo), and Judge.js has unique
+       * indexes on exactly that — so the row stays and stops holding anybody.
+       *
+       * `judgeAccount: null` is the part that was missing. Flipping `isActive`
+       * alone left the removed person still pointed at by the seat, so
+       * `assertNotAlreadyOnPanel` went on treating them as seated here and
+       * refused to put them anywhere else on the panel. It also kept the row
+       * countable: see the note on `isActive` in getJudges above.
+       *
+       * `deletedBy` / `deletedAt` are not in the schema and Mongoose drops them
+       * in strict mode, so they were never written — the audit trail for this
+       * is the AuditLog the route already records.
+       */
       const deletedJudge = await this.judgeRepository.updateById(judgeId, {
-        isActive: false,
-        deletedBy: adminId,
-        deletedAt: new Date()
+        judgeAccount: null,
+        isActive: false
       });
 
       this.logger.info('Judge deleted', { judgeId, adminId });

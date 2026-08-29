@@ -11,8 +11,9 @@
  * Calculate individual player score with base score and tolerance
  * Implements the Mallakhamb scoring algorithm per v2 spec:
  * - Panel size determines the entire scoring path (Section 4)
- * - 3-judge: simple average, no Chief Judge, no tolerance/base-score
- * - 4-judge: Sr. Judge=Chief, average all 3 eval judges (no high/low drop)
+ * - 3-judge: simple average of all three totals; no Chief, no tolerance/base-score
+ * - 4-judge: Sr. Judge=Chief AND fills the vacant 4th evaluation slot, then runs
+ *            the 5-judge method (drop high/low, average middle two, tolerance vs Chief)
  * - 5-judge: Standard COP (drop high/low of eval judges, tolerance-check vs Chief)
  *
  * @param {Object} judgeScores - Judge scores object
@@ -99,18 +100,39 @@ function calculateIndividualScore(judgeScores, panelSize) {
   }
 
   let middleScores, avgScore, method;
-  const sortedScores = [...evalScores].sort((a, b) => a - b);
 
   if (is5JudgePanel) {
     // Standard 5-judge COP: drop high/low of 4 eval judges, average middle two
+    const sortedScores = [...evalScores].sort((a, b) => a - b);
     if (sortedScores.length !== 4) {
       return { executionAverage: 0, baseScore: 0, baseScoreApplied: false, toleranceUsed: 0, averageMarks: 0, method: null };
     }
     middleScores = sortedScores.slice(1, 3);
     method = '5_JUDGE_STANDARD_COP';
   } else {
-    // 4-judge panel: average all 3 eval judges (no drop)
-    middleScores = sortedScores;
+    /*
+     * 4-judge panel: the Chief's mark fills the vacant fourth evaluation slot,
+     * and the panel then runs the 5-judge method unchanged — sort four marks,
+     * drop the highest and the lowest, average the middle two.
+     *
+     * This is a deliberate departure from the archived spec
+     * ("Mallakhamb Judging Software v2.md" §4.3, `git show 238ef76:...`), which
+     * called for the mean of all three evaluation judges with no drop, on the
+     * grounds that three marks are not enough to drop from. The rule was
+     * changed on the competition side: a 4-judge panel is to behave exactly
+     * like a 5-judge one, with the Sr. Judge counted twice — once here as the
+     * fourth evaluator, and again below as the Chief the tolerance is measured
+     * against.
+     *
+     * Two consequences worth knowing when reading a result:
+     *   - one genuine evaluation mark is always discarded, because the drop
+     *     removes two of the four and only three of them came from evaluators;
+     *   - when the Chief's mark is neither the highest nor the lowest it sits
+     *     inside the average it is then compared against, which narrows the
+     *     gap the tolerance check sees.
+     */
+    const pool = [...evalScores, seniorJudgeScore].sort((a, b) => a - b);
+    middleScores = pool.slice(1, 3);
     method = '4_JUDGE_AS_5_JUDGE_EQUIVALENT';
   }
 

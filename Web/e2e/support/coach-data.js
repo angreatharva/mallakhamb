@@ -25,7 +25,9 @@ const DEFAULTS = {
   password: 'Yatin@2026',
   teamName: 'AIGM-A',
   teamDescription: 'AIGM TEAM A',
-  competitionName: 'Bhausaheb Ranade Navodit Competition',
+  // The stored name, without the year — the card renders name + year + place,
+  // so including the year here would match it twice over.
+  competitionName: 'Bhausaheb Ranade Navodit',
   competitionPlace: 'Mumbai',
 };
 

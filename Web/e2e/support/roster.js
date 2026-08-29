@@ -49,7 +49,21 @@ import { derive, fullName, onlyMatching, validateRoster } from './people.js';
  * @property {string} dateOfBirth   yyyy-mm-dd
  * @property {'Male'|'Female'} gender
  * @property {string} teamName      exact name, as shown on the selection screen
- * @property {string} [ageGroup]    intended competition group, if known
+ * @property {string} [ageGroup]    the group the coach enters them in
+ * @property {string[]} [apparatus] the apparatus they are entered for
+ *
+ * `ageGroup` used to be documentation only, because registration does not
+ * collect it. `build-squads.spec.js` changed that: the coach picks an age group
+ * and an apparatus for every athlete they add to a competition, so both fields
+ * are now inputs to a real form and every entry needs them. A date of birth
+ * outside the group's band is refused by the dashboard, which is why the ages
+ * are noted beside each line.
+ *
+ * `apparatus` is a LIST, because an athlete can be entered for several and is
+ * judged separately on each. It decides which score sheet they are shown —
+ * Pole and Hanging list ten combination requirements, Rope seven — so it is not
+ * cosmetic. Entries that do not name one fall back to the squad default for
+ * their team and gender (see APPARATUS_DEFAULT).
  */
 
 /** @type {RosterEntry[]} */
@@ -59,18 +73,18 @@ const ENTRIES = [
   // single record of who should be in the system. The seeder skips accounts
   // that already exist, so re-running is safe. No age group was specified for
   // these squads.
-  { firstName: 'Atharva', lastName: 'Angre', gender: 'Male', dateOfBirth: '2002-09-08', phone: '9167449720', teamName: 'SGAM-A' }, // 23
-  { firstName: 'Preetesh', lastName: 'Gamre', gender: 'Male', dateOfBirth: '1999-12-03', phone: '8291584694', teamName: 'SGAM-A' }, // 26
-  { firstName: 'Mayur', lastName: 'Pashte', gender: 'Male', dateOfBirth: '2002-11-28', phone: '9619206753', teamName: 'SGAM-A' }, // 23
+  { firstName: 'Atharva', lastName: 'Angre', gender: 'Male', dateOfBirth: '2002-09-08', phone: '9167449720', teamName: 'SGAM-A', ageGroup: 'Above18' }, // 23
+  { firstName: 'Preetesh', lastName: 'Gamre', gender: 'Male', dateOfBirth: '1999-12-03', phone: '8291584694', teamName: 'SGAM-A', ageGroup: 'Above18' }, // 26
+  { firstName: 'Mayur', lastName: 'Pashte', gender: 'Male', dateOfBirth: '2002-11-28', phone: '9619206753', teamName: 'SGAM-A', ageGroup: 'Above18' }, // 23
 
   // ── SGAM-B ────────────────────────────────────────────────────────────────
-  { firstName: 'Aman', lastName: 'Murchwade', gender: 'Male', dateOfBirth: '2010-03-14', phone: '9823417650', teamName: 'SGAM-B' }, // 16
-  { firstName: 'Dhruv', lastName: 'Posture', gender: 'Male', dateOfBirth: '2011-01-27', phone: '7719604832', teamName: 'SGAM-B' }, // 15
-  { firstName: 'Vighnesh', lastName: 'Dighe', gender: 'Male', dateOfBirth: '2009-05-02', phone: '8806235147', teamName: 'SGAM-B' }, // 17
-  { firstName: 'Arya', lastName: 'Sawant', gender: 'Female', dateOfBirth: '2008-11-19', phone: '9764128503', teamName: 'SGAM-B' }, // 17
-  { firstName: 'Tanvi', lastName: 'Dawane', gender: 'Female', dateOfBirth: '2009-02-08', phone: '8390574126', teamName: 'SGAM-B' }, // 17
-  { firstName: 'Vaishnavi', lastName: 'Patil', gender: 'Female', dateOfBirth: '2007-04-30', phone: '7028461395', teamName: 'SGAM-B' }, // 19
-  { firstName: 'Rajas', lastName: 'Jadhav', gender: 'Female', dateOfBirth: '2010-12-05', phone: '9922307584', teamName: 'SGAM-B' }, // 15
+  { firstName: 'Aman', lastName: 'Murchwade', gender: 'Male', dateOfBirth: '2010-03-14', phone: '9823417650', teamName: 'SGAM-B', ageGroup: 'Under18' }, // 16
+  { firstName: 'Dhruv', lastName: 'Posture', gender: 'Male', dateOfBirth: '2011-01-27', phone: '7719604832', teamName: 'SGAM-B', ageGroup: 'Under18' }, // 15
+  { firstName: 'Vighnesh', lastName: 'Dighe', gender: 'Male', dateOfBirth: '2009-05-02', phone: '8806235147', teamName: 'SGAM-B', ageGroup: 'Under18' }, // 17
+  { firstName: 'Arya', lastName: 'Sawant', gender: 'Female', dateOfBirth: '2008-11-19', phone: '9764128503', teamName: 'SGAM-B', ageGroup: 'Above16', apparatus: ['Rope Mallakhamb'] }, // 17
+  { firstName: 'Tanvi', lastName: 'Dawane', gender: 'Female', dateOfBirth: '2009-02-08', phone: '8390574126', teamName: 'SGAM-B', ageGroup: 'Above16', apparatus: ['Rope Mallakhamb'] }, // 17
+  { firstName: 'Vaishnavi', lastName: 'Patil', gender: 'Female', dateOfBirth: '2007-04-30', phone: '7028461395', teamName: 'SGAM-B', ageGroup: 'Above16', apparatus: ['Rope Mallakhamb'] }, // 19
+  { firstName: 'Rajas', lastName: 'Jadhav', gender: 'Female', dateOfBirth: '2010-12-05', phone: '9922307584', teamName: 'SGAM-B', ageGroup: 'Under16', apparatus: ['Rope Mallakhamb'] }, // 15
 
   // ── SGAM-C ────────────────────────────────────────────────────────────────
   // Six per category, across all ten boy/girl age groups.
@@ -156,8 +170,55 @@ const ENTRIES = [
   { firstName: 'Shreyas', lastName: 'Khot', gender: 'Male', dateOfBirth: '2002-12-14', phone: '7450646584', ageGroup: 'Above18', teamName: 'SGAM-C' }, // 23
 ];
 
-/** @type {(RosterEntry & {email: string, password: string})[]} */
-export const ROSTER = derive(ENTRIES);
+/**
+ * The apparatus an entry gets when it does not name one.
+ *
+ * Pole rather than "none", because a squad place has to be entered for
+ * something before a judge can score it — and Pole is the apparatus every
+ * category in the seeded competitions offers.
+ */
+const ALL_APPARATUS = ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'];
+
+/**
+ * The apparatus an entry gets when it does not name its own.
+ *
+ * SGAM-A is entered for all three, which is what makes it the squad that
+ * exercises one athlete being judged several times over. Everywhere else the
+ * boys are on Pole and the girls on Rope — and the girls could not be on
+ * Hanging in any case, which COP §11 / 1.8.2 excludes from women's events.
+ */
+const APPARATUS_DEFAULT = (entry) => {
+  if (entry.teamName === 'SGAM-A') return ALL_APPARATUS;
+  return entry.gender === 'Female' ? ['Rope Mallakhamb'] : ['Pole Mallakhamb'];
+};
+
+/** @type {(RosterEntry & {email: string, password: string, apparatus: string[]})[]} */
+export const ROSTER = derive(ENTRIES).map((entry) => ({
+  ...entry,
+  apparatus: entry.apparatus || APPARATUS_DEFAULT(entry),
+}));
+
+/*
+ * Every athlete needs an age group before a coach can put them in a squad.
+ *
+ * Cheap to check here, expensive later: the dashboard's age-group dropdown has
+ * no "unspecified" option, so an entry without one stalls `build-squads` on a
+ * modal it cannot complete, forty players into a run.
+ */
+for (const player of ROSTER) {
+  if (player.gender === 'Female' && player.apparatus.includes('Hanging Mallakhamb')) {
+    throw new Error(
+      `${fullName(player)} is entered for Hanging Mallakhamb, which women's events ` +
+      'exclude (COP §11 / 1.8.2). The coach dashboard will not offer it either.'
+    );
+  }
+  if (!player.ageGroup) {
+    throw new Error(
+      `${fullName(player)} (${player.teamName}) has no ageGroup. ` +
+      'build-squads.spec.js needs one for every athlete — see the band table at the top of this file.'
+    );
+  }
+}
 
 // Conventions and the import-time checks live in people.js, shared with the
 // coach and judge rosters — a rule enforced in one place cannot drift between

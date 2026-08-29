@@ -66,10 +66,19 @@ export const submitJudgeRegistration = async (page, judge) => {
  * Judges sign in with their email like every other role; the slot-derived
  * usernames are gone.
  *
+ * THE TIMEOUT IS GENEROUS ON PURPOSE. A login is a bcrypt compare, `bcryptjs`
+ * is pure JavaScript, and Node runs it on the one thread that also serves every
+ * other request — so sign-in is the first thing to suffer when the machine is
+ * busy. Measured on this stack: ~1 s idle, and 25–50 s with four Playwright
+ * workers, a Vite dev server and four headless Chromiums competing for the CPU.
+ * Every one of those slow logins still returned 200. A twenty-second assertion
+ * turned that into twenty red categories that read like an auth bug.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {Object} judge
+ * @param {{timeout?: number}} [options]
  */
-export const judgeSignIn = async (page, judge) => {
+export const judgeSignIn = async (page, judge, { timeout = 90_000 } = {}) => {
   await page.goto('/judge/login');
   await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
@@ -77,18 +86,24 @@ export const judgeSignIn = async (page, judge) => {
   await page.locator('#judge-password').fill(judge.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
 
-  await expect(page).toHaveURL(/\/judge\/dashboard/, { timeout: 20_000 });
+  await expect(page).toHaveURL(/\/judge\/dashboard/, { timeout });
 };
 
 /**
  * Sign in without asserting success, for accounts this run did not create.
+ *
+ * Short timeout, unlike `judgeSignIn`: this one EXPECTS to fail sometimes — it
+ * is how a seeding run finds out that an existing account belongs to somebody
+ * else — and waiting a minute and a half to learn that, once per person, is a
+ * roster run that never finishes.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {Object} judge
  * @returns {Promise<boolean>} whether the credentials worked
  */
 export const tryJudgeSignIn = async (page, judge) => {
   try {
-    await judgeSignIn(page, judge);
+    await judgeSignIn(page, judge, { timeout: 20_000 });
     return true;
   } catch {
     return false;

@@ -236,3 +236,57 @@ describe('updateJudge', () => {
     expect(payload).not.toHaveProperty('password');
   });
 });
+
+describe('deleteJudge', () => {
+  const seated = {
+    _id: 'judge-4',
+    judgeAccount: ACCOUNT,
+    isActive: true,
+    competition: COMPETITION,
+    judgeNo: 5,
+    judgeType: 'Judge 4',
+    ...CATEGORY,
+  };
+
+  /*
+   * Shrinking a panel is not a cosmetic act: the judge screens count the seats
+   * a category reports to decide which averaging method it scores by (3 = flat
+   * mean, 4 = the chief copied into the vacant slot, 5 = drop high/low of the
+   * evaluators). A removal that leaves the seat countable turns a 4-judge panel
+   * into a 5-judge one and produces a believable number by the wrong method.
+   */
+  it('empties the seat rather than only flagging it', async () => {
+    const { service, judgeRepository } = buildService({ existingRows: [seated] });
+
+    await service.deleteJudge('judge-4', 'admin-1');
+
+    const [, payload] = judgeRepository.updateById.mock.calls[0];
+    expect(payload.judgeAccount).toBeNull();
+    expect(payload.isActive).toBe(false);
+  });
+
+  it('frees the person to be seated elsewhere on the same panel', async () => {
+    const { service } = buildService({ existingRows: [seated] });
+
+    await service.deleteJudge('judge-4', 'admin-1');
+
+    // Before the seat was actually emptied, this threw "That judge is already
+    // on this panel as Judge 4" — the removed person went on holding it.
+    await expect(
+      service.assertNotAlreadyOnPanel({
+        judgeAccountId: ACCOUNT,
+        competitionId: COMPETITION,
+        gender: CATEGORY.gender,
+        ageGroup: CATEGORY.ageGroup,
+        competitionTypes: CATEGORY.competitionTypes,
+        apparatus: CATEGORY.apparatus,
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it('refuses a slot that does not exist', async () => {
+    const { service } = buildService();
+
+    await expect(service.deleteJudge('judge-nope', 'admin-1')).rejects.toThrow(NotFoundError);
+  });
+});

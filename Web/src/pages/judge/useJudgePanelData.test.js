@@ -95,6 +95,9 @@ describe('analyzePanelMismatches with server-loaded slips', () => {
   });
 });
 
+// `disagreeingJudges` is the SLIP list: who recorded a different routine from
+// the chief. Who sits outside tolerance is a separate list (toleranceOffJudges)
+// and a separate alert — the two are never merged.
 describe('mismatch attribution against the Senior Judge', () => {
   // Full-detail slip helper: the Senior Judge's slip is the reference.
   const slip = (score, diffTotal, comboTotal, mix = { aClass: 1, bClass: 2, cClass: 3 }) => ({
@@ -116,7 +119,7 @@ describe('mismatch attribution against the Senior Judge', () => {
       'Judge 1': slip(7.95, 3.8, 1.6),   // agrees with SR
       'Judge 2': slip(6.50, 2.4, 1.6),   // differs on difficulty
     }), 3);
-    expect(result.judgesNeedingReview).toEqual(['Judge 2']);
+    expect(result.disagreeingJudges).toEqual(['Judge 2']);
   });
 
   it('never blames the Senior Judge, who is the reference', () => {
@@ -127,8 +130,8 @@ describe('mismatch attribution against the Senior Judge', () => {
       'Judge 1': slip(7.95, 3.8, 1.6),
       'Judge 2': slip(7.95, 3.8, 1.6),
     }), 3);
-    expect(result.judgesNeedingReview).toEqual(['Judge 1', 'Judge 2']);
-    expect(result.judgesNeedingReview).not.toContain('Senior Judge');
+    expect(result.disagreeingJudges).toEqual(['Judge 1', 'Judge 2']);
+    expect(result.disagreeingJudges).not.toContain('Senior Judge');
   });
 
   it('reports nobody when the whole panel matches the Senior Judge', () => {
@@ -137,7 +140,7 @@ describe('mismatch attribution against the Senior Judge', () => {
       'Judge 1': slip(7.95, 3.8, 1.6),
       'Judge 2': slip(7.95, 3.8, 1.6),
     }), 3);
-    expect(result.judgesNeedingReview).toEqual([]);
+    expect(result.disagreeingJudges).toEqual([]);
     expect(result.hasBlockingMismatch).toBe(false);
   });
 
@@ -149,7 +152,7 @@ describe('mismatch attribution against the Senior Judge', () => {
       'Judge 3': slip(5.0, 1.0, 1.6),
       'Judge 1': slip(7.0, 3.0, 1.6),
     }), 4);
-    expect(result.judgesNeedingReview).toEqual(['Judge 1', 'Judge 2', 'Judge 3']);
+    expect(result.disagreeingJudges).toEqual(['Judge 1', 'Judge 2', 'Judge 3']);
     // Totals are reported SR-first, then J1, J2, J3
     expect(result.difficultyValues).toEqual([3.8, 3.0, 2.0, 1.0]);
   });

@@ -36,12 +36,20 @@ import { derive, onlyMatching, validateRoster } from './people.js';
  * "No team named SGAM-A was offered" — so the two rosters are cross-checked at
  * the bottom of roster.js.
  *
+ * Mayur Pashte appears here, on the player roster and on the judge roster, and
+ * that is intentional rather than a collision. Each role is a separate
+ * collection with its own unique index on email, so `mayur.p@gmail.com` is
+ * three independent accounts — the same convention that already gave Yatin
+ * Nachre a coach login and a judge login. Signing in as the wrong one lands you
+ * in the wrong dashboard, not in an error, so check the role portal first when
+ * a login "works but shows nothing".
+ *
  * @type {CoachEntry[]}
  */
 const ENTRIES = [
-  { firstName: 'Yatin', lastName: 'Nachre', phone: '8451888899', teamName: 'SGAM-A', teamDescription: 'SGAM Team A' },
-  { firstName: 'Sagar', lastName: 'Bhoite', phone: '9702118345', teamName: 'SGAM-B', teamDescription: 'SGAM Team B' },
-  { firstName: 'Nilesh', lastName: 'Kamble', phone: '8779236401', teamName: 'SGAM-C', teamDescription: 'SGAM Team C' },
+  { firstName: 'Rajesh', lastName: 'Amrale', phone: '9146708325', teamName: 'SGAM-A', teamDescription: 'SGAM Team A' },
+  { firstName: 'Naresh', lastName: 'Jadhav', phone: '7028915463', teamName: 'SGAM-B', teamDescription: 'SGAM Team B' },
+  { firstName: 'Mayur', lastName: 'Pashte', phone: '8390612774', teamName: 'SGAM-C', teamDescription: 'SGAM Team C' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);

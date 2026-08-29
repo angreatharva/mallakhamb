@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-08-28T18:21:07.964Z",
+  "seed": 1105111944,
+  "place": "Mumbai",
+  "competitionTypes": [
+    "competition_1",
+    "competition_2"
+  ],
+  "seats": {
+    "Senior Judge": "ravi.g@gmail.com",
+    "Judge 1": "vinayak.d@gmail.com",
+    "Judge 2": "yatin.n@gmail.com",
+    "Judge 3": "laxman.s@gmail.com",
+    "Judge 4": "suraj.t@gmail.com",
+    "Scorer": "preetesh.g@gmail.com"
+  },
+  "panels": [
+    {
+      "gender": "Male",
+      "ageGroup": "Under10",
+      "size": 3
+    },
+    {
+      "gender": "Male",
+      "ageGroup": "Under12",
+      "size": 5
+    },
+    {
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "size": 4
+    },
+    {
+      "gender": "Male",
+      "ageGroup": "Under18",
+      "size": 4
+    },
+    {
+      "gender": "Male",
+      "ageGroup": "Above18",
+      "size": 5
+    },
+    {
+      "gender": "Female",
+      "ageGroup": "Under10",
+      "size": 4
+    },
+    {
+      "gender": "Female",
+      "ageGroup": "Under12",
+      "size": 3
+    },
+    {
+      "gender": "Female",
+      "ageGroup": "Under14",
+      "size": 5
+    },
+    {
+      "gender": "Female",
+      "ageGroup": "Under16",
+      "size": 3
+    },
+    {
+      "gender": "Female",
+      "ageGroup": "Above16",
+      "size": 3
+    }
+  ]
+}

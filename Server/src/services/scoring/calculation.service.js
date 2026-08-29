@@ -21,7 +21,7 @@ const {
 } = require('../../utils/scoring/tie-breaker.util');
 const {
   calculateTeamRankings,
-  calculateIndividualRankings,
+  calculateIndividualRankingsByApparatus,
   getTopTeams,
   getTopPlayers
 } = require('../../utils/scoring/ranking.util');
@@ -85,23 +85,40 @@ class CalculationService {
   }
 
   /**
-   * Calculate final score for a player
-   * Per v2 §2 note: All deductions are folded into the judge's Execution score,
-   * so there is NO separate system-level deduction step. The submitted total on
-   * each JudgeSlip is the judge's final say. The system only averages/reconciles.
-   * @param {Object} playerScore - Player score object
-   * @returns {number} Final score (same as averageMarks since no deductions applied)
+   * The final score: the panel's average, less the deductions the Scorer records.
+   *
+   *     finalScore = averageMarks − deduction − otherDeduction
+   *
+   * This used to be `finalScore = averageMarks`, on the reading of COP v2 §2
+   * that every deduction is folded into each judge's execution mark. Two things
+   * are wrong with that in practice, and both cost real marks:
+   *
+   *   - the TIME deduction (§3.5) is derived from the stopwatch, not from any
+   *     judge's slip. Nobody can fold in a penalty for a routine that has not
+   *     finished yet;
+   *   - a Senior Judge's ruling that the slip has no field for — a penalty
+   *     called after the marks are in — reaches the sheet only through the
+   *     Scorer's "other deduction".
+   *
+   * So the Scorer's sheet is the last word, and what it shows is what gets
+   * stored. Before this, the Scorer was shown 8.13 and the database kept 8.633,
+   * and the published ranking used the second one.
+   *
+   * @param {Object} playerScore - with averageMarks, deduction, otherDeduction
+   * @returns {number} Final score, never below zero
    */
   calculateFinalScore(playerScore) {
     try {
-      // Per v2 §2 note: All deductions are folded into the judge's Execution score,
-      // so there is NO separate system-level deduction step.
       const averageMarks = playerScore.averageMarks || 0;
+      const deduction = Number(playerScore.deduction) || 0;
+      const otherDeduction = Number(playerScore.otherDeduction) || 0;
 
-      const finalScore = Math.max(0, averageMarks);
+      const finalScore = Math.max(0, averageMarks - deduction - otherDeduction);
 
-      this.logger.debug('Final score calculated (v2: no post-average deductions)', {
+      this.logger.debug('Final score calculated', {
         averageMarks,
+        deduction,
+        otherDeduction,
         finalScore
       });
 
@@ -424,9 +441,14 @@ class CalculationService {
         // Calculate individual score with tolerance
         const scoreResult = calculateIndividualScore(playerData.judgeScores);
 
-        // v2 §2: All deductions are folded into the judge's Execution score,
-        // so finalScore = averageMarks (no deduction step)
-        const finalScore = Math.max(0, scoreResult.averageMarks);
+        // The Scorer's deductions are part of the final score — see
+        // calculateFinalScore for why the time penalty cannot come off a slip.
+        const finalScore = Math.max(
+          0,
+          scoreResult.averageMarks
+            - (Number(playerData.deduction) || 0)
+            - (Number(playerData.otherDeduction) || 0)
+        );
 
         return {
           ...playerData,
@@ -464,8 +486,10 @@ class CalculationService {
       // Calculate final scores for all players
       const playerScores = this.calculateFinalScores(allScores, options);
 
-      // Calculate individual rankings
-      const rankedPlayers = calculateIndividualRankings(playerScores, competitionType);
+      // Individual rankings, one standing per apparatus — Pole competes
+      // against Pole, Rope against Rope. An athlete entered for several holds
+      // a rank in each.
+      const rankedPlayers = calculateIndividualRankingsByApparatus(playerScores, competitionType);
 
       // Group players by team
       const teamGroups = rankedPlayers.reduce((groups, player) => {
@@ -547,7 +571,9 @@ class CalculationService {
    */
   getIndividualRankingsWithTieBreaker(players, competitionType = 'Competition II') {
     try {
-      const rankedPlayers = calculateIndividualRankings(players, competitionType);
+      // Per apparatus, for the reason given at the other call site: Pole and
+      // Rope are different events and do not share a standing.
+      const rankedPlayers = calculateIndividualRankingsByApparatus(players, competitionType);
 
       this.logger.debug('Individual rankings with tie-breaker calculated', {
         playerCount: rankedPlayers.length,

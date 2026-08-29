@@ -192,6 +192,15 @@ export const ResponsiveScoringTable = ({
     'Judge 4': 'judge4',
   };
 
+  /*
+   * The seated panel decides which rule applies, so it is passed in rather
+   * than inferred from how many marks have been typed. Without it a 5-judge
+   * sheet with three marks entered reads as a 3-judge panel — simple average,
+   * no tolerance — and the numbers on screen change as the fourth and fifth
+   * arrive.
+   */
+  const panelSize = judges.length || undefined;
+
   if (isMobile) {
     return (
       <ResponsiveContainer className={className} {...props}>
@@ -248,7 +257,7 @@ export const ResponsiveScoringTable = ({
                   <span style={{ fontSize: 12, color: textSecondary }}>Average</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {(() => {
-                      const result = calculateAverageMarks(scores[player.id] || {});
+                      const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                       return (
                         <>
                           {result.baseScoreApplied && (
@@ -288,7 +297,7 @@ export const ResponsiveScoringTable = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>Final Score</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{calculateFinalScore(scores[player.id] || {})}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{calculateFinalScore(scores[player.id] || {}, panelSize)}</span>
                 </div>
               </div>
             </div>
@@ -355,12 +364,12 @@ export const ResponsiveScoringTable = ({
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                     <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 600 }}>
                       {(() => {
-                        const result = calculateAverageMarks(scores[player.id] || {});
+                        const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                         return result.average.toFixed(2);
                       })()}
                     </span>
                     {(() => {
-                      const result = calculateAverageMarks(scores[player.id] || {});
+                      const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                       if (result.baseScoreApplied) {
                         return (
                           <span style={{ fontSize: 9, background: `${C.amber}22`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -396,7 +405,7 @@ export const ResponsiveScoringTable = ({
                 </td>
                 <td style={{ padding: '12px 14px' }}>
                   <span style={{ background: `${C.green}18`, color: C.green, borderRadius: 8, padding: '4px 10px', fontSize: 14, fontWeight: 700 }}>
-                    {calculateFinalScore(scores[player.id] || {})}
+                    {calculateFinalScore(scores[player.id] || {}, panelSize)}
                   </span>
                 </td>
               </tr>

@@ -101,15 +101,15 @@ describe('3-Judge Panel Scoring', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. Four-Judge Panel — 5-judge equivalent, no high/low drop (v2 §4.3)
+// 3. Four-Judge Panel — the Chief fills the vacant 4th slot, then 5-judge COP
 // ─────────────────────────────────────────────────────────────────────────────
 describe('4-Judge Panel Scoring (as 5-judge equivalent)', () => {
-  test('averages all 3 eval judges (no drop), applies tolerance vs Sr. Judge', () => {
-    // Sr. Judge (Chief role) = 8.50, J2=8.00, J3=8.20, J4=8.40
-    // Eval scores (all 3, no drop): avg = (8.00 + 8.20 + 8.40) / 3 = 8.20
-    // Tolerance for 8.20 (in [8.00, 9.00)) = 0.20
-    // |8.50 - 8.20| = 0.30 > 0.20 → tolerance EXCEEDED
-    // baseScore = (8.20 + 8.50) / 2 = 8.35
+  test('copies the Sr. Judge into the 4th slot, drops high/low, averages the middle two', () => {
+    // Sr. Judge (Chief) = 8.50, J1=8.00, J2=8.20, J3=8.40
+    // Pool with the Chief as the 4th evaluator: [8.00, 8.20, 8.40, 8.50]
+    // Drop 8.00 and 8.50 → middle two = 8.20, 8.40 → avg = 8.30
+    // Tolerance for 8.30 (in [8.00, 9.00)) = 0.20
+    // |8.50 - 8.30| = 0.20, which is NOT greater than 0.20 → within tolerance
     const result = calculateIndividualScore({
       seniorJudge: 8.50,
       judge1: 8.00,
@@ -119,16 +119,31 @@ describe('4-Judge Panel Scoring (as 5-judge equivalent)', () => {
     }, 4);
 
     expect(result.method).toBe('4_JUDGE_AS_5_JUDGE_EQUIVALENT');
-    expect(result.executionAverage).toBeCloseTo(8.20, 2);
+    expect(result.executionAverage).toBeCloseTo(8.30, 2);
+    expect(result.baseScoreApplied).toBe(false);
+    expect(result.averageMarks).toBeCloseTo(8.30, 2);
+  });
+
+  test('a Chief far from the panel is dropped from the pool and still breaches tolerance', () => {
+    // Sr. Judge = 9.40, J1=8.00, J2=8.40, J3=8.60
+    // Pool: [8.00, 8.40, 8.60, 9.40] → drop 8.00 and 9.40 → (8.40 + 8.60) / 2 = 8.50
+    // |9.40 - 8.50| = 0.90 > 0.20 → base = (8.50 + 9.40) / 2 = 8.95
+    const result = calculateIndividualScore({
+      seniorJudge: 9.40,
+      judge1: 8.00,
+      judge2: 8.40,
+      judge3: 8.60,
+      judge4: 0
+    }, 4);
+
+    expect(result.executionAverage).toBeCloseTo(8.50, 2);
     expect(result.baseScoreApplied).toBe(true);
-    expect(result.baseScore).toBeCloseTo(8.35, 2);
+    expect(result.baseScore).toBeCloseTo(8.95, 2);
   });
 
   test('within tolerance: no base score applied', () => {
-    // Sr. Judge = 8.10, J2=8.00, J3=8.10, J4=8.20
-    // Eval avg = (8.00 + 8.10 + 8.20) / 3 = 8.10
-    // Tolerance for 8.10 = 0.20
-    // |8.10 - 8.10| = 0.00 ≤ 0.20 → within tolerance
+    // Sr. Judge = 8.10, J1=8.00, J2=8.10, J3=8.20
+    // Pool: [8.00, 8.10, 8.10, 8.20] → drop 8.00 and 8.20 → (8.10 + 8.10) / 2 = 8.10
     const result = calculateIndividualScore({
       seniorJudge: 8.10,
       judge1: 8.00,
@@ -140,6 +155,21 @@ describe('4-Judge Panel Scoring (as 5-judge equivalent)', () => {
     expect(result.method).toBe('4_JUDGE_AS_5_JUDGE_EQUIVALENT');
     expect(result.baseScoreApplied).toBe(false);
     expect(result.averageMarks).toBeCloseTo(8.10, 2);
+  });
+
+  test('matches the 5-judge branch exactly when the Chief is duplicated by hand', () => {
+    // The rule in one assertion: a 4-judge panel IS the 5-judge panel whose
+    // fourth evaluator happens to hold the Chief's mark.
+    const asFour = calculateIndividualScore(
+      { seniorJudge: 8.50, judge1: 8.00, judge2: 8.20, judge3: 8.40, judge4: 0 }, 4
+    );
+    const asFive = calculateIndividualScore(
+      { seniorJudge: 8.50, judge1: 8.00, judge2: 8.20, judge3: 8.40, judge4: 8.50 }, 5
+    );
+
+    expect(asFour.executionAverage).toBeCloseTo(asFive.executionAverage, 3);
+    expect(asFour.averageMarks).toBeCloseTo(asFive.averageMarks, 3);
+    expect(asFour.baseScoreApplied).toBe(asFive.baseScoreApplied);
   });
 });
 

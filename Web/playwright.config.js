@@ -31,7 +31,14 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    /*
+     * Video OFF by default. `retain-on-failure` does not mean "record on
+     * failure" — it records every test and throws the passes away, so a
+     * two-hour seeding run pays for encoding it will never watch. The failure
+     * screenshot and the error-context snapshot next to it have been enough
+     * every time; set E2E_VIDEO=1 for the run where they are not.
+     */
+    video: process.env.E2E_VIDEO ? 'retain-on-failure' : 'off',
     actionTimeout: 15_000,
   },
 

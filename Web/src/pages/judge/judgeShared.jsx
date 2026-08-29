@@ -68,16 +68,24 @@ export const J = {
 export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 // ─── Mismatch Modal ───────────────────────────────────────────────────────────
-export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, effectivePanelSize, judgeNameMap }) => {
+//
+// Difficulty and Combination only. A tolerance breach is a different failure —
+// the panel agrees on the routine and disagrees on how well it was done — and
+// gets its own dialog below, so a judge is never shown one alert that mixes
+// "you recorded a different element mix" with "your execution mark is an
+// outlier".
+export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap }) => {
   if (!isOpen) return null;
-  const amber = '#F59E0B';
   const red = '#EF4444';
   // Always list judges as Senior Judge, Judge 1, Judge 2, … regardless of the
   // order their slips happened to arrive in.
   const orderedEntries = PANEL_TYPES
     .filter((jt) => panelScores?.[jt])
     .map((jt) => [jt, panelScores[jt]]);
-  const offJudges = panelMismatch.judgesNeedingReview || [];
+  // Highlighted as "off": the judges whose SLIP differs from the chief's. A
+  // judge who only sits outside tolerance recorded the same routine and does
+  // not belong in this dialog — they are named in the tolerance one.
+  const offJudges = panelMismatch.disagreeingJudges || [];
   const seniorEntry = panelScores?.['Senior Judge'];
   const myEntry = myJudgeType ? panelScores?.[myJudgeType] : null;
   const myMismatch = myJudgeType ? panelMismatch.judgeMismatchDetails?.[myJudgeType] : null;
@@ -228,26 +236,6 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                 </div>
               )}
 
-              {panelMismatch.toleranceMismatch && effectivePanelSize >= 4 && panelMismatch.toleranceInfo && (
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.3)' }}
-                >
-                  <p className="text-sm font-bold text-white mb-1" style={{ color: amber }}>⚠️ Tolerance Level Exceeded</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    |Exec avg {panelMismatch.toleranceInfo.executionAvg?.toFixed(2)} − Senior {panelMismatch.toleranceInfo.seniorScore?.toFixed(2)}|
-                    {' '}= {panelMismatch.toleranceInfo.difference?.toFixed(2)} exceeds ±{panelMismatch.toleranceInfo.tolerance?.toFixed(2)}.
-                    Base score {panelMismatch.toleranceInfo.baseScore?.toFixed(2)} will be applied.
-                  </p>
-                  {!isSeniorJudge && myJudgeType !== 'Senior Judge' && (
-                    <p className="text-xs mt-2 font-semibold" style={{ color: amber }}>
-                      Your score ({Number(panelScores[myJudgeType]?.score || 0).toFixed(2)}) may be contributing to this gap.
-                      Please verify your execution mark.
-                    </p>
-                  )}
-                </div>
-              )}
-
               {!isSeniorJudge && (
                 <div
                   className="rounded-xl border p-3 text-xs"
@@ -264,6 +252,172 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                 onClick={onClose}
                 className="w-full py-3 rounded-xl font-bold text-sm text-white"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
+                whileHover={{ filter: 'brightness(1.1)' }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Understood — Dismiss
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ─── Tolerance Modal ──────────────────────────────────────────────────────────
+//
+// COP §3.4: the execution average and the Senior Judge's mark must agree to
+// within the tolerance for that score band. When they do not, the panel is not
+// finished — this dialog says so, and Final Submit stays locked until the gap
+// closes (see JudgePanelReview.finalizePanelScore).
+//
+// Deliberately shaped like MismatchModal so the two read as the same kind of
+// alert, and coloured amber rather than red so a judge can tell which one they
+// are looking at without reading the heading.
+export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap }) => {
+  if (!isOpen) return null;
+  const amber = '#F59E0B';
+  const info = panelMismatch?.toleranceInfo || {};
+  const num = (v) => Number(v ?? 0).toFixed(2);
+  const orderedEntries = PANEL_TYPES
+    .filter((jt) => panelScores?.[jt])
+    .map((jt) => [jt, panelScores[jt]]);
+  // The judges whose own total differs from the Senior Judge's — the marks
+  // that could be moving the execution average away from the chief's.
+  const offJudges = panelMismatch?.toleranceOffJudges || [];
+  const myScore = myJudgeType ? panelScores?.[myJudgeType]?.score : null;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="w-full max-w-lg rounded-2xl border overflow-hidden"
+            style={{ background: '#0E0E0E', borderColor: 'rgba(245,158,11,0.45)' }}
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ background: 'rgba(245,158,11,0.10)', borderColor: 'rgba(245,158,11,0.25)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)' }}
+                >
+                  <AlertTriangle className="w-5 h-5" style={{ color: amber }} />
+                </div>
+                <div>
+                  <p className="text-white font-black text-base">Tolerance Limit Exceeded</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.4)' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-3 max-h-[65vh] overflow-y-auto">
+              <div
+                className="rounded-xl border p-4"
+                style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.3)' }}
+              >
+                <p className="text-sm font-bold mb-1" style={{ color: amber }}>⚠️ Execution average is outside tolerance</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  |Exec avg {num(info.executionAvg)} − Senior {num(info.seniorScore)}| = {num(info.difference)},
+                  {' '}which exceeds the ±{num(info.tolerance)} allowed at this score (COP §3.4).
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: 'rgba(34,197,94,0.15)', color: J.green }}>
+                    SR (reference): {num(info.seniorScore)}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: 'rgba(245,158,11,0.18)', color: amber }}>
+                    Execution average: {num(info.executionAvg)}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}>
+                    Allowed gap: ±{num(info.tolerance)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Who is off the chief's mark. Senior-only, like every other
+                  cross-panel figure on this screen. */}
+              {isSeniorJudge && orderedEntries.length > 0 && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    Panel totals
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {orderedEntries.map(([jt, data]) => (
+                      <span
+                        key={jt}
+                        className="text-xs px-2 py-1 rounded-lg"
+                        style={offJudges.includes(jt)
+                          ? { background: 'rgba(245,158,11,0.18)', color: amber }
+                          : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
+                      >
+                        {jt === 'Senior Judge' ? 'SR' : jt.replace('Judge ', 'J')}
+                        {judgeNameMap?.[jt] ? ` · ${judgeNameMap[jt]}` : ''}: {Number(data.score).toFixed(2)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!isSeniorJudge && myJudgeType !== 'Senior Judge' && myScore != null && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }}
+                >
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    Your total ({Number(myScore).toFixed(2)}) may be contributing to this gap.
+                    Re-check your execution mark against the routine you saw.
+                  </p>
+                </div>
+              )}
+
+              <div
+                className="rounded-xl border p-3 text-xs"
+                style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+              >
+                {isSeniorJudge
+                  ? `Final Submit stays locked until the gap is within tolerance. Adjust a judge's slip with the pencil on their card, or have them resubmit. Left unresolved, COP §3.4 would score this on the base score ${num(info.baseScore)} — (execution average + Senior) ÷ 2.`
+                  : `Final Submit is locked for the Senior Judge until this is resolved. Re-check your marks, or contact the Senior Judge.`}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <motion.button
+                onClick={onClose}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white"
+                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}
                 whileHover={{ filter: 'brightness(1.1)' }}
                 whileTap={{ scale: 0.97 }}
               >
@@ -533,7 +687,16 @@ MismatchModal.propTypes = {
   panelScores: panelScoresShape,
   isSeniorJudge: PropTypes.bool,
   myJudgeType: PropTypes.string,
-  effectivePanelSize: PropTypes.number,
+  judgeNameMap: PropTypes.objectOf(PropTypes.string),
+};
+
+ToleranceModal.propTypes = {
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func.isRequired,
+  panelMismatch: PropTypes.object,
+  panelScores: panelScoresShape,
+  isSeniorJudge: PropTypes.bool,
+  myJudgeType: PropTypes.string,
   judgeNameMap: PropTypes.objectOf(PropTypes.string),
 };
 

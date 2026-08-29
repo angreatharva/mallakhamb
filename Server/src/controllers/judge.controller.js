@@ -132,6 +132,9 @@ function createJudgeController(container) {
       const result = await judgeService.getTeamPlayers(req.user._id, req.params.teamId, {
         gender: req.query.gender,
         ageGroup: req.query.ageGroup,
+        // Without this the answer mixes both competition types; see the note in
+        // judge.service.getTeamPlayers.
+        competitionType: req.query.competitionType,
       });
       res.json({ success: true, data: result });
     }),

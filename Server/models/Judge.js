@@ -68,6 +68,21 @@ const judgeSchema = new mongoose.Schema({
     default: false // True once a registered judge fills the slot
   }
 }, {
+  /**
+   * `judgeassignments`, not the default `judges`.
+   *
+   * The header above is not a disclaimer — this really is one document per
+   * panel SEAT, and the person filling it lives in models/JudgeAccount.js.
+   * Leaving this collection called `judges` meant the obvious name pointed at
+   * the rows that are not people, and anyone opening the database looking for a
+   * judge found empty slots. `judges` now holds the accounts.
+   *
+   * Renaming a collection does not migrate it: an existing `judges` collection
+   * of assignments must be renamed across
+   * (`db.judges.renameCollection('judgeassignments')`) BEFORE the accounts move
+   * in, or the two end up interleaved in one collection.
+   */
+  collection: 'judgeassignments',
   timestamps: true
 });
 

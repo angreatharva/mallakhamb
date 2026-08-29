@@ -17,6 +17,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { phone } = require('../validators/common.validator');
+const { APPARATUS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
@@ -66,7 +67,27 @@ function createCoachRoutes(container) {
     body('gender')
       .isIn(['Male', 'Female'])
       .withMessage('Gender must be either Male or Female'),
-    body('apparatus').optional().isString()
+    /*
+     * A LIST of apparatus, because an athlete can be entered for several and
+     * is judged separately on each. A bare string is still accepted: it is
+     * what every squad place written before multi-apparatus entry holds, and
+     * what the field itself stores on those rows.
+     *
+     * The names are checked rather than left free-form — the value decides
+     * which score sheet a judge is shown, and a typo would silently fall back
+     * to the Pole checklist rather than fail.
+     */
+    body('apparatus')
+      .optional()
+      .customSanitizer((value) => {
+        if (typeof value === 'string') return value.trim() ? [value.trim()] : [];
+        return value;
+      })
+      .isArray()
+      .withMessage('Apparatus must be a list')
+      .bail()
+      .custom((list) => list.every((a) => APPARATUS.includes(a)))
+      .withMessage(`Each apparatus must be one of: ${APPARATUS.join(', ')}`)
   ];
 
   /**

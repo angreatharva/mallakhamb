@@ -93,6 +93,30 @@ function getTimeDeduction(overageSeconds) {
 
 // §5.1–5.3 — per-apparatus combination checklists. Penalties sum to 1.60.
 // A failed (unchecked) item deducts its penalty from the 1.60 allocation.
+/**
+ * The three apparatus a Mallakhamb competition is judged on (COP §5).
+ *
+ * The keys of COMBINATION_CHECKLISTS below, named once so that a squad
+ * registration, a Score document and a judge slip cannot drift apart on the
+ * spelling — the value decides which checklist a judge is shown.
+ */
+const APPARATUS = Object.freeze(['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb']);
+
+/**
+ * The apparatus a score belongs to, as a comparable key.
+ *
+ * `Score.playerScores[].apparatus` defaults to Pole, so a row written before a
+ * competition used apparatus at all and a row explicitly marked Pole are the
+ * same squad place and must compare equal — otherwise saving a Pole slip
+ * against an older row appends a duplicate instead of updating it.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function apparatusKey(value) {
+  return normalizeApparatus(value) || 'Pole Mallakhamb';
+}
+
 const COMBINATION_CHECKLISTS = Object.freeze({
   'Pole Mallakhamb': Object.freeze([
     { id: 1, rule: 'All parts of pole utilized', penalty: 0.10 },
@@ -337,6 +361,8 @@ function getCopRulesData() {
 
 module.exports = {
   COP_EDITION,
+  APPARATUS,
+  apparatusKey,
   POINT_CEILINGS,
   ELEMENT_CLASS_VALUES,
   DIFFICULTY_REQUIREMENTS,

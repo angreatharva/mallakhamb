@@ -9,13 +9,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
-import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
+import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle, ListOrdered } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createAdminAPI } from '@/services/user/admin.api';
 
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
-import { getTimeDeduction } from '@/utils/scoring/copRules';
+import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
+import { apparatusFor, apparatusKey, apparatusToJudge } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
@@ -150,9 +151,17 @@ const ScorerScoring = () => {
 
       const existingScores = { ...initialScores };
       teamData.scores.forEach(ps => {
-        let targetId = currentPlayers.find(p => p.id === ps.playerId || p.id === ps.playerId?.toString())?.id;
+        // Matched on athlete AND apparatus — a stored row belongs to exactly
+        // one of this sheet's rows, and matching on the athlete alone would
+        // pour a Rope result into the Pole row.
+        const wanted = apparatusKey(ps.apparatus);
+        let targetId = currentPlayers.find(
+          p => String(p.playerId) === String(ps.playerId) && apparatusKey(p.apparatus) === wanted
+        )?.id;
         if (!targetId) {
-          targetId = currentPlayers.find(p => p.name === ps.playerName)?.id;
+          targetId = currentPlayers.find(
+            p => p.name === ps.playerName && apparatusKey(p.apparatus) === wanted
+          )?.id;
         }
 
         if (targetId && existingScores[targetId]) {
@@ -214,16 +223,38 @@ const ScorerScoring = () => {
         setCompetitionType(match ? match[1] : 'Competition I');
       }
 
+      /*
+       * One ROW PER APPARATUS, not per athlete.
+       *
+       * Somebody entered for Pole, Hanging and Rope performs three times and
+       * earns three separate scores, each with its own time and its own
+       * deductions. A single row per athlete could only ever hold one of them,
+       * and whichever was typed last would be the one that reached the
+       * database.
+       *
+       * `id` is therefore the row's identity — athlete AND apparatus — and the
+       * athlete's own id is kept alongside it for the payload.
+       */
+      const competitionTypeSlug = selectedCompetitionType?.value;
       const teamPlayers = (selectedTeam.players || [])
         .filter(pe => pe.player.gender === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
-        .map(pe => ({
-          id: pe.player._id,
-          name: `${pe.player.firstName} ${pe.player.lastName}`,
-          gender: pe.player.gender,
-          ageGroup: pe.ageGroup,
-          teamId: selectedTeam._id,
-          teamName: selectedTeam.name
-        }));
+        .flatMap(pe => {
+          const entered = apparatusFor(pe, competitionTypeSlug);
+          // An athlete with no apparatus recorded still gets one row, judged on
+          // whatever the slip falls back to.
+          const list = entered.length > 0 ? entered : [apparatusToJudge(null, pe, competitionTypeSlug)];
+          return list.map(apparatus => ({
+            id: `${pe.player._id}::${apparatusKey(apparatus)}`,
+            playerId: pe.player._id,
+            apparatus,
+            name: `${pe.player.firstName} ${pe.player.lastName}`,
+            // Shown in the table so two rows for one athlete are tellable apart.
+            teamName: list.length > 1 ? `${selectedTeam.name} · ${apparatus}` : selectedTeam.name,
+            gender: pe.player.gender,
+            ageGroup: pe.ageGroup,
+            teamId: selectedTeam._id,
+          }));
+        });
       setPlayers(teamPlayers);
 
       const initialScores = {};
@@ -293,8 +324,10 @@ const ScorerScoring = () => {
     if (!socket) return;
     const handleScoreUpdate = (data) => {
       if (isLocked) return;
-      const playerExists = players.some(p => p.id === data.playerId);
-      if (!playerExists) return;
+      // The slip broadcasts the athlete and the apparatus it was scored on;
+      // the row it belongs to is the pair.
+      const rowId = `${data.playerId}::${apparatusKey(data.apparatus)}`;
+      if (!players.some(p => p.id === rowId)) return;
 
       const fieldMap = {
         'Senior Judge': 'seniorJudge',
@@ -306,14 +339,8 @@ const ScorerScoring = () => {
       const fieldName = fieldMap[data.judgeType] || (data.judgeNo ? `judge${data.judgeNo}` : 'seniorJudge');
 
       setScores(prev => {
-        const player = prev[data.playerId] || {};
-        return {
-          ...prev,
-          [data.playerId]: {
-            ...player,
-            [fieldName]: data.score.toString()
-          }
-        };
+        const row = prev[rowId] || {};
+        return { ...prev, [rowId]: { ...row, [fieldName]: data.score.toString() } };
       });
       setLastUpdated(new Date());
     };
@@ -330,38 +357,18 @@ const ScorerScoring = () => {
     };
   }, [socket, players, isLocked, fetchScoringData]);
 
-  const calculateAverageMarks = (playerScores) => {
-    const executionScores = [parseFloat(playerScores.judge1) || 0, parseFloat(playerScores.judge2) || 0, parseFloat(playerScores.judge3) || 0, parseFloat(playerScores.judge4) || 0].filter(s => s > 0);
-    if (executionScores.length === 0) return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0 };
-    let executionAverage = 0;
-    if (executionScores.length <= 2) executionAverage = executionScores.reduce((s, v) => s + v, 0) / executionScores.length;
-    else if (executionScores.length === 3) executionAverage = [...executionScores].sort((a, b) => a - b)[1];
-    else {
-      const sorted = [...executionScores].sort((a, b) => a - b);
-      const trimmed = sorted.slice(1, -1);
-      executionAverage = trimmed.reduce((s, v) => s + v, 0) / trimmed.length;
-    }
-    const seniorJudge = parseFloat(playerScores.seniorJudge) || 0;
-    if (seniorJudge === 0) return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance: getTolerance(executionAverage) };
-    const tolerance = getTolerance(executionAverage);
-    if (Math.abs(executionAverage - seniorJudge) <= tolerance) {
-      return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance };
-    }
-    const baseScore = (executionAverage + seniorJudge) / 2;
-    return { average: parseFloat(baseScore.toFixed(2)), baseScoreApplied: true, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: parseFloat(baseScore.toFixed(2)), tolerance };
-  };
-
-  const getTolerance = (score) => {
-    if (score >= 9) return 0.10;
-    if (score >= 8) return 0.20;
-    if (score >= 7) return 0.30;
-    if (score >= 6) return 0.40;
-    if (score >= 5) return 0.50;
-    return 1.00;
-  };
+  /*
+   * Panel averaging comes from copRules, the same module the judges' own pages
+   * and the score table use. This file used to carry a private copy that took
+   * the MEDIAN of three execution marks where copRules took the mean, so a
+   * 4-judge panel produced one number in the table on this screen and a
+   * different one in the payload this screen posted. The panel-size rules live
+   * in one place now; see calculateAverageMarks there.
+   */
+  const panelAverage = (playerScores) => calculateAverageMarks(playerScores, judges.length || undefined);
 
   const calculateFinalScore = (ps) => {
-    const r = calculateAverageMarks(ps);
+    const r = panelAverage(ps);
     return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);
   };
 
@@ -468,10 +475,11 @@ const ScorerScoring = () => {
         remarks,
         isLocked: shouldLock,
         playerScores: players.map(p => {
-          const r = calculateAverageMarks(scores[p.id]);
+          const r = panelAverage(scores[p.id]);
           return {
-            playerId: p.id,
+            playerId: p.playerId,
             playerName: p.name,
+            apparatus: p.apparatus,
             time: scores[p.id].time,
             judgeScores: {
               seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0,
@@ -585,10 +593,37 @@ const ScorerScoring = () => {
               {isLocked && <Lock className="w-4 h-4" style={{ color: ADMIN_COLORS.red }} />}
             </div>
           </div>
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
-            {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
-          </span>
+          <div className="flex items-center gap-3">
+            {/*
+              * The Scorer sets the running order as well as recording the
+              * marks — they are the person watching the floor, and the order
+              * changes there (a withdrawal, an athlete not ready) long after
+              * the lots were drawn. The server allows it (SEQUENCE_JUDGE_TYPES
+              * is Senior Judge and Scorer); until now the only way in was the
+              * dashboard, which meant leaving a half-filled sheet to reach it.
+              *
+              * /judge/sequence reads the category from the same sessionStorage
+              * keys the dashboard wrote on the way here.
+              */}
+            <motion.button
+              onClick={() => navigate('/judge/sequence')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold min-h-[36px] transition-colors"
+              style={{
+                borderColor: `${ADMIN_COLORS.purple}40`,
+                color: ADMIN_COLORS.purpleLight,
+                background: `${ADMIN_COLORS.purple}12`,
+              }}
+              whileHover={{ background: `${ADMIN_COLORS.purple}25` }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Set Sequence</span>
+            </motion.button>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+              {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
+            </span>
+          </div>
         </div>
       </motion.header>
 
@@ -680,17 +715,25 @@ const ScorerScoring = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {[{ label: 'Time Keeper', value: timeKeeper, setter: setTimeKeeper, placeholder: 'Enter time keeper name', required: true },
             { label: 'Scorer', value: scorer, setter: setScorer, placeholder: judgeInfo?.name || 'Enter scorer name', required: true },
-            { label: 'Remarks', value: remarks, setter: setRemarks, placeholder: 'Enter any remarks', required: false }].map(({ label, value, setter, placeholder, required }) => (
+            { label: 'Remarks', value: remarks, setter: setRemarks, placeholder: 'Enter any remarks', required: false }].map(({ label, value, setter, placeholder, required }) => {
+              // Tie each label to its field. Without `htmlFor` these read as
+              // three unlabelled text boxes to a screen reader — and the page
+              // already has text inputs of its own in the score table, so
+              // "the box next to Time Keeper" is not something anything can
+              // work out from the markup alone.
+              const fieldId = `scorer-${label.toLowerCase().replace(/\s+/g, '-')}`;
+              return (
               <div key={label}>
-                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                <label htmlFor={fieldId} className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
                   {label}
                   {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
-                <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
+                <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
                   onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
                   onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
               </div>
-            ))}
+              );
+            })}
           </div>
           <div className="flex justify-end">
             {!isLocked ? (

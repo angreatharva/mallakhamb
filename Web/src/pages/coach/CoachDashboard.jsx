@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trophy, Users, UserPlus, Search, Trash2, X, CheckCircle, LogOut, User, Save, GripVertical } from 'lucide-react';
+import { Trophy, Users, UserPlus, Search, Trash2, X, Check, CheckCircle, LogOut, User, Save, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS } from '@/styles/tokens';
+import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -31,7 +32,13 @@ const CoachDashboard = () => {
   const [selectedPlayerData, setSelectedPlayerData] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedGender, setSelectedGender] = useState(null);
-  const [selectedApparatus, setSelectedApparatus] = useState(null);
+  /*
+   * The apparatus an athlete is entered for — a LIST, because one athlete can
+   * compete on several and is judged separately on each. It was a single value
+   * until multi-apparatus entry, and everything downstream (the score sheet the
+   * judge is shown, the panel roster, the standings) keys off it.
+   */
+  const [selectedApparatus, setSelectedApparatus] = useState([]);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
@@ -175,10 +182,34 @@ const CoachDashboard = () => {
     )
   );
   
-  const apparatusOptions = availableApparatuses.map(app => ({
-    value: app,
-    label: app
-  }));
+  /*
+   * Women's competitions do not include Hanging Mallakhamb (COP §11 / 1.8.2),
+   * so it is not offered once the athlete's gender is known — the athlete is
+   * picked before the apparatus, so the gender always is.
+   */
+  const apparatusOptions = availableApparatuses
+    .filter(app => !selectedGender || isApparatusAllowedForGender(app, selectedGender.value))
+    .map(app => ({ value: app, label: app }));
+
+  /**
+   * How a stored apparatus reads on screen.
+   *
+   * The field is Mixed and holds a bare name on older rows and a list on new
+   * ones, so rendering it raw prints either "Rope Mallakhamb" or the array's
+   * default toString — "Pole Mallakhamb,Hanging Mallakhamb,Rope Mallakhamb",
+   * commas and all.
+   */
+  const apparatusLabel = (apparatus) => {
+    if (Array.isArray(apparatus)) return apparatus.join(' · ');
+    if (typeof apparatus === 'string') return apparatus;
+    return '';
+  };
+
+  const toggleApparatus = (value) => {
+    setSelectedApparatus(current => (
+      current.includes(value) ? current.filter(a => a !== value) : [...current, value]
+    ));
+  };
 
   const calculateAge = (dob) => {
     const today = new Date(), birth = new Date(dob);
@@ -270,8 +301,8 @@ const CoachDashboard = () => {
   };
 
   const handleAddPlayer = async () => {
-    if (!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedPlayerData || !selectedApparatus) {
-      return toast.error('Please select player, age group, and apparatus');
+    if (!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedPlayerData || selectedApparatus.length === 0) {
+      return toast.error('Please select player, age group, and at least one apparatus');
     }
     const { age } = selectedPlayerData;
     if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
@@ -282,7 +313,7 @@ const CoachDashboard = () => {
         playerId: selectedPlayer.value, 
         ageGroup: selectedAgeGroup.value, 
         gender: selectedGender.value,
-        apparatus: selectedApparatus?.value
+        apparatus: selectedApparatus
       });
       toast.success('Player added to age group successfully!');
       handleCloseModal();
@@ -292,7 +323,7 @@ const CoachDashboard = () => {
 
   const handleCloseModal = () => {
     setShowAddPlayer(false); setSelectedPlayer(null); setSelectedPlayerData(null);
-    setSelectedAgeGroup(null); setSelectedGender(null); setSelectedApparatus(null); setSearchQuery(''); setPlayers([]);
+    setSelectedAgeGroup(null); setSelectedGender(null); setSelectedApparatus([]); setSearchQuery(''); setPlayers([]);
   };
 
   const handleRemovePlayer = async (playerId) => {
@@ -547,7 +578,7 @@ const CoachDashboard = () => {
                 )}
                 <span className="text-white/70 text-sm truncate">
                   {player.player.firstName} {player.player.lastName}
-                  {player.apparatus ? <span className="ml-2 text-xs opacity-60">({player.apparatus})</span> : null}
+                  {apparatusLabel(player.apparatus) ? <span className="ml-2 text-xs opacity-60">({apparatusLabel(player.apparatus)})</span> : null}
                 </span>
               </div>
               <button
@@ -702,7 +733,7 @@ const CoachDashboard = () => {
                   ) : (
                     <>
                       <Trophy className="w-4 h-4" aria-hidden="true" />
-                      Submit Team
+                      Pay Fees
                     </>
                   )}
                 </motion.button>
@@ -841,7 +872,7 @@ const CoachDashboard = () => {
                                 ? gPlayers.map((p, i) => (
                                     <p key={i} className="text-white/55 text-xs">
                                       {p.player.firstName} {p.player.lastName}
-                                      {p.apparatus ? <span className="opacity-60 ml-1">({p.apparatus})</span> : null}
+                                      {apparatusLabel(p.apparatus) ? <span className="opacity-60 ml-1">({apparatusLabel(p.apparatus)})</span> : null}
                                     </p>
                                   ))
                                 : <p className="text-white/20 text-xs italic">No players</p>}
@@ -1026,12 +1057,45 @@ const CoachDashboard = () => {
                         style={{ color: COLORS.saffronLight }}>
                         Apparatus <span aria-hidden="true" style={{ color: COLORS.saffron }}>*</span>
                       </label>
-                      <Dropdown
-                        options={apparatusOptions}
-                        value={selectedApparatus}
-                        onChange={setSelectedApparatus}
-                        placeholder="Select apparatus"
-                      />
+                      {/*
+                        * Checkboxes rather than the shared Dropdown: an athlete
+                        * can be entered for more than one apparatus and is
+                        * judged separately on each, so this is a set and not a
+                        * choice. The real <input> carries the state — its label
+                        * gives it an accessible name, and it stays reachable by
+                        * keyboard and screen reader while the chip does the
+                        * looking.
+                        */}
+                      <div role="group" aria-label="Apparatus" className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {apparatusOptions.map(option => {
+                          const checked = selectedApparatus.includes(option.value);
+                          return (
+                            <label key={option.value}
+                              className="flex items-center gap-2 px-3 py-3 rounded-xl border cursor-pointer transition-colors min-h-[44px]"
+                              style={{
+                                background: checked ? `${COLORS.saffron}1A` : 'rgba(255,255,255,0.03)',
+                                borderColor: checked ? COLORS.saffron : COLORS.darkBorderSubtle,
+                              }}>
+                              <input type="checkbox" className="sr-only"
+                                checked={checked}
+                                onChange={() => toggleApparatus(option.value)} />
+                              <span className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
+                                style={{
+                                  borderColor: checked ? COLORS.saffron : 'rgba(255,255,255,0.25)',
+                                  background: checked ? COLORS.saffron : 'transparent',
+                                }}>
+                                {checked && <Check className="w-3 h-3 text-white" aria-hidden="true" />}
+                              </span>
+                              <span className="text-sm" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                                {option.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <p className="text-white/25 text-xs mt-1">
+                        Pick every apparatus this athlete competes on — each one is judged and ranked separately.
+                      </p>
                     </div>
                     <div className="flex gap-3 pt-2">
                       <button onClick={handleCloseModal}
@@ -1040,7 +1104,7 @@ const CoachDashboard = () => {
                         Cancel
                       </button>
                       <button onClick={handleAddPlayer}
-                        disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender || !selectedApparatus}
+                        disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender || selectedApparatus.length === 0}
                         className="flex-1 py-3 rounded-xl font-bold text-white min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ background: 'linear-gradient(135deg, #FF6B00, #CC5500)' }}>
                         Add Player

@@ -22,6 +22,7 @@ const {
 } = require('../../errors');
 const bcrypt = require('bcryptjs');
 const { getJudgeRoleMapping } = require('../../utils/scoring/judge-slip.util');
+const { toCompetitionTypeDisplay } = require('../../config/cop-rules');
 const {
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -507,7 +508,14 @@ class JudgeService extends UserService {
           // Projected, not bare: an unprojected coach populate is how CRIT-4
           // put coach credentials on a judge's screen in the first place.
           { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS },
-          { path: 'competition' },
+          /*
+           * No `competition` populate. A Team has no competition field — a team
+           * enters a meet through `Competition.registeredTeams`, not the other
+           * way round — so Mongoose's strictPopulate threw on every call and
+           * this endpoint answered 500 to every judge who opened a roster. The
+           * competition actually used below comes from the judge's assignment,
+           * which is the authoritative one anyway.
+           */
         ]
       });
 
@@ -524,6 +532,14 @@ class JudgeService extends UserService {
         throw new AuthorizationError('Judge is not assigned to a competition');
       }
 
+      /*
+       * The seat that covers the category being READ, not just any seat.
+       *
+       * `assignments[0]` is an arbitrary one — a judge seated on ten panels has
+       * ten — and falling back to it silently answers about a different age
+       * group. The caller now sends the category it is showing; the fallback
+       * remains for callers that cannot.
+       */
       const assignment = resolveAssignment(assignments, {
         gender: category.gender,
         ageGroup: category.ageGroup,
@@ -542,13 +558,30 @@ class JudgeService extends UserService {
         throw new AuthorizationError('Team has not been submitted by coach yet');
       }
 
-      // Find score documents for this team and the judge's category
-      const scores = await this.scoreRepository.find({
+      /*
+       * Score documents for this team, this category AND THIS COMPETITION TYPE.
+       *
+       * The type is part of a Score's identity
+       * (`{teamId, gender, ageGroup, competition, competitionType}`), so
+       * leaving it out returns the Competition I document alongside the
+       * Competition II one and reports an athlete finalized in the first as
+       * finalized in the second — at which point the roster refuses to open
+       * their slip and they can never be scored in the second at all.
+       *
+       * Stored in display form ('Competition I'); callers send either that or
+       * the slug, so it is normalized rather than trusted. Omitted means "every
+       * type", which is what a caller that does not know is asking for.
+       */
+      const scoreQuery = {
         teamId: teamId,
         gender: assignment.gender,
         ageGroup: assignment.ageGroup,
         competition: compId,
-      });
+      };
+      if (category.competitionType) {
+        scoreQuery.competitionType = toCompetitionTypeDisplay(category.competitionType);
+      }
+      const scores = await this.scoreRepository.find(scoreQuery);
 
       // Task 3.2: was a second hand-written copy of the panel-role mapping.
       // If it ever disagreed with the one used to WRITE slips, a judge would

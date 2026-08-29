@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { judgeAPI } from '@/services/public/judge.api';
+import { apparatusKey, apparatusToJudge } from '@/utils/scoring/apparatus';
 import { ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown } from './judgeShared';
 
 /**
@@ -113,12 +114,30 @@ export function useJudgeSession(locationState) {
     }
   }, [activeSessionData, navigate]);
 
+  /*
+   * The apparatus being judged, which decides the combination checklist the
+   * slip renders and which score this athlete's marks belong to.
+   *
+   * This used to be `activeSessionData?.apparatus || 'Pole Mallakhamb'`, and
+   * the fallback was doing all the work: no competition in the seeded data
+   * declares an `apparatusConfig`, so the dashboard never offered a picker,
+   * nothing ever set `apparatus`, and every athlete — Rope athletes included —
+   * was judged on the ten-item Pole checklist. The athlete's own registration
+   * is consulted first now, and the Pole default is reached only when nobody
+   * has said anything at all.
+   */
+  const selectedApparatus = apparatusToJudge(
+    activeSessionData?.apparatus,
+    activeSessionData?.player,
+    activeSessionData?.competitionType
+  );
+
   return {
     activeSessionData,
     selectedTeam: activeSessionData?.team,
     selectedPlayer: activeSessionData?.player,
     selectedCompetitionType: activeSessionData?.competitionType,
-    selectedApparatus: activeSessionData?.apparatus || 'Pole Mallakhamb',
+    selectedApparatus,
     selectedGender: activeSessionData?.gender,
     selectedAgeGroup: activeSessionData?.ageGroup,
   };
@@ -296,9 +315,16 @@ export function useJudgePanelData({ judgeInfo, session }) {
       const team = teams.find((t) => String(t._id) === teamId);
       if (!team) return;
 
+      /*
+       * The athlete's score FOR THIS APPARATUS. An athlete entered for Pole,
+       * Hanging and Rope has three rows here, and matching on the player alone
+       * would load whichever happened to come first — showing the Rope panel
+       * the Pole marks, and then overwriting them on submit.
+       */
       const playerId = playerIdOf(selectedPlayer);
+      const wanted = apparatusKey(selectedApparatus);
       const targetPs = (team.scores || []).find(
-        (ps) => String(ps.playerId) === String(playerId)
+        (ps) => String(ps.playerId) === String(playerId) && apparatusKey(ps.apparatus) === wanted
       );
       if (!targetPs) return;
       const scoreDoc = { isLocked: team.scoreMetadata?.isLocked === true };

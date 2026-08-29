@@ -7,6 +7,7 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
+import { apparatusFor, apparatusKey, apparatusToJudge, isRegisteredFor } from '@/utils/scoring/apparatus';
 import { judgeAPI } from '@/services/public/judge.api';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import {
@@ -65,8 +66,21 @@ const JudgeTeamPlayers = () => {
 
   const selectedCompetitionType =
     location.state?.competitionType || sessionStorage.getItem('judge_selected_comp_type') || '';
+  /*
+   * The apparatus being judged, when the judge narrowed the category to one.
+   *
+   * Empty is a real answer and NOT the same as Pole: it means "this panel is
+   * judging whatever each athlete is entered for", which is the normal state
+   * of a competition that declares no apparatusConfig. It used to default to
+   * 'Pole Mallakhamb' here, which quietly filtered the roster down to Pole
+   * athletes and handed everyone else the wrong score sheet — the Above16 Rope
+   * athletes were judged on the ten-item Pole checklist because of this line.
+   *
+   * With no selection nothing is filtered out, and each athlete's slip picks up
+   * their own registered apparatus (see apparatusToJudge in useJudgePanelData).
+   */
   const selectedApparatus =
-    location.state?.apparatus || sessionStorage.getItem('judge_selected_apparatus') || 'Pole Mallakhamb';
+    location.state?.apparatus || sessionStorage.getItem('judge_selected_apparatus') || '';
   
   // Use gender and ageGroup from navigation state (if passed), otherwise fall back to session storage or judgeInfo
   const selectedGender = 
@@ -120,22 +134,42 @@ const JudgeTeamPlayers = () => {
       }
       setTeam(found);
 
-      // Fetch score status from judge endpoint & public scores to know which players have scores
+      /*
+       * Which athletes are already scored, and which are locked.
+       *
+       * Keyed by (athlete, APPARATUS), not by athlete. Somebody entered for
+       * Pole, Hanging and Rope is judged three separate times and earns three
+       * separate scores; a map keyed on the athlete alone marked all three done
+       * the moment the first was finalized, and the other two could never be
+       * scored at all.
+       */
       try {
         const scoreMap = {};
         const finalizedMap = {};
+        const statusKey = (playerId, apparatus) => `${String(playerId)}::${apparatusKey(apparatus)}`;
 
-        // 1. Try judge-specific endpoint
+        // 1. The judge-specific endpoint, which reports per ATHLETE and has no
+        //    idea about apparatus. Its answer is only unambiguous for athletes
+        //    entered for exactly one, so it is applied to those alone — for
+        //    anyone else it would lock apparatus nobody has judged yet.
         try {
-          const judgePlayersRes = await judgeAPI.getTeamPlayers(teamId);
+          const judgePlayersRes = await judgeAPI.getTeamPlayers(teamId, {
+            gender: selectedGender,
+            ageGroup: selectedAgeGroup,
+            competitionType: selectedCompetitionType,
+          });
           const judgePlayers = judgePlayersRes.data?.data?.players || judgePlayersRes.data?.players || [];
+          const soleApparatus = new Map(
+            (found.players || [])
+              .map((e) => [String(e.player?._id), apparatusFor(e, selectedCompetitionType)])
+              .filter(([, list]) => list.length === 1)
+              .map(([id, list]) => [id, list[0]])
+          );
           judgePlayers.forEach((p) => {
-            if (p.hasScore) {
-              scoreMap[String(p._id)] = true;
-            }
-            if (p.isFinalized) {
-              finalizedMap[String(p._id)] = p.finalScore ?? true;
-            }
+            const only = soleApparatus.get(String(p._id));
+            if (!only) return;
+            if (p.hasScore) scoreMap[statusKey(p._id, only)] = true;
+            if (p.isFinalized) finalizedMap[statusKey(p._id, only)] = p.finalScore ?? true;
           });
         } catch (e) {
           logger.warn('Judge-specific endpoint fallback:', e.message);
@@ -182,13 +216,13 @@ const JudgeTeamPlayers = () => {
                   (ps.judgeScores && Object.values(ps.judgeScores).some(v => Number(v) > 0));
 
                 if (hasScore) {
-                  scoreMap[String(pid)] = true;
+                  scoreMap[statusKey(pid, ps.apparatus)] = true;
                 }
                 // A locked sheet is closed to everyone, so its rows read as
                 // finalized here even if the Senior Judge never signed one off
                 // individually — the judge cannot edit it either way.
                 if (ps.isFinalized || doc.isLocked) {
-                  finalizedMap[String(pid)] = ps.finalScore ?? true;
+                  finalizedMap[statusKey(pid, ps.apparatus)] = ps.finalScore ?? true;
                 }
               }
             });
@@ -199,11 +233,11 @@ const JudgeTeamPlayers = () => {
 
         // 3. Merge locally saved submitted player IDs for instant session persistence
         try {
+          // Written by the slip as `<playerId>::<apparatus>` so it carries the
+          // same identity as the maps above.
           const localSubmitted = JSON.parse(sessionStorage.getItem(`judge_submitted_players_${teamId}`) || '{}');
-          Object.keys(localSubmitted).forEach((pid) => {
-            if (localSubmitted[pid]) {
-              scoreMap[String(pid)] = true;
-            }
+          Object.keys(localSubmitted).forEach((key) => {
+            if (localSubmitted[key]) scoreMap[key] = true;
           });
         } catch {
           // Best-effort read of the local "already submitted" cache. A corrupt
@@ -298,20 +332,25 @@ const JudgeTeamPlayers = () => {
         if (!e.player || e.player.gender !== selectedGender || e.ageGroup !== selectedAgeGroup) {
           return false;
         }
-        // Filter by apparatus if specified
-        if (selectedApparatus && e.apparatus && e.apparatus[selectedCompetitionType]) {
-          const apps = e.apparatus[selectedCompetitionType];
-          if (Array.isArray(apps) && apps.length > 0 && !apps.includes(selectedApparatus)) {
-            return false;
-          }
-        }
-        return true;
+        // Only the athletes registered for the apparatus being judged. Goes
+        // through isRegisteredFor because `apparatus` has been stored as a bare
+        // name, a list and a map keyed by competition type — the object lookup
+        // this replaced understood only the last of the three, so a Rope
+        // athlete passed the filter for a Pole session.
+        return isRegisteredFor(e, selectedCompetitionType, selectedApparatus);
       })
       .map((e) => {
         const pidStr = String(e.player._id);
-        const finVal = finalizedScoreMap[pidStr];
-        const isFinalized = !!e.isFinalized || !!finVal;
-        const finalScore = e.finalScore ?? (typeof finVal === 'number' ? finVal : null);
+        /*
+         * Status is per (athlete, apparatus). With an apparatus selected that
+         * is the one being judged; without one, it is whatever this athlete is
+         * entered for — the same resolution the slip itself makes.
+         */
+        const forApparatus = apparatusToJudge(selectedApparatus, e, selectedCompetitionType);
+        const key = `${pidStr}::${apparatusKey(forApparatus)}`;
+        const finVal = finalizedScoreMap[key];
+        const isFinalized = !!finVal;
+        const finalScore = typeof finVal === 'number' ? finVal : null;
         return {
           id: e.player._id,
           name: `${e.player.firstName} ${e.player.lastName}`,
@@ -320,7 +359,7 @@ const JudgeTeamPlayers = () => {
           apparatus: e.apparatus || {},
           isFinalized,
           finalScore,
-          hasScore: !!e.hasScore || !!judgeScoreMap[pidStr],
+          hasScore: !!judgeScoreMap[key],
         };
       });
   })();

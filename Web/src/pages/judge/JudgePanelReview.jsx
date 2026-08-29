@@ -20,6 +20,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
   getCombinationChecklist,
   getDifficultyRequirement,
@@ -31,7 +32,7 @@ import {
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
 import {
-  J, EASE_OUT, Orb, LiveDot, MismatchModal, SrEditModal,
+  J, EASE_OUT, Orb, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
   SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
@@ -86,6 +87,8 @@ const JudgePanelReview = () => {
   const [finalizing, setFinalizing] = useState(false);
   const [showMismatchModal, setShowMismatchModal] = useState(false);
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
+  const [showToleranceModal, setShowToleranceModal] = useState(false);
+  const [toleranceDismissed, setToleranceDismissed] = useState(false);
   const [showSrEditModal, setShowSrEditModal] = useState(false);
   const [srEditTarget, setSrEditTarget] = useState(null);
 
@@ -93,17 +96,22 @@ const JudgePanelReview = () => {
   const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
   const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
 
-  const hasMismatch =
-    panelMismatch.difficultyMismatch ||
-    panelMismatch.combinationMismatch ||
-    (panelMismatch.toleranceMismatch && effectivePanelSize >= 4);
+  // Two separate blocks, each with its own alert. A slip mismatch means the
+  // panel recorded different routines; a tolerance breach means they recorded
+  // the same routine and marked it too differently. Final Submit waits on both.
+  const hasSlipMismatch = panelMismatch.difficultyMismatch || panelMismatch.combinationMismatch;
 
   // The Senior Judge's slip is the reference, so only two people need telling:
   // the Senior Judge (who resolves it) and any judge whose own slip differs
   // from theirs. A judge who already agrees with the Senior Judge is not part
   // of the disagreement and is left alone.
-  const isMismatchedJudge = panelMismatch.judgesNeedingReview.includes(myJudgeType);
-  const shouldSeeMismatch = hasMismatch && panelScoresCount > 0 && (isSeniorJudge || isMismatchedJudge);
+  const isMismatchedJudge = panelMismatch.disagreeingJudges.includes(myJudgeType);
+  const shouldSeeMismatch = hasSlipMismatch && panelScoresCount > 0 && (isSeniorJudge || isMismatchedJudge);
+
+  // Same rule for the tolerance alert: the chief, plus the execution judges
+  // whose own total sits away from the chief's.
+  const isToleranceJudge = panelMismatch.toleranceOffJudges.includes(myJudgeType);
+  const shouldSeeTolerance = panelMismatch.hasToleranceBreach && (isSeniorJudge || isToleranceJudge);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -114,6 +122,19 @@ const JudgePanelReview = () => {
     if (mismatchDismissed) return;
     if (shouldSeeMismatch) setShowMismatchModal(true);
   }, [shouldSeeMismatch, mismatchDismissed]);
+
+  // The tolerance alert queues behind the mismatch one: when a panel trips both
+  // (which is common — judges who disagree about the routine also disagree
+  // about the mark), stacking two dialogs would hide one behind the other.
+  //
+  // Gated on `mismatchDismissed` rather than on `showMismatchModal`: both
+  // effects run in the same commit, so the mismatch modal's own `setState` has
+  // not landed yet when this one reads it, and both dialogs would open at once.
+  useEffect(() => {
+    if (toleranceDismissed) return;
+    if (shouldSeeMismatch && !mismatchDismissed) return;
+    if (shouldSeeTolerance) setShowToleranceModal(true);
+  }, [shouldSeeTolerance, toleranceDismissed, shouldSeeMismatch, mismatchDismissed]);
 
   // Once the Senior Judge finalizes, every judge on this page — not just the
   // one who clicked Final Submit — should bounce back to the team roster.
@@ -206,7 +227,11 @@ const JudgePanelReview = () => {
       toast.success(`Score updated for ${targetJudgeType}: ${newTotal}`);
       setShowSrEditModal(false);
       setSrEditTarget(null);
-      setMismatchDismissed(false); // allow mismatch modal to re-check
+      // Let both alerts re-evaluate against the corrected slip — an override
+      // that closes a difficulty gap can still leave the marks outside
+      // tolerance, and the Senior Judge needs telling that it did.
+      setMismatchDismissed(false);
+      setToleranceDismissed(false);
     } catch (error) {
       logger.error('SR edit save failed:', error);
       toast.error('Failed to save score override');
@@ -217,6 +242,16 @@ const JudgePanelReview = () => {
     if (!canFinalSubmit) return;
     if (panelMismatch.hasBlockingMismatch) {
       toast.error('Resolve Difficulty and Combination mismatches before final submit');
+      setMismatchDismissed(false);
+      setShowMismatchModal(true);
+      return;
+    }
+    // COP §3.4 — the panel is not finished while the execution average and the
+    // chief's mark are further apart than the tolerance allows.
+    if (panelMismatch.hasToleranceBreach) {
+      toast.error('Resolve the tolerance breach before final submit');
+      setToleranceDismissed(false);
+      setShowToleranceModal(true);
       return;
     }
     setFinalizing(true);
@@ -271,9 +306,12 @@ const JudgePanelReview = () => {
       };
       await judgeAPI.saveScore(payload);
       try {
+        // Keyed by athlete AND apparatus: an athlete entered for three of them
+        // is judged three times, and marking the athlete alone would grey out
+        // the other two before anyone had scored them.
         const sKey = `judge_submitted_players_${selectedTeam._id}`;
         const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
-        prev[playerIdOf(selectedPlayer)] = true;
+        prev[`${playerIdOf(selectedPlayer)}::${apparatusKey(selectedApparatus)}`] = true;
         sessionStorage.setItem(sKey, JSON.stringify(prev));
       } catch {
         // best-effort cache of "already scored" markers
@@ -414,11 +452,31 @@ const JudgePanelReview = () => {
                   {[
                     (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.difficulty) && 'Difficulty',
                     (isSeniorJudge ? panelMismatch.combinationMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.combination) && 'Combination',
-                    panelMismatch.toleranceMismatch && 'Tolerance',
                   ].filter(Boolean).join(' · ')} mismatch detected
                 </span>
               </div>
               <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>View Details</span>
+            </motion.button>
+          )}
+
+          {/* Tolerance — its own strip, in its own colour, because it is a
+              separate block on Final Submit and resolved a different way. */}
+          {shouldSeeTolerance && (
+            <motion.button
+              type="button"
+              onClick={() => { setToleranceDismissed(false); setShowToleranceModal(true); }}
+              className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
+              style={{ background: 'rgba(245,158,11,0.09)', borderColor: 'rgba(245,158,11,0.35)' }}
+              whileHover={{ background: 'rgba(245,158,11,0.14)' }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: J.amber }} />
+                <span className="text-sm font-bold text-white">
+                  Tolerance exceeded — gap {Number(panelMismatch.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(panelMismatch.toleranceInfo?.tolerance ?? 0).toFixed(2)}
+                </span>
+              </div>
+              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)', color: J.amber }}>View Details</span>
             </motion.button>
           )}
 
@@ -540,13 +598,13 @@ const JudgePanelReview = () => {
               <motion.button
                 type="button"
                 onClick={finalizePanelScore}
-                disabled={finalizing || panelMismatch.hasBlockingMismatch}
+                disabled={finalizing || panelMismatch.hasBlockingIssue}
                 className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold min-h-[52px]"
                 style={{
-                  background: panelMismatch.hasBlockingMismatch
+                  background: panelMismatch.hasBlockingIssue
                     ? 'rgba(255,255,255,0.1)'
                     : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
-                  opacity: finalizing || panelMismatch.hasBlockingMismatch ? 0.6 : 1,
+                  opacity: finalizing || panelMismatch.hasBlockingIssue ? 0.6 : 1,
                 }}
                 whileHover={reduced || finalizing ? {} : { scale: 1.01 }}
                 whileTap={reduced || finalizing ? {} : { scale: 0.98 }}
@@ -568,7 +626,19 @@ const JudgePanelReview = () => {
             {isSeniorJudge && !allPanelSubmitted && !finalized && (
               <p className="flex-1 text-center text-xs self-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
                 Final Submit unlocks when all {effectivePanelSize || 'panel'} judges have submitted
-                {panelMismatch.hasBlockingMismatch ? ' and mismatches are resolved' : ''}
+                {panelMismatch.hasBlockingIssue ? ' and the alerts above are resolved' : ''}
+              </p>
+            )}
+            {/* Why the button next to this is greyed out. Without it a Senior
+                Judge with a full panel sees a dead button and no reason. */}
+            {canFinalSubmit && panelMismatch.hasBlockingIssue && (
+              <p className="flex-1 text-center text-xs self-center" style={{ color: J.amber }}>
+                Final Submit is locked —{' '}
+                {panelMismatch.hasBlockingMismatch && panelMismatch.hasToleranceBreach
+                  ? 'resolve the slip mismatch and the tolerance breach'
+                  : panelMismatch.hasBlockingMismatch
+                    ? 'resolve the Difficulty / Combination mismatch'
+                    : 'resolve the tolerance breach'}
               </p>
             )}
             {!isSeniorJudge && !finalized && (
@@ -596,7 +666,15 @@ const JudgePanelReview = () => {
         panelScores={panelScores}
         isSeniorJudge={isSeniorJudge}
         myJudgeType={myJudgeType}
-        effectivePanelSize={effectivePanelSize}
+        judgeNameMap={judgeNameMap}
+      />
+      <ToleranceModal
+        isOpen={showToleranceModal}
+        onClose={() => { setShowToleranceModal(false); setToleranceDismissed(true); }}
+        panelMismatch={panelMismatch}
+        panelScores={panelScores}
+        isSeniorJudge={isSeniorJudge}
+        myJudgeType={myJudgeType}
         judgeNameMap={judgeNameMap}
       />
       <SrEditModal

@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
   getCombinationChecklist,
   getDifficultyRequirement,
@@ -502,9 +503,12 @@ const JudgeSlip = () => {
       // surfacing as a failed submission mid-performance.
       await judgeAPI.saveScore(scoreData);
       try {
+        // Keyed by athlete AND apparatus: an athlete entered for three of them
+        // is judged three times, and marking the athlete alone would grey out
+        // the other two before anyone had scored them.
         const sKey = `judge_submitted_players_${selectedTeam._id}`;
         const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
-        prev[playerIdOf(selectedPlayer)] = true;
+        prev[`${playerIdOf(selectedPlayer)}::${apparatusKey(selectedApparatus)}`] = true;
         sessionStorage.setItem(sKey, JSON.stringify(prev));
       } catch {
         // best-effort cache of "already scored" markers

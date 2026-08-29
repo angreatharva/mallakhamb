@@ -46,7 +46,32 @@ scripts/*
 !scripts/migrate.js
 !scripts/migrate-superadmin-role.js
 !scripts/seedAccounts.js
+!scripts/captureEnvironment.js
+!scripts/planPanels.js
+!scripts/seatPanel.js
+!scripts/seatPanels.js
+!scripts/resetScores.js
 
-# scripts/seed/registrations.generated.json is NOT allow-listed above, and that
-# is deliberate: it holds plaintext passwords, and it records one environment's
-# state rather than source. Regenerate it with `npm --prefix Web run seed:ui`.
+# The panel scripts and their shared plumbing. Re-including a nested file takes
+# three lines, not one: `scripts/*` already excluded `scripts/lib`, and git will
+# not look inside an excluded directory however many `!` lines name files in it.
+!scripts/lib/
+scripts/lib/*
+!scripts/lib/admin-api.js
+!scripts/lib/panel-plan.js
+
+# The panel plan is a DECISION and is committed; the registration capture is a
+# record of one environment and is not.
+#
+# scripts/seed/panel-plan.json fixes which categories get 3, 4 and 5 seats. It
+# is drawn once (scripts/planPanels.js) and then read by everything that seats
+# or judges a panel, including two Playwright specs — a plan that only existed
+# on the machine that drew it would let a second machine seat a 4-judge panel
+# and score it as a 5, which produces a believable number rather than an error.
+#
+# scripts/seed/registrations.generated.json is deliberately NOT allow-listed: it
+# holds plaintext passwords and describes one database's state. Regenerate it
+# with `npm --prefix Web run seed:ui`.
+!scripts/seed/
+scripts/seed/*
+!scripts/seed/panel-plan.json

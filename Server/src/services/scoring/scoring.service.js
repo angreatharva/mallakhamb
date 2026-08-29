@@ -14,6 +14,7 @@ const {
 } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
 const {
+  apparatusKey,
   toCompetitionTypeDisplay,
   toCompetitionTypeSlug,
   validateSlipBreakdown,
@@ -1149,6 +1150,29 @@ class ScoringService {
       });
 
       /**
+       * Which stored row an incoming one belongs to.
+       *
+       * An athlete's identity in `playerScores` is (player, APPARATUS) — not
+       * the player alone. Somebody entered for Pole, Hanging and Rope competes
+       * three times, is judged by three separate panels' worth of slips and
+       * earns three separate scores; matching on `playerId` merged the second
+       * apparatus onto the first and the third onto that, so only the last one
+       * judged survived and the earlier results vanished without an error.
+       *
+       * A row that names no apparatus matches an incoming one that names none
+       * either — both normalise to the schema default — which keeps
+       * single-apparatus competitions behaving exactly as before.
+       *
+       * @param {Array} rows - the document's playerScores
+       * @param {Object} incoming
+       * @returns {number} index, or -1
+       */
+      const findSquadPlace = (rows, incoming) => rows.findIndex(
+        row => row.playerId?.toString() === incoming.playerId?.toString()
+          && apparatusKey(row.apparatus) === apparatusKey(incoming.apparatus)
+      );
+
+      /**
        * Merge the incoming slips onto an existing document's playerScores.
        *
        * Extracted so the retry loop can re-run it against freshly read state.
@@ -1159,9 +1183,7 @@ class ScoringService {
         const mergedPlayerScores = [...existingScore.playerScores];
 
         for (const incomingPlayerScore of processedPlayerScores) {
-          const existingPlayerIndex = mergedPlayerScores.findIndex(
-            ps => ps.playerId?.toString() === incomingPlayerScore.playerId?.toString()
-          );
+          const existingPlayerIndex = findSquadPlace(mergedPlayerScores, incomingPlayerScore);
 
           if (existingPlayerIndex >= 0) {
             // Merge judge scores - keep existing scores and add/update new ones
@@ -1213,6 +1235,25 @@ class ScoringService {
                 ? (incomingPlayerScore.finalizedAt || new Date())
                 : (incomingPlayerScore.finalizedAt || existingPlayerScore.finalizedAt)
             };
+
+            /*
+             * The final score is recomputed from the MERGED row, not taken
+             * from whichever payload arrived last.
+             *
+             * The two writers see different halves of it: a judge's Final
+             * Submit carries the marks and no deductions, the Scorer's save
+             * carries the deductions. Each one's own `finalScore` was computed
+             * from its half, so a judge re-submitting after the Scorer had
+             * recorded a time penalty would quietly restore the undeducted
+             * figure — the deduction still stored beside it, just not applied.
+             */
+            const merged = mergedPlayerScores[existingPlayerIndex];
+            merged.finalScore = Math.max(
+              0,
+              (Number(merged.averageMarks) || 0)
+                - (Number(merged.deduction) || 0)
+                - (Number(merged.otherDeduction) || 0)
+            );
           } else {
             // New player score
             if (scoreData.panelSize && !incomingPlayerScore.panelSize) {

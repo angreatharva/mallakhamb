@@ -231,7 +231,7 @@ export function calculateAverageMarks(playerScores, panelSize) {
 
   if (size === 3) {
     if (evalScores.length < 3 && nonZeroCount < 3) {
-      return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, method: null };
+      return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, seniorScore: seniorJudge, method: null };
     }
     // Only judge slip totals — never include time/deduction/other fields
     const totals = [
@@ -249,24 +249,40 @@ export function calculateAverageMarks(playerScores, panelSize) {
       baseScore: 0,
       tolerance: 0,
       difference: 0,
+      seniorScore: seniorJudge,
       method: '3_JUDGE_SIMPLE_AVERAGE',
     };
   }
 
   if (evalScores.length === 0) {
-    return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, method: null };
+    return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0, tolerance: 0, difference: 0, seniorScore: seniorJudge, method: null };
   }
 
-  const sorted = [...evalScores].sort((a, b) => a - b);
   let executionAverage;
   let method;
-  if (size === 5 || sorted.length === 4) {
-    const middle = sorted.slice(1, -1);
+  if (size === 5 || evalScores.length === 4) {
+    const middle = [...evalScores].sort((a, b) => a - b).slice(1, -1);
     executionAverage = middle.reduce((a, b) => a + b, 0) / middle.length;
     method = '5_JUDGE_STANDARD_COP';
   } else {
-    // 4-judge: average all 3 eval judges (no drop)
-    executionAverage = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+    /*
+     * 4-judge: the Chief's mark fills the vacant fourth evaluation slot and the
+     * panel then runs the 5-judge method unchanged — drop the highest and the
+     * lowest of the four, average the middle two.
+     *
+     * The Sr. Judge is therefore counted twice: once as the fourth evaluator
+     * here, and again as the Chief in the tolerance check below. See the long
+     * note in Server/src/utils/scoring/calculation.util.js — this mirrors it,
+     * and the two must not drift.
+     */
+    // Until the Chief has submitted there is no fourth mark to inject, and
+    // injecting a 0 would drop a real judge in favour of a phantom. This
+    // branch is a preview of an unfinished panel; the `seniorJudge === 0`
+    // return below reports it as exactly that.
+    const pool = seniorJudge > 0
+      ? [...evalScores, seniorJudge].sort((a, b) => a - b).slice(1, -1)
+      : evalScores;
+    executionAverage = pool.reduce((a, b) => a + b, 0) / pool.length;
     method = '4_JUDGE_AS_5_JUDGE_EQUIVALENT';
   }
 
@@ -279,6 +295,7 @@ export function calculateAverageMarks(playerScores, panelSize) {
       baseScore: 0,
       tolerance,
       difference: 0,
+      seniorScore: seniorJudge,
       method,
     };
   }
@@ -292,6 +309,7 @@ export function calculateAverageMarks(playerScores, panelSize) {
       baseScore: 0,
       tolerance,
       difference: parseFloat(difference.toFixed(2)),
+      seniorScore: seniorJudge,
       method,
     };
   }
@@ -304,6 +322,7 @@ export function calculateAverageMarks(playerScores, panelSize) {
     baseScore: parseFloat(baseScore.toFixed(2)),
     tolerance,
     difference: parseFloat(difference.toFixed(2)),
+    seniorScore: seniorJudge,
     method,
   };
 }
@@ -424,6 +443,11 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     toleranceInfo = result;
   }
 
+  // A tolerance breach is only meaningful once the whole panel has marked —
+  // an execution average taken over half the slips is not the one the rule
+  // §3.4 talks about, and blocking on it would stop a panel mid-way.
+  const hasToleranceBreach = toleranceMismatch && size >= 4 && slips.length >= size;
+
   // A tolerance breach is a gap between the execution average and the Senior
   // Judge's mark, so the execution judges whose own total differs from the
   // Senior's are the ones asked to re-check.
@@ -436,12 +460,10 @@ export function analyzePanelMismatches(panelScores, panelSize) {
       )
     : [];
 
-  // Everyone who should be prompted to review their slip. The Senior Judge is
-  // the reference and is never listed here — they are alerted separately
-  // because resolving the mismatch is their call.
-  const judgesNeedingReview = JUDGE_ORDER.filter(
-    (jt) => disagreeingJudges.includes(jt) || toleranceOffJudges.includes(jt)
-  );
+  // `disagreeingJudges` and `toleranceOffJudges` are deliberately kept apart
+  // rather than merged into one "needs review" list: they are shown in
+  // different dialogs, and a judge who merely sits outside tolerance recorded
+  // the same routine as the chief and has no slip to correct.
 
   return {
     difficultyMismatch,
@@ -455,16 +477,29 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     disagreeingJudges,
     judgeMismatchDetails,
     toleranceOffJudges,
-    judgesNeedingReview,
+    // Two independent gates, kept apart because they are resolved differently
+    // and are reported to the panel in two different dialogs:
+    //   hasBlockingMismatch — judges disagree about WHAT the athlete did
+    //                          (difficulty mix / combination checklist)
+    //   hasToleranceBreach  — judges agree on the routine but their execution
+    //                          marks are further apart than §3.4 allows
+    // Final Submit waits on both (hasBlockingIssue).
     hasBlockingMismatch: difficultyMismatch || combinationMismatch,
+    hasToleranceBreach,
+    hasBlockingIssue: difficultyMismatch || combinationMismatch || hasToleranceBreach,
   };
 }
 
 /**
  * Calculate final score applying deductions to the average marks.
+ *
+ * @param {Object} ps - player scores, including deduction / otherDeduction
+ * @param {number} [panelSize] - 3 | 4 | 5. Pass it wherever the seated panel is
+ *   known: inferring from how many marks are in yet reads a half-filled
+ *   5-judge sheet as a 3-judge panel, which is a different rule entirely.
  */
-export function calculateFinalScore(ps) {
-    const r = calculateAverageMarks(ps);
+export function calculateFinalScore(ps, panelSize) {
+    const r = calculateAverageMarks(ps, panelSize);
     return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);
 }
 

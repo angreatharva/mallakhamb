@@ -177,17 +177,21 @@ describe('Panel Size Branches (v2 §4)', () => {
     });
   });
 
-  describe('4.3 — 4-Judge Panel (Sr. Judge acts as Chief)', () => {
-    it('averages all 3 evaluation judges (no high/low drop)', () => {
+  describe('4.3 — 4-Judge Panel (Sr. Judge acts as Chief AND fills the 4th slot)', () => {
+    it('drops high/low from the pool the Chief completes', () => {
       const result = calculateIndividualScore({
         panelSize: 4,
-        seniorJudge: 9.0, // acts as Chief
+        seniorJudge: 9.0, // acts as Chief, and as the fourth evaluator
         judge2: 8.5, judge3: 8.7, judge4: 9.2
       });
-      // Note: 4-judge panel has Sr. Judge (chief) and 3 eval judges only
       expect(result.method).toBe('4_JUDGE_AS_5_JUDGE_EQUIVALENT');
-      // avg of 8.5+8.7+9.2 = 8.8
-      expect(result.executionAverage).toBeCloseTo(8.8, 3);
+      // Pool [8.5, 8.7, 9.0, 9.2] → drop 8.5 and 9.2 → (8.7 + 9.0) / 2 = 8.85.
+      // The Chief's 9.0 is neither highest nor lowest, so it survives the drop
+      // and sits inside the average it is then tolerance-checked against.
+      expect(result.executionAverage).toBeCloseTo(8.85, 3);
+      // A real evaluation mark is always discarded: 8.5 and 9.2 both came from
+      // evaluators, and only three evaluators marked.
+      expect(result.baseScoreApplied).toBe(false);
     });
   });
 

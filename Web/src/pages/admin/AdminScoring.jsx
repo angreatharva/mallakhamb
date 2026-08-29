@@ -9,7 +9,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { getTimeDeduction } from '@/utils/scoring/copRules';
+import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
@@ -353,23 +353,19 @@ const AdminScoring = () => {
         }
     };
 
-    const calculateAverageMarks = (playerScores) => {
-        const executionScores = [parseFloat(playerScores.judge1) || 0, parseFloat(playerScores.judge2) || 0, parseFloat(playerScores.judge3) || 0, parseFloat(playerScores.judge4) || 0].filter(s => s > 0);
-        if (executionScores.length === 0) return { average: 0, baseScoreApplied: false, executionAvg: 0, baseScore: 0 };
-        let executionAverage = 0;
-        if (executionScores.length <= 2) executionAverage = executionScores.reduce((s, v) => s + v, 0) / executionScores.length;
-        else if (executionScores.length === 3) executionAverage = [...executionScores].sort((a, b) => a - b)[1];
-        else { const sorted = [...executionScores].sort((a, b) => a - b); const trimmed = sorted.slice(1, -1); executionAverage = trimmed.reduce((s, v) => s + v, 0) / trimmed.length; }
-        const seniorJudge = parseFloat(playerScores.seniorJudge) || 0;
-        if (seniorJudge === 0) return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance: getTolerance(executionAverage) };
-        const tolerance = getTolerance(executionAverage);
-        if (Math.abs(executionAverage - seniorJudge) <= tolerance) return { average: parseFloat(executionAverage.toFixed(2)), baseScoreApplied: false, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: 0, tolerance };
-        const baseScore = (executionAverage + seniorJudge) / 2;
-        return { average: parseFloat(baseScore.toFixed(2)), baseScoreApplied: true, executionAvg: parseFloat(executionAverage.toFixed(2)), baseScore: parseFloat(baseScore.toFixed(2)), tolerance };
-    };
-
-    const getTolerance = (score) => { if (score >= 9) return 0.10; if (score >= 8) return 0.20; if (score >= 7) return 0.30; if (score >= 6) return 0.40; if (score >= 5) return 0.50; return 1.00; };
-    const calculateFinalScore = (ps) => { const r = calculateAverageMarks(ps); return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2); };
+    /*
+     * Panel averaging comes from copRules, the same module the judge pages and
+     * the score table use. The private copy that used to live here took the
+     * MEDIAN of three execution marks where copRules took the mean, so a
+     * 4-judge panel showed one number in the table and posted another. The
+     * panel-size rules belong in one place.
+     *
+     * The seated panel is passed in rather than inferred: a half-entered
+     * 5-judge sheet has three marks on it and would otherwise be scored as a
+     * 3-judge panel.
+     */
+    const panelAverage = (playerScores) => calculateAverageMarks(playerScores, judges.length || undefined);
+    const calculateFinalScore = (ps) => { const r = panelAverage(ps); return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2); };
 
     const handleScoreChange = (playerId, field, value) => {
         if (isLocked) { toast.error('Cannot edit scores - this entry is locked'); return; }
@@ -473,7 +469,7 @@ const AdminScoring = () => {
             const scoringData = {
                 teamId: selectedTeam._id, teamName: selectedTeam.name, coachName: selectedTeam.coach?.name, coachEmail: selectedTeam.coach?.email,
                 gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType, timeKeeper, scorer, remarks, isLocked: shouldLock,
-                playerScores: players.map(p => { const r = calculateAverageMarks(scores[p.id]); return { playerId: p.id, playerName: p.name, time: scores[p.id].time, judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 }, executionAverage: r.executionAvg, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied, toleranceUsed: r.tolerance, averageMarks: r.average, deduction: parseFloat(scores[p.id].deduction) || 0, otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0, finalScore: parseFloat(calculateFinalScore(scores[p.id])) }; }),
+                playerScores: players.map(p => { const r = panelAverage(scores[p.id]); return { playerId: p.id, playerName: p.name, time: scores[p.id].time, judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 }, executionAverage: r.executionAvg, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied, toleranceUsed: r.tolerance, averageMarks: r.average, deduction: parseFloat(scores[p.id].deduction) || 0, otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0, finalScore: parseFloat(calculateFinalScore(scores[p.id])) }; }),
                 // Judges hold accounts now: the panel record keeps the
                 // person's address, not the old slot-derived username.
                 judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
