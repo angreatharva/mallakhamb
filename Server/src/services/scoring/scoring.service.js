@@ -577,70 +577,94 @@ class ScoringService {
         });
       }
 
-      const teamsWithScores = await Promise.all(
-        filteredTeams.map(async (regTeam) => {
-          // Get scores for this team - filter by gender and ageGroup to get the correct score document
-          const scoreQuery = {
-            competition: competitionId,
-            teamId: regTeam.team._id
-          };
-          if (gender) scoreQuery.gender = gender;
-          if (ageGroup) scoreQuery.ageGroup = ageGroup;
-          if (competitionType) {
-            scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
-          }
-          
-          const scores = await this.scoreRepository.find(scoreQuery);
+      /*
+       * ONE query for every team's scores, not one per team.
+       *
+       * This used to `await scoreRepository.find({ teamId })` inside the map
+       * below — a textbook N+1. Measured at 100 entered teams it cost 105
+       * queries per request; at 1,000 it is 1,005. On loopback each is a
+       * fraction of a millisecond and it hides, but the API and the database
+       * are separate hosts in production, so those are 1,005 network round
+       * trips for one admin opening one screen.
+       *
+       * It backs /api/admin/scores/team, /api/judge/scores/team and — through
+       * getTeamRankings — both ranking endpoints, so this is four endpoints.
+       *
+       * The `{ teamId: { $in: [...] } }` form is served by the existing
+       * `{teamId, gender, ageGroup, competition}` index.
+       */
+      const teamIds = filteredTeams.map((regTeam) => regTeam.team._id);
 
-          let playerScores = scores.flatMap(s => s.playerScores || []);
-          
-          if (apparatus) {
-            playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
-          }
-          
-          const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
-          
-          // Get the most recent score document for metadata (isLocked, timeKeeper, etc.)
-          const latestScoreDoc = scores.length > 0 ? scores.sort((a, b) => 
-            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
-          )[0] : null;
+      const scoreQuery = { competition: competitionId, teamId: { $in: teamIds } };
+      if (gender) scoreQuery.gender = gender;
+      if (ageGroup) scoreQuery.ageGroup = ageGroup;
+      if (competitionType) {
+        scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
+      }
 
-          return {
-            _id: regTeam.team._id,
-            name: regTeam.team.name,
-            // Same defect class as CRIT-4: this returned the whole coach and
-            // player documents. `select: false` now hides the bcrypt hash, but
-            // coach/player e-mail and minors' dates of birth were still going
-            // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
-            // the allow-lists getSubmittedTeams projects with, so the two
-            // endpoints cannot drift apart.
-            coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
-            players: regTeam.players.map(playerEntry => {
-              // projectFields handles Mongoose documents and plain objects, and
-              // passes an unpopulated ObjectId ref through untouched.
-              const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
-              return {
-                ...playerData,
-                ageGroup: playerEntry.ageGroup,
-                gender: playerEntry.gender
-              };
-            }),
-            scores: playerScores,
-            totalScore,
-            // Include score document metadata
-            scoreMetadata: latestScoreDoc ? {
-              _id: latestScoreDoc._id,
-              isLocked: latestScoreDoc.isLocked,
-              timeKeeper: latestScoreDoc.timeKeeper,
-              scorer: latestScoreDoc.scorer,
-              remarks: latestScoreDoc.remarks,
-              competitionType: latestScoreDoc.competitionType,
-              createdAt: latestScoreDoc.createdAt,
-              updatedAt: latestScoreDoc.updatedAt
-            } : null
-          };
-        })
-      );
+      const allScores = teamIds.length ? await this.scoreRepository.find(scoreQuery) : [];
+
+      const scoresByTeam = new Map();
+      for (const scoreDoc of allScores) {
+        const key = scoreDoc.teamId?.toString();
+        if (!key) continue;
+        if (!scoresByTeam.has(key)) scoresByTeam.set(key, []);
+        scoresByTeam.get(key).push(scoreDoc);
+      }
+
+      const teamsWithScores = filteredTeams.map((regTeam) => {
+        const scores = scoresByTeam.get(regTeam.team._id?.toString()) || [];
+
+        let playerScores = scores.flatMap(s => s.playerScores || []);
+
+        if (apparatus) {
+          playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
+        }
+
+        const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
+
+        // Get the most recent score document for metadata (isLocked, timeKeeper, etc.).
+        // Sorted on a copy: `scores` is this team's bucket in the shared map,
+        // and sorting in place would reorder it for anyone reading it after.
+        const latestScoreDoc = scores.length > 0 ? [...scores].sort((a, b) =>
+          new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+        )[0] : null;
+
+        return {
+          _id: regTeam.team._id,
+          name: regTeam.team.name,
+          // Same defect class as CRIT-4: this returned the whole coach and
+          // player documents. `select: false` now hides the bcrypt hash, but
+          // coach/player e-mail and minors' dates of birth were still going
+          // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
+          // the allow-lists getSubmittedTeams projects with, so the two
+          // endpoints cannot drift apart.
+          coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
+          players: regTeam.players.map(playerEntry => {
+            // projectFields handles Mongoose documents and plain objects, and
+            // passes an unpopulated ObjectId ref through untouched.
+            const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
+            return {
+              ...playerData,
+              ageGroup: playerEntry.ageGroup,
+              gender: playerEntry.gender
+            };
+          }),
+          scores: playerScores,
+          totalScore,
+          // Include score document metadata
+          scoreMetadata: latestScoreDoc ? {
+            _id: latestScoreDoc._id,
+            isLocked: latestScoreDoc.isLocked,
+            timeKeeper: latestScoreDoc.timeKeeper,
+            scorer: latestScoreDoc.scorer,
+            remarks: latestScoreDoc.remarks,
+            competitionType: latestScoreDoc.competitionType,
+            createdAt: latestScoreDoc.createdAt,
+            updatedAt: latestScoreDoc.updatedAt
+          } : null
+        };
+      });
 
       this.logger.info('Team scores retrieved', { competitionId, ageGroup, gender });
 

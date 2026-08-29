@@ -9,15 +9,15 @@
     },
     {
       "name": "GET /api/admin/dashboard/competition/:id",
-      "queries": 26,
-      "perTeam": 0.26,
-      "breakdown": "countDocuments:teams x12, countDocuments:players x12, findOne:admins x1, findOne:competitions x1"
+      "queries": 0,
+      "perTeam": 0,
+      "breakdown": ""
     },
     {
       "name": "GET /api/admin/teams (limit 10)",
-      "queries": 104,
-      "perTeam": 1.04,
-      "breakdown": "find:players x100, findOne:admins x1, findOne:competitions x1, find:teams x1, find:coaches x1"
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "find:teams x2, findOne:admins x1, findOne:competitions x1, find:coaches x1, find:players x1"
     },
     {
       "name": "GET /api/admin/teams/submitted",
@@ -27,15 +27,15 @@
     },
     {
       "name": "GET /api/admin/scores/team",
-      "queries": 105,
-      "perTeam": 1.05,
-      "breakdown": "find:scores x100, findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1"
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1, find:scores x1"
     },
     {
       "name": "GET /api/admin/rankings/team",
-      "queries": 105,
-      "perTeam": 1.05,
-      "breakdown": "find:scores x100, findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1"
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1, find:scores x1"
     },
     {
       "name": "GET /api/admin/scores/individual",

@@ -303,6 +303,33 @@ async function run() {
       admin.get(`/api/admin/dashboard/competition/${competitionId}`), { expect: [404] });
     await step('GET /api/admin/system/health', admin.get('/api/admin/system/health'));
     const adminTeams = await step('GET /api/admin/teams', admin.get('/api/admin/teams', { query: { page: 1, limit: 10 } }));
+
+    /*
+     * Pagination moved into the database, so assert it actually paginates and
+     * that page 2 is a different set — a page cut from a rebuilt list would
+     * pass a naive "returns 200" check while returning the same rows.
+     */
+    const pageOne = await step('GET /api/admin/teams (page 1, limit 3)',
+      admin.get('/api/admin/teams', { query: { page: 1, limit: 3 } }));
+    const pageTwo = await step('GET /api/admin/teams (page 2, limit 3)',
+      admin.get('/api/admin/teams', { query: { page: 2, limit: 3 } }));
+
+    if (pageOne && pageTwo) {
+      const sized = pageOne.teams?.length <= 3;
+      record('teams page respects limit', sized ? 'PASS' : 'FAIL',
+        { reason: sized ? undefined : `got ${pageOne.teams?.length} rows for limit=3` });
+
+      const ids = (page) => (page.teams || []).map((t) => t._id).join(',');
+      const distinct = pageOne.teams?.length === 0 || ids(pageOne) !== ids(pageTwo);
+      record('teams page 2 differs from page 1', distinct ? 'PASS' : 'FAIL');
+
+      const totalStable = pageOne.total === adminTeams?.total;
+      record('teams total is independent of page size', totalStable ? 'PASS' : 'FAIL',
+        { reason: totalStable ? undefined : `${pageOne.total} vs ${adminTeams?.total}` });
+
+      const rostersIntact = (pageOne.teams || []).every((t) => Array.isArray(t.players));
+      record('teams page still carries rosters', rostersIntact ? 'PASS' : 'FAIL');
+    }
     const submitted = await step('GET /api/admin/teams/submitted',
       admin.get('/api/admin/teams/submitted', { query: CATEGORY }));
 

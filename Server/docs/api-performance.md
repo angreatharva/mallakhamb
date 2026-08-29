@@ -1,5 +1,11 @@
 # API performance: measurements, defects and a plan
 
+> **Status — Phases 0 and 1 are done.** See [§5 Results](#5-results-after-phases-0-and-1)
+> for the before/after. The measurements in §1–§4 below are the BASELINE that
+> motivated the work; they are kept as recorded rather than rewritten, so the
+> results can be checked against them.
+
+
 **Measured 2026-08-29** against `perf/api-docs-and-benchmarks`, on the harness in
 `Server/scripts/perf/`. Reproduce with:
 
@@ -80,7 +86,7 @@ Fixed in this branch, because it also broke the `/api/docs` page added here:
 Covered by `src/middleware/request-coalescing.middleware.test.js` — 16 tests,
 **8 of which fail against the original implementation**.
 
-### 1.1 — `POST /api/admin/age-groups/start` returns 500 (blocking)
+### 1.1 — `POST /api/admin/age-groups/start` returns 500 — **FIXED**
 
 `admin.service.js:2293` calls `competition.save()` on a document loaded through
 `competitionRepository.findById`, which is `.lean()` — a plain object with no
@@ -98,7 +104,7 @@ Fix: replace the read-modify-`save()` with a targeted `updateById` using
 starting two categories at once currently race to overwrite each other's whole
 `startedAgeGroups` array.
 
-### 1.2 — Queries filtering on fields the schema does not have
+### 1.2 — Queries filtering on fields the schema does not have — **RESOLVED**
 
 `Team` has `{name, coach, description, isActive, stateUnit, sex, teamAgeGroup}`.
 `Player` has no `competition`. Entry lives in `Competition.registeredTeams`.
@@ -115,7 +121,7 @@ Mongoose passes unknown paths straight through, so MongoDB matches nothing —
 That is why `dashboard/competition/:id` still costs 26 queries and 173ms at 1000
 teams while returning all zeros.
 
-### 1.3 — `GET /api/admin/scores/individual` silently empty for the slug form
+### 1.3 — `GET /api/admin/scores/individual` silently empty for the slug form — **FIXED**
 
 `getTeamScores` normalizes `competitionType` through `toCompetitionTypeDisplay`
 (`competition_1` → `Competition I`). `getIndividualScores` does not — it puts the
@@ -125,7 +131,7 @@ beside it is full.
 
 Verified: `competitionType=competition_1` → 0 rows; `Competition I` → 833 rows.
 
-### 1.4 — Judge search matches e-mail only
+### 1.4 — Judge search matches e-mail only — **FIXED**
 
 `judge-account.repository.js:83` searches `$or: [{name}, {email}]`, but
 `JudgeAccount` stores `firstName`/`lastName` — there is no `name` path (it was
@@ -135,7 +141,7 @@ Verified: searching a judge's actual first name returns 0 results; only e-mail
 matches. Since admins cannot create judge logins, this search is the **only** way
 a panel seat gets filled.
 
-### 1.5 — `GET /api/public/scores` with no `competitionId` returns everything
+### 1.5 — `GET /api/public/scores` with no `competitionId` returns everything — **OPEN** (Phase 2)
 
 The parameter is `competitionId`; `competition` is silently ignored. With no
 recognised id, the endpoint returns every published score in the database,
@@ -217,7 +223,7 @@ teams before slicing 10 off the end — see below.
 
 ## 3. Root causes
 
-### A. N+1 queries — one round trip per team
+### A. N+1 queries — one round trip per team — **FIXED**
 
 `scoring.service.js:580` maps over every submitted team and awaits
 `scoreRepository.find({competition, teamId, …})` inside the loop. `getTeamScores`
@@ -229,7 +235,7 @@ This is the single largest problem. On loopback each query costs ~0.3 ms and it
 looks survivable; with the API and database on different hosts, 1,000 sequential
 round trips at even 1 ms each is a full second of pure latency.
 
-### B. Pagination applied after doing all the work
+### B. Pagination applied after doing all the work — **FIXED**
 
 `getAllTeams` (`admin.service.js:744-871`) fetches every team, issues a player
 query for each, builds the full response, and **then** slices `page`/`limit` out
@@ -292,7 +298,7 @@ if request volume rather than data volume becomes the constraint.
 
 Ordered by (impact × confidence) ÷ risk. Phases 0 and 1 are the ones that matter.
 
-### Phase 0 — Correctness first (½ day)
+### Phase 0 — Correctness first — **DONE**
 
 Nothing here is a performance change, but four of these endpoints currently
 return nothing, and optimising an endpoint that returns nothing is wasted work.
@@ -304,7 +310,7 @@ return nothing, and optimising an endpoint that returns nothing is wasted work.
 | 0.2 | Same in `addPlayerToCompetitionTeam` / `removePlayerFromCompetitionTeam` | `registration.service.js:285,354` |
 | 0.3 | Normalize `competitionType` in `getIndividualScores` as `getTeamScores` does | `scoring.service.js:675` |
 | 0.4 | Judge search: `$or` on `firstName`/`lastName`/`email`; sort by `lastName` | `judge-account.repository.js:83` |
-| 0.5 | Decide `GET /api/judge/teams`, `GET /api/admin/players`, `dashboard/competition/:id`: rewrite against `registeredTeams`, or retire them | `judge.service.js:409`, `admin.service.js:1332,644` |
+| 0.5 | ~~Decide~~ **Done** — retired `/api/judge/teams` and `/dashboard/competition/:id` (no caller anywhere); rewrote `GET /api/judge/teams`, `GET /api/admin/players`, `dashboard/competition/:id`: rewrite against `registeredTeams`, or retire them | `judge.service.js:409`, `admin.service.js:1332,644` |
 
 0.5 needs a product call: the client uses `/api/public/submitted-teams` instead,
 so those three may simply be dead. **Retiring an endpoint nobody can use is
@@ -313,7 +319,7 @@ cheaper than fixing one.** Confirm against the Web bundle before either.
 Regression guard: `npm --prefix Server run perf:test` — 0.1 and 0.3 are already
 asserted there; add cases for 0.4 and 0.5.
 
-### Phase 1 — Kill the N+1s (1–2 days, the big win)
+### Phase 1 — Kill the N+1s — **DONE**
 
 **1.1 `getTeamScores` — one query instead of N.** Replace the per-team
 `scoreRepository.find` with a single `find({competition, teamId: {$in: teamIds}, …})`
@@ -332,8 +338,19 @@ Note the ordering subtlety: filtering currently happens partly in JS after the
 fetch, so the total count must still be derived from the filtered
 `registeredTeams` array rather than from a `countDocuments`.
 
-**1.3 `getCompetitionOverview` — one aggregation.** Replace 2×(age groups)
-counts with a single `$unwind`/`$group` over `registeredTeams`. Depends on 0.5.
+**1.3 `getCompetitionOverview` — one aggregation.** ~~Replace 2×(age groups)
+counts with a single `$unwind`/`$group` over `registeredTeams`.~~ **Moot** — 0.5
+retired the endpoint, so there is nothing left to aggregate. The `$unwind`
+approach was written anyway, for `GET /api/admin/players`, which needed the same
+shape and does have a caller.
+
+> **The prediction below was half right, and it is worth saying which half.**
+> `/api/admin/teams` landed where expected (573 → 89 ms). The scoring endpoints
+> did not: they went 392–467 → 248–263 ms, not 30–60 ms, because once the
+> queries are gone their remaining cost is cause **C** — the deep-populated
+> competition document — which Phase 1 does not touch. The query-count half of
+> the prediction (~1,005 → 6) held exactly, and that is the half that carries
+> over to a deployment with a real network between the API and the database.
 
 Expected after Phase 1, at 1000 teams: the five worst rows drop from
 300–600 ms to roughly 30–60 ms, and — the part that matters in production —
@@ -397,7 +414,79 @@ only when concurrent users, not data size, is the constraint.
 
 ---
 
-## 5. Where the harness lives
+## 5. Results after Phases 0 and 1
+
+Same harness, same fixtures, same machine. Baseline in
+[`perf-report.json`](perf-report.json), result in
+[`perf-report-after.json`](perf-report-after.json); query counts in
+[`perf-queries-before.json`](perf-queries-before.json) and
+[`perf-queries.json`](perf-queries.json).
+
+### Database round trips per request (100 entered teams)
+
+This is the headline. On loopback a query costs a fraction of a millisecond and
+the win looks modest; in production each one is a network round trip to another
+host, and the count is what you are actually paying.
+
+| Endpoint | Before | After |
+|---|---:|---:|
+| `GET /api/admin/rankings/team` | 105 | **6** |
+| `GET /api/admin/scores/team` | 105 | **6** |
+| `GET /api/judge/scores/team` | 105 | **6** |
+| `GET /api/admin/teams?limit=10` | 104 | **6** |
+| `GET /api/admin/dashboard/competition/:id` | 26 | **retired** |
+
+At 1000 teams those first four were ~1,005 queries each. They are now 6,
+**independent of the number of teams** — which is the property that was missing,
+not the milliseconds.
+
+### p95 latency at 1000 teams
+
+| Endpoint | Before | After | Change |
+|---|---:|---:|---|
+| `GET /api/admin/teams?limit=100` | 599ms | **111ms** | −82% |
+| `GET /api/admin/teams?limit=10` | 573ms | **89ms** | −85% |
+| `GET /api/judge/scores/team` | 467ms | **262ms** | −44% |
+| `GET /api/admin/rankings/team` | 429ms | **263ms** | −39% |
+| `GET /api/admin/scores/team` | 392ms | **248ms** | −37% |
+| `GET /api/admin/players` | *empty page* | **45ms**, correct | fixed |
+
+`/api/admin/teams` improved most because both problems applied to it — the N+1
+*and* paginating after building everything — so the page now costs what a page
+should.
+
+The scoring endpoints improved less than the query count suggests, and that is
+the expected shape: on loopback their remaining cost is not the queries, it is
+cause **C** — the deep-populated competition document, which loads every entry
+and every athlete in the meet whatever category was asked for. That is Phase 2
+work. On a deployment where the database is a network hop away, the same change
+removes ~1,000 round trips and the improvement will be far larger than 37%.
+
+Two rows in the raw comparison show ~99% improvements that are **not**
+optimisations — `/api/admin/dashboard/competition/:id` and `/api/judge/teams` are
+now 404s, because they were retired. They are called out here so nobody reads
+them as wins.
+
+### Correctness
+
+`npm --prefix Server run perf:test`: **131 checks, 0 failures** (baseline was
+111 passing with 1 failure, from 112). The added cases pin each fix — that
+`scores/individual` agrees on both spellings of `competitionType`, that
+`admin/players` returns entered athletes, that judge search matches a first
+name, that the teams page respects `limit` and page 2 differs from page 1.
+
+Jest: **454 passed**, unchanged.
+
+### What is left
+
+Phase 2 (bound the payloads) and Phase 3 (structural) are untouched.
+`/api/public/scores` still returns 7.4 MB unpaginated, and
+`/api/admin/teams/submitted` still returns 4.2 MB — those are now the largest
+remaining problems, and they are payload problems rather than query problems.
+
+---
+
+## 6. Where the harness lives
 
 | Path | What it does |
 |---|---|
