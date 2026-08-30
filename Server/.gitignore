@@ -100,3 +100,9 @@ scripts/perf/lib/*
 !scripts/perf/lib/harness-server.js
 
 !scripts/generateOpenApi.js
+
+# The supervised boot path. `npm start` and render.yaml's startCommand both run
+# this, so leaving it ignored means the deployed service has no entry point at
+# all — which is exactly what `scripts/*` did to it until a pre-merge check
+# noticed the file existed on disk and not in HEAD.
+!scripts/startup.js
