@@ -55,6 +55,14 @@ jobs:
 
       - run: npm test
 
+      # The OpenAPI document is generated from the code and checked against the
+      # routes read off the live Express stack. Without this in CI the guarantee
+      # is only as good as whoever remembers to run it: add a route and the spec
+      # silently stops describing the API. It needs no database — createApp only
+      # wires middleware — so it runs in a second.
+      - name: API documentation covers every route
+        run: npm run docs:openapi:check
+
   web:
     name: Web — tests, lint, build
     runs-on: ubuntu-latest

@@ -16,6 +16,7 @@ import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
+import { entryGender } from '@/utils/scoring/apparatus';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -207,7 +208,7 @@ const AdminScoring = () => {
             }
             
             const teamPlayers = selectedTeam.players
-                .filter(pe => pe.player.gender === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+                .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
                 .map(pe => ({ id: pe.player._id, name: `${pe.player.firstName} ${pe.player.lastName}`, gender: pe.player.gender, ageGroup: pe.ageGroup, teamId: selectedTeam._id, teamName: selectedTeam.name }));
             setPlayers(teamPlayers);
             const initialScores = {};

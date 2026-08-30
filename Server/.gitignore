@@ -93,6 +93,7 @@ scripts/perf/*
 !scripts/perf/probe.js
 !scripts/perf/loadTest.js
 !scripts/perf/equivalence.js
+!scripts/perf/socketLoad.js
 !scripts/perf/lib/
 scripts/perf/lib/*
 !scripts/perf/lib/client.js

@@ -343,4 +343,15 @@ scoreSchema.index({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1 }
  */
 scoreSchema.index({ competition: 1, isLocked: 1 });
 
+/**
+ * "Every score this athlete appears in" — `ScoreRepository.findByPlayer` and
+ * `AdminService.getPlayerDetails`. A multikey index on the embedded array;
+ * without it that query is a collection scan of every score document in every
+ * competition.
+ *
+ * Built by migration 001 and declared by no schema, so it existed in production
+ * and not in a fresh development database.
+ */
+scoreSchema.index({ 'playerScores.playerId': 1 });
+
 module.exports = mongoose.model('Score', scoreSchema);

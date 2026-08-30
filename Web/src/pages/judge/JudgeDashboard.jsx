@@ -17,7 +17,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
-import { apparatusInUse, isRegisteredFor } from '@/utils/scoring/apparatus';
+import { apparatusInUse, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
 import {
   indexPerformanceOrder,
   applyRunningOrder,
@@ -344,7 +344,7 @@ const JudgeDashboard = () => {
     
     return team.players
       .filter(e => {
-        if (!e.player || e.player.gender !== gender || e.ageGroup !== ageGroup) return false;
+        if (!e.player || entryGender(e) !== gender || e.ageGroup !== ageGroup) return false;
         // isRegisteredFor reads every shape `apparatus` has been stored in; the
         // inline object lookup this replaced silently matched everything when a
         // coach had written a bare name.
@@ -435,7 +435,7 @@ const JudgeDashboard = () => {
   const registeredApparatus = apparatusInUse(
     teams.flatMap((team) => (team.players || []).filter(
       (e) => e.player
-        && e.player.gender === (selectedGender || judgeInfo.gender)
+        && entryGender(e) === (selectedGender || judgeInfo.gender)
         && e.ageGroup === (selectedAgeGroup || judgeInfo.ageGroup)
     )),
     selectedCompetitionType

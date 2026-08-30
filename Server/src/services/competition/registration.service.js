@@ -563,7 +563,30 @@ class RegistrationService {
         );
       }
 
-      return registrations;
+      /*
+       * Paged, because the unpaged answer is 3.9 MB on a 1000-team meet.
+       *
+       * The whole entry list — every team, every athlete in every team — went
+       * out in one response. This endpoint IS the entry list, so unlike the
+       * other large payloads there is nothing to project away; the only bound
+       * available is a page.
+       *
+       * The slice happens after the filters above, so `total` counts what
+       * matched rather than what exists. Sliced in memory rather than in the
+       * database because the filters already are: making only pagination
+       * database-side would page a different set than it counted.
+       */
+      const total = registrations.length;
+      const page = Math.max(1, Number(filters.page) || 1);
+      const limit = Math.min(200, Math.max(1, Number(filters.limit) || 50));
+      const start = (page - 1) * limit;
+
+      return {
+        registrations: registrations.slice(start, start + limit),
+        total,
+        page,
+        pages: Math.ceil(total / limit) || 0,
+      };
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;

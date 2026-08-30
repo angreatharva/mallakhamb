@@ -130,3 +130,26 @@ export function apparatusToJudge(chosen, entry, competitionType) {
   if (registered.length === 1) return registered[0];
   return 'Pole Mallakhamb';
 }
+
+/**
+ * The gender a squad entry competes under.
+ *
+ * A registration entry carries its OWN `gender`, written from the coach's form
+ * when the athlete was added. `entry.player.gender` is a separate fact — the
+ * athlete's account — and nothing kept the two in step until the server started
+ * verifying them on write (coach.service.addPlayerToAgeGroup).
+ *
+ * The ENTRY is authoritative, because everything downstream is keyed on it: the
+ * category, the panel seat, the Score document. These screens used to filter on
+ * `entry.player.gender` while pairing it with `entry.ageGroup` — the account for
+ * one half of the category and the entry for the other — so a mismatch showed an
+ * athlete to one panel and scored them under another.
+ *
+ * Falls back to the account for entries written before the field was populated.
+ *
+ * @param {Object} entry - a `registeredTeams[].players[]` entry
+ * @returns {string|undefined}
+ */
+export function entryGender(entry) {
+  return entry?.gender ?? entry?.player?.gender;
+}

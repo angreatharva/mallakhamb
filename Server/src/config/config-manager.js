@@ -70,7 +70,27 @@ class ConfigManager {
         otpExpiry: this.getNumber('OTP_EXPIRY_MINUTES', 10),
         maxLoginAttempts: this.getNumber('MAX_LOGIN_ATTEMPTS', 5),
         lockoutDuration: this.getNumber('LOCKOUT_DURATION_MINUTES', 15),
-        csrfEnabled: this.getBoolean('CSRF_ENABLED', true)
+        csrfEnabled: this.getBoolean('CSRF_ENABLED', true),
+        /**
+         * Rate limiting, as one switch.
+         *
+         * OFF by default in development and test, because every limit in this
+         * app is sized for real humans and gets in the way of anything that
+         * drives the API faster than a person can click — the load harness, the
+         * e2e walk, seeding through the UI, or someone poking at endpoints by
+         * hand. Chasing a 429 that only exists because you are testing is pure
+         * noise.
+         *
+         * ON by default in production and staging, because the limits there are
+         * doing real work: judge login is the only credential-guessing surface
+         * on the panel, and the password-reset endpoints are the other. Set
+         * RATE_LIMIT_ENABLED=false to turn them off there too — deliberately,
+         * and visibly in the startup report.
+         */
+        rateLimitEnabled: this.getBoolean(
+          'RATE_LIMIT_ENABLED',
+          !['development', 'test'].includes(this.getString('NODE_ENV', 'development'))
+        )
       },
       razorpay: {
         keyId: this.getString('RAZORPAY_KEY_ID', ''),

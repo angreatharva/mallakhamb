@@ -118,9 +118,32 @@ function createApp(container) {
   // per-IP `authLimiter` bucket — otherwise one venue's NAT address would put the
   // whole panel on a single 10-per-15-min budget at sign-in. See
   // createJudgeLoginRateLimitMiddleware.
-  const authLimiter = createAuthRateLimitMiddleware(container);
-  const userLimiter = createUserRateLimitMiddleware(container);
-  const judgeLoginLimiter = createJudgeLoginRateLimitMiddleware(container);
+  /*
+   * One switch for every limiter (security.rateLimitEnabled).
+   *
+   * Off by default in development and test: the limits are sized for humans and
+   * they get in the way of the load harness, the e2e walk and UI seeding, where
+   * a 429 tells you nothing except that you are testing. On by default in
+   * production and staging, where judge login and password reset are genuine
+   * guessing surfaces.
+   *
+   * Passing `undefined` is what loadRoutes already treats as "no limiter", so
+   * disabling attaches nothing at all rather than attaching a permissive one.
+   */
+  const rateLimitEnabled = appConfig.get('security.rateLimitEnabled');
+  const authLimiter = rateLimitEnabled ? createAuthRateLimitMiddleware(container) : undefined;
+  const userLimiter = rateLimitEnabled ? createUserRateLimitMiddleware(container) : undefined;
+  const judgeLoginLimiter = rateLimitEnabled
+    ? createJudgeLoginRateLimitMiddleware(container)
+    : undefined;
+
+  if (!rateLimitEnabled) {
+    logger.warn('Rate limiting is DISABLED', {
+      environment: process.env.NODE_ENV,
+      hint: 'Set RATE_LIMIT_ENABLED=true to turn it back on.',
+    });
+  }
+
   loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter });
 
   /**

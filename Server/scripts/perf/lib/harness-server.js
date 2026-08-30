@@ -24,12 +24,14 @@ require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') 
  * @param {string} [options.uri] - the database to run against
  * @param {number} [options.port] - 0 picks a free one
  * @param {boolean} [options.quiet=true] - silence the app logger
- * @returns {Promise<{baseUrl: string, close: () => Promise<void>, container: Object}>}
+ * @param {boolean} [options.sockets=false] - attach Socket.IO
+ * @returns {Promise<{baseUrl: string, close: () => Promise<void>, container: Object, socketManager: Object|null}>}
  */
 async function startHarnessServer({
   uri = process.env.PERF_MONGODB_URI || 'mongodb://127.0.0.1:27017/mallakhamb_perf',
   port = 0,
   quiet = true,
+  sockets = false,
 } = {}) {
   // Both must be set BEFORE config-manager loads, because it snapshots the
   // environment once and every downstream service reads that snapshot.
@@ -69,13 +71,31 @@ async function startHarnessServer({
   server.keepAliveTimeout = 65_000;
   server.headersTimeout = 66_000;
 
+  /*
+   * Socket.IO is opt-in.
+   *
+   * server.js always attaches it, but most of this harness drives HTTP, and an
+   * idle Socket.IO server holds handles that make `close()` slower and noisier.
+   * The socket load test asks for it; nothing else pays for it.
+   */
+  let socketManager = null;
+  if (sockets) {
+    const { initializeSocketIO } = require('../../../src/infrastructure/bootstrap');
+    socketManager = initializeSocketIO(server);
+    app.set('io', socketManager.getIO());
+  }
+
   await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve));
   const actualPort = server.address().port;
 
   return {
     baseUrl: `http://127.0.0.1:${actualPort}`,
     container,
+    socketManager,
     close: async () => {
+      if (socketManager?.getIO) {
+        await new Promise((resolve) => socketManager.getIO().close(resolve));
+      }
       await new Promise((resolve) => server.close(resolve));
       await databaseConnection.disconnect?.().catch(() => {});
       const mongoose = require('mongoose');

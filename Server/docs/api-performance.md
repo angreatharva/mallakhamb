@@ -1,7 +1,7 @@
 # API performance: measurements, defects and a plan
 
 > **Status — Phases 0, 1, 2 and 3 are done.** See [§5](#5-results-after-phases-0-and-1), [§5b](#5b-results-after-phase-2)
-> and [§5c](#5c-results-after-phase-3) for the before/after, and [§6](#6-startup-and-index-configuration)
+> and [§5c](#5c-results-after-phase-3), [§5d](#5d-follow-ups) for the before/after, and [§6](#6-startup-and-index-configuration)
 > for the startup path. The measurements in §1–§4 below are the BASELINE that
 > motivated the work; they are kept as recorded rather than rewritten, so the
 > results can be checked against them.
@@ -698,6 +698,93 @@ been eliminated for the endpoint that mattered most without touching the schema.
 indistinguishable from a wrong password by message" failed once in a full run and
 passes in isolation. It fires two logins concurrently against a shared lockout
 counter, so it is order-dependent. Pre-existing; not investigated further.
+
+---
+
+## 5d. Follow-ups
+
+### Rate limiting is one switch now
+
+`security.rateLimitEnabled` — **off by default in development and test**, on in
+production and staging. Every limit here is sized for humans and got in the way
+of anything driving the API faster than a person clicks: the load harness, the
+e2e walk, UI seeding. Chasing a 429 that exists only because you are testing is
+noise. `RATE_LIMIT_ENABLED=false` turns it off in production too, deliberately,
+and the startup report says so out loud.
+
+### The gender question, settled
+
+A squad entry carries its own `gender`, written from the coach's form and
+entirely independent of `Player.gender`. Two records of one fact that nothing
+kept in step — and they decided different things: the ENTRY picks the category,
+the panel and the Score document, while five client screens filtered the roster
+on the ACCOUNT while pairing it with the entry's `ageGroup`.
+
+- **The entry is authoritative**, because everything downstream is keyed on it.
+- It is now **verified on write** (`coach.service.addPlayerToAgeGroup` refuses an
+  entry contradicting the athlete), so the two cannot drift.
+- The five client filters use `entryGender(entry)`, which prefers the entry and
+  falls back to the account for rows written before the field was populated.
+
+That unblocked `getTeamScores`, which now uses the same category-scoped fetch as
+`getSubmittedTeams`:
+
+| At 1000 teams | before | after |
+|---|---:|---:|
+| `GET /api/admin/scores/team` payload | 4,314 KB | **3,293 KB** |
+| `GET /api/admin/scores/team` @1 | 306ms | **199ms** |
+| `GET /api/competitions/:id/registrations` | 3,861 KB | **193 KB** (−95%, paginated) |
+
+`scores/team` is still the heaviest read and still saturates at 20 concurrent
+(997ms p50). Its remaining bulk is `judgeSlips[].breakdown`, which the judge
+panel-review edit flow genuinely reads — so it cannot be projected away without
+splitting that flow onto its own endpoint.
+
+### Sockets, measured for the first time
+
+Live scoring runs over Socket.IO and every measurement in this document until
+now drove HTTP. `scripts/perf/socketLoad.js` covers it — 12 panels × 6 seats:
+
+| | |
+|---|---|
+| handshake (incl. token verify + auto-join) | 4ms p50, 7.9ms p95 |
+| fan-out — emit to every panel-mate receiving | **3.4ms p50, 5.5ms p95** |
+| throughput | 268 slips/s |
+| delivery | 1800/1800 |
+
+Healthy, and now it is a number rather than an assumption.
+
+The first version of that script also reported "20 slips LEAKED to another
+panel". That was the harness, not the product: `seedScale.js` seats the same six
+accounts on every category, so a listener from "another panel" is the same judge,
+legitimately auto-joined. The check was removed rather than left to mislead —
+cross-room authorization is covered by
+`tests/security/socket-scoring.security.test.js`, which can seat a judge on one
+category only.
+
+### Smaller items
+
+- `docs:openapi:check` now runs in CI. The spec-covers-every-route guarantee was
+  only as good as whoever remembered to run it.
+- Three migration-era indexes are now declared on their schemas
+  (`Score {playerScores.playerId}`, `Competition {isDeleted}`, `Coach {team}`),
+  so a fresh development database matches production for the queries that use
+  them. 34 remain undeclared and are reported on every startup.
+- The flaky lockout test is deflaked — it fired two logins concurrently at a
+  shared counter. It now runs them sequentially and compares the two messages to
+  each other, which is what "indistinguishable" actually claims.
+
+### Still open
+
+- **`autoIndex` stays on in development.** It is a second mechanism doing the
+  reconciler's job, and it caused the original name collision — but turning it
+  off would leave `npm run start:bare` and Jest without the unique indexes that
+  `saveScores` depends on for its duplicate-key retry. Not worth trading a
+  correctness safety net for tidiness.
+- **Razorpay paths are still unexercised.** `payments/create-order` and
+  `verify-and-submit` need a third party, so the harness skips them.
+- **34 undeclared indexes.** Each costs a write on every insert; several look
+  redundant against a compound prefix. Needs a review pass, not a guess.
 
 ---
 

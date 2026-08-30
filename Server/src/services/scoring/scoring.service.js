@@ -26,7 +26,6 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
-const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
 class ScoringService {
   /**
@@ -539,43 +538,40 @@ class ScoringService {
       // populated documents carry e-mail addresses and minors' dates of birth
       // into the response. Applied here AND at the mapping layer below, because
       // `.toObject()` does not run a schema toJSON transform.
-      const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          {
-            path: 'registeredTeams.team',
-            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
-          },
-          {
-            path: 'registeredTeams.players.player',
-            select: SUBMITTED_TEAM_PLAYER_FIELDS
-          }
-        ]
-      });
+      /*
+       * Fetch only this category's submitted registrations.
+       *
+       * Same change, and the same reasoning, as AdminService.getSubmittedTeams:
+       * this used to load the WHOLE competition with two levels of populate and
+       * filter it in JavaScript — 2.87 MB and ~11,000 populated documents on a
+       * 1000-team meet — to answer a question about one category. It backs the
+       * Scorer's screen and the admin scoring screen, both polled during an
+       * event, and it was the worst endpoint in the API under concurrent load.
+       *
+       * "Submitted" (final submit AND fees paid) is applied inside the
+       * repository, so the Scorer's team list and the judge dashboard's cannot
+       * drift apart — they now run the same query.
+       *
+       * The repository ALSO narrows each squad to the category, which this
+       * method did not do before: it kept every athlete on a matching team.
+       * That is the intended behaviour — ScorerScoring.jsx and
+       * AdminScoring.jsx both filter the roster to the category on arrival —
+       * and it is safe now that a squad entry's gender is verified against the
+       * athlete's own on write (coach.service.addPlayerToAgeGroup), so the
+       * server and the client agree on which field decides.
+       */
+      const toProjection = (fields) => Object.fromEntries(
+        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
+      );
 
-      if (!competition) {
-        this.logger.warn('Competition not found', { competitionId });
-        return [];
-      }
-
-      // Only teams the coach has actually entered — final submit AND fees
-      // paid. This filter was missing entirely, and this method backs
-      // /api/judge/scores/team and /api/admin/scores/team, so the Scorer's
-      // team list and the admin scoring screen both showed teams a coach had
-      // merely saved as a draft: a half-built roster, sitting alongside real
-      // entries with nothing to distinguish it, waiting to be scored.
-      // getSubmittedTeams (the judge dashboard's list) has always filtered
-      // this way; the two lists must agree.
-      let filteredTeams = (competition.registeredTeams || []).filter(isSubmittedRegistration);
-
-      if (ageGroup || gender) {
-        filteredTeams = filteredTeams.filter(regTeam => {
-          return regTeam.players.some(playerEntry => {
-            const matchesAgeGroup = !ageGroup || playerEntry.ageGroup === ageGroup;
-            const matchesGender = !gender || playerEntry.gender === gender;
-            return matchesAgeGroup && matchesGender;
-          });
-        });
-      }
+      const filteredTeams = await this.competitionRepository.findSubmittedRegistrations(
+        competitionId,
+        { gender, ageGroup },
+        {
+          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+        }
+      );
 
       /*
        * ONE query for every team's scores, not one per team.

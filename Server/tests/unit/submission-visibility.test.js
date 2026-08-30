@@ -149,8 +149,34 @@ describe('registeredPlayerIds', () => {
 // ---------------------------------------------------------------------------
 
 describe('scoringService.getTeamScores — scorer and admin scoring lists', () => {
+  /**
+   * The submission filter moved from getTeamScores into
+   * `CompetitionRepository.findSubmittedRegistrations`, which applies it in the
+   * database (`isSubmitted: true, isActive: { $ne: false }`) so the fetch only
+   * transfers the category asked for. `scripts/perf/equivalence.js` proves that
+   * query matches `isSubmittedRegistration` against a seeded competition.
+   *
+   * The double below therefore implements the rule with the SHARED predicate
+   * rather than restating it — so these tests still check what they always
+   * checked (that getTeamScores surfaces nothing the visibility rule excludes)
+   * and cannot pass by agreeing with a private copy of the rule.
+   */
   const buildService = (competition) => {
-    const competitionRepository = { findById: jest.fn(async () => competition) };
+    const competitionRepository = {
+      findById: jest.fn(async () => competition),
+      findSubmittedRegistrations: jest.fn(async (id, filters = {}) => {
+        const rows = (competition?.registeredTeams || []).filter(isSubmittedRegistration);
+        if (!filters.gender && !filters.ageGroup) return rows;
+        return rows
+          .map((row) => ({
+            ...row,
+            players: (row.players || []).filter((p) =>
+              (!filters.gender || p.gender === filters.gender)
+              && (!filters.ageGroup || p.ageGroup === filters.ageGroup)),
+          }))
+          .filter((row) => row.players.length > 0);
+      }),
+    };
     const scoreRepository = { find: jest.fn(async () => []) };
     return new ScoringService(
       scoreRepository,
