@@ -1,7 +1,8 @@
 # API performance: measurements, defects and a plan
 
-> **Status — Phases 0, 1 and 2 are done.** See [§5](#5-results-after-phases-0-and-1) and
-> [§5b](#5b-results-after-phase-2) for the before/after. The measurements in §1–§4 below are the BASELINE that
+> **Status — Phases 0, 1, 2 and 3 are done.** See [§5](#5-results-after-phases-0-and-1), [§5b](#5b-results-after-phase-2)
+> and [§5c](#5c-results-after-phase-3) for the before/after, and [§6](#6-startup-and-index-configuration)
+> for the startup path. The measurements in §1–§4 below are the BASELINE that
 > motivated the work; they are kept as recorded rather than rewritten, so the
 > results can be checked against them.
 
@@ -242,7 +243,7 @@ query for each, builds the full response, and **then** slices `page`/`limit` out
 of the finished array. Asking for 10 rows costs the same as asking for all 1000 —
 hence `limit=10` and `limit=100` having near-identical timings.
 
-### C. Whole-document reads of an unbounded embedded array — **PARTLY FIXED**
+### C. Whole-document reads of an unbounded embedded array — **MOSTLY FIXED**
 
 `Competition.registeredTeams` embeds every entry and every athlete in every
 entry. Any `competitionRepository.findById` therefore loads the entire meet.
@@ -269,7 +270,7 @@ takes a limit at all. `/api/public/scores` is anonymous and unbounded.
 values by writing back during a GET. It fires only on legacy rows, but it makes a
 read endpoint take a write lock, and the judge dashboard polls this endpoint.
 
-### F. Full-collection scan for a backwards-compatibility field
+### F. Full-collection scan for a backwards-compatibility field — **FIXED**
 
 `getAllJudgesSummary` (`admin.service.js:1972`) issues
 `judgeRepository.find({})` — every judge seat in every competition, ever — to
@@ -379,7 +380,7 @@ a migration over legacy rows and delete the code path.
 **2.5 Scope the `byCompetition` scan** in `getAllJudgesSummary` to the current
 competition, or drop the field. Check the Web bundle for consumers first.
 
-### Phase 3 — Structural (1–2 weeks, only if the event size demands it)
+### Phase 3 — Structural — **REASSESSED, see §5c**
 
 **3.1 Move entries out of `Competition.registeredTeams`** into their own
 `Registration` collection keyed `{competition, team}`, with athletes in
@@ -582,6 +583,121 @@ here.
 ### What is left
 
 Phase 3 (structural) is untouched, and on this evidence is still not urgent.
+
+---
+
+## 5c. Results after Phase 3
+
+Phase 3 was planned as "cache things". The first thing it produced was a
+measurement showing that caching was the wrong answer, and a production bug that
+mattered more than any of it.
+
+### First: a concurrency measurement, which nothing here had
+
+`benchmarkApi.js` issues one request at a time. That answers "is this handler
+expensive" and says nothing about "does this hold up when a five-judge panel is
+polling it" — and the plan's own caveat on caching the auth principal was that it
+is worth it *only when concurrent users, not data size, are the constraint*.
+Nothing had measured that. `scripts/perf/loadTest.js` now does, closed-loop, at
+several concurrency levels.
+
+### It immediately found a production outage
+
+`GET /api/auth/me` returned **thousands of 429s** under load. The per-IP auth
+limiter is **10 requests per 15 minutes in production**, and it wrapped the
+*entire* `/api/auth` router — `me`, `refresh`, `set-competition` and
+`competitions/assigned` included.
+
+At a venue the whole panel shares one NAT address. Six judges opening the app is
+`me` + `set-competition` each — **twelve requests** — so the eleventh was refused
+and the application was down for that venue for fifteen minutes, mid-competition.
+
+This is the same trap `createJudgeLoginRateLimitMiddleware` was written to avoid;
+its comment says a five-judge panel behind one NAT address must never throttle
+itself at sign-in. The rest of `/auth` was left behind.
+
+**Fixed:** the per-IP limiter now covers only the guessable endpoints —
+`forgot-password`, `verify-otp`, `reset-password-otp`, `reset-password/:token`.
+The session endpoints are authenticated, or hold their own rotatable credential
+(`refresh`), and are no longer limited by shared address. Covered by
+`tests/security/auth-rate-limit.security.test.js` — 11 tests, **7 of which fail
+against the original wiring**.
+
+### Then: the fetch, not a cache
+
+With `/auth/me` fixed, the load test showed the expensive endpoints were not
+repeating cheap work — they were each doing a lot of work. `getSubmittedTeams`
+loaded the **whole competition** with three levels of populate (2.87 MB, ~11,000
+populated documents) and filtered it in JavaScript, to answer a question about
+~830 athletes.
+
+It now asks the database for only the matching registrations. Two attempts were
+needed, and the first was wrong:
+
+| `getSubmittedTeams` fetch, 1000 teams | (no filter) | one category |
+|---|---:|---:|
+| Original — whole competition + 3 populates | 234ms | 143ms |
+| Aggregation with `$lookup` in the pipeline | 733ms | 555ms |
+| **Aggregation to select, batched `$in` to join** | **142ms** | **61ms** |
+
+`$unwind` produces one document per registration and `$lookup` then runs *per
+document* — 4,000 of them — while Mongoose's populate issues one batched query
+per path. The pipeline was winning on transfer and losing far more on lookups.
+The shipped version uses the pipeline only to filter, then resolves references
+with three `$in` queries: four round trips regardless of how many teams entered.
+
+Under concurrent load at 1000 teams:
+
+| | before | after |
+|---|---|---|
+| `teams/submitted` @1 | 4.5 req/s, 210ms | **10.4 req/s, 87ms** |
+| `teams/submitted` @20 | 450ms p50 | **293ms p50** |
+| `auth/me` @20 | thousands of 429s | **0 errors** |
+
+### Equivalence, because this is the most-polled endpoint in the product
+
+`scripts/perf/equivalence.js` runs the old fetch and the new one against the same
+seeded competition and diffs them field by field across six category filters. It
+is what caught the `$lookup` regression, and it caught a correctness bug before
+that: the first draft filtered on `paymentStatus`, which
+`isSubmittedRegistration` does **not** — it would have silently dropped entries
+the JavaScript path kept.
+
+### Also done
+
+`getAllJudgesSummary` loaded **every judge seat in the database**, across every
+meet ever run, to build a `byCompetition` count map "for backward
+compatibility". Nothing in the web client reads it. Now one `countDocuments`
+scoped to the competition, same shape.
+
+### Not done, deliberately
+
+**`GET /api/admin/scores/team` is now the worst endpoint under load** — 271ms
+alone, 1277ms p50 at 20 concurrent. It has exactly the same whole-competition
+fetch and the same fix applies, but its consumers filter players on
+`player.gender` (the athlete's ACCOUNT) while a registration entry carries its
+own `gender`. Those normally agree and are not guaranteed to. Moving the filter
+into the database changes which field decides, so that question should be settled
+first — and note Phase 2's `teams/submitted` change already filters on the entry,
+which is worth reviewing on the same grounds.
+
+**Caching was not implemented.** With the fetch fixed, the remaining cost is work
+that differs per caller, not the same work repeated — so a cache would add
+staleness risk against a live event for little gain. Revisit if concurrency rises
+rather than data size.
+
+**3.1 (splitting `registeredTeams` into its own collection) was not started.**
+It is a multi-week change with a migration and a dual-read period, and the
+measurements no longer justify it: query counts are constant at ≤8 for every
+endpoint at 1000 teams, and the whole-document read it was meant to eliminate has
+been eliminated for the endpoint that mattered most without touching the schema.
+
+### Unrelated flake
+
+`tests/security/account-lockout.security.test.js` → "an unknown e-mail is
+indistinguishable from a wrong password by message" failed once in a full run and
+passes in isolation. It fires two logins concurrently against a shared lockout
+counter, so it is order-dependent. Pre-existing; not investigated further.
 
 ---
 

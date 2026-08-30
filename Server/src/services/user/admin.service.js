@@ -979,36 +979,42 @@ class AdminService extends UserService {
         filters 
       });
       
-      // Query the Competition model to get registered teams
-      // CRIT-4: project the populated coach and athlete documents. Without a
-      // `select` these carry bcrypt hashes, e-mail addresses and — for minors —
-      // dates of birth all the way to the response body.
-      const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          {
-            path: 'registeredTeams.team',
-            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
-          },
-          {
-            path: 'registeredTeams.coach',
-            select: SUBMITTED_TEAM_COACH_FIELDS
-          },
-          {
-            path: 'registeredTeams.players.player',
-            select: SUBMITTED_TEAM_PLAYER_FIELDS
-          }
-        ]
-      });
+      /*
+       * Fetch only this category's submitted registrations.
+       *
+       * This used to load the WHOLE competition with three levels of populate
+       * and filter it in JavaScript: 2.87 MB and ~11,000 populated documents on
+       * a 1000-team meet, to answer a question about roughly 830 athletes. Every
+       * category read paid for every other category, and the judge dashboard
+       * polls this endpoint throughout an event.
+       *
+       * CRIT-4 still applies and is still enforced: the aggregation projects the
+       * same coach and athlete allow-lists the populate did, so bcrypt hashes,
+       * e-mail addresses and minors' dates of birth do not leave the database.
+       * `projectFields` below is the second line of defence, unchanged.
+       */
+      const toProjection = (fields) => Object.fromEntries(
+        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
+      );
 
-      if (!competition) {
-        this.logger.warn('Competition not found', { competitionId });
-        return [];
-      }
-
-      this.logger.info('Competition found', { 
+      const registrations = await this.competitionRepository.findSubmittedRegistrations(
         competitionId,
-        competitionName: competition.name,
-        totalRegisteredTeams: competition.registeredTeams?.length || 0
+        { gender: filters.gender, ageGroup: filters.ageGroup },
+        {
+          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+        }
+      );
+
+      // Kept so the rest of this method reads as it did: it works off
+      // `competition.registeredTeams`.
+      const competition = { registeredTeams: registrations };
+
+      // The competition's own fields are no longer fetched — only its matching
+      // registrations are — so there is no name to log here any more.
+      this.logger.info('Submitted registrations fetched', {
+        competitionId,
+        count: registrations.length
       });
 
       // Filter submitted teams (only teams fully submitted by coach)
@@ -1979,18 +1985,21 @@ class AdminService extends UserService {
         }
       )).map(flattenJudgeAccount);
 
-      // Get judges by competition for backward compatibility
-      const allJudges = await this.judgeRepository.find({}, {
-        select: 'competition'
-      });
-
-      const byCompetition = allJudges.reduce((acc, judge) => {
-        const compId = judge.competition?.toString();
-        if (compId) {
-          acc[compId] = (acc[compId] || 0) + 1;
-        }
-        return acc;
-      }, {});
+      /*
+       * Seat count for THIS competition, not every competition ever run.
+       *
+       * This was `judgeRepository.find({})` — every judge seat in the database,
+       * across every past and future meet, loaded to build a count map "for
+       * backward compatibility". It grows without bound as meets accumulate,
+       * and it is on a screen an admin opens during an event.
+       *
+       * Nothing consumes the other competitions' entries: `byCompetition` does
+       * not appear anywhere in the web client. The shape is kept — a map keyed
+       * by competition id — so any caller outside this repository still finds
+       * what it expects for the competition it asked about.
+       */
+      const seatCount = await this.judgeRepository.count({ competition: compId });
+      const byCompetition = { [String(compId)]: seatCount };
 
       // Build summary array grouped by gender and age group
       const summaryMap = new Map();

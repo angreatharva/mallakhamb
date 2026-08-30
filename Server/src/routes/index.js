@@ -111,15 +111,44 @@ function loadRoutes(app, container, options = {}) {
   apiRouter.get('/csrf-token', csrfTokenHandler);
 
   // ============================================================
-  // AUTHENTICATION ROUTES (with rate limiting)
+  // AUTHENTICATION ROUTES
   // ============================================================
-  // Apply rate limiting to prevent brute force attacks
+  /**
+   * The per-IP auth limiter covers the GUESSABLE endpoints only.
+   *
+   * It used to wrap the whole `/auth` router — `apiRouter.use('/auth',
+   * authLimiter, authRouter)` — and in production that limiter is 10 requests
+   * per 15 minutes PER IP. `/auth/me` (session rehydration on every page load),
+   * `/auth/refresh`, `/auth/set-competition` and `/auth/competitions/assigned`
+   * were all inside it.
+   *
+   * At a venue the whole panel shares one NAT address. Six judges opening the
+   * app is `me` + `set-competition` each — twelve requests — so the eleventh was
+   * refused and the app was simply down for that venue for fifteen minutes,
+   * mid-competition.
+   *
+   * This is the same trap the judge login limiter was already written to avoid:
+   * see createJudgeLoginRateLimitMiddleware, which is keyed by username
+   * precisely so "a five-judge panel behind one venue NAT address must never
+   * throttle itself at sign-in". The rest of `/auth` was left behind.
+   *
+   * So: the password-reset and OTP endpoints keep the per-IP limit, because
+   * those are the ones an attacker guesses against and no legitimate client
+   * calls them in a loop. The session endpoints do not — they are either
+   * authenticated (and covered by the per-user limiter's own surface) or hold
+   * their own credential, as `/auth/refresh` does with an httpOnly token that
+   * is rotated and revocable.
+   */
   const authRouter = createAuthRoutes(container);
   if (authLimiter) {
-    apiRouter.use('/auth', authLimiter, authRouter);
-  } else {
-    apiRouter.use('/auth', authRouter);
+    const guessable = express.Router();
+    guessable.post('/forgot-password', authLimiter);
+    guessable.post('/verify-otp', authLimiter);
+    guessable.post('/reset-password-otp', authLimiter);
+    guessable.post('/reset-password/:token', authLimiter);
+    apiRouter.use('/auth', guessable);
   }
+  apiRouter.use('/auth', authRouter);
 
   // ============================================================
   // USER ROUTES (players, coaches, admins)
