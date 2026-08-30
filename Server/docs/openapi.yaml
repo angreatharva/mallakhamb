@@ -2658,6 +2658,8 @@ paths:
       description: |-
         The apparatus list decides which score sheet the judge is shown, so the names are checked rather than left free-form.
         
+        `gender` must match the athlete's own — a mismatch is refused with 400. The squad entry's gender is what picks the category, the panel and the score document, so it is not allowed to disagree with the account it refers to.
+        
         **Roles:** coach
         
         **Competition context required** — see the `X-Competition-Id` parameter.
@@ -4258,7 +4260,7 @@ paths:
     get:
       tags:
         - Competitions
-      summary: Every entry in a competition
+      summary: Entries in a competition, paginated
       operationId: competitionRegistrations
       parameters:
         - name: competitionId
@@ -4267,6 +4269,52 @@ paths:
           schema:
             type: string
           description: Competition id
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number (1-based)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+          description: Rows per page
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Registration status
+        - name: ageGroup
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - Under10
+              - Under12
+              - Under14
+              - Under16
+              - Under18
+              - Above16
+              - Above18
+          description: Age group
+        - name: gender
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - Male
+              - Female
+          description: Gender
       responses:
         "200":
           description: Entries
@@ -4279,9 +4327,20 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/RegisteredTeam"
+                    type: object
+                    properties:
+                      registrations:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RegisteredTeam"
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pages:
+                        type: integer
+                      count:
+                        type: integer
                   message:
                     type: string
         "401":
@@ -4308,7 +4367,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      description: "**Roles:** admin, superadmin"
+      description: |-
+        Paginated — this endpoint IS the entry list, so unlike the other large payloads there is nothing to project away and a page is the only bound available. Unpaginated it was 3.9 MB on a 1000-team meet.
+        
+        `count` is the size of this page; `total` is how many matched the filters.
+        
+        **Roles:** admin, superadmin
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -6354,6 +6418,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
+        When `gender` and `ageGroup` are supplied, each team's `players` contains only that category's athletes — it previously returned the whole mixed roster, which both consumers then filtered on arrival.
+        
+        Each `judgeSlips[]` entry keeps its `breakdown` here, unlike `/api/public/scores`: the judge panel-review edit flow reads it to restore a judge's exact element selections.
+        
         **Roles:** admin, superadmin
         
         **Competition context required** — see the `X-Competition-Id` parameter.
@@ -8804,7 +8872,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      description: "**Roles:** judge"
+      description: |-
+        Same handler as `/api/admin/scores/team`. With `gender` and `ageGroup`, each team's `players` is narrowed to that category.
+        
+        **Roles:** judge
       security:
         - bearerAuth: []
         - cookieAuth: []

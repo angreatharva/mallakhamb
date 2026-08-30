@@ -846,7 +846,10 @@ function buildPaths() {
     summary: 'Add an athlete to a squad place',
     description:
       'The apparatus list decides which score sheet the judge is shown, so the names '
-      + 'are checked rather than left free-form.',
+      + 'are checked rather than left free-form.\n\n'
+      + '`gender` must match the athlete\'s own — a mismatch is refused with 400. The '
+      + 'squad entry\'s gender is what picks the category, the panel and the score '
+      + 'document, so it is not allowed to disagree with the account it refers to.',
     requestBody: jsonBody(inline({
       playerId: S.id, ageGroup: S.ageGroup, gender: S.gender,
       apparatus: { type: 'array', items: S.apparatus },
@@ -1053,9 +1056,30 @@ function buildPaths() {
 
   add('/api/competitions/{competitionId}/registrations', 'get', op({
     tag: 'Competitions', roles: 'admin, superadmin', operationId: 'competitionRegistrations',
-    summary: 'Every entry in a competition',
-    parameters: [pathParam('competitionId', 'Competition id')],
-    responses: { 200: ok('Entries', { type: 'array', items: ref('RegisteredTeam') }), ...NOT_FOUND },
+    summary: 'Entries in a competition, paginated',
+    description:
+      'Paginated — this endpoint IS the entry list, so unlike the other large '
+      + 'payloads there is nothing to project away and a page is the only bound '
+      + 'available. Unpaginated it was 3.9 MB on a 1000-team meet.\n\n'
+      + '`count` is the size of this page; `total` is how many matched the filters.',
+    parameters: [
+      pathParam('competitionId', 'Competition id'),
+      queryParam('page', { type: 'integer', minimum: 1, default: 1 }, 'Page number (1-based)'),
+      queryParam('limit', { type: 'integer', minimum: 1, maximum: 200, default: 50 }, 'Rows per page'),
+      queryParam('status', S.str, 'Registration status'),
+      queryParam('ageGroup', S.ageGroup, 'Age group'),
+      queryParam('gender', S.gender, 'Gender'),
+    ],
+    responses: {
+      200: ok('Entries', inline({
+        registrations: { type: 'array', items: ref('RegisteredTeam') },
+        total: S.int,
+        page: S.int,
+        pages: S.int,
+        count: S.int,
+      })),
+      ...NOT_FOUND,
+    },
   }));
 
   add('/api/competitions/{id}/admins', 'post', op({
@@ -1307,6 +1331,13 @@ function buildPaths() {
   add('/api/admin/scores/team', 'get', op({
     tag: 'Scores', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminTeamScores',
     summary: 'Team-by-team scores for a category',
+    description:
+      'When `gender` and `ageGroup` are supplied, each team\'s `players` contains '
+      + 'only that category\'s athletes — it previously returned the whole mixed '
+      + 'roster, which both consumers then filtered on arrival.\n\n'
+      + 'Each `judgeSlips[]` entry keeps its `breakdown` here, unlike '
+      + '`/api/public/scores`: the judge panel-review edit flow reads it to restore a '
+      + 'judge\'s exact element selections.',
     parameters: CATEGORY_QUERY,
     responses: { 200: ok('Teams with scores', { type: 'array', items: {} }) },
   }));
@@ -1572,6 +1603,9 @@ function buildPaths() {
   add('/api/judge/scores/team', 'get', op({
     tag: 'Judge', roles: 'judge', operationId: 'judgeTeamScores',
     summary: 'Team scores (Scorer interface)',
+    description:
+      'Same handler as `/api/admin/scores/team`. With `gender` and `ageGroup`, each '
+      + 'team\'s `players` is narrowed to that category.',
     parameters: CATEGORY_QUERY,
     responses: { 200: ok('Teams with scores', { type: 'array', items: {} }) },
   }));

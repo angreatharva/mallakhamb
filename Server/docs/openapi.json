@@ -3952,7 +3952,7 @@
             }
           }
         },
-        "description": "The apparatus list decides which score sheet the judge is shown, so the names are checked rather than left free-form.\n\n**Roles:** coach\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
+        "description": "The apparatus list decides which score sheet the judge is shown, so the names are checked rather than left free-form.\n\n`gender` must match the athlete's own — a mismatch is refused with 400. The squad entry's gender is what picks the category, the panel and the score document, so it is not allowed to disagree with the account it refers to.\n\n**Roles:** coach\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
         "security": [
           {
             "bearerAuth": []
@@ -6536,7 +6536,7 @@
         "tags": [
           "Competitions"
         ],
-        "summary": "Every entry in a competition",
+        "summary": "Entries in a competition, paginated",
         "operationId": "competitionRegistrations",
         "parameters": [
           {
@@ -6547,6 +6547,69 @@
               "type": "string"
             },
             "description": "Competition id"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (1-based)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Registration status"
+          },
+          {
+            "name": "ageGroup",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Under10",
+                "Under12",
+                "Under14",
+                "Under16",
+                "Under18",
+                "Above16",
+                "Above18"
+              ]
+            },
+            "description": "Age group"
+          },
+          {
+            "name": "gender",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Male",
+                "Female"
+              ]
+            },
+            "description": "Gender"
           }
         ],
         "responses": {
@@ -6562,9 +6625,26 @@
                       "example": true
                     },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/RegisteredTeam"
+                      "type": "object",
+                      "properties": {
+                        "registrations": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RegisteredTeam"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pages": {
+                          "type": "integer"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
                       }
                     },
                     "message": {
@@ -6616,7 +6696,7 @@
             }
           }
         },
-        "description": "**Roles:** admin, superadmin",
+        "description": "Paginated — this endpoint IS the entry list, so unlike the other large payloads there is nothing to project away and a page is the only bound available. Unpaginated it was 3.9 MB on a 1000-team meet.\n\n`count` is the size of this page; `total` is how many matched the filters.\n\n**Roles:** admin, superadmin",
         "security": [
           {
             "bearerAuth": []
@@ -9737,7 +9817,7 @@
             }
           }
         },
-        "description": "**Roles:** admin, superadmin\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
+        "description": "When `gender` and `ageGroup` are supplied, each team's `players` contains only that category's athletes — it previously returned the whole mixed roster, which both consumers then filtered on arrival.\n\nEach `judgeSlips[]` entry keeps its `breakdown` here, unlike `/api/public/scores`: the judge panel-review edit flow reads it to restore a judge's exact element selections.\n\n**Roles:** admin, superadmin\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
         "security": [
           {
             "bearerAuth": []
@@ -13473,7 +13553,7 @@
             }
           }
         },
-        "description": "**Roles:** judge",
+        "description": "Same handler as `/api/admin/scores/team`. With `gender` and `ageGroup`, each team's `players` is narrowed to that category.\n\n**Roles:** judge",
         "security": [
           {
             "bearerAuth": []
