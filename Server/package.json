@@ -4,7 +4,11 @@
   "description": "Backend for Sports Event Entry Web App",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/startup.js",
+    "start:bare": "node server.js",
+    "start:check": "node scripts/startup.js --check",
+    "prepare:db": "node scripts/startup.js --migrate --no-serve",
+    "indexes:sync": "node scripts/startup.js --no-serve --no-migrate",
     "server": "nodemon server.js",
     "test": "jest",
     "test:watch": "jest --watch",

@@ -562,7 +562,13 @@ category-level projection that Phase 3 would enable, not a projection here.
 admin-only, unused by the web client, and is *by definition* the entry list, so
 there is nothing to trim — it needs pagination, which is Phase 3 work.
 
-### Unrelated finding: `migrate up` cannot reach migration 007
+### Startup and indexes — **FIXED** (see below)
+
+The finding recorded here is resolved. `scripts/startup.js` is now the
+supervised boot path and `src/infrastructure/database/index-manager.js`
+reconciles indexes against the schemas. Details in §6.
+
+### Original finding: `migrate up` could not reach migration 007
 
 `005_judge_account_indexes` fails with `Index already exists with a different
 name: email_1` on any database where Mongoose's `autoIndex` created `email_1`
@@ -579,7 +585,87 @@ Phase 3 (structural) is untouched, and on this evidence is still not urgent.
 
 ---
 
-## 6. Where the harness lives
+## 6. Startup and index configuration
+
+### The problem
+
+Indexes had **two sources of truth that disagreed**:
+
+1. The Mongoose schemas (`schema.index(...)`, `unique: true` on a path). These
+   are built automatically — but only when `autoIndex` is on, and
+   `connection.js` sets `autoIndex: isDevelopment()`. So they existed in
+   development and not in production.
+2. Migrations 001, 002, 004 and 005, which build indexes by hand for the
+   environments where autoIndex is off — **under their own names**.
+
+Those collide. autoIndex creates `email_1` from `unique: true`; migration 005
+then asks for the same key as `judge_account_email_unique`; MongoDB refuses with
+`Index already exists with a different name`. The runner rolls the batch back,
+so **`npm run migrate:up` failed at 005 on every developer machine and 006 and
+007 never ran**.
+
+Two smaller faults fell out of the same split:
+
+- Migration 005 indexed `{name: 1}` — the field migration **006 removes**. So it
+  built an index, the next migration deleted the field under it, and the judge
+  search (which now queries `firstName`/`lastName`) ran unindexed in exactly the
+  environments the migration exists to serve.
+- `Judge` declared `sparse: true` *and* `partialFilterExpression` on one index.
+  MongoDB accepts only the filter, so the schema asked for something the
+  database would never report back — a conflict that could never be resolved.
+
+### The fix
+
+`src/infrastructure/database/index-manager.js` makes the **schemas** the source
+of truth and reconciles the database to them:
+
+- an index already present on the right key **under any name** counts as
+  satisfied — no more name collisions;
+- missing indexes are created;
+- an index on the right key with genuinely different options (declared unique,
+  built non-unique) is **reported, never rebuilt** — dropping a unique index to
+  recreate it can succeed and then fail on the rebuild, leaving no constraint;
+- indexes present but undeclared are **reported and left alone**. Mongoose's own
+  `syncIndexes()` would delete exactly these, and migrations 001/002 created 37
+  of them that live queries use.
+
+`scripts/startup.js` is the supervised boot: validate config → connect →
+migrations → indexes → serve, reporting each step before the first request.
+
+```bash
+npm start            # per instance: indexes + report migrations + serve
+npm run prepare:db   # release step: apply migrations + indexes, don't serve
+npm run start:check  # readiness probe: report only, change nothing (exit 1 if not ready)
+npm run indexes:sync # indexes only
+npm run start:bare   # the old server.js path, unchanged
+```
+
+**Migrations are not applied by `npm start`, deliberately.** A process manager
+runs it once per instance, so auto-applying would race between instances on a
+scaled deploy and would let a failing migration take the whole service down
+rather than just the release. `render.yaml` now runs `prepare:db` as
+`preDeployCommand` (once) and `npm start` per instance. A pending migration
+blocks `--check` but does not stop an instance serving — refusing to start turns
+"a migration has not run yet" into an outage.
+
+### Result
+
+On a fresh database all 7 migrations now apply, and reconciliation reports
+**35 correct, 0 to create, 0 conflicts, 0 failed**. The 37 undeclared
+migration-era indexes are listed on every run so the drift stays visible.
+
+Two schema declarations were added while doing this, because the queries Phases
+1 and 2 introduced had no declared index: `Score {competition, gender, ageGroup,
+competitionType}` (the judge dashboard's category read) and
+`Score {competition, isLocked}` (published results), plus `Player {team}`, which
+migration 001 built by hand and no schema declared.
+
+Covered by `index-manager.test.js` — 17 tests, including the name-collision case
+that caused the original failure.
+
+---
+
+## 7. Where the harness lives
 
 | Path | What it does |
 |---|---|

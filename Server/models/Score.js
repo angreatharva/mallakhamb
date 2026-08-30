@@ -315,4 +315,32 @@ scoreSchema.index(
 );
 scoreSchema.index({ createdAt: -1 });
 
+/**
+ * The two category reads, declared on the schema rather than left to a
+ * migration.
+ *
+ * Migration 001 built `{competition, gender, ageGroup}` and
+ * `{competition, competitionType}` by hand. Neither is declared here, so in
+ * DEVELOPMENT — where autoIndex builds the schema's indexes and the migrations
+ * have often not been run — those queries had no index at all, and the two
+ * environments disagreed about which. Declaring them makes the schema the one
+ * source of truth; the index manager reconciles whatever names already exist.
+ *
+ * One compound key serves both, because a prefix of a compound index is usable
+ * on its own: {competition}, {competition, gender}, {competition, gender,
+ * ageGroup} and the whole thing all use this.
+ *
+ * Read by `AdminService.getSubmittedTeams` (the judge dashboard, polled
+ * throughout an event) and `ScoringService.getIndividualScores`.
+ */
+scoreSchema.index({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1 });
+
+/**
+ * The published-results read: `{isLocked: true, competition, ...}`
+ * (PublicService.getPublicScores). `isLocked` second because `competition` is
+ * the selective half — a meet has thousands of score documents and only two
+ * values of `isLocked`.
+ */
+scoreSchema.index({ competition: 1, isLocked: 1 });
+
 module.exports = mongoose.model('Score', scoreSchema);

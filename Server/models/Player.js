@@ -167,4 +167,14 @@ playerSchema.methods.getAge = function() {
   return age;
 };
 
+/**
+ * Membership lookups: "who is on this team".
+ *
+ * Migration 001 built this by hand and no schema declared it, so it existed in
+ * production and not in development — the two environments disagreed about
+ * whether the query was indexed. Declared here so the index manager builds it
+ * everywhere.
+ */
+playerSchema.index({ team: 1 });
+
 module.exports = mongoose.model('Player', playerSchema);
