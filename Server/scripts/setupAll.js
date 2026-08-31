@@ -4,7 +4,8 @@
  *   node scripts/setupAll.js --list        # the plan, run nothing
  *   node scripts/setupAll.js --dry-run     # print each command, run nothing
  *   node scripts/setupAll.js               # run it
- *   node scripts/setupAll.js --from=judges # resume at a step
+ *   node scripts/setupAll.js --to=competitions   # steps 1-4 (no browser needed)
+ *   node scripts/setupAll.js --from=judges       # resume at a step
  *   node scripts/setupAll.js --only=squads # one step
  *   node scripts/setupAll.js --drop        # DROP the database first, then run
  *
@@ -137,6 +138,7 @@ function parseArgs(argv) {
     drop: argv.includes('--drop'),
     yes: argv.includes('--yes'),
     from: flag('from'),
+    to: flag('to'),
     only: flag('only'),
   };
 }
@@ -147,21 +149,30 @@ function ask(question) {
 }
 
 /**
- * Which steps to run, honouring --from / --only.
+ * Which steps to run, honouring --only, or the --from/--to range.
  * @param {Object} args
  */
 function selectSteps(args) {
-  if (args.only) {
-    const step = STEPS.find((s) => s.id === args.only);
-    if (!step) throw new Error(`Unknown step "${args.only}". Known: ${STEPS.map((s) => s.id).join(', ')}`);
-    return [step];
+  const known = STEPS.map((s) => s.id).join(', ');
+  const indexOf = (id, flagName) => {
+    const index = STEPS.findIndex((s) => s.id === id);
+    if (index === -1) throw new Error(`Unknown --${flagName} step "${id}". Known: ${known}`);
+    return index;
+  };
+
+  if (args.only) return [STEPS[indexOf(args.only, 'only')]];
+
+  // A range. `--to` exists so the server-side steps can be run on their own —
+  // they need no browser, and the natural first move is everything up to the
+  // point where the API and Vite have to be running.
+  const start = args.from ? indexOf(args.from, 'from') : 0;
+  const end = args.to ? indexOf(args.to, 'to') : STEPS.length - 1;
+
+  if (end < start) {
+    throw new Error(`--to "${args.to}" comes before --from "${args.from}".`);
   }
-  if (args.from) {
-    const index = STEPS.findIndex((s) => s.id === args.from);
-    if (index === -1) throw new Error(`Unknown step "${args.from}". Known: ${STEPS.map((s) => s.id).join(', ')}`);
-    return STEPS.slice(index);
-  }
-  return STEPS;
+
+  return STEPS.slice(start, end + 1);
 }
 
 /**
