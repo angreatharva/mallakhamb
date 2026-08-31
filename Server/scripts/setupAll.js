@@ -40,10 +40,14 @@ const WEB_DIR = path.join(__dirname, '..', '..', 'Web');
 /**
  * The chain.
  *
- * `where` matters: the Server steps talk to MongoDB directly and need no running
- * API, while every `web` step drives a real browser through the real UI and
- * needs BOTH the API and the Vite dev server up. That split is why the API must
- * be started between step 3 and step 4.
+ * `where` matters. The `server` steps talk to MongoDB directly and need nothing
+ * running. The `web` steps drive a real browser through the real UI, so they
+ * need the API up — but NOT the Vite dev server, which Playwright starts itself
+ * (playwright.config.js, `webServer` with `reuseExistingServer: true`).
+ *
+ * So the only thing to start by hand is `npm --prefix Server start`, and the
+ * script checks for it before the first `web` step rather than letting
+ * Playwright time out two minutes later complaining about a missing element.
  */
 const STEPS = [
   {
@@ -176,6 +180,32 @@ function selectSteps(args) {
 }
 
 /**
+ * Is the API up?
+ *
+ * The browser steps drive the real app, and the app is useless without the API
+ * behind it. Playwright starts VITE itself (playwright.config.js has a
+ * `webServer` block with `reuseExistingServer`), so the dev server is not a
+ * prerequisite — but the API is, and without it every spec fails deep inside a
+ * page interaction after a two-minute timeout, with an error about a missing
+ * element rather than a missing server.
+ *
+ * Checking here turns that into an immediate, accurate message.
+ *
+ * @param {number} port
+ * @returns {Promise<boolean>}
+ */
+async function apiIsUp(port) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/health/live`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Run one step, inheriting stdio so its own output is the output.
  * @param {Object} step
  * @param {boolean} dryRun
@@ -222,7 +252,8 @@ async function main() {
       line(`     ${step.why.replace(/\s+/g, ' ')}`);
       line('');
     }
-    line('The API and the Vite dev server must be running before the [web] steps.');
+    line('The API must be running before the [web] steps: npm --prefix Server start');
+    line('Vite is started by Playwright itself — you do not need to run it.');
     line('Part 2 (judging) is: npm --prefix Web run seed:scores');
     return;
   }
@@ -237,10 +268,25 @@ async function main() {
    * have to be up. Starting them from here would mean owning two long-lived
    * child processes and their shutdown, which is a worse job than asking.
    */
+  /*
+   * Only the API has to be started by hand. Playwright brings up Vite itself.
+   */
   if (needsWeb && !args.dryRun) {
-    line('\n  The browser steps need BOTH servers running, in other terminals:');
-    line('    npm --prefix Server start');
-    line('    npm --prefix Web run dev');
+    const port = process.env.PORT || 5000;
+    const up = await apiIsUp(port);
+
+    if (!up) {
+      line(`\n  The API is not answering on port ${port}, and ${steps.filter((s) => s.where === 'web').length}`
+        + ' of these steps drive the real UI against it.');
+      line('\n  Start it in another terminal, then run this again:');
+      line('    npm --prefix Server start');
+      line('\n  (The Vite dev server does NOT need starting — Playwright does that.)');
+      line('\n  Or run just the server-side steps now:');
+      line('    npm --prefix Server run setup -- --to=competitions');
+      process.exit(1);
+    }
+
+    line(`\n  API is up on port ${port}. Vite will be started by Playwright as needed.`);
   }
 
   if (args.drop && !args.dryRun) {
