@@ -29,7 +29,12 @@
     "migrate:up": "node scripts/migrate.js up",
     "migrate:down": "node scripts/migrate.js down",
     "migrate:status": "node scripts/migrate.js status",
-    "env:check": "node scripts/checkEnv.js"
+    "env:check": "node scripts/checkEnv.js",
+    "setup": "node scripts/setupAll.js",
+    "setup:list": "node scripts/setupAll.js --list",
+    "setup:dry": "node scripts/setupAll.js --dry-run",
+    "create-competitions": "node scripts/createCompetitions.js",
+    "db:sync": "node scripts/syncDatabase.js"
   },
   "keywords": [
     "sports",

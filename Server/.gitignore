@@ -108,3 +108,6 @@ scripts/perf/lib/*
 # noticed the file existed on disk and not in HEAD.
 !scripts/startup.js
 !scripts/checkEnv.js
+!scripts/createCompetitions.js
+!scripts/syncDatabase.js
+!scripts/setupAll.js
