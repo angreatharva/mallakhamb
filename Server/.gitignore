@@ -13,6 +13,7 @@ coverage/
 
 # Environment and dependencies
 .env
+.env.production
 node_modules/
 dist
 dist-ssr
@@ -106,3 +107,4 @@ scripts/perf/lib/*
 # all — which is exactly what `scripts/*` did to it until a pre-merge check
 # noticed the file existed on disk and not in HEAD.
 !scripts/startup.js
+!scripts/checkEnv.js

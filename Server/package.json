@@ -28,7 +28,8 @@
     "create-superadmin": "node scripts/createSuperAdmin.js",
     "migrate:up": "node scripts/migrate.js up",
     "migrate:down": "node scripts/migrate.js down",
-    "migrate:status": "node scripts/migrate.js status"
+    "migrate:status": "node scripts/migrate.js status",
+    "env:check": "node scripts/checkEnv.js"
   },
   "keywords": [
     "sports",
