@@ -403,7 +403,23 @@ async function seedCompetitions(competitions, commit) {
         result.skipped.push({ what: 'Competition', who: label, reason: 'already exists' });
         continue;
       }
-      if (commit) await Competition.create({ ...competition, registeredTeams: [] });
+      /*
+       * `registeredTeams` and `admins` are both dropped, for the same reason.
+       *
+       * They hold ObjectIds from the database the capture was taken FROM, and an
+       * id from another database means nothing here — the same rule the team and
+       * membership phases already follow by matching on name and e-mail instead.
+       *
+       * `registeredTeams` was already reset because the entries and squads are
+       * replayed by their own phases. `admins` was not, so a rebuilt database got
+       * competitions pointing at an admin that does not exist: the reference
+       * dangles, and the admin who DOES exist has no access, because access is
+       * read from `Admin.competitions` — which the capture cannot carry either.
+       *
+       * Assign an admin after seeding (superadmins need no assignment; they
+       * reach every competition by role).
+       */
+      if (commit) await Competition.create({ ...competition, registeredTeams: [], admins: [] });
       result.created.push({ what: 'Competition', who: label, detail: competition.level });
     } catch (error) {
       result.failed.push({ what: 'Competition', who: label, error: error.message });
