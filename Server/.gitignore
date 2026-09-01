@@ -112,3 +112,4 @@ scripts/perf/lib/*
 !scripts/syncDatabase.js
 !scripts/setupAll.js
 !scripts/meetStatus.js
+!scripts/seedScores.js

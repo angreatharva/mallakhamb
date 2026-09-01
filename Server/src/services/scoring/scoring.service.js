@@ -1277,12 +1277,28 @@ class ScoringService {
              * figure — the deduction still stored beside it, just not applied.
              */
             const merged = mergedPlayerScores[existingPlayerIndex];
-            merged.finalScore = Math.max(
+            /*
+             * Rounded to 3 decimals, like CalculationService.calculateFinalScore
+             * — which is the other place this subtraction happens and which has
+             * always rounded.
+             *
+             * Without it the binary representation leaks into the stored score
+             * and out to the results page: 8.40 - 0.20 is 8.200000000000001 in
+             * IEEE 754, and a 0.20 time penalty is the most common one there is.
+             * 28 of 152 stored finals in the seeded meet carried an artifact
+             * like that, every one of them where the deduction was 0.20 — the
+             * other bands (0.30, 0.40, 0.50) happen to subtract cleanly, which
+             * is why it looked sporadic rather than systematic.
+             *
+             * 3 rather than 2 decimals because COP base scores are quarters
+             * (9.225), and rounding those to 2 would change a real result.
+             */
+            merged.finalScore = Number(Math.max(
               0,
               (Number(merged.averageMarks) || 0)
                 - (Number(merged.deduction) || 0)
                 - (Number(merged.otherDeduction) || 0)
-            );
+            ).toFixed(3));
           } else {
             // New player score
             if (scoreData.panelSize && !incomingPlayerScore.panelSize) {
