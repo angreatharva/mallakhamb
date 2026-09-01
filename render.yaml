@@ -7,19 +7,37 @@ services:
     plan: free
     rootDir: Server
     buildCommand: npm install
-    # Runs ONCE per deploy, before any new instance starts, so migrations cannot
-    # race between instances and a failing one fails the release rather than
-    # taking the running service down. Also reconciles indexes.
-    preDeployCommand: npm run prepare:db
-    # Per instance: validates config, connects, reconciles indexes (idempotent,
-    # safe to run concurrently), reports any pending migration, then serves.
-    # It does NOT apply migrations — that is preDeployCommand's job.
+    # `preDeployCommand: npm run prepare:db` used to sit here, to apply
+    # migrations once per deploy rather than once per instance. It is gone
+    # because pre-deploy commands are a PAID Render feature and this service is
+    # on `plan: free` — so it never ran, while looking like migrations were
+    # handled. Dead configuration that implies a guarantee is worse than none.
+    #
+    # MIGRATE_ON_START below does the job instead. Safe here specifically
+    # because a free service runs ONE instance: the race that keeps migrations
+    # out of the start path needs two.
+    #
+    # If this service is ever moved to a paid plan AND scaled past one instance,
+    # unset MIGRATE_ON_START and restore preDeployCommand.
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      # Apply pending migrations as the instance starts.
+      #
+      # `npm start` normally reports them and serves anyway, so that a failing
+      # migration cannot take a running service down and two instances cannot
+      # race the same one. Neither risk applies here: free runs a single
+      # instance, and there is no pre-deploy hook on this plan to put the
+      # release step in.
+      #
+      # Without this, nothing on Render ever runs a migration — you would have
+      # to point a laptop at the deployed database and run `prepare:db` by hand
+      # after every release that adds one.
+      - key: MIGRATE_ON_START
+        value: true
       - key: NGROK_ENABLED
         value: false
       # Database - Add in Render Dashboard (sensitive)

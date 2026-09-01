@@ -17,6 +17,13 @@
  *   npm run prepare:db     (= --migrate --no-serve)   before the new version starts
  *   npm start                                          per instance
  *
+ * MIGRATE_ON_START=true opts back in, for deployments that have no release step
+ * to put `prepare:db` in. Render's `preDeployCommand` is a PAID feature, so a
+ * free-tier service has nowhere else to run it — and a free service also runs
+ * exactly ONE instance, which is precisely the case where the race this guards
+ * against cannot happen. Set it there; leave it unset anywhere that runs more
+ * than one instance.
+ *
  * `npm start` runs server.js, which connects to MongoDB and starts listening.
  * That is the right thing for a process manager to restart, and this does not
  * replace it. What it adds is everything that has to be TRUE before serving is
@@ -56,8 +63,9 @@ function parseArgs(argv) {
   return {
     checkOnly: argv.includes('--check'),
     // Opt-in: see the note at the top about why starting an instance is the
-    // wrong moment to mutate a shared schema.
-    applyMigrations: argv.includes('--migrate') && !argv.includes('--check'),
+    // wrong moment to mutate a shared schema — and when it is safe anyway.
+    applyMigrations: (argv.includes('--migrate') || process.env.MIGRATE_ON_START === 'true')
+      && !argv.includes('--check'),
     indexes: !off('indexes'),
     serve: !off('serve') && !argv.includes('--check'),
   };
