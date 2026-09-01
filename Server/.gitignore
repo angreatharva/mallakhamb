@@ -13,6 +13,7 @@ coverage/
 
 # Environment and dependencies
 .env
+.env.production
 node_modules/
 dist
 dist-ssr
