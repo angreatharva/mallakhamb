@@ -7,7 +7,7 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { apparatusFor, apparatusKey, apparatusToJudge, isRegisteredFor } from '@/utils/scoring/apparatus';
+import { apparatusFor, apparatusKey, apparatusToJudge, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
 import { judgeAPI } from '@/services/public/judge.api';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import {
@@ -329,7 +329,7 @@ const JudgeTeamPlayers = () => {
     return (team.players || [])
       .filter((e) => {
         // Filter by selected gender and age group (not judgeInfo)
-        if (!e.player || e.player.gender !== selectedGender || e.ageGroup !== selectedAgeGroup) {
+        if (!e.player || entryGender(e) !== selectedGender || e.ageGroup !== selectedAgeGroup) {
           return false;
         }
         // Only the athletes registered for the apparatus being judged. Goes

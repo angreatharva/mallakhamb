@@ -16,7 +16,7 @@ import { createAdminAPI } from '@/services/user/admin.api';
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
-import { apparatusFor, apparatusKey, apparatusToJudge } from '@/utils/scoring/apparatus';
+import { apparatusFor, apparatusKey, apparatusToJudge, entryGender } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
@@ -237,7 +237,7 @@ const ScorerScoring = () => {
        */
       const competitionTypeSlug = selectedCompetitionType?.value;
       const teamPlayers = (selectedTeam.players || [])
-        .filter(pe => pe.player.gender === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+        .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
         .flatMap(pe => {
           const entered = apparatusFor(pe, competitionTypeSlug);
           // An athlete with no apparatus recorded still gets one row, judged on

@@ -62,7 +62,13 @@ function createCompetitionController(container) {
 
     /** @route GET /api/competitions/:id */
     getCompetitionById: asyncHandler(async (req, res) => {
-      const competition = await competitionService.getCompetitionById(req.params.id);
+      // `?include=registeredTeams` opts into the entry list, which is the bulk
+      // of the document (3.0 MB on a 1000-team meet) and which most callers of
+      // this endpoint do not want.
+      const include = String(req.query.include || '').split(',').map((s) => s.trim());
+      const competition = await competitionService.getCompetitionById(req.params.id, {
+        includeRegisteredTeams: include.includes('registeredTeams'),
+      });
       res.json({ success: true, data: competition });
     }),
 
@@ -122,16 +128,23 @@ function createCompetitionController(container) {
 
     /** @route GET /api/competitions/:competitionId/registrations */
     getCompetitionRegistrations: asyncHandler(async (req, res) => {
-      const { status, ageGroup, gender } = req.query;
+      const { status, ageGroup, gender, page, limit } = req.query;
       const filters = {};
       if (status) filters.status = status;
       if (ageGroup) filters.ageGroup = ageGroup;
       if (gender) filters.gender = gender;
+      if (page) filters.page = page;
+      if (limit) filters.limit = limit;
 
-      const registrations = await registrationService.getCompetitionRegistrations(
+      const result = await registrationService.getCompetitionRegistrations(
         req.params.competitionId, filters
       );
-      res.json({ success: true, data: { registrations, count: registrations.length } });
+      res.json({
+        success: true,
+        // `count` is the size of THIS page and is kept for the existing shape;
+        // `total` is how many matched, which is what a pager needs.
+        data: { ...result, count: result.registrations.length },
+      });
     }),
 
     /** @route GET /api/competitions/:competitionId/teams/:teamId */

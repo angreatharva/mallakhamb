@@ -76,3 +76,40 @@ scripts/lib/*
 !scripts/seed/
 scripts/seed/*
 !scripts/seed/panel-plan.json
+
+# The API documentation and performance harness (scripts/perf/). Same nesting
+# rule as scripts/lib above: re-include the directory, exclude its contents,
+# then name the files.
+#
+# routes.generated.json is NOT allow-listed — it is a build artefact of
+# extract-routes.js, regenerated in a second from the live router, and a stale
+# committed copy would be believed.
+!scripts/perf/
+scripts/perf/*
+!scripts/perf/extract-routes.js
+!scripts/perf/seedScale.js
+!scripts/perf/testApi.js
+!scripts/perf/benchmarkApi.js
+!scripts/perf/countQueries.js
+!scripts/perf/probe.js
+!scripts/perf/loadTest.js
+!scripts/perf/equivalence.js
+!scripts/perf/socketLoad.js
+!scripts/perf/lib/
+scripts/perf/lib/*
+!scripts/perf/lib/client.js
+!scripts/perf/lib/harness-server.js
+
+!scripts/generateOpenApi.js
+
+# The supervised boot path. `npm start` and render.yaml's startCommand both run
+# this, so leaving it ignored means the deployed service has no entry point at
+# all — which is exactly what `scripts/*` did to it until a pre-merge check
+# noticed the file existed on disk and not in HEAD.
+!scripts/startup.js
+!scripts/checkEnv.js
+!scripts/createCompetitions.js
+!scripts/syncDatabase.js
+!scripts/setupAll.js
+!scripts/meetStatus.js
+!scripts/seedScores.js

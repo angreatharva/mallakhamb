@@ -1,0 +1,83 @@
+{
+  "teams": 100,
+  "rows": [
+    {
+      "name": "GET /api/admin/dashboard/stats",
+      "queries": 3,
+      "perTeam": 0.03,
+      "breakdown": "findOne:admins x1, findOne:competitions x1, countDocuments:judgeassignments x1"
+    },
+    {
+      "name": "GET /api/admin/dashboard/competition/:id",
+      "queries": 0,
+      "perTeam": 0,
+      "breakdown": ""
+    },
+    {
+      "name": "GET /api/admin/teams (limit 10)",
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "find:teams x2, findOne:admins x1, findOne:competitions x1, find:coaches x1, find:players x1"
+    },
+    {
+      "name": "GET /api/admin/teams/submitted",
+      "queries": 7,
+      "perTeam": 0.07,
+      "breakdown": "find:coaches x2, findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/admin/scores/team",
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/admin/rankings/team",
+      "queries": 6,
+      "perTeam": 0.06,
+      "breakdown": "findOne:admins x1, findOne:competitions x1, find:teams x1, find:players x1, find:coaches x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/admin/scores/individual",
+      "queries": 2,
+      "perTeam": 0.02,
+      "breakdown": "findOne:admins x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/admin/judges/summary",
+      "queries": 7,
+      "perTeam": 0.07,
+      "breakdown": "countDocuments:judgeassignments x2, find:judgeassignments x2, findOne:admins x1, findOne:competitions x1, find:judges x1"
+    },
+    {
+      "name": "GET /api/admin/lots",
+      "queries": 8,
+      "perTeam": 0.08,
+      "breakdown": "find:coaches x2, findOne:admins x1, findOne:performanceorders x1, findOne:competitions x1, find:teams x1, find:players x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/public/scores",
+      "queries": 2,
+      "perTeam": 0.02,
+      "breakdown": "find:scores x1, find:teams x1"
+    },
+    {
+      "name": "GET /api/public/teams",
+      "queries": 3,
+      "perTeam": 0.03,
+      "breakdown": "findOne:competitions x1, find:teams x1, find:players x1"
+    },
+    {
+      "name": "GET /api/public/submitted-teams",
+      "queries": 8,
+      "perTeam": 0.08,
+      "breakdown": "find:coaches x2, findOne:judges x1, find:judgeassignments x1, findOne:competitions x1, find:teams x1, find:players x1, find:scores x1"
+    },
+    {
+      "name": "GET /api/auth/me",
+      "queries": 1,
+      "perTeam": 0.01,
+      "breakdown": "findOne:admins x1"
+    }
+  ]
+}

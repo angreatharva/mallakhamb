@@ -218,6 +218,13 @@ const competitionSchema = new mongoose.Schema({
 // Indexes
 competitionSchema.index({ name: 1, year: 1, place: 1 }, { unique: true });
 competitionSchema.index({ status: 1, startDate: 1 });
+
+/**
+ * Soft delete. `BaseRepository` appends `isDeleted != true` to EVERY read on
+ * this model, so it is part of essentially every competition query in the app.
+ * Built by migration 002 and declared by no schema.
+ */
+competitionSchema.index({ isDeleted: 1 });
 competitionSchema.index({ year: 1 });
 competitionSchema.index({ admins: 1 });
 competitionSchema.index({ competitionTypes: 1 });

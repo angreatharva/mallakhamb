@@ -142,19 +142,6 @@ const getCompetitionDetails = () => {
 };
 
 /**
- * Validate get available teams
- */
-const getAvailableTeams = () => {
-  return [
-    query('ageGroup')
-      .optional()
-      .trim()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
-      .withMessage('Invalid age group')
-  ];
-};
-
-/**
  * Validate get team players
  */
 const getTeamPlayers = () => {
@@ -210,7 +197,6 @@ module.exports = {
   updateProfile,
   setCompetitionContext,
   getCompetitionDetails,
-  getAvailableTeams,
   getTeamPlayers,
   saveIndividualScore,
   updateIndividualScore

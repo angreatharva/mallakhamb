@@ -118,11 +118,14 @@ const getAllPlayers = () => {
         }
         return true;
       }),
+    // `disqualified` was accepted here and no field anywhere models it, so it
+    // could only ever behave as "no filter". Accepting a value the server
+    // cannot honour is worse than refusing it: the caller believes it applied.
     query('status')
       .optional()
       .trim()
-      .isIn(['active', 'inactive', 'disqualified'])
-      .withMessage('Status must be active, inactive, or disqualified')
+      .isIn(['active', 'inactive'])
+      .withMessage('Status must be active or inactive')
   ];
 };
 

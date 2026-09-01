@@ -12,11 +12,13 @@ const COMPETITION_TYPE_MAP = {
   competition_3: 'Competition III',
 };
 
+const { ValidationError } = require('../../errors');
 const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
 const {
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
+  stripSlipBreakdowns,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
@@ -91,11 +93,39 @@ class PublicService {
    */
   async getPublicScores(competitionId, filters = {}) {
     try {
-      // Gate 2 — the Scorer has saved AND locked this sheet.
-      const query = { isLocked: true };
+      /*
+       * A competition is REQUIRED.
+       *
+       * It used to be optional, and omitting it dropped the filter rather than
+       * refusing the request — so an anonymous caller got every published score
+       * in the database in one unpaginated response. Measured on a single
+       * 1000-team meet that is 19.5 MB and 1.4 seconds; across a season's worth
+       * of competitions there is no bound at all. Nothing legitimate asked for
+       * it: both callers in the web client always send `competitionId`.
+       */
+      if (!competitionId) {
+        throw new ValidationError('competitionId is required', 'competitionId');
+      }
 
-      if (competitionId) {
-        query.competition = competitionId;
+      // Gate 2 — the Scorer has saved AND locked this sheet.
+      const query = { isLocked: true, competition: competitionId };
+
+      /*
+       * Scoping to one team is allowed.
+       *
+       * The note above says public results are never scoped to a single team,
+       * and that remains true of the RESULTS PAGE, which sends no teamId and
+       * gets every team. But `PerformancePanel` — one team's performance —
+       * has always SENT `teamId`, and this endpoint silently ignored it, so
+       * that component rendered every athlete in the competition under one
+       * team's heading. Honouring the filter fixes what it shows as well as
+       * what it transfers.
+       *
+       * Narrowing a public result set can disclose nothing the unscoped call
+       * would not already have returned.
+       */
+      if (filters.teamId) {
+        query.teamId = filters.teamId;
       }
       if (filters.gender) {
         query.gender = filters.gender;
@@ -121,7 +151,7 @@ class PublicService {
         // publish a performer the Senior Judge never signed off.
         let playerScores = (scoreObj.playerScores || [])
           .filter((ps) => ps.isFinalized === true)
-          .map((ps) => this.enrichPlayerScore(ps));
+          .map((ps) => stripSlipBreakdowns(this.enrichPlayerScore(ps)));
         
         // Filter by apparatus if specified
         if (filters.apparatus) {

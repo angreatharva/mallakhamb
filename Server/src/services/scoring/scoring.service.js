@@ -26,7 +26,6 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
-const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 
 class ScoringService {
   /**
@@ -539,108 +538,129 @@ class ScoringService {
       // populated documents carry e-mail addresses and minors' dates of birth
       // into the response. Applied here AND at the mapping layer below, because
       // `.toObject()` does not run a schema toJSON transform.
-      const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          {
-            path: 'registeredTeams.team',
-            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
-          },
-          {
-            path: 'registeredTeams.players.player',
-            select: SUBMITTED_TEAM_PLAYER_FIELDS
-          }
-        ]
-      });
-
-      if (!competition) {
-        this.logger.warn('Competition not found', { competitionId });
-        return [];
-      }
-
-      // Only teams the coach has actually entered — final submit AND fees
-      // paid. This filter was missing entirely, and this method backs
-      // /api/judge/scores/team and /api/admin/scores/team, so the Scorer's
-      // team list and the admin scoring screen both showed teams a coach had
-      // merely saved as a draft: a half-built roster, sitting alongside real
-      // entries with nothing to distinguish it, waiting to be scored.
-      // getSubmittedTeams (the judge dashboard's list) has always filtered
-      // this way; the two lists must agree.
-      let filteredTeams = (competition.registeredTeams || []).filter(isSubmittedRegistration);
-
-      if (ageGroup || gender) {
-        filteredTeams = filteredTeams.filter(regTeam => {
-          return regTeam.players.some(playerEntry => {
-            const matchesAgeGroup = !ageGroup || playerEntry.ageGroup === ageGroup;
-            const matchesGender = !gender || playerEntry.gender === gender;
-            return matchesAgeGroup && matchesGender;
-          });
-        });
-      }
-
-      const teamsWithScores = await Promise.all(
-        filteredTeams.map(async (regTeam) => {
-          // Get scores for this team - filter by gender and ageGroup to get the correct score document
-          const scoreQuery = {
-            competition: competitionId,
-            teamId: regTeam.team._id
-          };
-          if (gender) scoreQuery.gender = gender;
-          if (ageGroup) scoreQuery.ageGroup = ageGroup;
-          if (competitionType) {
-            scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
-          }
-          
-          const scores = await this.scoreRepository.find(scoreQuery);
-
-          let playerScores = scores.flatMap(s => s.playerScores || []);
-          
-          if (apparatus) {
-            playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
-          }
-          
-          const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
-          
-          // Get the most recent score document for metadata (isLocked, timeKeeper, etc.)
-          const latestScoreDoc = scores.length > 0 ? scores.sort((a, b) => 
-            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
-          )[0] : null;
-
-          return {
-            _id: regTeam.team._id,
-            name: regTeam.team.name,
-            // Same defect class as CRIT-4: this returned the whole coach and
-            // player documents. `select: false` now hides the bcrypt hash, but
-            // coach/player e-mail and minors' dates of birth were still going
-            // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
-            // the allow-lists getSubmittedTeams projects with, so the two
-            // endpoints cannot drift apart.
-            coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
-            players: regTeam.players.map(playerEntry => {
-              // projectFields handles Mongoose documents and plain objects, and
-              // passes an unpopulated ObjectId ref through untouched.
-              const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
-              return {
-                ...playerData,
-                ageGroup: playerEntry.ageGroup,
-                gender: playerEntry.gender
-              };
-            }),
-            scores: playerScores,
-            totalScore,
-            // Include score document metadata
-            scoreMetadata: latestScoreDoc ? {
-              _id: latestScoreDoc._id,
-              isLocked: latestScoreDoc.isLocked,
-              timeKeeper: latestScoreDoc.timeKeeper,
-              scorer: latestScoreDoc.scorer,
-              remarks: latestScoreDoc.remarks,
-              competitionType: latestScoreDoc.competitionType,
-              createdAt: latestScoreDoc.createdAt,
-              updatedAt: latestScoreDoc.updatedAt
-            } : null
-          };
-        })
+      /*
+       * Fetch only this category's submitted registrations.
+       *
+       * Same change, and the same reasoning, as AdminService.getSubmittedTeams:
+       * this used to load the WHOLE competition with two levels of populate and
+       * filter it in JavaScript — 2.87 MB and ~11,000 populated documents on a
+       * 1000-team meet — to answer a question about one category. It backs the
+       * Scorer's screen and the admin scoring screen, both polled during an
+       * event, and it was the worst endpoint in the API under concurrent load.
+       *
+       * "Submitted" (final submit AND fees paid) is applied inside the
+       * repository, so the Scorer's team list and the judge dashboard's cannot
+       * drift apart — they now run the same query.
+       *
+       * The repository ALSO narrows each squad to the category, which this
+       * method did not do before: it kept every athlete on a matching team.
+       * That is the intended behaviour — ScorerScoring.jsx and
+       * AdminScoring.jsx both filter the roster to the category on arrival —
+       * and it is safe now that a squad entry's gender is verified against the
+       * athlete's own on write (coach.service.addPlayerToAgeGroup), so the
+       * server and the client agree on which field decides.
+       */
+      const toProjection = (fields) => Object.fromEntries(
+        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
       );
+
+      const filteredTeams = await this.competitionRepository.findSubmittedRegistrations(
+        competitionId,
+        { gender, ageGroup },
+        {
+          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+        }
+      );
+
+      /*
+       * ONE query for every team's scores, not one per team.
+       *
+       * This used to `await scoreRepository.find({ teamId })` inside the map
+       * below — a textbook N+1. Measured at 100 entered teams it cost 105
+       * queries per request; at 1,000 it is 1,005. On loopback each is a
+       * fraction of a millisecond and it hides, but the API and the database
+       * are separate hosts in production, so those are 1,005 network round
+       * trips for one admin opening one screen.
+       *
+       * It backs /api/admin/scores/team, /api/judge/scores/team and — through
+       * getTeamRankings — both ranking endpoints, so this is four endpoints.
+       *
+       * The `{ teamId: { $in: [...] } }` form is served by the existing
+       * `{teamId, gender, ageGroup, competition}` index.
+       */
+      const teamIds = filteredTeams.map((regTeam) => regTeam.team._id);
+
+      const scoreQuery = { competition: competitionId, teamId: { $in: teamIds } };
+      if (gender) scoreQuery.gender = gender;
+      if (ageGroup) scoreQuery.ageGroup = ageGroup;
+      if (competitionType) {
+        scoreQuery.competitionType = toCompetitionTypeDisplay(competitionType);
+      }
+
+      const allScores = teamIds.length ? await this.scoreRepository.find(scoreQuery) : [];
+
+      const scoresByTeam = new Map();
+      for (const scoreDoc of allScores) {
+        const key = scoreDoc.teamId?.toString();
+        if (!key) continue;
+        if (!scoresByTeam.has(key)) scoresByTeam.set(key, []);
+        scoresByTeam.get(key).push(scoreDoc);
+      }
+
+      const teamsWithScores = filteredTeams.map((regTeam) => {
+        const scores = scoresByTeam.get(regTeam.team._id?.toString()) || [];
+
+        let playerScores = scores.flatMap(s => s.playerScores || []);
+
+        if (apparatus) {
+          playerScores = playerScores.filter(ps => ps.apparatus === apparatus);
+        }
+
+        const totalScore = playerScores.reduce((sum, ps) => sum + (ps.finalScore || 0), 0);
+
+        // Get the most recent score document for metadata (isLocked, timeKeeper, etc.).
+        // Sorted on a copy: `scores` is this team's bucket in the shared map,
+        // and sorting in place would reorder it for anyone reading it after.
+        const latestScoreDoc = scores.length > 0 ? [...scores].sort((a, b) =>
+          new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+        )[0] : null;
+
+        return {
+          _id: regTeam.team._id,
+          name: regTeam.team.name,
+          // Same defect class as CRIT-4: this returned the whole coach and
+          // player documents. `select: false` now hides the bcrypt hash, but
+          // coach/player e-mail and minors' dates of birth were still going
+          // out on /api/judge/scores/team and /api/admin/scores/team. Reuses
+          // the allow-lists getSubmittedTeams projects with, so the two
+          // endpoints cannot drift apart.
+          coach: projectFields(regTeam.coach, SUBMITTED_TEAM_COACH_FIELD_LIST),
+          players: regTeam.players.map(playerEntry => {
+            // projectFields handles Mongoose documents and plain objects, and
+            // passes an unpopulated ObjectId ref through untouched.
+            const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
+            return {
+              ...playerData,
+              ageGroup: playerEntry.ageGroup,
+              gender: playerEntry.gender
+            };
+          }),
+          scores: playerScores,
+          totalScore,
+          // Include score document metadata
+          scoreMetadata: latestScoreDoc ? {
+            _id: latestScoreDoc._id,
+            isLocked: latestScoreDoc.isLocked,
+            timeKeeper: latestScoreDoc.timeKeeper,
+            scorer: latestScoreDoc.scorer,
+            remarks: latestScoreDoc.remarks,
+            competitionType: latestScoreDoc.competitionType,
+            createdAt: latestScoreDoc.createdAt,
+            updatedAt: latestScoreDoc.updatedAt
+          } : null
+        };
+      });
 
       this.logger.info('Team scores retrieved', { competitionId, ageGroup, gender });
 
@@ -673,7 +693,16 @@ class ScoringService {
         query.ageGroup = ageGroup;
       }
       if (competitionType) {
-        query.competitionType = competitionType;
+        /*
+         * Normalized, exactly as getTeamScores does it.
+         *
+         * A Score stores the DISPLAY form ("Competition I"); the client sends
+         * the slug ("competition_1"). This filter used the raw value, so the
+         * slug matched no document and the endpoint answered `[]` — with a 200,
+         * so the individual results table simply rendered empty next to a fully
+         * populated team table fed by getTeamScores, which does normalize.
+         */
+        query.competitionType = toCompetitionTypeDisplay(competitionType);
       }
 
       const scores = await this.scoreRepository.find(query);
@@ -1248,12 +1277,28 @@ class ScoringService {
              * figure — the deduction still stored beside it, just not applied.
              */
             const merged = mergedPlayerScores[existingPlayerIndex];
-            merged.finalScore = Math.max(
+            /*
+             * Rounded to 3 decimals, like CalculationService.calculateFinalScore
+             * — which is the other place this subtraction happens and which has
+             * always rounded.
+             *
+             * Without it the binary representation leaks into the stored score
+             * and out to the results page: 8.40 - 0.20 is 8.200000000000001 in
+             * IEEE 754, and a 0.20 time penalty is the most common one there is.
+             * 28 of 152 stored finals in the seeded meet carried an artifact
+             * like that, every one of them where the deduction was 0.20 — the
+             * other bands (0.30, 0.40, 0.50) happen to subtract cleanly, which
+             * is why it looked sporadic rather than systematic.
+             *
+             * 3 rather than 2 decimals because COP base scores are quarters
+             * (9.225), and rounding those to 2 would change a real result.
+             */
+            merged.finalScore = Number(Math.max(
               0,
               (Number(merged.averageMarks) || 0)
                 - (Number(merged.deduction) || 0)
                 - (Number(merged.otherDeduction) || 0)
-            );
+            ).toFixed(3));
           } else {
             // New player score
             if (scoreData.panelSize && !incomingPlayerScore.panelSize) {

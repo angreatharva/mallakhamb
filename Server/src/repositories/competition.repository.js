@@ -9,6 +9,7 @@
 
 const BaseRepository = require('./base.repository');
 const Competition = require('../../models/Competition');
+const { convertToObjectId } = require('../utils/data/objectid.util');
 
 class CompetitionRepository extends BaseRepository {
   /**
@@ -209,6 +210,411 @@ class CompetitionRepository extends BaseRepository {
         teamId, 
         updates, 
         error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Open a category for scoring.
+   *
+   * Atomic, and deliberately so. The service used to read the competition,
+   * push onto `startedAgeGroups` and call `competition.save()` — which threw
+   * `TypeError: competition.save is not a function`, because `findById` here
+   * goes through BaseRepository and is `.lean()`. Starting an age group was a
+   * 500 on all three routes that do it.
+   *
+   * Rewriting it as a read-then-write would have fixed the crash and left a
+   * lost update: two admins opening two categories at the same moment each
+   * write back the whole array as they read it, and whichever saves second
+   * erases the other. The `$not/$elemMatch` filter makes "not already started"
+   * part of the write, so a duplicate is refused by the database rather than by
+   * a check that ran a moment earlier.
+   *
+   * @param {string} competitionId
+   * @param {{gender: string, ageGroup: string, competitionType: string}} category
+   * @returns {Promise<boolean>} false when the category was already started
+   */
+  async startAgeGroup(competitionId, category) {
+    try {
+      const { gender, ageGroup, competitionType } = category;
+
+      const result = await this.model.updateOne(
+        {
+          _id: competitionId,
+          isDeleted: { $ne: true },
+          startedAgeGroups: {
+            $not: { $elemMatch: { gender, ageGroup, competitionType } },
+          },
+        },
+        {
+          $push: {
+            startedAgeGroups: { gender, ageGroup, competitionType, startedAt: new Date() },
+          },
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      this.logger.error('CompetitionRepository.startAgeGroup error', {
+        competitionId,
+        category,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Add an athlete to a team's squad for this competition.
+   *
+   * Same story as startAgeGroup: the caller held a lean document and called
+   * `.save()` on it. `arrayFilters` targets the one registration without
+   * reading, rewriting and saving the whole `registeredTeams` array — which at
+   * a national meet is megabytes, and which two coaches editing two squads
+   * concurrently would clobber.
+   *
+   * @param {string} competitionId
+   * @param {string} teamId
+   * @param {{player: string, ageGroup: string, gender: string, apparatus?: Object}} entry
+   * @returns {Promise<boolean>} false when no matching registration was found
+   */
+  async addPlayerToRegistration(competitionId, teamId, entry) {
+    try {
+      const result = await this.model.updateOne(
+        { _id: competitionId, isDeleted: { $ne: true } },
+        { $push: { 'registeredTeams.$[registration].players': entry } },
+        { arrayFilters: [{ 'registration.team': convertToObjectId(teamId) }] }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      this.logger.error('CompetitionRepository.addPlayerToRegistration error', {
+        competitionId,
+        teamId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove an athlete from a team's squad for this competition.
+   *
+   * @param {string} competitionId
+   * @param {string} teamId
+   * @param {string} playerId
+   * @returns {Promise<boolean>} false when nothing was removed
+   */
+  async removePlayerFromRegistration(competitionId, teamId, playerId) {
+    try {
+      const result = await this.model.updateOne(
+        { _id: competitionId, isDeleted: { $ne: true } },
+        {
+          $pull: {
+            'registeredTeams.$[registration].players': { player: convertToObjectId(playerId) },
+          },
+        },
+        { arrayFilters: [{ 'registration.team': convertToObjectId(teamId) }] }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      this.logger.error('CompetitionRepository.removePlayerFromRegistration error', {
+        competitionId,
+        teamId,
+        playerId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * The submitted registrations for a category, and only those.
+   *
+   * Replaces loading the whole competition with three levels of populate and
+   * filtering it in JavaScript. On a 1000-team meet that read was 2.87 MB plus
+   * ~11,000 populated documents, to answer a question about roughly 830
+   * athletes — every category read paid for every other category.
+   *
+   * Returns entries in exactly the shape `registeredTeams` has after those
+   * populates, so the caller's mapping is unchanged. That is deliberate: this
+   * swaps the FETCH and nothing else, which is what makes it checkable against
+   * the old path (see the equivalence assertion in scripts/perf/testApi.js).
+   *
+   * The gender/ageGroup filter is applied here; competitionType and apparatus
+   * are NOT. Those are matched by the caller, which understands the three
+   * shapes `apparatus` has been stored in — and since this filter is a superset
+   * of the caller's, moving it here cannot change which teams survive.
+   *
+   * @param {string} competitionId
+   * @param {Object} [filters] - { gender, ageGroup }
+   * @param {Object} projections - the coach/player field allow-lists
+   * @returns {Promise<Object[]>}
+   */
+  async findSubmittedRegistrations(competitionId, filters = {}, projections = {}) {
+    try {
+      const { coachFields = {}, playerFields = {} } = projections;
+
+      const playerMatch = {};
+      if (filters.gender) playerMatch['players.gender'] = filters.gender;
+      if (filters.ageGroup) playerMatch['players.ageGroup'] = filters.ageGroup;
+
+      const pipeline = [
+        { $match: { _id: convertToObjectId(competitionId), isDeleted: { $ne: true } } },
+        { $unwind: '$registeredTeams' },
+        { $replaceRoot: { newRoot: '$registeredTeams' } },
+        /*
+         * `isSubmittedRegistration` expressed for the database, EXACTLY.
+         *
+         * `isSubmitted === true` strictly, so a missing or truthy-but-not-
+         * boolean value fails closed. `isActive !== false`, not `=== true`,
+         * because the field was added later and older entries have it
+         * undefined — `$eq: true` would hide every one of them.
+         *
+         * Deliberately NOT filtering on paymentStatus: the helper does not,
+         * because the only writer of `isSubmitted: true` sets it in the same
+         * `$set` as `paymentStatus: 'completed'`. Adding a payment test here
+         * would silently drop entries the JavaScript path keeps.
+         */
+        { $match: { isSubmitted: true, isActive: { $ne: false } } },
+      ];
+
+      if (Object.keys(playerMatch).length) {
+        // Narrow the squad to the category, then drop entries left with nobody
+        // in it — which is the caller's "keep a team when any athlete matches".
+        pipeline.push({
+          $addFields: {
+            players: {
+              $filter: {
+                input: '$players',
+                as: 'p',
+                cond: {
+                  $and: [
+                    ...(filters.gender ? [{ $eq: ['$$p.gender', filters.gender] }] : []),
+                    ...(filters.ageGroup ? [{ $eq: ['$$p.ageGroup', filters.ageGroup] }] : []),
+                  ],
+                },
+              },
+            },
+          },
+        });
+        pipeline.push({ $match: { 'players.0': { $exists: true } } });
+      }
+
+      /*
+       * The pipeline SELECTS; the joins are done in batches afterwards.
+       *
+       * The first version of this did the joins with `$lookup` inside the
+       * pipeline, and measured three times SLOWER than the populate it
+       * replaced (733ms vs 230ms at 1000 teams). `$unwind` produces one
+       * document per registration and each `$lookup` then runs per document —
+       * four thousand of them — whereas Mongoose's populate issues one batched
+       * `$in` per path. The aggregation was winning on transfer and losing far
+       * more on lookups.
+       *
+       * So: use the pipeline for what it is good at — filtering to the category
+       * before anything is transferred — and collect the references, then
+       * resolve them with three `$in` queries. Four round trips total,
+       * regardless of how many teams are entered.
+       */
+      const rows = await this.model.aggregate(pipeline);
+      if (rows.length === 0) return [];
+
+      const uniq = (values) => [...new Set(values.filter(Boolean).map(String))];
+
+      const teamIds = uniq(rows.map((row) => row.team));
+      const registrationCoachIds = uniq(rows.map((row) => row.coach));
+      const playerIds = uniq(rows.flatMap((row) => (row.players || []).map((p) => p.player)));
+
+      const [teams, players] = await Promise.all([
+        teamIds.length
+          ? this.model.db.collection('teams').find(
+            { _id: { $in: teamIds.map(convertToObjectId) } },
+            { projection: { name: 1, coach: 1, description: 1, isActive: 1 } }
+          ).toArray()
+          : [],
+        playerIds.length
+          ? this.model.db.collection('players').find(
+            { _id: { $in: playerIds.map(convertToObjectId) } },
+            { projection: playerFields }
+          ).toArray()
+          : [],
+      ]);
+
+      const teamById = new Map(teams.map((team) => [String(team._id), team]));
+
+      // The team's own coach as well as the registration's: the caller falls
+      // back from one to the other when a registration has no coach reference.
+      const coachIds = uniq([...registrationCoachIds, ...teams.map((team) => team.coach)]);
+      const coaches = coachIds.length
+        ? await this.model.db.collection('coaches').find(
+          { _id: { $in: coachIds.map(convertToObjectId) } },
+          { projection: coachFields }
+        ).toArray()
+        : [];
+      const coachById = new Map(coaches.map((coach) => [String(coach._id), coach]));
+      const playerById = new Map(players.map((player) => [String(player._id), player]));
+
+      // Stitched into exactly the shape the three populates produced.
+      return rows.map((row) => {
+        const team = teamById.get(String(row.team));
+        return {
+          ...row,
+          team: team
+            ? { ...team, coach: coachById.get(String(team.coach)) || team.coach }
+            : row.team,
+          coach: coachById.get(String(row.coach)) || row.coach,
+          players: (row.players || []).map((entry) => ({
+            ...entry,
+            player: playerById.get(String(entry.player)) || entry.player,
+          })),
+        };
+      });
+    } catch (error) {
+      this.logger.error('CompetitionRepository.findSubmittedRegistrations error', {
+        competitionId,
+        filters,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Athletes entered in a competition, as a page.
+   *
+   * Backs GET /api/admin/players, which used to filter the Player collection by
+   * `competition` — a field Player does not have. Entry is recorded in
+   * `registeredTeams`, so that query matched nothing, unindexed, and the
+   * endpoint returned an empty page however many athletes were entered.
+   *
+   * Paginating in the pipeline rather than in JavaScript matters here: the
+   * alternative is loading every athlete in the meet to return ten of them.
+   *
+   * @param {string} competitionId
+   * @param {Object} [filters] - { ageGroup, gender, team, isSubmitted }
+   * @param {{skip: number, limit: number}} pagination
+   * @returns {Promise<{players: Object[], total: number}>}
+   */
+  async findEnteredPlayers(competitionId, filters = {}, pagination = {}) {
+    try {
+      const { skip = 0, limit = 10 } = pagination;
+
+      const entryMatch = {};
+      if (filters.ageGroup) entryMatch['entry.ageGroup'] = filters.ageGroup;
+      if (filters.gender) entryMatch['entry.gender'] = filters.gender;
+      if (filters.team) entryMatch['registration.team'] = convertToObjectId(filters.team);
+      if (filters.isSubmitted !== undefined) {
+        entryMatch['registration.isSubmitted'] = filters.isSubmitted;
+      }
+
+      /*
+       * `status` filters on the ATHLETE's account, which lives in another
+       * collection — so it needs the join to happen before the count, not
+       * inside the paginated branch where the other filters are applied.
+       *
+       * Only built when asked for. Joining every entered athlete to answer a
+       * query that did not ask about them would make the common path pay for
+       * the rare one.
+       */
+      const statusStages = filters.isActive === undefined ? [] : [
+        {
+          $lookup: {
+            from: 'players',
+            localField: 'entry.player',
+            foreignField: '_id',
+            as: 'accountState',
+            pipeline: [{ $project: { isActive: 1 } }],
+          },
+        },
+        { $unwind: { path: '$accountState', preserveNullAndEmptyArrays: true } },
+        // `$ne: false` for active, because the field defaults to true and older
+        // rows may not carry it at all.
+        {
+          $match: filters.isActive
+            ? { 'accountState.isActive': { $ne: false } }
+            : { 'accountState.isActive': false },
+        },
+      ];
+
+      const pipeline = [
+        { $match: { _id: convertToObjectId(competitionId), isDeleted: { $ne: true } } },
+        { $unwind: '$registeredTeams' },
+        { $project: { registration: '$registeredTeams' } },
+        { $match: { 'registration.isActive': { $ne: false } } },
+        { $unwind: '$registration.players' },
+        { $project: { registration: 1, entry: '$registration.players' } },
+        ...(Object.keys(entryMatch).length ? [{ $match: entryMatch }] : []),
+        ...statusStages,
+        // `$facet` so the page and its total come from ONE pass. Counting
+        // separately would re-walk the whole embedded array a second time.
+        {
+          $facet: {
+            total: [{ $count: 'value' }],
+            page: [
+              { $sort: { 'entry.ageGroup': 1, 'entry.player': 1 } },
+              { $skip: skip },
+              { $limit: limit },
+              {
+                $lookup: {
+                  from: 'players',
+                  localField: 'entry.player',
+                  foreignField: '_id',
+                  as: 'player',
+                  // Projected in the lookup: these rosters are largely minors,
+                  // and an unprojected join carries the bcrypt hash, the e-mail
+                  // and the date of birth straight to the response.
+                  pipeline: [{
+                    $project: {
+                      firstName: 1, lastName: 1, gender: 1, stateUnit: 1, registrationNumber: 1,
+                    },
+                  }],
+                },
+              },
+              { $unwind: { path: '$player', preserveNullAndEmptyArrays: true } },
+              {
+                $lookup: {
+                  from: 'teams',
+                  localField: 'registration.team',
+                  foreignField: '_id',
+                  as: 'team',
+                  pipeline: [{ $project: { name: 1 } }],
+                },
+              },
+              { $unwind: { path: '$team', preserveNullAndEmptyArrays: true } },
+              {
+                $project: {
+                  _id: '$entry.player',
+                  firstName: '$player.firstName',
+                  lastName: '$player.lastName',
+                  gender: '$entry.gender',
+                  ageGroup: '$entry.ageGroup',
+                  apparatus: '$entry.apparatus',
+                  stateUnit: '$player.stateUnit',
+                  registrationNumber: '$player.registrationNumber',
+                  team: { _id: '$team._id', name: '$team.name' },
+                  isSubmitted: '$registration.isSubmitted',
+                  paymentStatus: '$registration.paymentStatus',
+                },
+              },
+            ],
+          },
+        },
+      ];
+
+      const [result] = await this.model.aggregate(pipeline);
+
+      return {
+        players: result?.page || [],
+        total: result?.total?.[0]?.value || 0,
+      };
+    } catch (error) {
+      this.logger.error('CompetitionRepository.findEnteredPlayers error', {
+        competitionId,
+        filters,
+        error: error.message,
       });
       throw error;
     }

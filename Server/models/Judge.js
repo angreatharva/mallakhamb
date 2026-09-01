@@ -103,8 +103,15 @@ judgeSchema.index({ competitionTypes: 1 });
 // slot-derived (`J1-M-U14-1`), so two competitions generated the same string
 // for two different people and a global lookup could return the wrong
 // person's row — which is a large part of why credentials left this document.
+//
+// `sparse: true` used to be declared alongside the partial filter. MongoDB does
+// not accept both on one index and builds it with the filter alone, so the
+// schema was asking for something the database would never report back — which
+// the index reconciler (infrastructure/database/index-manager.js) correctly
+// flagged as a permanent, unfixable conflict on every startup. The partial
+// filter already does the job `sparse` was there for: an unfilled seat has
+// `judgeAccount: null`, and `$type: 'objectId'` excludes it.
 judgeSchema.index({ judgeAccount: 1, competition: 1 }, {
-  sparse: true,
   partialFilterExpression: { judgeAccount: { $type: 'objectId' } }
 });
 

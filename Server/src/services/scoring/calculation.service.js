@@ -368,8 +368,19 @@ class CalculationService {
       if (computedFinal > 0) {
         result.finalScore = computedFinal;
       } else if (typeof playerScoreData.finalScore === 'number' && playerScoreData.finalScore > 0) {
-        result.finalScore = playerScoreData.finalScore;
-        if (!result.averageMarks) result.averageMarks = playerScoreData.finalScore;
+        /*
+         * Rounded like every other branch.
+         *
+         * This one took the client's number verbatim, and the client computes
+         * it as `average - deduction` in binary floating point — so a value
+         * like 9.200000000000001 would be stored exactly as sent.
+         *
+         * Not the cause of the artifacts seen in the seeded meet (those came
+         * from the merge in scoring.service.saveScores, which had the same gap),
+         * but the same hole in a less-travelled branch.
+         */
+        result.finalScore = Number(playerScoreData.finalScore.toFixed(3));
+        if (!result.averageMarks) result.averageMarks = result.finalScore;
       } else {
         result.finalScore = computedFinal;
       }

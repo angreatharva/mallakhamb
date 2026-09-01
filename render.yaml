@@ -7,6 +7,13 @@ services:
     plan: free
     rootDir: Server
     buildCommand: npm install
+    # Runs ONCE per deploy, before any new instance starts, so migrations cannot
+    # race between instances and a failing one fails the release rather than
+    # taking the running service down. Also reconciles indexes.
+    preDeployCommand: npm run prepare:db
+    # Per instance: validates config, connects, reconciles indexes (idempotent,
+    # safe to run concurrently), reports any pending migration, then serves.
+    # It does NOT apply migrations — that is preDeployCommand's job.
     startCommand: npm start
     envVars:
       - key: NODE_ENV

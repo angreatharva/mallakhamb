@@ -468,7 +468,37 @@ class CoachService extends UserService {
     }
     
     const registeredTeam = competition.registeredTeams[registeredTeamIndex];
-    
+
+    /*
+     * The squad place's gender must match the athlete's own.
+     *
+     * `gender` arrives in the coach's payload and used to be written straight
+     * through, entirely independently of `Player.gender`. Two records of the
+     * same fact that nothing kept in step — and they decide different things:
+     * the ENTRY's gender picks the category, the panel and the score document,
+     * while several screens filtered the roster on the ACCOUNT's. A coach
+     * choosing the wrong option in the dropdown put an athlete in a category
+     * where the client would then not show them, or worse, showed them to one
+     * panel and scored them under another.
+     *
+     * The entry stays authoritative — everything downstream is keyed on it —
+     * but it is now verified against the account at the only point that writes
+     * it, so the two cannot drift apart in the first place.
+     */
+    if (this.playerRepository) {
+      const player = await this.playerRepository.findById(playerId);
+      if (!player) {
+        throw new NotFoundError('Player');
+      }
+      if (player.gender && gender && player.gender !== gender) {
+        throw new ValidationError(
+          `${player.firstName} ${player.lastName} is registered as ${player.gender}, `
+          + `so they cannot be entered as ${gender}`,
+          'gender'
+        );
+      }
+    }
+
     // Check if player already exists
     const existingPlayerIndex = registeredTeam.players.findIndex(
       p => p.player && p.player.toString() === playerId.toString()

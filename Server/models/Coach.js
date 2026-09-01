@@ -116,4 +116,10 @@ coachSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+/**
+ * The coach's team. Read whenever a coach's squad is resolved, and built by
+ * migration 001 without any schema declaring it.
+ */
+coachSchema.index({ team: 1 });
+
 module.exports = mongoose.model('Coach', coachSchema);

@@ -113,16 +113,6 @@ function createJudgeController(container) {
 
     // ==================== Scoring ====================
 
-    /** @route GET /api/judge/teams */
-    getAvailableTeams: asyncHandler(async (req, res) => {
-      const teams = await judgeService.getAvailableTeams(
-        req.user._id,
-        req.competitionId,
-        req.query.ageGroup
-      );
-      res.json({ success: true, data: teams });
-    }),
-
     /**
      * @route GET /api/judge/teams/:teamId/players
      * @desc  The roster, scored against the seat the judge is working from.

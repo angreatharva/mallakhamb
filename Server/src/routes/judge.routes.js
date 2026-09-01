@@ -103,13 +103,20 @@ function createJudgeRoutes(container) {
   );
 
   // Scoring Interface
-  router.get('/teams',
-    authenticate,
-    requireJudge,
-    judgeValidator.getAvailableTeams(),
-    handleValidationErrors,
-    judgeController.getAvailableTeams
-  );
+  /*
+   * GET /api/judge/teams is gone.
+   *
+   * It queried `Team` by competition, ageGroup, gender and isSubmitted — none
+   * of which are paths on Team, because entry is recorded in
+   * `Competition.registeredTeams`. It therefore returned an empty list to every
+   * caller for its whole existence, via an unindexed collection scan.
+   *
+   * Not rewritten, because the working equivalent already exists and is what
+   * the judge client actually calls: GET /api/public/submitted-teams (see
+   * Web/src/services/public/judge.api.js, which has no binding for this path at
+   * all). Two endpoints for one question, one of which never answered it, is
+   * worse than one.
+   */
 
   router.get('/teams/:teamId/players',
     authenticate,

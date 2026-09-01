@@ -624,59 +624,6 @@ class AdminService extends UserService {
     }
   }
 
-  /**
-   * Get competition overview with age groups and registration status
-   * @param {string} competitionId - Competition ID
-   * @returns {Promise<Object>} Competition overview
-   * @throws {NotFoundError} If competition not found
-   */
-  async getCompetitionOverview(competitionId) {
-    try {
-      const competition = await this.competitionRepository.findById(competitionId);
-      if (!competition) {
-        throw new NotFoundError('Competition');
-      }
-
-      // Get registration status by age group
-      const ageGroups = competition.ageGroups || [];
-      const ageGroupStats = await Promise.all(
-        ageGroups.map(async (ageGroup) => {
-          const teamCount = await this.teamRepository.count({
-            competition: competitionId,
-            ageGroup: ageGroup.name
-          });
-          const playerCount = await this.playerRepository.count({
-            competition: competitionId,
-            ageGroup: ageGroup.name
-          });
-          return {
-            name: ageGroup.name,
-            teamCount,
-            playerCount,
-            status: ageGroup.status || 'pending'
-          };
-        })
-      );
-
-      this.logger.info('Competition overview retrieved', { competitionId });
-
-      return {
-        competition,
-        ageGroups: ageGroupStats,
-        registrationStatus: competition.registrationStatus || 'open',
-        scoringProgress: competition.scoringProgress || 0
-      };
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Get competition overview error', { 
-        competitionId, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
 
   /**
    * Get system health status
@@ -786,85 +733,109 @@ class AdminService extends UserService {
         };
       }
 
-      // Fetch actual team documents with coach populated
-      const teams = await this.teamRepository.find(
+      /*
+       * Paginate BEFORE doing the work, not after.
+       *
+       * This used to fetch every matching team, issue one player query per team
+       * inside a Promise.all, build the whole response, and only then slice the
+       * requested page off the end. Asking for 10 rows cost the same as asking
+       * for all of them — measured at 100 entered teams, `?limit=10` issued 104
+       * queries; at 1,000 teams it is 1,004, for ten rows.
+       *
+       * `teamFilters` (name, coachName) still has to be applied by the database
+       * before the page is cut, or the page would be taken from the wrong set.
+       * So: one query to resolve and order the matching ids, then the page, then
+       * ONE player query for just that page's athletes.
+       */
+      const matchingTeams = await this.teamRepository.find(
         { _id: { $in: teamIds }, ...teamFilters },
-        { 
-          sort: { createdAt: -1 },
-          populate: 'coach'
-        }
+        { sort: { createdAt: -1 }, select: '_id' }
       );
 
-      // Build response with players from registeredTeams
-      const teamsWithPlayers = await Promise.all(
-        teams.map(async (team) => {
-          const registeredTeam = filteredRegisteredTeams.find(
-            rt => rt.team.toString() === team._id.toString()
-          );
-
-          // Get player details
-          const playerIds = registeredTeam.players.map(p => p.player);
-          const players = await this.playerRepository.find({ _id: { $in: playerIds } });
-
-          // Map players with age groups from registered team data
-          let playersWithAgeGroups = players.map(player => {
-            const registeredPlayer = registeredTeam.players.find(
-              rp => rp.player.toString() === player._id.toString()
-            );
-            return {
-              _id: player._id,
-              firstName: player.firstName,
-              lastName: player.lastName,
-              email: player.email,
-              ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
-              gender: registeredPlayer?.gender || player.gender
-            };
-          });
-
-          // Apply gender and ageGroup filters to the players list
-          if (gender || ageGroup) {
-            playersWithAgeGroups = playersWithAgeGroups.filter(player => {
-              const matchesGender = !gender || player.gender === gender;
-              const matchesAgeGroup = !ageGroup || player.ageGroup === ageGroup;
-              return matchesGender && matchesAgeGroup;
-            });
-          }
-
-          return {
-            _id: team._id,
-            name: team.name,
-            coach: team.coach ? {
-              _id: team.coach._id,
-              firstName: team.coach.firstName,
-              lastName: team.coach.lastName,
-              name: fullName(team.coach),
-              email: team.coach.email
-            } : null,
-            playerCount: playersWithAgeGroups.length,
-            players: playersWithAgeGroups,
-            description: team.description,
-            isActive: team.isActive,
-            isSubmitted: registeredTeam.isSubmitted,
-            paymentStatus: registeredTeam.paymentStatus,
-            createdAt: team.createdAt,
-            updatedAt: team.updatedAt
-          };
-        })
-      );
-
-      // Apply pagination
-      const total = teamsWithPlayers.length;
+      const total = matchingTeams.length;
       const skip = (page - 1) * limit;
-      const paginatedTeams = teamsWithPlayers.slice(skip, skip + limit);
+      const pageIds = matchingTeams.slice(skip, skip + limit).map((team) => team._id);
 
-      this.logger.info('All teams retrieved with filters', { 
-        competitionId, 
-        total, 
+      if (pageIds.length === 0) {
+        return { teams: [], total, page, pages: Math.ceil(total / limit) };
+      }
+
+      const teams = await this.teamRepository.find(
+        { _id: { $in: pageIds } },
+        { sort: { createdAt: -1 }, populate: 'coach' }
+      );
+
+      // One query for the whole page's athletes, replacing the per-team query
+      // that made this an N+1.
+      const registeredByTeam = new Map(
+        filteredRegisteredTeams.map((rt) => [rt.team.toString(), rt])
+      );
+      const pagePlayerIds = teams.flatMap((team) => {
+        const registeredTeam = registeredByTeam.get(team._id.toString());
+        return (registeredTeam?.players || []).map((p) => p.player);
+      });
+      const playerDocs = pagePlayerIds.length
+        ? await this.playerRepository.find({ _id: { $in: pagePlayerIds } })
+        : [];
+      const playerById = new Map(playerDocs.map((player) => [player._id.toString(), player]));
+
+      const teamsWithPlayers = teams.map((team) => {
+        const registeredTeam = registeredByTeam.get(team._id.toString());
+
+        // Driven off the ENTRY rather than the fetched player documents, so an
+        // athlete whose account has since been removed still shows the squad
+        // place they hold — the previous version dropped the row entirely.
+        let playersWithAgeGroups = (registeredTeam?.players || []).map((registeredPlayer) => {
+          const player = playerById.get(registeredPlayer.player?.toString());
+          if (!player) return null;
+          return {
+            _id: player._id,
+            firstName: player.firstName,
+            lastName: player.lastName,
+            email: player.email,
+            ageGroup: registeredPlayer.ageGroup || player.ageGroup,
+            gender: registeredPlayer.gender || player.gender
+          };
+        }).filter(Boolean);
+
+        // Apply gender and ageGroup filters to the players list
+        if (gender || ageGroup) {
+          playersWithAgeGroups = playersWithAgeGroups.filter(player => {
+            const matchesGender = !gender || player.gender === gender;
+            const matchesAgeGroup = !ageGroup || player.ageGroup === ageGroup;
+            return matchesGender && matchesAgeGroup;
+          });
+        }
+
+        return {
+          _id: team._id,
+          name: team.name,
+          coach: team.coach ? {
+            _id: team.coach._id,
+            firstName: team.coach.firstName,
+            lastName: team.coach.lastName,
+            name: fullName(team.coach),
+            email: team.coach.email
+          } : null,
+          playerCount: playersWithAgeGroups.length,
+          players: playersWithAgeGroups,
+          description: team.description,
+          isActive: team.isActive,
+          isSubmitted: registeredTeam?.isSubmitted,
+          paymentStatus: registeredTeam?.paymentStatus,
+          createdAt: team.createdAt,
+          updatedAt: team.updatedAt
+        };
+      });
+
+      this.logger.info('All teams retrieved with filters', {
+        competitionId,
+        total,
         filters: { ageGroup, gender, ...teamFilters }
       });
 
       return {
-        teams: paginatedTeams,
+        teams: teamsWithPlayers,
         total,
         page,
         pages: Math.ceil(total / limit)
@@ -1008,36 +979,42 @@ class AdminService extends UserService {
         filters 
       });
       
-      // Query the Competition model to get registered teams
-      // CRIT-4: project the populated coach and athlete documents. Without a
-      // `select` these carry bcrypt hashes, e-mail addresses and — for minors —
-      // dates of birth all the way to the response body.
-      const competition = await this.competitionRepository.findById(competitionId, {
-        populate: [
-          {
-            path: 'registeredTeams.team',
-            populate: { path: 'coach', select: SUBMITTED_TEAM_COACH_FIELDS }
-          },
-          {
-            path: 'registeredTeams.coach',
-            select: SUBMITTED_TEAM_COACH_FIELDS
-          },
-          {
-            path: 'registeredTeams.players.player',
-            select: SUBMITTED_TEAM_PLAYER_FIELDS
-          }
-        ]
-      });
+      /*
+       * Fetch only this category's submitted registrations.
+       *
+       * This used to load the WHOLE competition with three levels of populate
+       * and filter it in JavaScript: 2.87 MB and ~11,000 populated documents on
+       * a 1000-team meet, to answer a question about roughly 830 athletes. Every
+       * category read paid for every other category, and the judge dashboard
+       * polls this endpoint throughout an event.
+       *
+       * CRIT-4 still applies and is still enforced: the aggregation projects the
+       * same coach and athlete allow-lists the populate did, so bcrypt hashes,
+       * e-mail addresses and minors' dates of birth do not leave the database.
+       * `projectFields` below is the second line of defence, unchanged.
+       */
+      const toProjection = (fields) => Object.fromEntries(
+        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
+      );
 
-      if (!competition) {
-        this.logger.warn('Competition not found', { competitionId });
-        return [];
-      }
-
-      this.logger.info('Competition found', { 
+      const registrations = await this.competitionRepository.findSubmittedRegistrations(
         competitionId,
-        competitionName: competition.name,
-        totalRegisteredTeams: competition.registeredTeams?.length || 0
+        { gender: filters.gender, ageGroup: filters.ageGroup },
+        {
+          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+        }
+      );
+
+      // Kept so the rest of this method reads as it did: it works off
+      // `competition.registeredTeams`.
+      const competition = { registeredTeams: registrations };
+
+      // The competition's own fields are no longer fetched — only its matching
+      // registrations are — so there is no name to log here any more.
+      this.logger.info('Submitted registrations fetched', {
+        competitionId,
+        count: registrations.length
       });
 
       // Filter submitted teams (only teams fully submitted by coach)
@@ -1096,12 +1073,29 @@ class AdminService extends UserService {
         scoreQuery.competitionType = toCompetitionTypeDisplay(filters.competitionType);
       }
 
-      const scoreDocs = await this.scoreRepository.find(scoreQuery);
+      /*
+       * Only the fields the loop below reads.
+       *
+       * This response does not return score documents at all — it returns a
+       * per-athlete `isFinalized` / `finalScore` / `hasScore` flag derived from
+       * them. Loading whole documents to compute three booleans pulled every
+       * judge slip and every COP breakdown in the category across the wire from
+       * MongoDB for nothing.
+       */
+      const scoreDocs = await this.scoreRepository.find(scoreQuery, {
+        select: 'teamId isLocked playerScores.playerId playerScores.isFinalized '
+          + 'playerScores.finalizedAt playerScores.finalScore playerScores.averageMarks '
+          + 'playerScores.deduction playerScores.otherDeduction playerScores.judgeScores '
+          + 'playerScores.panelSize '
+          // `judgeRole` alone, because the only thing asked of judgeSlips below
+          // is whether the array is non-empty. Selecting the slips whole would
+          // bring back the COP breakdowns this projection exists to avoid.
+          + 'playerScores.judgeSlips.judgeRole',
+      });
       const finalizedByPlayer = new Map();
       const scoredByPlayer = new Map();
       for (const doc of scoreDocs || []) {
         const teamKey = doc.teamId?.toString();
-        let needsRepair = false;
         for (const ps of doc.playerScores || []) {
           const pid = ps.playerId?.toString();
           if (!pid) continue;
@@ -1128,19 +1122,24 @@ class AdminService extends UserService {
             resolvedFinal = afterDeductions(ps.averageMarks);
           }
           if ((resolvedFinal == null || resolvedFinal === 0) && ps.judgeScores) {
+            /*
+             * Recompute for DISPLAY only.
+             *
+             * This block used to also write the repaired values back —
+             * `needsRepair = true` and an `updateById` at the end of the loop —
+             * to fix stale 0.00 finals left by the old 3-judge Senior+J1+J2
+             * bug. That made a GET take a write lock, on the endpoint the judge
+             * dashboard polls throughout an event.
+             *
+             * The repair is now a migration (007_repair_zero_final_scores),
+             * which does it once, offline, for every affected row rather than
+             * only the ones somebody happens to look at. The display fallback
+             * stays because it is also what shows a correct number for a panel
+             * still being scored, which no migration can pre-compute.
+             */
             const recomputed = calculateIndividualScore(ps.judgeScores, ps.panelSize);
             if (recomputed.averageMarks > 0) {
               resolvedFinal = afterDeductions(recomputed.averageMarks);
-              // Repair stale 0.00 finals left by the old 3-judge Senior+J1+J2 bug
-              if (ps.isFinalized) {
-                ps.finalScore = resolvedFinal;
-                ps.averageMarks = recomputed.averageMarks;
-                ps.executionAverage = recomputed.executionAverage;
-                ps.baseScore = recomputed.baseScore;
-                ps.baseScoreApplied = recomputed.baseScoreApplied;
-                ps.toleranceUsed = recomputed.toleranceUsed;
-                needsRepair = true;
-              }
             }
           }
 
@@ -1153,19 +1152,6 @@ class AdminService extends UserService {
           }
           if (ps.isFinalized || (ps.judgeScores && Object.values(ps.judgeScores).some((v) => Number(v) > 0)) || (ps.judgeSlips && ps.judgeSlips.length > 0)) {
             scoredByPlayer.set(key, true);
-          }
-        }
-        if (needsRepair && doc._id) {
-          try {
-            const plainScores = (doc.playerScores || []).map((ps) =>
-              typeof ps.toObject === 'function' ? ps.toObject() : { ...ps }
-            );
-            await this.scoreRepository.updateById(doc._id, { playerScores: plainScores });
-          } catch (repairErr) {
-            this.logger.warn('Failed to repair zero finalScore on read', {
-              scoreId: doc._id,
-              error: repairErr.message,
-            });
           }
         }
       }
@@ -1187,7 +1173,30 @@ class AdminService extends UserService {
         isSubmitted: regTeam.isSubmitted,
         submittedAt: regTeam.submittedAt,
         paymentStatus: regTeam.paymentStatus,
-        players: regTeam.players.map(playerEntry => {
+        /*
+         * Only the athletes in the CATEGORY that was asked for.
+         *
+         * The team-level filter above keeps a team when ANY of its athletes
+         * matches, and this then returned that team's ENTIRE roster. Since a
+         * squad is mixed, asking for Male Under-14 returned essentially every
+         * athlete in the meet — 10,000 rows on a 1000-team fixture where the
+         * category holds about 830.
+         *
+         * Both consumers already filter to exactly this
+         * (JudgeDashboard.getFilteredPlayersForTeam, and the apparatus picker
+         * beside it), so the rows being dropped here are rows the client
+         * discards on arrival.
+         *
+         * Deliberately gender + ageGroup ONLY. `apparatus` and
+         * `competitionType` are matched client-side by `isRegisteredFor`, which
+         * understands the three shapes the field has been written in; a second,
+         * simpler implementation here would disagree with it on the older ones.
+         */
+        players: regTeam.players.filter(playerEntry => {
+          if (filters.gender && playerEntry.gender !== filters.gender) return false;
+          if (filters.ageGroup && playerEntry.ageGroup !== filters.ageGroup) return false;
+          return true;
+        }).map(playerEntry => {
           // Handle both Mongoose documents and plain objects
           const playerData = projectFields(playerEntry.player, SUBMITTED_TEAM_PLAYER_FIELD_LIST);
           const playerId = playerData?._id?.toString();
@@ -1329,18 +1338,26 @@ class AdminService extends UserService {
   async getAllPlayers(competitionId, filters = {}, pagination = {}) {
     try {
       const { page = 1, limit = 10 } = pagination;
-      const criteria = { competition: competitionId, ...filters };
 
+      /*
+       * Read from the competition's entries, not from the Player collection.
+       *
+       * This used to be `playerRepository.find({ competition, ...filters })`.
+       * Player has no `competition` path — entry is recorded in
+       * `Competition.registeredTeams` — so Mongoose passed the unknown field
+       * through, MongoDB matched nothing (unindexed, so a full scan doing it),
+       * and the endpoint returned an empty page however many athletes were
+       * entered. It answered 200 throughout, so it read as "no athletes yet".
+       *
+       * `filters.team` rather than `filters.teamId`: the controller maps the
+       * query's `teamId` onto `team` before it gets here.
+       */
       const skip = (page - 1) * limit;
-      const [players, total] = await Promise.all([
-        this.playerRepository.find(criteria, { 
-          skip, 
-          limit, 
-          sort: { createdAt: -1 },
-          populate: ['team']
-        }),
-        this.playerRepository.count(criteria)
-      ]);
+      const { players, total } = await this.competitionRepository.findEnteredPlayers(
+        competitionId,
+        filters,
+        { skip, limit }
+      );
 
       this.logger.info('All players retrieved', { competitionId, total });
 
@@ -1968,18 +1985,21 @@ class AdminService extends UserService {
         }
       )).map(flattenJudgeAccount);
 
-      // Get judges by competition for backward compatibility
-      const allJudges = await this.judgeRepository.find({}, {
-        select: 'competition'
-      });
-
-      const byCompetition = allJudges.reduce((acc, judge) => {
-        const compId = judge.competition?.toString();
-        if (compId) {
-          acc[compId] = (acc[compId] || 0) + 1;
-        }
-        return acc;
-      }, {});
+      /*
+       * Seat count for THIS competition, not every competition ever run.
+       *
+       * This was `judgeRepository.find({})` — every judge seat in the database,
+       * across every past and future meet, loaded to build a count map "for
+       * backward compatibility". It grows without bound as meets accumulate,
+       * and it is on a screen an admin opens during an event.
+       *
+       * Nothing consumes the other competitions' entries: `byCompetition` does
+       * not appear anywhere in the web client. The shape is kept — a map keyed
+       * by competition id — so any caller outside this repository still finds
+       * what it expects for the competition it asked about.
+       */
+      const seatCount = await this.judgeRepository.count({ competition: compId });
+      const byCompetition = { [String(compId)]: seatCount };
 
       // Build summary array grouped by gender and age group
       const summaryMap = new Map();
@@ -2267,30 +2287,29 @@ class AdminService extends UserService {
         throw new NotFoundError(`Age group ${gender} ${ageGroup} not found in competition`);
       }
 
-      // Check if already started
-      const alreadyStarted = competition.startedAgeGroups?.some(
-        started => started.gender === gender && 
-                   started.ageGroup === ageGroup && 
-                   started.competitionType === competitionType
-      );
-
-      if (alreadyStarted) {
-        throw new ValidationError(`${competitionType} for ${gender} ${ageGroup} has already been started`);
-      }
-
-      // Add to startedAgeGroups array
-      if (!competition.startedAgeGroups) {
-        competition.startedAgeGroups = [];
-      }
-
-      competition.startedAgeGroups.push({
+      /*
+       * The "already started" check IS the write.
+       *
+       * This used to read the competition, test `startedAgeGroups` in memory,
+       * push, and call `competition.save()`. Two things were wrong with that.
+       * The document came from `competitionRepository.findById`, which is
+       * `.lean()`, so `.save()` did not exist and every call was a 500. And
+       * even hydrated, the check and the write were separate: two admins
+       * opening two categories at once would each write back the array as they
+       * read it, silently erasing one of the two.
+       *
+       * The repository does both in one conditional update, so a second attempt
+       * modifies nothing and is reported as already started.
+       */
+      const started = await this.competitionRepository.startAgeGroup(competitionId, {
         gender,
         ageGroup,
         competitionType,
-        startedAt: new Date()
       });
 
-      await competition.save();
+      if (!started) {
+        throw new ValidationError(`${competitionType} for ${gender} ${ageGroup} has already been started`);
+      }
 
       this.logger.info('Competition type started', { 
         competitionId, 
@@ -2375,32 +2394,40 @@ class AdminService extends UserService {
       const { page = 1, limit = 10 } = pagination;
 
       const skip = (page - 1) * limit;
+
+      /*
+       * The competition is NOT populated here any more.
+       *
+       * It used to be — with `registeredTeams.players.player` populated inside
+       * it — which meant every row of a ten-row page carried the ENTIRE
+       * competition: every entered team, every athlete in every entry. That is
+       * ~3 MB per row, so a single page of transactions was tens of megabytes.
+       * It never showed up in the benchmark because the fixture has no
+       * transactions, which is exactly how a payload like this survives.
+       *
+       * What the screen actually does with it (AdminTransactions.jsx) is find
+       * the ONE registration matching `tx.team._id` and read its athletes'
+       * name, ageGroup, gender and apparatus. So that is what is assembled
+       * below, per transaction, from one extra query for the whole page.
+       */
       const [transactions, total] = await Promise.all([
-        this.transactionRepository.find(filters, { 
-          skip, 
-          limit, 
+        this.transactionRepository.find(filters, {
+          skip,
+          limit,
           sort: { createdAt: -1 },
-          populate: [
-            {
-              path: 'competition',
-              populate: {
-                path: 'registeredTeams.players.player',
-                select: 'firstName lastName name gender'
-              }
-            },
-            'team',
-            'coach'
-          ]
+          populate: ['team', 'coach']
         }),
         this.transactionRepository.count(filters)
       ]);
+
+      const withEntries = await this.attachTransactionSquads(transactions);
 
       this.logger.info('Transactions retrieved', { total });
 
       return {
         // The table shows one name per row (AdminTransactions.jsx), so the two
         // stored halves are composed here.
-        transactions: transactions.map((tx) => (
+        transactions: withEntries.map((tx) => (
           tx.coach ? { ...tx, coach: { ...tx.coach, name: fullName(tx.coach) } } : tx
         )),
         total,
@@ -2411,6 +2438,86 @@ class AdminService extends UserService {
       this.logger.error('Get transactions error', { error: error.message });
       throw error;
     }
+  }
+
+  /**
+   * Attach each transaction's own squad, and nothing else's.
+   *
+   * Replaces populating the whole competition onto every row. One query for the
+   * page's competitions, one for the page's athletes, then each transaction
+   * gets the single registration matching its team — shaped as
+   * `competition.registeredTeams: [thatOneEntry]` so AdminTransactions.jsx's
+   * existing lookup keeps working unchanged.
+   *
+   * @param {Object[]} transactions
+   * @returns {Promise<Object[]>}
+   */
+  async attachTransactionSquads(transactions) {
+    if (!transactions.length) return transactions;
+
+    const competitionIds = [...new Set(
+      transactions.map((tx) => tx.competition?.toString()).filter(Boolean)
+    )];
+    if (competitionIds.length === 0) return transactions;
+
+    const competitions = await this.competitionRepository.find(
+      { _id: { $in: competitionIds } },
+      { select: 'name year place registeredTeams' }
+    );
+    const competitionById = new Map(competitions.map((c) => [c._id.toString(), c]));
+
+    // The entries this page actually refers to — team by team, not the whole
+    // meet.
+    const wanted = new Map();
+    for (const tx of transactions) {
+      const competition = competitionById.get(tx.competition?.toString());
+      const teamId = tx.team?._id?.toString() || tx.team?.toString();
+      if (!competition || !teamId) continue;
+      const entry = (competition.registeredTeams || [])
+        .find((rt) => rt.team?.toString() === teamId);
+      if (entry) wanted.set(`${tx._id}`, { competition, entry });
+    }
+
+    const playerIds = [...new Set(
+      [...wanted.values()].flatMap(({ entry }) =>
+        (entry.players || []).map((p) => p.player?.toString()).filter(Boolean))
+    )];
+    const players = playerIds.length
+      ? await this.playerRepository.find(
+        { _id: { $in: playerIds } },
+        { select: 'firstName lastName gender' }
+      )
+      : [];
+    const playerById = new Map(players.map((p) => [p._id.toString(), p]));
+
+    return transactions.map((tx) => {
+      const match = wanted.get(`${tx._id}`);
+      if (!match) return tx;
+      const { competition, entry } = match;
+
+      return {
+        ...tx,
+        competition: {
+          _id: competition._id,
+          name: competition.name,
+          year: competition.year,
+          place: competition.place,
+          registeredTeams: [{
+            ...entry,
+            players: (entry.players || []).map((p) => {
+              const player = playerById.get(p.player?.toString());
+              return {
+                ...p,
+                player: player
+                  ? { _id: player._id, firstName: player.firstName, lastName: player.lastName,
+                    gender: player.gender, name: fullName(player) }
+                  : p.player,
+              };
+            }),
+          }],
+        },
+      };
+    });
   }
 
   /**

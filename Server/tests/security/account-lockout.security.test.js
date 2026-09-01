@@ -196,10 +196,29 @@ describe('LOW-4 — login does not leak account existence by timing', () => {
   });
 
   test('an unknown e-mail is indistinguishable from a wrong password by message', async () => {
-    const unknown = auth.login('no-such-user@example.com', WRONG, 'coach');
-    const wrongPassword = auth.login(EMAIL, WRONG, 'coach');
+    /*
+     * Sequential, not concurrent.
+     *
+     * These two used to be started together and awaited afterwards. The second
+     * increments the failed-attempt counter on a real account, so two
+     * overlapping logins raced it — and the test failed intermittently in full
+     * runs (never in isolation) when the wrong-password branch came back
+     * "Account locked" instead of "Invalid credentials". Whatever the exact
+     * interleaving, a security assertion that sometimes tests a different code
+     * path is not one worth having.
+     */
+    const unknownError = await auth.login('no-such-user@example.com', WRONG, 'coach')
+      .then(() => null, (error) => error);
+    const wrongPasswordError = await auth.login(EMAIL, WRONG, 'coach')
+      .then(() => null, (error) => error);
 
-    await expect(unknown).rejects.toThrow(/Invalid credentials/);
-    await expect(wrongPassword).rejects.toThrow(/Invalid credentials/);
+    expect(unknownError).toBeTruthy();
+    expect(wrongPasswordError).toBeTruthy();
+
+    // The actual claim is INDISTINGUISHABLE, so compare the messages to each
+    // other rather than matching both against a pattern — which two different
+    // messages could also satisfy.
+    expect(unknownError.message).toBe(wrongPasswordError.message);
+    expect(unknownError.message).toMatch(/Invalid credentials/);
   });
 });
