@@ -177,6 +177,27 @@ function createApp(container) {
     });
   }
 
+  /**
+   * The service root.
+   *
+   * Render's port detector and health check both request `/`, and without a
+   * handler every one of those fell through to `notFoundHandler` — which logs a
+   * warning WITH A STACK TRACE. A platform probing an otherwise healthy service
+   * every few seconds should not look like a stream of errors; real 404s stop
+   * being noticeable when they share the log with expected ones.
+   *
+   * Deliberately says almost nothing. This is the one route reachable without
+   * knowing anything about the API, so it names the service and points at the
+   * probes rather than advertising the surface.
+   */
+  app.get('/', (req, res) => {
+    res.json({
+      service: 'mallakhamb-api',
+      status: 'ok',
+      health: '/api/health/live',
+    });
+  });
+
   // 404 handler
   app.use(notFoundHandler);
 

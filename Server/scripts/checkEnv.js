@@ -60,13 +60,26 @@ function readEnvFile(file) {
  * dropped — it may be deliberate, and deleting somebody's setting to satisfy a
  * checker would be worse than reporting it.
  *
+ * A MISSING key is filled from the template only for `.env`. For
+ * `.env.production` it is left EMPTY, because the template's values are
+ * development values and copying them into a production checklist is how
+ * `RATE_LIMIT_ENABLED=false` — correct locally, wrong in production — ended up
+ * pasted into a live dashboard and turned the limiter off on a public API.
+ *
+ * Empty is also the right default in its own right: every flag added here reads
+ * its default from NODE_ENV, so an unset value in production means the
+ * production behaviour, not the development one.
+ *
  * @param {string} file
  * @param {Object} template
  * @param {Object} target
+ * @returns {string[]} keys that were added blank and need a decision
  */
 function rewrite(file, template, target) {
   const out = [];
   const templateKeys = new Set(template.keys);
+  const blanked = [];
+  const isProduction = file.includes('production');
 
   for (const line of template.lines) {
     const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line);
@@ -75,8 +88,15 @@ function rewrite(file, template, target) {
       continue;
     }
     const key = match[1];
-    // Keep what this file already had; fall back to the template's value.
-    out.push(`${key}=${target.values.has(key) ? target.values.get(key) : match[2]}`);
+
+    if (target.values.has(key)) {
+      out.push(`${key}=${target.values.get(key)}`);
+    } else if (isProduction) {
+      blanked.push(key);
+      out.push(`${key}=`);
+    } else {
+      out.push(`${key}=${match[2]}`);
+    }
   }
 
   const extra = target.keys.filter((key) => !templateKeys.has(key));
@@ -90,6 +110,7 @@ function rewrite(file, template, target) {
   }
 
   fs.writeFileSync(path.join(SERVER_DIR, file), `${out.join('\n')}\n`);
+  return blanked;
 }
 
 function main() {
@@ -132,8 +153,13 @@ function main() {
     if (misordered) process.stdout.write('      order differs from the template\n');
 
     if (fix) {
-      rewrite(file, template, target);
-      process.stdout.write(`      -> rewritten in template order, existing values kept\n`);
+      const blanked = rewrite(file, template, target);
+      process.stdout.write('      -> rewritten in template order, existing values kept\n');
+      if (blanked.length) {
+        process.stdout.write(`      -> added EMPTY (decide each one): ${blanked.join(', ')}\n`);
+        process.stdout.write('         Empty means "use the NODE_ENV default", which for a production\n');
+        process.stdout.write('         file is usually what you want. Do not copy the dev value across.\n');
+      }
     }
   }
 
