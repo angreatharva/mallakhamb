@@ -111,3 +111,4 @@ scripts/perf/lib/*
 !scripts/createCompetitions.js
 !scripts/syncDatabase.js
 !scripts/setupAll.js
+!scripts/meetStatus.js

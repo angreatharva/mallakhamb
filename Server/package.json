@@ -34,7 +34,8 @@
     "setup:list": "node scripts/setupAll.js --list",
     "setup:dry": "node scripts/setupAll.js --dry-run",
     "create-competitions": "node scripts/createCompetitions.js",
-    "db:sync": "node scripts/syncDatabase.js"
+    "db:sync": "node scripts/syncDatabase.js",
+    "meet:status": "node scripts/meetStatus.js"
   },
   "keywords": [
     "sports",
