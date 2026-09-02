@@ -4,6 +4,27 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '@/components/auth/Dropdown';
 import { ADMIN_COLORS } from '../../styles/tokens';
+import { getAgeGroupsForGender, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
+
+/**
+ * The age groups to offer once a gender is chosen.
+ *
+ * Both filter bars below used to hold their own copy of the boys'/girls' lists
+ * AND return a caller-supplied `ageGroups` prop verbatim — so a caller that
+ * passed a combined list got a dropdown offering Above 18 to a girls' category.
+ * The gender filter is applied here whatever the source, and the lists
+ * themselves now come from the one place that defines them.
+ *
+ * @param {{value: string}|null} selectedGender
+ * @param {Array<{value: string, label: string}>} [supplied] - caller's options
+ * @returns {Array<{value: string, label: string}>} empty until a gender is set
+ */
+const ageGroupsForGender = (selectedGender, supplied) => {
+  if (!selectedGender) return [];
+
+  const options = supplied?.length ? supplied : getAgeGroupsForGender(selectedGender.value);
+  return options.filter((option) => isAgeGroupValidForGender(option.value, selectedGender.value));
+};
 
 const C = ADMIN_COLORS;
 const surface    = C.darkCard;
@@ -246,28 +267,11 @@ export const ResponsiveTeamFilters = ({
     { value: 'Female', label: 'Female' },
   ];
 
-  const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' },
-  ];
-  const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' },
-  ];
-
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    if (ageGroups?.length > 0) return ageGroups;
-    return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
-  };
-
   const filters = [
     { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
       key: 'ageGroup', label: 'Age Group', required: true,
-      options: getAvailableAgeGroups(), value: selectedAgeGroup,
+      options: ageGroupsForGender(selectedGender, ageGroups), value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
       helpText: !selectedGender ? 'Select gender first' : null,
@@ -311,29 +315,12 @@ export const ResponsiveScoreFilters = ({
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' },
   ];
-  const defaultBoysAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under18', label: 'Under 18' },
-    { value: 'Above18', label: 'Above 18' },
-  ];
-  const defaultGirlsAgeGroups = [
-    { value: 'Under10', label: 'Under 10' }, { value: 'Under12', label: 'Under 12' },
-    { value: 'Under14', label: 'Under 14' }, { value: 'Under16', label: 'Under 16' },
-    { value: 'Above16', label: 'Above 16' },
-  ];
-
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    if (ageGroups?.length > 0) return ageGroups;
-    return selectedGender.value === 'Male' ? defaultBoysAgeGroups : defaultGirlsAgeGroups;
-  };
-
   const filters = [
     { key: 'scoreType', label: 'Score Type', options: scoreTypes, value: scoreTypes.find(s => s.value === scoreType), placeholder: 'Select type' },
     { key: 'gender', label: 'Gender', required: true, options: genders, value: selectedGender, placeholder: 'Select gender' },
     {
       key: 'ageGroup', label: 'Age Group', required: true,
-      options: getAvailableAgeGroups(), value: selectedAgeGroup,
+      options: ageGroupsForGender(selectedGender, ageGroups), value: selectedAgeGroup,
       placeholder: selectedGender ? 'Select age group' : 'Select gender first',
       disabled: !selectedGender,
       helpText: !selectedGender ? 'Select gender first' : null,

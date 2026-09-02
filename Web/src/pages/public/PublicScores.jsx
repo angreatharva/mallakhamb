@@ -8,6 +8,7 @@ import { logger } from '@/infrastructure/logger';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
+import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows';
@@ -30,22 +31,6 @@ const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
   );
 };
 
-const BOYS_AGE_GROUPS = [
-  { value: 'Under10', label: 'Under 10' },
-  { value: 'Under12', label: 'Under 12' },
-  { value: 'Under14', label: 'Under 14' },
-  { value: 'Under18', label: 'Under 18' },
-  { value: 'Above18', label: 'Above 18' },
-];
-
-const GIRLS_AGE_GROUPS = [
-  { value: 'Under10', label: 'Under 10' },
-  { value: 'Under12', label: 'Under 12' },
-  { value: 'Under14', label: 'Under 14' },
-  { value: 'Under16', label: 'Under 16' },
-  { value: 'Above16', label: 'Above 16' },
-];
-
 const COMPETITION_TYPE_LABELS = {
   competition_1: 'Competition I - Team Championship & Qualifier',
   competition_2: 'Competition II - All Round Individual Final',
@@ -65,10 +50,11 @@ const PublicScores = () => {
   const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const getAvailableAgeGroups = () => {
-    if (!selectedGender) return [];
-    return selectedGender.value === 'Male' ? BOYS_AGE_GROUPS : GIRLS_AGE_GROUPS;
-  };
+  // Boys and girls do not share the top two brackets; the shared helper owns
+  // that rule and narrows it further to whatever this competition runs.
+  const getAvailableAgeGroups = () => (
+    selectedGender ? getFilteredAgeGroups(selectedCompetition, selectedGender.value) : []
+  );
 
   const getAvailableCompetitionTypes = () => {
     if (!selectedCompetition) return [];
@@ -137,6 +123,10 @@ const PublicScores = () => {
         label: `${c.name} (${c.year}) — ${c.place}`,
         competitionTypes: c.competitionTypes || [],
         apparatusConfig: c.apparatusConfig || {},
+        // Absent from the public payload today, so the age-group filter falls
+        // back to the gender's full list. Carried through so that it narrows
+        // on its own if the endpoint ever starts sending it.
+        ageGroups: c.ageGroups || [],
       })));
       if (!comps.length) {
         logger.warn('No public competitions returned from API');

@@ -11,6 +11,7 @@ import { useResponsive } from '../../hooks/useResponsive';
 import Dropdown from '@/components/auth/Dropdown';
 import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
+import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -274,7 +275,9 @@ const SuperAdminManagement = () => {
     gender: { value: 'Male', label: 'Male' }, teamId: null, competitionId: null, paymentStatus: { value: 'pending', label: 'Pending' }
   });
 
-  const defaultAgeGroups = ['Under10','Under12','Under14','Under16','Under18','Above16','Above18'];
+  // This grid offers every bracket and disables the pairings that do not
+  // exist, so it needs both genders' brackets rather than one gender's list.
+  const defaultAgeGroups = ALL_AGE_GROUPS;
   const ageGroupLabels = {
     Under10:'Under 10', Under12:'Under 12', Under14:'Under 14',
     Under16:'Under 16 (Girls)', Under18:'Under 18 (Boys)',
@@ -537,9 +540,6 @@ const SuperAdminManagement = () => {
   });
 
   const isAgeGroupSelected = (ag, gender) => competitionFormData.ageGroups.some(g => g.ageGroup === ag && g.gender === gender);
-  const isAgeGroupValidForGender = (ag, gender) => gender === 'Male'
-    ? ['Under10','Under12','Under14','Under18','Above18'].includes(ag)
-    : ['Under10','Under12','Under14','Under16','Above16'].includes(ag);
   const toggleAdminSelection = (id) => setCompetitionFormData(prev => ({
     ...prev, admins: prev.admins.includes(id) ? prev.admins.filter(a => a !== id) : [...prev.admins, id]
   }));
