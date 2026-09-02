@@ -22,7 +22,7 @@ import {
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import {
-  J, EASE_OUT, Orb, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
+  J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
   playerIdOf, normalizeBreakdown,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
@@ -561,9 +561,7 @@ const JudgeSlip = () => {
   const finalScore = parseFloat(calcFinal());
   return (
     <div className="min-h-dvh relative pb-24 lg:pb-0" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Orb x={5} y={10} size={400} color={J.purple} delay={0} duration={8} blur={120} />
-      <Orb x={95} y={60} size={300} color={COLORS.saffron} delay={3} duration={10} blur={100} />
-      <Orb x={50} y={95} size={250} color={J.purpleDark} delay={1.5} duration={7} blur={90} />
+      <JudgeAmbience />
 
       {/*  Header  */}
       <header className="sticky top-0 z-40 border-b"
@@ -572,7 +570,7 @@ const JudgeSlip = () => {
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={goBackAfterScoring}
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
                 aria-label="Back to team">
                 <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
@@ -588,7 +586,7 @@ const JudgeSlip = () => {
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
               <button onClick={handleLogout}
-                className="w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-red-500/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
                 style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
                 aria-label="Logout">
                 <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
@@ -650,7 +648,7 @@ const JudgeSlip = () => {
                       <button
                         type="button"
                         onClick={() => setActiveMobileTab('difficulty')}
-                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                        className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
                           activeMobileTab === 'difficulty' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
                         }`}
                       >
@@ -659,7 +657,7 @@ const JudgeSlip = () => {
                       <button
                         type="button"
                         onClick={() => setActiveMobileTab('combination')}
-                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                        className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
                           activeMobileTab === 'combination' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
                         }`}
                       >
@@ -668,7 +666,7 @@ const JudgeSlip = () => {
                       <button
                         type="button"
                         onClick={() => setActiveMobileTab('exec_orig')}
-                        className={`py-2 px-1 rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
+                        className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
                           activeMobileTab === 'exec_orig' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
                         }`}
                       >
@@ -718,7 +716,7 @@ const JudgeSlip = () => {
 
                           <motion.button
                             onClick={() => setShowCopModal(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
+                            className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
                             style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >
@@ -761,7 +759,7 @@ const JudgeSlip = () => {
 
                           <motion.button
                             onClick={() => setShowCopModal(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
+                            className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
                             style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >

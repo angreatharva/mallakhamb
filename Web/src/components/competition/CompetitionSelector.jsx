@@ -289,12 +289,12 @@ const CompetitionSelector = ({ userType }) => {
       <AnimatePresence>
         {isSwitching && (
           <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center"
+            className="modal-overlay z-[100]"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
             <motion.div
-              className="flex items-center gap-3 px-6 py-4 rounded-2xl border"
+              className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
               style={{ background: '#111111', borderColor: `${COLORS.saffron}30` }}
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
             >

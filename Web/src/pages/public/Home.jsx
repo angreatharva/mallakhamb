@@ -3,7 +3,7 @@ import { Users, UserCheck, Trophy, Calendar, Camera, Menu, X, MapPin, Phone, Mai
 import { useState, useEffect, useRef } from 'react';
 import { FadeIn, GradientText, SaffronButton } from '@/components/design-system';
 
-import { useReducedMotion as _useReducedMotion } from '../../hooks/useResponsive';
+import { useReducedMotion as _useReducedMotion, useMediaQuery } from '../../hooks/useResponsive';
 import { motion, useScroll, useTransform, useInView, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import MainHomeImg from '../../assets/main-home.jpg';
 import TextRevealBg from '../../assets/Mallakhamb.png';
@@ -12,6 +12,7 @@ import BHALogo from '../../assets/BHA.png';
 // ─── Design tokens ────────────────────────────────────────────────────────────
 // Import from unified design system
 import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING } from '../../styles/tokens';
+import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;
@@ -48,26 +49,6 @@ export const roles = [
   { icon: Shield, title: 'Judge', loginTo: '/judge/login', registerTo: '/judge/register', color: '#A855F7', desc: 'Register, then score performances once an organiser adds you to a panel.' },
   { icon: Award, title: 'Admin', loginTo: '/admin/login', registerTo: null, color: '#EF4444', desc: 'Oversee competition operations.' },
 ];
-
-// ─── 3D Floating Orb ─────────────────────────────────────────────────────────
-const FloatingOrb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`,
-        width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}88, ${color}22, transparent 70%)`,
-        filter: `blur(${blur}px)`,
-        transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -40, 0], x: [0, 15, 0], scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
-};
 
 // ─── Particle Field ───────────────────────────────────────────────────────────
 const ParticleField = () => {
@@ -169,8 +150,19 @@ export const TiltCard = ({ children, className = '', style = {} }) => {
 };
 
 // ─── Magnetic cursor orb ─────────────────────────────────────────────────────
+/*
+ * Desktop only, and not merely as an optimisation.
+ *
+ * There is no cursor to follow on a phone, so this 480px glow stayed parked at
+ * its -400,-400 start position: permanently off-screen, permanently mounted,
+ * and running two springs plus a mousemove listener for an effect nobody could
+ * see. It also read as a 640px overhang to the overflow audit on every mobile
+ * pass. `(hover: hover) and (pointer: fine)` is the same query the design
+ * system already uses for hover affordances.
+ */
 const MagneticCursor = () => {
   const reduced = useReducedMotion();
+  const hasCursor = useMediaQuery('(hover: hover) and (pointer: fine)');
   const cursorX = useMotionValue(-400);
   const cursorY = useMotionValue(-400);
   const trailX = useMotionValue(-400);
@@ -179,7 +171,7 @@ const MagneticCursor = () => {
   const trailSpringY = useSpring(trailY, { stiffness: 50, damping: 14 });
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !hasCursor) return;
     const move = (e) => {
       cursorX.set(e.clientX);
       cursorY.set(e.clientY);
@@ -188,9 +180,9 @@ const MagneticCursor = () => {
     };
     window.addEventListener('mousemove', move);
     return () => window.removeEventListener('mousemove', move);
-  }, [reduced, cursorX, cursorY, trailX, trailY]);
+  }, [reduced, hasCursor, cursorX, cursorY, trailX, trailY]);
 
-  if (reduced) return null;
+  if (reduced || !hasCursor) return null;
   return (
     <motion.div
       className="fixed pointer-events-none z-[9998] rounded-full mix-blend-screen"
@@ -282,7 +274,7 @@ const Navbar = () => {
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 md:h-20">
-        <Link to="/" className="flex items-center gap-3 group" aria-label="Bhausaheb Ranade Mallakhamb Home">
+        <Link to="/" className="flex items-center gap-3 group tap-safe" aria-label="Bhausaheb Ranade Mallakhamb Home">
           <motion.img src={BHALogo} alt="BHA Logo" className="h-10 md:h-14 w-auto object-contain"
             whileHover={{ scale: 1.05 }} transition={EASE_SPRING} />
           <div className="hidden sm:block">
@@ -371,10 +363,15 @@ const HeroSection = () => {
       </motion.div>
 
       {/* 3D ambient orbs */}
-      <FloatingOrb x={8} y={18} size={500} color={COLORS.saffron} delay={0} duration={7} blur={120} />
-      <FloatingOrb x={88} y={55} size={380} color={COLORS.gold} delay={2} duration={9} blur={100} />
-      <FloatingOrb x={50} y={85} size={300} color={COLORS.saffronDark} delay={1} duration={6} blur={90} />
-      <FloatingOrb x={25} y={65} size={200} color={COLORS.saffronLight} delay={3} duration={11} blur={80} />
+      <AmbientOrbs
+        intensity={ORB_INTENSITY.strong}
+        orbs={[
+          { x: 8, y: 18, size: 500, color: COLORS.saffron, delay: 0, duration: 7, blur: 120 },
+          { x: 88, y: 55, size: 380, color: COLORS.gold, delay: 2, duration: 9, blur: 100 },
+          { x: 50, y: 85, size: 300, color: COLORS.saffronDark, delay: 1, duration: 6, blur: 90 },
+          { x: 25, y: 65, size: 200, color: COLORS.saffronLight, delay: 3, duration: 11, blur: 80 },
+        ]}
+      />
 
       {/* Grid lines */}
       <GridLines />
@@ -386,7 +383,19 @@ const HeroSection = () => {
       <DepthLayer scrollYProgress={scrollYProgress} />
 
       {/* Content */}
-      <motion.div className="relative z-20 text-center px-4 max-w-5xl mx-auto w-full"
+      {/*
+        * `pt-24` on phones so the badge clears the fixed header.
+        *
+        * The hero centres its content in a `min-h-dvh` box. On a desktop the
+        * content is shorter than the viewport, so centring leaves it clear of
+        * the 80px bar. On a 375x812 phone the same content — badge, a
+        * three-line title, two paragraphs and four role cards — is taller than
+        * the screen, so the box grows and the content starts at the very top,
+        * putting the "Est. 1984" badge directly underneath the logo and the
+        * hamburger. Padding only below `md` fixes the collision and leaves the
+        * desktop hero untouched.
+        */}
+      <motion.div className="relative z-20 text-center px-4 pt-24 pb-8 md:pt-0 md:pb-0 max-w-5xl mx-auto w-full"
         style={{ y: contentY, opacity }}>
 
         {/* Badge */}
@@ -461,13 +470,13 @@ const HeroSection = () => {
                       <p className="text-white font-bold text-sm leading-tight">{role.title}</p>
                       <div className="flex gap-2 mt-auto">
                         <Link to={role.loginTo}
-                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
+                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe md:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
                           style={{ background: role.color, color: '#fff' }}>
                           Login
                         </Link>
                         {role.registerTo && (
                           <Link to={role.registerTo}
-                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe md:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
                             style={{ borderColor: `${role.color}45`, color: role.color }}>
                             Register
                           </Link>
@@ -481,7 +490,7 @@ const HeroSection = () => {
           </div>
           <div className="mt-5">
             <Link to="/superadmin/login"
-              className="text-white/20 hover:text-white/45 text-xs transition-colors duration-200 underline underline-offset-4">
+              className="text-white/20 hover:text-white/45 text-xs transition-colors duration-200 underline underline-offset-4 inline-flex items-center justify-center tap-safe">
               Super Admin Access
             </Link>
           </div>
@@ -752,7 +761,7 @@ const Footer = () => {
           </p>
           <div className="flex gap-3 pt-2">
             <a href="https://www.facebook.com/bhausahebranade/" target="_blank" rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
+              className="w-10 h-10 tap-safe rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
               style={{ borderColor: COLORS.darkBorder, background: `${COLORS.saffron}0E` }}
               aria-label="Facebook">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: COLORS.saffronLight }} aria-hidden="true">
@@ -769,7 +778,7 @@ const Footer = () => {
               {links.map((link) => (
                 <li key={link.to}>
                   <Link to={link.to}
-                    className="text-white/35 hover:text-white/70 text-sm transition-colors duration-200 flex items-center gap-2 group">
+                    className="text-white/35 hover:text-white/70 text-sm transition-colors duration-200 flex items-center gap-2 group tap-safe">
                     <span className="w-1 h-1 rounded-full group-hover:w-3 transition-all duration-200"
                       style={{ background: COLORS.saffron }} />
                     {link.label}
@@ -788,12 +797,12 @@ const Footer = () => {
               <p className="text-white/35 text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
             </div>
             <a href="tel:+919820688420"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200">
+              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 tap-safe">
               <Phone className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
               +91 982 068 8420
             </a>
             <a href="mailto:mallakhambindia@gmail.com"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 break-all">
+              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 break-all tap-safe">
               <Mail className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
               mallakhambindia@gmail.com
             </a>

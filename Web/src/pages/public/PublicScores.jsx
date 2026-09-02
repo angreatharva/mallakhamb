@@ -6,31 +6,14 @@ import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
 import { COLORS } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows';
+import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 // ─── Ambient orb ─────────────────────────────────────────────────────────────
-const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}33, ${color}0A, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -30, 0], scale: [1, 1.1, 1], opacity: [0.3, 0.55, 0.3] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
-};
-
 const COMPETITION_TYPE_LABELS = {
   competition_1: 'Competition I - Team Championship & Qualifier',
   competition_2: 'Competition II - All Round Individual Final',
@@ -185,9 +168,14 @@ const PublicScores = () => {
   return (
     <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Ambient orbs */}
-      <Orb x={10} y={15} size={500} color={COLORS.saffron} delay={0} duration={9} blur={120} />
-      <Orb x={90} y={50} size={350} color="#A855F7" delay={2} duration={11} blur={100} />
-      <Orb x={50} y={90} size={300} color={COLORS.saffronDark} delay={1} duration={8} blur={90} />
+      <AmbientOrbs
+        intensity={ORB_INTENSITY.faint}
+        orbs={[
+          { x: 10, y: 15, size: 500, color: COLORS.saffron, delay: 0, duration: 9, blur: 120 },
+          { x: 90, y: 50, size: 350, delay: 2, duration: 11, blur: 100, color: '#A855F7' },
+          { x: 50, y: 90, size: 300, color: COLORS.saffronDark, delay: 1, duration: 8, blur: 90 },
+        ]}
+      />
 
       {/* Sticky header */}
       <header className="sticky top-0 z-40 border-b"
@@ -195,7 +183,7 @@ const PublicScores = () => {
         <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/"
-              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] px-2 rounded-xl hover:bg-white/5"
+              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] tap-safe justify-center px-2 rounded-xl hover:bg-white/5"
               style={{ color: 'rgba(255,255,255,0.6)' }}
               aria-label="Back to Home">
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
@@ -300,12 +288,17 @@ const PublicScores = () => {
                     placeholder="Search players, team, coach..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-8 py-2 rounded-xl border text-sm outline-none transition-all duration-200 min-h-[40px]"
+                    className="pl-9 pr-8 py-2 rounded-xl border text-sm outline-none transition-all duration-200 min-h-[44px] sm:min-h-[40px] w-full sm:w-[220px]"
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       borderColor: searchTerm ? `${COLORS.saffron}50` : 'rgba(255,255,255,0.08)',
                       color: '#fff',
-                      width: '220px',
+                      /*
+                       * Width moved to classes: the flat 220px could not shrink,
+                       * so on a 320px screen the search box plus its gutters
+                       * pushed the filter row wider than the page. It keeps the
+                       * authored 220px from `sm` up, and fills the row below it.
+                       */
                     }}
                     aria-label="Search players by name, team, or coach"
                   />

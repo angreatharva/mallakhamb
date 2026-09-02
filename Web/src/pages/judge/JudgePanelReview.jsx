@@ -32,7 +32,7 @@ import {
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
 import {
-  J, EASE_OUT, Orb, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
+  J, EASE_OUT, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
   SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
@@ -339,9 +339,7 @@ const JudgePanelReview = () => {
 
   return (
     <div className="min-h-dvh relative pb-24 lg:pb-0" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Orb x={5} y={10} size={400} color={J.purple} delay={0} duration={8} blur={120} />
-      <Orb x={95} y={60} size={300} color={COLORS.saffron} delay={3} duration={10} blur={100} />
-      <Orb x={50} y={95} size={250} color={J.purpleDark} delay={1.5} duration={7} blur={90} />
+      <JudgeAmbience />
 
       {/*  Header  */}
       <header className="sticky top-0 z-40 border-b"
@@ -350,7 +348,7 @@ const JudgePanelReview = () => {
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={() => { if (!finalized) goBackToScoring(); else goBackToTeam(); }}
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
                 aria-label={finalized ? 'Back to team' : 'Back to scoring'}>
                 <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
@@ -366,7 +364,7 @@ const JudgePanelReview = () => {
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
               <button onClick={handleLogout}
-                className="w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-red-500/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
                 style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
                 aria-label="Logout">
                 <LogOut className="w-3.5 h-3.5" aria-hidden="true" />

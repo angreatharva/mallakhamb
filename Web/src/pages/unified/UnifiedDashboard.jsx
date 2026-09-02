@@ -127,7 +127,18 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { tab } = useParams();
-  const { isMobile } = useResponsive();
+  const { isDesktop } = useResponsive();
+  /*
+   * Which navigation to draw: the row of tabs, or the hamburger and drawer.
+   *
+   * This was `isMobile`, i.e. below 768 — but the row holds up to seven tabs
+   * plus the logo, the competition picker and Logout, and it does not fit
+   * until about 1024. Between the two the tabs rendered and pushed Logout off
+   * the right-hand edge, which is what a phone in landscape (812x375) gets.
+   * Switching on the desktop breakpoint instead means the drawer covers the
+   * whole awkward middle, and 1024-and-up is unchanged.
+   */
+  const compactNav = !isDesktop;
   useReducedMotion(); // Initialize for accessibility
   const theme = useTheme();
 
@@ -724,7 +735,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           </div>
 
           {/* Center: Desktop Tabs */}
-          {!isMobile && (
+          {!compactNav && (
             <nav className="flex items-center gap-1" aria-label={`${isSuperAdmin ? 'Super admin' : 'Admin'} navigation`}>
               {NAV_TABS.map((t) => {
                 const Icon = t.icon;
@@ -770,7 +781,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             <motion.button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold min-h-[36px] transition-colors duration-200"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe md:min-h-[36px] justify-center transition-colors duration-200"
               style={{ color: 'rgba(255,255,255,0.5)', border: `1px solid ${theme.colors.border}` }}
               whileHover={{ color: '#EF4444', borderColor: '#EF444440' }}
               aria-label="Logout"
@@ -779,7 +790,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               <span className="hidden sm:inline">Logout</span>
             </motion.button>
 
-            {isMobile && (
+            {compactNav && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
@@ -801,7 +812,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
         {/* Mobile Menu */}
         <AnimatePresence>
-          {isMobile && mobileMenuOpen && (
+          {compactNav && mobileMenuOpen && (
             <motion.div
               className="border-t"
               style={{ background: 'rgba(10,10,10,0.98)', backdropFilter: 'blur(20px)', borderColor: theme.colors.borderBright }}

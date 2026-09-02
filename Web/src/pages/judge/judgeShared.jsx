@@ -9,7 +9,8 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { AlertTriangle, CheckCircle, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useReducedMotion } from '@/hooks/useResponsive';
+import { COLORS } from '@/styles/tokens';
+import { AmbientOrbs } from '@/components/design-system/backgrounds';
 import {
   panelScoresShape,
   editTargetShape,
@@ -113,7 +114,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
+          className="modal-overlay z-[9998]"
           style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -121,7 +122,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-lg rounded-2xl border overflow-hidden"
+            className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
             style={{ background: '#0E0E0E', borderColor: 'rgba(239,68,68,0.4)' }}
             initial={{ scale: 0.9, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -292,7 +293,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
+          className="modal-overlay z-[9998]"
           style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -300,7 +301,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-lg rounded-2xl border overflow-hidden"
+            className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
             style={{ background: '#0E0E0E', borderColor: 'rgba(245,158,11,0.45)' }}
             initial={{ scale: 0.9, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -483,7 +484,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9997] flex items-center justify-center p-4"
+          className="modal-overlay z-[9997]"
           style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -491,7 +492,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-xl rounded-2xl border overflow-hidden"
+            className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel"
             style={{ background: '#0D0D0D', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
             initial={{ scale: 0.9, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -638,22 +639,25 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
 
 
 
-export const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}44, ${color}11, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -25, 0], scale: [1, 1.08, 1], opacity: [0.25, 0.5, 0.25] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
-};
+/**
+ * The purple wash every judge screen sits on.
+ *
+ * Was a local `Orb` that each of the five judge pages placed three copies of,
+ * unclipped, directly in the page root — the x=95 orb hung past the right edge
+ * and dragged the document with it, so every judge screen scrolled sideways at
+ * 375px AND at 1440px. `AmbientOrbs` owns the clip and the per-viewport
+ * scaling; the three positions below are the ones those pages already used, so
+ * the desktop look is unchanged.
+ */
+export const JudgeAmbience = () => (
+  <AmbientOrbs
+    orbs={[
+      { x: 5, y: 10, size: 400, color: J.purple, delay: 0, duration: 8, blur: 120 },
+      { x: 95, y: 60, size: 300, color: COLORS.saffron, delay: 3, duration: 10, blur: 100 },
+      { x: 50, y: 95, size: 250, color: J.purpleDark, delay: 1.5, duration: 7, blur: 90 },
+    ]}
+  />
+);
 
 export const LiveDot = ({ connected, compact = false }) => (
   <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full border text-xs font-bold ${connected ? 'border-green-500/30' : 'border-red-500/30'
@@ -714,16 +718,6 @@ SrEditModal.propTypes = {
   getDifficultyRequirement: PropTypes.func,
   computeCombinationTotal: PropTypes.func,
   selectedCompetitionType: PropTypes.string,
-};
-
-Orb.propTypes = {
-  x: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-  y: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-  size: PropTypes.number,
-  color: PropTypes.string,
-  delay: PropTypes.number,
-  duration: PropTypes.number,
-  blur: PropTypes.number,
 };
 
 LiveDot.propTypes = {

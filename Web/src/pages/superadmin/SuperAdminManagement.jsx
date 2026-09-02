@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  useState, useEffect, useRef, useCallback,
+  createContext, useContext, Children, isValidElement, cloneElement,
+} from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search, Save
@@ -147,11 +150,11 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <motion.div className="modal-overlay z-50"
           style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={(e) => e.target === e.currentTarget && onClose()}>
-          <motion.div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden`}
+          <motion.div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden modal-panel`}
             style={{ 
               background: ADMIN_COLORS.darkElevated, 
               borderColor: ADMIN_COLORS.darkBorderSubtle,
@@ -191,33 +194,67 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
 };
 
 // ─── Table ────────────────────────────────────────────────────────────────────
+/**
+ * Column headers, so a stacked cell can label itself on mobile.
+ *
+ * The three tables on this screen are built from generic `<Td>`s that know
+ * nothing about which column they are in. Rather than restate the headers at
+ * every call site, `DarkTable` publishes them here and `DarkTr` hands each
+ * child the matching one by position.
+ */
+const TableHeadersContext = createContext([]);
+
+/**
+ * A table that becomes a list of labelled cards below `md`.
+ *
+ * Nine columns of competition data cannot fit a 375px screen, and
+ * `overflow-x-auto` alone left an organiser dragging sideways to reach the
+ * Actions column — the only interactive one. The `stacked-table` class (see
+ * tailwind.config.js) turns rows into cards and pairs every value with its
+ * header, so nothing is dropped on mobile. Above `md` it is inert and the
+ * table renders exactly as before.
+ */
 const DarkTable = ({ headers, children, empty }) => (
-  <div className="overflow-x-auto">
-    <table className="min-w-full text-sm" role="table">
-      <thead>
-        <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-          {headers.map(h => (
-            <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-              style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-    {empty}
-  </div>
+  <TableHeadersContext.Provider value={headers}>
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm stacked-table" role="table">
+        <thead>
+          <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+            {headers.map(h => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
+                style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+      {empty}
+    </div>
+  </TableHeadersContext.Provider>
 );
 
-const DarkTr = ({ children, delay = 0 }) => (
-  <motion.tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
-    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.3 }}>
-    {children}
-  </motion.tr>
-);
+const DarkTr = ({ children, delay = 0 }) => {
+  const headers = useContext(TableHeadersContext);
+  return (
+    <motion.tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}>
+      {/*
+        * `data-label` is what the stacked layout prints beside each value.
+        * Injected by position rather than asked for at the call site, so the
+        * labels cannot fall out of step with the header row above them.
+        */}
+      {Children.map(children, (child, i) =>
+        isValidElement(child) ? cloneElement(child, { 'data-label': headers[i] }) : child
+      )}
+    </motion.tr>
+  );
+};
 
-const Td = ({ children, className = '' }) => (
-  <td className={`px-4 py-3 whitespace-nowrap text-white/70 ${className}`}>{children}</td>
+const Td = ({ children, className = '', ...props }) => (
+  // `whitespace-nowrap` only from `md`: keeping it on mobile is what forced the
+  // sideways scroll these cards exist to remove.
+  <td className={`px-4 py-3 md:whitespace-nowrap text-white/70 ${className}`} {...props}>{children}</td>
 );
 
 // ─── Section Tab Bar ──────────────────────────────────────────────────────────
@@ -691,20 +728,20 @@ const SuperAdminManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <motion.button onClick={() => openAdminManagementModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.green }} title="Manage Admins"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.green }} title="Manage Admins" aria-label="Manage Admins"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <UserPlus className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openCompetitionModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.blue }} title="Edit"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.blue }} title="Edit" aria-label="Edit"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteConfirmation(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.red }} title="Delete"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          style={{ color: ADMIN_COLORS.red }} title="Delete" aria-label="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
@@ -1155,12 +1192,12 @@ const SuperAdminManagement = () => {
       {/* Delete Competition Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirmation && competitionToDelete && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" 
               style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowDeleteConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
               style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
@@ -1219,12 +1256,12 @@ const SuperAdminManagement = () => {
       {/* Remove Admin Confirmation Modal */}
       <AnimatePresence>
         {showRemoveAdminConfirmation && adminToRemove && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" 
               style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowRemoveAdminConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
               style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
@@ -1283,12 +1320,12 @@ const SuperAdminManagement = () => {
       {/* Delete Admin Confirmation Modal */}
       <AnimatePresence>
         {showDeleteAdminConfirmation && adminToDelete && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" 
               style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowDeleteAdminConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden"
+            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
               style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>

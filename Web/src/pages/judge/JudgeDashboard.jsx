@@ -16,6 +16,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
+import { JudgeAmbience } from './judgeShared';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { apparatusInUse, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
 import {
@@ -34,23 +35,6 @@ const J = {
   purpleDark: '#7C3AED',
   green: '#22C55E',
   amber: '#F59E0B',
-};
-
-const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}44, ${color}11, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -25, 0], scale: [1, 1.08, 1], opacity: [0.25, 0.5, 0.25] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
 };
 
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
@@ -485,9 +469,7 @@ const JudgeDashboard = () => {
 
   return (
     <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Orb x={5} y={10} size={400} color={J.purple} delay={0} duration={8} blur={120} />
-      <Orb x={95} y={60} size={300} color={COLORS.saffron} delay={3} duration={10} blur={100} />
-      <Orb x={50} y={95} size={250} color={J.purpleDark} delay={1.5} duration={7} blur={90} />
+      <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
         style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
@@ -504,14 +486,14 @@ const JudgeDashboard = () => {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-purple-500/10"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-purple-500/10"
               style={{ borderColor: 'rgba(168,85,247,0.3)', color: J.purpleLight }}
               aria-label="Your profile">
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
             </button>
             <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-red-500/10"
               style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
               aria-label="Logout">
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
@@ -700,11 +682,11 @@ const JudgeDashboard = () => {
       <AnimatePresence>
         {showModal && (
           <motion.div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
+            className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             
             <motion.div 
-              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative my-8"
+              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
               

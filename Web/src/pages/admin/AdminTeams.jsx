@@ -80,11 +80,11 @@ const LoadingState = ({ label }) => (
 const TeamModal = ({ team, onClose }) => (
   <AnimatePresence>
     {team && (
-      <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      <motion.div className="modal-overlay z-50"
         style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <motion.div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border"
+        <motion.div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border modal-panel"
           style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
           initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>

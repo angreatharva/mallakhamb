@@ -124,7 +124,7 @@ const ScoreCategoryFilters = ({
         <button
           type="button"
           onClick={onClearFilters}
-          className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
+          className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-white/5"
           style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>
           Clear Filters
         </button>

@@ -659,7 +659,7 @@ const UnifiedLoginInner = () => {
                   autoComplete="current-password"
                   rightElement={
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword
                         ? <EyeOff className="w-4 h-4 text-white/25" />
@@ -696,20 +696,20 @@ const UnifiedLoginInner = () => {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
             {config.forgotPasswordLink && (
               <Link to={config.forgotPasswordLink}
-                className="text-xs transition-colors hover:underline underline-offset-4"
+                className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
                 style={{ color: `${theme.colors.primary}70` }}>
                 Forgot password?
               </Link>
             )}
             <div className="flex items-center gap-3 ml-auto">
-              <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors">
+              <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center">
                 ← Home
               </Link>
               {config.registerLink && (
                 <>
                   <span className="text-white/15 text-xs">·</span>
                   <Link to={config.registerLink}
-                    className="text-xs transition-colors hover:underline underline-offset-4"
+                    className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
                     style={{ color: `${theme.colors.primary}70` }}>
                     Register
                   </Link>

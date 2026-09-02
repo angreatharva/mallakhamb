@@ -20,31 +20,14 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
+import { JudgeAmbience } from './judgeShared';
 
 const J = {
   purple: '#A855F7',
   purpleLight: '#C084FC',
   purpleDark: '#7C3AED',
   green: '#22C55E',
-};
-
-const Orb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}44, ${color}11, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -25, 0], scale: [1, 1.08, 1], opacity: [0.25, 0.5, 0.25] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
 };
 
 const JudgeTeamPlayers = () => {
@@ -398,9 +381,7 @@ const JudgeTeamPlayers = () => {
 
   return (
     <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Orb x={5} y={10} size={400} color={J.purple} delay={0} duration={8} blur={120} />
-      <Orb x={95} y={60} size={300} color={COLORS.saffron} delay={3} duration={10} blur={100} />
-      <Orb x={50} y={95} size={250} color={J.purpleDark} delay={1.5} duration={7} blur={90} />
+      <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
         style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
@@ -409,7 +390,7 @@ const JudgeTeamPlayers = () => {
             <button
               type="button"
               onClick={() => navigate('/judge/dashboard')}
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
               aria-label="Back to dashboard"
             >
               <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
@@ -430,7 +411,7 @@ const JudgeTeamPlayers = () => {
             </div>
           </div>
           <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-red-500/10"
             style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
             aria-label="Logout">
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />

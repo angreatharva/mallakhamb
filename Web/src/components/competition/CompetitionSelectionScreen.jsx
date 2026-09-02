@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
+import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
@@ -23,25 +24,6 @@ const statusConfig = {
 };
 
 // ─── Ambient orb ─────────────────────────────────────────────────────────────
-const AmbientOrb = ({ x, y, size, color, delay }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`,
-        width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}55, transparent 70%)`,
-        filter: 'blur(80px)',
-        transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-      transition={{ duration: 6 + delay, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
-};
-
 // ─── Competition Card ─────────────────────────────────────────────────────────
 const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index }) => {
   const reduced = useReducedMotion();
@@ -453,8 +435,13 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   return (
     <div className="min-h-dvh relative overflow-hidden" style={{ background: COLORS.dark }}>
       {/* Ambient background */}
-      <AmbientOrb x={15} y={20} size={400} color={COLORS.saffron} delay={0} />
-      <AmbientOrb x={85} y={70} size={300} color={COLORS.gold} delay={2} />
+      <AmbientOrbs
+        intensity={ORB_INTENSITY.warm}
+        orbs={[
+          { x: 15, y: 20, size: 400, color: COLORS.saffron, delay: 0 },
+          { x: 85, y: 70, size: 300, color: COLORS.gold, delay: 2 },
+        ]}
+      />
 
       {/* Noise texture overlay */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.025]"

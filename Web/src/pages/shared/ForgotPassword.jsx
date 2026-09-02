@@ -9,29 +9,13 @@ import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 import { COLORS, EASE_OUT } from '../../styles/tokens';
+import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 const useReducedMotion = () => {
   const [reduced] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
   return reduced;
-};
-
-const AmbientOrb = ({ x, y, size, color, delay, duration, blur = 80 }) => {
-  const reduced = useReducedMotion();
-  if (reduced) return null;
-  return (
-    <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        left: `${x}%`, top: `${y}%`, width: size, height: size,
-        background: `radial-gradient(circle at 35% 35%, ${color}55, ${color}15, transparent 70%)`,
-        filter: `blur(${blur}px)`, transform: 'translate(-50%, -50%)',
-      }}
-      animate={{ y: [0, -30, 0], scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  );
 };
 
 const GradientText = ({ children, className = '' }) => (
@@ -95,8 +79,13 @@ const ForgotPassword = () => {
       className="min-h-dvh flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}
     >
-      <AmbientOrb x={15} y={20} size={400} color={COLORS.saffron} delay={0} duration={7} blur={120} />
-      <AmbientOrb x={85} y={70} size={300} color={COLORS.gold} delay={2} duration={9} blur={100} />
+      <AmbientOrbs
+        intensity={ORB_INTENSITY.warm}
+        orbs={[
+          { x: 15, y: 20, size: 400, color: COLORS.saffron, delay: 0, duration: 7, blur: 120 },
+          { x: 85, y: 70, size: 300, color: COLORS.gold, delay: 2, duration: 9, blur: 100 },
+        ]}
+      />
 
       {!reduced && (
         <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"

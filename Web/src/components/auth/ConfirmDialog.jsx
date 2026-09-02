@@ -65,7 +65,7 @@ const ConfirmDialog = ({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          className="modal-overlay z-[200]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
@@ -82,10 +82,15 @@ const ConfirmDialog = ({
 
           {/* Panel */}
           <motion.div
-            className="relative w-full rounded-2xl border overflow-hidden"
+            className="relative w-full rounded-2xl border overflow-hidden modal-panel"
             style={{
               maxWidth: isMobile ? '100%' : '28rem',
-              margin: isMobile ? '0 1rem' : '0',
+              /*
+               * No inline margin. `modal-overlay` supplies the 1rem gutter that
+               * the mobile branch used to add here, and a `margin` shorthand
+               * set inline beats `modal-panel`'s auto block margins — which is
+               * what centres a dialog short enough to fit.
+               */
               background: '#111111',
               borderColor: `${accentColor}25`,
               boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}15`,

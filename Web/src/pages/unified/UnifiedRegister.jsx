@@ -762,7 +762,7 @@ const UnifiedRegisterInner = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword
@@ -812,7 +812,7 @@ const UnifiedRegisterInner = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
                     >
                       {showConfirm
@@ -867,7 +867,7 @@ const UnifiedRegisterInner = () => {
           >
             <Link
               to="/"
-              className="text-xs text-white/20 hover:text-white/45 transition-colors"
+              className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center"
             >
               ← Home
             </Link>
@@ -875,7 +875,7 @@ const UnifiedRegisterInner = () => {
               <span className="text-white/15 text-xs">·</span>
               <Link
                 to={config.loginLink}
-                className="text-xs transition-colors hover:underline underline-offset-4"
+                className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
                 style={{ color: `${theme.colors.primary}70` }}
               >
                 Sign in

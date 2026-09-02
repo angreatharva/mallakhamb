@@ -23,10 +23,26 @@ body {
   margin: 0;
   min-height: 100vh;
   line-height: 1.6;
+  /*
+   * Respect the notch/home-indicator on phones that report insets. Zero on
+   * every desktop browser, so the laptop layout is untouched.
+   */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 #root {
   min-height: 100vh;
+}
+
+/*
+ * Long unbroken strings — an email, a competition slug, a pasted URL — are a
+ * leading cause of a phone-width page scrolling sideways, and they land in
+ * headings and table cells where no wrapper can help. Breaking words only as a
+ * last resort leaves normal prose alone.
+ */
+body {
+  overflow-wrap: break-word;
 }
 
 /* Custom scrollbar */
@@ -92,8 +108,19 @@ button {
   transition: all 0.2s ease-in-out;
 }
 
-button:hover {
-  transform: translateY(-1px);
+/*
+ * Lift on hover only where hovering is a thing.
+ *
+ * A touch browser fires :hover on tap and LEAVES IT SET until you tap
+ * something else, so every button a judge pressed stayed nudged up by a pixel
+ * for the rest of the session — and on the scoring keypad, where taps come in
+ * fast runs, the whole grid ended up unevenly offset. Gating on a fine pointer
+ * keeps the desktop affordance and drops it on phones and tablets.
+ */
+@media (hover: hover) and (pointer: fine) {
+  button:hover {
+    transform: translateY(-1px);
+  }
 }
 
 button:active {
@@ -132,6 +159,30 @@ button:active {
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+}
+
+/*
+ * How large the decorative background orbs draw. Read by AmbientOrbs.
+ *
+ * The sizes those pages author were picked against a desktop canvas; reused
+ * unchanged on a phone a single orb covers the whole screen, and the blur
+ * reads as fog over the content rather than as depth behind it. Kept in CSS so
+ * resizing costs no re-render — see the note in AmbientOrbs.jsx.
+ */
+:root {
+  --orb-scale: 1;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --orb-scale: 0.55;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --orb-scale: 0.75;
   }
 }
 

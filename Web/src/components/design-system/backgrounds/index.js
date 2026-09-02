@@ -11,6 +11,14 @@
 
 import { lazy } from 'react';
 
+/*
+ * NOT lazy, unlike the decorations below it. AmbientOrbs renders in the first
+ * paint of almost every page, so a Suspense boundary around it would show a
+ * hole where the background belongs; it is also small enough that deferring it
+ * buys nothing.
+ */
+export { default as AmbientOrbs, ORB_INTENSITY } from './AmbientOrbs';
+
 // Lazy load background decorations to reduce initial bundle size
 export const HexGrid = lazy(() => import('./HexGrid'));
 export const RadialBurst = lazy(() => import('./RadialBurst'));

@@ -34,7 +34,11 @@
     "seed:scores:fast": "playwright test e2e/score-all.spec.js --workers=2 --trace=off",
     "seed:scores:one": "playwright test e2e/score-all.spec.js --workers=1 --grep \"Competition I . Male Under10\"",
     "seed:scores:headed": "playwright test e2e/score-all.spec.js --workers=1 --headed",
-    "seed:ui": "playwright test e2e/register-coaches.spec.js e2e/register-players.spec.js e2e/register-judges.spec.js e2e/build-squads.spec.js e2e/seat-panels.spec.js"
+    "seed:ui": "playwright test e2e/register-coaches.spec.js e2e/register-players.spec.js e2e/register-judges.spec.js e2e/build-squads.spec.js e2e/seat-panels.spec.js",
+    "audit:responsive": "playwright test e2e/responsive-audit.spec.js",
+    "audit:modals": "playwright test e2e/responsive-modals.spec.js",
+    "audit:judge-walk": "playwright test e2e/responsive-judge-walk.spec.js",
+    "audit:shots": "playwright test e2e/responsive-shots.spec.js"
   },
   "dependencies": {
     "axios": "^1.6.2",

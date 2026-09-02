@@ -49,6 +49,47 @@ const statusStyle = (status) => {
   return map[status] || { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' };
 };
 
+/**
+ * The values a transaction row displays, derived once.
+ *
+ * Lifted out of the table body when the mobile card list was added, so the two
+ * presentations cannot drift — a card showing a different coach or player count
+ * from the table would be worse than having no card at all.
+ *
+ * @param {object} tx - a transaction from the API
+ */
+const deriveTransactionRow = (tx) => {
+  const competitionLabel = tx.competition
+    ? `${tx.competition.name}${tx.competition.year ? ` (${tx.competition.year})` : ''}${tx.competition.place ? ` — ${tx.competition.place}` : ''}`
+    : '-';
+  // Coach name comes from the coach field, or from metadata for a player a
+  // super admin added by hand.
+  const coachName = tx.coach?.name || tx.metadata?.coachName || '-';
+
+  const razorpayOrderId = tx.metadata?.razorpay_order_id || '-';
+  const razorpayPaymentId = tx.metadata?.razorpay_payment_id || '-';
+
+  // Players come off the competition's registeredTeams entry for this team.
+  let players = [];
+  if (tx.competition?.registeredTeams && tx.team?._id) {
+    const registeredTeam = tx.competition.registeredTeams.find(
+      (rt) => rt.team?.toString() === tx.team._id.toString()
+    );
+    if (registeredTeam?.players) {
+      players = registeredTeam.players.map((p) => ({
+        name: p.player?.name || p.player?.firstName || 'Unknown',
+        ageGroup: p.ageGroup || 'N/A',
+        gender: p.gender || 'N/A',
+        apparatus: p.apparatus,
+      }));
+    }
+  }
+
+  const playerCount = players.length || tx.metadata?.playerCount || 0;
+
+  return { competitionLabel, coachName, razorpayOrderId, razorpayPaymentId, players, playerCount };
+};
+
 const AdminTransactions = () => {
   const { routePrefix } = useRouteContext();
   const isSuperAdmin = routePrefix === '/superadmin';
@@ -167,7 +208,82 @@ const AdminTransactions = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/*
+              * Cards below `md`, the table from `md` up.
+              *
+              * Eleven columns — two of them 20-character Razorpay ids — cannot
+              * be made to fit a 375px screen, and `overflow-x-auto` on its own
+              * just meant an organiser had to drag sideways past nine columns
+              * to reach the amount and the status, which are the two anybody
+              * opens this page to read. The card puts those first and keeps
+              * everything else, so nothing is hidden on mobile; the table below
+              * is untouched, so the desktop view is exactly as it was.
+              */}
+            <div className="md:hidden flex flex-col gap-3">
+              {transactions.map((tx) => {
+                const row = deriveTransactionRow(tx);
+                const { bg, color } = statusStyle(tx.paymentStatus);
+                return (
+                  <div key={tx._id} className="rounded-2xl border p-4"
+                    style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    {/* What the page is for: how much, and did it go through. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-white font-bold text-lg leading-tight">{formatAmount(tx.amount)}</p>
+                        <p className="text-white/45 text-xs mt-0.5">{formatDateTime(tx.createdAt)}</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
+                        style={{ background: bg, color }}>
+                        {tx.paymentStatus || 'unknown'}
+                      </span>
+                    </div>
+
+                    <dl className="mt-3 space-y-1.5 text-xs">
+                      {[
+                        ['Team', tx.team?.name || '-'],
+                        ['Coach', row.coachName],
+                        ['Type', typeLabel(tx.type)],
+                        ['Source', sourceLabel(tx.source)],
+                        ['Competition', row.competitionLabel],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex justify-between gap-3">
+                          <dt className="text-white/35 flex-shrink-0">{label}</dt>
+                          <dd className="text-white/75 text-right break-words min-w-0">{value}</dd>
+                        </div>
+                      ))}
+                      {/* Monospaced ids last, and allowed to wrap rather than
+                          stretch the card. */}
+                      {[['Order ID', row.razorpayOrderId], ['Payment ID', row.razorpayPaymentId]].map(([label, value]) => (
+                        <div key={label} className="flex justify-between gap-3">
+                          <dt className="text-white/35 flex-shrink-0">{label}</dt>
+                          <dd className="text-white/60 font-mono text-right break-all min-w-0">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+
+                    {row.playerCount > 0 && (
+                      <button
+                        onClick={() => openPlayersModal(row.players)}
+                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg min-h-[44px] transition-colors"
+                        style={{
+                          background: `${ADMIN_COLORS.purple}18`,
+                          color: ADMIN_COLORS.purple,
+                          border: `1px solid ${ADMIN_COLORS.purple}30`,
+                        }}
+                      >
+                        <Users className="w-4 h-4" aria-hidden="true" />
+                        <span className="font-semibold text-sm">
+                          {row.playerCount} Player{row.playerCount !== 1 ? 's' : ''}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="overflow-x-auto hidden md:block">
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
@@ -179,34 +295,8 @@ const AdminTransactions = () => {
                 </thead>
                 <tbody>
                   {transactions.map((tx, i) => {
-                    const competitionLabel = tx.competition
-                      ? `${tx.competition.name}${tx.competition.year ? ` (${tx.competition.year})` : ''}${tx.competition.place ? ` — ${tx.competition.place}` : ''}`
-                      : '-';
-                    // Get coach name from coach field or metadata (for super admin added players)
-                    const coachName = tx.coach?.name || tx.metadata?.coachName || '-';
-                    
-                    // Extract Razorpay IDs from metadata
-                    const razorpayOrderId = tx.metadata?.razorpay_order_id || '-';
-                    const razorpayPaymentId = tx.metadata?.razorpay_payment_id || '-';
-                    
-                    // Get players from competition's registeredTeams
-                    let players = [];
-                    if (tx.competition?.registeredTeams && tx.team?._id) {
-                      const registeredTeam = tx.competition.registeredTeams.find(
-                        rt => rt.team?.toString() === tx.team._id.toString()
-                      );
-                      if (registeredTeam?.players) {
-                        players = registeredTeam.players.map(p => ({
-                          name: p.player?.name || p.player?.firstName || 'Unknown',
-                          ageGroup: p.ageGroup || 'N/A',
-                          gender: p.gender || 'N/A',
-                          apparatus: p.apparatus
-                        }));
-                      }
-                    }
-                    
-                    const playerCount = players.length || tx.metadata?.playerCount || 0;
-                    
+                    const { competitionLabel, coachName, razorpayOrderId, razorpayPaymentId, players, playerCount } =
+                      deriveTransactionRow(tx);
                     const { bg, color } = statusStyle(tx.paymentStatus);
                     return (
                       <motion.tr key={tx._id}
@@ -252,6 +342,7 @@ const AdminTransactions = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </DarkCard>
       </FadeIn>
@@ -260,7 +351,7 @@ const AdminTransactions = () => {
       <AnimatePresence>
         {playersModalOpen && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="modal-overlay z-50"
             style={{ background: 'rgba(0,0,0,0.75)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -268,7 +359,7 @@ const AdminTransactions = () => {
             onClick={closePlayersModal}
           >
             <motion.div
-              className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden"
+              className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden modal-panel"
               style={{ 
                 background: ADMIN_COLORS.darkCard, 
                 borderColor: ADMIN_COLORS.darkBorderSubtle 

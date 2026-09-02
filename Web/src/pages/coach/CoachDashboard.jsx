@@ -478,7 +478,7 @@ const CoachDashboard = () => {
             <div className="flex items-center gap-2">
               <CompetitionSelector userType="coach" />
               {user && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+                <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
                   style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                   <div className="w-7 h-7 rounded-full flex items-center justify-center"
                     style={{ background: `${COLORS.saffron}20` }}>
@@ -489,14 +489,14 @@ const CoachDashboard = () => {
               )}
               <motion.button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
+                className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px] tap-safe justify-center"
                 style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
                 whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
                 whileTap={{ scale: 0.96 }}
                 aria-label="Logout"
               >
                 <LogOut className="w-4 h-4" aria-hidden="true" />
-                Logout
+                <span className="hidden md:inline">Logout</span>
               </motion.button>
             </div>
           </div>
@@ -584,7 +584,7 @@ const CoachDashboard = () => {
               <button
                 onClick={() => handleRemovePlayer(player.player._id)}
                 disabled={team?.isSubmitted}
-                className="ml-2 p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center flex-shrink-0"
+                className="ml-2 p-1.5 rounded-lg transition-colors tap-safe md:min-h-[36px] md:min-w-[36px] flex items-center justify-center flex-shrink-0"
                 style={{ color: team?.isSubmitted ? 'rgba(255,255,255,0.2)' : '#EF4444' }}
                 title={team?.isSubmitted ? 'Cannot remove after submission' : 'Remove player'}
                 aria-label={`Remove ${player.player.firstName} ${player.player.lastName}`}
@@ -638,7 +638,7 @@ const CoachDashboard = () => {
           <div className="flex items-center gap-2">
             <CompetitionSelector userType="coach" />
             {user && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+              <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
                 style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
                   style={{ background: `${COLORS.saffron}20` }}>
@@ -649,14 +649,14 @@ const CoachDashboard = () => {
             )}
             <motion.button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px] tap-safe justify-center"
               style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
               whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
               whileTap={{ scale: 0.96 }}
               aria-label="Logout"
             >
               <LogOut className="w-4 h-4" aria-hidden="true" />
-              Logout
+              <span className="hidden md:inline">Logout</span>
             </motion.button>
           </div>
         </div>
@@ -824,11 +824,11 @@ const CoachDashboard = () => {
       {/* Team Summary Modal */}
       <AnimatePresence>
         {showTeamSummary && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowTeamSummary(false)} />
-            <motion.div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border"
+            <motion.div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border modal-panel"
               style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
@@ -915,11 +915,11 @@ const CoachDashboard = () => {
       {/* Submit Warning Modal */}
       <AnimatePresence>
         {showSubmitWarning && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowSubmitWarning(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border"
+            <motion.div className="relative w-full max-w-md rounded-3xl border modal-panel"
               style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
@@ -972,11 +972,11 @@ const CoachDashboard = () => {
       {/* Add Player Modal */}
       <AnimatePresence>
         {showAddPlayer && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={handleCloseModal} />
-            <motion.div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border"
+            <motion.div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border modal-panel"
               style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>

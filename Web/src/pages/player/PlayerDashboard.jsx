@@ -314,8 +314,14 @@ const PlayerDashboard = () => {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => fetchPlayerProfile(true)}
-                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors tap-safe justify-center"
                   title="Refresh player data"
+                  /*
+                   * `title` is not an accessible name a screen reader announces
+                   * reliably, and it does nothing at all on touch — this button
+                   * reported an empty name in the audit.
+                   */
+                  aria-label="Refresh player data"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -444,7 +450,7 @@ const PlayerDashboard = () => {
       <AnimatePresence>
         {showCompetitionModal && assignedCompetitions && assignedCompetitions.length > 1 && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="modal-overlay z-50"
             style={{ background: 'rgba(0,0,0,0.8)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -455,7 +461,7 @@ const PlayerDashboard = () => {
             }}
           >
             <motion.div
-              className="w-full max-w-2xl rounded-3xl border p-6 md:p-8"
+              className="w-full max-w-2xl rounded-3xl border p-6 md:p-8 modal-panel"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

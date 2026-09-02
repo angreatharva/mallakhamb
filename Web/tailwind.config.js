@@ -142,7 +142,124 @@ export default {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        
+
+        /*
+         * 44px, but ONLY where a finger is the pointer.
+         *
+         * `.touch-target` above enforces the minimum at every width, which is
+         * why the dense screens could not adopt it — it would inflate the
+         * compact desktop toolbars the brief protects. The recurring defect is
+         * narrower than that: a control that shows an icon AND a label on
+         * desktop collapses to the icon alone on mobile (`hidden sm:inline`)
+         * and lands at ~36px. This sizes exactly that case, and stops at the
+         * `md` breakpoint so desktop keeps its own metrics.
+         */
+        '.tap-safe': {
+          '@media (max-width: 767px)': {
+            minHeight: theme('spacing.touch-target'),
+            minWidth: theme('spacing.touch-target'),
+          },
+        },
+
+        /*
+         * The dialog shell, in one place.
+         *
+         * Seventeen modals had each written `fixed inset-0 flex items-center
+         * justify-center p-4`, and all but one of them omitted any scrolling.
+         * A dialog taller than the window — which on a 375x812 phone means
+         * most of the forms — was simply cut off, with its Save and Cancel
+         * buttons below the fold and no way to reach them.
+         *
+         * Centring with `align-items: center` is the trap: once the panel is
+         * taller than the scroll box, the overflow goes off the TOP and the
+         * browser will not scroll to it. `flex-start` plus auto block margins
+         * on the panel gives both behaviours from one rule — the margins
+         * absorb the slack and centre it while it fits, and collapse to zero
+         * when it does not, leaving the whole panel reachable.
+         */
+        '.modal-overlay': {
+          position: 'fixed',
+          inset: '0',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          overflowY: 'auto',
+          // Keep a flick at the end of the dialog from scrolling the page behind it.
+          overscrollBehavior: 'contain',
+          paddingLeft: '1rem',
+          paddingRight: '1rem',
+          paddingTop: 'max(1rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        },
+
+        '.modal-panel': {
+          marginTop: 'auto',
+          marginBottom: 'auto',
+        },
+
+        /*
+         * A data table that becomes a list of labelled cards on phones.
+         *
+         * The brief's rule for tables is that `overflow-x: auto` is a last
+         * resort, not the answer — and on the management screens it was the
+         * answer to nine columns, which meant dragging sideways past eight of
+         * them to reach the Actions column. Stacking keeps every column
+         * (nothing is hidden, which a priority-columns approach would do) and
+         * pairs each value with its header, so a row reads top-to-bottom.
+         *
+         * Rows carry the card border, so the internal borders come off. Above
+         * `md` none of this applies and the table is untouched.
+         */
+        '.stacked-table': {
+          '@media (max-width: 767px)': {
+            display: 'block',
+            '& thead': {
+              // Headers move into each cell via `data-label`, so the row of
+              // them is redundant — clipped rather than `display: none` so it
+              // stays available to screen readers.
+              position: 'absolute',
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+              whiteSpace: 'nowrap',
+            },
+            '& tbody': { display: 'block' },
+            '& tr': {
+              display: 'block',
+              borderRadius: theme('borderRadius.2xl'),
+              border: `1px solid ${theme('colors.white')}14`,
+              background: 'rgba(255,255,255,0.03)',
+              padding: theme('spacing.3'),
+              marginBottom: theme('spacing.3'),
+            },
+            '& td': {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: theme('spacing.3'),
+              padding: `${theme('spacing.1')} 0`,
+              textAlign: 'right',
+              border: 'none',
+            },
+            '& td::before': {
+              content: 'attr(data-label)',
+              flexShrink: '0',
+              textAlign: 'left',
+              fontSize: theme('fontSize.xs[0]'),
+              fontWeight: theme('fontWeight.bold'),
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.35)',
+            },
+            // A cell with no header (the actions column is often unlabelled)
+            // gets the full width rather than an empty gutter.
+            '& td[data-label=""]::before, & td:not([data-label])::before': {
+              content: 'none',
+            },
+          },
+        },
+
         // Enhanced mobile-first container utilities
         '.container-responsive': {
           width: '100%',

@@ -64,7 +64,12 @@ const Navbar = ({ user, userType, onLogout }) => {
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group" aria-label="MallakhambIndia Home">
+        {/*
+          * `tap-safe` because the wordmark beside the crest is `hidden sm:block`,
+          * so on a phone this link is just the 32px crest — the one control on
+          * the bar that was under the 44px minimum.
+          */}
+        <Link to="/" className="flex items-center gap-2.5 group tap-safe" aria-label="MallakhambIndia Home">
           <motion.div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
