@@ -10757,7 +10757,7 @@
             }
           }
         },
-        "description": "**Roles:** admin, superadmin\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
+        "description": "One row per performance, ranked within its apparatus. Competitors level on `finalScore` are separated by panel size — time on a 3-judge panel, senior judge score then the panel mean on 4/5 — and those the rules cannot separate share a placing.\n\n**Roles:** admin, superadmin\n\n**Competition context required** — see the `X-Competition-Id` parameter.",
         "security": [
           {
             "bearerAuth": []

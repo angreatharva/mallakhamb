@@ -216,10 +216,14 @@ const playerScoreSchema = new mongoose.Schema({
   // Ordering metadata.
   chestNo: { type: Number, default: null },
   sequenceNo: { type: Number, default: null },
-  // Tie-break resolution audit trail (v2 §7).
+  // Tie-break resolution audit trail.
+  //
+  // Nothing writes this yet: rankings are resolved on read, and the engine
+  // returns the same explanation as `tieBreakInfo` on the ranked row. Kept for
+  // the point at which a placing is frozen and has to be storable.
   tieBreakResolution: {
-    step: { type: Number, default: null },       // 1-4
-    method: { type: String, default: null },      // e.g. 'base_score', 'avg_eval_judges', 'avg_plus_chief', 'lucky_draw'
+    step: { type: Number, default: null },        // 1 or 2
+    method: { type: String, default: null },      // 'faster_time' | 'senior_judge_score' | 'panel_average' | 'identical_time' | 'identical_panel_average'
     resolvedAt: { type: Date, default: null }
   }
 });

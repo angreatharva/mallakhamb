@@ -484,8 +484,9 @@ playerScores: [{
 5. Final Score = Average Marks - Deduction - Other Deduction
 
 **Tie-Breaker Logic:**
-- If final scores equal, use execution average
-- Higher execution average wins
+- 3-judge panel: lower time wins (the senior judge's mark is not consulted)
+- 4/5-judge panel: higher senior judge score, then the higher mean of the whole panel (sum / panel size)
+- Still level: the tie stands and both competitors share the placing
 
 #### Transaction Model
 
@@ -1749,7 +1750,7 @@ The old-config migration brings remaining functionality from `Server/old-config/
 **Status:** `ongoing` or `completed`
 
 **Ranking Logic:**
-- Individual: By final score (tie-breaker: execution average)
+- Individual: By final score, ranked within each apparatus (tie-breaker: time on a 3-judge panel; senior judge score then panel mean on 4/5)
 - Team: Top 5 players, sum of scores
 
 ### Phase 6: Completion (Super Admin)
@@ -1859,7 +1860,7 @@ Rank: 2
 
 ### Tie-Breaking
 
-Time-based for 3-judge scenarios. Rank notes recorded for tied players.
+Time-based for 3-judge panels; senior judge score then the mean of the whole panel for 4- and 5-judge panels. Competitors the rules cannot separate share a placing — no random draw. See `src/utils/scoring/tie-breaker.util.js`.
 
 ### Constraints
 

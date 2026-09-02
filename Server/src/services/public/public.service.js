@@ -13,7 +13,7 @@ const COMPETITION_TYPE_MAP = {
 };
 
 const { ValidationError } = require('../../errors');
-const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
+const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const {
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
@@ -40,28 +40,13 @@ class PublicService {
   /**
    * Enrich a player score row with COP average/final when stored values are 0
    * but judge slips exist (common for in-progress / unlocked panels).
+   *
+   * Delegates to the shared helper so this feed and the admin feed compute the
+   * same numbers for the same athlete — the results board is rendered from
+   * both.
    */
   enrichPlayerScore(ps) {
-    const row = { ...(typeof ps.toObject === 'function' ? ps.toObject() : ps) };
-    const hasJudges = row.judgeScores && Object.values(row.judgeScores).some((v) => Number(v) > 0);
-    if (!hasJudges) return row;
-
-    if (!(row.finalScore > 0) || !(row.averageMarks > 0)) {
-      const calc = calculateIndividualScore(row.judgeScores, row.panelSize || undefined);
-      if (calc.averageMarks > 0) {
-        row.executionAverage = calc.executionAverage;
-        row.baseScore = calc.baseScore;
-        row.baseScoreApplied = calc.baseScoreApplied;
-        row.toleranceUsed = calc.toleranceUsed;
-        row.averageMarks = calc.averageMarks;
-        if (!(row.finalScore > 0)) {
-          const deduction = Number(row.deduction) || 0;
-          const other = Number(row.otherDeduction) || 0;
-          row.finalScore = Math.max(0, Number((calc.averageMarks - deduction - other).toFixed(3)));
-        }
-      }
-    }
-    return row;
+    return enrichPlayerScore(ps);
   }
 
   /**
@@ -158,13 +143,32 @@ class PublicService {
           playerScores = playerScores.filter((ps) => ps.apparatus === filters.apparatus);
         }
         
+        const teamName = scoreObj.teamId?.name || 'Unknown Team';
+
         return {
           ...scoreObj,
-          playerScores,
-          teamName: scoreObj.teamId?.name || 'Unknown Team',
+          // Stamped on every row as well as the document. The board pools
+          // athletes from every team into one standing, so each row has to
+          // carry its own team once it is separated from its parent.
+          playerScores: playerScores.map((ps) => ({ ...ps, teamName })),
+          teamName,
           team: scoreObj.teamId,
         };
       }).filter(score => score.playerScores.length > 0); // Only include scores with matching finalized players
+
+      /*
+       * Rank here, not in the browser.
+       *
+       * Placings depend on the panel-size tie-break rules, and those cannot be
+       * re-implemented in the client without the two copies drifting — the
+       * README already carries that warning about the COP rules. The rows go
+       * out with `rank` and `tieBreakInfo` on them and every consumer renders
+       * the same order.
+       */
+      rankPlayerRows(
+        formattedScores.flatMap((score) => score.playerScores),
+        COMPETITION_TYPE_MAP[filters.competitionType] || filters.competitionType
+      );
 
       this.logger.info('Public scores retrieved', {
         competitionId,

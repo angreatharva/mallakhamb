@@ -7,7 +7,8 @@
  *   - §3.2.1: Difficulty cascade (Competition I, {A:0, B:5, C:2} → 3.00)
  *   - §4.2: 3-judge panel simple average — no tolerance check
  *   - §4.3: 4-judge panel as 5-judge equivalent — no high/low drop but tolerance check
- *   - §7: Tie-break 4-step cascade
+ *   - Tie-breaks by panel size: 3 judges on time, 4/5 judges on the senior
+ *     judge's mark then the panel mean
  *   - §11: Hanging Mallakhamb / Female hard block
  */
 
@@ -279,84 +280,200 @@ describe('Difficulty Cascade (C→B→A)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7. Tie-Break Engine (v2 §7)
+// 7. Tie-Breaks — decided by the size of the panel that judged the performance
 // ─────────────────────────────────────────────────────────────────────────────
-describe('Tie-Break Engine (v2 4-step cascade)', () => {
-  test('Step 1: resolved by base_score difference', () => {
+describe('Tie-Breaks on a 3-judge panel (1 senior + 2 evaluation)', () => {
+  const onTime = (time, judgeScores = { seniorJudge: 8, judge1: 8, judge2: 8 }) => ({
+    finalScore: 8.00, panelSize: 3, time, judgeScores
+  });
+
+  test('the faster time takes the placing', () => {
+    const result = determineTieBreakerWinner(onTime('1:28'), onTime('1:30'));
+
+    expect(result.winner).toBe('A');
+    expect(result.step).toBe(1);
+    expect(result.reason).toBe('faster_time');
+    expect(result.isTieBreaker).toBe(true);
+  });
+
+  test('a time stored as plain seconds reads the same as "MM:SS"', () => {
+    expect(determineTieBreakerWinner(onTime('88'), onTime('1:30')).winner).toBe('A');
+    expect(determineTieBreakerWinner(onTime('1:30'), onTime(90)).winner).toBe('tie');
+  });
+
+  test('the senior judge is NOT consulted — the clock is the whole rule', () => {
+    const slowerButBetterMarked = onTime('1:31', { seniorJudge: 9.5, judge1: 8, judge2: 8 });
+    const fasterButWorseMarked = onTime('1:29', { seniorJudge: 7.0, judge1: 8, judge2: 8 });
+
+    const result = determineTieBreakerWinner(slowerButBetterMarked, fasterButWorseMarked);
+
+    expect(result.winner).toBe('B');
+    expect(result.reason).toBe('faster_time');
+  });
+
+  test('identical times stay tied', () => {
+    const result = determineTieBreakerWinner(onTime('1:30'), onTime('1:30'));
+
+    expect(result.winner).toBe('tie');
+    expect(result.reason).toBe('identical_time');
+  });
+
+  test('a missing time cannot break the tie, so the tie stands', () => {
+    expect(determineTieBreakerWinner(onTime(''), onTime('1:30')).reason).toBe('time_unavailable');
+    expect(determineTieBreakerWinner(onTime('1:28'), onTime(undefined)).winner).toBe('tie');
+  });
+});
+
+describe('Tie-Breaks on a 4-judge panel (1 senior + 3 evaluation)', () => {
+  const panel = (seniorJudge, judge1, judge2, judge3, extra = {}) => ({
+    finalScore: 8.00,
+    panelSize: 4,
+    judgeScores: { seniorJudge, judge1, judge2, judge3, ...extra }
+  });
+
+  test('step 1: the higher senior judge score takes the placing', () => {
     const result = determineTieBreakerWinner(
-      { finalScore: 8.00, baseScore: 8.10, averageMarks: 8.00, executionAverage: 8.00 },
-      { finalScore: 8.00, baseScore: 7.90, averageMarks: 8.00, executionAverage: 8.00 }
+      panel(8.5, 8.0, 8.0, 8.0),
+      panel(8.2, 8.0, 8.0, 8.0)
     );
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(1);
-    expect(result.reason).toBe('base_score');
-    expect(result.isTieBreaker).toBe(true);
+    expect(result.reason).toBe('senior_judge_score');
   });
 
-  test('Step 2: resolved by avg eval judges (excluding chief)', () => {
+  test('step 2: senior judges agree, so the mean of all four decides', () => {
+    // A: (8.0 + 8.6 + 8.0 + 8.0) / 4 = 8.15   B: 32.0 / 4 = 8.00
     const result = determineTieBreakerWinner(
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.10, panelSize: 5 },
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 7.90, panelSize: 5 }
+      panel(8.0, 8.6, 8.0, 8.0),
+      panel(8.0, 8.0, 8.0, 8.0)
     );
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(2);
-    expect(result.reason).toBe('avg_eval_judges');
+    expect(result.reason).toBe('panel_average');
   });
 
-  test('Step 3: resolved by (avg + chief) / 2', () => {
+  test('the mean is over the four seats that sat — an empty J4 is not counted', () => {
+    // A carries a stray judge4 mark; a 4-judge panel has no J4, so it is ignored.
+    // A: 32.0 / 4 = 8.00, B: 32.2 / 4 = 8.05 → B places higher.
     const result = determineTieBreakerWinner(
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, chiefScore: 8.50, panelSize: 5 },
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, chiefScore: 7.50, panelSize: 5 }
+      panel(8.0, 8.0, 8.0, 8.0, { judge4: 10 }),
+      panel(8.0, 8.2, 8.0, 8.0)
+    );
+
+    expect(result.winner).toBe('B');
+    expect(result.reason).toBe('panel_average');
+  });
+
+  test('same senior score and same mean stays tied', () => {
+    const result = determineTieBreakerWinner(
+      panel(8.0, 8.4, 7.6, 8.0),
+      panel(8.0, 7.6, 8.4, 8.0)
+    );
+
+    expect(result.winner).toBe('tie');
+    expect(result.reason).toBe('identical_panel_average');
+  });
+});
+
+describe('Tie-Breaks on a 5-judge panel (1 senior + 4 evaluation)', () => {
+  const panel = (seniorJudge, judge1, judge2, judge3, judge4) => ({
+    finalScore: 8.00,
+    panelSize: 5,
+    judgeScores: { seniorJudge, judge1, judge2, judge3, judge4 }
+  });
+
+  test('step 1: the higher senior judge score takes the placing', () => {
+    const result = determineTieBreakerWinner(
+      panel(8.4, 8.0, 8.0, 8.0, 8.0),
+      panel(8.0, 9.0, 9.0, 9.0, 9.0)
     );
 
     expect(result.winner).toBe('A');
-    expect(result.step).toBe(3);
-    expect(result.reason).toBe('avg_plus_chief');
+    expect(result.step).toBe(1);
+    expect(result.reason).toBe('senior_judge_score');
   });
 
-  test('Step 4: all steps exhausted → lucky draw required', () => {
+  test('step 2: senior judges agree, so the mean of all five decides', () => {
+    // A: 40.5 / 5 = 8.10   B: 40.0 / 5 = 8.00
     const result = determineTieBreakerWinner(
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, chiefScore: 8.00, panelSize: 5 },
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, chiefScore: 8.00, panelSize: 5 }
+      panel(8.0, 8.0, 8.0, 8.0, 8.5),
+      panel(8.0, 8.0, 8.0, 8.0, 8.0)
     );
 
-    expect(result.winner).toBe('tie');
-    expect(result.step).toBe(4);
-    expect(result.reason).toBe('lucky_draw_required');
+    expect(result.winner).toBe('A');
+    expect(result.step).toBe(2);
+    expect(result.reason).toBe('panel_average');
   });
 
-  test('3-judge panel: skips Steps 2-3, goes to Step 4 (lucky draw)', () => {
-    const result = determineTieBreakerWinner(
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, panelSize: 3 },
-      { finalScore: 8.00, baseScore: 8.00, averageMarks: 8.00, executionAverage: 8.00, panelSize: 3 }
-    );
+  test('an identical panel stays tied — no random draw decides a placing', () => {
+    const identical = () => panel(8.0, 8.0, 8.0, 8.0, 8.0);
 
-    expect(result.winner).toBe('tie');
-    expect(result.step).toBe(4);
+    expect(determineTieBreakerWinner(identical(), identical()).winner).toBe('tie');
+    expect(areTied(identical(), identical())).toBe(true);
   });
 
-  test('applyTieBreaker sorts a list of players', () => {
-    const players = [
-      { finalScore: 8.00, baseScore: 7.90, averageMarks: 7.90, executionAverage: 7.90 },
-      { finalScore: 9.00, baseScore: 9.00, averageMarks: 9.00, executionAverage: 9.00 },
-      { finalScore: 8.00, baseScore: 8.10, averageMarks: 8.10, executionAverage: 8.10 },
-    ];
+  test('panel size is inferred from the marks when it was not recorded', () => {
+    const withoutPanelSize = (seniorJudge) => ({
+      finalScore: 8.00,
+      judgeScores: { seniorJudge, judge1: 8, judge2: 8, judge3: 8, judge4: 8 }
+    });
 
-    const sorted = applyTieBreaker(players);
+    const result = determineTieBreakerWinner(withoutPanelSize(8.3), withoutPanelSize(8.1));
 
-    // 9.00 first, then the 8.10 base_score, then 7.90 base_score
-    expect(sorted[0].finalScore).toBe(9.00);
-    expect(sorted[1].baseScore).toBe(8.10);
-    expect(sorted[2].baseScore).toBe(7.90);
+    expect(result.winner).toBe('A');
+    expect(result.reason).toBe('senior_judge_score');
+  });
+});
+
+describe('Tie-Break ordering and annotation', () => {
+  const panel = (finalScore, seniorJudge) => ({
+    finalScore,
+    panelSize: 4,
+    judgeScores: { seniorJudge, judge1: 8, judge2: 8, judge3: 8 }
   });
 
-  test('areTied returns true for identical scores with no chief', () => {
-    expect(areTied(
-      { finalScore: 7.50, baseScore: 7.50, averageMarks: 7.50, executionAverage: 7.50, panelSize: 3 },
-      { finalScore: 7.50, baseScore: 7.50, averageMarks: 7.50, executionAverage: 7.50, panelSize: 3 }
-    )).toBe(true);
+  test('a clear score gap is not a tie-break at all', () => {
+    const result = determineTieBreakerWinner(panel(9.0, 8.0), panel(8.0, 9.0));
+
+    expect(result.winner).toBe('A');
+    expect(result.step).toBe(0);
+    expect(result.reason).toBe('higher_final_score');
+    expect(result.isTieBreaker).toBe(false);
+  });
+
+  test('applyTieBreaker orders the field and records how each tie was settled', () => {
+    const sorted = applyTieBreaker([
+      panel(8.0, 8.1),
+      panel(9.0, 7.0),
+      panel(8.0, 8.4)
+    ]);
+
+    expect(sorted.map((p) => p.finalScore)).toEqual([9.0, 8.0, 8.0]);
+    expect(sorted[1].judgeScores.seniorJudge).toBe(8.4);
+    expect(sorted[1].tieBreakInfo).toEqual({
+      resolvedAtStep: 1,
+      method: 'senior_judge_score',
+      unresolved: false
+    });
+    // The competitor who was never tied carries no explanation.
+    expect(sorted[0].tieBreakInfo).toBeUndefined();
+  });
+
+  test('applyTieBreaker does not reorder or annotate the caller\'s objects', () => {
+    const players = [panel(8.0, 8.1), panel(8.0, 8.4)];
+
+    applyTieBreaker(players);
+
+    expect(players[0].judgeScores.seniorJudge).toBe(8.1);
+    expect(players[0].tieBreakInfo).toBeUndefined();
+  });
+
+  test('ranking the same field twice gives the same order', () => {
+    const field = () => [panel(8.0, 8.0), panel(8.0, 8.0), panel(9.0, 8.0)];
+
+    expect(applyTieBreaker(field())).toEqual(applyTieBreaker(field()));
   });
 });
 

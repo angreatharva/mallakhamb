@@ -199,7 +199,17 @@ When `|executionAverage − seniorJudge| > tolerance`, the **base score** `(exec
 
 ### Tie-breaking (`src/utils/scoring/tie-breaker.util.js`)
 
-Four-step cascade for Competition II/III placements: base score (or avg) → average of evaluation judges excluding the chief → (average + chief) / 2 → lucky draw. Three-judge panels skip steps 2–3. Team Championship ranks on summed team totals and does not enter this engine. Resolution is recorded in `tieBreakResolution` on the player score.
+Competitors level on `finalScore` are separated by the size of the panel that judged them:
+
+| Panel | Rule |
+|---|---|
+| 3 judges | Lower **time** wins. The senior judge's mark is not consulted. |
+| 4 judges | 1. Higher **senior judge score**  2. Higher mean of **all four** judges (sum / 4) |
+| 5 judges | 1. Higher **senior judge score**  2. Higher mean of **all five** judges (sum / 5) |
+
+The step-2 mean covers the whole panel, senior judge included, so it is *not* `executionAverage` (which excludes the senior judge and drops the high and low marks).
+
+When a rule cannot separate two competitors — identical time, or an identical senior score *and* an identical panel mean, or the field the step needs is missing — the tie stands: both take the placing and the next one is skipped (1, 1, 3). Nothing is decided randomly, so ranking the same data twice gives the same order. Each tied entry carries a `tieBreakInfo` explaining the outcome; the standing is computed per apparatus, since Pole and Rope are separate events. Team Championship places on summed team totals and does not enter this engine.
 
 `src/utils/scoring/ranking.util.js` turns scored players/teams into ranks; `src/services/scoring/calculation.service.js` is the service wrapper around all three utilities.
 

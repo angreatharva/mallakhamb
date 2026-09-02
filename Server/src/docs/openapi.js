@@ -1395,6 +1395,7 @@ function buildPaths() {
   add('/api/admin/rankings/individual', 'get', op({
     tag: 'Rankings', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminIndividualRankings',
     summary: 'Individual rankings',
+    description: 'One row per performance, ranked within its apparatus. Competitors level on `finalScore` are separated by panel size — time on a 3-judge panel, senior judge score then the panel mean on 4/5 — and those the rules cannot separate share a placing.',
     parameters: [queryParam('ageGroup', S.ageGroup, 'Age group')],
     responses: { 200: ok('Rankings', { type: 'array', items: {} }), ...VALIDATION_ERROR },
   }));

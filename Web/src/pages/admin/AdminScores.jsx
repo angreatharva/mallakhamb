@@ -1,18 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Filter, X, Search } from 'lucide-react';
+import { Trophy, Filter, X, Search, Users } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
-import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
-import { ResponsiveIndividualRankings, ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
+import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
-import { ResponsiveScoreFilters } from '../../components/responsive/ResponsiveFilters';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
+import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
+import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -85,9 +86,54 @@ const InfoBanner = ({ color, children }) => (
   </div>
 );
 
+const SCORE_TYPES = [
+  { value: 'add', label: 'Add Score' },
+  { value: 'individual', label: 'Individual Rankings' },
+  { value: 'rankings', label: 'Team Rankings' },
+];
+
+const COMPETITION_TYPE_LABELS = {
+  competition_1: 'Competition I - Team Championship',
+  competition_2: 'Competition II - All Round Individual',
+  competition_3: 'Competition III - Apparatus Championship',
+};
+
+const DEFAULT_COMPETITION_TYPES = Object.entries(COMPETITION_TYPE_LABELS)
+  .map(([value, label]) => ({ value, label }));
+
+const competitionLabel = (competition) => [
+  competition.name,
+  competition.year ? ` (${competition.year})` : '',
+  competition.place ? ` — ${competition.place}` : '',
+].join('');
+
+/** Which view of the scores is on screen. */
+const ScoreTypeTabs = ({ value, onChange }) => (
+  <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Score view">
+    {SCORE_TYPES.map((type) => {
+      const active = type.value === value;
+      return (
+        <button
+          key={type.value}
+          role="tab"
+          aria-selected={active}
+          onClick={() => onChange(type.value)}
+          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 min-h-[38px] border"
+          style={{
+            background: active ? `${ADMIN_COLORS.saffron}18` : 'rgba(255,255,255,0.03)',
+            borderColor: active ? `${ADMIN_COLORS.saffron}45` : ADMIN_COLORS.darkBorderSubtle,
+            color: active ? ADMIN_COLORS.saffronLight : 'rgba(255,255,255,0.5)',
+          }}>
+          {type.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
 const Scores = () => {
   const navigate = useNavigate();
-  const { routePrefix, storagePrefix } = useRouteContext();
+  const { routePrefix } = useRouteContext();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
 
@@ -96,9 +142,7 @@ const Scores = () => {
   const [loadingCompetitions, setLoadingCompetitions] = useState(false);
   const [scores, setScores] = useState([]);
   const [submittedTeams, setSubmittedTeams] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [ageGroupStarted, setAgeGroupStarted] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
@@ -106,23 +150,56 @@ const Scores = () => {
   const [scoreType, setScoreType] = useState('add');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const competitionTypes = [
-    { value: 'competition_1', label: 'Competition I - Team Championship' },
-    { value: 'competition_2', label: 'Competition II - All Round Individual' },
-    { value: 'competition_3', label: 'Competition III - Apparatus Championship' }
-  ];
-
   const { currentCompetition } = useCompetition();
-  
-  const activeCompetition = isSuperAdmin 
-    ? competitions.find(c => c._id === selectedCompetition?.value)
-    : currentCompetition;
-    
-  const apparatusOptions = selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType.value]
-    ? activeCompetition.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app }))
-    : [];
 
-  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
+  const activeCompetition = isSuperAdmin
+    ? competitions.find((c) => c._id === selectedCompetition?.value)
+    : currentCompetition;
+
+  /*
+   * The competition filter is rendered on all three pages, so an admin sees
+   * the same five controls a superadmin and the public do. An admin cannot
+   * change it — theirs is fixed by their assignment — so it is preselected and
+   * locked rather than hidden, which would have left the page a control short.
+   */
+  const competitionOptions = useMemo(() => {
+    if (isSuperAdmin) {
+      return competitions.map((c) => ({ value: c._id, label: competitionLabel(c) }));
+    }
+    return currentCompetition?._id
+      ? [{ value: currentCompetition._id, label: competitionLabel(currentCompetition) }]
+      : [];
+  }, [isSuperAdmin, competitions, currentCompetition]);
+
+  useEffect(() => {
+    if (isSuperAdmin || !currentCompetition?._id) return;
+    // Keep the existing object when the id has not changed. Returning it
+    // unchanged lets React bail out, so a context that rebuilds
+    // `currentCompetition` on every render cannot retrigger the cascade reset
+    // below and wipe the filters mid-selection.
+    setSelectedCompetition((current) => (
+      current?.value === currentCompetition._id
+        ? current
+        : { value: currentCompetition._id, label: competitionLabel(currentCompetition) }
+    ));
+  }, [isSuperAdmin, currentCompetition]);
+
+  const ageGroupsForGender = useAgeGroups(
+    selectedGender?.value || 'Male',
+    isSuperAdmin ? activeCompetition : null
+  );
+  const ageGroupOptions = selectedGender ? ageGroupsForGender : [];
+
+  const competitionTypeOptions = activeCompetition?.competitionTypes?.length
+    ? activeCompetition.competitionTypes.map((type) => ({
+        value: type,
+        label: COMPETITION_TYPE_LABELS[type] || type,
+      }))
+    : DEFAULT_COMPETITION_TYPES;
+
+  const apparatusOptions = selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType.value]
+    ? activeCompetition.apparatusConfig[selectedCompetitionType.value].map((app) => ({ value: app, label: app }))
+    : [];
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -133,7 +210,6 @@ const Scores = () => {
           const responseData = res.data.data || res.data;
           const competitionsArray = Array.isArray(responseData) ? responseData : (responseData.competitions || []);
           setCompetitions(competitionsArray);
-          logger.info('Fetched competitions for scores:', competitionsArray);
         })
         .catch((error) => {
           logger.error('Failed to load competitions:', error);
@@ -143,48 +219,64 @@ const Scores = () => {
     }
   }, [isSuperAdmin]);
 
+  // Cascade resets — changing a filter invalidates everything below it
   useEffect(() => {
     setSelectedGender(null); setSelectedAgeGroup(null); setSelectedCompetitionType(null); setSelectedApparatus(null);
     setSubmittedTeams([]); setScores([]); setSearchTerm('');
   }, [selectedCompetition]);
 
-  useEffect(() => { if (selectedGender) setSelectedAgeGroup(null); }, [selectedGender]);
-  useEffect(() => { setSelectedApparatus(null); }, [selectedCompetitionType]);
+  useEffect(() => {
+    if (selectedGender) {
+      setSelectedAgeGroup(null); setSelectedCompetitionType(null); setSelectedApparatus(null);
+    }
+  }, [selectedGender]);
 
   useEffect(() => {
-    if (isSuperAdmin && !selectedCompetition) return;
-    if (selectedGender && selectedAgeGroup && selectedCompetitionType) {
-      if (scoreType === 'add') fetchSubmittedTeams();
-      else if (scoreType === 'individual') fetchIndividualScores();
-      else if (scoreType === 'rankings') fetchTeamRankings();
-    } else {
-      setSubmittedTeams([]); setScores([]);
+    if (selectedAgeGroup) {
+      setSelectedCompetitionType(null); setSelectedApparatus(null);
     }
-  }, [selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus, scoreType, selectedCompetition]);
+  }, [selectedAgeGroup]);
+
+  useEffect(() => { setSelectedApparatus(null); }, [selectedCompetitionType]);
+
+  /*
+   * Apparatus is the LAST selection, and nothing is fetched before it is made.
+   *
+   * This used to fire on gender + age group + competition type and then fire
+   * again when apparatus changed — two round trips for one category, the first
+   * of them showing a mixed-apparatus board that the second replaced. The
+   * public page has always waited for the full category; all three pages now
+   * behave the same way.
+   */
+  const categoryComplete = Boolean(
+    selectedCompetition && selectedGender && selectedAgeGroup && selectedCompetitionType && selectedApparatus
+  );
+
+  useEffect(() => {
+    if (!categoryComplete) {
+      setSubmittedTeams([]); setScores([]);
+      return;
+    }
+    if (scoreType === 'add') fetchSubmittedTeams();
+    else if (scoreType === 'individual') fetchIndividualScores();
+    else if (scoreType === 'rankings') fetchTeamRankings();
+  }, [categoryComplete, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus, scoreType, selectedCompetition]);
+
+  const categoryParams = () => ({
+    gender: selectedGender.value,
+    ageGroup: selectedAgeGroup.value,
+    competitionType: selectedCompetitionType.value,
+    apparatus: selectedApparatus.value,
+    ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
+  });
 
   const fetchSubmittedTeams = async () => {
-    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
-    if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { 
-        gender: selectedGender.value, 
-        ageGroup: selectedAgeGroup.value, 
-        competitionType: selectedCompetitionType.value, 
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
-        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
-      };
-      const response = await api.getSubmittedTeams(params);
+      const response = await api.getSubmittedTeams(categoryParams());
       // Handle response structure: {success: true, data: teams array}
       const teams = response.data.data || response.data;
       setSubmittedTeams(Array.isArray(teams) ? teams : []);
-      
-      const summaryResponse = await api.getAllJudgesSummary();
-      // Handle response structure: {success: true, data: {summary: [...], ...}}
-      const summaryData = summaryResponse.data.data || summaryResponse.data;
-      const summaryArray = summaryData.summary || [];
-      const ageGroupInfo = summaryArray.find(item => item.gender === selectedGender.value && item.ageGroup === selectedAgeGroup.value);
-      setAgeGroupStarted(ageGroupInfo?.competitionTypes?.[selectedCompetitionType.value]?.isStarted || false);
     } catch (error) {
       logger.error('Failed to load submitted teams:', error);
       toast.error('Failed to load submitted teams');
@@ -195,57 +287,25 @@ const Scores = () => {
   };
 
   const fetchIndividualScores = async () => {
-    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
-    if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { 
-        gender: selectedGender.value, 
-        ageGroup: selectedAgeGroup.value,
-        competitionType: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
-        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
-      };
-      const response = await api.getIndividualScores(params);
+      const response = await api.getIndividualScores(categoryParams());
       // Handle response structure: {success: true, data: [...]}
       const responseData = response.data.data || response.data;
       const rawScores = Array.isArray(responseData) ? responseData : [];
-      
-      // Transform the data to match the expected structure for ResponsiveIndividualRankings
-      // The API returns players with their scores array, we need to flatten and rank them
-      const transformedScores = [];
-      rawScores.forEach(player => {
-        if (player.scores && Array.isArray(player.scores)) {
-          player.scores.forEach(score => {
-            transformedScores.push({
-              playerId: player.playerId || score.playerId,
-              playerName: player.playerName || score.playerName,
-              teamName: score.teamName || 'Unknown Team',
-              time: score.time,
-              judgeScores: score.judgeScores,
-              judgeSlips: score.judgeSlips,
-              scoreBreakdown: score.scoreBreakdown,
-              panelSize: score.panelSize,
-              averageMarks: score.averageMarks,
-              finalScore: score.finalScore,
-              baseScoreApplied: score.baseScoreApplied,
-              tieBreakNotes: score.tieBreakNotes || '',
-              rank: score.rank
-            });
-          });
-        }
-      });
-      
-      // Sort by final score descending and assign ranks
-      transformedScores.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
-      transformedScores.forEach((score, index) => {
-        if (!score.rank) score.rank = index + 1;
-        score.originalRank = index + 1;
-      });
-      
-      setScores(transformedScores);
-      if (!transformedScores.length) toast.info('No individual scores found');
+
+      /*
+       * Flattened by the shared adapter, and NOT re-ranked here.
+       *
+       * This used to sort by finalScore and number the rows by array index,
+       * which ignored the tie-break rules entirely and ordered level athletes
+       * arbitrarily. `rank` now arrives from the server — the only place the
+       * panel-size rules live — so this page and the public board agree.
+       */
+      setScores(rowsFromIndividualScores(rawScores));
+      if (!rawScores.length) toast.info('No individual scores found');
     } catch (error) {
+      logger.error('Failed to load individual scores:', error);
       toast.error('Failed to load individual scores');
       setScores([]);
     } finally {
@@ -254,34 +314,25 @@ const Scores = () => {
   };
 
   const fetchTeamRankings = async () => {
-    if (!selectedGender || !selectedAgeGroup || !selectedCompetitionType) return;
-    if (isSuperAdmin && !selectedCompetition) return;
     setLoading(true);
     try {
-      const params = { 
-        gender: selectedGender.value, 
-        ageGroup: selectedAgeGroup.value,
-        competitionType: selectedCompetitionType.value,
-        ...(isSuperAdmin && selectedCompetition ? { competition: selectedCompetition.value } : {}),
-        ...(selectedApparatus ? { apparatus: selectedApparatus.value } : {})
-      };
-      const response = await api.getTeamRankings(params);
+      const response = await api.getTeamRankings(categoryParams());
       // Handle response structure: {success: true, data: [...]}
       const responseData = response.data.data || response.data;
       const rawTeams = Array.isArray(responseData) ? responseData : [];
-      
+
       // Transform the data to match the expected structure for ResponsiveTeamRankings
       const transformedTeams = rawTeams.map((team, index) => {
         const playerScores = team.scores || [];
         const playerCount = playerScores.length;
         const teamTotalScore = team.totalScore || team.finalScore || 0;
         const averageTeamScore = playerCount > 0 ? teamTotalScore / playerCount : 0;
-        
+
         // Get top 3 players by final score
         const topPlayerScores = [...playerScores]
           .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
           .slice(0, 3);
-        
+
         return {
           teamId: team._id,
           teamName: team.name,
@@ -290,13 +341,14 @@ const Scores = () => {
           averageTeamScore,
           topPlayerScores,
           rank: team.rank || index + 1,
-          originalRank: index + 1
+          originalRank: index + 1,
         };
       });
-      
+
       setScores(transformedTeams);
       if (!transformedTeams.length) toast.info('No team rankings found');
     } catch (error) {
+      logger.error('Failed to load team rankings:', error);
       toast.error('Failed to load team rankings');
       setScores([]);
     } finally {
@@ -310,166 +362,170 @@ const Scores = () => {
     if (isSuperAdmin) setSelectedCompetition(null);
   };
 
-  const getFilteredData = () => {
-    if (scoreType === 'add') {
-      return submittedTeams.filter(team => {
-        if (!searchTerm) return true;
-        const s = searchTerm.toLowerCase();
-        return (team.name || '').toLowerCase().includes(s) || (team.coach?.name || '').toLowerCase().includes(s);
-      });
-    }
-    return scores.map((score, i) => ({ ...score, originalRank: i + 1 })).filter(score => {
-      if (!searchTerm) return true;
-      const s = searchTerm.toLowerCase();
-      if (scoreType === 'individual') return (score.playerName || '').toLowerCase().includes(s) || (score.teamName || '').toLowerCase().includes(s);
-      if (scoreType === 'rankings') return (score.teamName || '').toLowerCase().includes(s);
-      return true;
-    });
-  };
+  const filteredTeams = submittedTeams.filter((team) => {
+    if (!searchTerm) return true;
+    const s = searchTerm.toLowerCase();
+    return (team.name || '').toLowerCase().includes(s) || (team.coach?.name || '').toLowerCase().includes(s);
+  });
 
-  const competitionOptions = competitions.map(c => ({ value: c._id, label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}` }));
-  const filtersReady = !isSuperAdmin || selectedCompetition;
+  const filteredPlayers = filterRows(scores, searchTerm);
+
+  const filteredTeamRankings = scores
+    .map((score, i) => ({ ...score, originalRank: i + 1 }))
+    .filter((score) => !searchTerm || (score.teamName || '').toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const teamCount = new Set(filteredPlayers.map((p) => p.teamName).filter(Boolean)).size;
+  const categoryLabel = categoryComplete
+    ? `${selectedGender.label} — ${selectedAgeGroup.label} — ${selectedCompetitionType.label} — ${selectedApparatus.label}`
+    : '';
 
   return (
     <div className="space-y-6">
       <FadeIn>
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring System</p>
-          <h2 className="text-2xl font-black text-white mb-6">Scores & Rankings</h2>
+          <h2 className="text-2xl font-black text-white mb-6">Scores &amp; Rankings</h2>
 
-          {isSuperAdmin && (
-            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
-              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
-              </label>
-              <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
-                placeholder={loadingCompetitions ? 'Loading competitions…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${ADMIN_COLORS.saffron}80` }}>Select a competition to enable filters.</p>}
-            </div>
-          )}
+          <ScoreTypeTabs value={scoreType} onChange={setScoreType} />
 
-          <div className={!filtersReady ? 'opacity-40 pointer-events-none' : ''}>
-            <ResponsiveScoreFilters
-              scoreType={scoreType} onScoreTypeChange={setScoreType}
-              selectedGender={selectedGender} onGenderChange={setSelectedGender}
-              selectedAgeGroup={selectedAgeGroup} onAgeGroupChange={setSelectedAgeGroup}
-              selectedCompetitionType={selectedCompetitionType} onCompetitionTypeChange={setSelectedCompetitionType}
-              selectedApparatus={selectedApparatus} onApparatusChange={setSelectedApparatus}
-              searchTerm={searchTerm} onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters} ageGroups={availableAgeGroups} competitionTypes={competitionTypes}
-              apparatusOptions={apparatusOptions}
-            />
-          </div>
+          <ScoreCategoryFilters
+            competitionOptions={competitionOptions}
+            selectedCompetition={selectedCompetition}
+            onCompetitionChange={setSelectedCompetition}
+            loadingCompetitions={loadingCompetitions}
+            competitionLocked={!isSuperAdmin}
+            selectedGender={selectedGender}
+            onGenderChange={setSelectedGender}
+            ageGroupOptions={ageGroupOptions}
+            selectedAgeGroup={selectedAgeGroup}
+            onAgeGroupChange={setSelectedAgeGroup}
+            competitionTypeOptions={competitionTypeOptions}
+            selectedCompetitionType={selectedCompetitionType}
+            onCompetitionTypeChange={setSelectedCompetitionType}
+            apparatusOptions={apparatusOptions}
+            selectedApparatus={selectedApparatus}
+            onApparatusChange={setSelectedApparatus}
+            onClearFilters={handleClearFilters}
+          />
 
-          {!filtersReady ? (
-            <EmptyState icon={Filter} title="Select a Competition First" desc="Choose a competition above to start filtering scores." />
-          ) : !selectedGender || !selectedAgeGroup || !selectedCompetitionType ? (
-            <EmptyState icon={Filter} title="Select Filters to View Scores" desc="Select gender, age group, and competition type to load data." />
-          ) : loading ? (
-            <LoadingState label="Loading data…" />
-          ) : (
-            <div>
-              {scoreType === 'add' && (
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-4">Add New Score</h3>
-                  {submittedTeams.length > 0 && (
-                    <>
-                      <InfoBanner color={ADMIN_COLORS.green}>
-                        <span className="text-white/70">Showing teams for: </span>
-                        <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label} — {selectedCompetitionType.label}</span>
-                        <span className="text-white/50 ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${getFilteredData().length} after search`})</span>
-                      </InfoBanner>
-                      <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
-                    </>
-                  )}
-                  <div className="space-y-4">
-                    {submittedTeams.length > 0 ? (
-                      getFilteredData().length === 0 && searchTerm ? (
-                        <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                          action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
-                      ) : (
-                        <ResponsiveTeamTable
-                          teams={getFilteredData()}
-                          onTeamClick={(teamId) => {
-                            const team = submittedTeams.find(t => t._id === teamId);
-                            if (team) navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } });
-                          }}
-                          searchTerm={searchTerm}
-                          renderMobileCard={(team) => (
-                            <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                              <h4 className="font-bold text-white">Team: {team.name}</h4>
-                              <p className="text-sm text-white/50 mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
-                              <p className="text-xs text-white/30 mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
-                              <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                <span className="text-sm text-white/50">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
-                                <motion.button
-                                  onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white min-h-[36px]"
-                                  style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
-                                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-                                  View Details →
-                                </motion.button>
+          <div className="mt-6">
+            {!categoryComplete ? (
+              <EmptyState icon={Filter} title="Select Filters to View Scores"
+                desc="Choose a competition, gender, age group, competition type and apparatus. Results load once the apparatus is picked." />
+            ) : loading ? (
+              <LoadingState label="Loading data…" />
+            ) : (
+              <div>
+                {scoreType === 'add' && (
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-4">Add New Score</h3>
+                    {submittedTeams.length > 0 && (
+                      <>
+                        <InfoBanner color={ADMIN_COLORS.green}>
+                          <span className="text-white/70">Showing teams for: </span>
+                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-white/50 ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
+                        </InfoBanner>
+                        <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
+                      </>
+                    )}
+                    <div className="space-y-4">
+                      {submittedTeams.length > 0 ? (
+                        filteredTeams.length === 0 && searchTerm ? (
+                          <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                        ) : (
+                          <ResponsiveTeamTable
+                            teams={filteredTeams}
+                            onTeamClick={(teamId) => {
+                              const team = submittedTeams.find(t => t._id === teamId);
+                              if (team) navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } });
+                            }}
+                            searchTerm={searchTerm}
+                            renderMobileCard={(team) => (
+                              <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                                <h4 className="font-bold text-white">Team: {team.name}</h4>
+                                <p className="text-sm text-white/50 mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
+                                <p className="text-xs text-white/30 mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                                  <span className="text-sm text-white/50">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
+                                  <motion.button
+                                    onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white min-h-[36px]"
+                                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
+                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                                    View Details →
+                                  </motion.button>
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        />
-                      )
+                            )}
+                          />
+                        )
+                      ) : (
+                        <EmptyState icon={Trophy} title="No teams submitted yet" desc="Teams appear here after coaches complete registration and payment." />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {scoreType === 'individual' && (
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-4">Individual Rankings</h3>
+                    {scores.length > 0 ? (
+                      <>
+                        <InfoBanner color={ADMIN_COLORS.blue}>
+                          <span className="text-white/70">Individual rankings for: </span>
+                          <span className="font-bold text-white">{categoryLabel}</span>
+                        </InfoBanner>
+                        <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
+
+                        <div className="flex items-center gap-2 px-1 mb-4">
+                          <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
+                          <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                            {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
+                            {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
+                          </span>
+                        </div>
+
+                        {filteredPlayers.length === 0 && searchTerm ? (
+                          <EmptyState icon={Search} title="No players found" desc={`No players match "${searchTerm}"`}
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                        ) : (
+                          <PlayerRankingBoard players={filteredPlayers} />
+                        )}
+                      </>
                     ) : (
-                      <EmptyState icon={Trophy} title="No teams submitted yet" desc="Teams appear here after coaches complete registration and payment." />
+                      <EmptyState icon={Trophy} title="No individual scores found" desc="Scores appear here after judges complete scoring." />
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {scoreType === 'individual' && (
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-4">Individual Rankings</h3>
-                  {scores.length > 0 ? (
-                    <>
-                      <InfoBanner color={ADMIN_COLORS.blue}>
-                        <span className="text-white/70">Individual rankings for: </span>
-                        <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
-                        <span className="text-white/50 ml-2">({scores.length} player{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${getFilteredData().length} after search`})</span>
-                      </InfoBanner>
-                      <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
-                      {getFilteredData().length === 0 && searchTerm ? (
-                        <EmptyState icon={Search} title="No players found" desc={`No players match "${searchTerm}"`}
-                          action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
-                      ) : (
-                        <ResponsiveIndividualRankings players={getFilteredData()} searchTerm={searchTerm} />
-                      )}
-                    </>
-                  ) : (
-                    <EmptyState icon={Trophy} title="No individual scores found" desc="Scores appear here after judges complete scoring." />
-                  )}
-                </div>
-              )}
-
-              {scoreType === 'rankings' && (
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-4">Team Rankings</h3>
-                  {scores.length > 0 ? (
-                    <>
-                      <InfoBanner color={ADMIN_COLORS.purple}>
-                        <span className="text-white/70">Team rankings for: </span>
-                        <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
-                        <span className="text-white/50 ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${getFilteredData().length} after search`})</span>
-                      </InfoBanner>
-                      <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
-                      {getFilteredData().length === 0 && searchTerm ? (
-                        <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                          action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
-                      ) : (
-                        <ResponsiveTeamRankings teams={getFilteredData()} searchTerm={searchTerm} />
-                      )}
-                    </>
-                  ) : (
-                    <EmptyState icon={Trophy} title="No team rankings found" desc="Rankings appear here after teams complete scoring." />
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                {scoreType === 'rankings' && (
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-4">Team Rankings</h3>
+                    {scores.length > 0 ? (
+                      <>
+                        <InfoBanner color={ADMIN_COLORS.purple}>
+                          <span className="text-white/70">Team rankings for: </span>
+                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-white/50 ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
+                        </InfoBanner>
+                        <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
+                        {filteredTeamRankings.length === 0 && searchTerm ? (
+                          <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                        ) : (
+                          <ResponsiveTeamRankings teams={filteredTeamRankings} searchTerm={searchTerm} />
+                        )}
+                      </>
+                    ) : (
+                      <EmptyState icon={Trophy} title="No team rankings found" desc="Rankings appear here after teams complete scoring." />
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </DarkCard>
       </FadeIn>
     </div>

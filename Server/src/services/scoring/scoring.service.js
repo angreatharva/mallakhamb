@@ -26,6 +26,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
 } = require('../../utils/data/user-projection.util');
+const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 
 class ScoringService {
   /**
@@ -705,11 +706,25 @@ class ScoringService {
         query.competitionType = toCompetitionTypeDisplay(competitionType);
       }
 
-      const scores = await this.scoreRepository.find(query);
+      /*
+       * The team comes with the score.
+       *
+       * A playerScores entry records the athlete but not the squad — the team
+       * lives on the parent document. Without this populate every row on the
+       * admin results board read "Unknown Team", while the same athlete on the
+       * public board showed the real name, because that feed populates it.
+       * `SUBMITTED_TEAM_*` projections keep it to the name; nothing here needs
+       * the coach's contact details.
+       */
+      const scores = await this.scoreRepository.find(query, {
+        populate: ['teamId'],
+      });
 
       const playerScoresMap = new Map();
 
       scores.forEach(scoreDoc => {
+        const teamName = scoreDoc.teamId?.name || 'Unknown Team';
+
         (scoreDoc.playerScores || []).forEach(ps => {
           const playerId = ps.playerId?.toString();
           if (playerId) {
@@ -717,12 +732,12 @@ class ScoringService {
             if (gender && ps.playerGender && ps.playerGender !== gender) {
               return; // Skip this player score
             }
-            
+
             // Apply apparatus filter if provided
             if (apparatus && ps.apparatus && ps.apparatus !== apparatus) {
               return; // Skip this player score
             }
-            
+
             if (!playerScoresMap.has(playerId)) {
               playerScoresMap.set(playerId, {
                 playerId: ps.playerId,
@@ -732,12 +747,26 @@ class ScoringService {
                 scores: []
               });
             }
-            playerScoresMap.get(playerId).scores.push(ps);
+            // Enriched for the same reason the public feed enriches: a panel
+            // that is still scoring has judge marks and no computed total yet,
+            // and an admin watching it live should see the marks add up rather
+            // than a row of 0.00.
+            playerScoresMap.get(playerId).scores.push({
+              ...enrichPlayerScore(ps),
+              teamName
+            });
           }
         });
       });
 
       const individualScores = Array.from(playerScoresMap.values());
+
+      // Ranked on the server so this feed and the public one agree on placings
+      // and on how each tie was settled.
+      rankPlayerRows(
+        individualScores.flatMap((player) => player.scores),
+        query.competitionType
+      );
 
       this.logger.info('Individual scores retrieved', { 
         competitionId, 
@@ -798,26 +827,44 @@ class ScoringService {
   }
 
   /**
-   * Get individual player rankings
+   * Get individual player rankings, one standing per apparatus, with the
+   * tie-break rules applied.
+   *
    * @param {string} competitionId - Competition ID
    * @param {string} ageGroup - Age group
-   * @returns {Promise<Array>} Individual rankings
+   * @returns {Promise<Array>} Ranked performances
    */
   async getIndividualRankings(competitionId, ageGroup) {
     try {
       const individualScores = await this.getIndividualScores(competitionId, ageGroup);
 
-      // Calculate final score for each player
-      const playersWithFinalScores = individualScores.map(player => {
-        const finalScore = player.scores.reduce((sum, s) => sum + (s.finalScore || 0), 0);
-        return {
-          ...player,
-          finalScore
-        };
-      });
+      /*
+       * One row per performance, not one per athlete.
+       *
+       * This used to add up an athlete's finalScore across every apparatus and
+       * rank that total. Two things were wrong with it. Pole and Rope are
+       * separate events on separate score sheets, so the total ranked athletes
+       * who never competed against each other. And the tie-break rules read
+       * properties of a single performance — the senior judge's mark, the
+       * panel that sat, the time on the clock — none of which survive being
+       * summed across apparatus, so a tie could not be broken at all.
+       *
+       * Each row therefore keeps the whole judging record;
+       * getIndividualRankingsWithTieBreaker groups them back into one standing
+       * per apparatus before ranking.
+       */
+      const performances = individualScores.flatMap((player) =>
+        (player.scores || []).map((score) => ({
+          ...score,
+          playerId: player.playerId,
+          playerName: player.playerName,
+          playerGender: player.playerGender,
+          playerAgeGroup: player.playerAgeGroup,
+          finalScore: score.finalScore || 0
+        }))
+      );
 
-      // Calculate rankings using CalculationService
-      const rankings = this.calculationService.calculateRankings(playersWithFinalScores);
+      const rankings = this.calculationService.getIndividualRankingsWithTieBreaker(performances);
 
       this.logger.info('Individual rankings calculated', { 
         competitionId, 

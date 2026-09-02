@@ -16,10 +16,6 @@ const {
   aggregateJudgeScores
 } = require('../../utils/scoring/calculation.util');
 const {
-  applyTieBreaker,
-  determineTieBreakerWinner
-} = require('../../utils/scoring/tie-breaker.util');
-const {
   calculateTeamRankings,
   calculateIndividualRankingsByApparatus,
   getTopTeams,
@@ -547,17 +543,22 @@ class CalculationService {
   }
 
   /**
-   * Get team rankings with tie-breaker applied
-   * 
+   * Get team rankings.
+   *
+   * Despite the name, no tie-break rule runs here: Team Championship places on
+   * the summed team total, and teams level on that total share a placing. The
+   * per-panel rules (time, senior judge, panel mean) describe one athlete's
+   * performance and have no team-level equivalent.
+   *
    * @param {Array<Object>} teams - Array of team objects
    * @param {string} competitionType - Type of competition
-   * @returns {Array<Object>} Ranked teams with tie-breaker
+   * @returns {Array<Object>} Ranked teams
    */
   getTeamRankingsWithTieBreaker(teams, competitionType = 'Competition II') {
     try {
       const rankedTeams = calculateTeamRankings(teams, competitionType);
 
-      this.logger.debug('Team rankings with tie-breaker calculated', {
+      this.logger.debug('Team rankings calculated', {
         teamCount: rankedTeams.length,
         competitionType
       });
