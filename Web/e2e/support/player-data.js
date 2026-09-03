@@ -13,6 +13,8 @@
  *                          runs don't collide on "email already registered"
  */
 
+import { passwordFor } from './people.js';
+
 const DEFAULTS = {
   firstName: 'Preetesh',
   lastName: 'Gamre',
@@ -22,7 +24,9 @@ const DEFAULTS = {
   // the ISO value regardless of the dd/mm/yyyy the browser displays.
   dateOfBirth: '1999-12-03',
   gender: 'Male',
-  password: 'Preetesh@2026',
+  // Derived, not restated: `people.js` owns the convention every seeded
+  // account follows, so the password is not written down a second time here.
+  password: passwordFor({ firstName: 'Preetesh' }),
 };
 
 /**

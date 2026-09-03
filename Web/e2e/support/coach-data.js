@@ -17,12 +17,16 @@
  *                         name, so repeated runs do not collide
  */
 
+import { passwordFor } from './people.js';
+
 const DEFAULTS = {
   firstName: 'Yatin',
   lastName: 'Nachre',
   email: 'yatin.n@gmail.com',
   phone: '8451888899',
-  password: 'Yatin@2026',
+  // Derived, not restated: `people.js` owns the convention every seeded
+  // account follows, so the password is not written down a second time here.
+  password: passwordFor({ firstName: 'Yatin' }),
   teamName: 'AIGM-A',
   teamDescription: 'AIGM TEAM A',
   // The stored name, without the year — the card renders name + year + place,

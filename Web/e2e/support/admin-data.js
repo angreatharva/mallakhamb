@@ -37,6 +37,22 @@ export const ADMIN = {
 };
 
 /**
+ * The platform owner's login. Matches `Server/scripts/createSuperAdmin.js`.
+ *
+ * Same guard as ADMIN, and for a stronger reason: a super admin can read and
+ * edit every meet on the deployment, not just one. The responsive audit signs
+ * in as this account to photograph the superadmin screens.
+ *
+ * Both are GETTERS, so the localhost check runs when a spec actually reaches
+ * for a credential rather than when this module is imported — importing it to
+ * read `COMPETITION_PLACE` must not throw.
+ */
+export const SUPERADMIN = {
+  get email() { return required('SUPERADMIN_EMAIL', 'Superadmin@gmail.com'); },
+  get password() { return required('SUPERADMIN_PASSWORD', 'Superadmin@2026'); },
+};
+
+/**
  * Which meet to work on.
  *
  * The seeded meets share a name and a year and differ only by place, so the

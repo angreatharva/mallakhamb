@@ -6,15 +6,52 @@
  */
 
 import { clearSession } from './browser.js';
-import { ADMIN } from './admin-data.js';
+import { ADMIN, SUPERADMIN } from './admin-data.js';
+import { JUDGE_ROSTER } from './judge-roster.js';
+import { COACH_ROSTER } from './coach-roster.js';
+import { ROSTER as PLAYER_ROSTER } from './roster.js';
 
-/** Seeded logins. The email/password conventions live in ./people.js. */
+/**
+ * The seeded person with this first name.
+ *
+ * Named rather than indexed: the audit wants a judge who chairs a panel, a
+ * coach who owns a team and a player who is in a squad, and position in the
+ * roster does not promise any of that.
+ *
+ * @param {{firstName: string, email: string, password: string}[]} roster
+ * @param {string} firstName
+ * @param {string} label
+ */
+const pick = (roster, firstName, label) => {
+  const found = roster.find((person) => person.firstName === firstName);
+  if (!found) {
+    throw new Error(
+      `No "${firstName}" on the ${label} roster, so this audit has no ${label} to sign in as. ` +
+      `Either the roster was edited or ./support/audit-routes.js is naming the wrong person.`
+    );
+  }
+  return { email: found.email, password: found.password };
+};
+
+/**
+ * Who to sign in as, per role.
+ *
+ * NO PASSWORDS ARE WRITTEN HERE. The three seeded roles derive theirs the same
+ * way everything else does — `people.js` builds an email and a password from
+ * the person's name, and the rosters are the single record of who exists — so
+ * this file cannot drift from them and adds no new secret to the repository.
+ *
+ * The admin and super admin are not on a roster; they come from `admin-data.js`,
+ * which reads the environment and refuses its local defaults off localhost.
+ * Both are accessed lazily through getters, so that refusal happens when a spec
+ * signs in rather than when this module is imported.
+ */
 export const CREDENTIALS = {
-  judge: { email: 'ravi.g@gmail.com', password: 'Ravi@2026' },
-  coach: { email: 'rajesh.a@gmail.com', password: 'Rajesh@2026' },
-  player: { email: 'atharva.a@gmail.com', password: 'Atharva@2026' },
-  admin: { email: ADMIN.email, password: ADMIN.password },
-  superadmin: { email: 'Superadmin@gmail.com', password: 'Superadmin@2026' },
+  judge: pick(JUDGE_ROSTER, 'Ravi', 'judge'),
+  coach: pick(COACH_ROSTER, 'Rajesh', 'coach'),
+  player: pick(PLAYER_ROSTER, 'Atharva', 'player'),
+  admin: ADMIN,
+  superadmin: SUPERADMIN,
 };
 
 /**
