@@ -65,9 +65,18 @@ function AppContent() {
           * than something CSS can reach, so this is one of the few places the
           * breakpoint has to be read in JavaScript.
           */}
+        {/*
+          * Clear of the header on DESKTOP too. The default offset is ~16px,
+          * which puts a toast squarely over the top-right of a 64px header —
+          * i.e. over the Logout button on every role's dashboard. It is only
+          * for the four seconds the toast lives, but "the welcome toast eats
+          * your first click on Logout" is a real thing users hit, and it was
+          * caught here by an e2e click failing with the toast named as the
+          * element intercepting pointer events.
+          */}
         <Toaster
           position={isPhone ? 'top-center' : 'top-right'}
-          containerStyle={isPhone ? { top: 76, left: 12, right: 12 } : undefined}
+          containerStyle={isPhone ? { top: 76, left: 12, right: 12 } : { top: 76 }}
           toastOptions={{
             duration: 4000,
             style: {

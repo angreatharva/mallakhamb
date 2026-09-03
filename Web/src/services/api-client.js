@@ -125,7 +125,7 @@ const UNSAFE_METHODS = new Set(['post', 'put', 'patch', 'delete']);
  * unnecessary, and if it is enabled the request will 403 and surface properly.
  * @returns {Promise<string|null>}
  */
-async function ensureCsrfToken() {
+export async function ensureCsrfToken() {
   if (csrfToken) return csrfToken;
   if (csrfRequest) return csrfRequest;
 

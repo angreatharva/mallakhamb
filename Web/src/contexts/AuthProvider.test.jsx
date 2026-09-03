@@ -37,6 +37,14 @@ vi.mock('@/services/auth/auth.api', () => ({
   },
 }));
 
+// handleLogout asks for a CSRF token before POSTing /auth/logout. The real
+// module issues an axios GET that never settles under jsdom, which would make
+// this suite depend on the two-second bail-out in the handler rather than on
+// the logout logic under test.
+vi.mock('@/services/api-client', () => ({
+  ensureCsrfToken: vi.fn().mockResolvedValue('test-csrf-token'),
+}));
+
 // Helper to access context in tests
 const ContextConsumer = () => {
   const { user, userType, login, logout } = useContext(AuthContext);
@@ -144,9 +152,37 @@ describe('AuthProvider', () => {
     });
 
     expect(secureStorage.clearForRole).toHaveBeenCalledWith('admin');
-    
+
     expect(screen.getByTestId('user').textContent).toBe('null');
     expect(screen.getByTestId('userType').textContent).toBe('null');
+  });
+
+  /*
+   * The revoke call has to carry CSRF, or the server rejects it with 403
+   * CSRF_TOKEN_MISSING and clears nothing — while the handler's `.catch`
+   * swallows the failure and the local clear above still makes it look like a
+   * clean logout. That is how this shipped: a logout that emptied the tab and
+   * left the refresh cookie valid for its full lifetime.
+   */
+  it('sends the CSRF header when revoking the session', async () => {
+    secureStorage.getItem.mockImplementation((key) => {
+      if (key === 'admin_user') return JSON.stringify({ name: 'Admin User' });
+      if (key === 'admin_token') return 'stored-admin-token';
+      return null;
+    });
+
+    renderAuthProvider('/admin/dashboard');
+    await act(async () => {
+      screen.getByText('Logout').click();
+    });
+
+    const [url, init] = global.fetch.mock.calls.at(-1);
+    expect(url).toContain('/auth/logout');
+    expect(init.headers['X-CSRF-Token']).toBe('test-csrf-token');
+    // Bearer is the other way past the CSRF gate, and is what tells
+    // authMiddleware whose session to revoke.
+    expect(init.headers.Authorization).toBe('Bearer stored-admin-token');
+    expect(init.credentials).toBe('include');
   });
 
   it('listens for AUTH_EXPIRED events and logs user out', () => {

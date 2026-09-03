@@ -15,6 +15,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import apiConfig from '@/config/api.config';
 import { logger } from '@/infrastructure/logger';
 import { authAPI } from '@/services/auth/auth.api';
+import { ensureCsrfToken } from '@/services/api-client';
 import {
   authEventBus,
   AUTH_EXPIRED,
@@ -198,10 +199,42 @@ export default function AuthProvider({ children }) {
       const roleToLogout = currentRole || userType;
 
       try {
+        /*
+         * Raw fetch on purpose — going through `api` would re-enter the
+         * response interceptor, and a 401 here would try a silent refresh for
+         * the session we are in the middle of ending.
+         *
+         * But skipping the client also skips its REQUEST interceptor, which is
+         * what normally attaches these two headers, and `POST /auth/logout`
+         * needs both: `authMiddleware` to know whose session to revoke, and
+         * either a Bearer token or the double-submit CSRF header to get past
+         * `csrf.middleware`. With neither, the server answered 403
+         * CSRF_TOKEN_MISSING and revoked nothing — while the `.catch` below
+         * swallowed it and the client-side clear made it LOOK like a clean
+         * logout. The refresh cookie stayed valid for its full lifetime, so on
+         * a shared judging tablet the next person could still resume the
+         * previous session. `attemptSilentRefresh` in api-client.js documents
+         * the same trap; this path was simply missed.
+         */
+        /*
+         * Never let logout HANG on the token fetch. If the API is unreachable
+         * the CSRF request can sit unresolved indefinitely, and awaiting it
+         * would strand the user in a session they have asked to end — the
+         * local clear below is what actually gets them out. Two seconds, then
+         * go without it: the Bearer header usually carries the request anyway,
+         * and a failed revoke is recoverable where a stuck logout is not.
+         */
+        const csrf = await Promise.race([
+          ensureCsrfToken().catch(() => null),
+          new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+        ]);
+        const token = secureStorage.getItem(`${roleToLogout}_token`);
         await fetch(`${apiConfig.getBaseUrl()}/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           credentials: 'include' // Send httpOnly cookies
         }).catch(() => {});
