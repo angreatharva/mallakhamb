@@ -29,18 +29,21 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   mkdirSync(OUT, { recursive: true });
 
   /*
-   * Present the seeded meet as if it had not been scored yet.
+   * OFF by default — set WALK_UNLOCK=1 to enable.
    *
-   * Every category in this database is finalized, and a finalized athlete's
-   * sheet is deliberately not openable — so without this the walk can never
-   * reach the score-entry screen, which is the one the brief cares most about.
-   * Reopening the scores for real is a destructive, meet-wide act reserved for
-   * a superadmin, so the flags are cleared IN THE RESPONSE instead: the
-   * database is untouched and the client renders its unscored layout.
+   * When the meet has already been judged to completion, every roster row is
+   * FINALIZED and a finalized athlete's sheet is deliberately not openable, so
+   * the walk can never reach the score-entry screen — the one the brief cares
+   * most about. Reopening scores for real is a destructive, meet-wide act
+   * reserved for a superadmin (see Server/scripts/resetScores.js), so this
+   * clears the lock flags IN THE RESPONSE instead: the database is untouched
+   * and the client renders its unscored layout.
    *
-   * This is a layout probe, not a functional test — nothing here submits.
+   * Prefer a real `resetScores.js --commit`: this shows the layout but the
+   * page is working from data the server never sent, so anything downstream of
+   * a real slip is not being exercised.
    */
-  await page.route('**/api/judge/**', async (route) => {
+  if (process.env.WALK_UNLOCK) await page.route('**/api/judge/**', async (route) => {
     // A request still in flight when the test ends makes `fetch` throw; let
     // those fall through rather than failing the run during teardown.
     try {
@@ -151,14 +154,79 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
 
   if (reached) {
     await shoot('4-score-sheet');
-    // The sheet is long; capture the sections a judge scrolls to.
-    for (const [i, label] of [/Execution/i, /Combination/i, /Submit/i].entries()) {
-      const section = page.getByText(label).first();
-      if (await section.count()) {
-        await section.scrollIntoViewIfNeeded().catch(() => {});
-        await page.waitForTimeout(300);
-        await shoot(`5-${i + 1}-sheet-${label.source.replace(/\W/g, '')}`);
+
+    /*
+     * Nothing may be trapped under the sticky Submit bar.
+     *
+     * The sheet ends in a fixed footer carrying the running total and Submit.
+     * A fixed element does not reserve space, so if the scrollable content
+     * does not end with padding at least as tall as the bar, the last control
+     * on the page sits permanently underneath it — reachable by neither a
+     * scroll nor a tap. Scroll to the very bottom and check what overlaps.
+     */
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }));
+    await page.waitForTimeout(600);
+    await shoot('6-sheet-bottom');
+
+    const trapped = await page.evaluate(() => {
+      // The bar is the fixed element anchored to the bottom of the viewport.
+      const bars = [...document.querySelectorAll('body *')].filter((el) => {
+        const s = getComputedStyle(el);
+        if (s.position !== 'fixed') return false;
+        const r = el.getBoundingClientRect();
+        return r.height > 0 && r.width > window.innerWidth * 0.6
+          && Math.abs(r.bottom - window.innerHeight) < 4;
+      });
+      if (!bars.length) return { bar: null, covered: [] };
+      const bar = bars.sort((a, b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)[0];
+      const barRect = bar.getBoundingClientRect();
+
+      const covered = [];
+      for (const el of document.querySelectorAll('button, a[href], input, select, textarea')) {
+        if (bar.contains(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        // Overlaps the bar vertically and is inside the viewport horizontally.
+        if (r.bottom > barRect.top + 2 && r.top < barRect.bottom && r.right > 0 && r.left < window.innerWidth) {
+          // Is the bar actually the thing on top at that point?
+          const probe = document.elementFromPoint(
+            Math.min(Math.max(r.left + r.width / 2, 1), window.innerWidth - 1),
+            Math.min(Math.max(r.top + r.height / 2, 1), window.innerHeight - 1)
+          );
+          if (probe && (probe === bar || bar.contains(probe))) {
+            covered.push({
+              el: `${el.tagName.toLowerCase()}.${(el.className || '').toString().trim().split(/\s+/).slice(0, 4).join('.')}`,
+              text: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40),
+            });
+          }
+        }
       }
+      return { bar: Math.round(barRect.height), covered };
+    });
+
+    if (trapped.covered.length) {
+      console.log(`  TRAPPED UNDER STICKY BAR (${trapped.bar}px):`);
+      for (const c of trapped.covered) console.log(`      ▣ ${c.el} "${c.text}"`);
+    } else {
+      console.log(`  sticky bar ${trapped.bar}px — nothing trapped beneath it`);
+    }
+    expect(trapped.covered, 'controls hidden under the sticky submit bar').toEqual([]);
+    /*
+     * The mobile sheet splits the slip across three tabs, so scrolling alone
+     * only ever shows Difficulty — the other two panels have to be opened to
+     * be measured at all. These are the controls a judge actually works in,
+     * so each one is switched to, shot and measured in turn.
+     */
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    for (const [i, tab] of ['Difficulty', 'Combination', 'Exec & Orig'].entries()) {
+      const button = page.getByRole('button', { name: tab, exact: true }).first();
+      if (!(await button.count())) {
+        console.log(`  tab not found: ${tab}`);
+        continue;
+      }
+      await button.click().catch(() => {});
+      await page.waitForTimeout(600);
+      await shoot(`5-${i + 1}-tab-${tab.replace(/\W/g, '')}`);
     }
   } else {
     /*

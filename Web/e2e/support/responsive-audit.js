@@ -122,6 +122,14 @@ export const measurePage = async (page, { checkTouchTargets = true } = {}) =>
           const cs = getComputedStyle(el);
           if (cs.visibility === 'hidden' || cs.display === 'none') continue;
           /*
+           * A visually-hidden input is not a tap target — it is the accessible
+           * half of a styled control whose LABEL is what a finger hits. The
+           * combination checklist is built this way, so every checkbox on it
+           * reported as a 1x1 failure.
+           */
+          if (el.classList.contains('sr-only') || (cs.clip === 'rect(0px, 0px, 0px, 0px)')) continue;
+          if (el.labels?.length && [...el.labels].some((l) => l.getBoundingClientRect().height >= 43.5)) continue;
+          /*
            * 44px per WCAG 2.5.5 / the project's own TOUCH_TARGET.minimum,
            * less half a pixel. Percentage-width controls land on heights like
            * 43.99 that report as "44x44 is too small" once rounded for the

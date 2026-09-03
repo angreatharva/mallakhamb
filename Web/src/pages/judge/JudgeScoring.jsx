@@ -830,7 +830,7 @@ const JudgeSlip = () => {
 
                           <motion.button
                             onClick={() => setShowCopModal(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-all duration-200"
+                            className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200"
                             style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >
