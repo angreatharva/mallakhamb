@@ -153,25 +153,23 @@ export const openJudges = async (page, competitionId) => {
  * @param {string} target.gender
  * @param {string} target.ageGroup - stored form, e.g. `Under10`
  * @param {string} target.competitionType - slug, e.g. `competition_1`
- * @param {string} [target.apparatus] - defaults to the category-wide panel
  */
-export const selectPanel = async (page, { action, gender, ageGroup, competitionType, apparatus = 'All apparatus' }) => {
+export const selectPanel = async (page, { action, gender, ageGroup, competitionType }) => {
   await choose(page, 'Judge Action', action === 'add' ? 'Add Judge' : 'Judge List');
   await choose(page, 'Gender', gender);
   await choose(page, 'Age Group', ageGroupLabel(ageGroup));
   await choose(page, 'Competition Type', COMPETITION_TYPE_LABEL[competitionType]);
 
   /*
-   * Apparatus is offered only when the meet declares an apparatusConfig, and
-   * "All apparatus" is what seats ONE panel for the whole category — the same
-   * judges score Pole, Hanging and Rope, and the score sheet follows the
-   * athlete's registration rather than the seat. Choosing a named apparatus
-   * instead gives an athlete entered for three a panel for one of them and
-   * none for the other two.
+   * NO APPARATUS STEP. Manage Judges used to ask for one, defaulting here to
+   * "All apparatus"; the question is gone and every seat is written
+   * `apparatus: null`.
+   *
+   * It is not a step that can be re-added on its own. `Judge`'s unique indexes
+   * carry no apparatus, so a meet holds one panel per category — seating that
+   * panel for a named apparatus leaves the athletes entered for the other two
+   * with no panel and their slips refused.
    */
-  if (await dropdown(page, 'Apparatus').count()) {
-    await choose(page, 'Apparatus', apparatus);
-  }
 
   // Every ladder change re-queries the seated judges before the screen settles.
   await expect(page.getByText('Checking existing judges…')).toBeHidden({ timeout: 20_000 });

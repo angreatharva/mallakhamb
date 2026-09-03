@@ -181,8 +181,10 @@ async function seatAll() {
             gender: panel.gender,
             ageGroup: panel.ageGroup,
             competitionTypes: [competitionType],
-            // One panel judges every apparatus in its category; the score sheet
-            // follows the ATHLETE's registration, not the seat.
+            // One panel judges every apparatus in its category, and this is the
+            // only shape a seat comes in — Manage Judges no longer asks for an
+            // apparatus. The score sheet follows the ATHLETE's registration and
+            // the judge picks what they are scoring on their own dashboard.
             apparatus: null,
             competition: competition._id,
             judges,

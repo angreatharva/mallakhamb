@@ -132,11 +132,17 @@ staffing the same seats again with that type selected. Scores stay separate
 regardless: a Score document's identity is
 `{teamId, gender, ageGroup, competition, competitionType}`.
 
-Seats carry **no apparatus** ("All apparatus"). One panel judges every apparatus
-in its category and the score sheet follows the ATHLETE's registration. A
-per-apparatus panel would give somebody entered for three a panel for one of
-them and none for the other two, and their slips are then refused with "Only a
-panel judge or an admin can submit a judge slip".
+Seats carry **no apparatus**, and Manage Judges no longer asks for one — one
+panel judges every apparatus in its category and the score sheet follows the
+ATHLETE's registration. A per-apparatus panel would give somebody entered for
+three a panel for one of them and none for the other two, and their slips are
+then refused with "Only a panel judge or an admin can submit a judge slip".
+Making panels genuinely per-apparatus means widening both `Judge` unique
+indexes to include it first; neither carries apparatus today.
+
+The **judge** still picks one on their own dashboard, and must: it decides the
+combination checklist the slip renders and which of an athlete's scores the
+marks belong to. That is a view, not a permission.
 
 ## Running the meet again
 

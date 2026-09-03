@@ -351,7 +351,6 @@ const Judges = () => {
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
-  const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [judgeType, setJudgeType] = useState(null);
   const [judgesExistForSelection, setJudgesExistForSelection] = useState(false);
   const [checkingExistingJudges, setCheckingExistingJudges] = useState(false);
@@ -372,27 +371,24 @@ const Judges = () => {
   const hasCompetitionType = !!selectedCompetitionType;
 
   /*
-   * "All apparatus" seats one panel for the whole category — the same judges
-   * score Pole, Hanging and Rope — and is the first option because it is the
-   * common arrangement.
+   * A PANEL IS SEATED FOR A CATEGORY, NOT FOR AN APPARATUS.
    *
-   * Without it the picker was mandatory whenever the competition declared any
-   * apparatus, so EVERY panel came out apparatus-scoped. An athlete entered
-   * for three apparatus then had a panel for one of them and none for the
-   * other two: their slips were refused with "Only a panel judge or an admin
-   * can submit a judge slip", because the judge genuinely held no seat for
-   * that apparatus. Choosing this leaves the seat's apparatus null, which
-   * `assignmentCoversCategory` reads as covering all of them.
+   * This screen used to ask for one, offering "All apparatus" alongside Pole,
+   * Hanging and Rope. The apparatus question is gone entirely: every seat is
+   * written with `apparatus: null`, which `assignmentCoversCategory` reads as
+   * covering all of them, and the judge chooses what they are scoring right
+   * now on their own dashboard.
+   *
+   * It is not a free choice to give back. `Judge`'s unique indexes are
+   * {gender, ageGroup, judgeNo, competition} and
+   * {gender, ageGroup, judgeType, competition} — NEITHER carries apparatus —
+   * so a meet holds exactly one panel per category. Seating that one panel for
+   * a named apparatus leaves every athlete in the category entered for a
+   * different one with no panel at all, and their slips are refused with
+   * "Only a panel judge or an admin can submit a judge slip". Restoring the
+   * question means widening both indexes first.
    */
-  const apparatusOptions = selectedCompetitionType && competitionForAgeGroups?.apparatusConfig?.[selectedCompetitionType.value]
-    ? [
-      { value: '', label: 'All apparatus' },
-      ...competitionForAgeGroups.apparatusConfig[selectedCompetitionType.value].map(app => ({ value: app, label: app })),
-    ]
-    : [];
-
-  const hasApparatus = apparatusOptions.length === 0 || !!selectedApparatus;
-  const ladderComplete = hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && hasCompetitionType && hasApparatus;
+  const ladderComplete = hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && hasCompetitionType;
 
   const getCompetitionTypeOptions = () => {
     const order = ['competition_1', 'competition_2', 'competition_3'];
@@ -425,7 +421,6 @@ const Judges = () => {
     setSelectedGender(null);
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
-    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedCompetition, isSuperAdmin]);
@@ -444,23 +439,15 @@ const Judges = () => {
   useEffect(() => {
     setSelectedAgeGroup(null);
     setSelectedCompetitionType(null);
-    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedGender]);
 
   useEffect(() => {
     setSelectedCompetitionType(null);
-    setSelectedApparatus(null);
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedAgeGroup]);
-
-  useEffect(() => {
-    setSelectedApparatus(null);
-    setJudges([]);
-    setJudgesExistForSelection(false);
-  }, [selectedCompetitionType]);
 
   /**
    * Ensure the judge list always shows all six slots.
@@ -500,22 +487,18 @@ const Judges = () => {
     if (!params.competitionTypes && selectedCompetitionType?.value) {
       params.competitionTypes = selectedCompetitionType.value;
     }
-    if (!params.apparatus && selectedApparatus) {
-      params.apparatus = selectedApparatus.value;
-    }
     if (isSuperAdmin && selectedCompetition) params.competition = selectedCompetition.value;
     return params;
   };
 
-  const isLadderCompleteWith = (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) =>
-    hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && !!compTypeOption && (apparatusOptions.length === 0 || !!apparatusOption);
+  const isLadderCompleteWith = (compTypeOption = selectedCompetitionType) =>
+    hasCompetition && hasJudgeAction && hasGender && hasAgeGroup && !!compTypeOption;
 
-  const checkForExistingJudges = async (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) => {
-    if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return false;
+  const checkForExistingJudges = async (compTypeOption = selectedCompetitionType) => {
+    if (!isLadderCompleteWith(compTypeOption)) return false;
     try {
       const response = await api.getJudges(buildJudgeQueryParams({
         competitionTypes: compTypeOption.value,
-        apparatus: apparatusOption?.value
       }));
       return (response.data.data || []).filter(j => j._id && j.judgeAccount).length > 0;
     } catch { return false; }
@@ -525,13 +508,12 @@ const Judges = () => {
     setSelectedAgeGroup(ageGroupOption);
   };
 
-  const loadJudgeList = async (compTypeOption = selectedCompetitionType, apparatusOption = selectedApparatus) => {
-    if (!isLadderCompleteWith(compTypeOption, apparatusOption)) return;
+  const loadJudgeList = async (compTypeOption = selectedCompetitionType) => {
+    if (!isLadderCompleteWith(compTypeOption)) return;
     setLoadingJudges(true);
     try {
       const response = await api.getJudges(buildJudgeQueryParams({
         competitionTypes: compTypeOption.value,
-        apparatus: apparatusOption?.value
       }));
       setJudges(padJudgeSlots(response.data.data || []));
       const summaryResponse = await api.getAllJudgesSummary(
@@ -549,29 +531,21 @@ const Judges = () => {
     }
   };
 
+  // The last rung of the ladder, so this is where the panel is looked up. It
+  // used to be conditional on the apparatus question not being asked, and the
+  // apparatus handler did the same work for the case where it was.
   const handleCompetitionTypeChange = async (compTypeOption) => {
     setSelectedCompetitionType(compTypeOption);
-    if (compTypeOption && apparatusOptions.length === 0) {
-      setCheckingExistingJudges(true);
-      const exists = await checkForExistingJudges(compTypeOption, null);
-      setJudgesExistForSelection(exists);
-      setCheckingExistingJudges(false);
-      if (judgeType === 'list') {
-        loadJudgeList(compTypeOption, null);
-      }
-    }
-  };
+    setJudges([]);
+    setJudgesExistForSelection(false);
+    if (!compTypeOption) return;
 
-  const handleApparatusChange = async (apparatusOption) => {
-    setSelectedApparatus(apparatusOption);
-    if (selectedCompetitionType && apparatusOption) {
-      setCheckingExistingJudges(true);
-      const exists = await checkForExistingJudges(selectedCompetitionType, apparatusOption);
-      setJudgesExistForSelection(exists);
-      setCheckingExistingJudges(false);
-      if (judgeType === 'list') {
-        loadJudgeList(selectedCompetitionType, apparatusOption);
-      }
+    setCheckingExistingJudges(true);
+    const exists = await checkForExistingJudges(compTypeOption);
+    setJudgesExistForSelection(exists);
+    setCheckingExistingJudges(false);
+    if (judgeType === 'list') {
+      loadJudgeList(compTypeOption);
     }
   };
 
@@ -621,7 +595,8 @@ const Judges = () => {
         gender: selectedGender.value,
         ageGroup: selectedAgeGroup.value,
         competitionTypes: [selectedCompetitionType.value],
-        apparatus: selectedApparatus?.value || null,
+        // Always category-wide — see the note on `ladderComplete`.
+        apparatus: null,
         judges: staffed.map((j) => ({
           judgeNo: j.judgeNo,
           judgeType: j.judgeType,
@@ -677,7 +652,7 @@ const Judges = () => {
           gender: editingJudge.gender || selectedGender?.value,
           ageGroup: editingJudge.ageGroup || selectedAgeGroup?.value,
           competitionTypes: [selectedCompetitionType?.value],
-          apparatus: selectedApparatus?.value || null,
+          apparatus: null,
           judgeNo: editingJudge.judgeNo,
           judgeType: editingJudge.judgeType,
           judgeAccount: editSelection._id,
@@ -804,23 +779,8 @@ const Judges = () => {
                       disabled={!hasAgeGroup}
                     />
                   )}
-                  {checkingExistingJudges && apparatusOptions.length === 0 && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
+                  {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
                 </div>
-                {apparatusOptions.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                      Apparatus <span style={{ color: ADMIN_COLORS.red }}>*</span>
-                    </label>
-                    <Dropdown
-                      options={apparatusOptions}
-                      value={selectedApparatus}
-                      onChange={handleApparatusChange}
-                      placeholder={hasCompetitionType ? 'Select apparatus' : 'Select competition type first'}
-                      disabled={!hasCompetitionType}
-                    />
-                    {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
-                  </div>
-                )}
               </div>
 
               {/* Add Judge Form */}
@@ -834,7 +794,7 @@ const Judges = () => {
                       <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
                         <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
-                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}{selectedApparatus ? ` — ${selectedApparatus.label}` : ''}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
+                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
                       </div>
                     </div>
@@ -843,7 +803,6 @@ const Judges = () => {
                       <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.blue}10`, borderColor: `${ADMIN_COLORS.blue}30` }}>
                         <p className="text-white/70">Staffing: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
                           {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
-                          {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
                         </p>
                         <p className="text-white/50 text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 &amp; Scorer · Judge 3 &amp; Judge 4 optional</p>
                       </div>
@@ -910,7 +869,6 @@ const Judges = () => {
                         setSelectedGender(null);
                         setSelectedAgeGroup(null);
                         setSelectedCompetitionType(null);
-                        setSelectedApparatus(null);
                         setJudges([]);
                         setJudgesExistForSelection(false);
                       }}>

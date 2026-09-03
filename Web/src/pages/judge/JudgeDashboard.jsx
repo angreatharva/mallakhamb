@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle
+  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
+  CalendarDays, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -17,8 +18,16 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { JudgeAmbience } from './judgeShared';
-import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { apparatusInUse, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
+import {
+  COMPETITION_TYPES,
+  idOf,
+  competitionsForJudge,
+  gendersForJudge,
+  ageGroupsForJudge,
+  competitionTypesForJudge,
+  apparatusOptionsForJudge,
+} from './judgeCategoryOptions';
 import {
   indexPerformanceOrder,
   applyRunningOrder,
@@ -57,12 +66,37 @@ const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   );
 };
 
+/** The meet stored at login, which is the only place `apparatusConfig` arrives. */
+const storedCompetition = () => {
+  const raw = secureStorage.getItem('judge_current_competition');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 const JudgeDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, login } = useAuth();
   const { clearCompetitionContext } = useCompetition();
-  
+
   const [judgeInfo, setJudgeInfo] = useState(null);
+  /**
+   * The meet being judged.
+   *
+   * A judge seated at two meets got neither a question nor a hint that a second
+   * one existed: login picked `competitionIds[0]`, returned only that meet's
+   * seats as `allAssignments`, and the picker was built from those — so the
+   * other meet was simply invisible. It is the first rung of the ladder now,
+   * and choosing it re-scopes the session token (see selectCompetition).
+   */
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState(
+    () => sessionStorage.getItem('judge_selected_competition') || ''
+  );
+  const [activeCompetition, setActiveCompetition] = useState(storedCompetition);
+  const [switchingCompetition, setSwitchingCompetition] = useState(false);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
   const [selectedGender, setSelectedGender] = useState(() => sessionStorage.getItem('judge_selected_gender') || '');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(() => sessionStorage.getItem('judge_selected_age_group') || '');
@@ -111,10 +145,6 @@ const JudgeDashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
 
-  // Available options based on judge assignment(s)
-  const [availableGenders, setAvailableGenders] = useState([]);
-  const [availableAgeGroups, setAvailableAgeGroups] = useState([]);
-
   useEffect(() => {
     let cancelled = false;
     judgeAPI.getAssignments()
@@ -142,20 +172,16 @@ const JudgeDashboard = () => {
     setShowModal(true);
   }, [assignmentsLoading, assignments, judgeInfo]);
 
-  const competitionTypes = [
-    { value: 'competition_1', label: 'Competition I', sub: 'Team' },
-    { value: 'competition_2', label: 'Competition II', sub: 'Individual' },
-    { value: 'competition_3', label: 'Competition III', sub: 'Apparatus' },
-  ];
+  const competitionTypes = COMPETITION_TYPES;
 
   useEffect(() => {
     const storedJudge = secureStorage.getItem('judge_user');
     if (!storedJudge) { toast.error('Please login first'); navigate('/judge/login'); return; }
     try {
       const judge = JSON.parse(storedJudge);
-      logger.log('Judge info loaded:', { 
-        judgeType: judge.judgeType, 
-        gender: judge.gender, 
+      logger.log('Judge info loaded:', {
+        judgeType: judge.judgeType,
+        gender: judge.gender,
         ageGroup: judge.ageGroup,
         competitionTypes: judge.competitionTypes,
         competition: judge.competition,
@@ -163,32 +189,12 @@ const JudgeDashboard = () => {
       });
       setJudgeInfo(judge);
 
-      // Extract unique genders and age groups from all assignments
-      const allAssignments = judge.allAssignments || [judge];
-      const genders = [...new Set(allAssignments.map(a => a.gender))].filter(Boolean);
-      const ageGroups = [...new Set(allAssignments.map(a => a.ageGroup))].filter(Boolean);
-      
-      setAvailableGenders(genders);
-      setAvailableAgeGroups(ageGroups);
-
-      // Auto-select if there's only one option
-      if (genders.length === 1 && !sessionStorage.getItem('judge_selected_gender')) {
-        setSelectedGender(genders[0]);
-      }
-      if (ageGroups.length === 1 && !sessionStorage.getItem('judge_selected_age_group')) {
-        setSelectedAgeGroup(ageGroups[0]);
-      }
-
-      // Auto-select if there's only one competition type and we haven't selected one yet
-      if (judge.competitionTypes?.length === 1 && !sessionStorage.getItem('judge_selected_comp_type')) {
-        setSelectedCompetitionType(judge.competitionTypes[0]);
-      }
-
-      // For scorers without competitionTypes, auto-select competition_1 (Team Championship)
-      if (judge.judgeType === 'Scorer' && !judge.competitionTypes?.length && !sessionStorage.getItem('judge_selected_comp_type')) {
-        logger.log('Scorer without competitionTypes, defaulting to competition_1');
-        setSelectedCompetitionType('competition_1');
-      }
+      // The meet the session is currently scoped to. Every rung below is
+      // filtered by it, so it has to be settled before the picker opens.
+      setSelectedCompetitionId((current) => current
+        || idOf(judge.competition)
+        || secureStorage.getItem('judge_competition_id')
+        || '');
     } catch (error) {
       logger.error('Error loading judge info:', error);
       secureStorage.removeItem('judge_user');
@@ -198,52 +204,254 @@ const JudgeDashboard = () => {
     }
   }, [navigate]);
 
-  const fetchTeams = async () => {
-    if (!judgeInfo || !selectedCompetitionType) return;
+  /**
+   * Every seat this judge holds, across every meet.
+   *
+   * The fetch is authoritative; the login copy is the fallback for when it
+   * failed, and it only ever covered one meet — so a judge on the fallback gets
+   * the picker they had before rather than nothing.
+   */
+  const seats = useMemo(() => {
+    if (assignments.length > 0) return assignments;
+    if (judgeInfo?.allAssignments?.length) return judgeInfo.allAssignments;
+    return judgeInfo ? [judgeInfo] : [];
+  }, [assignments, judgeInfo]);
+
+  // The ladder. Each rung offers only what the rungs above it leave reachable,
+  // so a choice can never be made that the judge holds no seat for.
+  const availableCompetitions = useMemo(() => competitionsForJudge(seats), [seats]);
+  const availableGenders = useMemo(
+    () => gendersForJudge(seats, { competitionId: selectedCompetitionId }),
+    [seats, selectedCompetitionId]
+  );
+  const availableAgeGroups = useMemo(
+    () => ageGroupsForJudge(seats, { competitionId: selectedCompetitionId, gender: selectedGender }),
+    [seats, selectedCompetitionId, selectedGender]
+  );
+  const availableCompetitionTypes = useMemo(
+    () => competitionTypesForJudge(seats, {
+      competitionId: selectedCompetitionId,
+      gender: selectedGender,
+      ageGroup: selectedAgeGroup,
+    }),
+    [seats, selectedCompetitionId, selectedGender, selectedAgeGroup]
+  );
+
+  /*
+   * What this judge is scoring right now — a specific apparatus, always.
+   *
+   * The meet's `apparatusConfig` decides what is on offer, falling back to
+   * whatever the entered athletes are registered for (and to a legacy
+   * apparatus-scoped seat ahead of both). It is NOT a permission: panels are
+   * seated for a whole category, so this only decides which combination
+   * checklist the slip renders and which of an athlete's scores the marks
+   * belong to — somebody entered for three apparatus earns three scores.
+   *
+   * `apparatusConfig` is read from the stored competition, NOT from
+   * `judgeInfo.competition`: that field is an id string, so the old lookup
+   * (`judgeInfo.competition?.apparatusConfig?.[type]`) was `undefined` on every
+   * render and this whole question came down to the registrations alone.
+   */
+  const availableApparatus = useMemo(() => {
+    if (!judgeInfo) return [];
+    const gender = selectedGender || judgeInfo.gender;
+    const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
+
+    const configured =
+      (selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType]) || [];
+    const registered = apparatusInUse(
+      teams.flatMap((team) => (team.players || []).filter(
+        (e) => e.player && entryGender(e) === gender && e.ageGroup === ageGroup
+      )),
+      selectedCompetitionType
+    );
+
+    return apparatusOptionsForJudge(
+      seats,
+      { competitionId: selectedCompetitionId, gender, ageGroup, competitionType: selectedCompetitionType },
+      { configured, registered }
+    );
+  }, [
+    judgeInfo, seats, teams, activeCompetition,
+    selectedCompetitionId, selectedGender, selectedAgeGroup, selectedCompetitionType,
+  ]);
+
+  /**
+   * Move to another meet.
+   *
+   * The token has to be re-issued, not just the local state: `x-competition-id`
+   * on every request is derived from the token's claim, so a judge who picked
+   * the second meet while holding the first meet's token would go on reading
+   * the first. The response also carries the competition in full, which is the
+   * only way `apparatusConfig` reaches this screen — the assignments list does
+   * not project it.
+   *
+   * The stored `judge_user` is rewritten too, because every other judge page
+   * reads the competition from there.
+   */
+  const selectCompetition = useCallback(async (competitionId) => {
+    const nextId = String(competitionId || '');
+    if (!nextId || nextId === selectedCompetitionId || switchingCompetition) return;
+
+    const previousId = selectedCompetitionId;
+    setSelectedCompetitionId(nextId);
+    setSelectedGender('');
+    setSelectedAgeGroup('');
+    setSelectedCompetitionType('');
+    setSelectedApparatus('');
+    setTeams([]);
+    setOrderIndex({ teams: new Map(), players: new Map() });
+    setSwitchingCompetition(true);
+
+    try {
+      const response = await judgeAPI.setCompetition(nextId);
+      const { token, competition } = response.data?.data || {};
+      if (!token) throw new Error('No competition-scoped token returned');
+
+      const seatsAtMeet = seats
+        .filter((seat) => idOf(seat.competition) === nextId)
+        // Flattened back to an id, so the stored shape matches what login
+        // writes and `resolveJudgeSeat` keeps reading the same thing.
+        .map((seat) => ({ ...seat, competition: nextId }));
+      const primary = seatsAtMeet[0] || null;
+
+      const nextJudge = {
+        ...judgeInfo,
+        competition: nextId,
+        judgeType: primary?.judgeType || null,
+        judgeNo: primary?.judgeNo ?? null,
+        gender: primary?.gender || null,
+        ageGroup: primary?.ageGroup || null,
+        competitionTypes: primary?.competitionTypes || [],
+        allAssignments: seatsAtMeet,
+      };
+
+      login(nextJudge, token, 'judge');
+      setJudgeInfo(nextJudge);
+      secureStorage.setItem('judge_competition_id', nextId);
+      if (competition) {
+        secureStorage.setItem('judge_current_competition', JSON.stringify(competition));
+      }
+      setActiveCompetition(competition || null);
+
+      /*
+       * Persisted HERE, not on confirm, and the category dropped with it.
+       *
+       * The token now belongs to the new meet; leaving the stored selection on
+       * the old one means a reload restores a category from a meet the session
+       * is no longer scoped to — screen and token disagreeing about which meet
+       * is being judged, which is the state this whole rung exists to prevent.
+       * Clearing `judge_category_selected` re-opens the picker on that reload,
+       * because a category at the new meet genuinely has not been chosen yet.
+       */
+      sessionStorage.setItem('judge_selected_competition', nextId);
+      sessionStorage.removeItem('judge_category_selected');
+      sessionStorage.removeItem('judge_selected_comp_type');
+      sessionStorage.removeItem('judge_selected_gender');
+      sessionStorage.removeItem('judge_selected_age_group');
+      sessionStorage.removeItem('judge_selected_apparatus');
+    } catch (error) {
+      logger.error('Could not switch competition', error);
+      toast.error(error.response?.data?.message || 'Could not switch to that competition');
+      // Back to the meet the token still belongs to, rather than leaving the
+      // screen claiming one meet while every request reads another.
+      setSelectedCompetitionId(previousId);
+    } finally {
+      setSwitchingCompetition(false);
+    }
+  }, [selectedCompetitionId, switchingCompetition, seats, judgeInfo, login]);
+
+  /**
+   * Keep the ladder consistent: drop anything the rungs above no longer allow,
+   * and answer any rung that has only one possible answer.
+   *
+   * This replaces the auto-selection that ran once, off the login session — it
+   * could not react to a gender change, which is how Under 16 stayed selected
+   * for a Male category.
+   */
+  useEffect(() => {
+    if (!judgeInfo || assignmentsLoading) return;
+
+    // The meet first, since every rung below is filtered by it. A stored id
+    // that is not among this judge's seats — a seat withdrawn, or a session
+    // reused — would otherwise leave every list below empty with no way back.
+    const knownMeet = availableCompetitions.some((c) => String(c._id) === String(selectedCompetitionId));
+    if (availableCompetitions.length > 0 && !knownMeet) {
+      setSelectedCompetitionId(String(availableCompetitions[0]._id));
+      return;
+    }
+
+    if (selectedGender && !availableGenders.includes(selectedGender)) setSelectedGender('');
+    else if (!selectedGender && availableGenders.length === 1) setSelectedGender(availableGenders[0]);
+
+    if (selectedAgeGroup && !availableAgeGroups.includes(selectedAgeGroup)) setSelectedAgeGroup('');
+    else if (!selectedAgeGroup && availableAgeGroups.length === 1) setSelectedAgeGroup(availableAgeGroups[0]);
+
+    if (selectedCompetitionType && !availableCompetitionTypes.includes(selectedCompetitionType)) {
+      setSelectedCompetitionType('');
+    } else if (!selectedCompetitionType && availableCompetitionTypes.length === 1) {
+      setSelectedCompetitionType(availableCompetitionTypes[0]);
+    }
+
+    // Apparatus is a required answer now, so a category offering exactly one
+    // is answered rather than asked — the same courtesy every rung above gets.
+    if (selectedApparatus && availableApparatus.length > 0
+      && !availableApparatus.includes(selectedApparatus)) {
+      setSelectedApparatus('');
+    } else if (!selectedApparatus && availableApparatus.length === 1) {
+      setSelectedApparatus(availableApparatus[0]);
+    }
+  }, [
+    judgeInfo, assignmentsLoading,
+    availableCompetitions, selectedCompetitionId,
+    availableGenders, selectedGender,
+    availableAgeGroups, selectedAgeGroup,
+    availableCompetitionTypes, selectedCompetitionType,
+    availableApparatus, selectedApparatus,
+  ]);
+
+  /**
+   * The category this judge is currently working in — and the one definition of
+   * "enough has been chosen to ask the server anything". Also the socket room key.
+   */
+  const categoryParams = useMemo(() => {
+    if (!judgeInfo || !selectedCompetitionType) return null;
+    const competitionId = selectedCompetitionId || idOf(judgeInfo.competition);
+    /*
+     * The CHOSEN gender and age group, falling back to the login session only
+     * when there are no seats to choose from at all — i.e. the assignments
+     * fetch failed and there is nothing better to go on.
+     *
+     * This used to fall back unconditionally, which was harmless only because
+     * nothing ever cleared a selection. Changing gender now clears the age
+     * group (it has to — boys and girls run different brackets), and an
+     * unconditional fallback would quietly refill it with the previous
+     * category's bracket and fetch that instead.
+     */
+    const gender = selectedGender || (availableGenders.length === 0 ? judgeInfo.gender : '');
+    const ageGroup = selectedAgeGroup || (availableAgeGroups.length === 0 ? judgeInfo.ageGroup : '');
+    if (!competitionId || !gender || !ageGroup) return null;
+    return { competitionId, gender, ageGroup, competitionType: selectedCompetitionType };
+  }, [
+    judgeInfo, selectedCompetitionId, selectedCompetitionType,
+    selectedGender, selectedAgeGroup, availableGenders, availableAgeGroups,
+  ]);
+
+  const fetchTeams = useCallback(async () => {
+    // Not while the token is being re-scoped: the reply would describe a meet
+    // this screen is already leaving.
+    if (!categoryParams || switchingCompetition) return;
     try {
       setLoading(true);
-      
-      // Extract competition ID from various possible locations
-      const competitionId = judgeInfo.competition?._id || 
-                           judgeInfo.competition || 
-                           secureStorage.getItem('judge_competition_id');
-      
-      // Use selected values if available, otherwise fall back to judgeInfo
-      const gender = selectedGender || judgeInfo.gender;
-      const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
-      
-      // Build API request parameters
-      const params = { 
-        competitionId: competitionId,
-        gender: gender, 
-        ageGroup: ageGroup, 
-        competitionType: selectedCompetitionType 
-      };
-      
-      logger.log('Fetching teams with params:', params);
-      
-      // Validate parameters before making request
-      if (!params.competitionId) {
-        logger.error('Missing competitionId - cannot fetch teams', { judgeInfo });
-        toast.error('Competition ID not found. Please contact admin.');
-        setTeams([]);
-        return;
-      }
-      
-      if (!params.gender || !params.ageGroup) {
-        logger.error('Missing gender or ageGroup', { gender, ageGroup, judgeInfo });
-        toast.error('Judge assignment incomplete. Please select gender and age group.');
-        setTeams([]);
-        return;
-      }
-      
-      const response = await judgeAPI.getSubmittedTeams(params);
-      
+      logger.log('Fetching teams with params:', categoryParams);
+
+      const response = await judgeAPI.getSubmittedTeams(categoryParams);
+
       logger.log('Teams fetched successfully:', { count: response.data.data?.length || 0 });
       setTeams(response.data.data || []);
-      
+
       if (response.data.data?.length === 0) {
-        logger.warn('No teams found for filters', params);
+        logger.warn('No teams found for filters', categoryParams);
       }
     } catch (error) {
       logger.error('Error fetching teams:', error);
@@ -251,23 +459,19 @@ const JudgeDashboard = () => {
       toast.error(errorMessage);
       setTeams([]);
     } finally { setLoading(false); }
-  };
+  }, [categoryParams, switchingCompetition]);
 
-  useEffect(() => {
-    if (judgeInfo && !showModal && selectedCompetitionType) {
-      fetchTeams();
-    }
-  }, [judgeInfo, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup]);
-
-  // The category this judge is currently working in. Also the socket room key.
-  const categoryParams = useMemo(() => {
-    if (!judgeInfo || !selectedCompetitionType) return null;
-    const competitionId = judgeInfo.competition?._id || judgeInfo.competition;
-    const gender = selectedGender || judgeInfo.gender;
-    const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
-    if (!competitionId || !gender || !ageGroup) return null;
-    return { competitionId, gender, ageGroup, competitionType: selectedCompetitionType };
-  }, [judgeInfo, selectedCompetitionType, selectedGender, selectedAgeGroup]);
+  /*
+   * Fetched WHILE THE PICKER IS OPEN, which it deliberately was not before.
+   *
+   * The apparatus the picker offers is derived, in part, from what the athletes
+   * in the category are registered for — and that comes from this list. Gating
+   * the fetch on the picker being closed made those two facts unreachable at
+   * the same time, so the apparatus question never appeared on a fresh session:
+   * the modal opened with no teams, offered nothing, and let Continue through.
+   * The only way to see it was to confirm a category and re-open the picker.
+   */
+  useEffect(() => { fetchTeams(); }, [fetchTeams]);
 
   /**
    * Load the running order set by the panel's Senior Judge / Scorer, or drawn
@@ -385,10 +589,15 @@ const JudgeDashboard = () => {
   };
 
   const handleConfirmSelection = () => {
+    // Straight from categoryParams: Continue is only live once that resolves,
+    // so these are the values the screen is actually about to work with rather
+    // than a second, possibly divergent, reading of the same state.
+    if (!categoryParams) return;
     sessionStorage.setItem('judge_category_selected', 'true');
-    sessionStorage.setItem('judge_selected_comp_type', selectedCompetitionType);
-    sessionStorage.setItem('judge_selected_gender', selectedGender || judgeInfo.gender);
-    sessionStorage.setItem('judge_selected_age_group', selectedAgeGroup || judgeInfo.ageGroup);
+    sessionStorage.setItem('judge_selected_competition', categoryParams.competitionId);
+    sessionStorage.setItem('judge_selected_comp_type', categoryParams.competitionType);
+    sessionStorage.setItem('judge_selected_gender', categoryParams.gender);
+    sessionStorage.setItem('judge_selected_age_group', categoryParams.ageGroup);
     if (selectedApparatus) {
       sessionStorage.setItem('judge_selected_apparatus', selectedApparatus);
     } else {
@@ -399,39 +608,19 @@ const JudgeDashboard = () => {
 
   if (!judgeInfo) return null;
 
-  // Apparatus options for the selected competition type, filtered by the COP
-  // gender rule (Women's competitions exclude Hanging Mallakhamb, §11 / 1.8.2).
-  /*
-   * What the judge can be asked to judge, in order of authority:
-   *
-   *   1. the competition's own apparatusConfig for this competition type;
-   *   2. failing that, whatever the athletes in this category are actually
-   *      registered for.
-   *
-   * The fallback is not a nicety. No seeded competition declares an
-   * apparatusConfig, so (1) is empty, the picker never rendered, and the slip
-   * fell back to its hardcoded Pole checklist — including for the Above16 Rope
-   * athletes. Deriving from the registrations means the picker appears exactly
-   * when there is a real choice to make.
-   */
-  const configuredApparatus =
-    (selectedCompetitionType && judgeInfo.competition?.apparatusConfig?.[selectedCompetitionType]) || [];
-  const registeredApparatus = apparatusInUse(
-    teams.flatMap((team) => (team.players || []).filter(
-      (e) => e.player
-        && entryGender(e) === (selectedGender || judgeInfo.gender)
-        && e.ageGroup === (selectedAgeGroup || judgeInfo.ageGroup)
-    )),
-    selectedCompetitionType
-  );
-  const apparatusOptions = (configuredApparatus.length > 0 ? configuredApparatus : registeredApparatus)
-    .filter(app => isApparatusAllowedForGender(app, selectedGender || judgeInfo.gender));
-
-  const needsApparatus = apparatusOptions.length > 0;
+  // An empty list is not an unanswered question — a meet that declares no
+  // apparatus and a category nobody has entered both produce one, and the
+  // judge has to be able to get past it.
+  const needsApparatus = availableApparatus.length > 0;
   const isApparatusSelected = !needsApparatus || !!selectedApparatus;
+  const isCompetitionSelected = availableCompetitions.length <= 1 || !!selectedCompetitionId;
   const isGenderSelected = availableGenders.length <= 1 || !!selectedGender;
   const isAgeGroupSelected = availableAgeGroups.length <= 1 || !!selectedAgeGroup;
-  const isSelectionComplete = selectedCompetitionType && isApparatusSelected && isGenderSelected && isAgeGroupSelected;
+  // `categoryParams` is the real test — it resolves only when the meet, gender,
+  // age group and competition type are all settled. The named checks below it
+  // say WHICH rung is unanswered, which is what the disabled button is for.
+  const isSelectionComplete = !!categoryParams && isCompetitionSelected && isApparatusSelected
+    && isGenderSelected && isAgeGroupSelected && !switchingCompetition;
 
   /**
    * The seat held for the category currently selected on this screen. A judge
@@ -466,6 +655,10 @@ const JudgeDashboard = () => {
   );
   
   const getCompLabel = (val) => competitionTypes.find(c => c.value === val)?.label || val;
+
+  /** A meet's name, falling back to its id when the assignment carried no document. */
+  const competitionName = (id) =>
+    availableCompetitions.find((c) => String(c._id) === String(id))?.name || 'Selected meet';
 
   return (
     <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -544,10 +737,17 @@ const JudgeDashboard = () => {
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
+                  // Only worth the space when there is more than one meet to be
+                  // confused between.
+                  ...(availableCompetitions.length > 1
+                    ? [{ label: 'Meet', value: competitionName(selectedCompetitionId) }]
+                    : []),
                   { label: 'Gender', value: selectedGender || judgeInfo.gender },
                   { label: 'Age Group', value: selectedAgeGroup || judgeInfo.ageGroup },
                   { label: 'Competition', value: getCompLabel(selectedCompetitionType) },
-                  ...(selectedApparatus ? [{ label: 'Apparatus', value: selectedApparatus }] : []),
+                  // '—' rather than "All apparatus": the meet declared none and
+                  // nobody has entered, so there was nothing to choose.
+                  { label: 'Apparatus', value: selectedApparatus || '—' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</span>
@@ -708,6 +908,40 @@ const JudgeDashboard = () => {
                   <p className="text-white/50 text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
+                {/* Competition — the meet, not the competition type. Only asked
+                    when this judge is seated at more than one. */}
+                {availableCompetitions.length > 1 && (
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition</p>
+                    <div className="grid grid-cols-1 gap-3">
+                      {availableCompetitions.map(comp => (
+                        <SelectBtn
+                          key={comp._id}
+                          selected={String(selectedCompetitionId) === String(comp._id)}
+                          onClick={() => selectCompetition(comp._id)}>
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 flex-shrink-0 text-white/40" aria-hidden="true" />
+                            <div>
+                              <p>{comp.name || 'Untitled competition'}</p>
+                              {(comp.place || comp.level) && (
+                                <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">
+                                  {[comp.place, comp.level].filter(Boolean).join(' · ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </SelectBtn>
+                      ))}
+                    </div>
+                    {switchingCompetition && (
+                      <p className="flex items-center gap-2 text-xs text-white/50 mt-3 ml-1">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                        Switching competition…
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Fixed or Selectable Assignments */}
                 <div className="space-y-4">
                   {/* Gender Selection or Display */}
@@ -725,14 +959,19 @@ const JudgeDashboard = () => {
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
                       <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Gender</p>
-                      <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender}</p>
+                      <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender || '—'}</p>
                     </div>
                   )}
 
-                  {/* Age Group Selection or Display */}
+                  {/* Age Group — the list belongs to the CHOSEN GENDER, not to
+                      the judge's seats as a whole. Boys and girls run different
+                      brackets, so a merged list offered Under 16 to a Male
+                      category and Above 18 to a Female one. */}
                   {availableAgeGroups.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Age Group</p>
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">
+                        Age Group{selectedGender ? ` · ${selectedGender}` : ''}
+                      </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {availableAgeGroups.map(ag => (
                           <SelectBtn key={ag} selected={selectedAgeGroup === ag} onClick={() => setSelectedAgeGroup(ag)}>
@@ -744,7 +983,11 @@ const JudgeDashboard = () => {
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
                       <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Age Group</p>
-                      <p className="font-bold text-white">{availableAgeGroups[0] || judgeInfo.ageGroup}</p>
+                      <p className="font-bold text-white">
+                        {availableAgeGroups[0]
+                          || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
+                          || '—'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -754,32 +997,11 @@ const JudgeDashboard = () => {
                   <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
-                      .filter(ct => {
-                        // Every seat this judge holds in the chosen gender and
-                        // age group has a say: someone seated for Competition I
-                        // and Competition III must be offered both, and a seat
-                        // with no competition types (routine for a Scorer)
-                        // covers all of them.
-                        const seats = (judgeInfo.allAssignments?.length
-                          ? judgeInfo.allAssignments
-                          : [judgeInfo]
-                        ).filter((seat) => {
-                          const gender = selectedGender || judgeInfo.gender;
-                          const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
-                          if (gender && seat.gender && seat.gender !== gender) return false;
-                          if (ageGroup && seat.ageGroup && seat.ageGroup !== ageGroup) return false;
-                          return true;
-                        });
-
-                        return seats.some((seat) => {
-                          const types = seat.competitionTypes || [];
-                          return types.length === 0 || types.includes(ct.value);
-                        });
-                      })
+                      .filter(ct => availableCompetitionTypes.includes(ct.value))
                       .map(ct => (
                         <SelectBtn key={ct.value} selected={selectedCompetitionType === ct.value}
-                          onClick={() => { 
-                            setSelectedCompetitionType(ct.value); 
+                          onClick={() => {
+                            setSelectedCompetitionType(ct.value);
                             setSelectedApparatus(''); // Reset apparatus when competition changes
                           }}>
                           <div>
@@ -794,20 +1016,26 @@ const JudgeDashboard = () => {
                 {/* Apparatus (If needed) */}
                 <AnimatePresence mode="wait">
                   {needsApparatus && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }} 
-                      animate={{ height: 'auto', opacity: 1 }} 
-                      exit={{ height: 0, opacity: 0 }} 
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden">
                       <div className="pt-2">
                         <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {apparatusOptions.map(app => (
+                          {availableApparatus.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
                               <span>{app}</span>
                             </SelectBtn>
                           ))}
                         </div>
+                        {loading && (
+                          <p className="flex items-center gap-2 text-xs text-white/40 mt-3 ml-1">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                            Checking what the entered athletes are registered for…
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   )}

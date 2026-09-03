@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { apiGet } from './browser.js';
+import { PLAN_PLACE } from './panel-plan.js';
 
 /**
  * The judge scoring screens, as reusable steps.
@@ -53,9 +54,15 @@ const DIFFICULTY_LABEL = {
  * and Mayur (Above18 only) go through the same helper.
  *
  * @param {import('@playwright/test').Page} page - on /judge/dashboard
- * @param {{gender?: string, ageGroup: string, competitionType?: string, apparatus?: string}} category
+ * @param {{gender?: string, ageGroup: string, competitionType?: string, apparatus?: string, place?: string}} category
  */
-export const chooseCategory = async (page, { gender = 'Male', ageGroup, competitionType = 'Competition I', apparatus = null }) => {
+export const chooseCategory = async (page, {
+  gender = 'Male',
+  ageGroup,
+  competitionType = 'Competition I',
+  apparatus = null,
+  place = PLAN_PLACE,
+}) => {
   /*
    * The picker is opened by an effect that waits for the judge's assignments to
    * arrive, so "not there yet" and "this judge has no seats" look identical for
@@ -80,7 +87,23 @@ export const chooseCategory = async (page, { gender = 'Male', ageGroup, competit
   ).toBe(0);
   await expect(picker).toBeVisible();
 
-  // Gender first: the competition-type list is filtered by the seats this judge
+  /*
+   * The MEET first, when this judge is seated at more than one.
+   *
+   * Every rung below is filtered by it — a judge who chairs a panel at two
+   * meets is offered only the categories belonging to the one selected — so
+   * landing on the wrong meet surfaces later as a missing age group rather than
+   * as anything naming a competition. The picker defaults to whichever meet the
+   * token was scoped to at login, which is "whichever assignment the database
+   * returned first"; the panel plan says which meet these specs are about.
+   */
+  const meet = page.getByRole('button', { name: new RegExp(place, 'i') });
+  if (await meet.count()) {
+    await meet.first().click();
+    await expect(page.getByText(/Switching competition/)).toBeHidden({ timeout: 30_000 });
+  }
+
+  // Gender next: the competition-type list is filtered by the seats this judge
   // holds in the chosen gender and age group, so it renders empty — and the
   // Continue button stays dead — until both are picked.
   await pickOrConfirm(page, gender);
@@ -91,25 +114,28 @@ export const chooseCategory = async (page, { gender = 'Male', ageGroup, competit
   await page.getByRole('button', { name: new RegExp(`^${competitionType}\\b`) }).click();
 
   /*
-   * APPARATUS TAKES TWO PASSES, and the reason is a chicken-and-egg in the
-   * screen itself.
+   * APPARATUS, IN ONE PASS NOW — with the second kept as a fallback.
    *
-   * The picker offers an apparatus only when it knows one is in play — either
-   * the meet declares an `apparatusConfig` for this competition type, or the
-   * ATHLETES in the category are registered for one. The second is derived from
-   * the dashboard's team list, and the team list is not fetched until a
-   * category has been chosen. So on a cold session the modal opens before any
-   * of that exists, offers no apparatus, and lets Continue through — which is
-   * correct (a panel with no apparatus judges whatever each athlete is entered
-   * for) but is not what a caller asking for one meant.
+   * The picker offers an apparatus when one is in play: the judge's seat names
+   * it, or the meet declares an `apparatusConfig` for this competition type, or
+   * the ATHLETES in the category are registered for one. The last of those is
+   * derived from the dashboard's team list, and that list USED to be withheld
+   * while the picker was open — so on a cold session the modal opened before
+   * any of it existed, offered nothing, and let Continue through. Only
+   * "Change Category" showed the question, on a second pass with the teams
+   * loaded. The dashboard fetches while the picker is open now, so the first
+   * pass normally settles it.
    *
-   * "Change Category" re-opens the same modal with the teams loaded, and the
-   * apparatus block is there the second time. That is also what a real judge
-   * does, for the same reason.
+   * The second pass is retained because it is still the honest answer to "the
+   * list has not arrived yet": a slow fetch is a timing difference, not a
+   * different category, and re-opening costs one interaction.
    *
    * When the picker IS showing and does not offer what the caller asked for,
    * that is a real disagreement about the data and it fails here naming what
    * was offered — rather than surfacing later as "No eligible players".
+   *
+   * There is no "all apparatus" answer any more: once the picker offers any,
+   * one of them must be chosen before Continue goes live.
    */
   const apparatusButtons = page.getByRole('button', { name: /Mallakhamb$/ });
   const continueButton = page.getByRole('button', { name: /Continue to Dashboard/ });
@@ -123,11 +149,10 @@ export const chooseCategory = async (page, { gender = 'Male', ageGroup, competit
     }
     if (!apparatus) {
       /*
-       * No preference: this panel judges every apparatus in its category and
-       * each slip follows the athlete's own registration. Choose only if the
-       * screen insists — Continue stays disabled while an offered apparatus is
-       * unchosen. This is the Scorer's path, whose sheet spans the whole
-       * category and for whom no single apparatus is the right answer.
+       * No preference, so take the first on offer. The screen requires one
+       * whenever it has any to give — Continue stays disabled until then — so
+       * the `isEnabled` check only lets through the genuinely empty case,
+       * where the meet declares no apparatus and nobody has entered.
        */
       if (await continueButton.isEnabled()) return true;
       await apparatusButtons.first().click();
@@ -151,6 +176,25 @@ export const chooseCategory = async (page, { gender = 'Male', ageGroup, competit
     await continueButton.click();
     await expect(picker).toBeHidden();
   };
+
+  /*
+   * A caller that named an apparatus gives the list a moment to arrive.
+   *
+   * A category with nothing to offer does not block Continue, so until the
+   * options land the picker looks answerable — and the settled-state check
+   * below would pass instantly, sending every such caller through the second
+   * pass. That is a lot of re-opening across a full seeding run.
+   *
+   * Deliberately not fatal: not arriving is what the second pass is for, and
+   * an apparatus that is genuinely not on offer is reported by `pickApparatus`
+   * naming what WAS offered.
+   */
+  if (apparatus) {
+    await expect(async () => {
+      expect(await page.getByRole('button', { name: apparatus, exact: true }).count())
+        .toBeGreaterThan(0);
+    }).toPass({ timeout: 15_000 }).catch(() => {});
+  }
 
   // Settled state, rather than a `count()` sampled the instant the competition
   // type was clicked: the apparatus block mounts through a height animation, so

@@ -55,6 +55,19 @@ export const judgeAPI = {
   /** Every panel this judge sits on, across competitions. */
   getAssignments: () => api.get('/judge/assignments'),
 
+  /**
+   * Switch the judge's active meet.
+   *
+   * Returns `{ token, competition }`: a token carrying the new competition
+   * claim, and the meet in full — including the `apparatusConfig` the category
+   * picker needs, which the assignments list does not project.
+   *
+   * The token is the point. Every request derives `x-competition-id` from the
+   * token claim (see the request interceptor in api-client), so a judge who
+   * picked a second meet without one would keep reading the first.
+   */
+  setCompetition: (competitionId) => api.put(`/judge/competition/${competitionId}/set`),
+
   /** Anonymous on the server, but routed through `api` so one instance serves this module. */
   getCompetitions: () => api.get('/public/competitions'),
 
