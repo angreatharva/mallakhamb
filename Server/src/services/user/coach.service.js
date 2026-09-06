@@ -10,7 +10,11 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
 const { fullName } = require('../../utils/data/user-projection.util');
-const { calculateTeamPaymentAmount } = require('../../config/payment.config');
+const {
+  calculateTeamPaymentAmount,
+  resolveFeeWindow,
+  assertPaymentWindowOpen,
+} = require('../../config/payment.config');
 
 class CoachService extends UserService {
   /**
@@ -387,11 +391,28 @@ class CoachService extends UserService {
         paymentStatus: registeredTeam.paymentStatus,
         paymentAmount: registeredTeam.paymentAmount,
         submittedAt: registeredTeam.submittedAt,
+        /*
+         * Everything the payment page needs to price the entry ITSELF.
+         *
+         * This is a hand-built allow-list, so a field the client needs and this
+         * does not name simply arrives undefined — no error, just a wrong
+         * answer. That is what the fee window would have hit: without these
+         * four the client resolves every meet as "always open", quotes the base
+         * fee, and the server then charges base + late fee and rejects the
+         * payment for an amount mismatch after the coach's money has moved.
+         *
+         * `endDate` is here because it is the closing edge of the window, not
+         * because the page shows it.
+         */
         competition: {
           _id: competition._id,
           name: competition.name,
           playerFee: competition.playerFee,
-          apparatusFees: competition.apparatusFees
+          apparatusFees: competition.apparatusFees,
+          endDate: competition.endDate,
+          registrationOpenDate: competition.registrationOpenDate,
+          feeDueDate: competition.feeDueDate,
+          lateFee: competition.lateFee
         }
       },
       totalTeams: teams.length,
@@ -627,9 +648,20 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
+      /*
+       * The registration window, before anything is charged.
+       *
+       * Refusing here rather than at verify time is the whole point: a coach
+       * who cannot pay should never reach Razorpay, let alone hand over money
+       * for an entry the meet will not accept.
+       */
+      const quotedAt = new Date();
+      const feeWindow = assertPaymentWindowOpen(competition, quotedAt);
+
       // Calculate payment amount using centralized config with competition-specific player fee
       const playerCount = registeredTeam.players?.length || 0;
-      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition);
+      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt);
+      const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -671,7 +703,9 @@ class CoachService extends UserService {
           competitionId: competitionId.toString(),
           teamId: team._id.toString(),
           teamName: team.name,
-          playerCount: playerCount
+          playerCount: playerCount,
+          feePhase: feeWindow.phase,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer
         }
       });
 
@@ -680,7 +714,9 @@ class CoachService extends UserService {
         competitionId,
         orderId: razorpayOrder.id,
         amount,
-        playerCount
+        playerCount,
+        feePhase: feeWindow.phase,
+        lateFeeTotal
       });
 
       return {
@@ -694,6 +730,16 @@ class CoachService extends UserService {
           _id: team._id,
           name: team.name,
           playerCount
+        },
+        // The coach's receipt needs to say WHY the total moved, not just show a
+        // bigger number than the fee breakdown on the page adds up to.
+        fee: {
+          phase: feeWindow.phase,
+          isLate: feeWindow.isLate,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer,
+          lateFeeTotal,
+          dueBy: feeWindow.dueBy,
+          closesAt: feeWindow.closesAt
         }
       };
     } catch (error) {
@@ -849,18 +895,41 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
+      /*
+       * Recompute the price against the moment the coach ACTUALLY PAID.
+       *
+       * `created_at` comes off the payment we just fetched from Razorpay, so it
+       * is theirs, not the client's, and it is the instant the late-fee rule in
+       * the brief is written about. Using `new Date()` here instead would price
+       * the payment by when the callback happened to be handled, which on a slow
+       * retry is a different day.
+       *
+       * The one case this cannot rescue: a checkout that STARTS minutes before
+       * the deadline and completes after it. The order was quoted at the regular
+       * price, the payment is priced as late, and the amounts disagree — the
+       * coach is told the amount mismatched and pays again at the late price.
+       * Rare (the two instants are usually seconds apart) and recoverable, which
+       * is why it is not worth pinning a quote to the registration for.
+       */
+      const paidAt = Number.isFinite(Number(paymentDetails.created_at))
+        ? new Date(Number(paymentDetails.created_at) * 1000)
+        : new Date();
+
       // Calculate expected amount using centralized config with competition-specific player fee
       // Use registeredTeam.players (players registered for this competition)
       // NOT team.players (all players in the team)
       const playerCount = registeredTeam.players?.length || 0;
-      const expectedAmount = calculateTeamPaymentAmount(registeredTeam.players, competition) * 100; // Convert to paise
+      const feeWindow = resolveFeeWindow(competition, paidAt);
+      const expectedAmount = calculateTeamPaymentAmount(registeredTeam.players, competition, paidAt) * 100; // Convert to paise
 
       // Verify payment amount
       if (paymentDetails.amount !== expectedAmount) {
         this.logger?.error?.('Payment amount mismatch', {
           expected: expectedAmount,
           received: paymentDetails.amount,
-          paymentId: payload.razorpay_payment_id
+          paymentId: payload.razorpay_payment_id,
+          feePhase: feeWindow.phase,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer
         });
         throw new ValidationError('Payment verification failed: Amount mismatch');
       }
@@ -901,6 +970,9 @@ class CoachService extends UserService {
             razorpay_status: paymentDetails.status,
             payment_method: paymentDetails.method,
             playerCount: playerCount,
+            feePhase: feeWindow.phase,
+            lateFeePerPlayer: feeWindow.lateFeePerPlayer,
+            lateFeeTotal: feeWindow.lateFeePerPlayer * playerCount,
             submittedAt: new Date(),
             verified: true
           }

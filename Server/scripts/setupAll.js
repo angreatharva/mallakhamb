@@ -82,7 +82,9 @@ const STEPS = [
     why: 'Bhausaheb Ranade Navodit at Mumbai, Pune and Nashik — December 2026 '
       + 'weekends. Assigns both admin accounts on BOTH sides of the link. '
       + 'Nothing else in the chain creates a competition, and a coach with no '
-      + 'meet to select cannot get past the first screen.',
+      + 'meet to select cannot get past the first screen. Also sets the fee '
+      + 'window: registration opens 1 Jan, the base fee runs until a week '
+      + 'before each meet, and ₹200 per athlete is added after that.',
   },
   {
     id: 'coaches',
@@ -336,6 +338,13 @@ async function main() {
   line('  Sign in as each coach and pay through the UI in Razorpay test mode. This');
   line('  script will not forge a payment signature: it would either be rejected, or');
   line('  prove the verification is not doing its job.');
+  line('');
+  line('  Fees: ₹500 per athlete plus any apparatus add-on. Registration opened on');
+  line('  1 Jan 2026, and the base fee runs until a week before each meet — so the');
+  line('  seeded meets are payable at the base price right now.');
+  line('  To see the late fee (₹200 per athlete) charged instead:');
+  line('    npm --prefix Server run create-competitions -- --force --late');
+  line('  and re-run it without --late to put the deadlines back.');
   line('');
   line('THEN — Part 2, the judging:');
   line('  npm --prefix Web run seed:scores');

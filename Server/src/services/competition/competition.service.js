@@ -17,6 +17,29 @@ const { sanitizeCompetitionData } = require('../../utils/validation/sanitization
 const EventTypes = require('../../socket/events/event-types');
 const Admin = require('../../../models/Admin');
 
+/**
+ * Fee-window fields a plain admin may not set.
+ *
+ * These decide how much money a coach is charged and until when, so they are a
+ * SUPER ADMIN decision — set through `/api/superadmin/competitions`, which is
+ * behind `requireSuperAdmin`. This service backs `/api/competitions`, which any
+ * admin can reach, so the fields are dropped here rather than merely hidden in
+ * the UI: an admin who posts them directly gets a competition without them, not
+ * a competition priced by whoever asked last.
+ */
+const SUPERADMIN_ONLY_FEE_FIELDS = ['registrationOpenDate', 'feeDueDate', 'lateFee'];
+
+/**
+ * @param {Object} data
+ * @returns {Object} a copy with the super-admin-only fee fields removed
+ */
+function stripSuperAdminFeeFields(data) {
+  if (!data || typeof data !== 'object') return data;
+  const stripped = { ...data };
+  for (const field of SUPERADMIN_ONLY_FEE_FIELDS) delete stripped[field];
+  return stripped;
+}
+
 class CompetitionService {
   /**
    * Create a competition service
@@ -65,7 +88,7 @@ class CompetitionService {
   async createCompetition(competitionData, createdBy) {
     try {
       // Sanitize string inputs
-      const sanitizedData = sanitizeCompetitionData(competitionData);
+      const sanitizedData = stripSuperAdminFeeFields(sanitizeCompetitionData(competitionData));
 
       // Validate dates
       this.validateDates(sanitizedData.startDate, sanitizedData.endDate);
@@ -145,7 +168,7 @@ class CompetitionService {
   async updateCompetition(competitionId, updates) {
     try {
       // Sanitize string inputs
-      const sanitizedUpdates = sanitizeCompetitionData(updates);
+      const sanitizedUpdates = stripSuperAdminFeeFields(sanitizeCompetitionData(updates));
 
       // Find competition
       const competition = await this.competitionRepository.findById(competitionId);

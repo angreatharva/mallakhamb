@@ -204,6 +204,28 @@ const schemas = {
       status: { type: 'string', enum: ['upcoming', 'open', 'ongoing', 'completed', 'cancelled'] },
       startDate: { type: 'string', format: 'date-time' },
       endDate: { type: 'string', format: 'date-time' },
+      playerFee: { type: 'number', description: 'Base entry fee per athlete, INR', example: 500 },
+      apparatusFees: {
+        type: 'object',
+        additionalProperties: { type: 'number' },
+        description: 'Per-apparatus add-on, INR, charged on top of `playerFee`',
+      },
+      registrationOpenDate: {
+        type: 'string', format: 'date-time', nullable: true,
+        description: 'First day entry fees can be paid. Super admin only. Unset means always open.',
+      },
+      feeDueDate: {
+        type: 'string', format: 'date-time', nullable: true,
+        description:
+          'Last day the base fee alone is accepted. Payments made after 23:59 UTC on this '
+          + 'day, up to 23:59 UTC on `endDate`, are charged `lateFee` PER ATHLETE. '
+          + 'Super admin only; unset means no late fee is ever charged.',
+      },
+      lateFee: {
+        type: 'number',
+        description: 'Per-athlete penalty for paying after `feeDueDate`, INR. Super admin only.',
+        example: 200,
+      },
       competitionTypes: { type: 'array', items: { type: 'string', enum: COMPETITION_TYPES } },
       ageGroups: {
         type: 'array',

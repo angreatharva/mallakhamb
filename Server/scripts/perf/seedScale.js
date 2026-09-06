@@ -377,6 +377,20 @@ async function seed() {
     apparatusConfig: { competition_1: APPARATUS, competition_2: APPARATUS },
     ageGroups,
     playerFee: 500,
+    /*
+     * The fee window.
+     *
+     * The harness makes no payments, so this is about document SHAPE rather
+     * than money: a fixture missing these fields cannot catch a query or
+     * projection that starts depending on them.
+     *
+     * The deadline is yesterday because this meet is deliberately `ongoing` and
+     * the fee deadline must fall BEFORE the start date — so an in-progress
+     * competition is always past it. That is the honest state, not a quirk.
+     */
+    registrationOpenDate: new Date(Date.now() - 30 * 86400000),
+    feeDueDate: new Date(Date.now() - 86400000),
+    lateFee: 200,
     admins: [admin._id, superadmin._id],
     registeredTeams,
   });

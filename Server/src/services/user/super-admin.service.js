@@ -1,7 +1,124 @@
 const { fullName } = require('../../utils/data/user-projection.util');
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
-const { calculatePlayerAdditionAmount } = require('../../config/payment.config');
+const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
+
+/**
+ * Read one of the competition's fee-window dates off a create/update payload.
+ *
+ * `''` is what an emptied `<input type="date">` sends, and it has to mean
+ * "unset" rather than "the epoch" — otherwise clearing the Opening Date in the
+ * edit form would open registration in 1970 instead of removing the gate.
+ *
+ * @param {Object} payload
+ * @param {string} field
+ * @returns {{ present: boolean, value: Date | null }}
+ * @throws {ValidationError} when the value is present but not a date
+ */
+function readWindowDate(payload, field) {
+  if (!Object.prototype.hasOwnProperty.call(payload, field)) {
+    return { present: false, value: null };
+  }
+  const raw = payload[field];
+  if (raw === null || raw === undefined || raw === '') {
+    return { present: true, value: null };
+  }
+  const date = raw instanceof Date ? raw : new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    throw new ValidationError(`${field} must be a valid date`);
+  }
+  return { present: true, value: date };
+}
+
+/**
+ * Validate and normalise the late-fee window on a competition payload.
+ *
+ * Runs on both create and update, and on update it has to reason about fields
+ * the payload may not carry — so anything absent falls back to what is already
+ * stored. Ordering is checked here rather than in a schema validator because
+ * the repository updates through `findByIdAndUpdate`, where a validator cannot
+ * see its sibling paths (see the comment on `models/Competition.js`).
+ *
+ * @param {Object} payload - incoming body (mutated copy is returned)
+ * @param {Object} [existing] - the stored competition, on update
+ * @returns {Object} the payload with the window fields coerced
+ * @throws {ValidationError}
+ */
+function normalizeFeeWindow(payload, existing = null) {
+  const body = { ...payload };
+
+  const openDate = readWindowDate(payload, 'registrationOpenDate');
+  const dueDate = readWindowDate(payload, 'feeDueDate');
+  const endDate = readWindowDate(payload, 'endDate');
+  const startDate = readWindowDate(payload, 'startDate');
+
+  if (openDate.present) body.registrationOpenDate = openDate.value;
+  if (dueDate.present) body.feeDueDate = dueDate.value;
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'lateFee')) {
+    const raw = payload.lateFee;
+    if (raw === null || raw === undefined || raw === '') {
+      body.lateFee = 0;
+    } else {
+      const lateFee = typeof raw === 'number' ? raw : Number(raw);
+      if (!Number.isFinite(lateFee) || lateFee < 0) {
+        throw new ValidationError('Late fee must be a number of rupees, zero or more');
+      }
+      body.lateFee = lateFee;
+    }
+  }
+
+  // Effective values: what the competition will look like once this write lands.
+  const effective = (incoming, stored) => {
+    if (incoming.present) return incoming.value;
+    const fallback = stored === null || stored === undefined ? null : new Date(stored);
+    return fallback && !Number.isNaN(fallback.getTime()) ? fallback : null;
+  };
+
+  const start = effective(startDate, existing?.startDate);
+  const open = effective(openDate, existing?.registrationOpenDate);
+  const due = effective(dueDate, existing?.feeDueDate);
+  const end = effective(endDate, existing?.endDate);
+
+  if (open && due && open > due) {
+    throw new ValidationError('The last date to pay fees cannot be before the competition opening date');
+  }
+
+  /*
+   * Both fee dates close BEFORE the meet opens.
+   *
+   * Money is settled in advance: a deadline falling on or inside the
+   * competition would let a coach still be paying the base fee while their
+   * athletes compete. Strict `>=`, so the start day itself is already too late.
+   *
+   * The end-date check below is implied by this one whenever `startDate` is
+   * present — which it always should be, since the model requires it. It stays
+   * because `updateById` goes through `findByIdAndUpdate`, where the schema's
+   * own start/end ordering validator cannot read its sibling paths, so a stored
+   * competition with the two reversed is not impossible.
+   */
+  if (open && start && open >= start) {
+    throw new ValidationError('The competition opening date must be before the competition start date');
+  }
+  if (due && start && due >= start) {
+    throw new ValidationError('The last date to pay fees must be before the competition start date');
+  }
+  if (due && end && due >= end) {
+    throw new ValidationError('The last date to pay fees must be before the competition end date');
+  }
+
+  const effectiveLateFee = Object.prototype.hasOwnProperty.call(body, 'lateFee')
+    ? body.lateFee
+    : Number(existing?.lateFee) || 0;
+
+  // A late fee with no deadline to be late for can never be charged, and a
+  // super admin who typed one plainly meant it to be.
+  if (effectiveLateFee > 0 && !due) {
+    throw new ValidationError('Set a last date to pay fees before setting a late fee amount');
+  }
+
+  return body;
+}
 
 class SuperAdminService {
   constructor({
@@ -255,7 +372,7 @@ class SuperAdminService {
     if (!Number.isFinite(playerFee) || playerFee < 0) {
       throw new ValidationError('A valid per-player fee (INR) is required for each competition');
     }
-    const body = { ...payload, playerFee };
+    const body = { ...normalizeFeeWindow(payload), playerFee };
 
     // Use admins from payload if provided, otherwise default to the creator
     const assignedAdmins = body.admins && body.admins.length > 0 
@@ -294,15 +411,25 @@ class SuperAdminService {
   }
   
   async updateCompetition(id, payload) {
+    /*
+     * The stored competition is needed to validate the window: an edit that
+     * only moves the End Date still has to be checked against the fee deadline
+     * already on file, and vice versa.
+     */
+    const existing = await this.competitionRepository.findById(id);
+    if (!existing) throw new NotFoundError('Competition');
+
+    const body = normalizeFeeWindow(payload, existing);
+
     if (Object.prototype.hasOwnProperty.call(payload, 'playerFee')) {
       const rawFee = payload.playerFee;
       const playerFee = typeof rawFee === 'number' ? rawFee : Number(rawFee);
       if (!Number.isFinite(playerFee) || playerFee < 0) {
         throw new ValidationError('A valid per-player fee (INR) is required for each competition');
       }
-      return this.competitionRepository.updateById(id, { ...payload, playerFee });
+      return this.competitionRepository.updateById(id, { ...body, playerFee });
     }
-    return this.competitionRepository.updateById(id, payload);
+    return this.competitionRepository.updateById(id, body);
   }
   async deleteCompetition(id) {
     return this.competitionService.deleteCompetition(id);
@@ -586,8 +713,18 @@ class SuperAdminService {
         throw new NotFoundError('Team not found');
       }
 
-      // Calculate payment amount using centralized config with competition-specific player fee
-      const amount = calculatePlayerAdditionAmount(playerData, competition);
+      /*
+       * Calculate payment amount using centralized config with
+       * competition-specific player fee, plus any late fee in force.
+       *
+       * The window is NOT asserted here. A coach is blocked outside it; a super
+       * admin adding a player is the override for exactly the cases the window
+       * would otherwise refuse, and an override the calendar can veto is not
+       * one. They still pay the penalty — only the block is lifted.
+       */
+      const quotedAt = new Date();
+      const feeWindow = resolveFeeWindow(competition, quotedAt);
+      const amount = calculatePlayerAdditionAmount(playerData, competition, quotedAt);
 
       // Get Razorpay credentials from config
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
@@ -629,7 +766,9 @@ class SuperAdminService {
           teamId: team._id.toString(),
           teamName: team.name,
           playerName: `${firstName} ${lastName}`,
-          type: 'player_addition'
+          type: 'player_addition',
+          feePhase: feeWindow.phase,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer
         }
       });
 
@@ -654,6 +793,13 @@ class SuperAdminService {
         playerData: {
           firstName,
           lastName
+        },
+        fee: {
+          phase: feeWindow.phase,
+          isLate: feeWindow.isLate,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer,
+          dueBy: feeWindow.dueBy,
+          closesAt: feeWindow.closesAt
         }
       };
     } catch (error) {
@@ -764,14 +910,27 @@ class SuperAdminService {
         throw new NotFoundError('Competition not found');
       }
 
+      /*
+       * Price against the instant the payment was actually made — Razorpay's
+       * own `created_at`, not ours — so a late-window payment is checked
+       * against the late-window quote. Same reasoning, and the same narrow
+       * deadline-crossing edge, as `coach.service.verifyTeamPaymentAndSubmit`.
+       */
+      const paidAt = Number.isFinite(Number(paymentDetails.created_at))
+        ? new Date(Number(paymentDetails.created_at) * 1000)
+        : new Date();
+      const feeWindow = resolveFeeWindow(competition, paidAt);
+
       // Verify payment amount with competition-specific player fee
-      const expectedAmount = calculatePlayerAdditionAmount(playerData, competition) * 100; // Convert to paise
+      const expectedAmount = calculatePlayerAdditionAmount(playerData, competition, paidAt) * 100; // Convert to paise
       if (paymentDetails.amount !== expectedAmount) {
         this.logger?.error?.('Payment amount mismatch', {
           expected: expectedAmount,
           received: paymentDetails.amount,
           paymentId: paymentPayload.razorpay_payment_id,
-          competitionPlayerFee: competition.playerFee
+          competitionPlayerFee: competition.playerFee,
+          feePhase: feeWindow.phase,
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer
         });
         throw new ValidationError('Payment verification failed: Amount mismatch');
       }
@@ -799,6 +958,8 @@ class SuperAdminService {
             razorpay_signature: paymentPayload.razorpay_signature,
             razorpay_status: paymentDetails.status,
             payment_method: paymentDetails.method,
+            feePhase: feeWindow.phase,
+            lateFeePerPlayer: feeWindow.lateFeePerPlayer,
             verifiedAt: new Date(),
             verified: true
           }

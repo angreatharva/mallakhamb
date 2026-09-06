@@ -8,7 +8,7 @@ import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
-import { calculatePlayerFee } from '@/utils/scoring/competitionFee';
+import { calculatePlayerFee, resolveFeeWindow, formatFeeWindowDate } from '@/utils/scoring/competitionFee';
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -304,9 +304,22 @@ const SuperAdminAddPlayerPayment = () => {
   const pd = checkout?.playerData;
   const mockCompetition = {
     playerFee: checkout?.competitionPlayerFee,
-    apparatusFees: checkout?.competitionApparatusFees || {}
+    apparatusFees: checkout?.competitionApparatusFees || {},
+    registrationOpenDate: checkout?.competitionRegistrationOpenDate || null,
+    feeDueDate: checkout?.competitionFeeDueDate || null,
+    endDate: checkout?.competitionEndDate || null,
+    lateFee: Number(checkout?.competitionLateFee) || 0,
   };
-  const playerFee = calculatePlayerFee(pd, mockCompetition) ?? 0;
+  const baseFee = calculatePlayerFee(pd, mockCompetition) ?? 0;
+
+  /*
+   * A super admin is NOT blocked outside the window — this is the override path
+   * (see `super-admin.service.createPlayerPaymentOrder`) — but the late fee
+   * still applies, so the phase is resolved here purely to price and explain it.
+   */
+  const feeWindow = resolveFeeWindow(mockCompetition);
+  const lateFee = feeWindow.lateFeePerPlayer;
+  const playerFee = baseFee + lateFee;
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -408,8 +421,19 @@ const SuperAdminAddPlayerPayment = () => {
                       </span>
                     )}
                   </div>
-                  <span className="text-white">₹{playerFee.toLocaleString()}</span>
+                  <span className="text-white">₹{baseFee.toLocaleString()}</span>
                 </div>
+                {lateFee > 0 && (
+                  <div className="flex justify-between text-sm items-center">
+                    <div>
+                      <span className="text-white/50 block">Late fee</span>
+                      <span className="text-white/30 text-xs">
+                        Fees were due by {formatFeeWindowDate(feeWindow.dueBy)}
+                      </span>
+                    </div>
+                    <span style={{ color: COLORS.saffron }}>+₹{lateFee.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total</span>
                   <span className="font-black text-lg" style={{ color: COLORS.saffron }}>

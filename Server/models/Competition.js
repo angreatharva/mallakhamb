@@ -54,6 +54,40 @@ const competitionSchema = new mongoose.Schema({
       message: 'End date cannot be before start date'
     }
   },
+  /**
+   * ── Registration / fee window ──────────────────────────────────────────
+   *
+   * `registrationOpenDate` — first day entry fees can be paid.
+   * `feeDueDate`           — LAST day the base fee alone is accepted.
+   * `lateFee`              — per-player penalty charged on every payment made
+   *                          after `feeDueDate` and up to 23:59 on `endDate`.
+   *
+   * All three are optional: competitions created before this feature still
+   * validate, and one with no `feeDueDate` simply never charges a late fee.
+   *
+   * The window itself is resolved in exactly ONE place —
+   * `src/config/payment.config.js#resolveFeeWindow` — mirrored for the browser
+   * in `Web/src/utils/scoring/competitionFee.js`. Never re-derive the phase
+   * from these dates by hand; a second comparison is a second set of boundary
+   * bugs, and this one decides how much money a coach is charged.
+   *
+   * Cross-field ordering (open <= due <= end) is enforced in the SERVICE, next
+   * to the `playerFee` check. A schema validator cannot do it reliably: the
+   * repository updates through `findByIdAndUpdate`, where `this` is the query
+   * and the sibling paths are not readable. The `endDate` validator above has
+   * the same limitation and is kept for parity, not relied on.
+   */
+  registrationOpenDate: {
+    type: Date
+  },
+  feeDueDate: {
+    type: Date
+  },
+  lateFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Late fee cannot be negative']
+  },
   description: {
     type: String,
     trim: true

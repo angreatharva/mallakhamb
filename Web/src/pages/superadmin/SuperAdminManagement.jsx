@@ -13,7 +13,9 @@ import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import Dropdown from '@/components/auth/Dropdown';
 import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
-import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
+import {
+  getCompetitionPlayerFeeRupees, resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
+} from '@/utils/scoring/competitionFee';
 import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
@@ -135,6 +137,84 @@ const EmptyState = ({ icon: Icon, title, desc }) => (
     {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
   </div>
 );
+
+// ─── Competition fee window ───────────────────────────────────────────────────
+/**
+ * A stored date as the `YYYY-MM-DD` an `<input type="date">` wants.
+ *
+ * Sliced off the ISO string rather than read through the local-time getters:
+ * these dates are stored as UTC midnight, and `getDate()` rolls the day
+ * backwards for anyone west of Greenwich.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
+/**
+ * The `YYYY-MM-DD` one day earlier, for a date input's `max`.
+ *
+ * Both fee dates must land strictly BEFORE the start date, so capping the
+ * picker at the start date itself would still offer one invalid day.
+ *
+ * @param {string} value - `YYYY-MM-DD`, or empty
+ * @returns {string | undefined} undefined when there is nothing to cap against
+ */
+const previousDay = (value) => {
+  if (!value) return undefined;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * Check the opening date, fee deadline and late fee against each other.
+ *
+ * Mirrors `normalizeFeeWindow` in
+ * `Server/src/services/user/super-admin.service.js` so the super admin is told
+ * what is wrong here rather than by a 400 from the API. The server still has
+ * the last word — this is a courtesy, not the guard.
+ *
+ * Plain string comparison is correct for `YYYY-MM-DD`.
+ *
+ * @param {Object} form
+ * @returns {string | null} the first problem found, or null
+ */
+const validateFeeWindow = ({ registrationOpenDate, feeDueDate, startDate, endDate, lateFee }) => {
+  const amount = lateFee === '' || lateFee === undefined || lateFee === null ? 0 : Number(lateFee);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return 'Enter a valid late fee (₹) — zero or more';
+  }
+  if (registrationOpenDate && feeDueDate && registrationOpenDate > feeDueDate) {
+    return 'The last date to pay fees cannot be before the competition opening date';
+  }
+  /*
+   * Both fee dates close BEFORE the meet opens.
+   *
+   * Money is settled in advance — a deadline that fell on or inside the
+   * competition would leave a coach able to pay the base fee while their
+   * athletes are already competing. `<` not `<=`: the day the meet starts is
+   * itself too late.
+   */
+  if (registrationOpenDate && startDate && registrationOpenDate >= startDate) {
+    return 'The competition opening date must be before the start date';
+  }
+  if (feeDueDate && startDate && feeDueDate >= startDate) {
+    return 'The last date to pay fees must be before the start date';
+  }
+  if (feeDueDate && endDate && feeDueDate >= endDate) {
+    return 'The last date to pay fees must be before the end date';
+  }
+  if (amount > 0 && !feeDueDate) {
+    return 'Set a last date to pay fees before setting a late fee amount';
+  }
+  return null;
+};
 
 const StatusBadge = ({ active }) => (
   <span className="px-2.5 py-1 rounded-full text-xs font-bold"
@@ -287,7 +367,8 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
+    registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
   // Admin management modal
@@ -445,7 +526,8 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
+    registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
   const openCompetitionModal = (comp = null) => {
@@ -464,7 +546,10 @@ const SuperAdminManagement = () => {
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
-        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {}
+        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {},
+        registrationOpenDate: toDateInputValue(comp.registrationOpenDate),
+        feeDueDate: toDateInputValue(comp.feeDueDate),
+        lateFee: Number.isFinite(Number(comp.lateFee)) && Number(comp.lateFee) > 0 ? Number(comp.lateFee) : ''
       });
     } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
@@ -495,6 +580,8 @@ const SuperAdminManagement = () => {
       toast.error('Enter a valid per-player fee (INR) for this competition');
       return;
     }
+    const feeWindowError = validateFeeWindow(competitionFormData);
+    if (feeWindowError) { toast.error(feeWindowError); return; }
     try {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
@@ -502,7 +589,10 @@ const SuperAdminManagement = () => {
         level: competitionFormData.level.value,
         year: competitionFormData.year.value,
         playerFee,
-        apparatusFees: competitionFormData.apparatusFees
+        apparatusFees: competitionFormData.apparatusFees,
+        registrationOpenDate: competitionFormData.registrationOpenDate || null,
+        feeDueDate: competitionFormData.feeDueDate || null,
+        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee)
       });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
@@ -531,6 +621,8 @@ const SuperAdminManagement = () => {
       toast.error('Enter a valid per-player fee (INR) for this competition');
       return;
     }
+    const feeWindowError = validateFeeWindow(competitionFormData);
+    if (feeWindowError) { toast.error(feeWindowError); return; }
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
         name: competitionFormData.name, level: competitionFormData.level.value,
@@ -538,7 +630,12 @@ const SuperAdminManagement = () => {
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
         playerFee,
-        apparatusFees: competitionFormData.apparatusFees
+        apparatusFees: competitionFormData.apparatusFees,
+        // `null` rather than omitted: an emptied date must CLEAR the stored one,
+        // and a key that is absent from the body is left alone by the service.
+        registrationOpenDate: competitionFormData.registrationOpenDate || null,
+        feeDueDate: competitionFormData.feeDueDate || null,
+        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee)
       });
       toast.success('Competition updated');
       setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
@@ -576,7 +673,41 @@ const SuperAdminManagement = () => {
     return { ...prev, ageGroups: groups };
   });
 
+  /**
+   * The late-fee field is only meaningful once there is a deadline to be late
+   * for, so the hint says which of the two states it is in rather than letting
+   * a super admin type an amount that can never be charged.
+   */
+  const lateFeeHint = competitionFormData.feeDueDate
+    ? `Added per athlete on top of the base fee for any payment made after ${competitionFormData.feeDueDate}`
+      + `, up to 23:59 on the end date. Leave blank or 0 for no penalty.`
+    : 'Set a "Last Date to Pay Fees" above first — with no deadline there is nothing to be late for.';
+
   const isAgeGroupSelected = (ag, gender) => competitionFormData.ageGroups.some(g => g.ageGroup === ag && g.gender === gender);
+
+  /**
+   * Every gender/age-group pair that actually exists.
+   *
+   * The grid offers all fourteen cells and disables the ones a gender does not
+   * compete in — Under 16 is a girls' bracket, Under 18 a boys' one. "Select
+   * all" has to mean all the REAL pairs, not all the cells, or it would post
+   * categories no athlete can be entered for and the server would reject them.
+   */
+  const allValidAgeGroupPairs = defaultAgeGroups.flatMap(ageGroup =>
+    ['Male', 'Female']
+      .filter(gender => isAgeGroupValidForGender(ageGroup, gender))
+      .map(gender => ({ ageGroup, gender }))
+  );
+
+  const allAgeGroupsSelected =
+    competitionFormData.ageGroups.length >= allValidAgeGroupPairs.length
+    && allValidAgeGroupPairs.every(({ ageGroup, gender }) => isAgeGroupSelected(ageGroup, gender));
+
+  const toggleAllAgeGroups = () => setCompetitionFormData(prev => ({
+    ...prev,
+    ageGroups: allAgeGroupsSelected ? [] : allValidAgeGroupPairs.map(pair => ({ ...pair })),
+  }));
+
   const toggleAdminSelection = (id) => setCompetitionFormData(prev => ({
     ...prev, admins: prev.admins.includes(id) ? prev.admins.filter(a => a !== id) : [...prev.admins, id]
   }));
@@ -682,7 +813,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : competitions.length === 0 ? (
               <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
             ) : (
-              <DarkTable headers={['Name','Types','Level','Place','Per player','Dates','Status','Admins','Actions']}>
+              <DarkTable headers={['Name','Types','Level','Place','Per player','Fee window','Dates','Status','Admins','Actions']}>
                 {competitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
                     <Td className="font-bold text-white">{comp.name}</Td>
@@ -707,6 +838,40 @@ const SuperAdminManagement = () => {
                       {(() => {
                         const rupees = getCompetitionPlayerFeeRupees(comp);
                         return rupees !== null ? `₹${rupees.toLocaleString()}` : '—';
+                      })()}
+                    </Td>
+                    <Td className="text-xs">
+                      {(() => {
+                        const lateFee = Number(comp.lateFee) || 0;
+                        if (!comp.registrationOpenDate && !comp.feeDueDate && !lateFee) {
+                          return <span className="text-white/30">Always open</span>;
+                        }
+                        const window = resolveFeeWindow(comp);
+                        const phaseColor = window.phase === FEE_PHASE.LATE ? ADMIN_COLORS.red
+                          : window.phase === FEE_PHASE.REGULAR ? ADMIN_COLORS.green
+                            : ADMIN_COLORS.saffron;
+                        return (
+                          <div className="space-y-0.5">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold"
+                              style={{ background: `${phaseColor}20`, color: phaseColor }}>
+                              {{
+                                [FEE_PHASE.NOT_OPEN]: 'Not open yet',
+                                [FEE_PHASE.REGULAR]: 'Base fee',
+                                [FEE_PHASE.LATE]: 'Late fee',
+                                [FEE_PHASE.CLOSED]: 'Closed',
+                              }[window.phase]}
+                            </span>
+                            {comp.registrationOpenDate && (
+                              <p className="text-white/45">Opens {formatFeeWindowDate(comp.registrationOpenDate)}</p>
+                            )}
+                            {comp.feeDueDate && (
+                              <p className="text-white/45">Base until {formatFeeWindowDate(comp.feeDueDate)}</p>
+                            )}
+                            {lateFee > 0 && (
+                              <p className="text-white/45">then +₹{lateFee.toLocaleString()}/athlete</p>
+                            )}
+                          </div>
+                        );
                       })()}
                     </Td>
                     <Td className="text-xs">
@@ -945,9 +1110,29 @@ const SuperAdminManagement = () => {
             onChange={(option) => setCompetitionFormData({ ...competitionFormData, year: option })}
             placeholder="Select year"
           />
+          {/*
+            * Chronological order: registration opens, fees fall due, then the
+            * meet runs. Both fee dates have to land before the meet starts, so
+            * reading them in the order they happen is also the order they are
+            * filled in — and the pickers below cap themselves at the day before
+            * the start date, so an invalid day cannot be chosen in the first
+            * place.
+            */}
+          <DarkInput label="Competition Opening Date" type="date"
+            value={competitionFormData.registrationOpenDate}
+            hint="Coaches cannot pay before this day. Must be before the start date. Leave blank to accept payment straight away."
+            max={previousDay(competitionFormData.startDate)}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, registrationOpenDate: e.target.value })} />
+          <DarkInput label="Last Date to Pay Fees" type="date"
+            value={competitionFormData.feeDueDate}
+            hint="Last day the base fee alone is accepted. Must be before the start date. Leave blank for no late fee."
+            min={competitionFormData.registrationOpenDate || undefined}
+            max={previousDay(competitionFormData.startDate)}
+            onChange={(e) => setCompetitionFormData({ ...competitionFormData, feeDueDate: e.target.value })} />
           <DarkInput label="Start Date" required type="date" value={competitionFormData.startDate}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, startDate: e.target.value })} />
           <DarkInput label="End Date" required type="date" value={competitionFormData.endDate}
+            min={competitionFormData.startDate || undefined}
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, endDate: e.target.value })} />
         </div>
 
@@ -969,7 +1154,27 @@ const SuperAdminManagement = () => {
             }
             const n = Number(raw);
             setCompetitionFormData({ ...competitionFormData, playerFee: Number.isFinite(n) ? n : '' });
-          }} 
+          }}
+        />
+
+        {/* Late Fee */}
+        <DarkInput
+          label="LATE FEE (Per-player ₹)"
+          type="number"
+          min="0"
+          step="1"
+          placeholder="e.g. 200"
+          value={competitionFormData.lateFee === '' || competitionFormData.lateFee === undefined ? '' : competitionFormData.lateFee}
+          hint={lateFeeHint}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === '') {
+              setCompetitionFormData({ ...competitionFormData, lateFee: '' });
+              return;
+            }
+            const n = Number(raw);
+            setCompetitionFormData({ ...competitionFormData, lateFee: Number.isFinite(n) ? n : '' });
+          }}
         />
 
         {/* Apparatus Fees (Optional) */}
@@ -1077,9 +1282,23 @@ const SuperAdminManagement = () => {
 
         {/* Age Groups */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-            Age Groups <span style={{ color: ADMIN_COLORS.red }}>*</span>
-          </p>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffronLight }}>
+              Age Groups <span style={{ color: ADMIN_COLORS.red }}>*</span>
+            </p>
+            {/* Fourteen cells is a lot of clicking for the common case, which is
+                "run every category". Clicking it again clears the lot. */}
+            <label className="flex items-center gap-2 p-2 -mr-2 rounded-lg cursor-pointer transition-all tap-safe">
+              <input type="checkbox" className="sr-only" checked={allAgeGroupsSelected} onChange={toggleAllAgeGroups} />
+              <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                style={{ background: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'transparent', borderColor: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                {allAgeGroupsSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </div>
+              <span className="text-xs font-bold text-white/70 whitespace-nowrap">
+                Select All ({competitionFormData.ageGroups.length}/{allValidAgeGroupPairs.length})
+              </span>
+            </label>
+          </div>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {defaultAgeGroups.map(ag => (
               <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>

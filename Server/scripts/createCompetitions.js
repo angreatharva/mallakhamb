@@ -4,6 +4,7 @@
  *   node scripts/createCompetitions.js            # create (idempotent)
  *   node scripts/createCompetitions.js --list     # show what exists, change nothing
  *   node scripts/createCompetitions.js --force    # rewrite dates/config on existing ones
+ *   node scripts/createCompetitions.js --force --late   # put the fee deadline in the PAST
  *
  * Nothing else in the setup chain creates a competition. The UI seeding specs
  * all assume one is already there — a coach signing in is sent straight to
@@ -28,6 +29,16 @@
  * competition that looks administered and an admin who cannot open it — which is
  * exactly the state a replayed capture used to produce, because ObjectIds from
  * another database mean nothing here.
+ *
+ * WHY THE FEE WINDOW OPENS IN JANUARY
+ *
+ * A coach cannot pay before `registrationOpenDate`, and the setup chain ends by
+ * asking you to pay through the UI by hand. A window that opens closer to the
+ * meet would make every seeded meet unpayable for months and read as a broken
+ * fixture, so it opens on 1 January of the competition year — comfortably in the
+ * past whenever this is run — and the base fee runs until a week before each
+ * meet. `--late` moves that deadline to yesterday so the late fee is actually in
+ * force and can be seen working end to end.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
@@ -70,6 +81,21 @@ const MEETS = [
 /** @param {number} day @returns {Date} midnight UTC on that December day */
 const december = (day) => new Date(Date.UTC(YEAR, 11, day));
 
+/** Per-athlete penalty for paying after the deadline. */
+const LATE_FEE = 200;
+
+/** Days before the meet that the base fee stops being enough. */
+const FEE_DEADLINE_LEAD_DAYS = 7;
+
+/** Registration opens at the start of the season. @returns {Date} */
+const registrationOpens = () => new Date(Date.UTC(YEAR, 0, 1));
+
+/** Midnight UTC yesterday — a deadline already passed, for `--late`. @returns {Date} */
+function yesterdayUtc() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+}
+
 /**
  * Refuse to build a meet on a weekday.
  *
@@ -93,8 +119,9 @@ function assertWeekend(date, label) {
  * The document for one meet.
  * @param {{place: string, startDay: number}} meet
  * @param {string[]} adminIds
+ * @param {boolean} [late] - put the fee deadline in the past, so late fees bite now
  */
-function buildCompetition(meet, adminIds) {
+function buildCompetition(meet, adminIds, late = false) {
   const startDate = december(meet.startDay);
   const endDate = december(meet.startDay + 1);
 
@@ -122,6 +149,11 @@ function buildCompetition(meet, adminIds) {
     ageGroups,
     playerFee: 500,
     apparatusFees: {},
+    // The fee window. Base fee until a week before the meet; ₹200 per athlete on
+    // top of that from then until 23:59 on the closing day.
+    registrationOpenDate: registrationOpens(),
+    feeDueDate: late ? yesterdayUtc() : december(meet.startDay - FEE_DEADLINE_LEAD_DAYS),
+    lateFee: LATE_FEE,
     editionRef: 'COP Nov 2022',
     admins: adminIds,
     registeredTeams: [],
@@ -135,6 +167,13 @@ const identity = (place) => ({ name: NAME, place, year: YEAR, isDeleted: { $ne: 
 async function main() {
   const list = process.argv.includes('--list');
   const force = process.argv.includes('--force');
+  const late = process.argv.includes('--late');
+
+  if (late && !force) {
+    console.error('--late only takes effect together with --force: the meets already exist by the');
+    console.error('time you want to test a passed deadline, and without --force they are skipped.');
+    process.exit(1);
+  }
 
   if (!process.env.MONGODB_URI) {
     console.error('MONGODB_URI not found. Check Server/.env');
@@ -148,11 +187,17 @@ async function main() {
     const existing = await Competition.find({ name: NAME, year: YEAR }).lean();
     if (existing.length === 0) console.log('  none of the three meets exist yet.');
     for (const competition of existing) {
+      const day = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '—');
       console.log(
         `  ${competition.place.padEnd(8)} ${competition.startDate.toISOString().slice(0, 10)}`
         + ` -> ${competition.endDate.toISOString().slice(0, 10)}  ${competition.status}`
         + `  admins: ${(competition.admins || []).length}`
         + `  entries: ${(competition.registeredTeams || []).length}`
+      );
+      console.log(
+        `           fees: opens ${day(competition.registrationOpenDate)}`
+        + `  base until ${day(competition.feeDueDate)}`
+        + `  then +₹${competition.lateFee || 0}/athlete`
       );
     }
     await mongoose.disconnect();
@@ -196,7 +241,7 @@ async function main() {
       continue;
     }
 
-    const document = buildCompetition(meet, adminIds);
+    const document = buildCompetition(meet, adminIds, late);
 
     if (existing) {
       // --force: refresh dates and configuration, KEEP the entries. Dropping
@@ -220,13 +265,30 @@ async function main() {
   describe('updated', updated);
   describe('already existed (assignment repaired)', skipped);
 
+  const day = (value) => new Date(value).toISOString().slice(0, 10);
+
   console.log('\nMeets:');
   for (const meet of MEETS) {
     const start = december(meet.startDay);
     const end = december(meet.startDay + 1);
     console.log(
-      `  ${meet.place.padEnd(8)} ${start.toISOString().slice(0, 10)} (Sat) -> ${end.toISOString().slice(0, 10)} (Sun)`
+      `  ${meet.place.padEnd(8)} ${day(start)} (Sat) -> ${day(end)} (Sun)`
     );
+  }
+
+  console.log('\nFees:');
+  console.log(`  base            ₹500 per athlete, plus any apparatus add-on`);
+  console.log(`  opens           ${day(registrationOpens())} — a coach cannot pay before this`);
+  for (const meet of MEETS) {
+    const due = late ? yesterdayUtc() : december(meet.startDay - FEE_DEADLINE_LEAD_DAYS);
+    console.log(
+      `  ${meet.place.padEnd(15)} base fee until ${day(due)}`
+      + `, then +₹${LATE_FEE}/athlete until ${day(december(meet.startDay + 1))} 23:59`
+    );
+  }
+  if (late) {
+    console.log('\n  --late: every deadline is in the PAST, so the next coach payment is charged');
+    console.log(`  the late fee. Re-run without --late to put the deadlines back before the meets.`);
   }
 
   console.log('\nThe seeded roster enters MUMBAI (Web/e2e/support/coach-data.js).');

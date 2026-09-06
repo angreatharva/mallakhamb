@@ -373,6 +373,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         competitionLabel: selectedCompetition.label,
         competitionPlayerFee,
         competitionApparatusFees: selectedCompetitionDoc.apparatusFees || {},
+        // The fee window travels with the checkout so the payment page can quote
+        // the same late fee the server will charge. Carried rather than re-fetched
+        // because the payment page has no competition list of its own.
+        competitionRegistrationOpenDate: selectedCompetitionDoc.registrationOpenDate || null,
+        competitionFeeDueDate: selectedCompetitionDoc.feeDueDate || null,
+        competitionEndDate: selectedCompetitionDoc.endDate || null,
+        competitionLateFee: Number(selectedCompetitionDoc.lateFee) || 0,
       };
 
       sessionStorage.setItem(SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutPayload));

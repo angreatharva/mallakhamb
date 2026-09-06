@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, CalendarClock, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
-import { getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee } from '@/utils/scoring/competitionFee';
+import {
+  getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee,
+  resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
+} from '@/utils/scoring/competitionFee';
 
 const CoachPayment = () => {
   const navigate = useNavigate();
@@ -223,6 +226,16 @@ const CoachPayment = () => {
   const basePlayerFee = getCompetitionPlayerFeeRupees(team?.competition);
   const feeConfigured = basePlayerFee !== null;
 
+  /*
+   * The registration window, resolved the same way the server resolves it
+   * (`Server/src/config/payment.config.js`). The coach has to see the same
+   * total the order will be created for — a page that quotes the base fee while
+   * Razorpay asks for base + late fee is worse than one that refuses to load.
+   */
+  const feeWindow = resolveFeeWindow(team?.competition);
+  const playerCount = team?.players?.length || 0;
+  const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
+
   const calculateTotal = () => {
     if (!feeConfigured || !team?.players) return 0;
     return calculateTeamPaymentAmount(team.players, team.competition);
@@ -295,6 +308,43 @@ const CoachPayment = () => {
           <h1 className="text-xl font-black text-white mb-3">Per-player fee not set</h1>
           <p className="text-white/50 text-sm mb-6 leading-relaxed">
             This competition does not have a valid per-player registration fee. Ask a super admin to edit the competition and set the fee, then try again.
+          </p>
+          <button type="button" onClick={() => navigate('/coach/dashboard')}
+            className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * Outside the window there is nothing to do on this page.
+   *
+   * The server refuses to create an order in either state, so rendering the
+   * checkout would only offer a button that answers with an error — this says
+   * which dates apply instead.
+   */
+  if (team && !feeWindow.canPay) {
+    const notOpen = feeWindow.phase === FEE_PHASE.NOT_OPEN;
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
+        <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+            style={{ background: `${COLORS.saffron}18`, border: `2px solid ${COLORS.saffron}40` }}>
+            <CalendarClock className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
+          </div>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
+          <h1 className="text-xl font-black text-white mb-3">
+            {notOpen ? 'Registration has not opened yet' : 'Registration is closed'}
+          </h1>
+          <p className="text-white/50 text-sm mb-6 leading-relaxed">
+            {notOpen
+              ? `Fees for ${team?.competition?.name || 'this competition'} can be paid from `
+                + `${formatFeeWindowDate(feeWindow.opensAt)}. Come back on or after that date.`
+              : `Fees for ${team?.competition?.name || 'this competition'} closed at the end of `
+                + `${formatFeeWindowDate(feeWindow.closesAt)}. Contact the organisers if you still need to enter.`}
           </p>
           <button type="button" onClick={() => navigate('/coach/dashboard')}
             className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
@@ -390,6 +440,30 @@ const CoachPayment = () => {
                 </div>
               </div>
 
+              {/* Late-fee notice: the total below is bigger than the rows add up
+                  to, and the coach is owed the reason before they pay it. */}
+              {feeWindow.isLate && (
+                <div className="flex gap-3 mb-5 p-4 rounded-2xl"
+                  style={{ background: `${COLORS.saffron}12`, border: `1px solid ${COLORS.saffron}35` }}>
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-bold text-white">Late fee applies</p>
+                    <p className="text-white/50 text-xs mt-1 leading-relaxed">
+                      The last date to pay without a penalty was {formatFeeWindowDate(feeWindow.dueBy)}.
+                      A late fee of ₹{feeWindow.lateFeePerPlayer.toLocaleString()} per athlete is added
+                      to the fees below. Registration closes at the end of {formatFeeWindowDate(feeWindow.closesAt)}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!feeWindow.isLate && feeWindow.dueBy && feeWindow.lateFeePerPlayer === 0 && Number(team?.competition?.lateFee) > 0 && (
+                <p className="text-white/40 text-xs mb-5 leading-relaxed">
+                  Pay by {formatFeeWindowDate(feeWindow.dueBy)} to avoid a late fee of
+                  {' '}₹{Number(team.competition.lateFee).toLocaleString()} per athlete.
+                </p>
+              )}
+
               {/* Fee breakdown */}
               <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                 {team?.players?.length > 0 ? (
@@ -413,6 +487,19 @@ const CoachPayment = () => {
                   </div>
                 )}
                 
+                {lateFeeTotal > 0 && (
+                  <div className="flex justify-between items-center text-sm py-1 border-t pt-3"
+                    style={{ borderColor: COLORS.darkBorderSubtle }}>
+                    <span className="text-white/70">
+                      Late fee
+                      <span className="text-white/30 text-xs ml-2">
+                        (₹{feeWindow.lateFeePerPlayer.toLocaleString()} × {playerCount})
+                      </span>
+                    </span>
+                    <span style={{ color: COLORS.saffron }}>+₹{lateFeeTotal.toLocaleString()}</span>
+                  </div>
+                )}
+
                 <div className="border-t pt-3 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total Amount</span>
                   <span className="font-black text-lg" style={{ color: COLORS.saffron }}>

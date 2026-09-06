@@ -24,6 +24,7 @@ const mongoose = require('mongoose');
 
 const Competition = require('../models/Competition');
 const Score = require('../models/Score');
+const { resolveFeeWindow } = require('../src/config/payment.config');
 
 /** @param {string[]} argv */
 function parseArgs(argv) {
@@ -61,6 +62,26 @@ async function main() {
     console.log(`${competition.name} — ${competition.place} ${competition.year}  [${competition.status}]`);
     console.log(`  teams entered: ${entered.length}   submitted (and payable): ${submitted.length}`
       + `   athletes: ${athletes}`);
+
+    /*
+     * What a coach would be charged if they paid right now.
+     *
+     * The manual payment step is where a seeded meet most often stalls, and
+     * "registration has not opened yet" from the UI is otherwise indistinguishable
+     * from a broken page. Resolved through the same helper the server charges
+     * with, so this cannot quietly disagree with it.
+     */
+    const feeWindow = resolveFeeWindow(competition);
+    const day = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '—');
+    const phaseLine = {
+      not_open: `  fees: NOT OPEN until ${day(feeWindow.opensAt)} — a coach cannot pay yet`,
+      regular: `  fees: base only (₹${competition.playerFee ?? '—'}/athlete)`
+        + (feeWindow.dueBy ? `, until ${day(feeWindow.dueBy)}` : ''),
+      late: `  fees: LATE — +₹${feeWindow.lateFeePerPlayer}/athlete on top of the base,`
+        + ` until ${day(feeWindow.closesAt)}`,
+      closed: `  fees: CLOSED since ${day(feeWindow.closesAt)} — no further payment is accepted`,
+    }[feeWindow.phase];
+    console.log(phaseLine);
 
     if (submitted.length < entered.length) {
       // The single most common reason a judge sees nothing: entry is not the

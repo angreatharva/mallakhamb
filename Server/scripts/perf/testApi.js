@@ -647,6 +647,59 @@ async function run() {
       await step('DELETE /api/competitions/:id', admin.del(`/api/competitions/${upcoming._id}`));
     }
 
+    /*
+     * The fee window is a SUPER ADMIN decision.
+     *
+     * It sets what a coach is charged and until when, so `/api/competitions`
+     * — which any admin can reach — drops the three fields rather than storing
+     * them. The check is worth having as an assertion because the enforcement
+     * is a silent strip in the service, not a 403: a regression that removed it
+     * would look like nothing at all from the outside.
+     */
+    const windowStart = new Date(Date.now() + 30 * 86400000);
+    const feeMeet = {
+      ...newMeet('feewindow', windowStart),
+      registrationOpenDate: new Date(Date.now() - 86400000).toISOString(),
+      // Both fee dates must fall strictly before the start date.
+      feeDueDate: new Date(windowStart.getTime() - 7 * 86400000).toISOString(),
+      lateFee: 250,
+    };
+
+    const strippedForAdmin = await step('POST /api/competitions ignores fee-window fields from an admin',
+      admin.post('/api/competitions', feeMeet), { skipOn: [400, 403] });
+
+    if (strippedForAdmin?._id) {
+      const stored = await step('GET /api/competitions/:id (admin-created)',
+        admin.get(`/api/competitions/${strippedForAdmin._id}`));
+      const leaked = stored && (stored.registrationOpenDate || stored.feeDueDate || stored.lateFee);
+      record('an admin cannot set the late fee', leaked ? 'FAIL' : 'PASS',
+        leaked ? { reason: `stored lateFee=${stored.lateFee} feeDueDate=${stored.feeDueDate}` } : {});
+      await step('DELETE /api/competitions/:id (admin-created)',
+        admin.del(`/api/competitions/${strippedForAdmin._id}`));
+    }
+
+    const superMeet = await step('POST /api/superadmin/competitions accepts the fee window',
+      superadmin.post('/api/superadmin/competitions', { ...feeMeet, name: `${feeMeet.name} SA`, playerFee: 100 }),
+      { skipOn: [400, 403] });
+
+    if (superMeet?._id) {
+      const stored = superMeet;
+      const applied = Number(stored.lateFee) === 250 && Boolean(stored.feeDueDate);
+      record('a super admin can set the late fee', applied ? 'PASS' : 'FAIL',
+        applied ? {} : { reason: `stored lateFee=${stored.lateFee} feeDueDate=${stored.feeDueDate}` });
+
+      await step('POST /api/superadmin/competitions refuses a deadline on or after the start date',
+        superadmin.post('/api/superadmin/competitions', {
+          ...feeMeet,
+          name: `${feeMeet.name} SA bad`,
+          playerFee: 100,
+          feeDueDate: windowStart.toISOString(),
+        }), { expect: [400, 422] });
+
+      await step('DELETE /api/superadmin/competitions/:id',
+        superadmin.del(`/api/superadmin/competitions/${superMeet._id}`), { skipOn: [409, 422] });
+    }
+
     // ================= Logout =================
     group('Logout');
     await step('POST /api/auth/logout', coach.post('/api/auth/logout', {}));
