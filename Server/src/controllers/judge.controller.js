@@ -129,30 +129,12 @@ function createJudgeController(container) {
       res.json({ success: true, data: result });
     }),
 
-    /** @route POST /api/judge/scores */
-    saveIndividualScore: asyncHandler(async (req, res) => {
-      const score = await judgeService.saveIndividualScore(req.user._id, {
-        ...req.body,
-        competitionId: req.competitionId,
-      });
-      res.status(201).json({ success: true, data: score, message: 'Score saved successfully' });
-    }),
-
-    /** @route PUT /api/judge/scores/:scoreId */
-    updateIndividualScore: asyncHandler(async (req, res) => {
-      const score = await judgeService.updateIndividualScore(
-        req.user._id,
-        req.params.scoreId,
-        req.body
-      );
-      res.json({ success: true, data: score, message: 'Score updated successfully' });
-    }),
-
-    /** @route GET /api/judge/scores/my */
-    getMyScores: asyncHandler(async (req, res) => {
-      const scores = await judgeService.getMyScores(req.user._id, req.competitionId);
-      res.json({ success: true, data: scores });
-    }),
+    /*
+     * saveIndividualScore / updateIndividualScore / getMyScores are gone —
+     * see the note in judge.service.js. They wrote a flat score shape the
+     * Score schema does not have; the slip a judge actually submits goes
+     * through `adminController.saveScores` (POST /api/judge/scores/save).
+     */
   };
 }
 

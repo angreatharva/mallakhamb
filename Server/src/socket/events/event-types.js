@@ -19,10 +19,9 @@ module.exports = {
   // Scoring events
   SCORE_UPDATE: 'score_update',
   SCORE_UPDATED: 'score_updated',
-  SCORE_UPDATE_REQUEST: 'score_update_request',
-  SCORE_UPDATE_SUCCESS: 'score_update_success',
+  // SCORE_UPDATE_REQUEST / SCORE_UPDATE_SUCCESS / SCORE_ERROR are gone with the
+  // `score_update_request` handler they belonged to — see scoring.handler.js.
   SCORE_SAVED: 'score_saved',
-  SCORE_ERROR: 'score_error',
   SCORES_SAVED: 'scores_saved',
   SCORES_SAVED_NOTIFICATION: 'scores_saved_notification',
 

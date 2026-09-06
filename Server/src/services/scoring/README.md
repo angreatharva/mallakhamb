@@ -54,32 +54,43 @@ Handles score calculations including averages, rankings, and final score computa
 
 **Key Methods:**
 
-- `calculateExecutionAverage(judgeScores)` - Calculate execution average by removing highest and lowest scores from judges 1-4
 - `calculateFinalScore(playerScore)` - Calculate final score (averageMarks - deduction - otherDeduction)
 - `calculateRankings(playerScores)` - Calculate rankings with tie handling
 - `calculateAverage(scores)` - Calculate simple average of scores
-- `calculateTimeDeduction(time, maxTime, deductionRate)` - Calculate time deduction for performances over time limit
-- `shouldApplyBaseScore(judgeScores, tolerance)` - Determine if base score should be applied based on judge score range
+- `calculateTimeDeduction(time, maxTime)` - Calculate time deduction for performances over time limit
 - `calculateCompletePlayerScore(playerScoreData, options)` - Calculate all score components for a player
 - `calculateTeamTotal(playerScores)` - Calculate team total from player scores
 
+`calculateExecutionAverage` and `shouldApplyBaseScore` were removed: both treated
+an absent judge as a mark of 0.00, and neither implemented the COP rule it
+appeared to. The panel average and the tolerance decision belong to
+`calculateIndividualScore` (`utils/scoring/calculation.util.js`), which is what
+`calculateCompletePlayerScore` calls.
+
 **Calculation Logic:**
 
-**Execution Average:**
-- Takes scores from judge1, judge2, judge3, judge4
-- Sorts scores and removes highest and lowest
-- Averages the middle two scores
+**Execution Average** (`calculateIndividualScore`, panel-size aware):
+- 3 judges — plain average of the three submitted totals. No Chief, no tolerance.
+- 4 judges — the Senior Judge's mark fills the vacant fourth evaluation slot, then
+  the 5-judge method runs unchanged; the Senior Judge is also the Chief the
+  tolerance is measured against, so that mark is counted twice.
+- 5 judges — sort the four evaluation marks, drop the highest and lowest, average
+  the middle two.
+- Judges who did not submit are excluded, never counted as 0.00.
 
 **Base Score Application:**
-- Calculates range (max - min) of execution judge scores
-- If range exceeds tolerance (default 0.5), base score is applied
-- Otherwise, execution average is used
+- Compares the execution average against the Chief (Senior Judge) mark
+- The tolerance comes from the COP §3.4 tiered table keyed on that average
+  (0.10 at 9.00+, 0.20 at 8.00+, 0.30 at 7.00+, 0.40 at 6.00+, 0.50 at 5.00+,
+  1.00 below) — see `getTolerance` in `config/cop-rules.js`
+- When the gap exceeds the tolerance, `averageMarks = (executionAverage + chief) / 2`
+- Does not apply to 3-judge panels
 
 **Time Deduction:**
 - Supports both numeric seconds and "MM:SS" format
-- Default max time: 90 seconds
-- Default deduction rate: 0.1 per second over limit
-- Formula: (timeInSeconds - maxTime) * deductionRate
+- Time limit: 90 seconds (`TIME_LIMIT_SECONDS`)
+- Banded, not per-second: 0.20 up to 3s over, 0.30 to 5s, 0.40 to 9s, 0.50 beyond
+  — see `getTimeDeduction` in `config/cop-rules.js`
 
 **Final Score:**
 - Formula: averageMarks - deduction - otherDeduction

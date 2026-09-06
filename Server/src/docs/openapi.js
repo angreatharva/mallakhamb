@@ -1568,27 +1568,12 @@ function buildPaths() {
     responses: { 200: ok('Athletes', { type: 'array', items: {} }), ...VALIDATION_ERROR },
   }));
 
-  add('/api/judge/scores', 'post', op({
-    tag: 'Judge', roles: 'judge', operationId: 'judgeSaveScore',
-    summary: 'Submit one athlete\'s slip',
-    requestBody: jsonBody(ref('SaveScoreRequest')),
-    responses: { 200: ok('Saved', ref('Score')), ...VALIDATION_ERROR },
-  }));
-
-  add('/api/judge/scores/{scoreId}', 'put', op({
-    tag: 'Judge', roles: 'judge', operationId: 'judgeUpdateScore',
-    summary: 'Revise a slip',
-    description: 'Refused once the Senior Judge has finalized that athlete.',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    requestBody: jsonBody(ref('SaveScoreRequest')),
-    responses: { 200: ok('Updated', ref('Score')), ...VALIDATION_ERROR, ...NOT_FOUND },
-  }));
-
-  add('/api/judge/scores/my', 'get', op({
-    tag: 'Judge', roles: 'judge', operationId: 'judgeMyScores',
-    summary: 'Slips this judge has submitted',
-    responses: { 200: ok('Slips', { type: 'array', items: {} }) },
-  }));
+  /*
+   * POST /api/judge/scores, PUT /api/judge/scores/{scoreId} and
+   * GET /api/judge/scores/my are retired — they wrote and read a flat score
+   * shape the Score schema has no paths for, so one stored nothing and the
+   * other always 500'd. `/api/judge/scores/save` below is the real one.
+   */
 
   add('/api/judge/scores/save', 'post', op({
     tag: 'Judge', roles: 'judge', operationId: 'judgeSaveScores',

@@ -35,50 +35,22 @@ class CalculationService {
     this.logger = logger;
   }
 
-  /**
-   * Calculate execution average from judge scores
-   * Removes highest and lowest scores from judges 1-4, then averages the remaining two
-   * @deprecated The live scoring path now uses calculateIndividualScore
-   *   (utils/scoring/calculation.util) via calculateCompletePlayerScore, which
-   *   filters unsubmitted judges and applies the COP tiered tolerance. Retained
-   *   for backward compatibility only. Note: this method counts missing judges
-   *   as 0, which is NOT COP-correct for partial panels.
-   * @param {Object} judgeScores - Judge scores object
-   * @returns {number} Execution average
+  /*
+   * `calculateExecutionAverage` is gone.
+   *
+   * It averaged the middle two of `[judge1..judge4]` with `|| 0` on each, so a
+   * judge who did not sit entered the calculation as a mark of 0.00. On a
+   * 3-judge panel scoring 8.5 / 8.6 / 8.4 it returned 8.45 — the phantom zero
+   * sorts to the bottom and displaces the real low mark — where the COP answer
+   * is 8.50. It also skipped the tolerance check against the Chief entirely.
+   *
+   * That is the worst shape a scoring bug can take: a believable number
+   * produced the wrong way. It had no callers left, but it had an inviting
+   * name, and the live path already computes this correctly —
+   * `calculateIndividualScore` (utils/scoring/calculation.util), reached
+   * through `calculateCompletePlayerScore` below, which selects the method from
+   * the panel size and applies the COP tiered tolerance.
    */
-  calculateExecutionAverage(judgeScores) {
-    try {
-      // Get execution judge scores (judge1 through judge4)
-      const executionScores = [
-        judgeScores.judge1 || 0,
-        judgeScores.judge2 || 0,
-        judgeScores.judge3 || 0,
-        judgeScores.judge4 || 0
-      ];
-
-      // Sort scores
-      const sorted = [...executionScores].sort((a, b) => a - b);
-
-      // Remove highest and lowest, average the middle two
-      const middle = sorted.slice(1, 3);
-      const average = middle.reduce((sum, score) => sum + score, 0) / middle.length;
-
-      this.logger.debug('Execution average calculated', {
-        executionScores,
-        sorted,
-        middle,
-        average
-      });
-
-      return Number(average.toFixed(2));
-    } catch (error) {
-      this.logger.error('Calculate execution average error', {
-        judgeScores,
-        error: error.message
-      });
-      throw error;
-    }
-  }
 
   /**
    * The final score: the panel's average, less the deductions the Scorer records.
@@ -267,60 +239,20 @@ class CalculationService {
     }
   }
 
-  /**
-   * Check if base score should be applied based on tolerance
-   * Base score is used when the difference between highest and lowest execution scores exceeds tolerance
-   * @deprecated Superseded by the COP tiered-tolerance logic in
-   *   calculateIndividualScore (utils/scoring/calculation.util), which compares
-   *   the execution average against the Senior (Chief) judge — not the raw J1–J4
-   *   range against a flat 0.5. Retained for backward compatibility only.
-   * @param {Object} judgeScores - Judge scores object
-   * @param {number} tolerance - Tolerance threshold (default: 0.5)
-   * @returns {Object} { shouldApplyBase: boolean, tolerance: number, range: number }
+  /*
+   * `shouldApplyBaseScore` is gone, for the same reason and with the same
+   * `|| 0` flaw as `calculateExecutionAverage` above.
+   *
+   * It answered a different question from the one COP asks. COP §3.4 compares
+   * the EXECUTION AVERAGE against the Chief's mark and picks the tolerance from
+   * a tiered table keyed on that average (0.10 at 9.00+, rising to 1.00 below
+   * 5.00). This compared the raw J1–J4 RANGE against a flat 0.5 and never
+   * looked at the Chief at all — so it disagreed with the real rule in both
+   * directions, and had no caller to notice.
+   *
+   * `calculateIndividualScore` (utils/scoring/calculation.util) owns this
+   * decision, and `getTolerance` (config/cop-rules) owns the table.
    */
-  shouldApplyBaseScore(judgeScores, tolerance = 0.5) {
-    try {
-      // Get execution judge scores (judge1 through judge4)
-      const executionScores = [
-        judgeScores.judge1 || 0,
-        judgeScores.judge2 || 0,
-        judgeScores.judge3 || 0,
-        judgeScores.judge4 || 0
-      ];
-
-      const max = Math.max(...executionScores);
-      const min = Math.min(...executionScores);
-      const range = max - min;
-
-      const shouldApplyBase = range > tolerance;
-
-      this.logger.debug('Base score check', {
-        executionScores,
-        max,
-        min,
-        range,
-        tolerance,
-        shouldApplyBase
-      });
-
-      return {
-        shouldApplyBase,
-        tolerance,
-        range
-      };
-    } catch (error) {
-      this.logger.error('Should apply base score error', {
-        judgeScores,
-        tolerance,
-        error: error.message
-      });
-      return {
-        shouldApplyBase: false,
-        tolerance,
-        range: 0
-      };
-    }
-  }
 
   /**
    * Calculate complete player score with all components

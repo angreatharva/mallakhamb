@@ -560,216 +560,31 @@ class JudgeService extends UserService {
     }
   }
 
-  /**
-   * Save individual score
-   * @param {string} judgeAccountId
-   * @param {Object} scoreData - Score data
-   * @returns {Promise<Object>} Saved score
+  /*
+   * saveIndividualScore / updateIndividualScore / getMyScores are gone.
+   *
+   * All three read and wrote a FLAT score document — { player, judge, score,
+   * notes, submittedAt } on a 0-100 scale — against a collection whose schema
+   * has none of those paths and whose scale is 0-10. Mongoose strict mode
+   * discarded every one of those fields on write, so `POST /api/judge/scores`
+   * answered 201 with a Score document containing nothing but the category,
+   * and `GET /api/judge/scores/my` threw StrictPopulateError on
+   * `populate(['player', 'team'])` and answered 500.
+   *
+   * They were a second, incompatible way to write the same collection. The
+   * real one is the COP path — `adminService.saveScores` →
+   * `scoring.service.saveScores` — which writes `playerScores[].judgeScores`
+   * on the 0-10 scale, merges judgeSlips by role and honours the finalize
+   * lock. That is what the judge client actually calls, through
+   * `POST /api/public/save-score` and `POST /api/judge/scores/save`
+   * (Web/src/services/public/judge.api.js).
+   *
+   * Retired rather than rewritten, for the same reason `GET /api/judge/teams`
+   * and `GET /api/admin/dashboard/competition/:id` were: nothing calls them —
+   * not the web client, not a test, not a script — and a working equivalent
+   * already exists. Rewriting them onto the COP path would recreate the
+   * duplicate write surface rather than remove it.
    */
-  async saveIndividualScore(judgeAccountId, scoreData) {
-    try {
-      const { playerId, teamId, competitionId, score, notes } = scoreData;
-
-      const player = await this.playerRepository.findById(playerId);
-
-      if (!player) {
-        throw new NotFoundError('Player');
-      }
-
-      const team = await this.teamRepository.findById(teamId);
-
-      if (!team) {
-        throw new NotFoundError('Team');
-      }
-
-      // The judge must hold a seat covering exactly the category this team is
-      // being scored in — not merely "a seat at this meet".
-      const assignments = await this.getAssignments(judgeAccountId, competitionId);
-      const assignment = resolveAssignment(assignments, {
-        competition: competitionId,
-        gender: team.gender,
-        ageGroup: team.ageGroup,
-      });
-
-      if (!assignment) {
-        throw new AuthorizationError('Not assigned to this age group/gender');
-      }
-
-      // Check if already scored
-      const existingScore = await this.scoreRepository.findOne({
-        player: playerId,
-        judge: judgeAccountId,
-        competition: competitionId
-      });
-
-      if (existingScore) {
-        throw new BusinessRuleError('Score already submitted for this player');
-      }
-
-      // Validate score range
-      if (score < 0 || score > 100) {
-        throw new BusinessRuleError('Score must be between 0 and 100');
-      }
-
-      // Save score
-      const savedScore = await this.scoreRepository.create({
-        player: playerId,
-        team: teamId,
-        judge: judgeAccountId,
-        competition: competitionId,
-        ageGroup: team.ageGroup,
-        gender: team.gender,
-        score,
-        notes,
-        submittedAt: new Date(),
-        isLocked: false
-      });
-
-      this.logger.info('Score saved', {
-        judgeAccountId,
-        playerId,
-        teamId,
-        score,
-        ageGroup: team.ageGroup
-      });
-
-      // Emit Socket.IO event
-      if (this.socketManager) {
-        this.socketManager.emitToRoom(
-          `competition_${competitionId}`,
-          'score_submitted',
-          {
-            scoreId: savedScore._id,
-            playerId,
-            teamId,
-            judgeId: judgeAccountId,
-            judgeType: assignment.judgeType,
-            ageGroup: team.ageGroup,
-            gender: team.gender,
-            score: savedScore.score,
-            timestamp: savedScore.submittedAt
-          }
-        );
-      }
-
-      return savedScore;
-    } catch (error) {
-      if (error instanceof AuthorizationError ||
-          error instanceof NotFoundError ||
-          error instanceof BusinessRuleError) {
-        throw error;
-      }
-      this.logger.error('Save individual score error', {
-        judgeAccountId,
-        scoreData,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Update individual score
-   * @param {string} judgeAccountId
-   * @param {string} scoreId - Score ID
-   * @param {Object} updates - Score updates
-   * @returns {Promise<Object>} Updated score
-   */
-  async updateIndividualScore(judgeAccountId, scoreId, updates) {
-    try {
-      const score = await this.scoreRepository.findById(scoreId);
-
-      if (!score) {
-        throw new NotFoundError('Score');
-      }
-
-      // Verify ownership
-      if (score.judge.toString() !== judgeAccountId.toString()) {
-        throw new AuthorizationError('Not authorized to update this score');
-      }
-
-      // Check if locked
-      if (score.isLocked) {
-        throw new BusinessRuleError('Score is locked and cannot be updated');
-      }
-
-      // Validate new score if provided
-      if (updates.score !== undefined) {
-        if (updates.score < 0 || updates.score > 100) {
-          throw new BusinessRuleError('Score must be between 0 and 100');
-        }
-      }
-
-      // Update score
-      const updatedScore = await this.scoreRepository.updateById(scoreId, {
-        ...updates,
-        updatedAt: new Date()
-      });
-
-      this.logger.info('Score updated', {
-        judgeAccountId,
-        scoreId,
-        updates: Object.keys(updates)
-      });
-
-      // Emit Socket.IO event
-      if (this.socketManager) {
-        this.socketManager.emitToRoom(
-          `competition_${score.competition}`,
-          'score_updated',
-          {
-            scoreId,
-            playerId: score.player,
-            teamId: score.team,
-            judgeId: judgeAccountId,
-            newScore: updatedScore.score,
-            timestamp: updatedScore.updatedAt
-          }
-        );
-      }
-
-      return updatedScore;
-    } catch (error) {
-      if (error instanceof NotFoundError ||
-          error instanceof AuthorizationError ||
-          error instanceof BusinessRuleError) {
-        throw error;
-      }
-      this.logger.error('Update individual score error', {
-        judgeAccountId,
-        scoreId,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get scores submitted by judge
-   * @param {string} judgeAccountId
-   * @param {string} competitionId - Competition ID
-   * @returns {Promise<Array>} Scores
-   */
-  async getMyScores(judgeAccountId, competitionId) {
-    try {
-      const scores = await this.scoreRepository.find({
-        judge: judgeAccountId,
-        competition: competitionId
-      }, {
-        populate: ['player', 'team'],
-        sort: { submittedAt: -1 }
-      });
-
-      return scores;
-    } catch (error) {
-      this.logger.error('Get my scores error', {
-        judgeAccountId,
-        competitionId,
-        error: error.message
-      });
-      throw error;
-    }
-  }
 
   /**
    * Persist the judge's account-lockout counters (MED-1).

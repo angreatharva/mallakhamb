@@ -95,6 +95,67 @@ app.use('/api/judge', createJudgeRoutes(mockContainer));
 
 const VALID_CATEGORY = { gender: 'Male', ageGroup: 'Under14', competitionType: 'competition_1' };
 
+/**
+ * The flat score endpoints are retired and must stay retired.
+ *
+ * All three wrote or read `{ player, judge, score }` on a 0-100 scale against a
+ * schema that has none of those paths and stores marks 0-10 inside
+ * `playerScores[].judgeScores`. Strict mode dropped every field on write and the
+ * `my` read threw StrictPopulateError — so one endpoint silently stored nothing
+ * and the other answered 500, for their whole existence.
+ *
+ * They were a SECOND way to write the score collection. `/scores/save` below is
+ * the real one, and these assertions exist so nobody restores a duplicate write
+ * surface by reflex when they find a 404 in a log.
+ */
+describe('retired flat score endpoints', () => {
+  const authed = (req) => req
+    .set('Authorization', 'Bearer fake-token')
+    .set('Role', 'judge')
+    .set('JudgeType', 'Judge 1');
+
+  it('POST /api/judge/scores is gone', async () => {
+    const response = await authed(
+      request(app).post('/api/judge/scores').send({
+        playerId: '507f1f77bcf86cd799439011',
+        teamId: '507f1f77bcf86cd799439012',
+        score: 87,
+      })
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it('PUT /api/judge/scores/:scoreId is gone', async () => {
+    const response = await authed(
+      request(app).put('/api/judge/scores/507f1f77bcf86cd799439013').send({ score: 91 })
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it('GET /api/judge/scores/my is gone', async () => {
+    const response = await authed(request(app).get('/api/judge/scores/my'));
+    expect(response.status).toBe(404);
+  });
+
+  it('POST /api/judge/scores/save — the real write path — still works', async () => {
+    const response = await authed(
+      request(app).post('/api/judge/scores/save').send({
+        teamId: '507f1f77bcf86cd799439012',
+        gender: 'Male',
+        ageGroup: 'Under14',
+        playerId: '507f1f77bcf86cd799439011',
+        score: 8.7,
+      })
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it('GET /api/judge/scores/team — the Scorer read — still works', async () => {
+    const response = await authed(request(app).get('/api/judge/scores/team'));
+    expect(response.status).toBe(200);
+  });
+});
+
 describe('GET /api/judge/lots', () => {
   it('blocks unauthenticated requests', async () => {
     const response = await request(app).get('/api/judge/lots').query(VALID_CATEGORY);

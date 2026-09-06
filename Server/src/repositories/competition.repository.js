@@ -331,6 +331,70 @@ class CompetitionRepository extends BaseRepository {
   }
 
   /**
+   * Apply a Razorpay webhook result to the registration that placed the order.
+   *
+   * Replaces a read-modify-`save()` loop that could not work: the caller held
+   * `findActive()` results, which come through BaseRepository and are `.lean()`,
+   * so `competition.save()` was a TypeError and every webhook answered 500. It
+   * also loaded EVERY active competition and scanned `registeredTeams` in
+   * JavaScript to find one order id.
+   *
+   * `arrayFilters` targets the single registration without rewriting the whole
+   * array — the same reason `addPlayerToRegistration` above uses it. A webhook
+   * arrives while coaches are still editing squads on the same document, and a
+   * whole-array write would discard their concurrent changes.
+   *
+   * Returns the identifiers the caller needs to record a Transaction, or null
+   * when no registration holds that order id.
+   *
+   * @param {string} orderId - Razorpay order id (`registeredTeams[].paymentOrderId`)
+   * @param {Object} fields - registration fields to set, unprefixed
+   * @returns {Promise<{competitionId: *, team: *, coach: *, paymentStatus: string}|null>}
+   */
+  async applyPaymentWebhookResult(orderId, fields) {
+    try {
+      if (!orderId) return null;
+
+      const $set = Object.fromEntries(
+        Object.entries(fields).map(([key, value]) => [
+          `registeredTeams.$[registration].${key}`,
+          value,
+        ])
+      );
+
+      const updated = await this.model.findOneAndUpdate(
+        { 'registeredTeams.paymentOrderId': orderId, isDeleted: { $ne: true } },
+        { $set },
+        {
+          arrayFilters: [{ 'registration.paymentOrderId': orderId }],
+          new: true,
+          projection: { _id: 1, registeredTeams: 1 },
+        }
+      ).lean();
+
+      if (!updated) return null;
+
+      const registration = (updated.registeredTeams || []).find(
+        (rt) => rt.paymentOrderId === orderId
+      );
+      if (!registration) return null;
+
+      return {
+        competitionId: updated._id,
+        team: registration.team,
+        coach: registration.coach,
+        paymentStatus: registration.paymentStatus,
+      };
+    } catch (error) {
+      this.logger.error('CompetitionRepository.applyPaymentWebhookResult error', {
+        orderId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * The submitted registrations for a category, and only those.
    *
    * Replaces loading the whole competition with three levels of populate and

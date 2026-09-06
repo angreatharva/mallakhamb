@@ -46,59 +46,109 @@ class PaymentService {
       return { processed: false, message: 'Webhook event ignored' };
     }
 
-    // Find matching team by paymentOrderId
+    if (!orderId) {
+      this.logger.warn('Webhook carried no order id', { event });
+      return { processed: false, message: 'No matching order found' };
+    }
+
     if (!this.competitionRepository) {
       this.logger.error('Competition repository not available for webhook processing');
       return { processed: false, message: 'No matching order found' };
     }
 
-    // Query all competitions to find the one with matching paymentOrderId
-    const competitions = await this.competitionRepository.findActive();
-    let matchingCompetition = null;
-    let matchingTeam = null;
+    const paymentEntity = payload?.payload?.payment?.entity || {};
 
-    for (const competition of competitions) {
-      const team = competition.registeredTeams?.find(rt => rt.paymentOrderId === orderId);
-      if (team) {
-        matchingCompetition = competition;
-        matchingTeam = team;
-        break;
+    /*
+     * Razorpay reports `amount` in PAISE. The registration's `paymentAmount`
+     * and the Transaction's `amount` are both recorded in RUPEES everywhere
+     * else — coach.service divides by 100 on the verify-and-submit path — so
+     * this converts rather than storing a figure a hundred times too large
+     * next to correct ones.
+     */
+    const amountInRupees = Number.isFinite(Number(paymentEntity.amount))
+      ? Number(paymentEntity.amount) / 100
+      : undefined;
+
+    const paymentStatus = event === 'payment.captured' ? 'completed' : 'failed';
+
+    const registrationFields = paymentStatus === 'completed'
+      ? {
+        paymentStatus,
+        paymentGateway: 'razorpay',
+        paymentId: paymentEntity.id,
+        paymentVerifiedAt: new Date(),
+        ...(amountInRupees !== undefined && { paymentAmount: amountInRupees }),
       }
-    }
+      : { paymentStatus };
 
-    if (!matchingCompetition || !matchingTeam) {
+    /*
+     * One atomic update, targeted by order id.
+     *
+     * This used to load every active competition, scan `registeredTeams` in
+     * JavaScript, mutate the match and call `competition.save()` — on a `.lean()`
+     * object, so it was a TypeError and this endpoint answered 500 to every
+     * webhook Razorpay ever sent. See the repository method for the rest.
+     */
+    const match = await this.competitionRepository.applyPaymentWebhookResult(
+      orderId,
+      registrationFields
+    );
+
+    if (!match) {
       this.logger.info('No matching order found for webhook', { orderId, event });
       return { processed: false, message: 'No matching order found' };
     }
 
-    // Update payment status based on event type
-    if (event === 'payment.captured') {
-      matchingTeam.paymentStatus = 'completed';
-      matchingTeam.paymentGateway = 'razorpay';
-      matchingTeam.paymentId = payload?.payload?.payment?.entity?.id;
-      matchingTeam.paymentVerifiedAt = new Date();
-      matchingTeam.paymentAmount = payload?.payload?.payment?.entity?.amount;
-    } else if (event === 'payment.failed') {
-      matchingTeam.paymentStatus = 'failed';
-    }
-
-    // Save the competition document
-    await matchingCompetition.save();
-
-    // Create transaction record if repository is available
+    /*
+     * The Transaction record.
+     *
+     * Previously `{ source: 'razorpay', type: payload.event, rawPayload }` —
+     * `source` is an enum of ['coach','superadmin'], `type` an enum of
+     * ['team_submission','player_add','other'], `competition` is required and
+     * `rawPayload` is not a path on the schema. Every field was wrong, so even
+     * with the save() bug fixed this would have thrown a ValidationError.
+     *
+     * A webhook reconciles a coach's team-submission payment, which is what the
+     * enums already have names for; the raw event goes in `metadata`, which is
+     * the schema's open field.
+     */
     if (this.transactionRepository) {
-      await this.transactionRepository.create({
-        source: 'razorpay',
-        type: payload?.event || 'webhook',
-        paymentStatus: matchingTeam.paymentStatus,
-        rawPayload: payload,
-      });
+      try {
+        await this.transactionRepository.create({
+          source: 'coach',
+          type: 'team_submission',
+          competition: match.competitionId,
+          team: match.team,
+          coach: match.coach,
+          amount: amountInRupees,
+          paymentStatus,
+          description: `Razorpay ${event} reconciled from webhook`,
+          metadata: {
+            razorpay_event: event,
+            razorpay_order_id: orderId,
+            razorpay_payment_id: paymentEntity.id,
+            reconciledAt: new Date(),
+          },
+        });
+      } catch (error) {
+        /*
+         * The registration is already updated, and that is the part that
+         * matters. Throwing here would answer 5xx and make Razorpay redeliver
+         * an event that has in fact been applied.
+         */
+        this.logger.error('Failed to record webhook transaction', {
+          orderId,
+          event,
+          error: error.message,
+        });
+      }
     }
 
-    this.logger.info('Razorpay webhook reconciled', { 
-      event, 
-      orderId, 
-      paymentStatus: matchingTeam.paymentStatus 
+    this.logger.info('Razorpay webhook reconciled', {
+      event,
+      orderId,
+      competitionId: String(match.competitionId),
+      paymentStatus,
     });
     return { processed: true };
   }

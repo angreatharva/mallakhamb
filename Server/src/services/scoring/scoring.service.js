@@ -688,10 +688,30 @@ class ScoringService {
     try {
       // Build query filters
       const query = { competition: competitionId };
-      
+
       // Only add ageGroup filter if provided
       if (ageGroup) {
         query.ageGroup = ageGroup;
+      }
+      /*
+       * Gender belongs in the QUERY, like every other part of the category.
+       *
+       * It used to be applied per row instead, as
+       * `if (gender && ps.playerGender && ps.playerGender !== gender) return;`
+       * — but `playerGender` is not a path on the playerScores sub-schema, so
+       * it read undefined on every row, the condition was never true and the
+       * filter did nothing. Asking for Male Under-14 returned the Female
+       * athletes too, next to a team table from `getTeamScores` that had
+       * filtered them out correctly, so the two halves of the same results
+       * board disagreed.
+       *
+       * The gender of a performance is on the score DOCUMENT — it is required
+       * there, and it is part of the document's identity — so this is both the
+       * correct source and the one served by the
+       * `{competition, gender, ageGroup, competitionType}` index.
+       */
+      if (gender) {
+        query.gender = gender;
       }
       if (competitionType) {
         /*
@@ -728,10 +748,7 @@ class ScoringService {
         (scoreDoc.playerScores || []).forEach(ps => {
           const playerId = ps.playerId?.toString();
           if (playerId) {
-            // Apply gender filter if provided
-            if (gender && ps.playerGender && ps.playerGender !== gender) {
-              return; // Skip this player score
-            }
+            // Gender is filtered in the query above — see the note there.
 
             // Apply apparatus filter if provided
             if (apparatus && ps.apparatus && ps.apparatus !== apparatus) {
@@ -742,8 +759,16 @@ class ScoringService {
               playerScoresMap.set(playerId, {
                 playerId: ps.playerId,
                 playerName: ps.playerName,
-                playerGender: ps.playerGender,
-                playerAgeGroup: ps.playerAgeGroup,
+                /*
+                 * From the score DOCUMENT, not the row. These two were read as
+                 * `ps.playerGender` / `ps.playerAgeGroup`, which the sub-schema
+                 * does not declare, so both were `undefined` on every response
+                 * this endpoint has ever returned — while the OpenAPI document
+                 * advertises them as enums. The document carries the real
+                 * values: they are what the athlete was judged under.
+                 */
+                playerGender: scoreDoc.gender,
+                playerAgeGroup: scoreDoc.ageGroup,
                 scores: []
               });
             }

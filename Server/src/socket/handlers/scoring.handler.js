@@ -47,11 +47,13 @@ class ScoringHandler {
       this.handleScoreUpdate.bind(this)
     );
 
-    // Register score update request handler (for updating existing scores)
-    this.socketManager.registerEventHandler(
-      EventTypes.SCORE_UPDATE_REQUEST,
-      this.handleScoreUpdateRequest.bind(this)
-    );
+    /*
+     * `score_update_request` is gone. It called
+     * `judgeService.updateIndividualScore`, which revised a flat score document
+     * the Score schema has no paths for — so it could only ever have thrown.
+     * The retired HTTP twins are documented in judge.routes.js. Live slip
+     * revision goes through POST /api/judge/scores/save like every other write.
+     */
 
     // Register scores saved handler
     this.socketManager.registerEventHandler(
@@ -308,55 +310,6 @@ class ScoringHandler {
     });
   }
 
-  /**
-   * Handle score update request (for updating existing scores)
-   * @param {Socket} socket - Socket.IO socket instance
-   * @param {Object} data - Event data { scoreId, updates }
-   */
-  async handleScoreUpdateRequest(socket, data) {
-    // Validate user is a judge
-    if (socket.userType !== 'judge') {
-      throw new Error('Only judges can update scores');
-    }
-
-    const { scoreId, updates } = data;
-
-    // Validate required fields
-    if (!scoreId || !updates) {
-      throw new Error('Missing required fields: scoreId, updates');
-    }
-
-    try {
-      if (!this.judgeService) {
-        throw new Error('Judge service is not configured');
-      }
-
-      const updatedScore = await this.judgeService.updateIndividualScore(
-        socket.userId,
-        scoreId,
-        updates
-      );
-
-      // Emit confirmation to judge
-      socket.emit(EventTypes.SCORE_UPDATE_SUCCESS, {
-        scoreId,
-        score: updatedScore
-      });
-
-      this.logger.info('Score updated via Socket.IO', {
-        scoreId,
-        judgeId: socket.userId
-      });
-    } catch (error) {
-      this.logger.error('Socket.IO score update error', {
-        scoreId,
-        error: error.message
-      });
-      socket.emit(EventTypes.SCORE_ERROR, {
-        message: error.message
-      });
-    }
-  }
 }
 
 module.exports = ScoringHandler;

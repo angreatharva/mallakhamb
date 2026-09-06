@@ -501,7 +501,11 @@ async function run() {
           ...slip, judgeType: 'Judge 2', breakdown: { ...slip.breakdown, bonus: 0.5 },
         }), { expect: [400] });
 
-      await step('GET /api/judge/scores/my', judge.get('/api/judge/scores/my'));
+      // Retired alongside POST /api/judge/scores and PUT /api/judge/scores/:id:
+      // all three used a flat score shape the Score schema has no paths for, so
+      // this one threw StrictPopulateError and answered 500 on every call.
+      await step('GET /api/judge/scores/my is retired', judge.get('/api/judge/scores/my'),
+        { expect: [404] });
     } else {
       record('scoring flow', 'SKIP', { reason: `no submitted team in ${CATEGORY.gender} ${CATEGORY.ageGroup}` });
     }

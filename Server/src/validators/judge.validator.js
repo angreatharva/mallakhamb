@@ -151,44 +151,12 @@ const getTeamPlayers = () => {
   ];
 };
 
-/**
- * Validate save individual score
+/*
+ * saveIndividualScore / updateIndividualScore validated a 0-100 `score` for the
+ * flat judge score endpoints, which are retired — see judge.routes.js. The
+ * scale alone shows how far those had drifted: a COP slip is 0-10, and
+ * scoring.validator.js range-checks it as such.
  */
-const saveIndividualScore = () => {
-  return [
-    mongoId('playerId', 'body')
-      .withMessage('Valid player ID is required'),
-    mongoId('teamId', 'body')
-      .withMessage('Valid team ID is required'),
-    body('score')
-      .isFloat({ min: 0, max: 100 })
-      .withMessage('Score must be a number between 0 and 100'),
-    body('notes')
-      .optional()
-      .trim()
-      .isLength({ max: 500 })
-      .withMessage('Notes must not exceed 500 characters')
-  ];
-};
-
-/**
- * Validate update individual score
- */
-const updateIndividualScore = () => {
-  return [
-    mongoId('scoreId', 'param')
-      .withMessage('Valid score ID is required'),
-    body('score')
-      .optional()
-      .isFloat({ min: 0, max: 100 })
-      .withMessage('Score must be a number between 0 and 100'),
-    body('notes')
-      .optional()
-      .trim()
-      .isLength({ max: 500 })
-      .withMessage('Notes must not exceed 500 characters')
-  ];
-};
 
 module.exports = {
   login,
@@ -198,6 +166,4 @@ module.exports = {
   setCompetitionContext,
   getCompetitionDetails,
   getTeamPlayers,
-  saveIndividualScore,
-  updateIndividualScore
 };

@@ -246,3 +246,65 @@ describe('Difficulty Cascade (v2 §3.2.1)', () => {
     expect(result.shortfallFlag).toBe(true); // missing A elements
   });
 });
+/**
+ * An absent judge is not a mark of zero.
+ *
+ * `CalculationService.calculateExecutionAverage` and `.shouldApplyBaseScore`
+ * were removed because both read `judgeScores.judgeN || 0` across all four
+ * evaluation slots, so a judge who never sat entered the arithmetic as 0.00.
+ * On a 3-judge panel the phantom zero sorts to the bottom and displaces the
+ * real low mark, which produces a *plausible* number by the wrong method —
+ * the hardest kind of scoring bug to notice.
+ *
+ * `calculateIndividualScore` is the one implementation now, and it selects the
+ * method from the panel size instead of assuming four evaluators.
+ */
+describe('absent judges are excluded, never counted as zero', () => {
+  const THREE_JUDGE = { seniorJudge: 8.5, judge1: 8.6, judge2: 8.4 };
+
+  it('averages a 3-judge panel over the marks that exist', () => {
+    const result = calculateIndividualScore(THREE_JUDGE, 3);
+
+    // (8.5 + 8.6 + 8.4) / 3 = 8.50. The removed helper answered 8.45 here,
+    // because it averaged the middle two of [0, 8.4, 8.5, 8.6].
+    expect(result.averageMarks).toBeCloseTo(8.50, 3);
+    expect(result.method).toBe('3_JUDGE_SIMPLE_AVERAGE');
+  });
+
+  it('runs no tolerance check on a 3-judge panel — there is no Chief', () => {
+    const result = calculateIndividualScore(THREE_JUDGE, 3);
+
+    expect(result.toleranceUsed).toBe(0);
+    expect(result.baseScoreApplied).toBe(false);
+  });
+
+  it('infers the panel size from the marks present when it is not declared', () => {
+    const declared = calculateIndividualScore(THREE_JUDGE, 3);
+    const inferred = calculateIndividualScore(THREE_JUDGE);
+
+    expect(inferred.averageMarks).toBeCloseTo(declared.averageMarks, 3);
+    expect(inferred.method).toBe('3_JUDGE_SIMPLE_AVERAGE');
+  });
+
+  it('decides the tolerance against the Chief, not against the J1-J4 range', () => {
+    // Range across the evaluation judges is 0.60 — more than the flat 0.5 the
+    // removed `shouldApplyBaseScore` compared against, so it would have called
+    // for a base score. COP does not: it measures the execution AVERAGE (9.05)
+    // against the Chief (9.10), a gap of 0.05 inside the 0.10 tier.
+    const result = calculateIndividualScore({
+      seniorJudge: 9.10, judge1: 8.80, judge2: 9.00, judge3: 9.10, judge4: 9.40,
+    });
+
+    expect(result.executionAverage).toBeCloseTo(9.05, 3);
+    expect(result.toleranceUsed).toBe(0.10);
+    expect(result.baseScoreApplied).toBe(false);
+  });
+
+  it('no longer exposes the two removed helpers', () => {
+    const CalculationService = require('../../src/services/scoring/calculation.service');
+    const service = new CalculationService({ debug() {}, info() {}, warn() {}, error() {} });
+
+    expect(service.calculateExecutionAverage).toBeUndefined();
+    expect(service.shouldApplyBaseScore).toBeUndefined();
+  });
+});

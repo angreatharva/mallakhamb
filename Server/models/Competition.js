@@ -229,6 +229,17 @@ competitionSchema.index({ year: 1 });
 competitionSchema.index({ admins: 1 });
 competitionSchema.index({ competitionTypes: 1 });
 competitionSchema.index({ 'ageGroups.gender': 1, 'ageGroups.ageGroup': 1 });
+
+/**
+ * "Which registration placed this Razorpay order?" — the only lookup the payment
+ * webhook performs (`CompetitionRepository.applyPaymentWebhookResult`).
+ *
+ * Sparse because most registrations never reach checkout, so the field is unset
+ * on the majority of the array entries and there is no point indexing those.
+ * NOT unique: a coach who abandons a checkout and starts a new one leaves the
+ * old order id behind, and a unique index would refuse the retry.
+ */
+competitionSchema.index({ 'registeredTeams.paymentOrderId': 1 }, { sparse: true });
 competitionSchema.index({ 'startedAgeGroups.gender': 1, 'startedAgeGroups.ageGroup': 1, 'startedAgeGroups.competitionType': 1 });
 
 // Method to add admin to competition

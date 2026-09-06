@@ -221,8 +221,15 @@ function buildPlayerScore(player, apparatus, index, finalized) {
   return {
     playerId: player._id,
     playerName: `${player.firstName} ${player.lastName}`,
-    playerGender: player.gender,
-    playerAgeGroup: player.ageGroup,
+    /*
+     * `playerGender` / `playerAgeGroup` are NOT set here.
+     *
+     * The playerScores sub-schema declares neither, so strict mode discarded
+     * both and this seeder was writing two fields that never reached the
+     * database. The category of a performance lives on the score DOCUMENT
+     * (built below, where `gender` and `ageGroup` are required), which is where
+     * getIndividualScores reads it from.
+     */
     apparatus,
     judgeScores: marks,
     judgeSlips,

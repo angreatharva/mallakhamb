@@ -126,27 +126,22 @@ function createJudgeRoutes(container) {
     judgeController.getTeamPlayers
   );
 
-  router.post('/scores',
-    authenticate,
-    requireJudge,
-    judgeValidator.saveIndividualScore(),
-    handleValidationErrors,
-    judgeController.saveIndividualScore
-  );
-
-  router.put('/scores/:scoreId',
-    authenticate,
-    requireJudge,
-    judgeValidator.updateIndividualScore(),
-    handleValidationErrors,
-    judgeController.updateIndividualScore
-  );
-
-  router.get('/scores/my',
-    authenticate,
-    requireJudge,
-    judgeController.getMyScores
-  );
+  /*
+   * POST /api/judge/scores, PUT /api/judge/scores/:scoreId and
+   * GET /api/judge/scores/my are gone.
+   *
+   * They were a SECOND, incompatible way to write the score collection: a flat
+   * `{ player, judge, score }` document on a 0-100 scale, against a schema that
+   * has none of those paths and stores marks 0-10 inside
+   * `playerScores[].judgeScores`. Strict mode dropped every field on write and
+   * the `my` read threw StrictPopulateError, so one endpoint stored nothing and
+   * the other answered 500 — for their entire existence.
+   *
+   * Not rewritten, because the working equivalent is right below and is what the
+   * judge client calls: POST /scores/save, the shared COP handler that resolves
+   * the caller's panel seat, merges judgeSlips by role and honours the finalize
+   * lock. See judge.service.js for the full note.
+   */
 
   // Scorer interface endpoints
   router.get('/scores/team',
