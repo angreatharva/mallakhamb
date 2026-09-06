@@ -22,6 +22,7 @@ const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
+const { createUserRateLimitMiddleware } = require('../middleware/security.middleware');
 
 /**
  * Initialize coach routes with dependencies from DI container
@@ -34,6 +35,30 @@ function createCoachRoutes(container) {
   const authMiddleware = createAuthMiddleware(container);
   const coachAuth = requireCoach;
   const coachController = container.resolve('coachController');
+  const userRateLimit = createUserRateLimitMiddleware(container);
+
+  /**
+   * The discount code, at the boundary.
+   *
+   * A length cap because this string is hashed and compared on every call and
+   * there is no reason to accept a megabyte of it; `.trim()` because a code
+   * pasted out of an email arrives with whitespace and rejecting that would
+   * read as "the code is wrong".
+   */
+  const discountCodeValidation = [
+    body('discountCode')
+      .exists({ checkNull: true })
+      .withMessage('Enter a discount code')
+      .bail()
+      .isString()
+      .withMessage('Enter a discount code')
+      .bail()
+      .trim()
+      .notEmpty()
+      .withMessage('Enter a discount code')
+      .isLength({ max: 128 })
+      .withMessage('That discount code is not valid'),
+  ];
 
   // Validation middleware
   const registerValidation = [
@@ -258,6 +283,37 @@ function createCoachRoutes(container) {
     coachAuth,
     validateCompetitionContext,
     coachController.verifyTeamPaymentAndSubmit
+  );
+
+  /*
+   * Discount code.
+   *
+   * Both of these answer "is this code right?", which makes them a guessing
+   * surface for a single shared secret that is worth a whole team's entry fee.
+   * `userRateLimit` is keyed by the authenticated coach rather than by IP —
+   * the same reason judge login is (a venue shares one NAT address), and the
+   * limiter is a no-op in development where RATE_LIMIT_ENABLED defaults off.
+   */
+  router.post(
+    '/payments/discount/validate',
+    authMiddleware,
+    coachAuth,
+    userRateLimit,
+    validateCompetitionContext,
+    discountCodeValidation,
+    handleValidationErrors,
+    coachController.validateDiscountCode
+  );
+
+  router.post(
+    '/payments/discount/redeem',
+    authMiddleware,
+    coachAuth,
+    userRateLimit,
+    validateCompetitionContext,
+    discountCodeValidation,
+    handleValidationErrors,
+    coachController.redeemDiscountAndSubmit
   );
 
   return router;

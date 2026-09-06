@@ -96,6 +96,25 @@ class ConfigManager {
         keyId: this.getString('RAZORPAY_KEY_ID', ''),
         keySecret: this.getString('RAZORPAY_KEY_SECRET', '')
       },
+      payments: {
+        /**
+         * The registration discount code.
+         *
+         * One shared code that takes 100% off a coach's team fee, so redeeming
+         * it skips Razorpay entirely — there is no such thing as a ₹0 order.
+         * That makes this switch the one thing standing between a typo and free
+         * entry for anyone who hears the code, which is why it is OFF by
+         * default in every environment and named in the startup report.
+         *
+         * `validate()` refuses to boot with the switch on and no code set: an
+         * empty expected value compared against an empty submitted one matches,
+         * and every coach would register for nothing.
+         */
+        discount: {
+          enabled: this.getBoolean('DISCOUNT_CODE_ENABLED', false),
+          code: this.getString('DISCOUNT_CODE', '')
+        }
+      },
       cache: {
         ttl: this.getNumber('CACHE_TTL_SECONDS', 300),
         maxSize: this.getNumber('CACHE_MAX_SIZE', 1000)
@@ -188,6 +207,16 @@ class ConfigManager {
           errors.push('RESEND_API_KEY is required when using resend provider');
         }
       }
+    }
+
+    /*
+     * A discount switch that is on with no code set would make EVERY coach's
+     * entry free: the comparison would be an empty expected value against an
+     * empty submitted one, which matches. Refuse to start rather than find out
+     * from the transaction list.
+     */
+    if (this.config.payments.discount.enabled && !this.config.payments.discount.code) {
+      errors.push('DISCOUNT_CODE must be set when DISCOUNT_CODE_ENABLED is true');
     }
 
     // Validate production-specific requirements

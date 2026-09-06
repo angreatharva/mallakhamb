@@ -165,6 +165,30 @@ function createCoachController(container) {
       res.json({ success: true, data: order });
     }),
 
+    /** @route POST /api/coaches/payments/discount/validate */
+    validateDiscountCode: asyncHandler(async (req, res) => {
+      const quote = await coachService.quoteTeamPaymentWithDiscount(
+        req.user._id,
+        req.competitionId,
+        req.body?.discountCode
+      );
+      res.json({ success: true, data: quote });
+    }),
+
+    /** @route POST /api/coaches/payments/discount/redeem */
+    redeemDiscountAndSubmit: asyncHandler(async (req, res) => {
+      const result = await coachService.redeemDiscountAndSubmit(
+        req.user._id,
+        req.competitionId,
+        req.body?.discountCode
+      );
+      res.json({
+        success: true,
+        data: result,
+        message: 'Discount code applied. Team submitted successfully.',
+      });
+    }),
+
     /** @route POST /api/coach/team/payment/verify */
     verifyTeamPaymentAndSubmit: asyncHandler(async (req, res) => {
       const result = await coachService.verifyTeamPaymentAndSubmit(

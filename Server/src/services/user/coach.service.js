@@ -14,6 +14,9 @@ const {
   calculateTeamPaymentAmount,
   resolveFeeWindow,
   assertPaymentWindowOpen,
+  applyDiscountCode,
+  assertDiscountCodeValid,
+  DISCOUNT_PERCENT,
 } = require('../../config/payment.config');
 
 class CoachService extends UserService {
@@ -380,6 +383,9 @@ class CoachService extends UserService {
     
     return {
       competitionId,
+      // Whether the payment page should offer a discount-code box. The code
+      // never leaves the server — only the fact that one is being accepted.
+      discount: this.getDiscountAvailability(),
       team: {
         _id: team._id,
         name: team.name,
@@ -618,6 +624,244 @@ class CoachService extends UserService {
       teamId: competition.registeredTeams[registeredTeamIndex].team, 
       playerId 
     };
+  }
+
+  /**
+   * The discount switch, as the payment page needs to see it.
+   *
+   * Only whether the feature is on and what it is worth — never the code. The
+   * client uses this to decide whether to render the input at all; the code
+   * itself is only ever compared on this side.
+   *
+   * @returns {{enabled: boolean, percentOff: number}}
+   */
+  getDiscountAvailability() {
+    // One config path for the whole feature — `payments.discount` — rather than
+    // reaching for `payments.discount.enabled` here and the object elsewhere.
+    return {
+      enabled: this.config?.get?.('payments.discount')?.enabled === true,
+      percentOff: DISCOUNT_PERCENT,
+    };
+  }
+
+  /**
+   * Find this coach's entry, or explain which half is missing.
+   *
+   * The three payment paths all begin the same way and all used to repeat it.
+   *
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @returns {Promise<{competition: Object, registeredTeam: Object, registeredTeamIndex: number}>}
+   */
+  async _loadRegistration(coachId, competitionId) {
+    const competition = await this.competitionRepository.findById(competitionId);
+    if (!competition) {
+      throw new NotFoundError('Competition not found');
+    }
+
+    const registeredTeamIndex = competition.registeredTeams.findIndex(
+      rt => rt.coach?.toString() === coachId.toString()
+    );
+    if (registeredTeamIndex === -1) {
+      throw new NotFoundError('Team not registered for this competition');
+    }
+
+    return {
+      competition,
+      registeredTeam: competition.registeredTeams[registeredTeamIndex],
+      registeredTeamIndex,
+    };
+  }
+
+  /**
+   * Price this coach's entry with a discount code applied — no side effects.
+   *
+   * Backs the "Apply" button, so the coach sees ₹0 before committing to a
+   * submission they cannot undo. It is also a code ORACLE, which is why it is
+   * rate limited at the route and why every rejection reads the same.
+   *
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @param {string} discountCode
+   * @returns {Promise<Object>} the quote
+   * @throws {ValidationError} if the feature is off, the code is wrong, or the
+   *   registration window is shut
+   */
+  async quoteTeamPaymentWithDiscount(coachId, competitionId, discountCode) {
+    const { competition, registeredTeam } = await this._loadRegistration(coachId, competitionId);
+
+    if (registeredTeam.isSubmitted) {
+      throw new ValidationError('This team has already been submitted');
+    }
+
+    const discountConfig = this.config?.get?.('payments.discount');
+    assertDiscountCodeValid(discountCode, discountConfig);
+
+    /*
+     * The window still applies at 100% off.
+     *
+     * A free entry is still an entry, and one accepted after the meet closed is
+     * exactly as wrong as a paid one. Asserted AFTER the code check purely so a
+     * coach with a bad code is told about the code.
+     */
+    const quotedAt = new Date();
+    const feeWindow = assertPaymentWindowOpen(competition, quotedAt);
+
+    const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt);
+    const discount = applyDiscountCode(amount, discountCode, discountConfig);
+
+    this.logger?.info?.('Discount code quoted', {
+      coachId,
+      competitionId,
+      originalAmount: discount.originalAmount,
+      payableAmount: discount.payableAmount,
+    });
+
+    return {
+      ...discount,
+      playerCount: registeredTeam.players?.length || 0,
+      currency: 'INR',
+      fee: {
+        phase: feeWindow.phase,
+        isLate: feeWindow.isLate,
+        lateFeePerPlayer: feeWindow.lateFeePerPlayer,
+        lateFeeTotal: feeWindow.lateFeePerPlayer * (registeredTeam.players?.length || 0),
+      },
+    };
+  }
+
+  /**
+   * Redeem the discount code and submit the team.
+   *
+   * This is the whole reason the discount is all-or-nothing. Razorpay has no
+   * ₹0 order, so a 100%-off entry cannot go through the gateway at all — there
+   * is no order to create, no signature to verify and no amount to match. The
+   * team is submitted here directly, which means EVERY guard the paid path gets
+   * from Razorpay has to be re-stated: the feature switch, the code, the
+   * registration window, and the already-submitted check.
+   *
+   * Re-validating rather than trusting a quote is deliberate. The quote endpoint
+   * has no side effects and hands nothing back that this could rely on; a client
+   * that skipped it entirely must land in exactly the same place.
+   *
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @param {string} discountCode
+   * @returns {Promise<Object>}
+   */
+  async redeemDiscountAndSubmit(coachId, competitionId, discountCode) {
+    try {
+      const coach = await this.repository.findById(coachId);
+      if (!coach) {
+        throw new NotFoundError('Coach not found');
+      }
+
+      const { competition, registeredTeam, registeredTeamIndex } =
+        await this._loadRegistration(coachId, competitionId);
+
+      if (registeredTeam.isSubmitted) {
+        this.logger?.warn?.('Team already submitted', { coachId, competitionId });
+        return {
+          coachId,
+          competitionId,
+          submitted: true,
+          alreadySubmitted: true,
+          discountApplied: true,
+          amountPaid: 0,
+        };
+      }
+
+      const discountConfig = this.config?.get?.('payments.discount');
+      assertDiscountCodeValid(discountCode, discountConfig);
+
+      const redeemedAt = new Date();
+      assertPaymentWindowOpen(competition, redeemedAt);
+
+      const playerCount = registeredTeam.players?.length || 0;
+      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, redeemedAt);
+      const discount = applyDiscountCode(amount, discountCode, discountConfig);
+
+      /*
+       * Belt and braces. `applyDiscountCode` cannot return a non-zero payable
+       * amount for a valid code while DISCOUNT_PERCENT is 100 — but if that
+       * constant is ever lowered, this path would silently submit a team that
+       * still owed money. Refuse instead.
+       */
+      if (!discount.applied || discount.payableAmount !== 0) {
+        throw new ValidationError('This discount code does not cover the full fee — pay through checkout instead');
+      }
+
+      const team = await this.teamRepository.findById(registeredTeam.team);
+      if (!team) {
+        throw new NotFoundError('Team not found');
+      }
+
+      await this.competitionRepository.updateById(
+        competitionId,
+        {
+          $set: {
+            [`registeredTeams.${registeredTeamIndex}.isSubmitted`]: true,
+            [`registeredTeams.${registeredTeamIndex}.submittedAt`]: redeemedAt,
+            // 'completed' because the fee obligation IS settled — at zero. The
+            // admin screens read this field to report who still owes money, and
+            // leaving it 'pending' would list a team that owes nothing.
+            [`registeredTeams.${registeredTeamIndex}.paymentStatus`]: 'completed',
+            [`registeredTeams.${registeredTeamIndex}.paymentAmount`]: 0,
+            [`registeredTeams.${registeredTeamIndex}.paymentVerifiedAt`]: redeemedAt,
+            // `paymentGateway` is left unset on purpose: its enum is ['razorpay']
+            // and no gateway was involved.
+          }
+        }
+      );
+
+      if (this.transactionRepository) {
+        await this.transactionRepository.create([{
+          source: 'coach',
+          type: 'team_submission',
+          amount: 0,
+          competition: competitionId,
+          team: registeredTeam.team,
+          coach: coachId,
+          paymentStatus: 'completed',
+          description: `Team ${team.name} submitted with a ${discount.percent}% discount code`,
+          metadata: {
+            discountApplied: true,
+            discountPercent: discount.percent,
+            // The amount waived, NOT the code. A transaction list is read by
+            // more people than should be able to reuse a free-entry code.
+            originalAmount: discount.originalAmount,
+            discountAmount: discount.discountAmount,
+            playerCount,
+            submittedAt: redeemedAt,
+          },
+        }]);
+      }
+
+      this.logger?.info?.('Team submitted with a discount code', {
+        coachId,
+        competitionId,
+        teamId: registeredTeam.team,
+        waived: discount.discountAmount,
+        playerCount,
+      });
+
+      return {
+        coachId,
+        competitionId,
+        submitted: true,
+        discountApplied: true,
+        discountPercent: discount.percent,
+        originalAmount: discount.originalAmount,
+        amountPaid: discount.payableAmount,
+      };
+    } catch (error) {
+      this.logger?.error?.('Error redeeming discount code', {
+        error: error.message,
+        coachId,
+        competitionId,
+      });
+      throw error;
+    }
   }
 
   async createTeamPaymentOrder(coachId, competitionId) {

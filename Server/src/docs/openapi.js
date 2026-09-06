@@ -905,6 +905,40 @@ function buildPaths() {
     responses: { 200: ok('Paid and submitted'), ...VALIDATION_ERROR, 402: errorResponse('Payment verification failed') },
   }));
 
+  add('/api/coaches/payments/discount/validate', 'post', op({
+    tag: 'Coaches', roles: 'coach', competitionContext: true, operationId: 'coachValidateDiscount',
+    summary: 'Price the entry with a discount code, without submitting',
+    description:
+      'Backs the "Apply" button so the coach sees the discounted total before committing. '
+      + 'No side effects. Gated on `DISCOUNT_CODE_ENABLED`; `GET /api/coaches/dashboard` '
+      + 'reports whether codes are being accepted at all. Rate limited per coach — this '
+      + 'is a guessing surface for a single shared code.',
+    requestBody: jsonBody(inline({ discountCode: S.str }, ['discountCode'])),
+    responses: {
+      200: ok('Quote', inline({
+        applied: { type: 'boolean' },
+        percent: { type: 'number', example: 100 },
+        originalAmount: { type: 'number' },
+        discountAmount: { type: 'number' },
+        payableAmount: { type: 'number', example: 0 },
+      })),
+      ...VALIDATION_ERROR,
+      ...NOT_FOUND,
+    },
+  }));
+
+  add('/api/coaches/payments/discount/redeem', 'post', op({
+    tag: 'Coaches', roles: 'coach', competitionContext: true, operationId: 'coachRedeemDiscount',
+    summary: 'Redeem a 100%-off discount code and final-submit the squad',
+    description:
+      'The gateway has no zero-value order, so a fully discounted entry never reaches '
+      + 'Razorpay — this submits the team directly and records a ₹0 transaction. Every '
+      + 'guard the paid path gets from the gateway is re-checked here: the feature '
+      + 'switch, the code, the registration window and the already-submitted state.',
+    requestBody: jsonBody(inline({ discountCode: S.str }, ['discountCode'])),
+    responses: { 200: ok('Submitted at no charge'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+
   // ===================== Teams =====================
 
   add('/api/teams', 'get', op({

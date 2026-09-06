@@ -99,6 +99,10 @@ function loadConfig() {
   line(`  port         ${config.get('server.port')}`);
   line(`  CSRF         ${config.get('security.csrfEnabled') ? 'enabled' : 'DISABLED'}`);
   line(`  rate limits  ${config.get('security.rateLimitEnabled') ? 'enabled' : 'DISABLED'}`);
+  // The code itself is never printed — only whether the switch is on. Naming it
+  // here is the point: a 100%-off code left enabled by accident is invisible
+  // until it shows up as a meet full of teams that paid nothing.
+  line(`  discount     ${config.get('payments.discount.enabled') ? 'ENABLED — 100% off with the code' : 'disabled'}`);
   line(`  CORS origins ${(config.get('server.corsOrigins') || []).join(', ') || '(none)'}`);
 
   if (nodeEnv === 'production' && !config.get('security.csrfEnabled')) {

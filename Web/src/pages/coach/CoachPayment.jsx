@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, CalendarClock, AlertTriangle } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, CalendarClock, AlertTriangle, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
 import { COLORS } from '@/styles/tokens';
@@ -20,6 +20,19 @@ const CoachPayment = () => {
   const [processing, setProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const reduced = useReducedMotion();
+
+  /*
+   * Discount code.
+   *
+   * `discountEnabled` comes from the server — the code itself never reaches the
+   * browser, and neither does any hint of it. `appliedDiscount` holds the
+   * server's quote, so what is shown as the new total is the server's number
+   * and not one this page worked out for itself.
+   */
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [checkingCode, setCheckingCode] = useState(false);
 
   useEffect(() => { fetchTeamData(); }, []);
 
@@ -87,10 +100,12 @@ const CoachPayment = () => {
   const fetchTeamData = async () => {
     try {
       const response = await coachAPI.getDashboard();
-      // API returns: { success: true, data: { team: {...}, competitionId, totalTeams } }
-      const teamData = response.data?.data?.team || response.data?.team;
+      // API returns: { success: true, data: { team: {...}, competitionId, totalTeams, discount } }
+      const payload = response.data?.data || response.data;
+      const teamData = payload?.team;
       setTeam(teamData);
-      
+      setDiscountEnabled(payload?.discount?.enabled === true);
+
       // Check if team is already submitted
       if (teamData?.isSubmitted) {
         setPaymentComplete(true);
@@ -100,6 +115,64 @@ const CoachPayment = () => {
       navigate('/coach/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Ask the server what this entry costs with the code applied.
+   *
+   * Quote only — nothing is submitted here, and a valid code grants nothing
+   * that the redeem call does not check again for itself.
+   */
+  const handleApplyDiscount = async () => {
+    const code = discountCode.trim();
+    if (!code) {
+      toast.error('Enter a discount code');
+      return;
+    }
+
+    try {
+      setCheckingCode(true);
+      const response = await coachAPI.validateDiscountCode(code);
+      const quote = response.data?.data || response.data;
+      setAppliedDiscount(quote);
+      toast.success(`Discount code applied — ${quote?.percent ?? 100}% off`);
+    } catch (error) {
+      setAppliedDiscount(null);
+      toast.error(error?.response?.data?.message || 'That discount code is not valid');
+    } finally {
+      setCheckingCode(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode('');
+  };
+
+  /**
+   * Submit at no charge.
+   *
+   * A fully discounted entry never reaches Razorpay — the gateway has no
+   * zero-value order — so this is its own endpoint rather than a variant of the
+   * checkout flow, and it re-validates the code before submitting anything.
+   */
+  const handleFreeSubmit = async () => {
+    try {
+      setProcessing(true);
+      await coachAPI.redeemDiscountCode(discountCode.trim());
+      setPaymentComplete(true);
+      toast.success('Discount applied. Team submitted for the competition.');
+      await fetchTeamData();
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Could not submit with that discount code.';
+      toast.error(message);
+      logger.error('Discount redemption failed:', { error: message });
+      // The code may have been switched off between quoting and redeeming, so
+      // drop the quote rather than leaving a ₹0 total the server will refuse.
+      setAppliedDiscount(null);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -236,10 +309,20 @@ const CoachPayment = () => {
   const playerCount = team?.players?.length || 0;
   const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
 
+  /** What the entry costs before any discount. */
   const calculateTotal = () => {
     if (!feeConfigured || !team?.players) return 0;
     return calculateTeamPaymentAmount(team.players, team.competition);
   };
+
+  /*
+   * What is actually owed.
+   *
+   * Taken from the server's quote rather than recomputed here — this page must
+   * never be the thing that decides a fee is zero.
+   */
+  const discountApplied = appliedDiscount?.applied === true;
+  const payableTotal = discountApplied ? (appliedDiscount.payableAmount ?? 0) : calculateTotal();
 
   if (loading) {
     return (
@@ -500,19 +583,100 @@ const CoachPayment = () => {
                   </div>
                 )}
 
-                <div className="border-t pt-3 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                {discountApplied && (
+                  <div className="flex justify-between items-center text-sm py-1 border-t pt-3"
+                    style={{ borderColor: COLORS.darkBorderSubtle }}>
+                    <span className="text-white/70">
+                      Discount code
+                      <span className="text-white/30 text-xs ml-2">({appliedDiscount.percent}% off)</span>
+                    </span>
+                    <span style={{ color: '#22C55E' }}>
+                      −₹{(appliedDiscount.discountAmount ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                <div className="border-t pt-3 flex justify-between items-baseline" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total Amount</span>
-                  <span className="font-black text-lg" style={{ color: COLORS.saffron }}>
-                    ₹{calculateTotal().toLocaleString()}
+                  <span className="flex items-baseline gap-2">
+                    {discountApplied && (
+                      <span className="text-white/30 text-sm line-through">
+                        ₹{calculateTotal().toLocaleString()}
+                      </span>
+                    )}
+                    <span className="font-black text-lg" style={{ color: discountApplied ? '#22C55E' : COLORS.saffron }}>
+                      ₹{payableTotal.toLocaleString()}
+                    </span>
                   </span>
                 </div>
               </div>
 
-              {/* Checkout */}
+              {/* Discount code — only when the server says codes are being taken */}
+              {discountEnabled && (
+                <div className="mb-6">
+                  {discountApplied ? (
+                    <div className="flex items-center justify-between gap-3 p-4 rounded-2xl"
+                      style={{ background: '#22C55E10', border: '1px solid #22C55E35' }}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Tag className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">
+                            {appliedDiscount.percent}% off applied
+                          </p>
+                          <p className="text-white/40 text-xs">Nothing to pay for this entry</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={handleRemoveDiscount} disabled={processing}
+                        className="text-xs font-bold text-white/50 hover:text-white/80 transition-colors tap-safe px-2 disabled:opacity-40">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <label htmlFor="discount-code"
+                        className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: COLORS.saffron }}>
+                        Discount Code
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="discount-code"
+                          type="text"
+                          autoComplete="off"
+                          autoCapitalize="characters"
+                          spellCheck="false"
+                          placeholder="Enter code"
+                          value={discountCode}
+                          disabled={checkingCode || processing}
+                          onChange={(e) => setDiscountCode(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyDiscount(); } }}
+                          className="flex-1 min-w-0 rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] px-3.5 transition-all disabled:opacity-50"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                        />
+                        <button type="button" onClick={handleApplyDiscount}
+                          disabled={checkingCode || processing || !discountCode.trim()}
+                          className="rounded-xl font-bold text-sm text-white px-4 min-h-[44px] flex-shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                          {checkingCode ? 'Checking…' : 'Apply'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/*
+                * Checkout.
+                *
+                * At ₹0 this is NOT a payment button with a different label — it
+                * calls a different endpoint. Razorpay has no zero-value order,
+                * so a fully discounted entry has to be submitted directly.
+                */}
               <div className="space-y-4">
-                <motion.button onClick={handlePayment} disabled={processing}
+                <motion.button onClick={discountApplied ? handleFreeSubmit : handlePayment} disabled={processing}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                  style={{ background: discountApplied
+                    ? 'linear-gradient(135deg, #22C55E, #16A34A)'
+                    : `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
                   whileHover={processing ? {} : { scale: 1.01 }}
                   whileTap={processing ? {} : { scale: 0.98 }}>
                   {processing ? (
@@ -521,7 +685,12 @@ const CoachPayment = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Processing Payment...
+                      {discountApplied ? 'Submitting Team…' : 'Processing Payment...'}
+                    </>
+                  ) : discountApplied ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" aria-hidden="true" />
+                      Submit Team — No Payment Due
                     </>
                   ) : (
                     <>
@@ -533,7 +702,7 @@ const CoachPayment = () => {
 
                 <div className="flex items-center justify-center gap-2 text-white/20 text-xs">
                   <Lock className="w-3 h-3" aria-hidden="true" />
-                  Secure Razorpay checkout
+                  {discountApplied ? 'Discount verified on the server' : 'Secure Razorpay checkout'}
                 </div>
               </div>
             </div>

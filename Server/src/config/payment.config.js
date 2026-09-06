@@ -12,12 +12,104 @@
  * same reasoning as the COP tables — but the two must move together.
  */
 
+const crypto = require('crypto');
+
 const { ValidationError } = require('../errors');
 
 const PAYMENT_CONFIG = {
   CURRENCY: 'INR',
   PROVIDER: 'razorpay',
 };
+
+/**
+ * What the discount code takes off. One code, all of it.
+ *
+ * A partial discount would still need a Razorpay order and would leave the
+ * whole verify/amount-match path intact. 100% does not: there is no such thing
+ * as a ₹0 order, so redeeming skips the gateway entirely and submits the team
+ * directly. Changing this number is therefore not a one-line change — see
+ * `coach.service.redeemDiscountAndSubmit`.
+ */
+const DISCOUNT_PERCENT = 100;
+
+/**
+ * Does the submitted code match the configured one?
+ *
+ * Compared as SHA-256 digests so the comparison is constant time and both sides
+ * are always the same length — `timingSafeEqual` throws on a length mismatch,
+ * and guarding that by comparing lengths first leaks the length.
+ *
+ * Two refusals before any comparison, both of which would otherwise hand out
+ * free entry: the feature being off, and an empty expected code (an unset
+ * `DISCOUNT_CODE` would match an empty submission). `config-manager` already
+ * refuses to boot in that state; this is the second lock on the same door.
+ *
+ * @param {unknown} submitted - what the coach typed
+ * @param {{enabled: boolean, code: string}} discountConfig
+ * @returns {boolean}
+ */
+function isDiscountCodeValid(submitted, discountConfig) {
+  if (!discountConfig || discountConfig.enabled !== true) return false;
+
+  const expected = String(discountConfig.code ?? '');
+  const given = String(submitted ?? '');
+  if (expected.length === 0 || given.length === 0) return false;
+
+  const digest = (value) => crypto.createHash('sha256').update(value, 'utf8').digest();
+  return crypto.timingSafeEqual(digest(given), digest(expected));
+}
+
+/**
+ * Price a team submission with a discount code applied.
+ *
+ * Returns the breakdown rather than just a number, because the coach is shown
+ * what was taken off and the transaction records it.
+ *
+ * @param {number} amount - what the entry costs before any discount, INR
+ * @param {unknown} submittedCode
+ * @param {{enabled: boolean, code: string}} discountConfig
+ * @returns {{applied: boolean, percent: number, originalAmount: number, discountAmount: number, payableAmount: number}}
+ */
+function applyDiscountCode(amount, submittedCode, discountConfig) {
+  const originalAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+
+  if (!isDiscountCodeValid(submittedCode, discountConfig)) {
+    return {
+      applied: false,
+      percent: 0,
+      originalAmount,
+      discountAmount: 0,
+      payableAmount: originalAmount,
+    };
+  }
+
+  const discountAmount = (originalAmount * DISCOUNT_PERCENT) / 100;
+  return {
+    applied: true,
+    percent: DISCOUNT_PERCENT,
+    originalAmount,
+    discountAmount,
+    payableAmount: originalAmount - discountAmount,
+  };
+}
+
+/**
+ * Refuse a discount that will not be honoured.
+ *
+ * @param {unknown} submittedCode
+ * @param {{enabled: boolean, code: string}} discountConfig
+ * @throws {ValidationError}
+ */
+function assertDiscountCodeValid(submittedCode, discountConfig) {
+  if (!discountConfig || discountConfig.enabled !== true) {
+    throw new ValidationError('Discount codes are not being accepted for this event');
+  }
+  if (!isDiscountCodeValid(submittedCode, discountConfig)) {
+    // Deliberately the same message whether the code is wrong, blank or the
+    // configured one is unset — the response should not narrow a guess.
+    throw new ValidationError('That discount code is not valid');
+  }
+}
 
 /**
  * The four states a competition's fee window can be in at a given instant.
@@ -267,6 +359,10 @@ function getPaymentConfig() {
 module.exports = {
   PAYMENT_CONFIG,
   FEE_PHASE,
+  DISCOUNT_PERCENT,
+  isDiscountCodeValid,
+  applyDiscountCode,
+  assertDiscountCodeValid,
   calculateTeamPaymentAmount,
   calculatePlayerAdditionAmount,
   calculatePlayerFee,

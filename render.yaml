@@ -74,6 +74,17 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      # Registration discount code — 100% off a coach's team entry, and the one
+      # switch that lets a team be submitted without paying. Dashboard-owned
+      # (`sync: false`) for the same reason as CSRF_ENABLED: turning it off is
+      # an incident action, and a Blueprint-owned `value:` would let the next
+      # sync switch free entry back on. Both unset means disabled, which is the
+      # correct resting state — the server refuses to boot with the switch on
+      # and DISCOUNT_CODE blank.
+      - key: DISCOUNT_CODE_ENABLED
+        sync: false
+      - key: DISCOUNT_CODE
+        sync: false
       # Optional. Backs cross-instance JWT invalidation; the app falls back to
       # an in-memory store when unset, which is per-process and resets on deploy.
       - key: REDIS_URL
