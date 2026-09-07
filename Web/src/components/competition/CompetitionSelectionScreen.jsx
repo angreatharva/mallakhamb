@@ -433,7 +433,12 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
 
   // ── Main ──
   return (
-    <div className="min-h-dvh relative overflow-hidden" style={{ background: COLORS.dark }}>
+    // `h-dvh`, not `min-h-dvh`: the screen owns exactly one viewport and the
+    // COMPETITION LIST is the only part that scrolls. Growing the page instead
+    // pushed "Register Team & Continue" past the fold — 24px past it with only
+    // three competitions on a 695px-tall window, and further with every extra
+    // card — so the primary action needed a scroll nobody knew to make.
+    <div className="h-dvh relative overflow-hidden" style={{ background: COLORS.dark }}>
       {/* Ambient background */}
       <AmbientOrbs
         intensity={ORB_INTENSITY.warm}
@@ -449,26 +454,36 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }} />
 
-      <div className="relative z-10 min-h-dvh flex flex-col items-center justify-center p-4 py-16">
-        <div className="w-full max-w-3xl">
-          {/* Header */}
-          <FadeIn className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border"
+      <div className="relative z-10 h-full flex flex-col items-center p-4 py-8 md:py-10 [@media(max-height:700px)]:py-4">
+        {/*
+          * Header, search and CTA are `shrink-0`; the card region is the one
+          * item allowed to shrink, so it absorbs every overflow. `justify-center`
+          * still centres the whole stack while it fits.
+          */}
+        <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
+          {/*
+            * Header. The height-based variants buy the card list back its room
+            * on short viewports — a landscape phone (375px tall) spends half of
+            * it on a badge and a subtitle, which left the list a 47px sliver
+            * once the screen stopped growing.
+            */}
+          <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
               style={{ background: `${COLORS.saffron}12`, borderColor: `${COLORS.saffron}35`, color: COLORS.saffronLight }}>
               <Trophy className="w-3 h-3" aria-hidden="true" />
               Competition Selection
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Arena</GradientText>
             </h1>
-            <p className="text-white/40 text-base max-w-md mx-auto">
+            <p className="text-white/40 text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
               Select a competition to continue to your dashboard
             </p>
           </FadeIn>
 
           {/* Search */}
           {competitions.length > 3 && (
-            <FadeIn delay={0.1} className="mb-6">
+            <FadeIn delay={0.1} className="mb-6 shrink-0">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
                   style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
@@ -501,45 +516,48 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             </FadeIn>
           )}
 
-          {/* Cards grid */}
-          <AnimatePresence mode="wait">
-            {filteredCompetitions && filteredCompetitions.length === 0 ? (
-              <motion.div
-                key="empty"
-                className="text-center py-16"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              >
-                <p className="text-white/30 text-sm">
-                  No competitions found for &quot;{searchQuery}&quot;
-                </p>
-                <button onClick={() => setSearchQuery('')}
-                  className="mt-2 text-xs font-semibold transition-colors"
-                  style={{ color: COLORS.saffronLight }}>
-                  Clear search
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="grid"
-                className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              >
-                {filteredCompetitions?.map((competition, i) => (
-                  <CompetitionCard
-                    key={competition._id || competition.id}
-                    competition={competition}
-                    isSelected={selectedCompetition === (competition._id || competition.id)}
-                    onSelect={setSelectedCompetition}
-                    disabled={isSelecting}
-                    index={i}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Cards grid — the only scrolling region. `py-1 pr-1` keeps the
+              hover lift and the selected card's glow off the clip edge. */}
+          <div className="min-h-0 overflow-y-auto mb-6 py-1 pr-1">
+            <AnimatePresence mode="wait">
+              {filteredCompetitions && filteredCompetitions.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  className="text-center py-16"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                >
+                  <p className="text-white/30 text-sm">
+                    No competitions found for &quot;{searchQuery}&quot;
+                  </p>
+                  <button onClick={() => setSearchQuery('')}
+                    className="mt-2 text-xs font-semibold transition-colors"
+                    style={{ color: COLORS.saffronLight }}>
+                    Clear search
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="grid"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                >
+                  {filteredCompetitions?.map((competition, i) => (
+                    <CompetitionCard
+                      key={competition._id || competition.id}
+                      competition={competition}
+                      isSelected={selectedCompetition === (competition._id || competition.id)}
+                      onSelect={setSelectedCompetition}
+                      disabled={isSelecting}
+                      index={i}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* CTA */}
-          <FadeIn delay={0.2} className="flex justify-center">
+          <FadeIn delay={0.2} className="flex justify-center shrink-0">
             <motion.button
               onClick={handleCompetitionSelect}
               disabled={!selectedCompetition || isSelecting}
