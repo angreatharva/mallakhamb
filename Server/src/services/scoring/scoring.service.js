@@ -14,6 +14,8 @@ const {
 } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
 const {
+  AGE_GROUPS,
+  GENDERS,
   apparatusKey,
   toCompetitionTypeDisplay,
   toCompetitionTypeSlug,
@@ -27,6 +29,10 @@ const {
   projectFields,
 } = require('../../utils/data/user-projection.util');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
+const {
+  JUDGE_SCORE_FIELDS,
+  JUDGE_TYPE_BY_FIELD,
+} = require('../../utils/scoring/judge-slip.util');
 
 class ScoringService {
   /**
@@ -415,13 +421,13 @@ class ScoringService {
 
     if (!scoreData.gender) {
       errors.push('Gender is required');
-    } else if (!['Male', 'Female'].includes(scoreData.gender)) {
+    } else if (!GENDERS.includes(scoreData.gender)) {
       errors.push('Gender must be Male or Female');
     }
 
     if (!scoreData.ageGroup) {
       errors.push('Age group is required');
-    } else if (!['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'].includes(scoreData.ageGroup)) {
+    } else if (!AGE_GROUPS.includes(scoreData.ageGroup)) {
       errors.push('Invalid age group');
     }
 
@@ -478,8 +484,7 @@ class ScoringService {
 
       // Validate judge scores are within range
       if (ps.judgeScores) {
-        const judgeFields = ['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'];
-        for (const field of judgeFields) {
+        for (const field of JUDGE_SCORE_FIELDS) {
           if (ps.judgeScores[field] !== undefined) {
             const score = ps.judgeScores[field];
             if (score < 0 || score > 10) {
@@ -1510,18 +1515,15 @@ class ScoringService {
         
         // Emit score update for each player score
         for (const playerScore of processedPlayerScores) {
-          // Determine which judge field was updated
+          // Determine which judge field was updated. The field→judgeType map is
+          // derived from JUDGE_ROLE_MAP rather than written out here: this is
+          // the read side of the same mapping the WRITE side uses, and a
+          // divergence between the two is what makes a judge's slip land in one
+          // slot while everything else looks for it in another.
           const judgeScores = playerScore.judgeScores || {};
-          const judgeTypeMap = {
-            seniorJudge: 'Senior Judge',
-            judge1: 'Judge 1',
-            judge2: 'Judge 2',
-            judge3: 'Judge 3',
-            judge4: 'Judge 4'
-          };
-          
+
           // Emit for each judge score that was provided (include full breakdown for Panel Review)
-          for (const [field, judgeType] of Object.entries(judgeTypeMap)) {
+          for (const [field, judgeType] of Object.entries(JUDGE_TYPE_BY_FIELD)) {
             if (judgeScores[field] !== undefined && judgeScores[field] !== 0) {
               this.socketManager.emitToRoom(roomId, 'score_updated', {
                 playerId: playerScore.playerId,

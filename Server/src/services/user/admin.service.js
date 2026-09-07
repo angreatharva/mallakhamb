@@ -38,6 +38,8 @@ const {
   fullName,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
+const { MINIMUM_PANEL_SEATS } = require('../../utils/data/judge-assignment.util');
+const { apparatusList } = require('../../utils/data/apparatus.util');
 
 class AdminService extends UserService {
   /**
@@ -1033,19 +1035,12 @@ class AdminService extends UserService {
             const matchesAgeGroup = !filters.ageGroup || playerEntry.ageGroup === filters.ageGroup;
             
             let matchesApparatus = true;
-            let playerApparatuses = [];
-            
-            if (typeof playerEntry.apparatus === 'string') {
-              playerApparatuses = [playerEntry.apparatus];
-            } else if (Array.isArray(playerEntry.apparatus)) {
-              playerApparatuses = playerEntry.apparatus;
-            } else if (playerEntry.apparatus && typeof playerEntry.apparatus === 'object') {
-              if (filters.competitionType) {
-                playerApparatuses = playerEntry.apparatus[filters.competitionType] || [];
-              } else {
-                playerApparatuses = Object.values(playerEntry.apparatus).flat();
-              }
-            }
+            // One reading of the three-shaped Mixed field, shared with the fee
+            // engine — see utils/data/apparatus.util.
+            const playerApparatuses = apparatusList(
+              playerEntry.apparatus,
+              filters.competitionType
+            );
 
             if (filters.competitionType && filters.apparatus) {
               matchesApparatus = playerApparatuses.includes(filters.apparatus);
@@ -2071,12 +2066,15 @@ class AdminService extends UserService {
         }
       });
 
-      // Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required
+      // Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required.
+      // The list is MINIMUM_PANEL_SEATS in utils/data/judge-assignment.util —
+      // it was an anonymous literal buried in this loop, which made the rule
+      // that gates whether a category can be scored at all invisible to anyone
+      // not reading this function.
       summaryMap.forEach(entry => {
         Object.keys(entry.competitionTypes).forEach(ct => {
           const judges = entry.competitionTypes[ct].judges || [];
-          const requiredTypes = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
-          entry.competitionTypes[ct].hasMinimumJudges = requiredTypes.every(
+          entry.competitionTypes[ct].hasMinimumJudges = MINIMUM_PANEL_SEATS.every(
             (type) => judges.some((j) => j.judgeType === type)
           );
         });

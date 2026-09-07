@@ -1,6 +1,14 @@
+const mongoose = require('mongoose');
 const { body, param } = require('express-validator');
 const { objectId, enumValue, number } = require('./common.validator');
-const { isApparatusAllowedForGender } = require('../config/cop-rules');
+const {
+  isApparatusAllowedForGender,
+  AGE_GROUPS,
+  GENDERS,
+  COMPETITION_TYPE_DISPLAYS,
+  POINT_CEILINGS,
+} = require('../config/cop-rules');
+const { JUDGE_SCORE_FIELDS } = require('../utils/scoring/judge-slip.util');
 
 /**
  * Validate that a value is a multiple of 0.05 (for execution marks).
@@ -16,6 +24,107 @@ const multipleOf005 = (value) => {
 /**
  * Validation rules for scoring endpoints
  */
+
+/**
+ * Validate one `playerScores[]` array.
+ *
+ * `submitScore()` and `updateScore()` used to carry two copy-pasted versions of
+ * this, ~65 lines each, differing only in whether `judgeScores` is mandatory,
+ * whether the apparatus/gender rule is checked, and whether `time` is
+ * type-checked. Two copies of a scoring validator is two places for a COP
+ * ceiling to be raised in one and not the other.
+ *
+ * The three differences are flags rather than a merged superset, so neither
+ * caller's behaviour changes.
+ *
+ * @param {Array} entries
+ * @param {Object} [options]
+ * @param {string} [options.gender] - when set, applies the apparatus/gender rule
+ * @param {boolean} [options.requireJudgeScores=false]
+ * @param {boolean} [options.checkTime=false]
+ * @returns {boolean} true, or throws with the first failure
+ */
+function validatePlayerScoreEntries(entries, options = {}) {
+  const { gender = null, requireJudgeScores = false, checkTime = false } = options;
+
+  for (const playerScore of entries) {
+    // v2 §11 (rule 1.8.2/1.10): Hanging Mallakhamb is a HARD BLOCK for Female
+    if (gender && playerScore.apparatus
+      && !isApparatusAllowedForGender(playerScore.apparatus, gender)) {
+      throw new Error(
+        `${playerScore.apparatus} is not allowed for ${gender} competitions (rule 1.8.2)`
+      );
+    }
+
+    if (!playerScore.playerId || !mongoose.Types.ObjectId.isValid(playerScore.playerId)) {
+      throw new Error('Invalid player ID in player scores');
+    }
+
+    if (!playerScore.playerName || typeof playerScore.playerName !== 'string') {
+      throw new Error('Player name is required in player scores');
+    }
+
+    if (requireJudgeScores && !playerScore.judgeScores) {
+      throw new Error('Judge scores are required for each player');
+    }
+
+    if (playerScore.judgeScores) {
+      // The seat names come from the one role→field mapping, so a sixth seat
+      // cannot become scoreable without also becoming validated.
+      for (const judge of JUDGE_SCORE_FIELDS) {
+        const score = playerScore.judgeScores[judge];
+        if (score !== undefined && score !== null) {
+          if (typeof score !== 'number' || score < 0 || score > POINT_CEILINGS.total) {
+            throw new Error(`${judge} score must be between 0 and ${POINT_CEILINGS.total}`);
+          }
+        }
+      }
+    }
+
+    // Execution marks must be multiples of 0.05 and within the COP §3.3 ceiling.
+    if (playerScore.breakdown?.execution !== undefined) {
+      const exec = playerScore.breakdown.execution;
+      if (typeof exec !== 'number') {
+        throw new Error('Execution score must be a number');
+      }
+      if (exec < 0 || exec > POINT_CEILINGS.execution) {
+        throw new Error(`Execution score must be between 0 and ${POINT_CEILINGS.execution.toFixed(2)}`);
+      }
+      if (!multipleOf005(exec)) {
+        throw new Error('Execution score must be in multiples of 0.05 (e.g., 0.00, 0.05, 0.10)');
+      }
+    }
+
+    if (checkTime && playerScore.time && typeof playerScore.time !== 'string') {
+      throw new Error('Time must be a string');
+    }
+
+    if (playerScore.executionAverage !== undefined) {
+      if (typeof playerScore.executionAverage !== 'number'
+        || playerScore.executionAverage < 0
+        || playerScore.executionAverage > POINT_CEILINGS.total) {
+        throw new Error(`Execution average must be between 0 and ${POINT_CEILINGS.total}`);
+      }
+    }
+
+    for (const field of ['deduction', 'otherDeduction']) {
+      if (playerScore[field] !== undefined) {
+        if (typeof playerScore[field] !== 'number' || playerScore[field] < 0) {
+          const label = field === 'deduction' ? 'Deduction' : 'Other deduction';
+          throw new Error(`${label} must be a non-negative number`);
+        }
+      }
+    }
+
+    if (playerScore.finalScore !== undefined) {
+      if (typeof playerScore.finalScore !== 'number' || playerScore.finalScore < 0) {
+        throw new Error('Final score must be a non-negative number');
+      }
+    }
+  }
+
+  return true;
+}
 
 /**
  * Validate judge score (0-10 range)
@@ -39,7 +148,6 @@ const submitScore = () => {
       .notEmpty()
       .withMessage('Competition ID is required')
       .custom((value) => {
-        const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(value)) {
           throw new Error('Invalid competition ID format');
         }
@@ -50,19 +158,18 @@ const submitScore = () => {
       .notEmpty()
       .withMessage('Team ID is required')
       .custom((value) => {
-        const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(value)) {
           throw new Error('Invalid team ID format');
         }
         return true;
       }),
-    enumValue('gender', ['Male', 'Female']),
-    enumValue('ageGroup', ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']),
+    enumValue('gender', GENDERS),
+    enumValue('ageGroup', AGE_GROUPS),
     body('competitionType')
       .trim()
       .notEmpty()
       .withMessage('Competition type is required')
-      .isIn(['Competition I', 'Competition II', 'Competition III'])
+      .isIn(COMPETITION_TYPE_DISPLAYS)
       .withMessage('Invalid competition type'),
     body('timeKeeper')
       .optional()
@@ -87,92 +194,11 @@ const submitScore = () => {
       .withMessage('Player scores are required')
       .isArray({ min: 1 })
       .withMessage('At least one player score is required')
-      .custom((value, { req }) => {
-        // Validate each player score
-        const gender = req.body.gender;
-        for (const playerScore of value) {
-          const mongoose = require('mongoose');
-          
-          // v2 §11 (rule 1.8.2/1.10): Hanging Mallakhamb is a HARD BLOCK for Female
-          if (playerScore.apparatus && gender && !isApparatusAllowedForGender(playerScore.apparatus, gender)) {
-            throw new Error(`${playerScore.apparatus} is not allowed for ${gender} competitions (rule 1.8.2)`);
-          }
-          
-          // Validate player ID
-          if (!playerScore.playerId || !mongoose.Types.ObjectId.isValid(playerScore.playerId)) {
-            throw new Error('Invalid player ID in player scores');
-          }
-          
-          // Validate player name
-          if (!playerScore.playerName || typeof playerScore.playerName !== 'string') {
-            throw new Error('Player name is required in player scores');
-          }
-          
-          // Validate judge scores
-          if (!playerScore.judgeScores) {
-            throw new Error('Judge scores are required for each player');
-          }
-
-          const judges = ['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'];
-          for (const judge of judges) {
-            const score = playerScore.judgeScores[judge];
-            if (score !== undefined && score !== null) {
-              if (typeof score !== 'number' || score < 0 || score > 10) {
-                throw new Error(`${judge} score must be between 0 and 10`);
-              }
-            }
-          }
-
-          // Validate execution marks (must be multiples of 0.05)
-          if (playerScore.breakdown?.execution !== undefined) {
-            const exec = playerScore.breakdown.execution;
-            if (typeof exec !== 'number') {
-              throw new Error('Execution score must be a number');
-            }
-            if (exec < 0 || exec > 4.40) {
-              throw new Error('Execution score must be between 0 and 4.40');
-            }
-            if (Math.round(exec * 20) / 20 !== exec) {
-              throw new Error('Execution score must be in multiples of 0.05 (e.g., 0.00, 0.05, 0.10)');
-            }
-          }
-          
-          // Validate time if provided
-          if (playerScore.time && typeof playerScore.time !== 'string') {
-            throw new Error('Time must be a string');
-          }
-          
-          // Validate execution average
-          if (playerScore.executionAverage !== undefined) {
-            if (typeof playerScore.executionAverage !== 'number' || 
-                playerScore.executionAverage < 0 || 
-                playerScore.executionAverage > 10) {
-              throw new Error('Execution average must be between 0 and 10');
-            }
-          }
-          
-          // Validate deductions
-          if (playerScore.deduction !== undefined) {
-            if (typeof playerScore.deduction !== 'number' || playerScore.deduction < 0) {
-              throw new Error('Deduction must be a non-negative number');
-            }
-          }
-          
-          if (playerScore.otherDeduction !== undefined) {
-            if (typeof playerScore.otherDeduction !== 'number' || playerScore.otherDeduction < 0) {
-              throw new Error('Other deduction must be a non-negative number');
-            }
-          }
-          
-          // Validate final score
-          if (playerScore.finalScore !== undefined) {
-            if (typeof playerScore.finalScore !== 'number' || playerScore.finalScore < 0) {
-              throw new Error('Final score must be a non-negative number');
-            }
-          }
-        }
-        return true;
-      })
+      .custom((value, { req }) => validatePlayerScoreEntries(value, {
+        gender: req.body.gender,
+        requireJudgeScores: true,
+        checkTime: true,
+      }))
   ];
 };
 
@@ -209,73 +235,7 @@ const updateScore = () => {
       .optional()
       .isArray({ min: 1 })
       .withMessage('At least one player score is required')
-      .custom((value) => {
-        // Validate each player score (same validation as submitScore)
-        for (const playerScore of value) {
-          const mongoose = require('mongoose');
-          
-          if (!playerScore.playerId || !mongoose.Types.ObjectId.isValid(playerScore.playerId)) {
-            throw new Error('Invalid player ID in player scores');
-          }
-          
-          if (!playerScore.playerName || typeof playerScore.playerName !== 'string') {
-            throw new Error('Player name is required in player scores');
-          }
-          
-          if (playerScore.judgeScores) {
-            const judges = ['seniorJudge', 'judge1', 'judge2', 'judge3', 'judge4'];
-            for (const judge of judges) {
-              const score = playerScore.judgeScores[judge];
-              if (score !== undefined && score !== null) {
-                if (typeof score !== 'number' || score < 0 || score > 10) {
-                  throw new Error(`${judge} score must be between 0 and 10`);
-                }
-              }
-            }
-          }
-
-          // Validate execution marks (must be multiples of 0.05)
-          if (playerScore.breakdown?.execution !== undefined) {
-            const exec = playerScore.breakdown.execution;
-            if (typeof exec !== 'number') {
-              throw new Error('Execution score must be a number');
-            }
-            if (exec < 0 || exec > 4.40) {
-              throw new Error('Execution score must be between 0 and 4.40');
-            }
-            if (Math.round(exec * 20) / 20 !== exec) {
-              throw new Error('Execution score must be in multiples of 0.05 (e.g., 0.00, 0.05, 0.10)');
-            }
-          }
-
-          if (playerScore.executionAverage !== undefined) {
-            if (typeof playerScore.executionAverage !== 'number' || 
-                playerScore.executionAverage < 0 || 
-                playerScore.executionAverage > 10) {
-              throw new Error('Execution average must be between 0 and 10');
-            }
-          }
-          
-          if (playerScore.deduction !== undefined) {
-            if (typeof playerScore.deduction !== 'number' || playerScore.deduction < 0) {
-              throw new Error('Deduction must be a non-negative number');
-            }
-          }
-          
-          if (playerScore.otherDeduction !== undefined) {
-            if (typeof playerScore.otherDeduction !== 'number' || playerScore.otherDeduction < 0) {
-              throw new Error('Other deduction must be a non-negative number');
-            }
-          }
-          
-          if (playerScore.finalScore !== undefined) {
-            if (typeof playerScore.finalScore !== 'number' || playerScore.finalScore < 0) {
-              throw new Error('Final score must be a non-negative number');
-            }
-          }
-        }
-        return true;
-      })
+      .custom((value) => validatePlayerScoreEntries(value))
   ];
 };
 

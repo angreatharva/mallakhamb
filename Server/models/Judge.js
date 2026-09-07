@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
 // Required for its side effect: registering the JudgeAccount schema. Every
 // panel query populates `judgeAccount`, and a populate against an unregistered
 // model throws MissingSchemaError at request time rather than at startup.
@@ -39,12 +40,12 @@ const judgeSchema = new mongoose.Schema({
   }],
   gender: {
     type: String,
-    enum: ['Male', 'Female'],
+    enum: GENDERS,
     required: [true, 'Gender is required']
   },
   ageGroup: {
     type: String,
-    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+    enum: AGE_GROUPS,
     required: [true, 'Age group is required']
   },
   apparatus: {

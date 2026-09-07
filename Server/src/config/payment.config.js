@@ -15,6 +15,7 @@
 const crypto = require('crypto');
 
 const { ValidationError } = require('../errors');
+const { apparatusList } = require('../utils/data/apparatus.util');
 
 const PAYMENT_CONFIG = {
   CURRENCY: 'INR',
@@ -291,20 +292,13 @@ function calculateTeamPaymentAmount(players, competition, at = new Date()) {
  */
 function calculatePlayerFee(player, competition) {
   const baseFee = requireCompetitionPlayerFeePerPlayer(competition.playerFee);
-  
-  // Standardize the player's selected apparatuses into a flat array
-  let selectedApparatuses = [];
-  if (typeof player?.apparatus === 'string') {
-    selectedApparatuses.push(player.apparatus);
-  } else if (Array.isArray(player?.apparatus)) {
-    selectedApparatuses = player.apparatus;
-  } else if (player?.apparatus && typeof player.apparatus === 'object') {
-    Object.values(player.apparatus).forEach(apps => {
-      if (Array.isArray(apps)) selectedApparatuses.push(...apps);
-      else if (typeof apps === 'string') selectedApparatuses.push(apps);
-    });
-  }
-  
+
+  // The Mixed `apparatus` field has three shapes; reading it lives in one
+  // place, shared with the roster filter — see utils/data/apparatus.util.
+  // No competitionType here on purpose: the fee covers every apparatus the
+  // athlete is entered for, in any category.
+  const selectedApparatuses = apparatusList(player?.apparatus);
+
   if (selectedApparatuses.length === 0) {
     return baseFee;
   }

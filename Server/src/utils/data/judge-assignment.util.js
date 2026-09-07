@@ -15,12 +15,29 @@
  */
 
 const { toCompetitionTypeSlug } = require('../../config/cop-rules');
+const { PANEL_JUDGE_TYPES } = require('../scoring/judge-slip.util');
 
-/** Roles that may set a panel's running order. */
-const SEQUENCE_JUDGE_TYPES = ['Senior Judge', 'Scorer'];
+/**
+ * Roles that may set a panel's running order.
+ *
+ * The route guard (`requireSequenceManager`) and the assignment check
+ * (`PerformanceOrderService.assertJudgeMaySequence`) are the two halves of ONE
+ * authorization decision, and they each used to carry their own copy of this
+ * list. Adding a role to one half without the other either refuses somebody who
+ * should be allowed, or lets them past the guard and into a 403 from the
+ * service — neither of which reads as a missing list.
+ */
+const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
 
-/** Roles that submit an evaluation slip. */
-const PANEL_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+/**
+ * The seats a category must have filled before it can be scored at all.
+ *
+ * Not the same question as the panel SIZE, which is 3, 4 or 5 evaluators and
+ * decides the averaging method. This is the floor: a chief, two evaluators and
+ * somebody to record. `AdminService.getAllJudgesSummary` renders it as
+ * `hasMinimumJudges` on the admin dashboard.
+ */
+const MINIMUM_PANEL_SEATS = Object.freeze(['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer']);
 
 const idStr = (value) => {
   if (!value) return '';
@@ -139,6 +156,10 @@ function competitionsFor(assignments) {
 
 module.exports = {
   SEQUENCE_JUDGE_TYPES,
+  MINIMUM_PANEL_SEATS,
+  // Re-exported, not redefined: the definition lives with the role→field
+  // mapping in utils/scoring/judge-slip.util.js, so a sixth evaluation seat
+  // cannot appear in one list and not the other.
   PANEL_JUDGE_TYPES,
   loadAssignments,
   assignmentCoversCategory,

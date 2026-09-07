@@ -1,5 +1,6 @@
 const { body } = require('express-validator');
 const { email, password, enumValue } = require('./common.validator');
+const { GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation rules for authentication endpoints
@@ -54,7 +55,7 @@ const registerPlayer = () => {
         return true;
       }),
     password('password'),
-    enumValue('gender', ['Male', 'Female'])
+    enumValue('gender', GENDERS)
   ];
 };
 

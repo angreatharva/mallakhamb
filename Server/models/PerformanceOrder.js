@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
 
 /**
  * PerformanceOrder Model
@@ -27,8 +28,6 @@ const mongoose = require('mongoose');
  * normalizes either input to this form; the service calls it on every path in
  * and out, so a caller passing "Competition I" cannot create a second document.
  */
-
-const AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
 
 const orderedTeamSchema = new mongoose.Schema({
   team: {
@@ -82,7 +81,7 @@ const performanceOrderSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female'],
+    enum: GENDERS,
     required: [true, 'Gender is required']
   },
   ageGroup: {

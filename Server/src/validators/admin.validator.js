@@ -8,8 +8,7 @@ const {
   string, 
   array 
 } = require('./common.validator');
-
-const AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation rules for admin endpoints
@@ -26,12 +25,12 @@ const getAllTeams = () => {
     query('ageGroup')
       .optional()
       .trim()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     query('gender')
       .optional()
       .trim()
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Gender must be Male or Female'),
     query('status')
       .optional()
@@ -102,12 +101,12 @@ const getAllPlayers = () => {
     query('ageGroup')
       .optional()
       .trim()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     query('gender')
       .optional()
       .trim()
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Gender must be Male or Female'),
     query('teamId')
       .optional()
@@ -184,13 +183,13 @@ const saveJudges = () => {
       .trim()
       .notEmpty()
       .withMessage('Gender is required')
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Invalid gender'),
     body('ageGroup')
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('competitionTypes')
       .isArray({ min: 1 })
@@ -227,13 +226,13 @@ const createSingleJudge = () => {
       .trim()
       .notEmpty()
       .withMessage('Gender is required')
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Invalid gender'),
     body('ageGroup')
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('judgeNo')
       .isInt({ min: 1, max: 6 })
@@ -456,7 +455,7 @@ const startAgeGroup = () => {
       .trim()
       .notEmpty()
       .withMessage('Gender is required')
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Invalid gender'),
     body('ageGroup')
       .trim()

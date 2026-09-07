@@ -1,5 +1,6 @@
 const { body } = require('express-validator');
 const { objectId, email, password, phone, enumValue, date } = require('./common.validator');
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation rules for player endpoints
@@ -41,11 +42,11 @@ const createPlayer = () => {
         return true;
       }),
     password('password'),
-    enumValue('gender', ['Male', 'Female']),
+    enumValue('gender', GENDERS),
     body('ageGroup')
       .optional()
       .trim()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('team')
       .optional()
@@ -103,12 +104,12 @@ const updatePlayer = () => {
     body('gender')
       .optional()
       .trim()
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Gender must be Male or Female'),
     body('ageGroup')
       .optional()
       .trim()
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('team')
       .optional()

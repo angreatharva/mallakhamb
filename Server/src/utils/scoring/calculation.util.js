@@ -2,10 +2,13 @@
  * Scoring Calculation Utilities
  *
  * Provides low-level calculation functions for scoring operations.
- * These utilities are pure functions with no dependencies.
+ * Pure functions: no repository, no request, no socket. The one import is
+ * `config/cop-rules`, which is itself pure data plus lookups over that data.
  *
  * Requirements: 1.5, 1.8, v2 spec additions
  */
+
+const { getTolerance } = require('../../config/cop-rules');
 
 /**
  * Calculate individual player score with base score and tolerance
@@ -138,14 +141,17 @@ function calculateIndividualScore(judgeScores, panelSize) {
 
   avgScore = middleScores.reduce((sum, s) => sum + s, 0) / middleScores.length;
 
-  // Tolerance check (only for 4/5-judge panels)
-  let tolerance;
-  if (avgScore >= 9.00) tolerance = 0.10;
-  else if (avgScore >= 8.00) tolerance = 0.20;
-  else if (avgScore >= 7.00) tolerance = 0.30;
-  else if (avgScore >= 6.00) tolerance = 0.40;
-  else if (avgScore >= 5.00) tolerance = 0.50;
-  else tolerance = 1.00;
+  /*
+   * Tolerance check (only for 4/5-judge panels).
+   *
+   * The tier table is COP §3.4 data and lives in `config/cop-rules`, which is
+   * also what `GET /api/public/cop-rules` serves to the judge client. This used
+   * to be an if-ladder written out here as well — so the table the server
+   * PUBLISHED and the ladder the server SCORED WITH were two separate
+   * statements of one rule, and a COP revision applied to the table alone would
+   * have changed what the client displayed without changing a single result.
+   */
+  const tolerance = getTolerance(avgScore);
 
   const difference = Math.abs(avgScore - seniorJudgeScore);
   let baseScoreApplied = false;

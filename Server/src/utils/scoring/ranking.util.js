@@ -11,49 +11,69 @@ const { applyTieBreaker, areTied } = require('./tie-breaker.util');
 const { apparatusKey } = require('../../config/cop-rules');
 
 /**
- * Calculate team rankings with tie-breaker support
- * 
- * @param {Array<Object>} teams - Array of team objects with totalScore and other properties
- * @param {string} competitionType - Type of competition ('Competition I' or 'Competition II')
- * @returns {Array<Object>} Teams with rank assigned
+ * Sort by score descending and stamp `rank`, using STANDARD COMPETITION
+ * RANKING: two competitors on the same score share a placing and the next
+ * placing is skipped (1, 1, 3).
+ *
+ * This loop existed twice, byte for byte, differing only in which property it
+ * read — `totalScore` here and `finalScore` in
+ * `CalculationService.calculateRankings`. Two copies of the code that decides
+ * who gets a medal is one copy too many, and there is no error to notice if
+ * they drift: both still return a plausible ordering.
+ *
+ * The input is copied, so the caller's array is never reordered.
+ *
+ * @template T
+ * @param {Array<T>} items
+ * @param {(item: T) => number} scoreOf - reads the score to rank on
+ * @returns {Array<T & {rank: number}>}
  */
-function calculateTeamRankings(teams, competitionType = 'Competition II') {
-  if (!teams || teams.length === 0) {
+function rankByScore(items, scoreOf) {
+  if (!items || items.length === 0) {
     return [];
   }
 
-  // Sort teams by total score (descending)
-  const sortedTeams = [...teams].sort((a, b) => {
-    const scoreA = a.totalScore || 0;
-    const scoreB = b.totalScore || 0;
-    return scoreB - scoreA;
-  });
+  const sorted = [...items].sort((a, b) => (scoreOf(b) || 0) - (scoreOf(a) || 0));
 
-  // Assign ranks with tie handling
   let currentRank = 1;
   let previousScore = null;
-  let teamsWithSameRank = 0;
+  let itemsWithSameRank = 0;
 
-  const rankedTeams = sortedTeams.map((team, index) => {
-    const score = team.totalScore || 0;
+  return sorted.map((item) => {
+    const score = scoreOf(item) || 0;
 
     // If score is different from previous, update rank
     if (previousScore !== null && score !== previousScore) {
-      currentRank += teamsWithSameRank;
-      teamsWithSameRank = 1;
+      currentRank += itemsWithSameRank;
+      itemsWithSameRank = 1;
     } else {
-      teamsWithSameRank++;
+      itemsWithSameRank++;
     }
 
     previousScore = score;
 
     return {
-      ...team,
+      ...item,
       rank: currentRank
     };
   });
+}
 
-  return rankedTeams;
+/**
+ * Calculate team rankings.
+ *
+ * Despite the historical name, no tie-break rule runs here and none should:
+ * Team Championship places on the summed team total, and teams level on that
+ * total share a placing. The panel-size rules (time, senior judge, panel mean)
+ * describe ONE athlete's performance and have no team-level equivalent — see
+ * the header of tie-breaker.util.js.
+ *
+ * @param {Array<Object>} teams - Array of team objects with totalScore and other properties
+ * @param {string} competitionType - accepted for call compatibility; unused
+ * @returns {Array<Object>} Teams with rank assigned
+ */
+function calculateTeamRankings(teams, competitionType = 'Competition II') {
+  return rankByScore(teams, (team) => team.totalScore);
 }
 
 /**
@@ -289,6 +309,7 @@ function calculateRankStatistics(rankedItems) {
 }
 
 module.exports = {
+  rankByScore,
   calculateIndividualRankingsByApparatus,
   calculateTeamRankings,
   calculateIndividualRankings,

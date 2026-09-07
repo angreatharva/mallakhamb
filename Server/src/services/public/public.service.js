@@ -6,13 +6,10 @@
  * @module services/public/public.service
  */
 
-const COMPETITION_TYPE_MAP = {
-  competition_1: 'Competition I',
-  competition_2: 'Competition II',
-  competition_3: 'Competition III',
-};
-
 const { ValidationError } = require('../../errors');
+// The slug→display map used to be a fourth private copy in this file. It lives
+// in config/cop-rules, which is also what GET /api/public/cop-rules serves.
+const { toCompetitionTypeDisplay } = require('../../config/cop-rules');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const {
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -119,8 +116,7 @@ class PublicService {
         query.ageGroup = filters.ageGroup;
       }
       if (filters.competitionType) {
-        query.competitionType =
-          COMPETITION_TYPE_MAP[filters.competitionType] || filters.competitionType;
+        query.competitionType = toCompetitionTypeDisplay(filters.competitionType);
       }
 
       const scores = await this.scoreRepository.find(query, {
@@ -167,7 +163,7 @@ class PublicService {
        */
       rankPlayerRows(
         formattedScores.flatMap((score) => score.playerScores),
-        COMPETITION_TYPE_MAP[filters.competitionType] || filters.competitionType
+        toCompetitionTypeDisplay(filters.competitionType)
       );
 
       this.logger.info('Public scores retrieved', {

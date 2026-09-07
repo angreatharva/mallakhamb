@@ -11,6 +11,11 @@ const { Server } = require('socket.io');
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const {
+  assignmentCompetitionTypes,
+  scoringRoomIds,
+  normalizeCompetitionType,
+} = require('../utils/data/scoring-room.util');
 
 class SocketManager {
   /**
@@ -193,23 +198,11 @@ class SocketManager {
    */
   getRoomIdsForAssignment(assignment) {
     const { gender, ageGroup, competitionTypes } = assignment || {};
-    if (!gender || !ageGroup) return [];
 
-    const compTypes = (competitionTypes && Array.isArray(competitionTypes) && competitionTypes.length > 0)
-      ? competitionTypes
-      : ['competition_1'];
-
-    const roomIds = [];
-    for (const compType of compTypes) {
-      const rawRoomId = `scoring_${gender}_${ageGroup}_${compType}`;
-      roomIds.push(rawRoomId);
-
-      const normRoomId = `scoring_${gender}_${ageGroup}_${this.normalizeCompetitionType(compType)}`;
-      if (normRoomId !== rawRoomId) {
-        roomIds.push(normRoomId);
-      }
-    }
-    return roomIds;
+    // `scoringRoomIds` returns [] for an incomplete category, so an assignment
+    // missing gender or ageGroup still yields no rooms.
+    return assignmentCompetitionTypes(competitionTypes)
+      .flatMap((compType) => scoringRoomIds(gender, ageGroup, compType));
   }
 
   /**
@@ -317,21 +310,14 @@ class SocketManager {
           continue;
         }
 
-        const compTypes = (competitionTypes && Array.isArray(competitionTypes) && competitionTypes.length > 0)
-          ? competitionTypes
-          : ['competition_1'];
-
-        for (const compType of compTypes) {
+        for (const compType of assignmentCompetitionTypes(competitionTypes)) {
           // Both room-id forms come from the same helper the authorization
-          // check uses, so a judge can never be auto-joined to a room they
-          // would then be refused permission to act in.
-          const rawRoomId = `scoring_${gender}_${ageGroup}_${compType}`;
-          const compTypeValue = this.normalizeCompetitionType(compType);
-          const normRoomId = `scoring_${gender}_${ageGroup}_${compTypeValue}`;
-
-          socket.join(rawRoomId);
-          if (normRoomId !== rawRoomId) {
-            socket.join(normRoomId);
+          // check uses (getRoomIdsForAssignment, above), so a judge can never
+          // be auto-joined to a room they would then be refused permission to
+          // act in.
+          const roomIds = scoringRoomIds(gender, ageGroup, compType);
+          for (const roomId of roomIds) {
+            socket.join(roomId);
           }
 
           this.logger.info('Judge auto-joined scoring room', {
@@ -340,17 +326,18 @@ class SocketManager {
             judgeId: judgeDetails._id,
             judgeName: judgeDetails.name,
             judgeType: judgeType || judgeDetails.judgeType,
-            rawRoomId,
-            normRoomId,
+            roomIds,
             gender,
             ageGroup,
             competitionType: compType,
             apparatus
           });
 
-          // Notify the judge client that they've joined the room
+          // Notify the judge client that they've joined the room. The RAW form
+          // is reported because that is the one the client addresses its own
+          // broadcasts to; `scoringRoomIds` returns it first for that reason.
           socket.emit('room_joined', {
-            roomId: rawRoomId,
+            roomId: roomIds[0],
             message: 'Automatically joined your assigned scoring room',
             assignment: {
               gender,
@@ -373,28 +360,18 @@ class SocketManager {
   }
 
   /**
-   * Normalize competition type from database format to display format
+   * Normalize competition type from database format to display format.
+   *
+   * Delegates to the shared helper. This used to carry its own slug→display
+   * table that ran to "Competition V" — two categories more than either the
+   * Competition or the Score enum permits — and which could drift from the
+   * canonical map in `config/cop-rules`.
+   *
    * @param {string} compType - Competition type (e.g., "competition_1", "Competition I")
    * @returns {string} Normalized competition type
    */
   normalizeCompetitionType(compType) {
-    if (!compType) return 'Competition I';
-    
-    // If already in "Competition X" format, return as is
-    if (/^Competition [IVX]+$/i.test(compType)) {
-      return compType;
-    }
-    
-    // Convert competition_1 -> Competition I, competition_2 -> Competition II, etc.
-    const typeMap = {
-      'competition_1': 'Competition I',
-      'competition_2': 'Competition II',
-      'competition_3': 'Competition III',
-      'competition_4': 'Competition IV',
-      'competition_5': 'Competition V'
-    };
-    
-    return typeMap[compType.toLowerCase()] || compType;
+    return normalizeCompetitionType(compType);
   }
 
   /**

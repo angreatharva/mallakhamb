@@ -16,6 +16,7 @@ const {
   aggregateJudgeScores
 } = require('../../utils/scoring/calculation.util');
 const {
+  rankByScore,
   calculateTeamRankings,
   calculateIndividualRankingsByApparatus,
   getTopTeams,
@@ -109,41 +110,16 @@ class CalculationService {
    */
   calculateRankings(playerScores) {
     try {
-      if (!playerScores || playerScores.length === 0) {
-        return [];
-      }
-
-      // Sort by final score descending
-      const sorted = [...playerScores].sort((a, b) => {
-        return (b.finalScore || 0) - (a.finalScore || 0);
-      });
-
-      // Assign ranks
-      let currentRank = 1;
-      let previousScore = null;
-      let playersWithSameRank = 0;
-
-      const ranked = sorted.map((player, index) => {
-        const score = player.finalScore || 0;
-
-        // If score is different from previous, update rank
-        if (previousScore !== null && score !== previousScore) {
-          currentRank += playersWithSameRank;
-          playersWithSameRank = 1;
-        } else {
-          playersWithSameRank++;
-        }
-
-        previousScore = score;
-
-        return {
-          ...player,
-          rank: currentRank
-        };
-      });
+      // The loop itself is `rankByScore` in utils/scoring/ranking.util — the
+      // same standard-competition-ranking logic `calculateTeamRankings` uses.
+      // It was written out twice, identically, reading a different property
+      // each time.
+      const ranked = rankByScore(playerScores, (player) => player.finalScore);
 
       this.logger.debug('Rankings calculated', {
-        playerCount: playerScores.length,
+        // Optional: `rankByScore` accepts null/empty and returns [], which the
+        // early return this replaced used to short-circuit before the log.
+        playerCount: playerScores?.length ?? 0,
         rankedCount: ranked.length
       });
 

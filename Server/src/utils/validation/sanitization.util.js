@@ -6,9 +6,14 @@
  * Extended for service-layer sanitization (Requirement 17.5)
  */
 
-// Valid enum values for validation
-const VALID_GENDERS = ['Male', 'Female'];
-const VALID_AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
+// Valid enum values for validation. Genders and age groups come from the
+// shared vocabulary in config/cop-rules — the same lists the Mongoose enums
+// and the express-validator chains read, so a new age bracket cannot be
+// accepted at the boundary and rejected by the schema (or the reverse).
+const { AGE_GROUPS, GENDERS } = require('../../config/cop-rules');
+
+const VALID_GENDERS = GENDERS;
+const VALID_AGE_GROUPS = AGE_GROUPS;
 const VALID_COMPETITION_TYPES = ['Competition I', 'Competition II', 'Competition III'];
 const VALID_COMPETITION_STATUSES = ['upcoming', 'ongoing', 'completed'];
 

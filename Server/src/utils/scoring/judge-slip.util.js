@@ -36,6 +36,18 @@ const PANEL_JUDGE_TYPES = Object.freeze(Object.keys(JUDGE_ROLE_MAP));
 const JUDGE_SCORE_FIELDS = Object.freeze(PANEL_JUDGE_TYPES.map((t) => JUDGE_ROLE_MAP[t].field));
 
 /**
+ * The inverse of the mapping: `judgeScores` key → judgeType.
+ *
+ * Needed by the read side — the socket broadcast has a field name and has to
+ * say which judge it belongs to. That inverse was written out by hand in
+ * `scoring.service.saveScores`, which is exactly the divergence this module
+ * exists to prevent, just pointing the other way.
+ */
+const JUDGE_TYPE_BY_FIELD = Object.freeze(
+  Object.fromEntries(PANEL_JUDGE_TYPES.map((t) => [JUDGE_ROLE_MAP[t].field, t]))
+);
+
+/**
  * Resolve a judgeType to its Score-document field and slip role.
  *
  * Falls back to Judge 1 to preserve the behaviour the call sites already had
@@ -120,6 +132,7 @@ module.exports = {
   JUDGE_ROLE_MAP,
   PANEL_JUDGE_TYPES,
   JUDGE_SCORE_FIELDS,
+  JUDGE_TYPE_BY_FIELD,
   getJudgeRoleMapping,
   isPanelJudgeType,
   buildJudgeSlipPlayerScore,

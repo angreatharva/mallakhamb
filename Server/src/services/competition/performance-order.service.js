@@ -14,12 +14,13 @@
 
 const crypto = require('crypto');
 const EventTypes = require('../../socket/events/event-types');
-const { toCompetitionTypeSlug, toCompetitionTypeDisplay } = require('../../config/cop-rules');
+const { toCompetitionTypeSlug } = require('../../config/cop-rules');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
 const { fullName } = require('../../utils/data/user-projection.util');
-
-/** Judge roles allowed to set the running order for their own panel. */
-const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
+const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
+// The route guard reads the same list from the same place — see the note on
+// SEQUENCE_JUDGE_TYPES there. This file used to declare its own copy.
+const { SEQUENCE_JUDGE_TYPES } = require('../../utils/data/judge-assignment.util');
 
 /**
  * Fisher-Yates using crypto.randomInt rather than Math.random.
@@ -522,11 +523,12 @@ class PerformanceOrderService {
     if (!this.socketManager) return;
 
     try {
-      const base = `scoring_${identity.gender}_${identity.ageGroup}`;
-      const roomIds = new Set([
-        `${base}_${identity.competitionType}`,
-        `${base}_${toCompetitionTypeDisplay(identity.competitionType)}`,
-      ]);
+      // Both forms, from the same helper the socket layer joins judges with.
+      const roomIds = scoringRoomIds(
+        identity.gender,
+        identity.ageGroup,
+        identity.competitionType
+      );
 
       const payload = {
         ...extra,

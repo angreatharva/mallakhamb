@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
 
 const competitionSchema = new mongoose.Schema({
   name: {
@@ -123,11 +124,11 @@ const competitionSchema = new mongoose.Schema({
       },
       ageGroup: {
         type: String,
-        enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']
+        enum: AGE_GROUPS
       },
       gender: {
         type: String,
-        enum: ['Male', 'Female']
+        enum: GENDERS
       },
       apparatus: {
         type: mongoose.Schema.Types.Mixed,
@@ -184,12 +185,12 @@ const competitionSchema = new mongoose.Schema({
   ageGroups: [{
     gender: {
       type: String,
-      enum: ['Male', 'Female'],
+      enum: GENDERS,
       required: true
     },
     ageGroup: {
       type: String,
-      enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+      enum: AGE_GROUPS,
       required: true
     }
   }],
@@ -206,12 +207,12 @@ const competitionSchema = new mongoose.Schema({
   startedAgeGroups: [{
     gender: {
       type: String,
-      enum: ['Male', 'Female'],
+      enum: GENDERS,
       required: true
     },
     ageGroup: {
       type: String,
-      enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+      enum: AGE_GROUPS,
       required: true
     },
     competitionType: {

@@ -8,6 +8,7 @@
  */
 
 const EventTypes = require('../events/event-types');
+const { alternateRoomId } = require('../../utils/data/scoring-room.util');
 
 class ScoringHandler {
   /**
@@ -227,30 +228,19 @@ class ScoringHandler {
   }
 
   /**
-   * Helper to get alternate room ID format (competition_1 <-> Competition I)
+   * The alternate room-id form (competition_1 <-> Competition I).
+   *
+   * Delegates to `utils/data/scoring-room.util`. The chain that used to live
+   * here replaced `Competition I` before `Competition III`, so a Competition III
+   * room came back as `..._competition_1II` — a room with no members — and the
+   * broadcast to it went nowhere silently. The shared helper tests the display
+   * values longest-first.
+   *
    * @param {string} roomId - Room ID
    * @returns {string|null} Alternate room ID
    */
   getAltRoomId(roomId) {
-    if (!roomId || typeof roomId !== 'string') return null;
-    if (!roomId.startsWith('scoring_')) return null;
-
-    if (roomId.includes('competition_')) {
-      return roomId
-        .replace('competition_1', 'Competition I')
-        .replace('competition_2', 'Competition II')
-        .replace('competition_3', 'Competition III')
-        .replace('competition_4', 'Competition IV')
-        .replace('competition_5', 'Competition V');
-    } else if (roomId.includes('Competition ')) {
-      return roomId
-        .replace('Competition I', 'competition_1')
-        .replace('Competition II', 'competition_2')
-        .replace('Competition III', 'competition_3')
-        .replace('Competition IV', 'competition_4')
-        .replace('Competition V', 'competition_5');
-    }
-    return null;
+    return alternateRoomId(roomId);
   }
 
   /**

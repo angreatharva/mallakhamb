@@ -21,6 +21,30 @@
 
 const COP_EDITION = 'COP Nov 2022';
 
+// ── Category vocabulary ─────────────────────────────────────────────────────
+//
+// The values that identify WHICH competition a performance belongs to, as
+// opposed to how it is scored. They live here beside APPARATUS because this
+// module is already the one place both stacks agree on domain vocabulary, and
+// because the alternative is what was here before: the same literal array
+// written out in fourteen files — six Mongoose enums, six validators, a route
+// and a service — where adding an age bracket meant twenty-five edits and any
+// one of them could be missed without an error.
+//
+// Frozen so a caller cannot sort or splice the shared array in place.
+
+/**
+ * The age brackets a competition can contest, in ascending order.
+ * Every `ageGroup` enum in `models/` and every `isIn` check in `validators/`
+ * reads this.
+ */
+const AGE_GROUPS = Object.freeze([
+  'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18',
+]);
+
+/** The two sexes a category is split by. */
+const GENDERS = Object.freeze(['Male', 'Female']);
+
 // §3.3 — universal point distribution (all apparatus, all competitions)
 const POINT_CEILINGS = Object.freeze({
   difficulty: 3.80,
@@ -193,6 +217,22 @@ const COMPETITION_TYPE_DISPLAY_TO_SLUG = Object.freeze({
 });
 
 /**
+ * The two encodings as lists, derived from the map above so a fourth category
+ * cannot be added to one and forgotten in the other.
+ *
+ * DISPLAYS is ordered longest-first. Every consumer that matches a competition
+ * type inside a longer string — the socket room ids, above all — must test
+ * "Competition III" before "Competition I", because the shorter one is a prefix
+ * of the longer two. Getting that backwards turns
+ * `scoring_Male_Under14_Competition III` into
+ * `scoring_Male_Under14_competition_1II`, which is a room nobody is in.
+ */
+const COMPETITION_TYPE_SLUGS = Object.freeze(Object.keys(COMPETITION_TYPE_SLUG_TO_DISPLAY));
+const COMPETITION_TYPE_DISPLAYS = Object.freeze(
+  Object.values(COMPETITION_TYPE_SLUG_TO_DISPLAY).sort((a, b) => b.length - a.length)
+);
+
+/**
  * Map a competition-type slug (or display value) to the Score display form.
  * Passes through anything already in display form / unknown.
  */
@@ -361,6 +401,10 @@ function getCopRulesData() {
 
 module.exports = {
   COP_EDITION,
+  AGE_GROUPS,
+  GENDERS,
+  COMPETITION_TYPE_SLUGS,
+  COMPETITION_TYPE_DISPLAYS,
   APPARATUS,
   apparatusKey,
   POINT_CEILINGS,

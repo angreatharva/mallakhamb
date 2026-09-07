@@ -1,5 +1,6 @@
 const { body, param } = require('express-validator');
 const { objectId, dateRange, enumValue, string, number, array } = require('./common.validator');
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation rules for competition endpoints
@@ -87,8 +88,8 @@ const createCompetition = () => {
       .withMessage('Age groups must be an array')
       .custom((value) => {
         if (value && value.length > 0) {
-          const validGenders = ['Male', 'Female'];
-          const validAgeGroups = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
+          const validGenders = GENDERS;
+          const validAgeGroups = AGE_GROUPS;
           
           for (const group of value) {
             if (!group.gender || !validGenders.includes(group.gender)) {
@@ -203,8 +204,8 @@ const updateCompetition = () => {
       .withMessage('Age groups must be an array')
       .custom((value) => {
         if (value && value.length > 0) {
-          const validGenders = ['Male', 'Female'];
-          const validAgeGroups = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
+          const validGenders = GENDERS;
+          const validAgeGroups = AGE_GROUPS;
           
           for (const group of value) {
             if (!group.gender || !validGenders.includes(group.gender)) {
@@ -311,13 +312,13 @@ const addPlayerToTeam = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'])
+      .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('gender')
       .trim()
       .notEmpty()
       .withMessage('Gender is required')
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Invalid gender')
   ];
 };
@@ -328,8 +329,8 @@ const addPlayerToTeam = () => {
 const startAgeGroup = () => {
   return [
     objectId('competitionId', 'param'),
-    enumValue('gender', ['Male', 'Female']),
-    enumValue('ageGroup', ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']),
+    enumValue('gender', GENDERS),
+    enumValue('ageGroup', AGE_GROUPS),
     body('competitionType')
       .trim()
       .notEmpty()

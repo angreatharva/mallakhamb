@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
 
 const playerScoreSchema = new mongoose.Schema({
   playerId: {
@@ -242,12 +243,12 @@ const scoreSchema = new mongoose.Schema({
   gender: {
     type: String,
     required: true,
-    enum: ['Male', 'Female']
+    enum: GENDERS
   },
   ageGroup: {
     type: String,
     required: true,
-    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18']
+    enum: AGE_GROUPS
   },
   competitionType: {
     type: String,

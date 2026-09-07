@@ -17,7 +17,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { phone } = require('../validators/common.validator');
-const { APPARATUS } = require('../config/cop-rules');
+const { APPARATUS, AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
@@ -87,10 +87,10 @@ function createCoachRoutes(container) {
   const addPlayerValidation = [
     body('playerId').isMongoId().withMessage('Valid player ID is required'),
     body('ageGroup')
-      .isIn(['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above18', 'Above16'])
+      .isIn(AGE_GROUPS)
       .withMessage('Valid age group is required'),
     body('gender')
-      .isIn(['Male', 'Female'])
+      .isIn(GENDERS)
       .withMessage('Gender must be either Male or Female'),
     /*
      * A LIST of apparatus, because an athlete can be entered for several and

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
 const bcrypt = require('bcryptjs');
 
 const playerSchema = new mongoose.Schema({
@@ -75,12 +76,12 @@ const playerSchema = new mongoose.Schema({
   },
   ageGroup: {
     type: String,
-    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+    enum: AGE_GROUPS,
     default: null
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female'],
+    enum: GENDERS,
     required: [true, 'Gender is required']
   },
   isActive: {
@@ -109,7 +110,7 @@ const playerSchema = new mongoose.Schema({
   // The age group the player is locked into after playing up.
   lockedAgeGroup: {
     type: String,
-    enum: ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'],
+    enum: AGE_GROUPS,
     default: null
   },
   resetPasswordToken: {

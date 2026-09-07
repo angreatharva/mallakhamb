@@ -1,8 +1,6 @@
 const { body, query } = require('express-validator');
 const mongoose = require('mongoose');
-
-const AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18'];
-const GENDERS = ['Male', 'Female'];
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 // Both encodings are accepted on the wire; the service normalizes to the slug
 // before anything is stored, so a client that sends the Score model's display
 // form cannot open a second document for the same panel.
