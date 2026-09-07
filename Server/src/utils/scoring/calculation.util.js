@@ -172,137 +172,19 @@ function calculateIndividualScore(judgeScores, panelSize) {
   };
 }
 
-/**
- * Calculate team score from player scores
- * Team score is the sum of the top 5 player scores
- * 
- * @param {Array<Object>} playerScores - Array of player score objects with finalScore property
- * @returns {Object} Team score details with totalScore, topPlayersCount, allPlayersCount
+/*
+ * `calculateTeamScore`, `isScoreValid`, `calculateAverageScore` and
+ * `aggregateJudgeScores` are gone.
+ *
+ * None had a caller. `calculateTeamScore` (sum of the top five finals) was
+ * reached only from `CalculationService.recalculateAllScores`, itself unused;
+ * the other three were imported by that service and never referenced. The live
+ * team total is computed in `ScoringService.getTeamScores`, which sums every
+ * entered athlete rather than the top five — so restoring the helper without
+ * reconciling those two definitions would reintroduce exactly the kind of
+ * "two answers to one question" this pass removed.
  */
-function calculateTeamScore(playerScores) {
-  if (!playerScores || playerScores.length === 0) {
-    return {
-      totalScore: 0,
-      topPlayersCount: 0,
-      allPlayersCount: 0
-    };
-  }
-
-  // Sort players by final score descending
-  const sortedPlayers = [...playerScores]
-    .filter(player => typeof player.finalScore === 'number')
-    .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
-
-  // Take top 5 players
-  const topPlayers = sortedPlayers.slice(0, 5);
-
-  // Calculate total score
-  const totalScore = topPlayers.reduce((sum, player) => sum + (player.finalScore || 0), 0);
-
-  return {
-    totalScore: parseFloat(totalScore.toFixed(2)),
-    topPlayersCount: topPlayers.length,
-    allPlayersCount: playerScores.length
-  };
-}
-
-/**
- * Check if a score is valid based on tolerance
- * Validates that the difference between execution average and senior judge score is within tolerance
- * 
- * @param {number} executionAverage - Execution average score
- * @param {number} seniorJudgeScore - Senior judge score
- * @param {number} tolerance - Tolerance threshold
- * @returns {boolean} True if score is valid (within tolerance)
- */
-function isScoreValid(executionAverage, seniorJudgeScore, tolerance) {
-  if (typeof executionAverage !== 'number' || typeof seniorJudgeScore !== 'number') {
-    return false;
-  }
-
-  if (seniorJudgeScore === 0) {
-    return true; // No senior judge score to validate against
-  }
-
-  const difference = Math.abs(executionAverage - seniorJudgeScore);
-  return difference <= tolerance;
-}
-
-/**
- * Calculate average score from an array of scores
- * 
- * @param {Array<number>} scores - Array of score values
- * @returns {number} Average score
- */
-function calculateAverageScore(scores) {
-  if (!scores || scores.length === 0) {
-    return 0;
-  }
-
-  const validScores = scores.filter(score => typeof score === 'number' && !isNaN(score));
-  
-  if (validScores.length === 0) {
-    return 0;
-  }
-
-  const sum = validScores.reduce((acc, score) => acc + score, 0);
-  const average = sum / validScores.length;
-
-  return parseFloat(average.toFixed(2));
-}
-
-/**
- * Aggregate judge scores into a single score object
- * Combines multiple judge score entries into a unified format
- * 
- * @param {Array<Object>} judgeScoreEntries - Array of judge score entries
- * @returns {Object} Aggregated judge scores with seniorJudge, judge1, judge2, judge3, judge4
- */
-function aggregateJudgeScores(judgeScoreEntries) {
-  if (!judgeScoreEntries || judgeScoreEntries.length === 0) {
-    return {
-      seniorJudge: 0,
-      judge1: 0,
-      judge2: 0,
-      judge3: 0,
-      judge4: 0
-    };
-  }
-
-  const aggregated = {
-    seniorJudge: 0,
-    judge1: 0,
-    judge2: 0,
-    judge3: 0,
-    judge4: 0
-  };
-
-  // Aggregate scores by judge role
-  judgeScoreEntries.forEach(entry => {
-    if (entry.judgeRole && typeof entry.score === 'number') {
-      const role = entry.judgeRole.toLowerCase();
-      
-      if (role === 'senior' || role === 'seniorjudge') {
-        aggregated.seniorJudge = entry.score;
-      } else if (role === 'judge1') {
-        aggregated.judge1 = entry.score;
-      } else if (role === 'judge2') {
-        aggregated.judge2 = entry.score;
-      } else if (role === 'judge3') {
-        aggregated.judge3 = entry.score;
-      } else if (role === 'judge4') {
-        aggregated.judge4 = entry.score;
-      }
-    }
-  });
-
-  return aggregated;
-}
 
 module.exports = {
   calculateIndividualScore,
-  calculateTeamScore,
-  isScoreValid,
-  calculateAverageScore,
-  aggregateJudgeScores
 };

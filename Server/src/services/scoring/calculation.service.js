@@ -7,20 +7,10 @@
  * Requirements: 1.5, 1.8
  */
 
-const { ValidationError } = require('../../errors');
-const {
-  calculateIndividualScore,
-  calculateTeamScore,
-  isScoreValid,
-  calculateAverageScore,
-  aggregateJudgeScores
-} = require('../../utils/scoring/calculation.util');
+const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
 const {
   rankByScore,
-  calculateTeamRankings,
   calculateIndividualRankingsByApparatus,
-  getTopTeams,
-  getTopPlayers
 } = require('../../utils/scoring/ranking.util');
 const {
   TIME_LIMIT_SECONDS,
@@ -127,36 +117,6 @@ class CalculationService {
     } catch (error) {
       this.logger.error('Calculate rankings error', {
         playerScoresCount: playerScores?.length,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Calculate average score for a player across multiple performances
-   * @param {Array} scores - Array of score values
-   * @returns {number} Average score
-   */
-  calculateAverage(scores) {
-    try {
-      if (!scores || scores.length === 0) {
-        return 0;
-      }
-
-      const validScores = scores.filter(s => typeof s === 'number' && !isNaN(s));
-      
-      if (validScores.length === 0) {
-        return 0;
-      }
-
-      const sum = validScores.reduce((acc, score) => acc + score, 0);
-      const average = sum / validScores.length;
-
-      return Number(average.toFixed(2));
-    } catch (error) {
-      this.logger.error('Calculate average error', {
-        scores,
         error: error.message
       });
       throw error;
@@ -309,180 +269,6 @@ class CalculationService {
   }
 
   /**
-   * Calculate team total score
-   * @param {Array} playerScores - Array of player scores
-   * @returns {number} Team total score
-   */
-  calculateTeamTotal(playerScores) {
-    try {
-      if (!playerScores || playerScores.length === 0) {
-        return 0;
-      }
-
-      const total = playerScores.reduce((sum, player) => {
-        return sum + (player.finalScore || 0);
-      }, 0);
-
-      this.logger.debug('Team total calculated', {
-        playerCount: playerScores.length,
-        total
-      });
-
-      return Number(total.toFixed(2));
-    } catch (error) {
-      this.logger.error('Calculate team total error', {
-        playerScoresCount: playerScores?.length,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Calculate final scores for all players in a competition
-   * Aggregates judge scores with tolerance checking
-   * 
-   * @param {Array<Object>} playerScoreData - Array of player score data with judge scores
-   * @param {Object} options - Calculation options
-   * @returns {Array<Object>} Array of calculated player scores
-   */
-  calculateFinalScores(playerScoreData, options = {}) {
-    try {
-      if (!playerScoreData || playerScoreData.length === 0) {
-        return [];
-      }
-
-      const calculatedScores = playerScoreData.map(playerData => {
-        // Calculate individual score with tolerance
-        const scoreResult = calculateIndividualScore(playerData.judgeScores);
-
-        // The Scorer's deductions are part of the final score — see
-        // calculateFinalScore for why the time penalty cannot come off a slip.
-        const finalScore = Math.max(
-          0,
-          scoreResult.averageMarks
-            - (Number(playerData.deduction) || 0)
-            - (Number(playerData.otherDeduction) || 0)
-        );
-
-        return {
-          ...playerData,
-          ...scoreResult,
-          finalScore: parseFloat(finalScore.toFixed(3))
-        };
-      });
-
-      this.logger.debug('Final scores calculated', {
-        playerCount: calculatedScores.length
-      });
-
-      return calculatedScores;
-    } catch (error) {
-      this.logger.error('Calculate final scores error', {
-        playerScoreDataCount: playerScoreData?.length,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Recalculate all scores for a competition
-   * Useful when scoring rules change or data needs to be refreshed
-   * 
-   * @param {Array<Object>} allScores - All score data for the competition
-   * @param {Object} options - Calculation options
-   * @returns {Object} Recalculated scores with player and team rankings
-   */
-  recalculateAllScores(allScores, options = {}) {
-    try {
-      const { competitionType = 'Competition II' } = options;
-
-      // Calculate final scores for all players
-      const playerScores = this.calculateFinalScores(allScores, options);
-
-      // Individual rankings, one standing per apparatus — Pole competes
-      // against Pole, Rope against Rope. An athlete entered for several holds
-      // a rank in each.
-      const rankedPlayers = calculateIndividualRankingsByApparatus(playerScores, competitionType);
-
-      // Group players by team
-      const teamGroups = rankedPlayers.reduce((groups, player) => {
-        const teamId = player.teamId || player.team;
-        if (teamId) {
-          if (!groups[teamId]) {
-            groups[teamId] = [];
-          }
-          groups[teamId].push(player);
-        }
-        return groups;
-      }, {});
-
-      // Calculate team scores
-      const teamScores = Object.entries(teamGroups).map(([teamId, players]) => {
-        const teamScoreResult = calculateTeamScore(players);
-        return {
-          teamId,
-          ...teamScoreResult,
-          players
-        };
-      });
-
-      // Calculate team rankings
-      const rankedTeams = calculateTeamRankings(teamScores, competitionType);
-
-      this.logger.info('All scores recalculated', {
-        playerCount: rankedPlayers.length,
-        teamCount: rankedTeams.length,
-        competitionType
-      });
-
-      return {
-        players: rankedPlayers,
-        teams: rankedTeams
-      };
-    } catch (error) {
-      this.logger.error('Recalculate all scores error', {
-        allScoresCount: allScores?.length,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get team rankings.
-   *
-   * Despite the name, no tie-break rule runs here: Team Championship places on
-   * the summed team total, and teams level on that total share a placing. The
-   * per-panel rules (time, senior judge, panel mean) describe one athlete's
-   * performance and have no team-level equivalent.
-   *
-   * @param {Array<Object>} teams - Array of team objects
-   * @param {string} competitionType - Type of competition
-   * @returns {Array<Object>} Ranked teams
-   */
-  getTeamRankingsWithTieBreaker(teams, competitionType = 'Competition II') {
-    try {
-      const rankedTeams = calculateTeamRankings(teams, competitionType);
-
-      this.logger.debug('Team rankings calculated', {
-        teamCount: rankedTeams.length,
-        competitionType
-      });
-
-      return rankedTeams;
-    } catch (error) {
-      this.logger.error('Get team rankings with tie-breaker error', {
-        teamsCount: teams?.length,
-        competitionType,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
    * Get individual rankings with tie-breaker applied
    * 
    * @param {Array<Object>} players - Array of player objects
@@ -511,45 +297,6 @@ class CalculationService {
     }
   }
 
-  /**
-   * Get top teams from competition
-   * 
-   * @param {Array<Object>} rankedTeams - Ranked teams
-   * @param {number} n - Number of top teams
-   * @returns {Array<Object>} Top N teams
-   */
-  getTopTeams(rankedTeams, n = 3) {
-    try {
-      return getTopTeams(rankedTeams, n);
-    } catch (error) {
-      this.logger.error('Get top teams error', {
-        rankedTeamsCount: rankedTeams?.length,
-        n,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get top players from competition
-   * 
-   * @param {Array<Object>} rankedPlayers - Ranked players
-   * @param {number} n - Number of top players
-   * @returns {Array<Object>} Top N players
-   */
-  getTopPlayers(rankedPlayers, n = 10) {
-    try {
-      return getTopPlayers(rankedPlayers, n);
-    } catch (error) {
-      this.logger.error('Get top players error', {
-        rankedPlayersCount: rankedPlayers?.length,
-        n,
-        error: error.message
-      });
-      throw error;
-    }
-  }
 }
 
 module.exports = CalculationService;

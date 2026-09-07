@@ -15,13 +15,6 @@
 const {
   calculateTeamRankings,
   calculateIndividualRankings,
-  getTopTeams,
-  getTopPlayers,
-  findPlayerRank,
-  findTeamRank,
-  groupPlayersByRank,
-  groupTeamsByRank,
-  calculateRankStatistics,
 } = require('./ranking.util');
 
 const team = (name, totalScore) => ({ _id: `team-${name}`, name, totalScore });
@@ -115,114 +108,5 @@ describe('calculateIndividualRankings', () => {
 
   test('a single competitor is rank 1', () => {
     expect(calculateIndividualRankings([player('A', 5)])[0].rank).toBe(1);
-  });
-});
-
-describe('getTopTeams / getTopPlayers', () => {
-  const ranked = [
-    { name: 'C', rank: 3 }, { name: 'A', rank: 1 }, { name: 'B', rank: 2 }, { name: 'D', rank: 4 },
-  ];
-
-  test('returns the best N in rank order regardless of input order', () => {
-    expect(getTopTeams(ranked, 3).map((t) => t.name)).toEqual(['A', 'B', 'C']);
-    expect(getTopPlayers(ranked, 2).map((p) => p.name)).toEqual(['A', 'B']);
-  });
-
-  test('defaults to a podium of 3 for teams and 10 for players', () => {
-    expect(getTopTeams(ranked)).toHaveLength(3);
-    expect(getTopPlayers(ranked)).toHaveLength(4); // fewer than the default 10
-  });
-
-  test('asking for more than exists returns everything, not undefined padding', () => {
-    expect(getTopTeams(ranked, 99)).toHaveLength(4);
-  });
-
-  test('returns [] for empty or missing input', () => {
-    expect(getTopTeams([], 3)).toEqual([]);
-    expect(getTopPlayers(null, 3)).toEqual([]);
-  });
-
-  test('does not mutate the caller’s array', () => {
-    const input = [...ranked];
-    getTopTeams(input, 2);
-    expect(input.map((t) => t.name)).toEqual(['C', 'A', 'B', 'D']);
-  });
-});
-
-describe('findPlayerRank / findTeamRank', () => {
-  test('matches on _id, playerId or id — the three shapes this codebase uses', () => {
-    const players = [
-      { _id: 'p1', rank: 1 },
-      { playerId: 'p2', rank: 2 },
-      { id: 'p3', rank: 3 },
-    ];
-
-    expect(findPlayerRank(players, 'p1').rank).toBe(1);
-    expect(findPlayerRank(players, 'p2').rank).toBe(2);
-    expect(findPlayerRank(players, 'p3').rank).toBe(3);
-  });
-
-  test('compares by string, so an ObjectId-like value still matches', () => {
-    const objectIdish = { toString: () => 'p1' };
-    const players = [{ _id: objectIdish, rank: 1 }];
-
-    expect(findPlayerRank(players, 'p1').rank).toBe(1);
-  });
-
-  test('returns null when absent or when inputs are missing', () => {
-    expect(findPlayerRank([{ _id: 'p1', rank: 1 }], 'nope')).toBeNull();
-    expect(findPlayerRank(null, 'p1')).toBeNull();
-    expect(findPlayerRank([{ _id: 'p1' }], null)).toBeNull();
-  });
-
-  test('findTeamRank behaves the same for teams', () => {
-    const teams = [{ _id: 't1', rank: 1 }, { teamId: 't2', rank: 2 }];
-
-    expect(findTeamRank(teams, 't2').rank).toBe(2);
-    expect(findTeamRank(teams, 'missing')).toBeNull();
-  });
-});
-
-describe('groupPlayersByRank / groupTeamsByRank', () => {
-  test('collects everyone sharing a rank, which is how a tie is presented', () => {
-    const grouped = groupPlayersByRank([
-      { name: 'A', rank: 1 }, { name: 'B', rank: 1 }, { name: 'C', rank: 3 },
-    ]);
-
-    expect(grouped[1].map((p) => p.name)).toEqual(['A', 'B']);
-    expect(grouped[3].map((p) => p.name)).toEqual(['C']);
-  });
-
-  test('returns {} for empty or missing input', () => {
-    expect(groupPlayersByRank([])).toEqual({});
-    expect(groupTeamsByRank(null)).toEqual({});
-  });
-});
-
-describe('calculateRankStatistics', () => {
-  test('reports totals, distinct ranks and which ranks are tied', () => {
-    const stats = calculateRankStatistics([
-      { rank: 1 }, { rank: 1 }, { rank: 3 }, { rank: 4 },
-    ]);
-
-    expect(stats.totalItems).toBe(4);
-    expect(stats.uniqueRanks).toBe(3);
-    expect(stats.maxRank).toBe(4);
-    expect(stats.tiedRanks).toEqual([{ rank: 1, count: 2 }]);
-  });
-
-  test('reports no ties when every rank is distinct', () => {
-    const stats = calculateRankStatistics([{ rank: 1 }, { rank: 2 }]);
-
-    expect(stats.tiedRanks).toEqual([]);
-    expect(stats.uniqueRanks).toBe(2);
-  });
-
-  test('returns a zeroed shape for empty input rather than NaN', () => {
-    // Math.max() of an empty array is -Infinity, so the early return matters.
-    expect(calculateRankStatistics([])).toEqual({
-      totalItems: 0, uniqueRanks: 0, tiedRanks: [], maxRank: 0,
-    });
-    expect(calculateRankStatistics(null).maxRank).toBe(0);
   });
 });

@@ -58,85 +58,19 @@ class ScoreRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Find scores by judge
-   * @param {string} judgeId - Judge ID
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Array of scores entered by the judge
+  /*
+   * `findByJudge` and `calculateAverages` are gone.
+   *
+   * `findByJudge` returned [] with a "not fully implemented" warning — a Score
+   * document has no judge reference to query, because a judge's contribution
+   * lives in `playerScores[].judgeSlips[].judgeRole`, which is a panel SEAT and
+   * not an account id. `calculateAverages` averaged an athlete's finalScore
+   * across score documents, which is not a figure this competition format has:
+   * placings are per apparatus, per category.
+   *
+   * Neither had a caller anywhere in src, tests or scripts.
    */
-  async findByJudge(judgeId, options = {}) {
-    try {
-      // Note: The Score model doesn't have a direct judge reference
-      // This method would need to be implemented based on how judges are tracked
-      // For now, we'll return an empty array as a placeholder
-      this.logger.warn('ScoreRepository.findByJudge not fully implemented', { judgeId });
-      return [];
-    } catch (error) {
-      this.logger.error('ScoreRepository.findByJudge error', { 
-        judgeId, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
 
-  /**
-   * Calculate average scores for a competition
-   * @param {string} competitionId - Competition ID
-   * @param {Object} filters - Additional filters (gender, ageGroup, competitionType)
-   * @returns {Promise<Array>} Array of average scores by player
-   */
-  async calculateAverages(competitionId, filters = {}) {
-    try {
-      const criteria = { competition: competitionId, ...filters };
-      const scores = await this.find(criteria);
-
-      // Calculate averages per player
-      const playerAverages = new Map();
-
-      scores.forEach(scoreDoc => {
-        scoreDoc.playerScores.forEach(ps => {
-          const playerId = ps.playerId.toString();
-          
-          if (!playerAverages.has(playerId)) {
-            playerAverages.set(playerId, {
-              playerId: ps.playerId,
-              playerName: ps.playerName,
-              scores: [],
-              totalScore: 0,
-              count: 0
-            });
-          }
-
-          const playerData = playerAverages.get(playerId);
-          playerData.scores.push(ps.finalScore);
-          playerData.totalScore += ps.finalScore;
-          playerData.count += 1;
-        });
-      });
-
-      // Calculate averages
-      const results = Array.from(playerAverages.values()).map(data => ({
-        playerId: data.playerId,
-        playerName: data.playerName,
-        averageScore: data.count > 0 ? data.totalScore / data.count : 0,
-        totalScore: data.totalScore,
-        scoreCount: data.count
-      }));
-
-      // Sort by average score descending
-      results.sort((a, b) => b.averageScore - a.averageScore);
-
-      return results;
-    } catch (error) {
-      this.logger.error('ScoreRepository.calculateAverages error', { 
-        competitionId, 
-        filters, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
 }
 
 module.exports = ScoreRepository;
