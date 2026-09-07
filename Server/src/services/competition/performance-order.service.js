@@ -18,6 +18,7 @@ const { toCompetitionTypeSlug } = require('../../config/cop-rules');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
 const { fullName } = require('../../utils/data/user-projection.util');
 const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
+const { idStr } = require('../../utils/data/objectid.util');
 // The route guard reads the same list from the same place — see the note on
 // SEQUENCE_JUDGE_TYPES there. This file used to declare its own copy.
 const { SEQUENCE_JUDGE_TYPES } = require('../../utils/data/judge-assignment.util');
@@ -43,8 +44,6 @@ function secureShuffle(items) {
   return out;
 }
 
-/** @param {*} id @returns {string} */
-const idStr = (id) => (id == null ? '' : String(id._id ?? id));
 
 class PerformanceOrderService {
   /**

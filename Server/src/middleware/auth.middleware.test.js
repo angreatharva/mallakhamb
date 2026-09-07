@@ -6,9 +6,15 @@ jest.mock('../utils/security/token-invalidation.util', () => ({
 }));
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 
-// Mock cookie util
+// Mock cookie util.
+//
+// This mock must export EVERY symbol auth.middleware imports from the real
+// module. A missing one is `undefined` at require time and only fails when the
+// middleware factory runs — which is the same shape as the auth-guard mock trap
+// documented on admin.routes.test.js, just one module further down.
 jest.mock('../utils/security/cookie.util', () => ({
   COOKIE_NAMES: { ACCESS_TOKEN: 'access_token' },
+  isProductionLike: jest.fn(() => false),
   setAccessTokenCookie: jest.fn()
 }));
 

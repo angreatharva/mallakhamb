@@ -15,7 +15,7 @@
 
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
-const { COOKIE_NAMES, setAccessTokenCookie } = require('../utils/security/cookie.util');
+const { COOKIE_NAMES, isProductionLike, setAccessTokenCookie } = require('../utils/security/cookie.util');
 const {
   loadAssignments,
   hasAnyRole,
@@ -41,7 +41,7 @@ function createAuthMiddleware(container) {
     judgeRepository = null;
   }
   const config = container.resolve('config');
-  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
+  const isProduction = isProductionLike(config);
 
   return async (req, res, next) => {
     try {
@@ -253,6 +253,48 @@ function createAuthMiddleware(container) {
 }
 
 /**
+ * The 401 every guard in this file sends when there is no authenticated
+ * principal, written once.
+ *
+ * These stay as direct `res.json` calls rather than thrown AuthenticationError /
+ * AuthorizationError: the error middleware would rewrite `code` to
+ * `AUTHENTICATION_ERROR`/`AUTHORIZATION_ERROR` and drop `requiredRoles`, and the
+ * client matches on these codes.
+ *
+ * @param {import('express').Response} res
+ * @returns {import('express').Response}
+ */
+function denyUnauthenticated(res) {
+  return res.status(401).json({
+    success: false,
+    error: {
+      message: 'Authentication required',
+      code: 'AUTH_REQUIRED'
+    }
+  });
+}
+
+/**
+ * The 403 every guard in this file sends when the principal is authenticated
+ * but not permitted.
+ *
+ * @param {import('express').Response} res
+ * @param {string} message
+ * @param {Object} [extra] - additional error fields, e.g. `requiredRoles`
+ * @returns {import('express').Response}
+ */
+function denyForbidden(res, message, extra = {}) {
+  return res.status(403).json({
+    success: false,
+    error: {
+      message,
+      code: 'INSUFFICIENT_PERMISSIONS',
+      ...extra
+    }
+  });
+}
+
+/**
  * Create role-based authorization middleware
  * @param {string|string[]} allowedRoles - Allowed user types
  * @returns {Function} Express middleware
@@ -260,28 +302,15 @@ function createAuthMiddleware(container) {
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user || !req.userType) {
-      return res.status(401).json({ 
-        success: false,
-        error: {
-          message: 'Authentication required',
-          code: 'AUTH_REQUIRED'
-        }
-      });
+      return denyUnauthenticated(res);
     }
 
     const roles = allowedRoles.flat();
-    const hasRole = roles.includes(req.userType) || 
+    const hasRole = roles.includes(req.userType) ||
                     (req.user.role && roles.includes(req.user.role));
 
     if (!hasRole) {
-      return res.status(403).json({ 
-        success: false,
-        error: {
-          message: 'Access denied. Insufficient permissions.',
-          code: 'INSUFFICIENT_PERMISSIONS',
-          requiredRoles: roles
-        }
-      });
+      return denyForbidden(res, 'Access denied. Insufficient permissions.', { requiredRoles: roles });
     }
 
     next();
@@ -293,10 +322,7 @@ function requireRole(...allowedRoles) {
  */
 const requireAdminOrScorer = (req, res, next) => {
   if (!req.user || !req.userType) {
-    return res.status(401).json({ 
-      success: false,
-      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }
-    });
+    return denyUnauthenticated(res);
   }
 
   const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' || 
@@ -308,13 +334,7 @@ const requireAdminOrScorer = (req, res, next) => {
   const isScorer = req.userType === 'judge' && hasAnyRole(req.judgeAssignments, ['Scorer']);
 
   if (!isAdmin && !isScorer) {
-    return res.status(403).json({ 
-      success: false,
-      error: {
-        message: 'Access denied. Requires Admin or Scorer permissions.',
-        code: 'INSUFFICIENT_PERMISSIONS'
-      }
-    });
+    return denyForbidden(res, 'Access denied. Requires Admin or Scorer permissions.');
   }
   
   next();
@@ -335,10 +355,7 @@ const requireAdminOrScorer = (req, res, next) => {
  */
 const requireSequenceManager = (req, res, next) => {
   if (!req.user || !req.userType) {
-    return res.status(401).json({
-      success: false,
-      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }
-    });
+    return denyUnauthenticated(res);
   }
 
   const isAdmin = req.userType === 'admin' || req.userType === 'superadmin' ||
@@ -352,13 +369,7 @@ const requireSequenceManager = (req, res, next) => {
                       hasAnyRole(req.judgeAssignments, SEQUENCE_JUDGE_TYPES);
 
   if (!isAdmin && !canSequence) {
-    return res.status(403).json({
-      success: false,
-      error: {
-        message: 'Access denied. Only the Senior Judge or Scorer can set the running order.',
-        code: 'INSUFFICIENT_PERMISSIONS'
-      }
-    });
+    return denyForbidden(res, 'Access denied. Only the Senior Judge or Scorer can set the running order.');
   }
 
   next();
@@ -384,13 +395,7 @@ const requireAdmin = requireRole('admin', 'superadmin');
  */
 const requireSuperAdmin = (req, res, next) => {
   if (!req.user || !req.userType) {
-    return res.status(401).json({ 
-      success: false,
-      error: {
-        message: 'Authentication required',
-        code: 'AUTH_REQUIRED'
-      }
-    });
+    return denyUnauthenticated(res);
   }
 
   const isSuperAdmin = req.userType === 'superadmin' || 

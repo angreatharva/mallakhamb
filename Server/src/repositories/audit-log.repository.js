@@ -1,5 +1,6 @@
 const BaseRepository = require('./base.repository');
 const AuditLog = require('../models/AuditLog');
+const { pageMeta } = require('../utils/data/pagination.util');
 
 class AuditLogRepository extends BaseRepository {
   constructor(logger) {
@@ -46,12 +47,7 @@ class AuditLogRepository extends BaseRepository {
 
     return {
       data,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
+      pagination: { ...pageMeta(total, page, limit), limit }
     };
   }
 }

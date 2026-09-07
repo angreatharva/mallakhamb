@@ -25,50 +25,14 @@ const {
 const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
 // Shared so /auth/me and login can never disagree about what is sensitive.
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
-
-/**
- * LOW-4: a dummy hash to compare against when the account does not exist.
- *
- * Without it, login returned immediately on user-not-found while a real
- * account paid for a bcrypt comparison, so response time told an attacker
- * which e-mail addresses are registered. Computed once at module load — doing
- * it per request would be the same work bcrypt is meant to cost, on every
- * unauthenticated hit.
- *
- * The plaintext is irrelevant and this is not a secret; only the COST of
- * comparing against it matters. It is a literal rather than a `hashSync` call
- * so that importing this module does no bcrypt work at startup, and so unit
- * tests that mock bcrypt do not have to stub `hashSync` to load the file.
- * Generated at cost 12, matching BCRYPT_ROUNDS.
- */
-const DUMMY_PASSWORD_HASH = '$2a$12$xkzf6jGVSx6.qXQ/GXY93OiYAmFAjB7Q9ph2ciDNL8cuW.PNc94Mi';
-
-const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
-const DEFAULT_LOCKOUT_MINUTES = 15;
-// Matches the model pre-save hooks and the documented BCRYPT_ROUNDS default.
-const DEFAULT_BCRYPT_ROUNDS = 12;
-
-/**
- * Read a security setting from the config singleton.
- *
- * This service is constructed positionally by the DI container and has no
- * `config` dependency; adding one would change the constructor signature that
- * bootstrap wires by position. The singleton is read directly instead, and
- * defensively: unit tests build the service without ever calling
- * `config.load()`, and a lockout policy is not worth throwing over.
- *
- * @param {string} key - Dot path under the config root
- * @param {number} fallback
- * @returns {number}
- */
-function securitySetting(key, fallback) {
-  try {
-    const value = require('../../config/config-manager').get(key);
-    return Number.isFinite(Number(value)) ? Number(value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+// Shared with judge.service, which authenticates against a different collection
+// and so used to carry its own copy of both of these.
+const {
+  equalizeFailedLoginTiming,
+  securitySetting,
+  lockoutPolicy,
+  DEFAULT_BCRYPT_ROUNDS,
+} = require('../../utils/security/login-security.util');
 
 class AuthenticationService {
   /**
@@ -148,7 +112,7 @@ class AuthenticationService {
       if (!user) {
         // LOW-4: burn a comparable amount of time before returning, so an
         // unregistered e-mail is not distinguishable by response latency.
-        await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
+        await equalizeFailedLoginTiming(password);
         this.logger.warn('Login failed: User not found', { email: sanitizedEmail, userType: sanitizedUserType });
         throw new AuthenticationError('Invalid credentials');
       }
@@ -177,10 +141,7 @@ class AuthenticationService {
       const isPasswordValid = await this.verifyPassword(user, password);
 
       if (!isPasswordValid) {
-        const next = registerFailedAttempt(user, {
-          maxAttempts: securitySetting('security.maxLoginAttempts', DEFAULT_MAX_LOGIN_ATTEMPTS),
-          lockoutMinutes: securitySetting('security.lockoutDuration', DEFAULT_LOCKOUT_MINUTES),
-        });
+        const next = registerFailedAttempt(user, lockoutPolicy());
 
         await this.persistLockoutState(sanitizedUserType, user._id, {
           loginAttempts: next.loginAttempts,

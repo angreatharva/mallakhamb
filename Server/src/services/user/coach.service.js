@@ -9,7 +9,7 @@
 
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
-const { fullName } = require('../../utils/data/user-projection.util');
+const { fullName, stripSensitiveFields } = require('../../utils/data/user-projection.util');
 const {
   calculateTeamPaymentAmount,
   resolveFeeWindow,
@@ -18,6 +18,15 @@ const {
   assertDiscountCodeValid,
   DISCOUNT_PERCENT,
 } = require('../../config/payment.config');
+const {
+  RAZORPAY_CURRENCY,
+  razorpayClient,
+  buildReceipt,
+  verifyPaymentSignature,
+  fetchPaymentDetails,
+  isPaymentSuccessful,
+  paidAtFrom,
+} = require('../payment/razorpay.gateway');
 
 class CoachService extends UserService {
   /**
@@ -907,24 +916,10 @@ class CoachService extends UserService {
       const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt);
       const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
 
-      // Get Razorpay credentials from config
+      // Credentials, client and receipt scheme are shared with the super
+      // admin's per-athlete payment path — see services/payment/razorpay.gateway.
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
-      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
-
-      if (!razorpayKeyId || !razorpayKeySecret) {
-        this.logger?.error?.('Razorpay credentials not configured', {
-          hasKeyId: !!razorpayKeyId,
-          hasKeySecret: !!razorpayKeySecret
-        });
-        throw new ValidationError('Razorpay credentials are not configured');
-      }
-
-      // Create Razorpay instance
-      const Razorpay = require('razorpay');
-      const razorpay = new Razorpay({
-        key_id: razorpayKeyId,
-        key_secret: razorpayKeySecret
-      });
+      const razorpay = razorpayClient(this.config);
 
       this.logger?.info?.('Creating Razorpay order', {
         amount,
@@ -932,16 +927,10 @@ class CoachService extends UserService {
         teamId: team._id.toString()
       });
 
-      // Create Razorpay order
-      // Receipt must be max 40 characters - use last 8 chars of teamId + timestamp
-      const shortTeamId = team._id.toString().slice(-8);
-      const timestamp = Date.now().toString().slice(-8);
-      const receipt = `rcpt_${shortTeamId}_${timestamp}`;
-      
       const razorpayOrder = await razorpay.orders.create({
         amount: amount * 100, // Razorpay expects amount in paise (smallest currency unit)
-        currency: 'INR',
-        receipt: receipt,
+        currency: RAZORPAY_CURRENCY,
+        receipt: buildReceipt(team._id),
         notes: {
           coachId: coachId.toString(),
           competitionId: competitionId.toString(),
@@ -1039,25 +1028,16 @@ class CoachService extends UserService {
         };
       }
 
-      // CRITICAL: Verify Razorpay payment signature server-side
-      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
-      if (!razorpayKeySecret) {
-        this.logger?.error?.('Razorpay key secret not configured');
-        throw new ValidationError('Payment verification failed: Configuration error');
-      }
+      // CRITICAL: Verify Razorpay payment signature server-side. The HMAC and
+      // the constant-time comparison live in services/payment/razorpay.gateway,
+      // shared with the super admin's per-athlete payment path.
+      const signatureValid = verifyPaymentSignature(this.config, {
+        orderId: payload.razorpay_order_id,
+        paymentId: payload.razorpay_payment_id,
+        signature: payload.razorpay_signature,
+      });
 
-      const crypto = require('crypto');
-      const generatedSignature = crypto
-        .createHmac('sha256', razorpayKeySecret)
-        .update(`${payload.razorpay_order_id}|${payload.razorpay_payment_id}`)
-        .digest('hex');
-
-      // Use timing-safe comparison
-      const generatedBuffer = Buffer.from(generatedSignature);
-      const receivedBuffer = Buffer.from(payload.razorpay_signature);
-
-      if (generatedBuffer.length !== receivedBuffer.length || 
-          !crypto.timingSafeEqual(generatedBuffer, receivedBuffer)) {
+      if (!signatureValid) {
         this.logger?.error?.('Payment signature verification failed', {
           coachId,
           competitionId,
@@ -1067,32 +1047,21 @@ class CoachService extends UserService {
         throw new ValidationError('Payment verification failed: Invalid signature');
       }
 
-      // Verify payment status with Razorpay API
-      const Razorpay = require('razorpay');
-      const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
-      
-      if (!razorpayKeyId) {
-        throw new ValidationError('Payment verification failed: Configuration error');
-      }
-
-      const razorpay = new Razorpay({
-        key_id: razorpayKeyId,
-        key_secret: razorpayKeySecret
-      });
-
+      // Verify payment status with Razorpay API — the client's claim that it
+      // succeeded is not evidence.
       let paymentDetails;
       try {
-        paymentDetails = await razorpay.payments.fetch(payload.razorpay_payment_id);
+        paymentDetails = await fetchPaymentDetails(this.config, payload.razorpay_payment_id);
       } catch (error) {
         this.logger?.error?.('Failed to fetch payment details from Razorpay', {
           error: error.message,
           paymentId: payload.razorpay_payment_id
         });
-        throw new ValidationError('Payment verification failed: Unable to verify payment status');
+        throw error;
       }
 
       // Check payment status
-      if (paymentDetails.status !== 'captured' && paymentDetails.status !== 'authorized') {
+      if (!isPaymentSuccessful(paymentDetails)) {
         this.logger?.error?.('Payment not successful', {
           paymentId: payload.razorpay_payment_id,
           status: paymentDetails.status,
@@ -1155,9 +1124,7 @@ class CoachService extends UserService {
        * Rare (the two instants are usually seconds apart) and recoverable, which
        * is why it is not worth pinning a quote to the registration for.
        */
-      const paidAt = Number.isFinite(Number(paymentDetails.created_at))
-        ? new Date(Number(paymentDetails.created_at) * 1000)
-        : new Date();
+      const paidAt = paidAtFrom(paymentDetails);
 
       // Calculate expected amount using centralized config with competition-specific player fee
       // Use registeredTeam.players (players registered for this competition)
@@ -1277,7 +1244,7 @@ class CoachService extends UserService {
       }
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = coach;
+      const profile = stripSensitiveFields(coach);
 
       this.logger.info('Coach profile retrieved', { coachId });
 
@@ -1344,7 +1311,7 @@ class CoachService extends UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedCoach;
+      const profile = stripSensitiveFields(updatedCoach);
 
       this.logger.info('Coach assigned to team', { 
         coachId, 
@@ -1396,7 +1363,7 @@ class CoachService extends UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedCoach;
+      const profile = stripSensitiveFields(updatedCoach);
 
       this.logger.info('Coach removed from team', { 
         coachId, 
@@ -1482,7 +1449,7 @@ class CoachService extends UserService {
 
       // Remove passwords from response
       const coachesWithoutPasswords = coaches.map(coach => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = coach;
+        const profile = stripSensitiveFields(coach);
         return profile;
       });
 

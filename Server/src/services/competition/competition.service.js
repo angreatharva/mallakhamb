@@ -16,6 +16,7 @@ const {
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
 const EventTypes = require('../../socket/events/event-types');
 const Admin = require('../../../models/Admin');
+const { pageMeta } = require('../../utils/data/pagination.util');
 
 /**
  * Fee-window fields a plain admin may not set.
@@ -420,12 +421,7 @@ class CompetitionService {
           this.competitionRepository.count(criteria)
         ]);
 
-        const result = {
-          competitions,
-          total,
-          page,
-          pages: Math.ceil(total / limit)
-        };
+        const result = { competitions, ...pageMeta(total, page, limit) };
 
         this.logger.debug('Competitions fetched from database', {
           filters,

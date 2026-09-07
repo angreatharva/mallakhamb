@@ -11,6 +11,7 @@
 const { asyncHandler } = require('../middleware/error.middleware');
 const { stripSensitiveFields } = require('../utils/data/user-projection.util');
 const {
+  isProductionLike,
   setAccessTokenCookie,
   setRefreshTokenCookie,
   clearAuthCookies,
@@ -22,7 +23,7 @@ function createAuthController(container) {
   const config = container.resolve('config');
   const logger = container.resolve('logger');
 
-  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
+  const isProduction = isProductionLike(config);
 
   return {
     // ==================== Password Reset ====================

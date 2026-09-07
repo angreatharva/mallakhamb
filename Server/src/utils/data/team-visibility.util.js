@@ -41,8 +41,7 @@ function isSubmittedRegistration(registration) {
   return registration.isSubmitted === true && registration.isActive !== false;
 }
 
-/** @param {*} id @returns {string} */
-const idStr = (id) => (id == null ? '' : String(id._id ?? id));
+const { idStr } = require('./objectid.util');
 
 /**
  * Find the SUBMITTED registration for a team inside a competition.

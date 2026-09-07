@@ -1,7 +1,16 @@
-const { fullName } = require('../../utils/data/user-projection.util');
+const { fullName, coachCard, enteredPlayerCard } = require('../../utils/data/user-projection.util');
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
+const {
+  RAZORPAY_CURRENCY,
+  razorpayClient,
+  buildReceipt,
+  verifyPaymentSignature,
+  fetchPaymentDetails,
+  isPaymentSuccessful,
+  paidAtFrom,
+} = require('../payment/razorpay.gateway');
 
 /**
  * Read one of the competition's fee-window dates off a create/update payload.
@@ -244,12 +253,8 @@ class SuperAdminService {
               rp => rp.player.toString() === player._id.toString()
             );
             return {
-              _id: player._id,
-              firstName: player.firstName,
-              lastName: player.lastName,
-              email: player.email,
-              ageGroup: registeredPlayer?.ageGroup || player.ageGroup,
-              gender: registeredPlayer?.gender || player.gender,
+              ...enteredPlayerCard(player, registeredPlayer),
+              // The superadmin list shows apparatus; the admin list does not.
               apparatus: registeredPlayer?.apparatus
             };
           });
@@ -266,13 +271,7 @@ class SuperAdminService {
           return {
             _id: team._id,
             name: team.name,
-            coach: team.coach ? {
-              _id: team.coach._id,
-              firstName: team.coach.firstName || '',
-              lastName: team.coach.lastName || '',
-              name: fullName(team.coach),
-              email: team.coach.email
-            } : null,
+            coach: coachCard(team.coach),
             playerCount: playersWithAgeGroups.length,
             players: playersWithAgeGroups,
             description: team.description,
@@ -306,13 +305,7 @@ class SuperAdminService {
         return {
           _id: team._id,
           name: team.name,
-          coach: team.coach ? {
-            _id: team.coach._id,
-            firstName: team.coach.firstName || '',
-            lastName: team.coach.lastName || '',
-            name: fullName(team.coach),
-            email: team.coach.email
-          } : null,
+          coach: coachCard(team.coach),
           playerCount: players.length,
           players: players.map(p => ({
             _id: p._id,
@@ -726,24 +719,10 @@ class SuperAdminService {
       const feeWindow = resolveFeeWindow(competition, quotedAt);
       const amount = calculatePlayerAdditionAmount(playerData, competition, quotedAt);
 
-      // Get Razorpay credentials from config
+      // Credentials, client and receipt scheme are shared with the coach's squad
+      // payment path — see services/payment/razorpay.gateway.
       const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
-      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
-
-      if (!razorpayKeyId || !razorpayKeySecret) {
-        this.logger?.error?.('Razorpay credentials not configured', {
-          hasKeyId: !!razorpayKeyId,
-          hasKeySecret: !!razorpayKeySecret
-        });
-        throw new ValidationError('Razorpay credentials are not configured');
-      }
-
-      // Create Razorpay instance
-      const Razorpay = require('razorpay');
-      const razorpay = new Razorpay({
-        key_id: razorpayKeyId,
-        key_secret: razorpayKeySecret
-      });
+      const razorpay = razorpayClient(this.config);
 
       this.logger?.info?.('Creating Razorpay order for player addition', {
         amount,
@@ -751,15 +730,10 @@ class SuperAdminService {
         competitionId
       });
 
-      // Create Razorpay order
-      const shortTeamId = team._id.toString().slice(-8);
-      const timestamp = Date.now().toString().slice(-8);
-      const receipt = `rcpt_${shortTeamId}_${timestamp}`;
-      
       const razorpayOrder = await razorpay.orders.create({
         amount: amount * 100, // Razorpay expects amount in paise
-        currency: 'INR',
-        receipt: receipt,
+        currency: RAZORPAY_CURRENCY,
+        receipt: buildReceipt(team._id),
         notes: {
           superAdminId: superAdminId.toString(),
           competitionId: competitionId.toString(),
@@ -833,25 +807,16 @@ class SuperAdminService {
         throw new ValidationError('Missing required payment details');
       }
 
-      // CRITICAL: Verify Razorpay payment signature server-side
-      const razorpayKeySecret = this.config?.get('razorpay.keySecret') || '';
-      if (!razorpayKeySecret) {
-        this.logger?.error?.('Razorpay key secret not configured');
-        throw new ValidationError('Payment verification failed: Configuration error');
-      }
+      // CRITICAL: Verify Razorpay payment signature server-side. The HMAC and
+      // the constant-time comparison live in services/payment/razorpay.gateway,
+      // shared with the coach's squad payment path.
+      const signatureValid = verifyPaymentSignature(this.config, {
+        orderId: paymentPayload.razorpay_order_id,
+        paymentId: paymentPayload.razorpay_payment_id,
+        signature: paymentPayload.razorpay_signature,
+      });
 
-      const crypto = require('crypto');
-      const generatedSignature = crypto
-        .createHmac('sha256', razorpayKeySecret)
-        .update(`${paymentPayload.razorpay_order_id}|${paymentPayload.razorpay_payment_id}`)
-        .digest('hex');
-
-      // Use timing-safe comparison
-      const generatedBuffer = Buffer.from(generatedSignature);
-      const receivedBuffer = Buffer.from(paymentPayload.razorpay_signature);
-
-      if (generatedBuffer.length !== receivedBuffer.length || 
-          !crypto.timingSafeEqual(generatedBuffer, receivedBuffer)) {
+      if (!signatureValid) {
         this.logger?.error?.('Payment signature verification failed', {
           superAdminId,
           orderId: paymentPayload.razorpay_order_id,
@@ -860,32 +825,21 @@ class SuperAdminService {
         throw new ValidationError('Payment verification failed: Invalid signature');
       }
 
-      // Verify payment status with Razorpay API
-      const Razorpay = require('razorpay');
-      const razorpayKeyId = this.config?.get('razorpay.keyId') || '';
-      
-      if (!razorpayKeyId) {
-        throw new ValidationError('Payment verification failed: Configuration error');
-      }
-
-      const razorpay = new Razorpay({
-        key_id: razorpayKeyId,
-        key_secret: razorpayKeySecret
-      });
-
+      // Verify payment status with Razorpay API — the client's claim that it
+      // succeeded is not evidence.
       let paymentDetails;
       try {
-        paymentDetails = await razorpay.payments.fetch(paymentPayload.razorpay_payment_id);
+        paymentDetails = await fetchPaymentDetails(this.config, paymentPayload.razorpay_payment_id);
       } catch (error) {
         this.logger?.error?.('Failed to fetch payment details from Razorpay', {
           error: error.message,
           paymentId: paymentPayload.razorpay_payment_id
         });
-        throw new ValidationError('Payment verification failed: Unable to verify payment status');
+        throw error;
       }
 
       // Check payment status
-      if (paymentDetails.status !== 'captured' && paymentDetails.status !== 'authorized') {
+      if (!isPaymentSuccessful(paymentDetails)) {
         this.logger?.error?.('Payment not successful', {
           paymentId: paymentPayload.razorpay_payment_id,
           status: paymentDetails.status,
@@ -916,9 +870,7 @@ class SuperAdminService {
        * against the late-window quote. Same reasoning, and the same narrow
        * deadline-crossing edge, as `coach.service.verifyTeamPaymentAndSubmit`.
        */
-      const paidAt = Number.isFinite(Number(paymentDetails.created_at))
-        ? new Date(Number(paymentDetails.created_at) * 1000)
-        : new Date();
+      const paidAt = paidAtFrom(paymentDetails);
       const feeWindow = resolveFeeWindow(competition, paidAt);
 
       // Verify payment amount with competition-specific player fee

@@ -9,6 +9,7 @@
 
 const BaseRepository = require('./base.repository');
 const Coach = require('../../models/Coach');
+const { pageMeta } = require('../utils/data/pagination.util');
 
 class CoachRepository extends BaseRepository {
   /**
@@ -89,12 +90,7 @@ class CoachRepository extends BaseRepository {
         this.count(criteria)
       ]);
       
-      return {
-        coaches,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
+      return { coaches, ...pageMeta(total, page, limit) };
     } catch (error) {
       this.logger.error('CoachRepository.findPaginated error', { 
         filters, 

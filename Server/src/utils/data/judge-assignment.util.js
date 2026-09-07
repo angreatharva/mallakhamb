@@ -16,6 +16,7 @@
 
 const { toCompetitionTypeSlug } = require('../../config/cop-rules');
 const { PANEL_JUDGE_TYPES } = require('../scoring/judge-slip.util');
+const { idStr } = require('./objectid.util');
 
 /**
  * Roles that may set a panel's running order.
@@ -39,11 +40,6 @@ const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
  */
 const MINIMUM_PANEL_SEATS = Object.freeze(['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer']);
 
-const idStr = (value) => {
-  if (!value) return '';
-  if (typeof value === 'object' && value._id) return String(value._id);
-  return String(value);
-};
 
 /**
  * Every active assignment held by a judge account.

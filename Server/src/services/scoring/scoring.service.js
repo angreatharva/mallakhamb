@@ -27,6 +27,7 @@ const {
   SUBMITTED_TEAM_COACH_FIELD_LIST,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
+  toMongoProjection,
 } = require('../../utils/data/user-projection.util');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const {
@@ -566,16 +567,12 @@ class ScoringService {
        * athlete's own on write (coach.service.addPlayerToAgeGroup), so the
        * server and the client agree on which field decides.
        */
-      const toProjection = (fields) => Object.fromEntries(
-        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
-      );
-
       const filteredTeams = await this.competitionRepository.findSubmittedRegistrations(
         competitionId,
         { gender, ageGroup },
         {
-          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
-          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+          coachFields: toMongoProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toMongoProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
         }
       );
 

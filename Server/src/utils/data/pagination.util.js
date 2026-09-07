@@ -41,4 +41,26 @@ const getPaginationMeta = (total, page = 1, limit = 20) => {
   };
 };
 
-module.exports = { paginate, getPaginationMeta };
+/**
+ * The pagination envelope this API actually returns.
+ *
+ * Distinct from `getPaginationMeta` above, which nothing uses and which reports
+ * a richer shape (`currentPage`, `totalPages`, `hasNextPage`…). Ten call sites
+ * across the services and repositories build `{ total, page, pages }` by hand,
+ * every one of them ending in the same `Math.ceil(total / limit)`.
+ *
+ * Spread it beside the named collection:
+ *   `return { teams, ...pageMeta(total, page, limit) };`
+ *
+ * @param {number} total - items matching the query, not items on this page
+ * @param {number} page
+ * @param {number} limit
+ * @returns {{total: number, page: number, pages: number}}
+ */
+const pageMeta = (total, page, limit) => ({
+  total,
+  page,
+  pages: Math.ceil(total / limit),
+});
+
+module.exports = { paginate, getPaginationMeta, pageMeta };

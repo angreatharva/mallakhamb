@@ -19,6 +19,8 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { fullName } = require('../utils/data/user-projection.util');
+const { competitionIdFromRequest } = require('../utils/data/request-context.util');
 
 /**
  * Describe the caller for the audit fields and the broadcast payload.
@@ -29,7 +31,9 @@ function actorFrom(req) {
   const user = req.user || {};
   return {
     id: user._id || null,
-    name: user.name || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || '',
+    // People are stored as two name halves and composed at the boundary by the
+    // shared helper; this file used to inline the join.
+    name: user.name || fullName(user) || user.username || '',
     role: req.userType === 'judge' ? (user.judgeType || 'judge') : (user.role || req.userType || ''),
   };
 }
@@ -39,25 +43,14 @@ function actorFrom(req) {
  *
  * Admin routes get it from the competition-context middleware; superadmin and
  * judge routes send it explicitly, because neither is scoped to a single
- * competition by its token the way an admin is.
+ * competition by its token the way an admin is. The chain itself is shared with
+ * admin.controller — see utils/data/request-context.util, which also documents
+ * the two ordering differences from the version this replaces.
  *
  * @param {import('express').Request} req
  * @returns {string|undefined}
  */
-function competitionFrom(req) {
-  return (
-    req.competitionId ||
-    req.query.competitionId ||
-    req.query.competition ||
-    req.body?.competitionId ||
-    req.body?.competition ||
-    req.user?.currentCompetition ||
-    req.user?.competition ||
-    // A judge principal is an account, so the competition lives on their
-    // assignments rather than on the user document.
-    req.judgeAssignments?.[0]?.competition
-  );
-}
+const competitionFrom = competitionIdFromRequest;
 
 /**
  * Pull the category filters out of query or body, whichever the verb uses.

@@ -9,6 +9,7 @@
 
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, ConflictError } = require('../../errors');
+const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 
 class PlayerService extends UserService {
   /**
@@ -216,7 +217,7 @@ class PlayerService extends UserService {
       }
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = player;
+      const profile = stripSensitiveFields(player);
 
       this.logger.info('Player profile retrieved', { playerId });
 
@@ -293,7 +294,7 @@ class PlayerService extends UserService {
       const updatedPlayer = await this.repository.updateTeam(playerId, teamId);
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedPlayer;
+      const profile = stripSensitiveFields(updatedPlayer);
 
       this.logger.info('Player assigned to team', { 
         playerId, 
@@ -343,7 +344,7 @@ class PlayerService extends UserService {
       const updatedPlayer = await this.repository.updateTeam(playerId, null);
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedPlayer;
+      const profile = stripSensitiveFields(updatedPlayer);
 
       this.logger.info('Player removed from team', { 
         playerId, 
@@ -375,7 +376,7 @@ class PlayerService extends UserService {
 
       // Remove passwords from response
       const playersWithoutPasswords = players.map(player => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = player;
+        const profile = stripSensitiveFields(player);
         return profile;
       });
 
@@ -407,7 +408,7 @@ class PlayerService extends UserService {
 
       // Remove passwords from response
       const playersWithoutPasswords = players.map(player => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = player;
+        const profile = stripSensitiveFields(player);
         return profile;
       });
 
@@ -437,7 +438,7 @@ class PlayerService extends UserService {
 
       // Remove passwords from response
       const playersWithoutPasswords = players.map(player => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = player;
+        const profile = stripSensitiveFields(player);
         return profile;
       });
 

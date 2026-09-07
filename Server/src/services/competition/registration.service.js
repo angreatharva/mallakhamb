@@ -13,6 +13,7 @@ const {
   NotFoundError,
   BusinessRuleError 
 } = require('../../errors');
+const { pageMeta } = require('../../utils/data/pagination.util');
 
 class RegistrationService {
   /**
@@ -583,9 +584,7 @@ class RegistrationService {
 
       return {
         registrations: registrations.slice(start, start + limit),
-        total,
-        page,
-        pages: Math.ceil(total / limit) || 0,
+        ...pageMeta(total, page, limit),
       };
     } catch (error) {
       if (error instanceof NotFoundError) {

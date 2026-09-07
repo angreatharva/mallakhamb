@@ -117,7 +117,25 @@ const validateAndConvertObjectId = (fieldName, value) => {
   return { success: true, objectId, originalValue: value };
 };
 
+/**
+ * An id as a comparable string, whether it arrives as an ObjectId, a string, or
+ * a populated document.
+ *
+ * Comparing ids is the single most common operation in this codebase — a
+ * registration against a team, an assignment against a competition — and it
+ * cannot be done with `===` because the same id is an ObjectId on one side and
+ * a string on the other. This helper existed three times, character for
+ * character, in judge-assignment.util, team-visibility.util and
+ * performance-order.service.
+ *
+ * @param {*} value
+ * @returns {string} '' for null/undefined, so two absent ids never compare equal
+ *   to a present one
+ */
+const idStr = (value) => (value == null ? '' : String(value._id ?? value));
+
 module.exports = {
+  idStr,
   isValidObjectId,
   convertToObjectId,
   convertMultipleToObjectId,

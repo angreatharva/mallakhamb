@@ -36,10 +36,15 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
   fullName,
+  coachCard,
+  enteredPlayerCard,
+  toMongoProjection,
+  stripSensitiveFields,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 const { MINIMUM_PANEL_SEATS } = require('../../utils/data/judge-assignment.util');
 const { apparatusList } = require('../../utils/data/apparatus.util');
+const { pageMeta } = require('../../utils/data/pagination.util');
 
 class AdminService extends UserService {
   /**
@@ -371,12 +376,12 @@ class AdminService extends UserService {
 
       // Remove passwords from response
       const playersWithoutPasswords = players.map(player => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = player;
+        const profile = stripSensitiveFields(player);
         return { ...profile, userType: 'player' };
       });
 
       const coachesWithoutPasswords = coaches.map(coach => {
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = coach;
+        const profile = stripSensitiveFields(coach);
         return { ...profile, userType: 'coach' };
       });
 
@@ -390,12 +395,7 @@ class AdminService extends UserService {
         total 
       });
 
-      return {
-        users,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
+      return { users, ...pageMeta(total, page, limit) };
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -443,7 +443,7 @@ class AdminService extends UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedUser;
+      const profile = stripSensitiveFields(updatedUser);
 
       this.logger.info('User activated by admin', { 
         adminId, 
@@ -501,7 +501,7 @@ class AdminService extends UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedUser;
+      const profile = stripSensitiveFields(updatedUser);
 
       this.logger.info('User deactivated by admin', { 
         adminId, 
@@ -759,7 +759,7 @@ class AdminService extends UserService {
       const pageIds = matchingTeams.slice(skip, skip + limit).map((team) => team._id);
 
       if (pageIds.length === 0) {
-        return { teams: [], total, page, pages: Math.ceil(total / limit) };
+        return { teams: [], ...pageMeta(total, page, limit) };
       }
 
       const teams = await this.teamRepository.find(
@@ -790,14 +790,7 @@ class AdminService extends UserService {
         let playersWithAgeGroups = (registeredTeam?.players || []).map((registeredPlayer) => {
           const player = playerById.get(registeredPlayer.player?.toString());
           if (!player) return null;
-          return {
-            _id: player._id,
-            firstName: player.firstName,
-            lastName: player.lastName,
-            email: player.email,
-            ageGroup: registeredPlayer.ageGroup || player.ageGroup,
-            gender: registeredPlayer.gender || player.gender
-          };
+          return enteredPlayerCard(player, registeredPlayer);
         }).filter(Boolean);
 
         // Apply gender and ageGroup filters to the players list
@@ -812,13 +805,7 @@ class AdminService extends UserService {
         return {
           _id: team._id,
           name: team.name,
-          coach: team.coach ? {
-            _id: team.coach._id,
-            firstName: team.coach.firstName,
-            lastName: team.coach.lastName,
-            name: fullName(team.coach),
-            email: team.coach.email
-          } : null,
+          coach: coachCard(team.coach),
           playerCount: playersWithAgeGroups.length,
           players: playersWithAgeGroups,
           description: team.description,
@@ -836,12 +823,7 @@ class AdminService extends UserService {
         filters: { ageGroup, gender, ...teamFilters }
       });
 
-      return {
-        teams: teamsWithPlayers,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
+      return { teams: teamsWithPlayers, ...pageMeta(total, page, limit) };
     } catch (error) {
       this.logger.error('Get all teams error', { 
         competitionId, 
@@ -929,13 +911,7 @@ class AdminService extends UserService {
         team: {
           _id: team._id,
           name: team.name,
-          coach: team.coach ? {
-            _id: team.coach._id,
-            firstName: team.coach.firstName || '',
-            lastName: team.coach.lastName || '',
-            name: fullName(team.coach),
-            email: team.coach.email
-          } : null,
+          coach: coachCard(team.coach),
           players: players.map(p => ({
             _id: p._id,
             firstName: p.firstName,
@@ -995,16 +971,12 @@ class AdminService extends UserService {
        * e-mail addresses and minors' dates of birth do not leave the database.
        * `projectFields` below is the second line of defence, unchanged.
        */
-      const toProjection = (fields) => Object.fromEntries(
-        fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
-      );
-
       const registrations = await this.competitionRepository.findSubmittedRegistrations(
         competitionId,
         { gender: filters.gender, ageGroup: filters.ageGroup },
         {
-          coachFields: toProjection(SUBMITTED_TEAM_COACH_FIELDS),
-          playerFields: toProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
+          coachFields: toMongoProjection(SUBMITTED_TEAM_COACH_FIELDS),
+          playerFields: toMongoProjection(SUBMITTED_TEAM_PLAYER_FIELDS),
         }
       );
 
@@ -1356,12 +1328,7 @@ class AdminService extends UserService {
 
       this.logger.info('All players retrieved', { competitionId, total });
 
-      return {
-        players,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
+      return { players, ...pageMeta(total, page, limit) };
     } catch (error) {
       this.logger.error('Get all players error', { 
         competitionId, 
@@ -2428,9 +2395,7 @@ class AdminService extends UserService {
         transactions: withEntries.map((tx) => (
           tx.coach ? { ...tx, coach: { ...tx.coach, name: fullName(tx.coach) } } : tx
         )),
-        total,
-        page,
-        pages: Math.ceil(total / limit)
+        ...pageMeta(total, page, limit),
       };
     } catch (error) {
       this.logger.error('Get transactions error', { error: error.message });

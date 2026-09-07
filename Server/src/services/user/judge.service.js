@@ -46,31 +46,13 @@ const {
   clearedLockoutState,
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
-
-/**
- * LOW-4: see the equivalent note in authentication.service.js. A literal, not a
- * `hashSync` call, so importing this module does no bcrypt work at startup.
- */
-const DUMMY_PASSWORD_HASH = '$2a$12$xkzf6jGVSx6.qXQ/GXY93OiYAmFAjB7Q9ph2ciDNL8cuW.PNc94Mi';
-
-const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
-const DEFAULT_LOCKOUT_MINUTES = 15;
-
-/**
- * Read a security setting from the config singleton, defensively — unit tests
- * construct this service without ever calling `config.load()`.
- * @param {string} key
- * @param {number} fallback
- * @returns {number}
- */
-function judgeSecuritySetting(key, fallback) {
-  try {
-    const value = require('../../config/config-manager').get(key);
-    return Number.isFinite(Number(value)) ? Number(value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+// Shared with authentication.service — the timing equalizer and the lockout
+// policy read are the same controls, and this file used to hold a second copy
+// of each purely because judges authenticate against a different collection.
+const {
+  equalizeFailedLoginTiming,
+  lockoutPolicy,
+} = require('../../utils/security/login-security.util');
 
 /** Shape one assignment for the client. */
 const toClientAssignment = (assignment) => ({
@@ -140,7 +122,7 @@ class JudgeService extends UserService {
       if (!account) {
         // LOW-4: equalize timing so an unknown address is not distinguishable
         // from a wrong password by response latency.
-        await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
+        await equalizeFailedLoginTiming(password);
         this.logger.warn('Judge login failed: account not found', { email: normalizedEmail });
         throw new AuthenticationError('Invalid credentials');
       }
@@ -167,10 +149,7 @@ class JudgeService extends UserService {
       const isPasswordValid = await bcrypt.compare(password || '', account.password || '');
 
       if (!isPasswordValid) {
-        const next = registerFailedAttempt(account, {
-          maxAttempts: judgeSecuritySetting('security.maxLoginAttempts', DEFAULT_MAX_LOGIN_ATTEMPTS),
-          lockoutMinutes: judgeSecuritySetting('security.lockoutDuration', DEFAULT_LOCKOUT_MINUTES),
-        });
+        const next = registerFailedAttempt(account, lockoutPolicy());
 
         await this.persistJudgeLockoutState(account._id, {
           loginAttempts: next.loginAttempts,

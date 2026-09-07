@@ -157,6 +157,70 @@ function projectFields(doc, allowedFields) {
 }
 
 /**
+ * A space-separated `select` string as a MongoDB projection object.
+ *
+ * `_id` is dropped because MongoDB includes it unless explicitly excluded, and
+ * naming it in an inclusion projection is redundant. Defined identically inside
+ * `AdminService.getSubmittedTeams` and `ScoringService.getTeamScores`, which
+ * project the SAME allow-lists — so the two copies existed only because neither
+ * author saw the other.
+ *
+ * @param {string} fields - e.g. '_id firstName lastName gender'
+ * @returns {Object} e.g. { firstName: 1, lastName: 1, gender: 1 }
+ */
+function toMongoProjection(fields) {
+  return Object.fromEntries(
+    fields.split(' ').filter((f) => f !== '_id').map((field) => [field, 1])
+  );
+}
+
+/**
+ * A coach as the team lists render one: identity, both name halves, the
+ * composed display name, and the address an admin needs to contact them.
+ *
+ * Built by hand in four places — `AdminService.getAllTeams`,
+ * `AdminService.getTeamDetails` and both branches of
+ * `SuperAdminService.getAllTeams`. Not the same thing as
+ * `SUBMITTED_TEAM_COACH_FIELD_LIST`, which is the narrower allow-list a JUDGE
+ * sees and deliberately carries no e-mail.
+ *
+ * @param {Object|null|undefined} coach - a populated coach document
+ * @returns {Object|null}
+ */
+function coachCard(coach) {
+  if (!coach) return null;
+  return {
+    _id: coach._id,
+    firstName: coach.firstName || '',
+    lastName: coach.lastName || '',
+    name: fullName(coach),
+    email: coach.email,
+  };
+}
+
+/**
+ * An entered athlete as the admin and superadmin team lists render one.
+ *
+ * The CATEGORY comes from the entry, not the account: an athlete can be entered
+ * in a different age group than their profile default (a play-up), and the
+ * squad place is what they are judged under. See [[entry-vs-account-gender]].
+ *
+ * @param {Object} player - the Player document
+ * @param {Object} [entry] - the `registeredTeams[].players[]` entry
+ * @returns {Object}
+ */
+function enteredPlayerCard(player, entry = null) {
+  return {
+    _id: player._id,
+    firstName: player.firstName,
+    lastName: player.lastName,
+    email: player.email,
+    ageGroup: entry?.ageGroup || player.ageGroup,
+    gender: entry?.gender || player.gender,
+  };
+}
+
+/**
  * Fields that must never reach a client, whatever a query happened to select.
  *
  * The schema `toJSON` transforms are NOT a safety net: BaseRepository queries
@@ -220,6 +284,9 @@ module.exports = {
   JUDGE_ACCOUNT_CARD_FIELDS,
   flattenJudgeAccount,
   fullName,
+  coachCard,
+  enteredPlayerCard,
+  toMongoProjection,
   stripSlipBreakdowns,
   SENSITIVE_USER_FIELDS,
   stripSensitiveFields,

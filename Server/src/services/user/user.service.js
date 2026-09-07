@@ -15,6 +15,7 @@ const {
   ConflictError 
 } = require('../../errors');
 const { sanitizeUserData, normalizeEmail } = require('../../utils/validation/sanitization.util');
+const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 
 class UserService {
   /**
@@ -54,7 +55,7 @@ class UserService {
         }
 
         // Remove password from response
-        const { password, resetPasswordToken, resetPasswordExpires, ...profile } = user;
+        const profile = stripSensitiveFields(user);
 
         this.logger.info('Profile retrieved from database', { 
           userId, 
@@ -105,8 +106,19 @@ class UserService {
         throw new NotFoundError(`${this.userType} not found`);
       }
 
-      // Prevent updating sensitive fields
-      const { password, resetPasswordToken, resetPasswordExpires, ...allowedUpdates } = sanitizedUpdates;
+      /*
+       * Prevent updating sensitive fields.
+       *
+       * This is the one place the shared list is applied to INPUT rather than
+       * to a response, and it therefore now also drops `loginAttempts` and
+       * `lockUntil` — which the hand-written destructure it replaced did not.
+       * That is a strengthening, not a change of intent: without it a caller
+       * could clear their own account lockout by sending the counters in a
+       * profile update. (No HTTP route reaches this method today — judges
+       * update through JudgeAccountService, which has its own allow-list — so
+       * nothing observable changes.)
+       */
+      const allowedUpdates = stripSensitiveFields(sanitizedUpdates);
 
       // If email is being updated, check if it's already taken
       if (allowedUpdates.email && allowedUpdates.email !== user.email) {
@@ -133,7 +145,7 @@ class UserService {
       }
 
       // Remove password from response
-      const { password: _, resetPasswordToken: __, resetPasswordExpires: ___, ...profile } = updatedUser;
+      const profile = stripSensitiveFields(updatedUser);
 
       // Invalidate cache
       if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
@@ -247,7 +259,7 @@ class UserService {
       });
 
       // Remove password from response
-      const { password, resetPasswordToken, resetPasswordExpires, ...profile } = updatedUser;
+      const profile = stripSensitiveFields(updatedUser);
 
       // Invalidate cache
       if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);
@@ -295,7 +307,7 @@ class UserService {
       });
 
       // Remove password from response
-      const { password: _p, resetPasswordToken: _r, resetPasswordExpires: _e, ...profile2 } = updatedUser;
+      const profile2 = stripSensitiveFields(updatedUser);
 
       // Invalidate cache
       if (this.cacheService) this.cacheService.delete(`user:${this.userType}:${userId}`);

@@ -51,6 +51,26 @@ function crossSiteCookiePolicy(isProduction) {
 }
 
 /**
+ * Is this a deployed environment, for cookie-security purposes?
+ *
+ * "Production-like" means production OR staging: staging is internet-reachable
+ * and cross-site in exactly the way `crossSiteCookiePolicy` cares about, so it
+ * must get `Secure` + `SameSite=None` too.
+ *
+ * Every login controller computed this same expression inline — six controllers
+ * plus the auth middleware, all feeding the answer into the cookie helpers
+ * below. Optional-chained so a partially-stubbed config in a test resolves to
+ * `false` rather than throwing.
+ *
+ * @param {Object} config - the ConfigManager (or anything with `.get`)
+ * @returns {boolean}
+ */
+function isProductionLike(config) {
+  const env = config?.get?.('server.nodeEnv');
+  return env === 'production' || env === 'staging';
+}
+
+/**
  * Build common cookie options.
  * @param {boolean} isProduction - Whether the app is running in production
  * @param {Object} [overrides] - Additional or overriding cookie options
@@ -110,6 +130,7 @@ function clearAuthCookies(res, isProduction) {
 
 module.exports = {
   COOKIE_NAMES,
+  isProductionLike,
   setAccessTokenCookie,
   setRefreshTokenCookie,
   clearAuthCookies,

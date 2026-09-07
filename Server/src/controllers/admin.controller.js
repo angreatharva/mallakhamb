@@ -10,12 +10,14 @@
 
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
+const { isProductionLike } = require('../utils/security/cookie.util');
 const { toCompetitionTypeDisplay } = require('../config/cop-rules');
 const {
   PANEL_JUDGE_TYPES,
   buildJudgeSlipPlayerScore,
 } = require('../utils/scoring/judge-slip.util');
 const { resolveAssignment } = require('../utils/data/judge-assignment.util');
+const { competitionIdFromRequest } = require('../utils/data/request-context.util');
 
 /**
  * @param {Object} container - DI container
@@ -27,7 +29,7 @@ function createAdminController(container) {
   const tokenService = container.resolve('tokenService');
   const config = container.resolve('config');
   const logger = container.resolve('logger');
-  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
+  const isProduction = isProductionLike(config);
 
   return {
     // ==================== Authentication ====================
@@ -110,7 +112,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/teams/submitted */
     getSubmittedTeams: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = competitionIdFromRequest(req);
       
       logger.info('getSubmittedTeams called', {
         competitionId,
@@ -226,7 +228,7 @@ function createAdminController(container) {
 
     /** @route GET /api/admin/judges */
     getJudges: asyncHandler(async (req, res) => {
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
+      const competitionId = competitionIdFromRequest(req);
       const { gender, ageGroup, competitionTypes, apparatus } = req.query;
       const judges = await adminService.getJudges(competitionId, { gender, ageGroup, competitionTypes, apparatus });
       res.json({ success: true, data: judges });
@@ -280,7 +282,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/judges/summary */
     getAllJudgesSummary: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
+      const competitionId = competitionIdFromRequest(req);
       const summary = await adminService.getAllJudgesSummary(competitionId);
       res.json({ success: true, data: summary });
     }),
@@ -305,7 +307,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/scores/team */
     getTeamScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
+      const competitionId = competitionIdFromRequest(req);
       const scores = await adminService.getTeamScores(
         competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus
       );
@@ -315,7 +317,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/scores/individual */
     getIndividualScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = competitionIdFromRequest(req);
       const scores = await adminService.getIndividualScores(
         competitionId, 
         req.query.ageGroup, 
@@ -471,7 +473,7 @@ function createAdminController(container) {
       scoreData.allowFinalizedEdit = isScorer || isAdmin;
 
       // Handle admin routes, superadmin routes, and judge/scorer routes
-      const competitionId = req.competitionId || scoreData.competition || req.query.competition || req.query.competitionId || req.user?.competition?._id || req.user?.competition || req.user?.currentCompetition || req.judgeAssignments?.[0]?.competition;
+      const competitionId = competitionIdFromRequest(req, { fallback: scoreData.competition });
       
       if (!competitionId) {
         return res.status(400).json({
@@ -495,7 +497,7 @@ function createAdminController(container) {
     /** @route GET /api/admin/rankings/team */
     getTeamRankings: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
-      const competitionId = req.competitionId || req.query.competition || req.query.competitionId;
+      const competitionId = competitionIdFromRequest(req);
       const rankings = await adminService.getTeamRankings(
         competitionId, 
         req.query.ageGroup, 

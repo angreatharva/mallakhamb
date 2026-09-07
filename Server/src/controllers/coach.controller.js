@@ -10,13 +10,14 @@
 
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
+const { isProductionLike } = require('../utils/security/cookie.util');
 
 function createCoachController(container) {
   const coachService = container.resolve('coachService');
   const tokenService = container.resolve('tokenService');
   const config = container.resolve('config');
   const logger = container.resolve('logger');
-  const isProduction = config.get('server.nodeEnv') === 'production' || config.get('server.nodeEnv') === 'staging';
+  const isProduction = isProductionLike(config);
 
   return {
     // ==================== Auth ====================
