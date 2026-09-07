@@ -165,7 +165,12 @@ function buildService({ discount = ON, isSubmitted = false, competitionOverrides
     null,                                                 // authenticationService
     {                                                     // competitionRepository
       findById: async () => competition,
-      updateById: async (id, update) => { updates.push(update); return competition; },
+      // Team-addressed, not positional — see
+      // CompetitionRepository.updateRegistrationFields.
+      updateRegistrationFields: async (id, teamId, fields) => {
+        updates.push({ teamId, fields });
+        return true;
+      },
     },
     null,                                                 // playerRepository
     { get: (path) => (path === 'payments.discount' ? discount : undefined) },
@@ -252,14 +257,17 @@ describe('redeeming a discount code', () => {
     expect(result.amountPaid).toBe(0);
     expect(result.originalAmount).toBe(1500);
 
-    const set = updates[0].$set;
-    expect(set['registeredTeams.0.isSubmitted']).toBe(true);
+    // Addressed by TEAM. The write used to be built from the registration's
+    // position in the array, which shifts when another coach withdraws.
+    expect(updates[0].teamId).toBe(TEAM_ID);
+    const fields = updates[0].fields;
+    expect(fields.isSubmitted).toBe(true);
     // 'completed' because the obligation IS settled — at zero. Leaving it
     // 'pending' would list a team that owes nothing as still owing.
-    expect(set['registeredTeams.0.paymentStatus']).toBe('completed');
-    expect(set['registeredTeams.0.paymentAmount']).toBe(0);
+    expect(fields.paymentStatus).toBe('completed');
+    expect(fields.paymentAmount).toBe(0);
     // No gateway was involved and the enum only knows 'razorpay'.
-    expect(set['registeredTeams.0.paymentGateway']).toBeUndefined();
+    expect(fields.paymentGateway).toBeUndefined();
 
     expect(transactions).toHaveLength(1);
     expect(transactions[0].amount).toBe(0);

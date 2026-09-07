@@ -495,15 +495,13 @@ class CoachService extends UserService {
     }
     
     // Find registered team
-    const registeredTeamIndex = competition.registeredTeams.findIndex(
+    const registeredTeam = competition.registeredTeams.find(
       rt => rt.coach.toString() === coachId.toString()
     );
-    
-    if (registeredTeamIndex === -1) {
+
+    if (!registeredTeam) {
       throw new NotFoundError('Registered team for this competition');
     }
-    
-    const registeredTeam = competition.registeredTeams[registeredTeamIndex];
 
     /*
      * The squad place's gender must match the athlete's own.
@@ -535,40 +533,35 @@ class CoachService extends UserService {
       }
     }
 
-    // Check if player already exists
-    const existingPlayerIndex = registeredTeam.players.findIndex(
+    /*
+     * Addressed by team and athlete, never by array position.
+     *
+     * Both branches used to build their update path from `findIndex` results
+     * taken off the document read above — the outer index shifts if any team
+     * withdraws, the inner one if any athlete is removed. See
+     * `CompetitionRepository.updateRegistrationFields` for what that costs.
+     */
+    const teamId = registeredTeam.team;
+    const alreadyEntered = registeredTeam.players.some(
       p => p.player && p.player.toString() === playerId.toString()
     );
-    
-    if (existingPlayerIndex !== -1) {
-      // Update existing player's age group and gender
-      await this.competitionRepository.updateById(
+
+    if (alreadyEntered) {
+      await this.competitionRepository.updatePlayerInRegistration(
         competitionId,
-        {
-          $set: {
-            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.ageGroup`]: ageGroup,
-            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.gender`]: gender,
-            [`registeredTeams.${registeredTeamIndex}.players.${existingPlayerIndex}.apparatus`]: apparatus || {}
-          }
-        }
+        teamId,
+        playerId,
+        { ageGroup, gender, apparatus: apparatus || {} }
       );
     } else {
-      // Add new player
-      await this.competitionRepository.updateById(
+      await this.competitionRepository.addPlayerToRegistration(
         competitionId,
-        {
-          $push: {
-            [`registeredTeams.${registeredTeamIndex}.players`]: {
-              player: playerId,
-              ageGroup,
-              gender,
-              apparatus: apparatus || {}
-            }
-          }
-        }
+        teamId,
+        { player: playerId, ageGroup, gender, apparatus: apparatus || {} }
       );
     }
-    
+
+
     this.logger?.info?.('Player added to team', { 
       coachId, 
       competitionId, 
@@ -602,35 +595,31 @@ class CoachService extends UserService {
     }
     
     // Find registered team
-    const registeredTeamIndex = competition.registeredTeams.findIndex(
+    const registeredTeam = competition.registeredTeams.find(
       rt => rt.coach.toString() === coachId.toString()
     );
-    
-    if (registeredTeamIndex === -1) {
+
+    if (!registeredTeam) {
       throw new NotFoundError('Registered team for this competition');
     }
-    
-    // Remove player using $pull
-    await this.competitionRepository.updateById(
+
+    // Addressed by team, not by array position — see the note in
+    // CompetitionRepository.updateRegistrationFields.
+    await this.competitionRepository.removePlayerFromRegistration(
       competitionId,
-      {
-        $pull: {
-          [`registeredTeams.${registeredTeamIndex}.players`]: {
-            player: playerId
-          }
-        }
-      }
+      registeredTeam.team,
+      playerId
     );
-    
-    this.logger?.info?.('Player removed from team', { 
-      coachId, 
-      competitionId, 
-      playerId 
+
+    this.logger?.info?.('Player removed from team', {
+      coachId,
+      competitionId,
+      playerId
     });
-    
-    return { 
-      competitionId, 
-      teamId: competition.registeredTeams[registeredTeamIndex].team, 
+
+    return {
+      competitionId,
+      teamId: registeredTeam.team,
       playerId 
     };
   }
@@ -660,7 +649,11 @@ class CoachService extends UserService {
    *
    * @param {string} coachId
    * @param {string} competitionId
-   * @returns {Promise<{competition: Object, registeredTeam: Object, registeredTeamIndex: number}>}
+   * The registration's array POSITION is deliberately not returned. It used to
+   * be, and every caller wrote through it — which is unsafe the moment a team
+   * withdraws. Writes go through the team-addressed repository methods instead.
+   *
+   * @returns {Promise<{competition: Object, registeredTeam: Object}>}
    */
   async _loadRegistration(coachId, competitionId) {
     const competition = await this.competitionRepository.findById(competitionId);
@@ -668,18 +661,14 @@ class CoachService extends UserService {
       throw new NotFoundError('Competition not found');
     }
 
-    const registeredTeamIndex = competition.registeredTeams.findIndex(
+    const registeredTeam = competition.registeredTeams.find(
       rt => rt.coach?.toString() === coachId.toString()
     );
-    if (registeredTeamIndex === -1) {
+    if (!registeredTeam) {
       throw new NotFoundError('Team not registered for this competition');
     }
 
-    return {
-      competition,
-      registeredTeam: competition.registeredTeams[registeredTeamIndex],
-      registeredTeamIndex,
-    };
+    return { competition, registeredTeam };
   }
 
   /**
@@ -765,7 +754,7 @@ class CoachService extends UserService {
         throw new NotFoundError('Coach not found');
       }
 
-      const { competition, registeredTeam, registeredTeamIndex } =
+      const { competition, registeredTeam } =
         await this._loadRegistration(coachId, competitionId);
 
       if (registeredTeam.isSubmitted) {
@@ -805,21 +794,20 @@ class CoachService extends UserService {
         throw new NotFoundError('Team not found');
       }
 
-      await this.competitionRepository.updateById(
+      await this.competitionRepository.updateRegistrationFields(
         competitionId,
+        registeredTeam.team,
         {
-          $set: {
-            [`registeredTeams.${registeredTeamIndex}.isSubmitted`]: true,
-            [`registeredTeams.${registeredTeamIndex}.submittedAt`]: redeemedAt,
-            // 'completed' because the fee obligation IS settled — at zero. The
-            // admin screens read this field to report who still owes money, and
-            // leaving it 'pending' would list a team that owes nothing.
-            [`registeredTeams.${registeredTeamIndex}.paymentStatus`]: 'completed',
-            [`registeredTeams.${registeredTeamIndex}.paymentAmount`]: 0,
-            [`registeredTeams.${registeredTeamIndex}.paymentVerifiedAt`]: redeemedAt,
-            // `paymentGateway` is left unset on purpose: its enum is ['razorpay']
-            // and no gateway was involved.
-          }
+          isSubmitted: true,
+          submittedAt: redeemedAt,
+          // 'completed' because the fee obligation IS settled — at zero. The
+          // admin screens read this field to report who still owes money, and
+          // leaving it 'pending' would list a team that owes nothing.
+          paymentStatus: 'completed',
+          paymentAmount: 0,
+          paymentVerifiedAt: redeemedAt,
+          // `paymentGateway` is left unset on purpose: its enum is ['razorpay']
+          // and no gateway was involved.
         }
       );
 
@@ -1005,15 +993,13 @@ class CoachService extends UserService {
         throw new NotFoundError('Competition not found');
       }
 
-      const registeredTeamIndex = competition.registeredTeams.findIndex(
+      const registeredTeam = competition.registeredTeams.find(
         rt => rt.coach?.toString() === coachId.toString()
       );
 
-      if (registeredTeamIndex === -1) {
+      if (!registeredTeam) {
         throw new NotFoundError('Team not registered for this competition');
       }
-
-      const registeredTeam = competition.registeredTeams[registeredTeamIndex];
 
       // Check if already submitted
       if (registeredTeam.isSubmitted) {
@@ -1145,21 +1131,29 @@ class CoachService extends UserService {
         throw new ValidationError('Payment verification failed: Amount mismatch');
       }
 
-      // All verifications passed - Update team submission status
-      await this.competitionRepository.updateById(
+      /*
+       * All verifications passed — mark the registration submitted and paid.
+       *
+       * Addressed by TEAM. This write used to be built from a positional index
+       * taken off the document read at the top of this method, and a coach
+       * withdrawing in the meantime shifted it onto somebody else's
+       * registration — marking a team submitted and paid against another
+       * coach's money, with nothing to report it. See
+       * CompetitionRepository.updateRegistrationFields.
+       */
+      await this.competitionRepository.updateRegistrationFields(
         competitionId,
+        registeredTeam.team,
         {
-          $set: {
-            [`registeredTeams.${registeredTeamIndex}.isSubmitted`]: true,
-            [`registeredTeams.${registeredTeamIndex}.submittedAt`]: new Date(),
-            [`registeredTeams.${registeredTeamIndex}.paymentStatus`]: 'completed',
-            [`registeredTeams.${registeredTeamIndex}.paymentId`]: payload.razorpay_payment_id,
-            [`registeredTeams.${registeredTeamIndex}.paymentOrderId`]: payload.razorpay_order_id,
-            [`registeredTeams.${registeredTeamIndex}.paymentSignature`]: payload.razorpay_signature,
-            [`registeredTeams.${registeredTeamIndex}.paymentVerifiedAt`]: new Date(),
-            [`registeredTeams.${registeredTeamIndex}.paymentAmount`]: paymentDetails.amount,
-            [`registeredTeams.${registeredTeamIndex}.paymentMethod`]: paymentDetails.method,
-          }
+          isSubmitted: true,
+          submittedAt: new Date(),
+          paymentStatus: 'completed',
+          paymentId: payload.razorpay_payment_id,
+          paymentOrderId: payload.razorpay_order_id,
+          paymentSignature: payload.razorpay_signature,
+          paymentVerifiedAt: new Date(),
+          paymentAmount: paymentDetails.amount,
+          paymentMethod: paymentDetails.method,
         }
       );
 

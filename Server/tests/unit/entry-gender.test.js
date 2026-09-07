@@ -51,7 +51,17 @@ function buildService(player) {
     null,
     {
       findById: async () => competition,
-      updateById: async (id, update) => { updates.push(update); return competition; },
+      // Writes go through the team-addressed repository methods, never through
+      // a positional `registeredTeams.<i>` path — see
+      // CompetitionRepository.updateRegistrationFields.
+      addPlayerToRegistration: async (id, teamId, entry) => {
+        updates.push({ kind: 'add', teamId, entry });
+        return true;
+      },
+      updatePlayerInRegistration: async (id, teamId, playerId, fields) => {
+        updates.push({ kind: 'update', teamId, playerId, fields });
+        return true;
+      },
     },
     { findById: async () => player }
   );
@@ -98,8 +108,9 @@ describe('addPlayerToAgeGroup — entry gender', () => {
     await add(service, 'Female');
 
     expect(updates).toHaveLength(1);
-    const pushed = Object.values(updates[0].$push)[0];
-    expect(pushed.gender).toBe('Female');
+    expect(updates[0].kind).toBe('add');
+    expect(updates[0].teamId).toBe(TEAM_ID);
+    expect(updates[0].entry.gender).toBe('Female');
   });
 
   it('refuses when the athlete does not exist', async () => {

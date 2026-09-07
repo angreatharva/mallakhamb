@@ -11,6 +11,57 @@ const BaseRepository = require('./base.repository');
 const Competition = require('../../models/Competition');
 const { convertToObjectId } = require('../utils/data/objectid.util');
 
+/**
+ * Prefix an unprefixed field map onto the matched registration, for use with
+ * `arrayFilters: [{ 'registration.<something>': … }]`.
+ *
+ * `{ isSubmitted: true }` becomes
+ * `{ 'registeredTeams.$[registration].isSubmitted': true }`.
+ *
+ * @param {Object} fields
+ * @param {string} [identifier] - the arrayFilters identifier to target
+ * @returns {Object} a `$set` document
+ */
+function prefixRegistrationFields(fields, identifier = 'registration') {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [
+      `registeredTeams.$[${identifier}].${key}`,
+      value,
+    ])
+  );
+}
+
+/**
+ * The query filter for "this competition, and it has a registration for this
+ * team".
+ *
+ * Putting the array-element condition in the QUERY rather than relying on the
+ * update's `arrayFilters` alone is what makes the result readable. An
+ * `arrayFilters` update whose identifier matches NOTHING still reports
+ * `modifiedCount: 1` on these schemas, because `timestamps: true` bumps
+ * `updatedAt` and Mongoose bumps `__v` — the document really was modified, just
+ * not the element the caller cared about. Every one of these methods used to
+ * return `modifiedCount > 0` and document it as "false when no matching
+ * registration was found", which was therefore always true so long as the
+ * competition existed, and `registration.service`'s NotFoundError guard on that
+ * return could never fire.
+ *
+ * With the condition in the filter, `matchedCount === 0` means exactly what the
+ * callers already believed it meant, and the write cannot run at all against a
+ * competition where the team is not registered.
+ *
+ * @param {string} competitionId
+ * @param {string} teamId
+ * @returns {Object}
+ */
+function registrationFilter(competitionId, teamId) {
+  return {
+    _id: competitionId,
+    isDeleted: { $ne: true },
+    'registeredTeams.team': convertToObjectId(teamId),
+  };
+}
+
 class CompetitionRepository extends BaseRepository {
   /**
    * Create a competition repository
@@ -154,23 +205,31 @@ class CompetitionRepository extends BaseRepository {
    */
   async removeTeam(competitionId, teamId) {
     try {
-      const competition = await this.model.findById(competitionId);
-      if (!competition) {
-        return null;
-      }
+      /*
+       * `$pull`, not read-filter-save.
+       *
+       * This used to reassign `competition.registeredTeams` to a filtered copy
+       * and call `.save()`. Assigning the whole path marks it dirty, so
+       * Mongoose emits a `$set` of the ENTIRE array — every concurrent squad
+       * edit made since this document was read is silently discarded, on a
+       * meet-wide document that coaches are editing continuously.
+       *
+       * It matters twice over: this method is also the only thing that SPLICES
+       * the array, which is what made positional writes elsewhere unsafe (see
+       * `updateRegistrationFields`).
+       */
+      const result = await this.model.findOneAndUpdate(
+        { _id: competitionId, isDeleted: { $ne: true } },
+        { $pull: { registeredTeams: { team: convertToObjectId(teamId) } } },
+        { new: true }
+      ).lean();
 
-      // Remove team from registered teams
-      competition.registeredTeams = competition.registeredTeams.filter(
-        rt => rt.team.toString() !== teamId.toString()
-      );
-
-      await competition.save();
-      return this.toPlainObject(competition);
+      return result;
     } catch (error) {
-      this.logger.error('CompetitionRepository.removeTeam error', { 
-        competitionId, 
-        teamId, 
-        error: error.message 
+      this.logger.error('CompetitionRepository.removeTeam error', {
+        competitionId,
+        teamId,
+        error: error.message
       });
       throw error;
     }
@@ -282,12 +341,12 @@ class CompetitionRepository extends BaseRepository {
   async addPlayerToRegistration(competitionId, teamId, entry) {
     try {
       const result = await this.model.updateOne(
-        { _id: competitionId, isDeleted: { $ne: true } },
+        registrationFilter(competitionId, teamId),
         { $push: { 'registeredTeams.$[registration].players': entry } },
         { arrayFilters: [{ 'registration.team': convertToObjectId(teamId) }] }
       );
 
-      return result.modifiedCount > 0;
+      return result.matchedCount > 0;
     } catch (error) {
       this.logger.error('CompetitionRepository.addPlayerToRegistration error', {
         competitionId,
@@ -309,7 +368,7 @@ class CompetitionRepository extends BaseRepository {
   async removePlayerFromRegistration(competitionId, teamId, playerId) {
     try {
       const result = await this.model.updateOne(
-        { _id: competitionId, isDeleted: { $ne: true } },
+        registrationFilter(competitionId, teamId),
         {
           $pull: {
             'registeredTeams.$[registration].players': { player: convertToObjectId(playerId) },
@@ -318,9 +377,110 @@ class CompetitionRepository extends BaseRepository {
         { arrayFilters: [{ 'registration.team': convertToObjectId(teamId) }] }
       );
 
-      return result.modifiedCount > 0;
+      return result.matchedCount > 0;
     } catch (error) {
       this.logger.error('CompetitionRepository.removePlayerFromRegistration error', {
+        competitionId,
+        teamId,
+        playerId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Set fields on ONE team's registration, addressed by team rather than by
+   * position in the array.
+   *
+   * WHY THIS EXISTS, and why it matters more than it looks.
+   *
+   * The submission and payment writes in `coach.service` used to build their
+   * update paths from a positional index —
+   * `` `registeredTeams.${registeredTeamIndex}.isSubmitted` `` — where the index
+   * came from a `findIndex` on a document read moments earlier. `removeTeam`
+   * SPLICES that array, and it is reachable by any coach through
+   * `DELETE /api/competitions/:competitionId/register/:teamId`.
+   *
+   * So between one coach's read and their payment write, another coach
+   * withdrawing shifted every later index down by one — and the write landed on
+   * a DIFFERENT coach's registration, marking their team submitted and paid
+   * against someone else's money. Nothing would have reported it: both writes
+   * succeed, and the wrong team simply appears as entered.
+   *
+   * `arrayFilters` keyed on the team makes the target part of the write, so
+   * there is no window between deciding what to write and writing it.
+   *
+   * @param {string} competitionId
+   * @param {string} teamId
+   * @param {Object} fields - registration fields to set, unprefixed
+   * @returns {Promise<boolean>} false when no matching registration was found
+   */
+  async updateRegistrationFields(competitionId, teamId, fields) {
+    try {
+      if (!fields || Object.keys(fields).length === 0) return false;
+
+      const result = await this.model.updateOne(
+        registrationFilter(competitionId, teamId),
+        { $set: prefixRegistrationFields(fields) },
+        { arrayFilters: [{ 'registration.team': convertToObjectId(teamId) }] }
+      );
+
+      return result.matchedCount > 0;
+    } catch (error) {
+      this.logger.error('CompetitionRepository.updateRegistrationFields error', {
+        competitionId,
+        teamId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Set fields on ONE athlete's squad place inside ONE team's registration.
+   *
+   * Two nested `arrayFilters` identifiers, because the target is two levels
+   * deep. The path this replaces used TWO positional indices —
+   * `` `registeredTeams.${i}.players.${j}.ageGroup` `` — so it carried the
+   * hazard described on `updateRegistrationFields` twice over: the outer index
+   * shifts when a team withdraws, and the inner one shifts when any athlete is
+   * removed from the squad.
+   *
+   * @param {string} competitionId
+   * @param {string} teamId
+   * @param {string} playerId
+   * @param {Object} fields - squad-place fields to set, unprefixed
+   * @returns {Promise<boolean>} false when no matching squad place was found
+   */
+  async updatePlayerInRegistration(competitionId, teamId, playerId, fields) {
+    try {
+      if (!fields || Object.keys(fields).length === 0) return false;
+
+      const $set = Object.fromEntries(
+        Object.entries(fields).map(([key, value]) => [
+          `registeredTeams.$[registration].players.$[entry].${key}`,
+          value,
+        ])
+      );
+
+      const result = await this.model.updateOne(
+        {
+          ...registrationFilter(competitionId, teamId),
+          'registeredTeams.players.player': convertToObjectId(playerId),
+        },
+        { $set },
+        {
+          arrayFilters: [
+            { 'registration.team': convertToObjectId(teamId) },
+            { 'entry.player': convertToObjectId(playerId) },
+          ],
+        }
+      );
+
+      return result.matchedCount > 0;
+    } catch (error) {
+      this.logger.error('CompetitionRepository.updatePlayerInRegistration error', {
         competitionId,
         teamId,
         playerId,
@@ -355,12 +515,7 @@ class CompetitionRepository extends BaseRepository {
     try {
       if (!orderId) return null;
 
-      const $set = Object.fromEntries(
-        Object.entries(fields).map(([key, value]) => [
-          `registeredTeams.$[registration].${key}`,
-          value,
-        ])
-      );
+      const $set = prefixRegistrationFields(fields);
 
       const updated = await this.model.findOneAndUpdate(
         { 'registeredTeams.paymentOrderId': orderId, isDeleted: { $ne: true } },
