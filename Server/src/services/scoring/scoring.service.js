@@ -35,6 +35,27 @@ const {
   JUDGE_TYPE_BY_FIELD,
 } = require('../../utils/scoring/judge-slip.util');
 
+/**
+ * Wait a little before re-reading, so concurrent writers serialize instead of
+ * colliding again.
+ *
+ * The retry loop in `saveScores` had no delay at all: every writer that lost the
+ * `__v` race immediately re-read, at the same instant as every other loser, and
+ * raced again. With five judges and a Scorer on one performer that wastes the
+ * attempt budget on repeats of the same collision.
+ *
+ * Linear rather than exponential, and small: these are humans pressing Submit
+ * during a live routine, so the ceiling has to stay well inside a request. Full
+ * jitter, because a fixed delay just moves the pile-up.
+ *
+ * @param {number} attempt - 1-based
+ * @returns {Promise<void>}
+ */
+function pauseBeforeRetry(attempt) {
+  const ceiling = Math.min(attempt, 4) * 25; // 25, 50, 75, 100ms
+  return new Promise((resolve) => setTimeout(resolve, Math.random() * ceiling));
+}
+
 class ScoringService {
   /**
    * Create a scoring service
@@ -1404,7 +1425,21 @@ class ScoringService {
       // per-player finalize guard, neither of which a positional update can
       // express. The version guard makes that merge safe without altering its
       // semantics.
-      const MAX_SAVE_ATTEMPTS = 5;
+      /*
+       * Eight, not five, and with a pause between attempts.
+       *
+       * A five-judge panel plus the Scorer is SIX concurrent writers on one
+       * document, and each round only lets one through — so at five attempts the
+       * last writer could exhaust the budget and surface "Could not save scores
+       * because another judge is submitting for the same performer" in the
+       * middle of a competition. A Senior Judge's Panel Review correction makes
+       * seven.
+       *
+       * The pause matters as much as the count. Retrying immediately means every
+       * loser re-reads at the same instant and collides again; a short jittered
+       * delay lets them serialize instead of thrashing.
+       */
+      const MAX_SAVE_ATTEMPTS = 8;
       let savedScore = null;
       // Tracked outside the loop purely for the log line below — `existingScore`
       // is scoped per attempt.
@@ -1435,6 +1470,28 @@ class ScoringService {
             scoreDocData.isLocked = existingScore.isLocked;
           }
 
+          /*
+           * The Scorer's sheet survives a judge's slip.
+           *
+           * `buildScoreDocData` defaults these to '' and {}, and the whole
+           * object is `$set` — so every one of them was overwritten on every
+           * write. Only `playerScores` and `isLocked` were merged back.
+           *
+           * ScorerScoring.jsx and AdminScoring.jsx send timeKeeper, scorer and
+           * remarks, and REQUIRE the first two before they will save. The judge
+           * slip path sends none of them. So any slip submission — including a
+           * Senior Judge's correction from Panel Review — blanked the Scorer's
+           * record mid-event, and the Scorer was then blocked from "Save & Lock"
+           * until they retyped it.
+           *
+           * `??`, not `||`: a Scorer deliberately clearing remarks to '' must
+           * persist, while a judge's payload (field absent) must not touch it.
+           */
+          scoreDocData.timeKeeper = scoreData.timeKeeper ?? existingScore.timeKeeper ?? '';
+          scoreDocData.scorer = scoreData.scorer ?? existingScore.scorer ?? '';
+          scoreDocData.remarks = scoreData.remarks ?? existingScore.remarks ?? '';
+          scoreDocData.judgeDetails = scoreData.judgeDetails ?? existingScore.judgeDetails ?? {};
+
           // Optimistic-concurrency guard. Matching on the `__v` we just read
           // means a judge whose slip was computed from stale state matches zero
           // documents and loops instead of overwriting the winner's slips.
@@ -1443,9 +1500,31 @@ class ScoringService {
             versionGuard.__v = existingScore.__v;
           }
 
+          /*
+           * The identity fields are not written on an update.
+           *
+           * `competition`, `teamId`, `gender`, `ageGroup` and `competitionType`
+           * ARE the document's identity — they are the key
+           * `findOne(scoreIdentity)` just matched on, and the key of the unique
+           * index `score_identity_unique`. Re-`$set`ting them to the values they
+           * already hold achieves nothing and puts the uniqueness constraint in
+           * the path of every slip submission for no reason.
+           *
+           * `playerScores` stays a whole-array `$set`: the merge produces the
+           * whole array, and it is safe here because the `__v` guard proves the
+           * array has not shifted since it was read. (That is exactly the
+           * guarantee `registeredTeams` writes do NOT have, which is why those
+           * are addressed by team instead — see
+           * CompetitionRepository.updateRegistrationFields.)
+           */
+          const {
+            competition: _c, teamId: _t, gender: _g, ageGroup: _a, competitionType: _ct,
+            ...mutableFields
+          } = scoreDocData;
+
           const result = await this.scoreRepository.model.updateOne(
             versionGuard,
-            { $set: scoreDocData, $inc: { __v: 1 } }
+            { $set: mutableFields, $inc: { __v: 1 } }
           );
 
           if (result.matchedCount === 0) {
@@ -1454,6 +1533,7 @@ class ScoringService {
               attempt,
               maxAttempts: MAX_SAVE_ATTEMPTS
             });
+            await pauseBeforeRetry(attempt);
             continue;
           }
 
@@ -1482,6 +1562,7 @@ class ScoringService {
                 attempt,
                 maxAttempts: MAX_SAVE_ATTEMPTS
               });
+              await pauseBeforeRetry(attempt);
               continue;
             }
             throw createError;
