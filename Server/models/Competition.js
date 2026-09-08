@@ -277,6 +277,34 @@ competitionSchema.index({ 'ageGroups.gender': 1, 'ageGroups.ageGroup': 1 });
 competitionSchema.index({ 'registeredTeams.paymentOrderId': 1 }, { sparse: true });
 competitionSchema.index({ 'startedAgeGroups.gender': 1, 'startedAgeGroups.ageGroup': 1, 'startedAgeGroups.competitionType': 1 });
 
+/**
+ * Entry lookups by the three references a registration holds.
+ *
+ * `Team` has no `competition` and `Player` has no `competition` — this array IS
+ * the record of who is entered — so "which meets is this coach in?" and "which
+ * meets is this athlete entered in?" can only be asked of these sub-paths.
+ *
+ * Declared here rather than left to migration 001, which is where `.team` and
+ * `.coach` used to live alone. Since `connection.js` sets
+ * `autoIndex: isDevelopment()`, that meant a database built from the schema had
+ * neither of them while a migrated one had both — the two-sources-of-truth
+ * problem `infrastructure/database/index-manager.js` exists to end. The schema
+ * is authoritative; add index declarations here, never in a migration.
+ *
+ * `registeredTeams.players.player` was indexed NOWHERE, and it is read on every
+ * athlete profile load (`player.service.getPlayerProfile`) and every
+ * `getAssignedCompetitions` for a player — a collection scan across every
+ * competition, each of which is a multi-megabyte document.
+ *
+ * Note migration 001 also builds `registeredTeams.paymentStatus`, which no query
+ * in the codebase uses. It is multikey write cost for nothing. Left in place
+ * deliberately: dropping an index is an operational decision, and the index
+ * manager reports undeclared indexes rather than removing them.
+ */
+competitionSchema.index({ 'registeredTeams.coach': 1 });
+competitionSchema.index({ 'registeredTeams.team': 1 });
+competitionSchema.index({ 'registeredTeams.players.player': 1 });
+
 // Method to add admin to competition
 competitionSchema.methods.addAdmin = function(adminId) {
   // Check if admin already exists
