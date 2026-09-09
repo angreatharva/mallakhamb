@@ -17,6 +17,14 @@ const express = require('express');
 // failing the whole suite at load time rather than in one test. Keep the shape
 // in sync with module.exports at the bottom of src/middleware/auth.middleware.js.
 jest.mock('../middleware/auth.middleware', () => {
+  // A judge's token carries the meet they signed in for — JudgeService.loginJudge
+  // puts the active competition in the claim — and the real middleware copies it
+  // to `req.user.currentCompetition` and loads their seats FILTERED BY IT. The
+  // Scorer read routes run behind `validateCompetitionContext`, which checks the
+  // meet against those seats, so a mock that omits either half makes them 400 or
+  // 403 for reasons that have nothing to do with the guards under test.
+  const CONTEXT_COMPETITION = 'comp-1';
+
   const createAuthMiddleware = () => (req, res, next) => {
     if (!req.header('Authorization')) {
       return res.status(401).json({ message: 'No authorization token provided' });
@@ -28,10 +36,19 @@ jest.mock('../middleware/auth.middleware', () => {
       _id: 'account-1',
       name: 'Test User',
       role: req.header('Role') || undefined,
+      currentCompetition: CONTEXT_COMPETITION,
+      competitions: [CONTEXT_COMPETITION],
     };
     const judgeType = req.header('JudgeType');
     req.judgeAssignments = judgeType
-      ? [{ _id: 'seat-1', judgeType, gender: 'Male', ageGroup: 'Under14', competitionTypes: ['competition_1'] }]
+      ? [{
+          _id: 'seat-1',
+          judgeType,
+          competition: CONTEXT_COMPETITION,
+          gender: 'Male',
+          ageGroup: 'Under14',
+          competitionTypes: ['competition_1'],
+        }]
       : [];
     next();
   };

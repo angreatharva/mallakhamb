@@ -199,6 +199,28 @@ describe('a judge is scoped by their seat, not by an account field', () => {
       headers: { 'x-competition-id': String(MINE) },
     }).sent.status).toBe(403);
   });
+
+  it('pins the meet on the request, which is what defeats ?competition=', () => {
+    // `/api/judge/scores/team`, `/judges` and `/judges/summary` reach
+    // admin.controller, and `competitionIdFromRequest` reads
+    // `req.query.competition` when nothing has put a meet on the request. This
+    // middleware sets `req.competitionId`, which is FIRST in that chain — so a
+    // judge naming another meet in the query string is ignored, not obeyed.
+    const req = {
+      headers: {},
+      body: {},
+      query: { competition: String(THEIRS) },
+      user: { _id: oid(), currentCompetition: String(MINE) },
+      userType: 'judge',
+      judgeAssignments: [seatAt(MINE)],
+    };
+    const res = recorder();
+    let nexted = false;
+    validateCompetitionContext(req, res, () => { nexted = true; });
+
+    expect(nexted).toBe(true);
+    expect(String(req.competitionId)).toBe(String(MINE));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

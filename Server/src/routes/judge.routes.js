@@ -9,6 +9,7 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireJudge, requireSequenceManager } = require('../middleware/auth.middleware');
+const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const judgeValidator = require('../validators/judge.validator');
 const performanceOrderValidator = require('../validators/performance-order.validator');
@@ -143,22 +144,42 @@ function createJudgeRoutes(container) {
    * lock. See judge.service.js for the full note.
    */
 
-  // Scorer interface endpoints
+  /*
+   * Scorer interface endpoints — the four handlers this router SHARES with
+   * /api/admin.
+   *
+   * `validateCompetitionContext` is mounted on the three reads for the same
+   * reason it fronts the admin router: `competitionIdFromRequest` falls through
+   * to `req.query.competition` when nothing has put a meet on the request, so
+   * without it a judge could read another meet's team scores and judge list by
+   * naming it in a query parameter. The middleware checks the meet against
+   * `req.judgeAssignments` and, by setting `req.competitionId`, makes the
+   * caller's own meet win over anything in the query string.
+   *
+   * `/scores/save` is deliberately NOT behind it: `saveScores` resolves the
+   * caller's seat with `resolveAssignment(req.judgeAssignments, …)` against the
+   * category IN THE PAYLOAD, which is a narrower check than this one — it
+   * covers gender, age group and competition type as well as the meet. Adding
+   * the middleware there would only turn one refusal into a different one.
+   */
   router.get('/scores/team',
     authenticate,
     requireJudge,
+    validateCompetitionContext,
     adminController.getTeamScores
   );
 
   router.get('/judges',
     authenticate,
     requireJudge,
+    validateCompetitionContext,
     adminController.getJudges
   );
 
   router.get('/judges/summary',
     authenticate,
     requireJudge,
+    validateCompetitionContext,
     adminController.getAllJudgesSummary
   );
 
