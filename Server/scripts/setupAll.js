@@ -15,18 +15,27 @@
  * ends up looking complete and behaving oddly: coaches with no meet to enter,
  * squads with no competition, panels with no judges.
  *
- * WHAT IT DOES NOT DO
+ * PAYMENTS, AND WHAT IS STILL NOT FAKED
  *
- * Payments. A team is only visible to a judge once the coach has final-submitted
- * AND paid, and the payment goes through Razorpay — an order is created by their
- * API and the callback is signature-verified. There is no honest way to fake
- * that from a script; a forged signature would either be rejected or, worse,
- * prove the verification is not doing its job. So this stops at the point where
- * every squad is built and every panel is seated, and the payments are yours to
- * do through the UI in Razorpay test mode.
+ * A team is only visible to a judge once the coach has final-submitted AND
+ * paid. This used to stop short of that and hand the payments back to you,
+ * because the Razorpay callback is signature-verified and there is no honest
+ * way to forge that from a script — a forged signature would either be rejected
+ * or, worse, prove the verification is not doing its job.
  *
- * That is the Part 1 / Part 2 boundary: after payment, `npm --prefix Web run
- * seed:scores` drives the judges through the actual scoring.
+ * The `pay` step does not forge one. It redeems the DISCOUNT CODE as each
+ * coach, over HTTP: a 100%-off entry is a shipped product path that never
+ * creates a Razorpay order at all, because there is nothing to charge. If
+ * submission or the discount path is broken, the step FAILS — which is the
+ * whole difference between this and writing `paymentStatus: 'completed'`
+ * straight into Mongo.
+ *
+ * To exercise the real Razorpay flow instead, stop at `--to=panels` and pay
+ * through the UI in test mode.
+ *
+ * That is the Part 1 / Part 2 boundary: after payment, `npm --prefix Server run
+ * seed:scores` posts the slips over the API in minutes, or `npm --prefix Web
+ * run seed:scores` drives the judges through the browser in hours.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
@@ -55,7 +64,7 @@ const STEPS = [
     where: 'server',
     title: 'Migrations and indexes',
     command: ['npm', 'run', 'prepare:db'],
-    why: 'Applies the 7 migrations and reconciles every index against the schemas. '
+    why: 'Applies every migration and reconciles every index against the schemas. '
       + 'On an empty database nothing else works until this has run.',
   },
   {
@@ -127,6 +136,16 @@ const STEPS = [
     why: 'The admin seats judges on every category, to the sizes fixed in '
       + 'scripts/seed/panel-plan.json. A panel missing any of Senior Judge, '
       + 'Judge 1, Judge 2 or Scorer is refused.',
+  },
+  {
+    id: 'pay',
+    where: 'server',
+    title: 'Final submission and payment',
+    command: ['npm', 'run', 'pay:discount'],
+    why: 'A team reaches a judge only once the coach has final-submitted AND paid. '
+      + 'This redeems the discount code as each coach, over HTTP — a shipped product '
+      + 'path that needs no Razorpay order because there is nothing to charge, not a '
+      + 'forged signature. Needs DISCOUNT_CODE_ENABLED=true in .env.',
   },
 ];
 
@@ -256,7 +275,7 @@ async function main() {
     }
     line('The API must be running before the [web] steps: npm --prefix Server start');
     line('Vite is started by Playwright itself — you do not need to run it.');
-    line('Part 2 (judging) is: npm --prefix Web run seed:scores');
+    line('Part 2 (judging) is: npm --prefix Server run seed:scores  (or --prefix Web, through the browser)');
     return;
   }
 
@@ -332,12 +351,14 @@ async function main() {
   line('  3 coaches with teams entered for Mumbai');
   line('  70 athletes, placed into squads by age group, gender and apparatus');
   line('  7 judges registered and seated across every category');
+  line('  every team final-submitted and paid, so the judges can see them');
   line('');
-  line('NEXT — payment, by hand:');
-  line('  A team reaches a judge only after the coach has final-submitted AND paid.');
-  line('  Sign in as each coach and pay through the UI in Razorpay test mode. This');
-  line('  script will not forge a payment signature: it would either be rejected, or');
-  line('  prove the verification is not doing its job.');
+  line('ABOUT THAT PAYMENT:');
+  line('  The `pay` step redeems the DISCOUNT CODE as each coach, over HTTP. That is');
+  line('  a shipped product path — a 100%-off entry needs no Razorpay order because');
+  line('  there is nothing to charge — not a forged signature, which this chain still');
+  line('  will not produce. To exercise the real Razorpay flow instead, skip it with');
+  line('  --to=panels and pay through the UI in test mode.');
   line('');
   line('  Fees: ₹500 per athlete plus any apparatus add-on. Registration opened on');
   line('  1 Jan 2026, and the base fee runs until a week before each meet — so the');
@@ -347,7 +368,8 @@ async function main() {
   line('  and re-run it without --late to put the deadlines back.');
   line('');
   line('THEN — Part 2, the judging:');
-  line('  npm --prefix Web run seed:scores');
+  line('  npm --prefix Server run seed:scores   # minutes, over the API');
+  line('  npm --prefix Web run seed:scores      # hours, through the browser');
 }
 
 main().catch((error) => {

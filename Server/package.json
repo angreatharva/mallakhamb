@@ -23,6 +23,7 @@
     "seed:panels:plan": "node scripts/planPanels.js",
     "seed:panels": "node scripts/seatPanels.js",
     "seed:panels:one": "node scripts/seatPanel.js",
+    "pay:discount": "node scripts/payWithDiscount.js",
     "reset:scores": "node scripts/resetScores.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-superadmin": "node scripts/createSuperAdmin.js",
