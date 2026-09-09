@@ -204,6 +204,11 @@ describe('admin score lock/unlock cycle', () => {
       email: 'meet.admin@example.com',
       password: 'AdminSecret1',
       role: 'admin',
+      // An admin who runs a meet is assigned to it on BOTH sides — see the
+      // header of scripts/createCompetitions.js. `Admin.competitions` is the
+      // side access is read from, and `validateCompetitionContext` now enforces
+      // it, so an unassigned admin is refused before reaching any handler.
+      competitions: [competitionId],
     });
 
     judge = await JudgeAccount.create({

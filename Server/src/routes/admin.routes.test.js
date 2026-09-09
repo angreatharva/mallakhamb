@@ -16,11 +16,27 @@ app.use(express.json());
 jest.mock('../middleware/auth.middleware', () => {
   // The real middleware sets BOTH req.userType and req.user; the guards below
   // read both, so the mock has to populate both to be faithful.
+  //
+  // It also loads the full principal document and, for a judge, their panel
+  // assignments — and `validateCompetitionContext` now reads those to decide
+  // whether the caller may act on the meet they named. A mock that omits them
+  // makes every competition-scoped route 403, which looks like a guard bug and
+  // is not one. These tests exercise the AUTH GUARDS; the scoping rule itself
+  // is covered by tests/security/competition-scope.security.test.js.
+  const CONTEXT_COMPETITION = 'comp-1';
+
   const createAuthMiddleware = () => (req, res, next) => {
     if (req.header('Authorization')) {
       const role = req.header('Role') || 'player';
       req.userType = role;
-      req.user = { role, judgeType: req.header('JudgeType') || undefined };
+      req.user = {
+        role,
+        judgeType: req.header('JudgeType') || undefined,
+        competitions: [CONTEXT_COMPETITION],
+      };
+      if (role === 'judge') {
+        req.judgeAssignments = [{ competition: CONTEXT_COMPETITION }];
+      }
       next();
     } else {
       res.status(401).json({ message: 'No authorization token provided' });

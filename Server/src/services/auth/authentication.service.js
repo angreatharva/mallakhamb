@@ -8,12 +8,21 @@
  */
 
 const bcrypt = require('bcryptjs');
-const { 
-  AuthenticationError, 
-  ConflictError, 
+const {
+  AuthenticationError,
+  AuthorizationError,
+  ConflictError,
   ValidationError,
-  NotFoundError 
+  NotFoundError
 } = require('../../errors');
+// One rule for "may this principal act on this meet", shared with
+// middleware/competition-context.middleware so the token-minting half and the
+// per-request half can never disagree.
+const {
+  isCompetitionScoped,
+  mayActOnCompetition,
+} = require('../../utils/security/competition-access.util');
+const { loadAssignments, competitionsFor } = require('../../utils/data/judge-assignment.util');
 const { normalizeEmail, sanitizeString, sanitizeUserData } = require('../../utils/validation/sanitization.util');
 const { recordLogout } = require('../../utils/security/token-invalidation.util');
 const {
@@ -438,7 +447,7 @@ class AuthenticationService {
    * @param {string} competitionId - Competition ID
    * @returns {Promise<Object>} { token, competition }
    * @throws {NotFoundError} If competition not found
-   * @throws {AuthenticationError} If user doesn't have access
+   * @throws {AuthorizationError} If the user is not assigned to the competition
    */
   async setCompetitionContext(userId, userType, competitionId) {
     try {
@@ -446,14 +455,44 @@ class AuthenticationService {
       const competition = await this.competitionRepository.findById(competitionId);
 
       if (!competition) {
-        this.logger.warn('Competition context failed: Competition not found', { 
-          competitionId 
+        this.logger.warn('Competition context failed: Competition not found', {
+          competitionId
         });
         throw new NotFoundError('Competition');
       }
 
-      // TODO: Validate user has access to competition
-      // This would depend on business rules (e.g., admin assigned to competition)
+      /*
+       * The token this mints is what every admin route trusts, so the meet has
+       * to be one the caller is assigned to. This carried a `TODO: Validate
+       * user has access to competition` for as long as the route existed —
+       * meaning any authenticated admin could mint a token for any meet in the
+       * database and act on it.
+       *
+       * Only admins are scoped this way; see
+       * `utils/security/competition-access.util` for why coaches and players
+       * are not, and `JudgeService.setCompetitionContext` for judges, who are
+       * scoped by their seats and must use their own route (this one cannot
+       * see the `judgeassignments` collection).
+       */
+      if (String(userType || '').toLowerCase() === 'judge') {
+        throw new AuthorizationError(
+          'Judges switch competitions through /api/judge/competition/:competitionId/set, ' +
+          'which checks panel assignments.'
+        );
+      }
+
+      if (isCompetitionScoped(userType)) {
+        const admin = await this.adminRepository.findById(userId);
+
+        if (!mayActOnCompetition(admin, userType, competitionId)) {
+          this.logger.warn('Competition context refused: not assigned', {
+            userId,
+            userType,
+            competitionId,
+          });
+          throw new AuthorizationError('You are not assigned to this competition.');
+        }
+      }
 
       // Generate new token with competition context
       const token = this.tokenService.generateToken(userId, userType, competitionId);
@@ -469,14 +508,14 @@ class AuthenticationService {
         competition
       };
     } catch (error) {
-      if (error instanceof NotFoundError) {
+      if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      this.logger.error('Set competition context error', { 
-        userId, 
-        userType, 
-        competitionId, 
-        error: error.message 
+      this.logger.error('Set competition context error', {
+        userId,
+        userType,
+        competitionId,
+        error: error.message
       });
       throw error;
     }
@@ -514,10 +553,15 @@ class AuthenticationService {
       }
 
       if (type === 'judge') {
-        // Judge has a single competition field
-        if (!user.competition) return [];
-        const competition = await this.competitionRepository.findById(user.competition);
-        return competition ? [competition] : [];
+        // A judge login is an ACCOUNT and carries no competition field — their
+        // meets are the ones they hold a seat at, in `judgeassignments`. This
+        // used to read `user.competition`, which JudgeAccount has never had, so
+        // it returned [] for every judge. `JudgeService.getAssignedCompetitions`
+        // is the same query and is what the judge client actually calls.
+        const assignments = await loadAssignments(this.judgeRepository, user._id);
+        const ids = competitionsFor(assignments);
+        if (ids.length === 0) return [];
+        return await this.competitionRepository.find({ _id: { $in: ids } });
       }
 
       if (type === 'coach') {
