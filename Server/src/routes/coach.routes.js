@@ -93,26 +93,39 @@ function createCoachRoutes(container) {
       .isIn(GENDERS)
       .withMessage('Gender must be either Male or Female'),
     /*
-     * A LIST of apparatus, because an athlete can be entered for several and
-     * is judged separately on each. A bare string is still accepted: it is
-     * what every squad place written before multi-apparatus entry holds, and
-     * what the field itself stores on those rows.
+     * Apparatus arrives in any of the three shapes this field has ever held —
+     * a bare string, a flat list, or an object keyed by competition type — and
+     * is normalised to the last of those before it is stored. All three are
+     * accepted because two live clients disagree: `CoachDashboard.jsx` posts a
+     * flat list and the superadmin's `AddPlayerForm.jsx` posts the object. This
+     * rule used to demand an array, which would have rejected the superadmin
+     * form outright had it posted here.
      *
      * The names are checked rather than left free-form — the value decides
      * which score sheet a judge is shown, and a typo would silently fall back
-     * to the Pole checklist rather than fail.
+     * to the Pole checklist rather than fail. The canonical form is built in
+     * `coach.service`, which knows the meet's competition types; validation
+     * only has to prove every name is real.
      */
     body('apparatus')
       .optional()
-      .customSanitizer((value) => {
-        if (typeof value === 'string') return value.trim() ? [value.trim()] : [];
-        return value;
+      .custom((value) => {
+        const names = typeof value === 'string'
+          ? [value]
+          : Array.isArray(value)
+            ? value
+            : value && typeof value === 'object'
+              ? Object.values(value).flat()
+              : null;
+
+        if (names === null) {
+          throw new Error('Apparatus must be a name, a list of names, or a map of competition type to names');
+        }
+        if (!names.every((a) => APPARATUS.includes(a))) {
+          throw new Error(`Each apparatus must be one of: ${APPARATUS.join(', ')}`);
+        }
+        return true;
       })
-      .isArray()
-      .withMessage('Apparatus must be a list')
-      .bail()
-      .custom((list) => list.every((a) => APPARATUS.includes(a)))
-      .withMessage(`Each apparatus must be one of: ${APPARATUS.join(', ')}`)
   ];
 
   /**

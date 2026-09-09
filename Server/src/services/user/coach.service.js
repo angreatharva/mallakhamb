@@ -10,6 +10,8 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
 const { fullName, stripSensitiveFields } = require('../../utils/data/user-projection.util');
+// One shape on the way in, whatever the two clients post — see the module header.
+const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const {
   calculateTeamPaymentAmount,
   resolveFeeWindow,
@@ -546,18 +548,29 @@ class CoachService extends UserService {
       p => p.player && p.player.toString() === playerId.toString()
     );
 
+    /*
+     * Written in ONE shape, whatever the client sent.
+     *
+     * The coach dashboard posts a flat list and the superadmin's Add Player
+     * form posts an object keyed by competition type — two clients, one Mixed
+     * field, and reading it was unified long before writing it was. A flat list
+     * is spread across the meet's own competition types, which is what the
+     * reader already did with it. See utils/data/apparatus.util.
+     */
+    const entryApparatus = toCanonicalApparatus(apparatus, competition.competitionTypes);
+
     if (alreadyEntered) {
       await this.competitionRepository.updatePlayerInRegistration(
         competitionId,
         teamId,
         playerId,
-        { ageGroup, gender, apparatus: apparatus || {} }
+        { ageGroup, gender, apparatus: entryApparatus }
       );
     } else {
       await this.competitionRepository.addPlayerToRegistration(
         competitionId,
         teamId,
-        { player: playerId, ageGroup, gender, apparatus: apparatus || {} }
+        { player: playerId, ageGroup, gender, apparatus: entryApparatus }
       );
     }
 

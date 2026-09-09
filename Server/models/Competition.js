@@ -130,6 +130,22 @@ const competitionSchema = new mongoose.Schema({
         type: String,
         enum: GENDERS
       },
+      /*
+       * The apparatus this athlete is entered for, keyed by competition-type
+       * slug: `{ competition_1: ['Pole Mallakhamb'], competition_3: [...] }`.
+       *
+       * Mixed because three shapes exist in stored data — a bare string, a flat
+       * list, and this object. Migration 008 rewrites the first two, and
+       * `utils/data/apparatus.util` still reads all three so a row that has not
+       * been migrated degrades instead of going blank. Everything WRITTEN from
+       * 008 onward goes through `toCanonicalApparatus`, which is the only
+       * function that should ever produce a value for this path.
+       *
+       * Do not "simplify" it to `[String]`: the array form cannot say that an
+       * athlete is on Pole in Competition I and Rope in Competition III, which
+       * `Competition.apparatusConfig` already models per type and COP requires
+       * for Competition III.
+       */
       apparatus: {
         type: mongoose.Schema.Types.Mixed,
         default: {}
