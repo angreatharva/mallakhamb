@@ -68,6 +68,8 @@ class AdminService extends UserService {
     // this class delegate to it.
     this.scoringService = dependencies.scoringService;
     this.socketManager = dependencies.socketManager;
+    // Only for the health endpoint — nothing here sends mail.
+    this.emailService = dependencies.emailService;
     this.authenticationService = dependencies.authenticationService;
   }
 
@@ -650,12 +652,14 @@ class AdminService extends UserService {
         }
       }
 
+      const emailStatus = await this.checkEmailStatus();
+
       this.logger.info('System health checked');
 
       return {
         database: dbStatus,
         cache: cacheStatus,
-        email: 'healthy', // Placeholder - would need email service check
+        email: emailStatus,
         uptime: Math.floor(uptime),
         memory: {
           used: Math.floor(memoryUsage.heapUsed / 1024 / 1024),
@@ -678,6 +682,45 @@ class AdminService extends UserService {
       return 'healthy';
     } catch (error) {
       return 'unhealthy';
+    }
+  }
+
+  /**
+   * Check email provider status.
+   *
+   * This used to be the literal string `'healthy'` with a comment saying a real
+   * check was needed — so the health page reported a working mailer while OTP
+   * and password-reset delivery was down, which is precisely the outage this
+   * field exists to surface.
+   *
+   * `verifyConfiguration()` opens an SMTP connection, so it is raced against a
+   * deadline: a health endpoint that hangs on a wedged mail server is worse
+   * than one that says it does not know.
+   *
+   * @param {number} [timeoutMs=3000] - How long to wait for the provider
+   * @returns {Promise<'healthy'|'unhealthy'|'unavailable'|'unknown'>}
+   */
+  async checkEmailStatus(timeoutMs = 3000) {
+    if (!this.emailService || typeof this.emailService.verifyConfiguration !== 'function') {
+      return 'unavailable';
+    }
+
+    let timer;
+    try {
+      const verdict = await Promise.race([
+        this.emailService.verifyConfiguration(),
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve('timeout'), timeoutMs);
+        }),
+      ]);
+
+      if (verdict === 'timeout') return 'unknown';
+      return verdict ? 'healthy' : 'unhealthy';
+    } catch (error) {
+      this.logger.warn('Email health check failed', { error: error.message });
+      return 'unhealthy';
+    } finally {
+      clearTimeout(timer);
     }
   }
 

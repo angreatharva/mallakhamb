@@ -171,6 +171,8 @@ function bootstrap() {
     logger: c.resolve('logger'),
     cacheService: c.resolve('cacheService'),
     authenticationService: c.resolve('authenticationService'),
+    // Read only by getSystemHealth, which used to hardcode 'healthy'.
+    emailService: c.resolve('emailService'),
   }), 'singleton');
   container.register('publicService', (c) => new PublicService({
     competitionRepository: c.resolve('competitionRepository'),
@@ -258,7 +260,9 @@ function bootstrap() {
     c.resolve('logger'),
     // Task 3.1: the score-aggregation and ranking methods moved here from
     // admin.service need the calculation service.
-    c.resolve('calculationService')
+    c.resolve('calculationService'),
+    // `submitScore` validates the team a score is filed against.
+    c.resolve('teamRepository')
   ), 'singleton');
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');

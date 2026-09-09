@@ -65,6 +65,8 @@ class ScoringService {
    * @param {JudgeRepository} judgeRepository - Judge repository
    * @param {SocketManager} socketManager - Socket.IO manager (optional)
    * @param {Logger} logger - Logger instance
+   * @param {CalculationService} calculationService - Scoring calculations
+   * @param {TeamRepository} teamRepository - Team repository, for `submitScore`
    */
   constructor(
     scoreRepository,
@@ -73,7 +75,11 @@ class ScoringService {
     judgeRepository,
     socketManager,
     logger,
-    calculationService
+    calculationService,
+    // Appended rather than inserted so the existing positional construction
+    // keeps working, and defaulted so the harnesses that build this service
+    // with seven arguments still do.
+    teamRepository = null
   ) {
     this.scoreRepository = scoreRepository;
     this.competitionRepository = competitionRepository;
@@ -84,6 +90,7 @@ class ScoringService {
     // Appended rather than inserted so the existing positional construction
     // keeps working. Required by the ranking methods moved here in task 3.1.
     this.calculationService = calculationService;
+    this.teamRepository = teamRepository;
   }
 
   /**
@@ -108,10 +115,24 @@ class ScoringService {
         throw new NotFoundError('Competition', scoreData.competition);
       }
 
-      // Validate team exists
+      // Validate team exists. A score is filed against `teamId` and every read
+      // path — rankings, the team sheet, the public results — joins on it, so a
+      // typo'd or stale id produces a document that scores a team nobody can
+      // find. This used to be a comment saying the check would go here.
       if (scoreData.teamId) {
-        // Team validation would go here if TeamRepository was injected
-        // For now, we'll assume it's valid
+        if (!this.teamRepository) {
+          // Loud rather than skipped: silently accepting an unchecked id is
+          // how this went unvalidated for as long as it did.
+          throw new Error('ScoringService was built without a teamRepository; cannot validate teamId');
+        }
+        const team = await this.teamRepository.findById(scoreData.teamId);
+        if (!team) {
+          this.logger.warn('Score submission failed: Team not found', {
+            teamId: scoreData.teamId,
+            competitionId: scoreData.competition,
+          });
+          throw new NotFoundError('Team', scoreData.teamId);
+        }
       }
 
       // Validate player scores
