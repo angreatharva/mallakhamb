@@ -77,6 +77,9 @@
     "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2"
   },
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "jest": {
     "testEnvironment": "node",
     "coveragePathIgnorePatterns": [
