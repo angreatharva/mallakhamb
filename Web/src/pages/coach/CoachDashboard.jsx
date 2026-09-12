@@ -12,6 +12,7 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS } from '@/styles/tokens';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
+import { apparatusFor } from '@/utils/scoring/apparatus';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -194,16 +195,19 @@ const CoachDashboard = () => {
   /**
    * How a stored apparatus reads on screen.
    *
-   * The field is Mixed and holds a bare name on older rows and a list on new
-   * ones, so rendering it raw prints either "Rope Mallakhamb" or the array's
-   * default toString — "Pole Mallakhamb,Hanging Mallakhamb,Rope Mallakhamb",
-   * commas and all.
+   * The field is Mixed and all three shapes reach here, so this goes through
+   * the shared reader rather than testing for them again. It used to test for
+   * a string and an array and return '' for anything else — which blanked
+   * every athlete's apparatus on this dashboard the moment the server started
+   * writing the canonical per-competition-type object.
+   *
+   * No competition type is passed on purpose: this is "what is this athlete
+   * entered for", across every category. De-duplicated, because an athlete
+   * entered for the same apparatus in two categories appears twice in the
+   * flattened object and reads as "Pole · Pole".
    */
-  const apparatusLabel = (apparatus) => {
-    if (Array.isArray(apparatus)) return apparatus.join(' · ');
-    if (typeof apparatus === 'string') return apparatus;
-    return '';
-  };
+  const apparatusLabel = (apparatus) =>
+    [...new Set(apparatusFor({ apparatus }))].join(' · ');
 
   const toggleApparatus = (value) => {
     setSelectedApparatus(current => (

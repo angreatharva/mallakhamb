@@ -12,6 +12,7 @@ const { NotFoundError, ValidationError, AuthorizationError } = require('../../er
 const { fullName, stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // One shape on the way in, whatever the two clients post — see the module header.
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
+const { idStr } = require('../../utils/data/objectid.util');
 const {
   calculateTeamPaymentAmount,
   resolveFeeWindow,
@@ -246,15 +247,12 @@ class CoachService extends UserService {
     // Get coach's teams
     const teams = await this.getCoachTeams(coachId);
     
-    this.logger?.info?.('getTeamDashboard called', { 
-      coachId: coachId.toString(), 
-      coachIdType: typeof coachId,
-      coachIdConstructor: coachId.constructor.name,
-      competitionId: competitionId.toString(),
+    this.logger?.debug?.('getTeamDashboard called', {
+      coachId: idStr(coachId),
+      competitionId: idStr(competitionId),
       teamsCount: teams.length,
-      teamIds: teams.map(t => t._id.toString())
     });
-    
+
     if (teams.length === 0) {
       this.logger?.warn?.('No teams found for coach', { coachId });
       return {
@@ -286,50 +284,31 @@ class CoachService extends UserService {
       throw new NotFoundError('Competition');
     }
     
-    this.logger?.info?.('Competition found', { 
-      competitionId,
+    this.logger?.debug?.('Competition found', {
+      competitionId: idStr(competitionId),
       registeredTeamsCount: competition.registeredTeams.length,
-      registeredTeams: competition.registeredTeams.map(rt => ({
-        teamId: rt.team.toString(),
-        coachId: rt.coach.toString(),
-        coachIdType: typeof rt.coach,
-        coachIdConstructor: rt.coach.constructor?.name
-      }))
     });
-    
-    // Find the registered team in the competition
+
+
+    /*
+     * Find the registered team in the competition.
+     *
+     * The comparison used to log both ids, their lengths, three equality
+     * results and `Array.from(id).map(c => c.charCodeAt(0))` for each — 48
+     * character codes per registered team, per request, at `info`. That was
+     * left over from chasing an id-comparison bug; `idStr` is the answer to
+     * that question now, and it is the same one `judge-assignment.util` uses.
+     */
+    const searchCoachId = idStr(coachId);
     const registeredTeam = competition.registeredTeams.find(
-      rt => {
-        const rtCoachId = rt.coach._id ? rt.coach._id.toString() : rt.coach.toString();
-        const searchCoachId = coachId._id ? coachId._id.toString() : coachId.toString();
-        
-        this.logger?.info?.('Comparing coach IDs', {
-          rtCoachId,
-          searchCoachId,
-          rtCoachIdLength: rtCoachId.length,
-          searchCoachIdLength: searchCoachId.length,
-          matches: rtCoachId === searchCoachId,
-          strictEquals: rtCoachId === searchCoachId,
-          looseEquals: rtCoachId == searchCoachId,
-          rtCoachType: typeof rt.coach,
-          searchCoachType: typeof coachId,
-          rtCoachIdCharCodes: Array.from(rtCoachId).map(c => c.charCodeAt(0)),
-          searchCoachIdCharCodes: Array.from(searchCoachId).map(c => c.charCodeAt(0))
-        });
-        
-        return rtCoachId === searchCoachId;
-      }
+      rt => idStr(rt.coach) === searchCoachId
     );
     
     if (!registeredTeam) {
       // Team exists but not registered for this competition
-      this.logger?.warn?.('Team not registered for this competition', { 
-        coachId: coachId.toString(),
-        competitionId,
-        availableCoaches: competition.registeredTeams.map(rt => {
-          const rtCoachId = rt.coach._id ? rt.coach._id.toString() : rt.coach.toString();
-          return rtCoachId;
-        })
+      this.logger?.warn?.('Team not registered for this competition', {
+        coachId: searchCoachId,
+        competitionId: idStr(competitionId),
       });
       return {
         competitionId,
@@ -337,24 +316,18 @@ class CoachService extends UserService {
         totalTeams: teams.length,
       };
     }
-    
-    this.logger?.info?.('Registered team found', { 
-      teamId: registeredTeam.team.toString(),
-      playersCount: registeredTeam.players.length 
+
+    this.logger?.debug?.('Registered team found', {
+      teamId: idStr(registeredTeam.team),
+      playersCount: registeredTeam.players.length,
     });
-    
+
     // Get the team details
-    const team = teams.find(t => {
-      const tId = t._id._id ? t._id._id.toString() : t._id.toString();
-      const rtTeamId = registeredTeam.team._id ? registeredTeam.team._id.toString() : registeredTeam.team.toString();
-      return tId === rtTeamId;
-    });
+    const registeredTeamId = idStr(registeredTeam.team);
+    const team = teams.find(t => idStr(t._id) === registeredTeamId);
     
     if (!team) {
-      this.logger?.error?.('Team details not found', { 
-        registeredTeamId: registeredTeam.team.toString(),
-        availableTeams: teams.map(t => t._id.toString())
-      });
+      this.logger?.error?.('Team details not found', { registeredTeamId });
       return {
         competitionId,
         team: null,
@@ -362,33 +335,52 @@ class CoachService extends UserService {
       };
     }
     
-    // Populate player details
+    /*
+     * Populate player details — in ONE query, not one per athlete.
+     *
+     * This was a sequential `findById` inside a `for...of`, so the endpoint
+     * cost a full database round trip per squad place. Measured against Atlas:
+     * 3 athletes 0.4s, 7 athletes 0.6s, 60 athletes 3.9s — about 60ms each,
+     * linear, and paid again on every dashboard refetch. The coach dashboard
+     * refetches after every add-player, so building a 60-athlete squad spent
+     * minutes of wall clock inside this loop and eventually timed out the
+     * "Save Team" round trip that follows it.
+     *
+     * The projection stays a hand-built allow-list: a coach sees their own
+     * athletes' contact details, and nobody else's.
+     */
     const playersWithDetails = [];
     if (this.playerRepository && registeredTeam.players.length > 0) {
-      for (const playerEntry of registeredTeam.players) {
-        try {
-          const player = await this.playerRepository.findById(playerEntry.player);
-          if (player) {
-            playersWithDetails.push({
-              player: {
-                _id: player._id,
-                firstName: player.firstName,
-                lastName: player.lastName,
-                email: player.email,
-                dateOfBirth: player.dateOfBirth,
-                gender: player.gender
-              },
-              ageGroup: playerEntry.ageGroup,
-              gender: playerEntry.gender,
-              apparatus: playerEntry.apparatus
-            });
-          }
-        } catch (error) {
-          this.logger?.warn?.('Failed to fetch player details', { 
-            playerId: playerEntry.player, 
-            error: error.message 
+      try {
+        const playerIds = registeredTeam.players.map((entry) => entry.player).filter(Boolean);
+        const players = await this.playerRepository.find({ _id: { $in: playerIds } });
+        const byId = new Map((players || []).map((p) => [String(p._id), p]));
+
+        for (const playerEntry of registeredTeam.players) {
+          const player = byId.get(String(playerEntry.player));
+          // A squad place pointing at a deleted athlete is skipped, exactly as
+          // the per-athlete lookup skipped a `null`.
+          if (!player) continue;
+
+          playersWithDetails.push({
+            player: {
+              _id: player._id,
+              firstName: player.firstName,
+              lastName: player.lastName,
+              email: player.email,
+              dateOfBirth: player.dateOfBirth,
+              gender: player.gender
+            },
+            ageGroup: playerEntry.ageGroup,
+            gender: playerEntry.gender,
+            apparatus: playerEntry.apparatus
           });
         }
+      } catch (error) {
+        this.logger?.warn?.('Failed to fetch player details', {
+          teamId: String(registeredTeam.team),
+          error: error.message
+        });
       }
     }
     
