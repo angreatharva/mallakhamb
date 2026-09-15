@@ -108,20 +108,37 @@ export const clearSession = async (page) => {
  * already closed surfaces as ECONNRESET before any response exists. That is a
  * connection flake, not a verdict on the data.
  *
+ * A 5xx is retried for the same reason. The API answers 500 when its own
+ * connection to MongoDB drops — `MongoServerSelectionError: connection closed`
+ * — which is a blink on the way to the database, not an answer about what is in
+ * it. On a remote database that happens often enough to kill an hour-long
+ * seeding run over one request: a real instance took out a squad build that had
+ * twenty other meets still to go.
+ *
+ * 4xx is NOT retried. A 404 or a 409 is the server telling you something true
+ * about the data, and repeating the question will not change it.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {string} path - e.g. '/players/profile'
  * @returns {Promise<any>} the `data` field of the response body
  */
 export const apiGet = async (page, path) => {
+  const ATTEMPTS = 3;
   let response;
+
   for (let attempt = 1; ; attempt += 1) {
     try {
       response = await page.request.get(`${API_BASE}${path}`);
-      break;
+      if (response.ok() || response.status() < 500 || attempt === ATTEMPTS) break;
+      console.warn(
+        `GET ${path} returned ${response.status()}; retrying (${attempt}/${ATTEMPTS - 1})`
+      );
     } catch (error) {
-      if (attempt === 3) throw error;
-      await page.waitForTimeout(500 * attempt);
+      if (attempt === ATTEMPTS) throw error;
     }
+    // Backs off between tries — a dropped Mongo connection takes a moment to
+    // be re-established, and an immediate retry just spends an attempt on it.
+    await page.waitForTimeout(1000 * attempt);
   }
 
   expect(response.ok(), `GET ${path} returned ${response.status()}`).toBe(true);

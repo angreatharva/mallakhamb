@@ -202,7 +202,22 @@ export const joinTeam = async (page, player) => {
   }
 
   const locateCard = async () => {
-    await expect(page.getByRole('heading', { name: 'Select Your Team' })).toBeVisible();
+    /*
+     * The heading only renders once the team list has loaded, so this waits on
+     * a request, not on a paint — and it needs the same generous timeout the
+     * card wait below already has.
+     *
+     * It was on the default 10s, which is the one wait in this file that was.
+     * `/players/teams` fetches up to fifty teams with their coaches populated,
+     * on a database that may not be local, and a slow one leaves the screen
+     * reading "Loading teams…" — so the failure was `element(s) not found` for
+     * a heading that simply had not arrived yet. Two athletes out of 274 hit
+     * that window in a thirty-minute run.
+     */
+    await expect(
+      page.getByRole('heading', { name: 'Select Your Team' }),
+      'the team list never finished loading'
+    ).toBeVisible({ timeout: 30_000 });
 
     // Each team is a <button> card whose <h3> is the team name.
     const cards = page.getByRole('button').filter({ has: page.locator('h3') });
