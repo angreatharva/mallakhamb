@@ -31,7 +31,14 @@ import { LEVELS, meetsAtLevel } from './meets.js';
  */
 
 /**
- * Five coaches, and so five teams, at each of the four levels.
+ * Three coaches, and so three teams, at each of the four levels.
+ *
+ * THREE IS A DELIBERATE FLOOR, not an arbitrary number. It is the smallest
+ * field that gives a team ranking a genuine middle place — with two, every
+ * result is first-or-last and a comparison bug that swaps them looks the same
+ * as one that reverses the whole order. Every entered team's squad has to be
+ * built once PER MEET, so each extra team is three more squads through an
+ * eight-interaction modal; five made a rebuild an afternoon's work.
  *
  * ONE COACH PER TEAM. A coach can technically own several — `Team` is unique on
  * (name, coach) — but `Coach.team` only ever points at the last one created,
@@ -40,11 +47,10 @@ import { LEVELS, meetsAtLevel } from './meets.js';
  * oddly.
  *
  * `level` is what binds a team to meets. Each team enters ALL THREE meets at its
- * own level, which is what gets five teams into every one of the twelve
- * competitions without needing sixty distinct squads and the ~720 athletes that
- * would take through the browser. A team entering several meets is a supported
- * path, not a shortcut: `registerTeam` only refuses a duplicate entry into the
- * SAME competition.
+ * own level, which is what gets three teams into every one of the twelve
+ * competitions without needing thirty-six distinct squads. A team entering
+ * several meets is a supported path, not a shortcut: `registerTeam` only refuses
+ * a duplicate entry into the SAME competition.
  *
  * Levels are also why the clubs are named in four families — a district club
  * appearing at an international meet is exactly the kind of detail that makes a
@@ -68,29 +74,21 @@ const ENTRIES = [
   { firstName: 'Rajesh', lastName: 'Amrale', phone: '9146708325', teamName: 'SGAM-A', level: 'district', teamDescription: 'SGAM Team A' },
   { firstName: 'Naresh', lastName: 'Jadhav', phone: '7028915463', teamName: 'SGAM-B', level: 'district', teamDescription: 'SGAM Team B' },
   { firstName: 'Mayur', lastName: 'Pashte', phone: '8390612774', teamName: 'SGAM-C', level: 'district', teamDescription: 'SGAM Team C' },
-  { firstName: 'Sandeep', lastName: 'Kulkarni', phone: '9822417305', teamName: 'SGAM-D', level: 'district', teamDescription: 'SGAM Team D' },
-  { firstName: 'Vikram', lastName: 'Bhosale', phone: '7719503284', teamName: 'SGAM-E', level: 'district', teamDescription: 'SGAM Team E' },
 
   // ── state — Maharashtra State Akhada Mandal ───────────────────────────────
   { firstName: 'Ganesh', lastName: 'Deshmukh', phone: '9834126750', teamName: 'MSAM-A', level: 'state', teamDescription: 'MSAM Team A' },
   { firstName: 'Prakash', lastName: 'Salunkhe', phone: '8605731942', teamName: 'MSAM-B', level: 'state', teamDescription: 'MSAM Team B' },
   { firstName: 'Nilesh', lastName: 'Gaikwad', phone: '7020648153', teamName: 'MSAM-C', level: 'state', teamDescription: 'MSAM Team C' },
-  { firstName: 'Sachin', lastName: 'More', phone: '9145283760', teamName: 'MSAM-D', level: 'state', teamDescription: 'MSAM Team D' },
-  { firstName: 'Anil', lastName: 'Chavan', phone: '8149735026', teamName: 'MSAM-E', level: 'state', teamDescription: 'MSAM Team E' },
 
   // ── national — National Institute of Mallakhamb ───────────────────────────
   { firstName: 'Deepak', lastName: 'Rane', phone: '9028561473', teamName: 'NIMA-A', level: 'national', teamDescription: 'NIMA Team A' },
   { firstName: 'Sunil', lastName: 'Thorat', phone: '7385204916', teamName: 'NIMA-B', level: 'national', teamDescription: 'NIMA Team B' },
   { firstName: 'Kiran', lastName: 'Pawar', phone: '9673810542', teamName: 'NIMA-C', level: 'national', teamDescription: 'NIMA Team C' },
-  { firstName: 'Hemant', lastName: 'Nikam', phone: '8975326104', teamName: 'NIMA-D', level: 'national', teamDescription: 'NIMA Team D' },
-  { firstName: 'Ashok', lastName: 'Bhagat', phone: '7040195862', teamName: 'NIMA-E', level: 'national', teamDescription: 'NIMA Team E' },
 
   // ── international — International Mallakhamb Sports Academy ───────────────
   { firstName: 'Rohit', lastName: 'Vaidya', phone: '9762014835', teamName: 'IMSA-A', level: 'international', teamDescription: 'IMSA Team A' },
   { firstName: 'Sameer', lastName: 'Kale', phone: '8329471605', teamName: 'IMSA-B', level: 'international', teamDescription: 'IMSA Team B' },
   { firstName: 'Jitendra', lastName: 'Wagh', phone: '7016482953', teamName: 'IMSA-C', level: 'international', teamDescription: 'IMSA Team C' },
-  { firstName: 'Pravin', lastName: 'Sawant', phone: '9890357214', teamName: 'IMSA-D', level: 'international', teamDescription: 'IMSA Team D' },
-  { firstName: 'Amit', lastName: 'Lokhande', phone: '8446120973', teamName: 'IMSA-E', level: 'international', teamDescription: 'IMSA Team E' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);
@@ -104,13 +102,13 @@ validateRoster(COACH_ROSTER, { label: 'Coach roster' });
  * than two steps later as an empty competition list on a chooser — which reads
  * as a broken app rather than as a roster that is short a team.
  */
-const TEAMS_PER_LEVEL = 5;
+const TEAMS_PER_LEVEL = 3;
 for (const level of LEVELS) {
   const teams = COACH_ROSTER.filter((c) => c.level === level);
   if (teams.length < TEAMS_PER_LEVEL) {
     throw new Error(
       `Coach roster: "${level}" has ${teams.length} team(s); every level needs at least ${TEAMS_PER_LEVEL}. ` +
-      'Each team enters all three meets at its level, so this is what puts five teams in every competition.'
+      'Each team enters all three meets at its level, so this is what puts three teams in every competition.'
     );
   }
   if (meetsAtLevel(level).length === 0) {

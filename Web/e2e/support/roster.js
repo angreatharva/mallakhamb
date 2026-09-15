@@ -213,8 +213,76 @@ const APPARATUS_DEFAULT = (entry) => {
 };
 
 /**
- * Everyone: the hand-written SGAM squads, then the generated squads for the
- * other seventeen teams.
+ * How many of a team's athletes are actually SEEDED.
+ *
+ * SGAM-C is sixty real people and the file stays the record of all of them —
+ * but seeding all sixty costs sixty registrations AND a three-minute squad
+ * build at each of its three meets, which was a third of a rebuild on its own.
+ *
+ * Capping keeps the record and drops the cost. Nothing is deleted: raise or
+ * remove the number here and the rest come back.
+ */
+const SEED_CAP = {
+  'SGAM-C': 10,
+};
+
+/**
+ * Trim a team to its cap, ONE PER CATEGORY FIRST.
+ *
+ * Taking the first N in file order would be wrong: the roster is grouped by
+ * category, so the first ten of SGAM-C are all Under-10s and seven panels would
+ * be left with nobody to judge. Dealing one from each category before taking a
+ * second from any keeps full coverage at whatever cap is chosen — and at a cap
+ * of ten, which is the number of category panels, it lands exactly one each.
+ *
+ * Deterministic, because a fixture that picks different people each run cannot
+ * be re-run against an existing database or reconciled with what is stored.
+ *
+ * @param {RosterEntry[]} entries
+ * @returns {RosterEntry[]}
+ */
+const applySeedCap = (entries) => {
+  const capped = [];
+  const byTeam = new Map();
+  for (const entry of entries) {
+    if (!byTeam.has(entry.teamName)) byTeam.set(entry.teamName, []);
+    byTeam.get(entry.teamName).push(entry);
+  }
+
+  for (const [teamName, squad] of byTeam) {
+    const cap = SEED_CAP[teamName];
+    if (!cap || squad.length <= cap) {
+      capped.push(...squad);
+      continue;
+    }
+
+    // Round-robin over categories, in the order they first appear.
+    const categories = new Map();
+    for (const entry of squad) {
+      const key = `${entry.gender}/${entry.ageGroup}`;
+      if (!categories.has(key)) categories.set(key, []);
+      categories.get(key).push(entry);
+    }
+
+    const queues = [...categories.values()];
+    const taken = [];
+    for (let round = 0; taken.length < cap; round += 1) {
+      let tookAny = false;
+      for (const queue of queues) {
+        if (taken.length >= cap) break;
+        if (queue[round]) { taken.push(queue[round]); tookAny = true; }
+      }
+      if (!tookAny) break; // squad exhausted before the cap
+    }
+    capped.push(...taken);
+  }
+
+  return capped;
+};
+
+/**
+ * Everyone seeded: the hand-written SGAM squads (capped where SEED_CAP says so)
+ * and the generated squads for the other nine teams.
  *
  * The generated half is built in `roster-generated.js` and joins here rather
  * than staying separate, so every check below — apparatus, age group, email
@@ -224,7 +292,7 @@ const APPARATUS_DEFAULT = (entry) => {
  *
  * @type {(RosterEntry & {email: string, password: string, apparatus: string[]})[]}
  */
-export const ROSTER = derive([...ENTRIES, ...GENERATED_ENTRIES]).map((entry) => ({
+export const ROSTER = derive(applySeedCap([...ENTRIES, ...GENERATED_ENTRIES])).map((entry) => ({
   ...entry,
   apparatus: entry.apparatus || APPARATUS_DEFAULT(entry),
 }));

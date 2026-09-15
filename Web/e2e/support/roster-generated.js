@@ -52,14 +52,19 @@ const FEMALE_FIRST_NAMES = [
 ];
 
 /**
- * The squad every generated team fields: twelve athletes covering all ten
- * category panels, with two doubled up.
+ * The squad every generated team fields: exactly one athlete per category
+ * panel, so ten.
+ *
+ * ONE EACH, not more. Every athlete is added through an eight-interaction modal
+ * and every squad is rebuilt once per meet, so the squad size multiplies by
+ * thirty-six across a rebuild. Ten is the number that leaves no panel empty,
+ * and a panel with nobody to judge looks like a broken competition rather than
+ * an unfinished seed — which is the case worth covering. Depth within a
+ * category is what the hand-written SGAM squads provide.
  *
  * The ten panels are gender × age group, and the two lists are NOT the same —
  * boys run to Under 18 and Above 18, girls to Under 16 and Above 16
- * (`Web/src/hooks/useAgeGroups.js`). A squad missing a category leaves that
- * panel seated with nobody to judge, which looks like a broken competition
- * rather than an empty one.
+ * (`Web/src/hooks/useAgeGroups.js`).
  *
  * Ages sit clear of every band edge. The bands are cumulative ceilings —
  * Under 14 is 0-13, Above 16 is 16 and up — so an athlete AT the boundary is in
@@ -72,7 +77,6 @@ const MALE_SLOTS = [
   { ageGroup: 'Under14', age: 13 },
   { ageGroup: 'Under18', age: 16 },
   { ageGroup: 'Above18', age: 20 },
-  { ageGroup: 'Under14', age: 12 },
 ];
 
 const FEMALE_SLOTS = [
@@ -81,7 +85,6 @@ const FEMALE_SLOTS = [
   { ageGroup: 'Under14', age: 13 },
   { ageGroup: 'Under16', age: 15 },
   { ageGroup: 'Above16', age: 17 },
-  { ageGroup: 'Under12', age: 10 },
 ];
 
 /** Teams whose athletes are written out by hand in roster.js. */
