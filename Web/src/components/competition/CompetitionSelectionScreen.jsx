@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
-import { coachAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { coachAPI, playerAPI } from '@/services/api';
+import { judgeAPI } from '@/services/public/judge.api';
+import { authAPI } from '@/services/auth/auth.api';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
+import { competitionsAtLevel, levelLabel } from '@/utils/competition/levels';
 import {
-  Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock,
+  Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS } from '@/styles/tokens';
@@ -140,8 +144,10 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const navigate = useNavigate();
+  const { user, login } = useAuth();
   const {
     assignedCompetitions,
+    selectedLevel,
     switchCompetition,
     isLoading,
     mergeAssignedAndSelectCompetition,
@@ -154,7 +160,40 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const [coachTeam, setCoachTeam] = useState(null);
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachError, setCoachError] = useState(null);
+  /*
+   * Judges and teamless players read from their own endpoints rather than from
+   * CompetitionContext — see `scopedCompetitions` below for why neither can use
+   * the assigned list.
+   */
+  const [scopedCompetitions, setScopedCompetitions] = useState(null);
+  const [scopedLoading, setScopedLoading] = useState(false);
+  const [scopedError, setScopedError] = useState(null);
   useReducedMotion();
+
+  /**
+   * Does this player already belong to a squad?
+   *
+   * `team` comes back as either an id string or a populated object depending on
+   * the endpoint, which is why this is not a plain truthiness check.
+   */
+  const playerHasTeam = Boolean(
+    user?.team && (typeof user.team === 'string' ? user.team : (user.team._id || user.team.id))
+  );
+
+  /*
+   * Send anyone who arrives without a level back to the chooser.
+   *
+   * Reachable by deep link, by a reload after storage was cleared, or by a
+   * stale level left over from before a rename (normalizeLevel turns that into
+   * null rather than filtering the list down to nothing). Without this the
+   * screen would show every meet at every level, which is the behaviour this
+   * flow exists to replace.
+   */
+  useEffect(() => {
+    if (!selectedLevel && userType !== 'superadmin') {
+      navigate(`/${userType}/select-level`, { replace: true });
+    }
+  }, [selectedLevel, userType, navigate]);
 
   // Coach-specific data fetching
   useEffect(() => {
@@ -162,6 +201,51 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       fetchCoachData();
     }
   }, [userType]);
+
+  /*
+   * Judges and players choose from a list CompetitionContext cannot give them.
+   *
+   * A judge's meets are their panel seats, which live in a different collection
+   * behind /judge/competitions — the context early-returns on userType 'judge'
+   * and never fetches anything for them.
+   *
+   * A player with no team yet is choosing WHERE TO JOIN one, so the assigned
+   * list (meets they are already rostered in) is empty by definition. A player
+   * who has a team is choosing between the meets that team is entered in, which
+   * is exactly the assigned list.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    const needsScopedFetch = userType === 'judge' || (userType === 'player' && !playerHasTeam);
+
+    if (!needsScopedFetch) {
+      setScopedCompetitions(null);
+      return undefined;
+    }
+
+    const load = async () => {
+      setScopedLoading(true);
+      setScopedError(null);
+      try {
+        const response = userType === 'judge'
+          ? await judgeAPI.getAssignedCompetitions()
+          : await playerAPI.getOpenCompetitions();
+        const payload = response.data?.data ?? response.data ?? [];
+        if (!cancelled) setScopedCompetitions(Array.isArray(payload) ? payload : []);
+      } catch (err) {
+        logger.error('[Competition Selection] Failed to load competitions', err);
+        if (!cancelled) {
+          setScopedCompetitions([]);
+          setScopedError(err.response?.data?.message || err.message || 'Failed to load competitions');
+        }
+      } finally {
+        if (!cancelled) setScopedLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [userType, playerHasTeam]);
 
   const fetchCoachData = async () => {
     try {
@@ -210,28 +294,113 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   };
 
   // Use appropriate data based on user type
-  const competitions = userType === 'coach' ? coachCompetitions : 
-                     assignedCompetitions;
-  const loading = userType === 'coach' ? coachLoading : 
-                 isLoading;
-  const error = userType === 'coach' ? coachError : 
-               null;
+  const sourceCompetitions = userType === 'coach'
+    ? coachCompetitions
+    : (scopedCompetitions ?? assignedCompetitions);
+  const loading = userType === 'coach'
+    ? coachLoading
+    : (scopedCompetitions === null ? isLoading : scopedLoading);
+  const error = userType === 'coach' ? coachError : scopedError;
 
+  /*
+   * The whole point of the preceding screen: only meets at the chosen level.
+   *
+   * Applied to every role's list, whichever endpoint it came from, so there is
+   * one place the narrowing happens and no role can quietly skip it.
+   */
+  const competitions = competitionsAtLevel(sourceCompetitions, selectedLevel);
+
+  /*
+   * One meet at this level and nothing to decide — go straight through.
+   *
+   * Gated on `selectedLevel` so it can never fire before the level step has
+   * happened, which would skip the choice this flow exists to ask for. Coaches
+   * are excluded because selecting is not a navigation for them, it registers
+   * a team; players because a teamless one still has a squad to pick.
+   */
   useEffect(() => {
-    if (!loading && competitions?.length === 1 && userType !== 'coach' && userType !== 'player') {
+    if (!loading && selectedLevel && competitions?.length === 1
+        && userType !== 'coach' && userType !== 'player') {
       handleAutoSelect(competitions[0]._id);
     }
-  }, [loading, competitions, userType]);
+  }, [loading, competitions, userType, selectedLevel]);
+
+  /**
+   * Scope the session to a meet, by whatever route this role uses.
+   *
+   * Every branch ends with a token carrying the competition claim, because
+   * `x-competition-id` on every request is derived from that claim — a session
+   * that updated only local state would go on reading the previous meet.
+   *
+   * @param {string} competitionId
+   */
+  const activateCompetition = async (competitionId) => {
+    if (userType === 'judge') {
+      /*
+       * Judges have their own endpoint. `/auth/set-competition` throws for them
+       * by design: it cannot see the `judgeassignments` collection, so it has no
+       * way to check that the judge holds a seat at the meet. This one does.
+       */
+      const response = await judgeAPI.setCompetition(competitionId);
+      const { token, competition } = response.data?.data || {};
+      if (!token) throw new Error('No competition-scoped token returned');
+
+      // Every other judge page reads the meet out of the stored `judge_user`,
+      // so that copy has to move with the token.
+      login({ ...(user || {}), competition: competitionId }, token, 'judge');
+      secureStorage.setItem('judge_competition_id', competitionId);
+      if (competition) {
+        secureStorage.setItem('judge_current_competition', JSON.stringify(competition));
+      }
+
+      /*
+       * The category ladder below belongs to the meet just left. Leaving it in
+       * place would restore a gender/age group/apparatus from a competition the
+       * token is no longer scoped to — screen and token disagreeing about what
+       * is being judged.
+       */
+      sessionStorage.setItem('judge_selected_competition', competitionId);
+      for (const key of [
+        'judge_category_selected',
+        'judge_selected_comp_type',
+        'judge_selected_gender',
+        'judge_selected_age_group',
+        'judge_selected_apparatus',
+      ]) {
+        sessionStorage.removeItem(key);
+      }
+      return;
+    }
+
+    if (userType === 'player') {
+      /*
+       * A teamless player is picking a meet they are not yet rostered in, so it
+       * is not in `assignedCompetitions` and `switchCompetition` would reject it
+       * as unassigned. Setting the context directly is allowed — only admins are
+       * competition-scoped server-side, so this mints the claim without
+       * asserting an assignment the player does not have yet.
+       */
+      const response = await authAPI.setCompetition(competitionId);
+      const newToken = response.data?.data?.token || response.data?.token;
+      if (newToken) secureStorage.setItem('player_token', newToken);
+
+      const chosen = competitions.find((c) => (c._id || c.id) === competitionId);
+      if (chosen) mergeAssignedAndSelectCompetition(chosen);
+      return;
+    }
+
+    await switchCompetition(competitionId);
+  };
 
   const handleAutoSelect = async (competitionId) => {
     try {
       setIsSelecting(true);
-      await switchCompetition(competitionId);
+      await activateCompetition(competitionId);
       if (onCompetitionSelected) onCompetitionSelected(competitionId);
-      navigateToDashboard();
+      navigateToDashboard(competitionId);
     } catch (error) {
       logger.error('Failed to auto-select competition:', error);
-      toast.error('Failed to select competition');
+      toast.error(error.response?.data?.message || 'Failed to select competition');
       setIsSelecting(false);
     }
   };
@@ -294,15 +463,15 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
         await fetchAssignedCompetitions();
         toast.success('Team registered for competition successfully!');
       } else {
-        // Admin/Superadmin flow: just switch competition
-        await switchCompetition(selectedCompetition);
+        // Admin, superadmin, judge and player all just scope the session.
+        await activateCompetition(selectedCompetition);
       }
-      
+
       if (onCompetitionSelected) onCompetitionSelected(selectedCompetition);
-      
+
       logger.log('[Competition Selection] About to navigate to dashboard');
       await new Promise(resolve => setTimeout(resolve, 300));
-      navigateToDashboard();
+      navigateToDashboard(selectedCompetition);
     } catch (error) {
       logger.error('Failed to select competition:', error);
       const errorMsg = error.response?.data?.message ||
@@ -313,22 +482,31 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     }
   };
 
-  const navigateToDashboard = () => {
+  /**
+   * Where this role goes once the session is scoped to a meet.
+   *
+   * @param {string} competitionId - The meet just chosen. Passed in rather than
+   *   read from state because the auto-select path never sets that state.
+   */
+  const navigateToDashboard = (competitionId) => {
     const routes = {
       admin: '/admin/dashboard',
       superadmin: '/superadmin/dashboard',
       coach: '/coach/dashboard',
-      player: '/player/dashboard',
-      judge: '/judge',
+      // A player who is not on a squad yet picks one now, scoped to the meet
+      // they just chose — `/players/teams/available` takes a competitionId and
+      // without one lists teams across every open competition at once.
+      player: playerHasTeam ? '/player/dashboard' : '/player/select-team',
+      judge: '/judge/dashboard',
     };
-    
+
     // Pass the selected competition ID as a URL parameter to ensure immediate loading
     const basePath = routes[userType] || '/';
-    
-    const pathWithCompetition = selectedCompetition
-      ? `${basePath}?competitionId=${selectedCompetition}`
+
+    const pathWithCompetition = competitionId
+      ? `${basePath}?competitionId=${competitionId}`
       : basePath;
-    
+
     logger.log('[Competition Selection] Navigating to:', pathWithCompetition);
     navigate(pathWithCompetition);
   };
@@ -403,8 +581,24 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     );
   }
 
-  // ── Empty ──
+  /*
+   * ── Empty ──
+   *
+   * Empty AT THE CHOSEN LEVEL, which is a different thing from having no
+   * competitions at all — and the difference is the whole reason this needs its
+   * own copy. Somebody who picks "international" and is told "you are not
+   * assigned to any competitions" would reasonably conclude their account is
+   * broken. The way out is another level, so that is the primary action.
+   */
   if (!competitions || competitions.length === 0) {
+    const emptyReason = {
+      coach: 'No open competitions at this level right now.',
+      player: playerHasTeam
+        ? 'Your team is not entered in any competition at this level.'
+        : 'No open competitions at this level right now.',
+      judge: 'You do not hold a panel seat at any competition at this level.',
+    }[userType] || 'You are not assigned to any competition at this level.';
+
     return (
       <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
         <FadeIn className="text-center max-w-sm w-full">
@@ -412,20 +606,28 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
             <Trophy className="w-10 h-10 text-white/20" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">No Competitions</h2>
+          <h2 className="text-2xl font-black text-white mb-3">
+            Nothing at {levelLabel(selectedLevel)} Level
+          </h2>
           <p className="text-white/40 text-sm leading-relaxed mb-8">
-            {userType === 'coach' 
-              ? 'No open competitions are available right now. Please check back later.'
-              : 'You are not assigned to any competitions yet. Please contact your administrator.'
-            }
+            {emptyReason} Try another level, or check back later.
           </p>
-          <button
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
-            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
-          >
-            Go to Home <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={() => navigate(`/${userType}/select-level`)}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+            >
+              <Layers className="w-4 h-4" aria-hidden="true" /> Choose Another Level
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white/70 font-bold text-sm min-h-[44px] transition-all hover:text-white active:scale-95"
+              style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+            >
+              Go to Home
+            </button>
+          </div>
         </FadeIn>
       </div>
     );
@@ -479,6 +681,27 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             <p className="text-white/40 text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
               Select a competition to continue to your dashboard
             </p>
+
+            {/*
+              * The active level, and the way back to change it. Without this the
+              * list looks like every meet the user has — so a level that hides
+              * the one they were looking for reads as the meet having vanished.
+              */}
+            {selectedLevel && (
+              <button
+                onClick={() => navigate(`/${userType}/select-level`)}
+                className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors min-h-[32px]"
+                style={{
+                  background: `${COLORS.saffron}12`,
+                  border: `1px solid ${COLORS.saffron}30`,
+                  color: COLORS.saffronLight,
+                }}
+              >
+                <Layers className="w-3 h-3" aria-hidden="true" />
+                {levelLabel(selectedLevel)} level
+                <span className="text-white/35 font-normal">· change</span>
+              </button>
+            )}
           </FadeIn>
 
           {/* Search */}
