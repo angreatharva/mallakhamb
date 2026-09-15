@@ -9,12 +9,17 @@ export const playerAPI = {
   /**
    * Teams a player can join.
    *
-   * `competitionId` is a QUERY parameter rather than something the request
-   * interceptor supplies: `/players/teams` carries no `validateCompetitionContext`,
-   * so `req.competitionId` is never populated for it and the handler falls
-   * through to `req.query.competitionId`. Sending the header alone would be
-   * silently ignored and the player would be offered teams from every open
-   * competition at once.
+   * `competitionId` goes in the QUERY STRING, not a header: `/players/teams`
+   * carries no `validateCompetitionContext`, so `req.competitionId` is never
+   * populated for it and the controller falls through to
+   * `req.query.competitionId`.
+   *
+   * BE AWARE that the server does not act on it yet. The controller reads it
+   * and passes it down, but `PlayerService.getAvailableTeams()` takes no
+   * arguments and returns every active team — so the list is NOT scoped to the
+   * meet, whatever is sent here. It is sent anyway because this is the correct
+   * call site for when that is fixed, and because the alternative is a screen
+   * that silently drops the only context it has.
    */
   getTeams: (competitionId) =>
     api.get('/players/teams', competitionId ? { params: { competitionId } } : undefined),

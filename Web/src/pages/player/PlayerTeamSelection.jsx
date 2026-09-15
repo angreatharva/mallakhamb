@@ -38,11 +38,14 @@ const PlayerTeamSelection = () => {
    * The meet this player just chose.
    *
    * Read from the URL first — the competition chooser appends it on the way
-   * here, which makes the scope survive a reload and visible in the address
-   * bar. The context is the fallback for arriving any other way.
+   * here, which makes the scope survive a reload and keeps it visible in the
+   * address bar. The context is the fallback for arriving any other way.
    *
-   * Without it the server lists teams across EVERY open competition, so a
-   * player who picked a district meet would be offered national squads.
+   * Sent to both the team list and the join. The list does not honour it yet
+   * (PlayerService.getAvailableTeams ignores its argument and returns every
+   * active team), so a player still sees squads from meets they did not pick;
+   * the join does record it. Passing it from here is what makes fixing the
+   * list a server-only change.
    */
   const competitionId = searchParams.get('competitionId') || currentCompetition?._id || null;
 
