@@ -8,10 +8,10 @@ import { COACH_ROSTER } from './coach-roster.js';
  *
  * SGAM-A, SGAM-B and SGAM-C are real people who were registered by hand before
  * the roster file existed, and `roster.js` remains the single record of who
- * they are. The other seventeen teams exist to put five squads into each of the
- * twelve meets, and writing two hundred more names out by hand would be two
- * hundred more chances to typo a phone number or a date of birth into a run
- * that fails an hour in.
+ * they are. The other nine teams exist to put three squads into each of the
+ * twelve meets, and writing ninety more names out by hand would be ninety more
+ * chances to typo a phone number or a date of birth into a run that fails
+ * twenty minutes in.
  *
  * Generated DETERMINISTICALLY, not randomly. A seed file whose contents change
  * every run cannot be re-run against an existing database, diffed, or
@@ -156,5 +156,5 @@ function build() {
   return entries;
 }
 
-/** The generated athletes, for the seventeen teams without a hand-written squad. */
+/** The generated athletes, for the nine teams without a hand-written squad. */
 export const GENERATED_ENTRIES = build();

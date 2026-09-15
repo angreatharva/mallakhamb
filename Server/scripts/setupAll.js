@@ -107,7 +107,7 @@ const STEPS = [
     needsApi: true,
     title: 'Coaches and teams',
     command: ['npm', 'run', 'seed:coaches'],
-    why: 'Registers 20 coaches through the UI, five per level, each creating one '
+    why: 'Registers 12 coaches through the UI, three per level, each creating one '
       + 'team. Stops at the team — entering a meet costs an entry fee and is the '
       + '`squads` step. Also captures every request body into '
       + 'scripts/seed/registrations.generated.json.',
@@ -118,9 +118,9 @@ const STEPS = [
     needsApi: true,
     title: 'Athletes and team membership',
     command: ['npm', 'run', 'seed:players'],
-    why: '274 athletes register and join their coach\'s team. The seventeen '
-      + 'generated squads are twelve each, covering all ten category panels so '
-      + 'no panel is seated with nobody to judge.',
+    why: '110 athletes register and join their coach\'s team. The nine generated '
+      + 'squads are ten each — exactly one per category panel, so no panel is '
+      + 'seated with nobody to judge.',
   },
   {
     id: 'judges',
@@ -137,12 +137,12 @@ const STEPS = [
     needsApi: true,
     title: 'Entries and squads',
     command: ['npm', 'run', 'seed:squads'],
-    why: 'Each team enters all three meets at its level — 60 entries, five per '
+    why: 'Each team enters all three meets at its level — 36 entries, three per '
       + 'meet — and its athletes are placed into age group, gender and apparatus '
       + 'for each. This is what decides whether a judge sees anybody: eligibility '
-      + 'is the squad row, not team membership. THE LONGEST STEP BY FAR: sixty '
-      + 'squads through an eight-interaction modal each. Narrow it with '
-      + 'LEVEL=state or PLACE=Pune and re-run — every test is independent.',
+      + 'is the squad row, not team membership. THE LONGEST STEP BY FAR: '
+      + 'thirty-six squads through an eight-interaction modal each. Narrow it '
+      + 'with LEVEL=state or PLACE=Pune and re-run — every test is independent.',
   },
   {
     id: 'panels',
@@ -418,9 +418,9 @@ async function main() {
   line(`${'='.repeat(72)}`);
   line('\nWhere this leaves you:');
   line('  12 meets — three each at district, state, national and international');
-  line('  20 coaches with one team apiece, five per level');
-  line('  60 entries — every team in all three meets at its level, five per meet');
-  line('  274 athletes, placed into squads by age group, gender and apparatus');
+  line('  12 coaches with one team apiece, three per level');
+  line('  36 entries — every team in all three meets at its level, three per meet');
+  line('  110 athletes, placed into squads by age group, gender and apparatus');
   line('  16 judges registered and seated across every category of every meet');
   line('  every team final-submitted and paid, so the judges can see them');
   line('');
