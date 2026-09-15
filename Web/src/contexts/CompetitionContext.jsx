@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getTokenData } from '@/utils/auth/tokenUtils.js';
 import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { logger } from '@/infrastructure/logger.js';
 import { authAPI } from '@/services/auth/auth.api.js';
+import { normalizeLevel, competitionsAtLevel } from '@/utils/competition/levels.js';
 
 const CompetitionContext = createContext();
 
@@ -32,8 +33,22 @@ export const CompetitionProvider = ({ children, userType }) => {
     }
   };
 
+  /**
+   * The level chosen at `/{role}/select-level`, restored synchronously so a
+   * reload on `/{role}/select-competition` does not bounce back to the chooser.
+   *
+   * Normalized on the way in: a stale value left in storage from before a
+   * rename would otherwise filter the list down to nothing, which reads as
+   * "you have no competitions" rather than "that level no longer exists".
+   */
+  const getStoredLevel = (type) => {
+    if (!type) return null;
+    return normalizeLevel(secureStorage.getItem(`${type}_selected_level`));
+  };
+
   const [currentCompetition, setCurrentCompetition] = useState(() => getStoredCompetition(userType));
   const [assignedCompetitions, setAssignedCompetitions] = useState([]);
+  const [selectedLevel, setSelectedLevelState] = useState(() => getStoredLevel(userType));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -52,6 +67,44 @@ export const CompetitionProvider = ({ children, userType }) => {
       secureStorage.removeItem(`${userType}_current_competition`);
     }
   }, [currentCompetition, userType]);
+
+  /**
+   * Record the chosen level. Persisted per role, like the competition itself,
+   * because the chooser and the competition list are separate routes and a
+   * reload between them must not lose the choice.
+   *
+   * An unrecognised value clears the selection rather than storing garbage.
+   */
+  const setSelectedLevel = useCallback(
+    (level) => {
+      const next = normalizeLevel(level);
+      setSelectedLevelState(next);
+      if (!userType) return;
+      if (next) {
+        secureStorage.setItem(`${userType}_selected_level`, next);
+      } else {
+        secureStorage.removeItem(`${userType}_selected_level`);
+      }
+    },
+    [userType]
+  );
+
+  /** Drop the level so the next visit starts at the chooser. */
+  const clearSelectedLevel = useCallback(() => setSelectedLevel(null), [setSelectedLevel]);
+
+  /**
+   * The assigned list narrowed to the chosen level.
+   *
+   * Filtered here, on documents the server already returns with `level` on
+   * them, rather than by querying per level. The coach/player list comes from
+   * `getOpenCompetitions`, which is cached server-side under the single flat key
+   * `competitions:open` with no level in it — pushing the filter down there
+   * would serve one level's list to somebody who asked for another.
+   */
+  const competitionsForSelectedLevel = useMemo(
+    () => competitionsAtLevel(assignedCompetitions, selectedLevel),
+    [assignedCompetitions, selectedLevel]
+  );
 
   // Helper to get token for current user type
   const getToken = useCallback(() => {
@@ -216,19 +269,31 @@ export const CompetitionProvider = ({ children, userType }) => {
   const clearCompetitionContext = useCallback(() => {
     setCurrentCompetition(null);
     setAssignedCompetitions([]);
+    setSelectedLevelState(null);
     setError(null);
-    if (userType) secureStorage.removeItem(`${userType}_current_competition`);
+    if (userType) {
+      secureStorage.removeItem(`${userType}_current_competition`);
+      secureStorage.removeItem(`${userType}_selected_level`);
+    }
   }, [userType]);
 
   // When auth user type clears (logout), drop in-memory competition state so
   // a new login does not inherit the previous session's selection.
+  //
+  // The level is re-read rather than only cleared: this provider is mounted for
+  // the life of the app, so a logout followed by a sign-in as a DIFFERENT role
+  // arrives here as a userType change, not a remount. Without the re-read the
+  // level state would still hold whatever the first role picked.
   useEffect(() => {
     if (!userType) {
       setCurrentCompetition(null);
       setAssignedCompetitions([]);
+      setSelectedLevelState(null);
       setError(null);
       setIsLoading(false);
+      return;
     }
+    setSelectedLevelState(getStoredLevel(userType));
   }, [userType]);
 
   // Load competitions on mount and when userType changes.
@@ -312,6 +377,10 @@ export const CompetitionProvider = ({ children, userType }) => {
   const value = {
     currentCompetition,
     assignedCompetitions,
+    selectedLevel,
+    competitionsForSelectedLevel,
+    setSelectedLevel,
+    clearSelectedLevel,
     isLoading,
     error,
     switchCompetition,

@@ -43,7 +43,17 @@ const getEncryptionKey = () =>
  * Known per-role storage key suffixes.
  * When clearing for a specific role we remove `${role}_${suffix}` keys.
  */
-const ROLE_KEY_SUFFIXES = ['token', 'user'];
+/*
+ * Every per-role key, so `clearForRole` actually ends a session.
+ *
+ * `current_competition` and `selected_level` were missing, and the logout path
+ * only got away with it because it follows `clearForRole` with a nuclear
+ * `sessionStorage.clear()`. The cross-tab logout handler in AuthProvider does
+ * NOT — it calls `clearForRole` alone — so a tab told to drop its session kept
+ * the previous user's meet and level, and the next sign-in for that role
+ * inherited both.
+ */
+const ROLE_KEY_SUFFIXES = ['token', 'user', 'current_competition', 'selected_level'];
 
 export const obfuscatedStorage = {
   setItem: (key, value) => {
