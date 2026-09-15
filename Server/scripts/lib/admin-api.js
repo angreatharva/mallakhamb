@@ -127,15 +127,34 @@ async function signInAsAdmin(script) {
  * The seeded meets share a name and a year and differ only by place, so the
  * place is the only thing that identifies one.
  *
+ * ASKS THE SERVER FOR THE ONE MEET rather than listing and filtering here.
+ * `GET /competitions` paginates with `limit = 10, sortBy = createdAt desc`
+ * (competition.controller.js), so listing returned only the ten NEWEST — and
+ * once there were twelve, the two created first were simply absent. That failed
+ * as "No competition in Mumbai. Known: <ten other places>", which reads like the
+ * meet was never created rather than like a second page nobody asked for.
+ *
+ * `search` matches name or place with a case-insensitive regex, so it can be
+ * loose; the exact `c.place === place` below is what actually decides. The
+ * generous limit covers a place that is a substring of several others.
+ *
  * @param {string} [place] - omit to take the first competition
  */
 async function findCompetition(place) {
-  const competitions = await call('/competitions');
+  const query = new URLSearchParams({ limit: '100' });
+  if (place) query.set('search', place);
+
+  const competitions = await call(`/competitions?${query}`);
   const list = competitions.data?.competitions || competitions.data || [];
   const found = place ? list.find((c) => c.place === place) : list[0];
+
   if (!found) {
+    // Re-listed WITHOUT the search term, so the error names every meet that
+    // exists rather than only the ones that matched a term which found nothing.
+    const all = await call('/competitions?limit=100');
+    const every = all.data?.competitions || all.data || [];
     throw new Error(
-      `No competition${place ? ` in ${place}` : ''}. Known: ${list.map((c) => c.place).join(', ')}`
+      `No competition${place ? ` in ${place}` : ''}. Known: ${every.map((c) => c.place).join(', ')}`
     );
   }
   return found;
