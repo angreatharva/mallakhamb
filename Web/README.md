@@ -13,15 +13,16 @@ Talks to the Express API in [`../Server`](../Server/README.md).
 3. [Directory map](#directory-map)
 4. [App shell](#app-shell)
 5. [Routing](#routing)
-6. [Authentication model](#authentication-model)
-7. [Data layer](#data-layer)
-8. [Judge scoring module](#judge-scoring-module)
-9. [Scoring rules on the client](#scoring-rules-on-the-client)
-10. [Design system & styling](#design-system--styling)
-11. [Environment configuration](#environment-configuration)
-12. [Scripts](#scripts)
-13. [Testing](#testing)
-14. [Build & deployment](#build--deployment)
+6. [Post-login flow: level, then competition](#post-login-flow-level-then-competition)
+7. [Authentication model](#authentication-model)
+8. [Data layer](#data-layer)
+9. [Judge scoring module](#judge-scoring-module)
+10. [Scoring rules on the client](#scoring-rules-on-the-client)
+11. [Design system & styling](#design-system--styling)
+12. [Environment configuration](#environment-configuration)
+13. [Scripts](#scripts)
+14. [Testing](#testing)
+15. [Build & deployment](#build--deployment)
 
 ---
 
@@ -123,7 +124,7 @@ ErrorBoundary
                     └── Toaster
 ```
 
-The Navbar is hidden on admin, superadmin and judge routes, on `/`, on `/scores`, on `/coach/select-competition`, and on any login / register / forgot-password / reset-password page. The global background is `#0a0a0a`.
+The Navbar is hidden on admin, superadmin and judge routes, on `/`, on `/scores`, on any `*/select-level` or `*/select-competition` chooser, and on any login / register / forgot-password / reset-password page. The global background is `#0a0a0a`.
 
 ---
 
@@ -136,18 +137,48 @@ Role sections use a layout component that wraps `<ProtectedRoute requiredUserTyp
 | Area | Routes |
 |---|---|
 | Public | `/`, `/scores`, `/forgot-password`, `/reset-password[/:token]` |
-| Player | `/player/login`, `/player/register`, `/player/select-team`, `/player/dashboard` |
-| Coach | `/coach/login`, `/coach/register`, `/coach/create-team`, `/coach/select-competition`, `/coach/dashboard`, `/coach/payment` |
-| Admin | `/admin/login`, `/admin/register`, `/admin/dashboard[/:tab]`, `/admin/teams`, `/admin/scoring` |
-| Judge | `/judge/login`, `/judge/dashboard`, `/judge/team/:teamId`, `/judge/scoring`, `/judge/scoring/panel-review` |
+| Player | `/player/login`, `/player/register`, `/player/select-level`, `/player/select-competition`, `/player/select-team`, `/player/dashboard` |
+| Coach | `/coach/login`, `/coach/register`, `/coach/create-team`, `/coach/select-level`, `/coach/select-competition`, `/coach/dashboard`, `/coach/payment` |
+| Admin | `/admin/login`, `/admin/register`, `/admin/select-level`, `/admin/select-competition`, `/admin/dashboard[/:tab]`, `/admin/teams`, `/admin/scoring` |
+| Judge | `/judge/login`, `/judge/select-level`, `/judge/select-competition`, `/judge/dashboard`, `/judge/team/:teamId`, `/judge/scoring`, `/judge/scoring/panel-review` |
 | Superadmin | `/superadmin/login`, `/superadmin/dashboard[/:tab]`, `/superadmin/add-player-payment`, `/superadmin/scoring` (reuses `AdminScoring`) |
-| Fallback | `*` → `/` |
+| Fallback | `*` → `NotFound` |
 
 Notes:
 
 - **Every role's login route renders the same `pages/unified/UnifiedLogin.jsx`.** The per-role login files (`JudgeLogin.jsx`, `AdminLogin.jsx`, …) are thin re-export wrappers. `UnifiedLogin` derives the role from the URL, themes itself accordingly and picks the matching API endpoint.
 - Several page files (`AdminJudges`, `AdminScores`, `AdminTransactions`, `SuperAdminManagement`, `SuperAdminSystemStats`) are rendered as dashboard `:tab` content rather than as top-level routes.
 - `pages/unified/UnifiedDashboard.jsx` and `UnifiedCompetitionSelection.jsx` exist but are **not wired into the router**.
+
+---
+
+## Post-login flow: level, then competition
+
+Every competition-scoped role walks the same two rungs after signing in:
+
+```
+login → /{role}/select-level → /{role}/select-competition → dashboard
+```
+
+Superadmin is the one exception — it is not scoped to assigned meets, so it goes straight to `/superadmin/dashboard`. A player with no squad gets one extra rung, `/player/select-team`, **after** the competition: a team only means something inside a meet.
+
+**The level is a filter, not a permission.** `Competition.level` is a required enum on the server (`district | state | national | international`), and choosing one narrows the list of meets the next screen offers. It grants nothing. What a user may actually act on is still decided by the checks that already existed — an admin's assignment list, a judge's panel seats.
+
+**Nothing about a level is recorded on a person.** Registration is untouched by this flow. A level belongs to a competition, not to an account: a district athlete who qualifies upward would immediately contradict such a field, and the competition is the authority on its own level.
+
+Key pieces:
+
+| Piece | Role |
+|---|---|
+| `utils/competition/levels.js` | The four levels, mirroring the server enum, plus `normalizeLevel`, `competitionsAtLevel`, `countByLevel` |
+| `components/competition/LevelSelectionScreen.jsx` | Rung one, role-parameterised |
+| `components/competition/CompetitionSelectionScreen.jsx` | Rung two; filters by the chosen level and bounces back when there is none |
+| `contexts/CompetitionContext.jsx` | Holds `selectedLevel`, persisted per role as `${userType}_selected_level` |
+
+Two things worth knowing before changing this:
+
+- **Filter on the client, from documents the server already returns.** Every competition document carries `level`. The coach/player list comes from `getOpenCompetitions`, which the server caches under the single flat key `competitions:open` with no level in it — pushing the filter down there would serve one level's list to somebody who asked for another.
+- **Judges do not use `/auth/set-competition`.** It throws for them by design: it cannot see the `judgeassignments` collection, so it cannot verify the judge holds a seat. They use `PUT /judge/competition/:competitionId/set`, and the stored `judge_user` has to move with the reissued token because every other judge page reads the meet from there.
 
 ---
 

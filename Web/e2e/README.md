@@ -62,6 +62,47 @@ holds the one thing all three rosters agree on: how an account's email and
 password are derived from a name. `panel-plan.js` reads the meet's panel sizes
 from the file the Server scripts write.
 
+## The level rung
+
+Signing in no longer lands anyone on a dashboard. Every role goes to
+`/{role}/select-level` first, then to `/{role}/select-competition`, and the
+competition screen bounces anyone who arrives without a level. `support/level-flows.js`
+walks that rung for all four roles.
+
+It navigates to the chooser **explicitly** rather than assuming the current page
+is already it. A seeding run signs several people in against one browser context
+and the level persists per role in session storage, so the second coach would
+otherwise inherit the first coach's level, skip the screen, and find no card for
+their own meet on the list behind it.
+
+The three seeded meets are **one per level**:
+
+| Place | Level |
+|---|---|
+| Mumbai | `district` |
+| Pune | `state` |
+| Nashik | `national` |
+
+`international` is left unseeded on purpose — it is the empty case, and the
+"Nothing at this level" state is worth being able to reach by hand.
+
+`MEETS` in `Server/scripts/createCompetitions.js` is the authority;
+`LEVEL_FOR_PLACE` in `support/level-flows.js` mirrors it. **Drift between them
+does not fail loudly**: picking the level a meet is *not* at simply finds no
+competitions, and the run dies on "Nothing at X Level", which reads like missing
+seed data rather than a stale map.
+
+An existing database keeps whatever levels it already has —
+`createCompetitions.js` skips meets that exist. Re-run it with `--force` to move
+them onto the levels above.
+
+> **Deciding whether work is still owed: ask the API, never the URL.** Several
+> specs used to read the landing URL to tell a finished account from a stranded
+> one — a coach without a team bounced to `/coach/create-team`, a player without
+> one to `/player/select-team`. Everyone lands on `/select-level` now, so those
+> checks would report every account as finished and leave the roster empty,
+> silently. `coachHasTeam`, `coachHasEntry` and `hasTeam` exist for this.
+
 ## The panel plan
 
 `Server/scripts/seed/panel-plan.json` decides which categories get 3, 4 and 5
@@ -491,10 +532,10 @@ inside the band their group requires.
 
 ## register-player
 
-Walks a brand-new player through register → login → team selection → dashboard,
-then reads the profile back from the API to confirm every field — name, email,
-gender, date of birth, **phone** — actually persisted. A form that accepts a
-value and a database that keeps it are two different claims.
+Walks a brand-new player through register → login → level selection → team
+selection → dashboard, then reads the profile back from the API to confirm every
+field — name, email, gender, date of birth, **phone** — actually persisted. A
+form that accepts a value and a database that keeps it are two different claims.
 
 ```bash
 npm --prefix Web run test:e2e:player
@@ -549,7 +590,7 @@ The coach path, which is longer than the player one — a coach is not usable
 until they have a team *and* that team is entered into a competition:
 
 ```
-/coach/register → /coach/login → /coach/create-team → /coach/select-competition → /coach/dashboard
+/coach/register → /coach/login → /coach/create-team → /coach/select-level → /coach/select-competition → /coach/dashboard
 ```
 
 ```bash
