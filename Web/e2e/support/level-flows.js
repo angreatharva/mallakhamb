@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { levelForPlace } from './meets.js';
 
 /**
  * The level chooser, shared by every role's sign-in helper.
@@ -11,23 +12,6 @@ import { expect } from '@playwright/test';
  *
  * @module e2e/support/level-flows
  */
-
-/**
- * The level each seeded meet sits at.
- *
- * MUST match MEETS in Server/scripts/createCompetitions.js, which is the
- * authority — one meet per level, so the chooser has more than one non-empty
- * option to be wrong about. Drift here does not fail loudly: picking the level
- * a meet is NOT at simply finds no competitions, and the run dies on "Nothing
- * at X Level", which reads like missing seed data rather than a stale map.
- *
- * `international` is intentionally absent from both: it is the empty case.
- */
-export const LEVEL_FOR_PLACE = {
-  Mumbai: 'district',
-  Pune: 'state',
-  Nashik: 'national',
-};
 
 /**
  * Choose a level and continue to the competition chooser.
@@ -81,12 +65,5 @@ export const chooseLevel = async (page, role, level, { timeout = 30_000 } = {}) 
  * @param {string} place - e.g. 'Mumbai'
  * @param {{timeout?: number}} [options]
  */
-export const chooseLevelForPlace = async (page, role, place, options) => {
-  const level = LEVEL_FOR_PLACE[place];
-  if (!level) {
-    throw new Error(
-      `No level recorded for "${place}". Add it to LEVEL_FOR_PLACE in e2e/support/level-flows.js.`
-    );
-  }
-  return chooseLevel(page, role, level, options);
-};
+export const chooseLevelForPlace = async (page, role, place, options) =>
+  chooseLevel(page, role, levelForPlace(place), options);

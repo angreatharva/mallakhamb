@@ -1,5 +1,5 @@
 /**
- * The three meets the seeded roster competes in.
+ * The twelve meets the seeded roster competes in — three at each level.
  *
  *   node scripts/createCompetitions.js            # create (idempotent)
  *   node scripts/createCompetitions.js --list     # show what exists, change nothing
@@ -7,19 +7,32 @@
  *   node scripts/createCompetitions.js --force --late   # put the fee deadline in the PAST
  *
  * Nothing else in the setup chain creates a competition. The UI seeding specs
- * all assume one is already there — a coach signing in is sent straight to
- * /coach/select-competition, and with no competition to select the whole chain
- * stops at the first screen. This is the step that was missing.
+ * all assume one is already there — a coach signing in is sent to the level
+ * chooser, and with no competition behind any level the whole chain stops at the
+ * first screen.
+ *
+ * WHERE THE MEETS COME FROM
+ *
+ * `seed/meets.json`, read through `lib/meets.js`. They used to be three entries
+ * hardcoded here, all at `district`, with the place-to-level map copied into the
+ * e2e helpers by hand. Both stacks read the one file now, because drift between
+ * them does not fail loudly: picking the level a meet is not at simply finds no
+ * competitions, and a seeding run dies on "Nothing at X Level", which reads like
+ * missing seed data rather than a stale map.
+ *
+ * Three meets per level, laddered through the season — district in October,
+ * international in December — so the post-login level chooser has a real choice
+ * behind every option rather than one populated level and three empty ones.
  *
  * WHY THE DATES ARE WEEKENDS
  *
- * They are the Saturday/Sunday pairs of December 2026 — 12-13, 19-20, 26-27,
- * verified as actual weekends, not assumed. A meet dated mid-week is not wrong
- * exactly, but it invites date-shaped confusion in a fixture people look at for
- * months, and the competition status rules key off start/end dates: `ongoing` is
- * refused before the start date, and a competition cannot be deleted once it has
- * started. Dates far enough in the future keep every meet in `upcoming`, where
- * all of that is still open.
+ * Every meet starts on a Saturday and ends the Sunday after, and `lib/meets.js`
+ * REFUSES a date that is not a Saturday rather than trusting the file. A meet
+ * dated mid-week is not wrong exactly, but it invites date-shaped confusion in a
+ * fixture people look at for months, and the competition status rules key off
+ * start/end dates: `ongoing` is refused before the start date, and a competition
+ * cannot be deleted once it has started. Dates far enough in the future keep
+ * every meet in `upcoming`, where all of that is still open.
  *
  * WHY THE ADMIN IS ASSIGNED ON BOTH SIDES
  *
@@ -46,10 +59,9 @@ const mongoose = require('mongoose');
 
 const Competition = require('../models/Competition');
 const Admin = require('../models/Admin');
+const { allMeets, readMeets, startDateOf, endDateOf, LEVELS } = require('./lib/meets');
 
-/** Shared by all three meets. Matches what the seeded roster expects. */
-const NAME = 'Bhausaheb Ranade Navodit';
-const YEAR = 2026;
+const { name: NAME, year: YEAR } = readMeets();
 
 /** Both types the panel plan seats judges for. */
 const COMPETITION_TYPES = ['competition_1', 'competition_2'];
@@ -68,30 +80,11 @@ const AGE_GROUPS = ['Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Abov
 const GENDERS = ['Male', 'Female'];
 
 /**
- * The three meets. December 2026 weekends, one per place.
+ * The twelve meets, from `seed/meets.json` — three at each of the four levels.
  *
- * ONE PER LEVEL, deliberately. All three used to be `district`, which made the
- * level a constant across the whole seeded database — so the chooser every role
- * now passes through after sign-in had exactly one non-empty option, and a
- * filter that dropped the wrong meets would have looked identical to one that
- * worked. Spreading them is what gives that screen something to be wrong about.
- *
- * `international` is left unseeded on purpose: it is the empty case, and the
- * "Nothing at this level" state is worth being able to reach by hand.
- *
- * The levels are also what tell the three apart. They share a name and a year,
- * so before this the place was the only distinguishing field.
- *
- * @type {{place: string, startDay: number, level: string}[]}
+ * @type {{place: string, level: string, startDate: string}[]}
  */
-const MEETS = [
-  { place: 'Mumbai', startDay: 12, level: 'district' },
-  { place: 'Pune', startDay: 19, level: 'state' },
-  { place: 'Nashik', startDay: 26, level: 'national' },
-];
-
-/** @param {number} day @returns {Date} midnight UTC on that December day */
-const december = (day) => new Date(Date.UTC(YEAR, 11, day));
+const MEETS = allMeets();
 
 /** Per-athlete penalty for paying after the deadline. */
 const LATE_FEE = 200;
@@ -109,36 +102,30 @@ function yesterdayUtc() {
 }
 
 /**
- * Refuse to build a meet on a weekday.
- *
- * The point of choosing these dates is that they are weekends; asserting it here
- * means a future edit that shifts them cannot quietly undo that.
- *
- * @param {Date} date
- * @param {string} label
+ * The day the base fee stops being enough for one meet.
+ * @param {{startDate: string}} meet
+ * @returns {Date}
  */
-function assertWeekend(date, label) {
-  const day = date.getUTCDay();
-  if (day !== 0 && day !== 6) {
-    throw new Error(
-      `${label} falls on a ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day]}`
-      + ` (${date.toISOString().slice(0, 10)}). The meets are meant to be weekends.`
-    );
-  }
+function feeDeadlineOf(meet) {
+  const due = startDateOf(meet);
+  due.setUTCDate(due.getUTCDate() - FEE_DEADLINE_LEAD_DAYS);
+  return due;
 }
 
 /**
  * The document for one meet.
- * @param {{place: string, startDay: number, level: string}} meet
+ *
+ * The weekend check that used to live here has moved into `lib/meets.js`, which
+ * refuses a non-Saturday when the file is read — so a bad date fails once, up
+ * front, rather than on whichever meet happens to be built first.
+ *
+ * @param {{place: string, level: string, startDate: string}} meet
  * @param {string[]} adminIds
  * @param {boolean} [late] - put the fee deadline in the past, so late fees bite now
  */
 function buildCompetition(meet, adminIds, late = false) {
-  const startDate = december(meet.startDay);
-  const endDate = december(meet.startDay + 1);
-
-  assertWeekend(startDate, `${meet.place} start`);
-  assertWeekend(endDate, `${meet.place} end`);
+  const startDate = startDateOf(meet);
+  const endDate = endDateOf(meet);
 
   const ageGroups = [];
   for (const gender of GENDERS) {
@@ -164,7 +151,7 @@ function buildCompetition(meet, adminIds, late = false) {
     // The fee window. Base fee until a week before the meet; ₹200 per athlete on
     // top of that from then until 23:59 on the closing day.
     registrationOpenDate: registrationOpens(),
-    feeDueDate: late ? yesterdayUtc() : december(meet.startDay - FEE_DEADLINE_LEAD_DAYS),
+    feeDueDate: late ? yesterdayUtc() : feeDeadlineOf(meet),
     lateFee: LATE_FEE,
     editionRef: 'COP Nov 2022',
     admins: adminIds,
@@ -279,13 +266,17 @@ async function main() {
 
   const day = (value) => new Date(value).toISOString().slice(0, 10);
 
+  // Grouped by level, because the level is the first thing every role picks
+  // after signing in — a level with no meet behind it is a dead option.
   console.log('\nMeets:');
-  for (const meet of MEETS) {
-    const start = december(meet.startDay);
-    const end = december(meet.startDay + 1);
-    console.log(
-      `  ${meet.place.padEnd(8)} ${meet.level.padEnd(9)} ${day(start)} (Sat) -> ${day(end)} (Sun)`
-    );
+  for (const level of LEVELS) {
+    const atLevel = MEETS.filter((m) => m.level === level);
+    console.log(`  ${level}${atLevel.length ? '' : '   (none — this level will be empty in the chooser)'}`);
+    for (const meet of atLevel) {
+      console.log(
+        `    ${meet.place.padEnd(12)} ${day(startDateOf(meet))} (Sat) -> ${day(endDateOf(meet))} (Sun)`
+      );
+    }
   }
   // Printed because the level is what every role now picks BEFORE the meet, so
   // a run that leaves an existing database on its old levels should say so.
@@ -300,10 +291,10 @@ async function main() {
   console.log(`  base            ₹500 per athlete, plus any apparatus add-on`);
   console.log(`  opens           ${day(registrationOpens())} — a coach cannot pay before this`);
   for (const meet of MEETS) {
-    const due = late ? yesterdayUtc() : december(meet.startDay - FEE_DEADLINE_LEAD_DAYS);
+    const due = late ? yesterdayUtc() : feeDeadlineOf(meet);
     console.log(
       `  ${meet.place.padEnd(15)} base fee until ${day(due)}`
-      + `, then +₹${LATE_FEE}/athlete until ${day(december(meet.startDay + 1))} 23:59`
+      + `, then +₹${LATE_FEE}/athlete until ${day(endDateOf(meet))} 23:59`
     );
   }
   if (late) {

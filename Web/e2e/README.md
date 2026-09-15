@@ -75,26 +75,30 @@ and the level persists per role in session storage, so the second coach would
 otherwise inherit the first coach's level, skip the screen, and find no card for
 their own meet on the list behind it.
 
-The three seeded meets are **one per level**:
+There are **twelve seeded meets, three at each level**, laddered through the
+season so district runs first and international last:
 
-| Place | Level |
-|---|---|
-| Mumbai | `district` |
-| Pune | `state` |
-| Nashik | `national` |
+| Level | Places | Dates |
+|---|---|---|
+| `district` | Mumbai, Pune, Nashik | Oct 2026 |
+| `state` | Nagpur, Kolhapur, Aurangabad | Oct–Nov 2026 |
+| `national` | Delhi, Bengaluru, Chennai | Nov 2026 |
+| `international` | Goa, Hyderabad, Kolkata | Dec 2026 |
 
-`international` is left unseeded on purpose — it is the empty case, and the
-"Nothing at this level" state is worth being able to reach by hand.
+`Server/scripts/seed/meets.json` is the single authority, **read by both
+stacks** — `Server/scripts/lib/meets.js` creates them, `support/meets.js`
+resolves a place to its level. That seam exists because the map used to be typed
+out on both sides, and drift did not fail loudly: picking the level a meet is
+*not* at simply finds no competitions, so a run died on "Nothing at X Level",
+which reads like missing seed data rather than a stale map.
 
-`MEETS` in `Server/scripts/createCompetitions.js` is the authority;
-`LEVEL_FOR_PLACE` in `support/level-flows.js` mirrors it. **Drift between them
-does not fail loudly**: picking the level a meet is *not* at simply finds no
-competitions, and the run dies on "Nothing at X Level", which reads like missing
-seed data rather than a stale map.
+Both readers validate rather than trust — a date that is not a Saturday, a level
+outside the enum, or a place used twice (identity is name + place + year, so a
+duplicate place is the same competition) fails on read.
 
-An existing database keeps whatever levels it already has —
-`createCompetitions.js` skips meets that exist. Re-run it with `--force` to move
-them onto the levels above.
+An existing database keeps whatever meets it already has —
+`createCompetitions.js` skips ones that exist. Re-run it with `--force` to move
+them onto the dates and levels above.
 
 > **Deciding whether work is still owed: ask the API, never the URL.** Several
 > specs used to read the landing URL to tell a finished account from a stranded
