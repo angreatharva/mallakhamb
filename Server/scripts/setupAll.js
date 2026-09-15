@@ -49,14 +49,19 @@ const WEB_DIR = path.join(__dirname, '..', '..', 'Web');
 /**
  * The chain.
  *
- * `where` matters. The `server` steps talk to MongoDB directly and need nothing
- * running. The `web` steps drive a real browser through the real UI, so they
- * need the API up — but NOT the Vite dev server, which Playwright starts itself
- * (playwright.config.js, `webServer` with `reuseExistingServer: true`).
+ * `where` decides which directory a step runs in. `needsApi` is a SEPARATE
+ * question and the two do not line up: `web` steps drive a real browser against
+ * the real app and obviously need it, but so do two `server` steps — `panels`
+ * seats over the admin API and `pay` redeems over HTTP. Only Mongo-direct steps
+ * need nothing running.
  *
- * So the only thing to start by hand is `npm --prefix Server start`, and the
- * script checks for it before the first `web` step rather than letting
- * Playwright time out two minutes later complaining about a missing element.
+ * They used to be conflated, and the check keyed off `where === 'web'`, so
+ * `--only=pay` against a stopped API failed with a connection error instead of
+ * the one-line "start it" message this exists to give.
+ *
+ * The Vite dev server is never a prerequisite — Playwright starts it itself
+ * (playwright.config.js, `webServer` with `reuseExistingServer: true`). So the
+ * only thing to start by hand is `npm --prefix Server start`.
  */
 const STEPS = [
   {
@@ -86,60 +91,79 @@ const STEPS = [
   {
     id: 'competitions',
     where: 'server',
-    title: 'The three meets',
+    title: 'The twelve meets',
     command: ['node', 'scripts/createCompetitions.js'],
-    why: 'Bhausaheb Ranade Navodit at Mumbai, Pune and Nashik — December 2026 '
-      + 'weekends. Assigns both admin accounts on BOTH sides of the link. '
-      + 'Nothing else in the chain creates a competition, and a coach with no '
-      + 'meet to select cannot get past the first screen. Also sets the fee '
-      + 'window: registration opens 1 Jan, the base fee runs until a week '
-      + 'before each meet, and ₹200 per athlete is added after that.',
+    why: 'Bhausaheb Ranade Navodit at twelve places — three at each of district, '
+      + 'state, national and international, laddered Oct-Dec 2026, from '
+      + 'scripts/seed/meets.json. Assigns both admin accounts on BOTH sides of '
+      + 'the link. Nothing else in the chain creates a competition, and a role '
+      + 'with no meet behind any level cannot get past the level chooser. Also '
+      + 'sets the fee window: registration opens 1 Jan, the base fee runs until a '
+      + 'week before each meet, and ₹200 per athlete is added after that.',
   },
   {
     id: 'coaches',
     where: 'web',
-    title: 'Coaches, teams, and entry',
+    needsApi: true,
+    title: 'Coaches and teams',
     command: ['npm', 'run', 'seed:coaches'],
-    why: 'Registers 3 coaches through the UI, each creating a team and entering '
-      + 'it for MUMBAI. Also captures every request body into '
+    why: 'Registers 20 coaches through the UI, five per level, each creating one '
+      + 'team. Stops at the team — entering a meet costs an entry fee and is the '
+      + '`squads` step. Also captures every request body into '
       + 'scripts/seed/registrations.generated.json.',
   },
   {
     id: 'players',
     where: 'web',
+    needsApi: true,
     title: 'Athletes and team membership',
     command: ['npm', 'run', 'seed:players'],
-    why: '70 athletes register and join their coach\'s team.',
+    why: '274 athletes register and join their coach\'s team. The seventeen '
+      + 'generated squads are twelve each, covering all ten category panels so '
+      + 'no panel is seated with nobody to judge.',
   },
   {
     id: 'judges',
     where: 'web',
+    needsApi: true,
     title: 'Judge accounts',
     command: ['npm', 'run', 'seed:judges'],
-    why: 'Judges register themselves — an admin cannot create a judge login. '
+    why: '16 judges register themselves — an admin cannot create a judge login. '
       + 'Registering leaves them on no panel; seating is the next-but-one step.',
   },
   {
     id: 'squads',
     where: 'web',
-    title: 'Squads',
+    needsApi: true,
+    title: 'Entries and squads',
     command: ['npm', 'run', 'seed:squads'],
-    why: 'Each coach places their athletes into age group, gender and apparatus. '
-      + 'This is what decides whether a judge sees anybody: eligibility is the '
-      + 'squad row, not team membership.',
+    why: 'Each team enters all three meets at its level — 60 entries, five per '
+      + 'meet — and its athletes are placed into age group, gender and apparatus '
+      + 'for each. This is what decides whether a judge sees anybody: eligibility '
+      + 'is the squad row, not team membership. THE LONGEST STEP BY FAR: sixty '
+      + 'squads through an eight-interaction modal each. Narrow it with '
+      + 'LEVEL=state or PLACE=Pune and re-run — every test is independent.',
   },
   {
     id: 'panels',
-    where: 'web',
+    where: 'server',
+    needsApi: true,
     title: 'Judging panels',
     command: ['npm', 'run', 'seed:panels'],
-    why: 'The admin seats judges on every category, to the sizes fixed in '
-      + 'scripts/seed/panel-plan.json. A panel missing any of Senior Judge, '
-      + 'Judge 1, Judge 2 or Scorer is refused.',
+    why: 'Seats judges on every category of every meet, to the sizes fixed in '
+      + 'scripts/seed/panel-plan.json. District keeps its frozen sizes and seats '
+      + '(the scoring specs run against one); the other nine meets were drawn. '
+      + 'A panel missing any of Senior Judge, Judge 1, Judge 2 or Scorer is '
+      + 'refused. Over the admin API rather than the admin SCREEN: twelve meets '
+      + 'is 120 panels, and the Manage Judges ladder is five dropdowns per one. '
+      + '`npm --prefix Web run seed:panels` still does it through the browser, '
+      + 'from the same plan, when that is what you want to exercise. Needs '
+      + 'SEED_ADMIN_PASSWORD in .env (the API must be running either way).',
   },
   {
     id: 'pay',
     where: 'server',
+    needsApi: true,
     title: 'Final submission and payment',
     command: ['npm', 'run', 'pay:discount'],
     why: 'A team reaches a judge only once the coach has final-submitted AND paid. '
@@ -269,40 +293,44 @@ async function main() {
   if (args.list) {
     line('\nSteps:\n');
     for (const [i, step] of STEPS.entries()) {
-      line(`  ${i + 1}. ${step.id.padEnd(13)} [${step.where}] ${step.title}`);
+      const needs = step.needsApi ? ' (needs the API running)' : '';
+      line(`  ${i + 1}. ${step.id.padEnd(13)} [${step.where}]${needs} ${step.title}`);
       line(`     ${step.why.replace(/\s+/g, ' ')}`);
       line('');
     }
-    line('The API must be running before the [web] steps: npm --prefix Server start');
+    line('Start the API before any step marked "needs the API": npm --prefix Server start');
     line('Vite is started by Playwright itself — you do not need to run it.');
     line('Part 2 (judging) is: npm --prefix Server run seed:scores  (or --prefix Web, through the browser)');
     return;
   }
 
   const steps = selectSteps(args);
-  const needsWeb = steps.some((s) => s.where === 'web');
+  const apiSteps = steps.filter((s) => s.needsApi);
 
   /*
    * The one thing this script cannot do for you.
    *
-   * The `web` steps drive a real browser against the real app, so both servers
-   * have to be up. Starting them from here would mean owning two long-lived
-   * child processes and their shutdown, which is a worse job than asking.
-   */
-  /*
+   * Starting the API from here would mean owning a long-lived child process and
+   * its shutdown, which is a worse job than asking.
+   *
+   * Keyed off `needsApi`, NOT off `where === 'web'`. Two server-side steps talk
+   * to the running API — `panels` seats over the admin API and `pay` redeems
+   * over HTTP — so the old check let `--only=pay` through to fail on a
+   * connection error instead of the message below.
+   *
    * Only the API has to be started by hand. Playwright brings up Vite itself.
    */
-  if (needsWeb && !args.dryRun) {
+  if (apiSteps.length > 0 && !args.dryRun) {
     const port = process.env.PORT || 5000;
     const up = await apiIsUp(port);
 
     if (!up) {
-      line(`\n  The API is not answering on port ${port}, and ${steps.filter((s) => s.where === 'web').length}`
-        + ' of these steps drive the real UI against it.');
+      line(`\n  The API is not answering on port ${port}, and ${apiSteps.length}`
+        + ` of these steps need it (${apiSteps.map((s) => s.id).join(', ')}).`);
       line('\n  Start it in another terminal, then run this again:');
       line('    npm --prefix Server start');
       line('\n  (The Vite dev server does NOT need starting — Playwright does that.)');
-      line('\n  Or run just the server-side steps now:');
+      line('\n  Or run just the steps that need nothing running:');
       line('    npm --prefix Server run setup -- --to=competitions');
       process.exit(1);
     }
@@ -348,9 +376,11 @@ async function main() {
   line(`Part 1 complete — ${done.length} step(s): ${done.join(', ')}`);
   line(`${'='.repeat(72)}`);
   line('\nWhere this leaves you:');
-  line('  3 coaches with teams entered for Mumbai');
-  line('  70 athletes, placed into squads by age group, gender and apparatus');
-  line('  7 judges registered and seated across every category');
+  line('  12 meets — three each at district, state, national and international');
+  line('  20 coaches with one team apiece, five per level');
+  line('  60 entries — every team in all three meets at its level, five per meet');
+  line('  274 athletes, placed into squads by age group, gender and apparatus');
+  line('  16 judges registered and seated across every category of every meet');
   line('  every team final-submitted and paid, so the judges can see them');
   line('');
   line('ABOUT THAT PAYMENT:');
