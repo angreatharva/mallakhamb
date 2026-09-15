@@ -39,10 +39,13 @@
  */
 
 import { COACH_ROSTER } from './coach-roster.js';
-import { derive, fullName, onlyMatching, validateRoster } from './people.js';
+import { agedExactly, derive, fullName, onlyMatching, validateRoster } from './people.js';
+import { GENERATED_ENTRIES } from './roster-generated.js';
 
 /**
- * A date of birth for somebody who is exactly `years` old TODAY.
+ * `agedExactly` lives in people.js now, shared with the generated roster so both
+ * halves age the same way. The reasoning, kept here because this is where it was
+ * learned:
  *
  * These used to be literal dates, and that made the roster a time bomb. The
  * coach dashboard offers an age group only when the athlete's CURRENT age fits
@@ -56,19 +59,7 @@ import { derive, fullName, onlyMatching, validateRoster } from './people.js';
  *
  * Six months back into the year makes them solidly `years` old — far from either
  * birthday boundary, so the same fixture works whatever day it is run.
- *
- * @param {number} years - the age this athlete is meant to be
- * @returns {string} yyyy-mm-dd
  */
-function agedExactly(years) {
-  const today = new Date();
-  const born = new Date(Date.UTC(
-    today.getUTCFullYear() - years,
-    today.getUTCMonth() - 6,
-    15
-  ));
-  return born.toISOString().slice(0, 10);
-}
 
 /**
  * @typedef {Object} RosterEntry
@@ -221,8 +212,19 @@ const APPARATUS_DEFAULT = (entry) => {
   return entry.gender === 'Female' ? ['Rope Mallakhamb'] : ['Pole Mallakhamb'];
 };
 
-/** @type {(RosterEntry & {email: string, password: string, apparatus: string[]})[]} */
-export const ROSTER = derive(ENTRIES).map((entry) => ({
+/**
+ * Everyone: the hand-written SGAM squads, then the generated squads for the
+ * other seventeen teams.
+ *
+ * The generated half is built in `roster-generated.js` and joins here rather
+ * than staying separate, so every check below — apparatus, age group, email
+ * collisions, the team cross-check against coach-roster — runs over ALL of
+ * them. A second roster with its own copy of those checks is how one of them
+ * ends up not being applied to half the athletes.
+ *
+ * @type {(RosterEntry & {email: string, password: string, apparatus: string[]})[]}
+ */
+export const ROSTER = derive([...ENTRIES, ...GENERATED_ENTRIES]).map((entry) => ({
   ...entry,
   apparatus: entry.apparatus || APPARATUS_DEFAULT(entry),
 }));

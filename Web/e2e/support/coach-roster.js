@@ -7,7 +7,8 @@
  * A coach owns a team, and team names are shared across the app, so each entry
  * names the team it should create. The spec registers the coach and creates
  * that team; registering the team for a competition is a separate step with its
- * own money and deadlines, and is deliberately NOT automated here.
+ * own money and deadlines, and is deliberately NOT automated here —
+ * `build-squads.spec.js` does that.
  *
  * Phone numbers were generated randomly, once, and written down. A seed file
  * whose contents change every run cannot be re-run against an existing
@@ -17,6 +18,7 @@
  */
 
 import { derive, onlyMatching, validateRoster } from './people.js';
+import { LEVELS, meetsAtLevel } from './meets.js';
 
 /**
  * @typedef {Object} CoachEntry
@@ -24,17 +26,29 @@ import { derive, onlyMatching, validateRoster } from './people.js';
  * @property {string} lastName
  * @property {string} phone            10-digit Indian mobile, leading 6-9
  * @property {string} teamName         the team this coach creates
+ * @property {string} level            which level's meets this team enters
  * @property {string} [teamDescription]
  */
 
 /**
- * One coach per team the player roster uses.
+ * Five coaches, and so five teams, at each of the four levels.
  *
- * The team names are not free choice: `roster.js` puts 70 players into SGAM-A,
- * SGAM-B and SGAM-C, and a player can only join a team that exists. Seeding
- * coaches who create differently-named teams leaves every player run failing on
- * "No team named SGAM-A was offered" — so the two rosters are cross-checked at
- * the bottom of roster.js.
+ * ONE COACH PER TEAM. A coach can technically own several — `Team` is unique on
+ * (name, coach) — but `Coach.team` only ever points at the last one created,
+ * and the competition chooser reads `teams[0]`. So a coach with two teams has
+ * one the UI cannot reach, which is a fixture that looks complete and behaves
+ * oddly.
+ *
+ * `level` is what binds a team to meets. Each team enters ALL THREE meets at its
+ * own level, which is what gets five teams into every one of the twelve
+ * competitions without needing sixty distinct squads and the ~720 athletes that
+ * would take through the browser. A team entering several meets is a supported
+ * path, not a shortcut: `registerTeam` only refuses a duplicate entry into the
+ * SAME competition.
+ *
+ * Levels are also why the clubs are named in four families — a district club
+ * appearing at an international meet is exactly the kind of detail that makes a
+ * fixture read as fake.
  *
  * Mayur Pashte appears here, on the player roster and on the judge roster, and
  * that is intentional rather than a collision. Each role is a separate
@@ -47,14 +61,83 @@ import { derive, onlyMatching, validateRoster } from './people.js';
  * @type {CoachEntry[]}
  */
 const ENTRIES = [
-  { firstName: 'Rajesh', lastName: 'Amrale', phone: '9146708325', teamName: 'SGAM-A', teamDescription: 'SGAM Team A' },
-  { firstName: 'Naresh', lastName: 'Jadhav', phone: '7028915463', teamName: 'SGAM-B', teamDescription: 'SGAM Team B' },
-  { firstName: 'Mayur', lastName: 'Pashte', phone: '8390612774', teamName: 'SGAM-C', teamDescription: 'SGAM Team C' },
+  // ── district — Shivaji Gymkhana Akhada Mandal ─────────────────────────────
+  // The three that predate the other levels. Registered by hand before this
+  // file existed, which is why the player roster's 70 athletes all belong to
+  // them; the seeder skips accounts that already exist, so re-running is safe.
+  { firstName: 'Rajesh', lastName: 'Amrale', phone: '9146708325', teamName: 'SGAM-A', level: 'district', teamDescription: 'SGAM Team A' },
+  { firstName: 'Naresh', lastName: 'Jadhav', phone: '7028915463', teamName: 'SGAM-B', level: 'district', teamDescription: 'SGAM Team B' },
+  { firstName: 'Mayur', lastName: 'Pashte', phone: '8390612774', teamName: 'SGAM-C', level: 'district', teamDescription: 'SGAM Team C' },
+  { firstName: 'Sandeep', lastName: 'Kulkarni', phone: '9822417305', teamName: 'SGAM-D', level: 'district', teamDescription: 'SGAM Team D' },
+  { firstName: 'Vikram', lastName: 'Bhosale', phone: '7719503284', teamName: 'SGAM-E', level: 'district', teamDescription: 'SGAM Team E' },
+
+  // ── state — Maharashtra State Akhada Mandal ───────────────────────────────
+  { firstName: 'Ganesh', lastName: 'Deshmukh', phone: '9834126750', teamName: 'MSAM-A', level: 'state', teamDescription: 'MSAM Team A' },
+  { firstName: 'Prakash', lastName: 'Salunkhe', phone: '8605731942', teamName: 'MSAM-B', level: 'state', teamDescription: 'MSAM Team B' },
+  { firstName: 'Nilesh', lastName: 'Gaikwad', phone: '7020648153', teamName: 'MSAM-C', level: 'state', teamDescription: 'MSAM Team C' },
+  { firstName: 'Sachin', lastName: 'More', phone: '9145283760', teamName: 'MSAM-D', level: 'state', teamDescription: 'MSAM Team D' },
+  { firstName: 'Anil', lastName: 'Chavan', phone: '8149735026', teamName: 'MSAM-E', level: 'state', teamDescription: 'MSAM Team E' },
+
+  // ── national — National Institute of Mallakhamb ───────────────────────────
+  { firstName: 'Deepak', lastName: 'Rane', phone: '9028561473', teamName: 'NIMA-A', level: 'national', teamDescription: 'NIMA Team A' },
+  { firstName: 'Sunil', lastName: 'Thorat', phone: '7385204916', teamName: 'NIMA-B', level: 'national', teamDescription: 'NIMA Team B' },
+  { firstName: 'Kiran', lastName: 'Pawar', phone: '9673810542', teamName: 'NIMA-C', level: 'national', teamDescription: 'NIMA Team C' },
+  { firstName: 'Hemant', lastName: 'Nikam', phone: '8975326104', teamName: 'NIMA-D', level: 'national', teamDescription: 'NIMA Team D' },
+  { firstName: 'Ashok', lastName: 'Bhagat', phone: '7040195862', teamName: 'NIMA-E', level: 'national', teamDescription: 'NIMA Team E' },
+
+  // ── international — International Mallakhamb Sports Academy ───────────────
+  { firstName: 'Rohit', lastName: 'Vaidya', phone: '9762014835', teamName: 'IMSA-A', level: 'international', teamDescription: 'IMSA Team A' },
+  { firstName: 'Sameer', lastName: 'Kale', phone: '8329471605', teamName: 'IMSA-B', level: 'international', teamDescription: 'IMSA Team B' },
+  { firstName: 'Jitendra', lastName: 'Wagh', phone: '7016482953', teamName: 'IMSA-C', level: 'international', teamDescription: 'IMSA Team C' },
+  { firstName: 'Pravin', lastName: 'Sawant', phone: '9890357214', teamName: 'IMSA-D', level: 'international', teamDescription: 'IMSA Team D' },
+  { firstName: 'Amit', lastName: 'Lokhande', phone: '8446120973', teamName: 'IMSA-E', level: 'international', teamDescription: 'IMSA Team E' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);
 
 validateRoster(COACH_ROSTER, { label: 'Coach roster' });
+
+/**
+ * Every level must have meets to enter and teams to enter them.
+ *
+ * Checked at import so a half-finished edit fails here, naming the level, rather
+ * than two steps later as an empty competition list on a chooser — which reads
+ * as a broken app rather than as a roster that is short a team.
+ */
+const TEAMS_PER_LEVEL = 5;
+for (const level of LEVELS) {
+  const teams = COACH_ROSTER.filter((c) => c.level === level);
+  if (teams.length < TEAMS_PER_LEVEL) {
+    throw new Error(
+      `Coach roster: "${level}" has ${teams.length} team(s); every level needs at least ${TEAMS_PER_LEVEL}. ` +
+      'Each team enters all three meets at its level, so this is what puts five teams in every competition.'
+    );
+  }
+  if (meetsAtLevel(level).length === 0) {
+    throw new Error(
+      `Coach roster: "${level}" has ${teams.length} team(s) but no meets to enter. ` +
+      'Add meets at that level to Server/scripts/seed/meets.json.'
+    );
+  }
+}
+
+const unknownLevel = COACH_ROSTER.find((c) => !LEVELS.includes(c.level));
+if (unknownLevel) {
+  throw new Error(
+    `Coach roster: ${unknownLevel.teamName} has level "${unknownLevel.level}", ` +
+    `which is not one of ${LEVELS.join(', ')}.`
+  );
+}
+
+/** Which meets a team enters — all three at its own level. */
+export const meetsForTeam = (teamName) => {
+  const coach = COACH_ROSTER.find((c) => c.teamName === teamName);
+  if (!coach) throw new Error(`No coach owns a team called "${teamName}".`);
+  return meetsAtLevel(coach.level);
+};
+
+/** Every team name, in roster order. */
+export const TEAM_NAMES = COACH_ROSTER.map((c) => c.teamName);
 
 /** The coaches to seed this run — all of them, or `ONLY=<name>`. */
 export const selectedCoaches = () => onlyMatching(COACH_ROSTER);

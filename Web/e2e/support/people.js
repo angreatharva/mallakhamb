@@ -23,6 +23,34 @@ export const passwordFor = ({ firstName }) => `${firstName}@2026`;
 export const fullName = ({ firstName, lastName }) => `${firstName} ${lastName}`;
 
 /**
+ * A date of birth that makes someone exactly this old today.
+ *
+ * Relative rather than fixed, because the roster is read months after it is
+ * written and the age groups have hard bands — a literal birth date drifts an
+ * athlete out of Under 14 on their birthday and the coach dashboard then
+ * refuses the squad row with no explanation of what changed.
+ *
+ * Six months back so nobody sits on a band boundary: an athlete who turns the
+ * band age today is in one group in the morning and another after midnight, and
+ * that is not a fixture anyone should have to debug.
+ *
+ * Shared by the hand-written roster and the generated one so both age the same
+ * way.
+ *
+ * @param {number} years - the age this person is meant to be
+ * @returns {string} yyyy-mm-dd
+ */
+export function agedExactly(years) {
+  const today = new Date();
+  const born = new Date(Date.UTC(
+    today.getUTCFullYear() - years,
+    today.getUTCMonth() - 6,
+    15
+  ));
+  return born.toISOString().slice(0, 10);
+}
+
+/**
  * Attach the derived fields to a list of people.
  * @template {{firstName: string, lastName: string}} T
  * @param {T[]} entries
