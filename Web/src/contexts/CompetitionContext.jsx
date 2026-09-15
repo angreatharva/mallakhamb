@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getTokenData } from '@/utils/auth/tokenUtils.js';
 import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { logger } from '@/infrastructure/logger.js';
@@ -20,6 +21,19 @@ export const CompetitionProvider = ({ children, userType }) => {
   useEffect(() => {
     logger.info('CompetitionProvider initialized', { userType });
   }, [userType]);
+
+  /*
+   * Where the user is RIGHT NOW, read through a ref.
+   *
+   * Only the auto-select below uses it, and it has to be the value at the
+   * moment that decision is taken rather than at the moment the effect was
+   * scheduled — the two are seconds apart, and what happens in between is the
+   * user walking onto the chooser. A ref, not a dependency: adding location to
+   * the effect's deps would re-fetch the assigned list on every navigation.
+   */
+  const location = useLocation();
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
 
   // Synchronously restore the last-selected competition from storage so the
   // navbar never flashes "Select" while the async fetch is in flight.
@@ -339,7 +353,35 @@ export const CompetitionProvider = ({ children, userType }) => {
 
         // No competition in JWT: auto-select when exactly one assigned
         if (!getCompetitionFromToken()) {
-          if (competitions.length === 1) {
+          /*
+           * NOT WHILE THE USER IS CHOOSING.
+           *
+           * `/auth/set-competition` does not merely return a token — it sets the
+           * httpOnly access-token COOKIE, and `auth.middleware` trusts the
+           * cookie ABOVE the Authorization header. So this call re-scopes the
+           * whole session server-side, and no amount of care with what the
+           * client stores can undo that.
+           *
+           * It fires when exactly one meet is assigned, which for a coach is
+           * precisely the moment they are entering their second: they hold one
+           * entry and are standing on the chooser picking another. It raced
+           * their choice and won, because it set a cookie that outranks
+           * everything, and every squad place they then added was written to
+           * the meet they had just left. It cost the second meet of every level
+           * — in a twelve-meet seed, four silent losses with nothing failing.
+           *
+           * Auto-select exists so somebody with ONE meet does not have to pick
+           * it. On a screen whose entire purpose is picking, that convenience
+           * is not just unnecessary, it is the bug.
+           */
+          const choosing = /\/select-(level|competition)$/.test(pathnameRef.current);
+
+          if (choosing) {
+            logger.info('Skipping auto-select — the user is on the chooser', {
+              path: pathnameRef.current,
+            });
+            setCurrentCompetition(null);
+          } else if (competitions.length === 1) {
             const competition = competitions[0];
             logger.info('Auto-selecting single competition', {
               competitionId: competition._id,
@@ -351,23 +393,14 @@ export const CompetitionProvider = ({ children, userType }) => {
               const response = await authAPI.setCompetition(competition._id);
 
               /*
-               * Re-check AFTER the round trip, and yield to an explicit choice.
+               * Defence in depth for the paths the chooser check above does not
+               * cover: a competitionId present now means somebody chose while
+               * this was in flight, and a deliberate choice always beats a
+               * convenience default.
                *
-               * This auto-select fires only when exactly ONE meet is assigned,
-               * which for a coach is exactly the moment they are entering their
-               * SECOND — they hold one entry and are choosing another. The user
-               * picks a meet while this request is still in flight, and the two
-               * writes race for the same storage key. This one wrote last, so
-               * the session silently reverted to the meet they had just left.
-               *
-               * Nothing surfaced: the screen showed the new meet, the token
-               * carried the old one, and every write after it went to the wrong
-               * competition. It cost four meets' worth of squads in a seeding
-               * run before the counts gave it away — the entries were there and
-               * the athletes were not.
-               *
-               * A competitionId present now means somebody chose deliberately,
-               * and a deliberate choice always beats a convenience default.
+               * Note this can only protect what the CLIENT stores. The cookie
+               * the request just set is already there either way, which is why
+               * not making the request is the actual fix.
                */
               if (!isMounted) return;
               if (getCompetitionFromToken()) {
