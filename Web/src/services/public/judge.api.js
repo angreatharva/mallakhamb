@@ -56,6 +56,17 @@ export const judgeAPI = {
   getAssignments: () => api.get('/judge/assignments'),
 
   /**
+   * The judge's own meets, as full competition documents.
+   *
+   * Distinct from `getCompetitions` below, which is the PUBLIC list of every
+   * competition — that one is anonymous and says nothing about who is seated
+   * where. This is the judge's panel assignments resolved to the competitions
+   * behind them, and it is what the level and competition choosers filter, so
+   * a judge is never offered a meet they hold no seat at.
+   */
+  getAssignedCompetitions: () => api.get('/judge/competitions'),
+
+  /**
    * Switch the judge's active meet.
    *
    * Returns `{ token, competition }`: a token carrying the new competition

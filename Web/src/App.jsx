@@ -35,7 +35,16 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/superadmin');
   const isHomePage = location.pathname === '/';
   const isPublicScores = location.pathname === '/scores';
-  const isCompetitionSelectionPage = location.pathname === '/coach/select-competition';
+  /*
+   * The two post-login chooser screens, for every role. Both own the full
+   * viewport and carry their own "go back" affordances, so the navbar — which
+   * includes a competition picker of its own — would be offering a second,
+   * contradictory way to do the thing the page is already asking for.
+   *
+   * Matched by suffix rather than by the one hardcoded coach path this
+   * replaced, which left the navbar showing on the other six.
+   */
+  const isSelectionPage = /\/select-(level|competition)$/.test(location.pathname);
   const isLoginPage = location.pathname.includes('/login');
   const isRegisterPage = location.pathname.includes('/register');
   const isForgotPasswordPage = location.pathname.includes('/forgot-password') || location.pathname.includes('/reset-password');
@@ -43,7 +52,7 @@ function AppContent() {
   const isJudgeRoute = location.pathname.startsWith('/judge');
 
   const shouldHideNavbar =
-    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isCompetitionSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
+    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
 
   return (
     <CompetitionProvider userType={userType}>

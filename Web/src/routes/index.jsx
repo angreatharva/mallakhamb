@@ -5,6 +5,7 @@ import ProtectedRoute from '@/middleware/protected-route';
 import RouteContext from '@/contexts/RouteContext';
 import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
+import LevelSelectionScreen from '@/components/competition/LevelSelectionScreen';
 import {
   Home,
   PlayerLogin,
@@ -141,6 +142,15 @@ export default function AppRoutes() {
         <Route path="/player/login" element={<PlayerLogin />} />
         <Route path="/player/register" element={<UnifiedRegister />} />
         <Route path="/player" element={<PlayerLayout />}>
+          {/*
+            * Level, then competition, then team. Team selection sits AFTER the
+            * competition on purpose: a squad only means anything inside a meet,
+            * and the endpoint behind it (`/players/teams/available`) already
+            * takes a competitionId — without one it falls back to listing teams
+            * across every open competition at once.
+            */}
+          <Route path="select-level" element={<LevelSelectionScreen userType="player" />} />
+          <Route path="select-competition" element={<CompetitionSelectionScreen userType="player" />} />
           <Route path="select-team" element={<PlayerTeamSelection />} />
           <Route path="dashboard" element={<PlayerDashboard />} />
         </Route>
@@ -151,6 +161,7 @@ export default function AppRoutes() {
         <Route path="/coach/register" element={<UnifiedRegister />} />
         <Route path="/coach" element={<CoachLayout />}>
           <Route path="create-team" element={<CoachCreateTeam />} />
+          <Route path="select-level" element={<LevelSelectionScreen userType="coach" />} />
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
           <Route path="dashboard" element={<CoachDashboard />} />
           <Route path="payment" element={<CoachPayment />} />
@@ -161,6 +172,14 @@ export default function AppRoutes() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin" element={<AdminLayout />}>
+          {/*
+            * Both steps are real routes now. Competition selection used to be
+            * component state inside UnifiedLogin (`showCompetitionSelection`),
+            * so it had no URL, could not be reloaded, and could not be reached
+            * again without signing out.
+            */}
+          <Route path="select-level" element={<LevelSelectionScreen userType="admin" />} />
+          <Route path="select-competition" element={<CompetitionSelectionScreen userType="admin" onCompetitionSelected={() => {}} />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="dashboard/:tab" element={<AdminDashboard />} />
           <Route path="teams" element={<AdminTeams />} />
@@ -172,6 +191,14 @@ export default function AppRoutes() {
         <Route path="/judge/login" element={<JudgeLogin />} />
         <Route path="/judge/register" element={<UnifiedRegister />} />
         <Route path="/judge" element={<JudgeLayout />}>
+          {/*
+            * Judges used to land on the dashboard straight from login, with the
+            * meet picked silently from their first panel seat. These two steps
+            * make that choice explicit — and a judge with seats at more than one
+            * meet no longer has the first one chosen for them.
+            */}
+          <Route path="select-level" element={<LevelSelectionScreen userType="judge" />} />
+          <Route path="select-competition" element={<CompetitionSelectionScreen userType="judge" />} />
           <Route path="dashboard" element={<JudgeDashboard />} />
           <Route path="profile" element={<JudgeProfile />} />
           <Route path="team/:teamId" element={<JudgeTeamPlayers />} />
