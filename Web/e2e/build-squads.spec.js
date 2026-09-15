@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
-import { COACH_ROSTER } from './support/coach-roster.js';
+import { COACH_ROSTER, meetsForTeam } from './support/coach-roster.js';
+import { MEET_NAME, MEET_YEAR } from './support/meets.js';
 import { ROSTER } from './support/roster.js';
-import { coachHasEntry, coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
+import {
+  coachEnteredPlaces,
+  coachSignIn,
+  registerTeamForCompetition,
+  selectCompetition,
+} from './support/coach-flows.js';
 import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
 
 /**
@@ -15,10 +21,19 @@ import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
  * group, apparatus) inside one competition's registration.
  *
  * ```bash
- * npm --prefix Web run seed:squads
- * TEAM=SGAM-A npm --prefix Web run seed:squads
+ * npm --prefix Web run seed:squads              # all 60: 20 teams × 3 meets each
+ * LEVEL=state npm --prefix Web run seed:squads  # one level's 15
+ * PLACE=Pune npm --prefix Web run seed:squads   # one meet's 5
+ * TEAM=SGAM-A npm --prefix Web run seed:squads  # one team's 3
  * npm --prefix Web run seed:squads:headed
  * ```
+ *
+ * THE FULL RUN IS HOURS, and the narrowing above is why it is worth knowing
+ * that. Every team enters all three meets at its level, and a squad place
+ * belongs to ONE competition registration — so twenty teams produce sixty
+ * squads, each built one athlete at a time through an eight-interaction modal.
+ * Each test is independent and re-running finishes what is outstanding, so this
+ * can be done a level at a time.
  *
  * Runs after the three registration specs and needs all of them:
  *
@@ -44,13 +59,6 @@ import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
  * the form actually sent, rather than a hand-written description of it.
  */
 
-const PLACE = process.env.COMPETITION_PLACE || 'Mumbai';
-const COMPETITION = {
-  name: process.env.COMPETITION_NAME || 'Bhausaheb Ranade Navodit',
-  place: PLACE,
-  year: Number(process.env.COMPETITION_YEAR || 2026),
-};
-
 /** `TEAM=SGAM-A` narrows a re-run to one squad. */
 const teamsToBuild = () => {
   const only = process.env.TEAM;
@@ -63,34 +71,74 @@ const teamsToBuild = () => {
   return coaches;
 };
 
+/**
+ * Which of a team's meets to build this run.
+ *
+ * `LEVEL=state` and `PLACE=Pune` narrow it, because the full run is 60 squads —
+ * every team at all three meets of its level — and that is hours of modal
+ * interactions. Narrowing lets it be done a level at a time; each test is
+ * independent and re-running finishes what is outstanding.
+ */
+const meetsToBuild = (coach) => {
+  const level = process.env.LEVEL;
+  const place = process.env.PLACE;
+
+  let meets = meetsForTeam(coach.teamName);
+  if (level) meets = meets.filter((m) => m.level === level);
+  if (place) meets = meets.filter((m) => m.place === place);
+  return meets;
+};
+
 for (const coach of teamsToBuild()) {
   const squad = ROSTER.filter((p) => p.teamName === coach.teamName);
 
-  test(`${coach.teamName}: enter ${COMPETITION.place} and build a squad of ${squad.length}`, async ({ page }) => {
+  /*
+   * One test per (team, meet).
+   *
+   * A squad place belongs to ONE competition registration — it is
+   * (athlete, gender, age group, apparatus) inside a meet's `registeredTeams` —
+   * so a team entered at three meets needs its squad built three times. There is
+   * no "copy last meet's squad" anywhere in the product, and inventing one here
+   * would seed a shape the app cannot produce.
+   *
+   * Separate tests rather than a loop inside one so a meet that fails does not
+   * take the other two with it, and so `--grep` can re-run just that one.
+   */
+  for (const meet of meetsToBuild(coach)) {
+    const COMPETITION = { name: MEET_NAME, place: meet.place, year: MEET_YEAR };
+
+    test(`${coach.teamName}: enter ${meet.place} (${meet.level}) and build a squad of ${squad.length}`, async ({ page }) => {
     // Sixty athletes through a modal is a long run; the timeout is per squad.
     test.setTimeout(60_000 + squad.length * 20_000);
     const errors = watchConsole(page);
 
     await page.goto('/coach/login');
     await clearSession(page);
-    await coachSignIn(page, { ...coach, ...COMPETITION, competitionName: COMPETITION.name, competitionPlace: COMPETITION.place });
+    await coachSignIn(page, coach);
 
     /*
-     * Asked of the API, not read off the URL. Sign-in lands every coach on
-     * /coach/select-level now, entered or not, so the old check for
-     * /coach/select-competition never fired — and entering a team is a PAID
-     * act, so "did this already happen?" cannot be guessed from where we
-     * landed.
+     * Asked of the API, and asked about THIS meet.
+     *
+     * Two things the landing URL cannot answer. Sign-in lands every coach on
+     * /coach/select-level whether or not they are entered anywhere, so the old
+     * check for /coach/select-competition never fires. And a team now enters
+     * three meets, so "is this coach entered at all" is the wrong question —
+     * a coach entered at Mumbai but not Pune answers yes to it, and the two
+     * entries still owed would be skipped.
+     *
+     * Entering is a PAID act, so this has to be known rather than guessed.
      */
-    if (!(await coachHasEntry(page))) {
+    const entered = await coachEnteredPlaces(page);
+    if (!entered.has(meet.place)) {
       await registerTeamForCompetition(page, {
         ...coach,
         competitionName: COMPETITION.name,
         competitionPlace: COMPETITION.place,
       });
-      captureEntry(coach.email, coach.teamName, COMPETITION);
     } else {
-      await page.goto('/coach/dashboard');
+      // Already entered, but the dashboard may be showing a different meet —
+      // the squad below is read and written against whichever one is selected.
+      await selectCompetition(page, meet.place);
     }
     await expect(page).toHaveURL(/\/coach\/dashboard/, { timeout: 20_000 });
     captureEntry(coach.email, coach.teamName, COMPETITION);
@@ -134,6 +182,10 @@ for (const coach of teamsToBuild()) {
       ).toContain(`${player.firstName} ${player.lastName}`);
     }
 
-    expect(errors, `Console errors while building ${coach.teamName}:\n${errors.join('\n')}`).toEqual([]);
-  });
+    expect(
+      errors,
+      `Console errors while building ${coach.teamName} at ${meet.place}:\n${errors.join('\n')}`
+    ).toEqual([]);
+    });
+  }
 }

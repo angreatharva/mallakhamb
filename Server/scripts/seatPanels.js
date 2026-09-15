@@ -52,7 +52,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, seatsFor } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -104,30 +104,34 @@ async function seatedIn(competition, { gender, ageGroup }) {
 const vacate = (judgeId, csrfToken, competitionId) =>
   call(`/admin/judges/${judgeId}`, { method: 'DELETE', csrfToken, competitionId });
 
-async function seatAll() {
-  const { place, only, dryRun } = parseArgs(process.argv.slice(2));
-  const plan = readPlan();
-  const meetPlace = place || plan.place;
-
+/**
+ * Seat every panel at ONE meet.
+ *
+ * @param {Object} meetPlan - one entry from the plan's `meets`
+ * @param {Object} plan - the whole plan, for competitionTypes and provenance
+ * @param {string} csrfToken
+ * @param {{only: string|null, dryRun: boolean}} options
+ * @returns {Promise<number>} how many panels failed
+ */
+async function seatMeet(meetPlan, plan, csrfToken, { only, dryRun }) {
   for (const seat of REQUIRED_SEATS) {
-    if (!plan.seats[seat]) throw new Error(`The plan is missing the required seat "${seat}"`);
+    if (!meetPlan.seats[seat]) {
+      throw new Error(`${meetPlan.place} is missing the required seat "${seat}"`);
+    }
   }
 
-  const csrfToken = await signInAsAdmin('seatPanels.js');
+  const competition = await findCompetition(meetPlan.place);
+  console.log(`\n🏆 ${competition.name} — ${competition.place} ${competition.year} [${meetPlan.level}]`);
 
-  const competition = await findCompetition(meetPlace);
-  console.log(`🏆 ${competition.name} — ${competition.place} ${competition.year}`);
-  console.log(`📋 Plan drawn ${plan.generatedAt} (seed ${plan.seed})\n`);
-
-  const accountId = await resolveSeatAccounts(plan.seats);
-  for (const [seat, email] of Object.entries(plan.seats)) {
+  const accountId = await resolveSeatAccounts(meetPlan.seats);
+  for (const [seat, email] of Object.entries(meetPlan.seats)) {
     console.log(`   ${seat.padEnd(13)} ${email}`);
   }
   console.log();
 
   const wanted = only
-    ? plan.panels.filter((p) => `${p.gender}/${p.ageGroup}` === only)
-    : plan.panels;
+    ? meetPlan.panels.filter((p) => `${p.gender}/${p.ageGroup}` === only)
+    : meetPlan.panels;
   if (wanted.length === 0) throw new Error(`--only=${only} matched no panel in the plan`);
 
   const summary = [];
@@ -214,13 +218,58 @@ async function seatAll() {
     }
   }
 
-  console.log('\n📋 Panels');
+  console.log(`\n📋 ${meetPlan.place} panels`);
   console.table(summary);
 
   const bySize = wanted.reduce((acc, p) => ({ ...acc, [p.size]: (acc[p.size] || 0) + 1 }), {});
   console.log(`Panel sizes: ${Object.entries(bySize).sort().map(([s, n]) => `${n}×${s}-judge`).join(', ')}`);
 
-  if (failed > 0) process.exit(1);
+  return failed;
+}
+
+/**
+ * Seat every planned meet, or just one with `--place=`.
+ *
+ * Signing in ONCE and reusing the token across all twelve: the admin routes
+ * take the meet from the X-Competition-Id header rather than from the token's
+ * claim, so one session seats them all. Signing in per meet would be twelve
+ * bcrypt compares for nothing.
+ *
+ * One meet failing does not stop the others. Twelve meets is long enough that
+ * aborting on the first failure would mean finding out about the second only
+ * after fixing the first — the exit code still reports it.
+ */
+async function seatAll() {
+  const { place, only, dryRun } = parseArgs(process.argv.slice(2));
+  const plan = readPlan();
+
+  const meets = place
+    ? [planForPlace(plan, place)]
+    : plan.meets;
+
+  const csrfToken = await signInAsAdmin('seatPanels.js');
+
+  console.log(`📋 Plan drawn ${plan.generatedAt} (seed ${plan.seed})`);
+  console.log(`   Seating ${meets.length} meet(s): ${meets.map((m) => m.place).join(', ')}`);
+
+  let failedPanels = 0;
+  const failedMeets = [];
+
+  for (const meetPlan of meets) {
+    try {
+      failedPanels += await seatMeet(meetPlan, plan, csrfToken, { only, dryRun });
+    } catch (error) {
+      failedMeets.push(meetPlan.place);
+      console.error(`❌ ${meetPlan.place} — ${error.message}`);
+    }
+  }
+
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`Seated ${meets.length - failedMeets.length} of ${meets.length} meet(s)`);
+  if (failedMeets.length) console.log(`Failed: ${failedMeets.join(', ')}`);
+  if (failedPanels) console.log(`${failedPanels} individual panel(s) refused`);
+
+  if (failedPanels > 0 || failedMeets.length > 0) process.exit(1);
 
   console.log('\nRecord it into the seed so it can be rebuilt elsewhere:');
   console.log('  npm --prefix Server run seed:capture');

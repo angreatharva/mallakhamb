@@ -187,6 +187,60 @@ export const coachHasEntry = async (page) => {
 };
 
 /**
+ * WHICH meets this coach's team is already entered in, by place.
+ *
+ * `coachHasEntry` above answers "any at all", which stopped being the useful
+ * question once a team entered three meets: a coach entered at Mumbai but not
+ * Pune answers yes to it, and the run would skip the two entries still owed.
+ *
+ * `/auth/competitions/assigned` is the coach's own list — the server resolves it
+ * from `registeredTeams.coach`, so it is exactly "meets I have entered".
+ *
+ * @param {import('@playwright/test').Page} page - signed in as this coach
+ * @returns {Promise<Set<string>>} places, e.g. Set{'Mumbai'}
+ */
+export const coachEnteredPlaces = async (page) => {
+  const data = await apiGet(page, '/auth/competitions/assigned');
+  const competitions = data?.competitions ?? [];
+  return new Set(competitions.map((competition) => competition.place).filter(Boolean));
+};
+
+/**
+ * Switch the dashboard to a meet this team is ALREADY entered in.
+ *
+ * Through the navbar picker, not the competition chooser: that screen's coach
+ * action is "Register Team & Continue", which would try to enter a meet the
+ * team is already in and be refused with a 409. The picker calls
+ * `/auth/set-competition`, which is the right verb for "I am already in this
+ * one, show me it".
+ *
+ * Matched on the place. The picker's headline is "<name> <year>", which reads
+ * identically for all twelve seeded meets — the place underneath it is the only
+ * thing telling them apart.
+ *
+ * @param {import('@playwright/test').Page} page - on a coach page with the navbar
+ * @param {string} place
+ */
+export const selectCompetition = async (page, place) => {
+  await page.goto('/coach/dashboard');
+
+  const trigger = page.getByRole('button', { name: 'Select competition' });
+  await expect(trigger, 'the navbar competition picker is not on this page')
+    .toBeVisible({ timeout: 20_000 });
+  await trigger.click();
+
+  const option = page.getByRole('option').filter({ hasText: place });
+  await expect(
+    option,
+    `Expected exactly one "${place}" option in the coach's competition picker. ` +
+    'It lists only meets the team is entered in — check the entry actually happened.'
+  ).toHaveCount(1, { timeout: 20_000 });
+  await option.click();
+
+  await expect(page).toHaveURL(/\/coach\/dashboard/, { timeout: 20_000 });
+};
+
+/**
  * Pick a competition and register the team for it.
  *
  * Competitions are disambiguated by place, not name: the seeded set is three
