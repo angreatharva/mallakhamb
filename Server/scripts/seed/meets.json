@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "The meets the seeded roster competes in, and the ONE place they are named.",
+    "",
+    "Committed and hand-maintained, read by both stacks: Server/scripts/createCompetitions.js",
+    "creates them, and Web/e2e/support/meets.js resolves a place to its level so a",
+    "seeding run can pick the right level on the post-login chooser. Before this",
+    "file the places lived in createCompetitions.js and the place-to-level map was",
+    "copied into the e2e helpers by hand, where drift did not fail loudly: picking",
+    "the level a meet is NOT at simply finds no competitions, and the run dies on",
+    "'Nothing at X Level', which reads like missing seed data rather than a stale map.",
+    "",
+    "Three meets at each of the four levels, laddered through the season so district",
+    "runs first and international last. Dates are Saturdays, verified rather than",
+    "assumed; each meet ends the following day. The competition status rules key off",
+    "these -- 'ongoing' is refused before the start date, and a started meet cannot be",
+    "deleted -- so they sit far enough out to keep every meet in 'upcoming'.",
+    "",
+    "Places must stay distinct: a meet is identified by name + place + year, so two",
+    "meets sharing a place would be the same competition."
+  ],
+  "name": "Bhausaheb Ranade Navodit",
+  "year": 2026,
+  "meets": [
+    { "place": "Mumbai", "level": "district", "startDate": "2026-10-03" },
+    { "place": "Pune", "level": "district", "startDate": "2026-10-10" },
+    { "place": "Nashik", "level": "district", "startDate": "2026-10-17" },
+
+    { "place": "Nagpur", "level": "state", "startDate": "2026-10-24" },
+    { "place": "Kolhapur", "level": "state", "startDate": "2026-10-31" },
+    { "place": "Aurangabad", "level": "state", "startDate": "2026-11-07" },
+
+    { "place": "Delhi", "level": "national", "startDate": "2026-11-14" },
+    { "place": "Bengaluru", "level": "national", "startDate": "2026-11-21" },
+    { "place": "Chennai", "level": "national", "startDate": "2026-11-28" },
+
+    { "place": "Goa", "level": "international", "startDate": "2026-12-05" },
+    { "place": "Hyderabad", "level": "international", "startDate": "2026-12-12" },
+    { "place": "Kolkata", "level": "international", "startDate": "2026-12-19" }
+  ]
+}

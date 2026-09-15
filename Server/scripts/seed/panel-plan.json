@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-28T18:21:07.964Z",
-  "seed": 1105111944,
+  "generatedAt": "2026-09-15T11:03:45.440Z",
+  "seed": 20260915,
   "place": "Mumbai",
   "competitionTypes": [
     "competition_1",
@@ -64,6 +64,776 @@
       "gender": "Female",
       "ageGroup": "Above16",
       "size": 3
+    }
+  ],
+  "meets": [
+    {
+      "place": "Mumbai",
+      "level": "district",
+      "seats": {
+        "Senior Judge": "ravi.g@gmail.com",
+        "Judge 1": "vinayak.d@gmail.com",
+        "Judge 2": "yatin.n@gmail.com",
+        "Judge 3": "laxman.s@gmail.com",
+        "Judge 4": "suraj.t@gmail.com",
+        "Scorer": "preetesh.g@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Pune",
+      "level": "district",
+      "seats": {
+        "Senior Judge": "ravi.g@gmail.com",
+        "Judge 1": "vinayak.d@gmail.com",
+        "Judge 2": "yatin.n@gmail.com",
+        "Judge 3": "laxman.s@gmail.com",
+        "Judge 4": "suraj.t@gmail.com",
+        "Scorer": "preetesh.g@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Nashik",
+      "level": "district",
+      "seats": {
+        "Senior Judge": "ravi.g@gmail.com",
+        "Judge 1": "vinayak.d@gmail.com",
+        "Judge 2": "yatin.n@gmail.com",
+        "Judge 3": "laxman.s@gmail.com",
+        "Judge 4": "suraj.t@gmail.com",
+        "Scorer": "preetesh.g@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Nagpur",
+      "level": "state",
+      "seats": {
+        "Senior Judge": "rahul.j@gmail.com",
+        "Judge 1": "umesh.v@gmail.com",
+        "Judge 2": "dattatray.l@gmail.com",
+        "Judge 3": "vinayak.d@gmail.com",
+        "Judge 4": "nitin.p@gmail.com",
+        "Scorer": "milind.k@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
+    },
+    {
+      "place": "Kolhapur",
+      "level": "state",
+      "seats": {
+        "Senior Judge": "dattatray.l@gmail.com",
+        "Judge 1": "preetesh.g@gmail.com",
+        "Judge 2": "milind.k@gmail.com",
+        "Judge 3": "vinayak.d@gmail.com",
+        "Judge 4": "mayur.p@gmail.com",
+        "Scorer": "yatin.n@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 5
+        }
+      ]
+    },
+    {
+      "place": "Aurangabad",
+      "level": "state",
+      "seats": {
+        "Senior Judge": "girish.o@gmail.com",
+        "Judge 1": "sanjay.b@gmail.com",
+        "Judge 2": "yatin.n@gmail.com",
+        "Judge 3": "suraj.t@gmail.com",
+        "Judge 4": "milind.k@gmail.com",
+        "Scorer": "umesh.v@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Delhi",
+      "level": "national",
+      "seats": {
+        "Senior Judge": "shirish.m@gmail.com",
+        "Judge 1": "girish.o@gmail.com",
+        "Judge 2": "ravi.g@gmail.com",
+        "Judge 3": "yatin.n@gmail.com",
+        "Judge 4": "nitin.p@gmail.com",
+        "Scorer": "rahul.j@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 5
+        }
+      ]
+    },
+    {
+      "place": "Bengaluru",
+      "level": "national",
+      "seats": {
+        "Senior Judge": "suraj.t@gmail.com",
+        "Judge 1": "shirish.m@gmail.com",
+        "Judge 2": "laxman.s@gmail.com",
+        "Judge 3": "nitin.p@gmail.com",
+        "Judge 4": "milind.k@gmail.com",
+        "Scorer": "sanjay.b@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Chennai",
+      "level": "national",
+      "seats": {
+        "Senior Judge": "sanjay.b@gmail.com",
+        "Judge 1": "umesh.v@gmail.com",
+        "Judge 2": "yatin.n@gmail.com",
+        "Judge 3": "shirish.m@gmail.com",
+        "Judge 4": "ashwin.r@gmail.com",
+        "Scorer": "laxman.s@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Goa",
+      "level": "international",
+      "seats": {
+        "Senior Judge": "suraj.t@gmail.com",
+        "Judge 1": "umesh.v@gmail.com",
+        "Judge 2": "shirish.m@gmail.com",
+        "Judge 3": "mayur.p@gmail.com",
+        "Judge 4": "yatin.n@gmail.com",
+        "Scorer": "rahul.j@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 5
+        }
+      ]
+    },
+    {
+      "place": "Hyderabad",
+      "level": "international",
+      "seats": {
+        "Senior Judge": "suraj.t@gmail.com",
+        "Judge 1": "sanjay.b@gmail.com",
+        "Judge 2": "shirish.m@gmail.com",
+        "Judge 3": "laxman.s@gmail.com",
+        "Judge 4": "preetesh.g@gmail.com",
+        "Scorer": "ashwin.r@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Kolkata",
+      "level": "international",
+      "seats": {
+        "Senior Judge": "ashwin.r@gmail.com",
+        "Judge 1": "mayur.p@gmail.com",
+        "Judge 2": "vinayak.d@gmail.com",
+        "Judge 3": "nitin.p@gmail.com",
+        "Judge 4": "ravi.g@gmail.com",
+        "Scorer": "girish.o@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
     }
   ]
 }

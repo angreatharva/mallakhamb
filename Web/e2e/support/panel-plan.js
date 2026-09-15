@@ -48,27 +48,44 @@ const read = () => {
     );
   }
 
-  if (!Array.isArray(plan.panels) || plan.panels.length === 0) {
-    throw new Error(`${PLAN_PATH} has no panels in it`);
-  }
-  for (const panel of plan.panels) {
-    if (!SIZES.includes(panel.size)) {
+  /**
+   * One meet's panels. Applied to the default meet at the top level and to
+   * every entry in `meets`, so a bad draw anywhere fails on import rather than
+   * on whichever meet a run happens to reach first.
+   */
+  const checkPanels = (panels, where) => {
+    if (!Array.isArray(panels) || panels.length === 0) {
+      throw new Error(`${PLAN_PATH} has no panels for ${where}`);
+    }
+    for (const panel of panels) {
+      if (!SIZES.includes(panel.size)) {
+        throw new Error(
+          `${PLAN_PATH} (${where}): ${panel.gender} ${panel.ageGroup} has size ${panel.size}; ` +
+          `only ${SIZES.join(', ')} are scoring methods`
+        );
+      }
+    }
+    // Checked on import rather than in a spec: a plan that lost a size does not
+    // fail anything, it just stops exercising one of the three methods, and
+    // nothing else would ever say so.
+    const missing = SIZES.filter((size) => !panels.some((p) => p.size === size));
+    if (missing.length > 0) {
       throw new Error(
-        `${PLAN_PATH}: ${panel.gender} ${panel.ageGroup} has size ${panel.size}; ` +
-        `only ${SIZES.join(', ')} are scoring methods`
+        `${PLAN_PATH} (${where}) has no ${missing.join('- or ')}-judge panel, so that scoring ` +
+        'method is never exercised. Redraw: npm --prefix Server run seed:panels:plan -- --force'
       );
     }
-  }
-  // Checked on import rather than in a spec: a plan that lost a size does not
-  // fail anything, it just stops exercising one of the three methods, and
-  // nothing else would ever say so.
-  const missing = SIZES.filter((size) => !plan.panels.some((p) => p.size === size));
-  if (missing.length > 0) {
+  };
+
+  checkPanels(plan.panels, plan.place ?? 'the default meet');
+
+  if (!Array.isArray(plan.meets) || plan.meets.length === 0) {
     throw new Error(
-      `${PLAN_PATH} has no ${missing.join('- or ')}-judge panel, so that scoring ` +
-      'method is never exercised. Redraw: npm --prefix Server run seed:panels:plan -- --force'
+      `${PLAN_PATH} has no per-meet plans. ` +
+      'Redraw: npm --prefix Server run seed:panels:plan -- --force'
     );
   }
+  for (const meet of plan.meets) checkPanels(meet.panels, meet.place);
 
   return plan;
 };
@@ -89,6 +106,30 @@ export const PLAN_COMPETITION_TYPES = PLAN.competitionTypes;
 
 /** Seat name → the email of the judge who holds it, on every panel. */
 export const SEAT_EMAIL = PLAN.seats;
+
+/** Every meet's plan: `{place, level, seats, panels}`. */
+export const PLANNED_MEETS = PLAN.meets;
+
+/**
+ * One meet's plan, by place.
+ *
+ * `PANELS` and `SEAT_EMAIL` above are the DEFAULT meet — the district one the
+ * scoring specs run against, which is what they mean by "the meet". Anything
+ * working across several meets wants this instead.
+ *
+ * @param {string} place
+ * @returns {{place: string, level: string, seats: Object, panels: Array}}
+ */
+export const planForPlace = (place) => {
+  const meet = PLAN.meets.find((m) => m.place === place);
+  if (!meet) {
+    throw new Error(
+      `No panel plan for "${place}". Planned: ${PLAN.meets.map((m) => m.place).join(', ')}.\n` +
+      'Redraw after adding a meet: npm --prefix Server run seed:panels:plan -- --force'
+    );
+  }
+  return meet;
+};
 
 /**
  * The roster entry for whoever holds a seat — the specs need a password too.

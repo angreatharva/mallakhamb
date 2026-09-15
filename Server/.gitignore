@@ -60,6 +60,8 @@ scripts/*
 scripts/lib/*
 !scripts/lib/admin-api.js
 !scripts/lib/panel-plan.js
+!scripts/lib/meets.js
+!scripts/lib/judges.js
 
 # The panel plan is a DECISION and is committed; the registration capture is a
 # record of one environment and is not.
@@ -76,6 +78,12 @@ scripts/lib/*
 !scripts/seed/
 scripts/seed/*
 !scripts/seed/panel-plan.json
+# meets.json and judges.json are the same kind of thing as the panel plan: a
+# DECISION about what the fixture is, hand-maintained, and read by both stacks.
+# Leaving them uncommitted would give a second machine a different set of meets
+# or a judge pool the panel plan seats people from who were never registered.
+!scripts/seed/meets.json
+!scripts/seed/judges.json
 
 # The API documentation and performance harness (scripts/perf/). Same nesting
 # rule as scripts/lib above: re-include the directory, exclude its contents,
