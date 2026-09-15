@@ -341,18 +341,45 @@ export const CompetitionProvider = ({ children, userType }) => {
         if (!getCompetitionFromToken()) {
           if (competitions.length === 1) {
             const competition = competitions[0];
-            logger.info('Auto-selecting single competition', { 
-              competitionId: competition._id, 
+            logger.info('Auto-selecting single competition', {
+              competitionId: competition._id,
               competitionName: competition.name,
-              userType 
+              userType
             });
-            setCurrentCompetition(competition);
-            
+
             try {
               const response = await authAPI.setCompetition(competition._id);
-              const newToken = response.data.data?.token || response.data.token;
-              secureStorage.setItem(`${userType}_token`, newToken);
-              logger.info('Competition auto-selected and token updated', { competitionId: competition._id });
+
+              /*
+               * Re-check AFTER the round trip, and yield to an explicit choice.
+               *
+               * This auto-select fires only when exactly ONE meet is assigned,
+               * which for a coach is exactly the moment they are entering their
+               * SECOND — they hold one entry and are choosing another. The user
+               * picks a meet while this request is still in flight, and the two
+               * writes race for the same storage key. This one wrote last, so
+               * the session silently reverted to the meet they had just left.
+               *
+               * Nothing surfaced: the screen showed the new meet, the token
+               * carried the old one, and every write after it went to the wrong
+               * competition. It cost four meets' worth of squads in a seeding
+               * run before the counts gave it away — the entries were there and
+               * the athletes were not.
+               *
+               * A competitionId present now means somebody chose deliberately,
+               * and a deliberate choice always beats a convenience default.
+               */
+              if (!isMounted) return;
+              if (getCompetitionFromToken()) {
+                logger.info('Auto-select superseded by an explicit choice — leaving it alone', {
+                  wouldHaveSet: competition._id,
+                });
+              } else {
+                const newToken = response.data.data?.token || response.data.token;
+                secureStorage.setItem(`${userType}_token`, newToken);
+                setCurrentCompetition(competition);
+                logger.info('Competition auto-selected and token updated', { competitionId: competition._id });
+              }
             } catch (err) {
               logger.error('Failed to update token after auto-select:', err);
             }

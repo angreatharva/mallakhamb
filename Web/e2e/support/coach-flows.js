@@ -227,6 +227,16 @@ export const selectCompetition = async (page, place) => {
   const trigger = page.getByRole('button', { name: 'Select competition' });
   await expect(trigger, 'the navbar competition picker is not on this page')
     .toBeVisible({ timeout: 20_000 });
+
+  /*
+   * ENABLED, not just visible. CompetitionSelector disables the trigger while
+   * `isLoading || isSwitching`, so on a fresh page load it is on screen and
+   * unclickable for as long as the assigned-competitions fetch takes. Clicking
+   * a disabled button times out with "element is not stable", which points at
+   * animation rather than at the fetch it is actually waiting for.
+   */
+  await expect(trigger, 'the competition picker never finished loading')
+    .toBeEnabled({ timeout: 30_000 });
   await trigger.click();
 
   const option = page.getByRole('option').filter({ hasText: place });

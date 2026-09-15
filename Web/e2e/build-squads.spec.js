@@ -1,14 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
+import { apiGet, captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
 import { COACH_ROSTER, meetsForTeam } from './support/coach-roster.js';
 import { MEET_NAME, MEET_YEAR } from './support/meets.js';
 import { ROSTER } from './support/roster.js';
-import {
-  coachEnteredPlaces,
-  coachSignIn,
-  registerTeamForCompetition,
-  selectCompetition,
-} from './support/coach-flows.js';
+import { coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
 import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
 
 /**
@@ -116,30 +111,27 @@ for (const coach of teamsToBuild()) {
     await clearSession(page);
     await coachSignIn(page, coach);
 
+    // The team this coach owns, for the post-save check at the bottom —
+    // `registeredTeams` lists every team at the meet, not just ours.
+    const teams = await apiGet(page, '/coaches/teams');
+    const teamId = String((Array.isArray(teams) ? teams : teams?.teams || [])[0]?._id || '');
+    expect(teamId, `${coach.teamName} has no team — register-coaches has not run`).toBeTruthy();
+
     /*
-     * Asked of the API, and asked about THIS meet.
+     * One path for both cases. The chooser skips the entry when this team is
+     * already in the meet and just switches to it, so "enter" and "re-select"
+     * are the same three clicks — which is what a coach moving between their
+     * meets actually does.
      *
-     * Two things the landing URL cannot answer. Sign-in lands every coach on
-     * /coach/select-level whether or not they are entered anywhere, so the old
-     * check for /coach/select-competition never fires. And a team now enters
-     * three meets, so "is this coach entered at all" is the wrong question —
-     * a coach entered at Mumbai but not Pune answers yes to it, and the two
-     * entries still owed would be skipped.
-     *
-     * Entering is a PAID act, so this has to be known rather than guessed.
+     * The navbar picker would be the other way, but it is only on pages the
+     * dashboard will render, and the dashboard bounces to the chooser when no
+     * meet is selected yet. On a cold sign-in that is every time.
      */
-    const entered = await coachEnteredPlaces(page);
-    if (!entered.has(meet.place)) {
-      await registerTeamForCompetition(page, {
-        ...coach,
-        competitionName: COMPETITION.name,
-        competitionPlace: COMPETITION.place,
-      });
-    } else {
-      // Already entered, but the dashboard may be showing a different meet —
-      // the squad below is read and written against whichever one is selected.
-      await selectCompetition(page, meet.place);
-    }
+    await registerTeamForCompetition(page, {
+      ...coach,
+      competitionName: COMPETITION.name,
+      competitionPlace: COMPETITION.place,
+    });
     await expect(page).toHaveURL(/\/coach\/dashboard/, { timeout: 20_000 });
     captureEntry(coach.email, coach.teamName, COMPETITION);
 
@@ -181,6 +173,35 @@ for (const coach of teamsToBuild()) {
         `${player.firstName} ${player.lastName} is not on the ${coach.teamName} dashboard after saving`
       ).toContain(`${player.firstName} ${player.lastName}`);
     }
+
+    /*
+     * Confirm the squad landed on THIS meet, from the server.
+     *
+     * The dashboard check above proves the athletes are on screen; it does not
+     * prove which competition they were written to. Those are different claims,
+     * and the difference is not theoretical: a race in CompetitionContext's
+     * auto-select used to revert the session token to the previously entered
+     * meet while the screen still showed the new one, so every squad write went
+     * to the wrong competition and this test passed anyway.
+     *
+     * It cost four meets' worth of squads — one per level, always the second
+     * one, because auto-select fires only when exactly one meet is assigned.
+     * Nothing failed; the entries existed and the athletes did not. Asking the
+     * API which competition actually holds them is the only check that would
+     * have caught it.
+     */
+    const assigned = await apiGet(page, '/auth/competitions/assigned');
+    const thisMeet = (assigned?.competitions || []).find((c) => c.place === meet.place);
+    expect(thisMeet, `${coach.teamName} is not entered at ${meet.place} after building its squad`)
+      .toBeTruthy();
+
+    const ourRegistration = (thisMeet.registeredTeams || [])
+      .find((r) => String(r.team?._id || r.team) === String(teamId));
+    expect(
+      (ourRegistration?.players || []).length,
+      `${coach.teamName}'s squad was saved, but ${meet.place} holds none of it — ` +
+      'the session was almost certainly scoped to a different competition while it was written.'
+    ).toBe(squad.length);
 
     expect(
       errors,

@@ -424,8 +424,36 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           return;
         }
         
-        logger.log('[Competition Selection] Registering team for competition');
-        await coachAPI.registerTeamForCompetition(coachTeam._id || coachTeam.id, selectedCompetition);
+        /*
+         * Entering is skipped when this team is already in.
+         *
+         * A coach with entries at several meets uses this screen to move
+         * between them, not only to enter new ones — and `registerTeam` refuses
+         * a duplicate with a 409, so re-selecting a meet they were already in
+         * failed with "Team is already registered for this competition" and
+         * left them on the chooser. The meet they asked for was right there and
+         * the error read like something was broken.
+         *
+         * Checked against the assigned list first, and the 409 is still caught
+         * below: the list can be a moment stale, and losing that race must not
+         * turn a switch into an error either.
+         */
+        const alreadyEntered = (assignedCompetitions || [])
+          .some((c) => String(c._id || c.id) === String(selectedCompetition));
+
+        if (alreadyEntered) {
+          logger.log('[Competition Selection] Already entered — switching, not registering');
+        } else {
+          logger.log('[Competition Selection] Registering team for competition');
+          try {
+            await coachAPI.registerTeamForCompetition(coachTeam._id || coachTeam.id, selectedCompetition);
+          } catch (error) {
+            const conflict = error.response?.status === 409
+              || /already registered/i.test(error.response?.data?.message || '');
+            if (!conflict) throw error;
+            logger.log('[Competition Selection] Entry raced — already registered, switching instead');
+          }
+        }
 
         // Set competition context
         const token = secureStorage.getItem('coach_token');
@@ -461,7 +489,11 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           mergeAssignedAndSelectCompetition(competitionForContext);
         }
         await fetchAssignedCompetitions();
-        toast.success('Team registered for competition successfully!');
+        toast.success(
+          alreadyEntered
+            ? 'Switched to this competition.'
+            : 'Team registered for competition successfully!'
+        );
       } else {
         // Admin, superadmin, judge and player all just scope the session.
         await activateCompetition(selectedCompetition);
