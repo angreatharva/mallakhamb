@@ -322,10 +322,20 @@ const JUDGE_FIELDS = [
   // certificationLevel is rendered separately as a ThemedSelect
 ];
 
-/** Where each role lands once it has an account. */
+/**
+ * Where each role lands once it has an account.
+ *
+ * Registration itself is unchanged by the level flow — a level belongs to a
+ * competition, not to a person, so nothing here records one. These are only the
+ * hand-offs into the flow.
+ */
 const HOME_AFTER_REGISTER = {
+  // A coach needs a squad before a meet will take them; create-team hands on to
+  // the level chooser.
   coach: '/coach/create-team',
-  player: '/player/select-team',
+  // Level, then competition, then team: a squad only means something inside a
+  // meet, and the teams endpoint is scoped by competition.
+  player: '/player/select-level',
   // A new judge is on no panel yet; the dashboard says so and shows the seats
   // as soon as an organiser adds them.
   judge: '/judge/dashboard',

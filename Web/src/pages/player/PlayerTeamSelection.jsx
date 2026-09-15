@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, ArrowRight, Search, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playerAPI } from '@/services/api';
+import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 
@@ -25,20 +26,35 @@ const EASE = [0.22, 1, 0.36, 1];
  */
 const PlayerTeamSelection = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { currentCompetition } = useCompetition();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [joining, setJoining] = useState(false);
 
+  /*
+   * The meet this player just chose.
+   *
+   * Read from the URL first — the competition chooser appends it on the way
+   * here, which makes the scope survive a reload and visible in the address
+   * bar. The context is the fallback for arriving any other way.
+   *
+   * Without it the server lists teams across EVERY open competition, so a
+   * player who picked a district meet would be offered national squads.
+   */
+  const competitionId = searchParams.get('competitionId') || currentCompetition?._id || null;
+
   useEffect(() => {
     fetchTeams();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitionId]);
 
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      const response = await playerAPI.getTeams();
+      const response = await playerAPI.getTeams(competitionId);
       const payload = response.data?.data ?? response.data?.teams ?? response.data ?? [];
       const teamsList = Array.isArray(payload) ? payload : [];
       setTeams(teamsList);
@@ -55,7 +71,9 @@ const PlayerTeamSelection = () => {
     setSelectedTeam(team);
     setJoining(true);
     try {
-      await playerAPI.updateTeam({ teamId: team._id });
+      // The meet goes with the join: it is optional server-side, but sending it
+      // is what lets the roster entry be attributed to the right competition.
+      await playerAPI.updateTeam({ teamId: team._id, ...(competitionId && { competitionId }) });
       toast.success(`Successfully joined ${team.name}!`);
       logger.info('Player joined team', { teamId: team._id, teamName: team.name });
       

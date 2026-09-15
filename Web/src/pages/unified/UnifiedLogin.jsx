@@ -29,8 +29,6 @@ import { useReducedMotion } from '../../components/design-system/animations';
 
 // Import API services
 import { adminAPI, superAdminAPI, coachAPI, playerAPI } from '@/services/api';
-import { CompetitionProvider } from '../../contexts/CompetitionContext';
-import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -166,7 +164,6 @@ const UnifiedLoginInner = () => {
   
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showCompetitionSelection, setShowCompetitionSelection] = useState(false);
   const [lockoutEndTime, setLockoutEndTime] = useState(null);
   const [rateLimitEndTime, setRateLimitEndTime] = useState(null);
   const [loginError, setLoginError] = useState(null);
@@ -222,28 +219,26 @@ const UnifiedLoginInner = () => {
     return services[role];
   };
   
-  // Redirect if already logged in (but not during active login process)
+  /*
+   * Already signed in and back on the login page — send them on rather than
+   * showing a form they do not need.
+   *
+   * The destination is the level chooser, the same as a fresh sign-in, so the
+   * two paths cannot drift. It is safe to land there repeatedly: the chooser
+   * reads the stored level but does not act on it, so this cannot loop.
+   */
   useEffect(() => {
-    if (user && userType === role && !showCompetitionSelection && !loading) {
-      // For coaches and players, always let them choose competition - don't auto-redirect
-      if (role === 'coach' || role === 'player') {
-        return;
-      }
-      
-      // For other roles, use standard redirect logic
-      const redirectPaths = {
-        admin: '/admin/dashboard',
-        superadmin: '/superadmin/dashboard',
-        judge: '/judge/dashboard',
-      };
-      const targetPath = redirectPaths[role] || '/';
+    if (!user || userType !== role || loading) return;
 
-      // Avoid redirect loops when this component is rendered on the destination route.
-      if (location.pathname !== targetPath) {
-        navigate(targetPath);
-      }
+    const targetPath = role === 'superadmin'
+      ? '/superadmin/dashboard'
+      : `/${role}/select-level`;
+
+    // Avoid redirect loops when this component is rendered on the destination route.
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
     }
-  }, [user, userType, role, navigate, showCompetitionSelection, loading, location.pathname]);
+  }, [user, userType, role, navigate, loading, location.pathname]);
   
   // Handle form submission
   const onSubmit = async (data) => {
@@ -327,7 +322,13 @@ const UnifiedLoginInner = () => {
             ? `Welcome ${judge.name}! Assigned to ${competitionName}`
             : `Welcome ${judge.name}!`
         );
-        navigate('/judge/dashboard');
+        /*
+         * To the level chooser like every other role, rather than straight to
+         * the dashboard. Login still reports the meet the server picked, but a
+         * judge seated at more than one had no way to reach the others from
+         * here — the first seat simply won.
+         */
+        navigate('/judge/select-level');
         return;
       }
       
@@ -359,42 +360,29 @@ const UnifiedLoginInner = () => {
       toast.success(role === 'coach' ? 'Welcome back, Coach!' : 'Login successful!');
       reset();
       
-      // Handle post-login navigation
-      if (role === 'admin') {
-        // Admin needs to select competition
-        setShowCompetitionSelection(true);
-      } else if (role === 'superadmin') {
-        // Superadmin goes directly to dashboard without competition selection
+      /*
+       * Post-login navigation.
+       *
+       * Every competition-scoped role goes to the level chooser first, then to
+       * a competition at that level, then to their dashboard. Admin used to
+       * open its competition screen as component state here
+       * (`showCompetitionSelection`), which gave it no URL and no way back;
+       * coach went straight to competition selection with no level step; and
+       * player branched on whether it had a squad. All three are now the same
+       * two routes.
+       *
+       * Superadmin is the one exception: it is not scoped to assigned meets, so
+       * there is nothing for it to narrow and it goes straight to its dashboard.
+       */
+      if (role === 'superadmin') {
         setTimeout(() => {
           navigate('/superadmin/dashboard');
         }, 100);
-      } else if (role === 'coach') {
-        // Coach always goes to competition selection after login
-        navigate('/coach/select-competition');
-      } else if (role === 'player') {
-        // Player: check if they have a team assigned
-        // Team can be either a string ID or an object with _id
-        const hasTeam = userData.team && (
-          typeof userData.team === 'string' ? userData.team : 
-          (userData.team._id || userData.team.id)
-        );
-        
-        if (hasTeam) {
-          const teamId = typeof userData.team === 'string' ? userData.team : (userData.team._id || userData.team.id);
-          logger.info('Player has team, redirecting to dashboard', { teamId });
-          setTimeout(() => {
-            navigate('/player/dashboard');
-          }, 100);
-        } else {
-          logger.info('Player has no team, redirecting to team selection');
-          setTimeout(() => {
-            navigate('/player/select-team');
-          }, 100);
-        }
       } else {
-        // Add small delay for state to update before navigation
+        // Small delay so the auth state commits before the guard on the next
+        // route reads it.
         setTimeout(() => {
-          navigate(`/${role}/dashboard`);
+          navigate(`/${role}/select-level`);
         }, 100);
       }
     } catch (error) {
@@ -439,15 +427,6 @@ const UnifiedLoginInner = () => {
       setLoading(false);
     }
   };
-  
-  // Show competition selection for admin only (superadmin goes directly to dashboard)
-  if (showCompetitionSelection && role === 'admin') {
-    return (
-      <CompetitionProvider userType={role}>
-        <CompetitionSelectionScreen userType={role} onCompetitionSelected={() => {}} />
-      </CompetitionProvider>
-    );
-  }
   
   const BackgroundComponent = config.background;
   const OrnamentComponent = config.ornament;

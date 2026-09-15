@@ -32,8 +32,10 @@ const CoachCreateTeam = () => {
         // If coach has team, redirect to select competition
         // (Coach can always select a different competition)
         if (hasTeam && step === 'select-competition') {
-          console.log('[Create Team] Redirecting to select-competition - already has team');
-          navigate('/coach/select-competition', { replace: true });
+          console.log('[Create Team] Redirecting to select-level - already has team');
+          // Into the level chooser, not straight at the competition list: the
+          // competition screen needs a level and bounces back here without one.
+          navigate('/coach/select-level', { replace: true });
           return; // Don't set checkingStatus to false, keep showing loading
         }
         
@@ -57,7 +59,7 @@ const CoachCreateTeam = () => {
       toast.success('Team created successfully! Now register it for a competition.');
       // Small delay to ensure the team is available in the backend
       setTimeout(() => {
-        navigate('/coach/select-competition', { state: { teamCreated: true } });
+        navigate('/coach/select-level', { state: { teamCreated: true } });
       }, 500);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create team');
