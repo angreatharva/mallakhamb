@@ -47,6 +47,12 @@ npm --prefix Web run seed:ui        # coaches → players → judges → squads 
 npm --prefix Web run seed:scores    # then judge the meet
 ```
 
+> `seed:ui` ends with the browser seating, which staffs **one** meet. That is
+> the point of it — it is the all-through-the-UI path — but it leaves the other
+> eleven unseated. `npm --prefix Server run setup` uses the server script for
+> that step instead; after a `seed:ui` run, seat the rest with
+> `SEED_ADMIN_PASSWORD='…' npm --prefix Server run seed:panels`.
+
 The last three are the ones you read rather than run for data. `score-panel` and
 `score-all` are companions and neither replaces the other: `score-panel` proves
 each scoring rule on ONE athlete per panel size, with arithmetic picked so a

@@ -302,8 +302,9 @@ async function main() {
     console.log(`  the late fee. Re-run without --late to put the deadlines back before the meets.`);
   }
 
-  console.log('\nThe seeded roster enters MUMBAI (Web/e2e/support/coach-data.js).');
-  console.log('Pune and Nashik exist so the competition picker has a real choice to make.');
+  console.log('\nEvery team enters all three meets at its own level, five teams per meet');
+  console.log('(Web/e2e/support/coach-roster.js). Which level a team belongs to is the only');
+  console.log('thing binding it to meets — a district club never appears at an international.');
 
   await mongoose.disconnect();
 }
