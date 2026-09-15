@@ -10,6 +10,7 @@ const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireJudge, requireSequenceManager } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const judgeValidator = require('../validators/judge.validator');
 const performanceOrderValidator = require('../validators/performance-order.validator');
@@ -26,6 +27,14 @@ function createJudgeRoutes(container) {
   const adminController = container.resolve('adminController');
   const performanceOrderController = container.resolve('performanceOrderController');
   const authenticate = createAuthMiddleware(container);
+  /*
+   * A panel's authority ends with the meet. After 23:59 UTC on the end date the
+   * three writes below are refused; everything a judge READS — the panel, the
+   * running order, the team scores, their own assignments — stays open, because
+   * a frozen result still has to be viewable. Login, profile and password are
+   * not behind it either: those are the judge's ACCOUNT, not the competition.
+   */
+  const requireUnlockedCompetition = createCompetitionLockGuard(container);
 
   // Authentication
   router.post('/login',
@@ -183,9 +192,17 @@ function createJudgeRoutes(container) {
     adminController.getAllJudgesSummary
   );
 
+  /*
+   * `requireUnlockedCompetition` resolves the meet the same way `saveScores`
+   * itself does — `competitionIdFromRequest`, which reads the payload's
+   * `competitionId` and falls back to the judge's own assignment — so it holds
+   * even though this route has no `validateCompetitionContext` in front of it
+   * (see the note above for why it does not).
+   */
   router.post('/scores/save',
     authenticate,
     requireJudge,
+    requireUnlockedCompetition(),
     adminController.saveScores
   );
 
@@ -218,6 +235,7 @@ function createJudgeRoutes(container) {
     authenticate,
     requireJudge,
     requireSequenceManager,
+    requireUnlockedCompetition(),
     performanceOrderValidator.setTeamOrder(),
     handleValidationErrors,
     performanceOrderController.setTeamOrder
@@ -232,6 +250,7 @@ function createJudgeRoutes(container) {
     authenticate,
     requireJudge,
     requireSequenceManager,
+    requireUnlockedCompetition(),
     performanceOrderValidator.setPlayerOrder(),
     handleValidationErrors,
     performanceOrderController.setPlayerOrder

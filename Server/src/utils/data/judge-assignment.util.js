@@ -93,9 +93,17 @@ function assignmentCoversCategory(assignment, category = {}) {
     }
   }
 
-  // Apparatus narrows a Competition III panel. An assignment with no apparatus
-  // covers every apparatus in its category; one with an apparatus covers only
-  // that apparatus.
+  /*
+   * Apparatus is part of a panel's identity: a meet is seated once per
+   * (gender, age group, apparatus), and Manage Judges asks which.
+   *
+   * A seat that names one covers only that apparatus. A seat with NONE is the
+   * legacy shape — written before the apparatus rung existed, and before
+   * `Judge`'s unique keys carried apparatus at all — and it covers every
+   * apparatus in its category. Both are matched here rather than migrated,
+   * because backfilling an old seat to a named apparatus would strand the
+   * athletes in its category entered for the other two.
+   */
   if (category.apparatus && assignment.apparatus && assignment.apparatus !== category.apparatus) {
     return false;
   }

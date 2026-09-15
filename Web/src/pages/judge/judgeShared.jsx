@@ -17,12 +17,19 @@ import {
   combinationChecklistShape,
   pointCeilingsShape,
 } from '@/utils/scoring/scoringPropTypes';
+import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
 
 export const SCORING_PATH = '/judge/scoring';
 export const PANEL_REVIEW_PATH = '/judge/scoring/panel-review';
 
-/** Panel judge slots, in display order. */
-export const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
+/**
+ * Panel judge slots, in display order.
+ *
+ * Re-exported rather than declared: the list now also decides which rows
+ * `utils/scoring/judgePanel.js` folds into a panel, and a second copy here
+ * would let the display order and the panel SIZE disagree about what a seat is.
+ */
+export { PANEL_TYPES };
 
 /** sessionStorage key holding the active scoring session across refreshes. */
 export const ACTIVE_SESSION_KEY = 'judge_scoring_active_session';

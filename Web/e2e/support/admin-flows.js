@@ -60,6 +60,44 @@ const choose = async (page, labelText, optionLabel) => {
 };
 
 /**
+ * The apparatus this meet actually runs, read off the screen.
+ *
+ * NOT a constant, and not a new key in the panel plan. The dropdown is filled
+ * from the competition's own `apparatusConfig` for the chosen competition type,
+ * so reading it is the only way the UI seeder seats exactly what the meet runs
+ * — the same thing `Server/scripts/seatPanels.js` gets by reading the
+ * competition over the API. A list hard-coded on this side would let the two
+ * seeders stand up different meets from one plan, which is the drift the plan
+ * file exists to prevent.
+ *
+ * The ladder must already be at the competition-type rung; the dropdown is
+ * disabled until then and the assertion below says so.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<string[]>}
+ */
+export const apparatusChoices = async (page) => {
+  const trigger = dropdown(page, 'Apparatus');
+  await expect(trigger, 'no "Apparatus" dropdown on Manage Judges').toBeVisible();
+  await expect(
+    trigger,
+    'the "Apparatus" dropdown is disabled — pick a competition type first'
+  ).toBeEnabled();
+
+  await trigger.click();
+  const labels = await page.getByRole('option').allInnerTexts();
+  // Closed again so the caller is left exactly where it was — `selectPanel`
+  // opens it itself, and a second open on an already-open list selects nothing.
+  await page.keyboard.press('Escape');
+
+  const names = labels.map((label) => label.trim()).filter(Boolean);
+  if (names.length === 0) {
+    throw new Error('Manage Judges offers no apparatus — the meet declares none for this type');
+  }
+  return names;
+};
+
+/**
  * Sign in as the organiser and land on the dashboard, working one meet.
  *
  * Signing in is not the end of it. An admin who is not bound to a single
@@ -145,7 +183,12 @@ export const openJudges = async (page, competitionId) => {
 };
 
 /**
- * Walk the filter ladder to one panel.
+ * Walk the ladder as far as the CATEGORY — everything above the apparatus.
+ *
+ * Split out because the apparatus a meet runs is only knowable once these four
+ * are chosen (the dropdown is filled from the competition and disabled until
+ * then), so a caller that wants to seat every apparatus has to stop here, read
+ * them with `apparatusChoices`, and then walk the last rung once per panel.
  *
  * @param {import('@playwright/test').Page} page - on Manage Judges
  * @param {Object} target
@@ -154,22 +197,44 @@ export const openJudges = async (page, competitionId) => {
  * @param {string} target.ageGroup - stored form, e.g. `Under10`
  * @param {string} target.competitionType - slug, e.g. `competition_1`
  */
-export const selectPanel = async (page, { action, gender, ageGroup, competitionType }) => {
+export const selectCategory = async (page, { action, gender, ageGroup, competitionType }) => {
   await choose(page, 'Judge Action', action === 'add' ? 'Add Judge' : 'Judge List');
   await choose(page, 'Gender', gender);
   await choose(page, 'Age Group', ageGroupLabel(ageGroup));
   await choose(page, 'Competition Type', COMPETITION_TYPE_LABEL[competitionType]);
+};
+
+/**
+ * Walk the filter ladder to one panel.
+ *
+ * @param {import('@playwright/test').Page} page - on Manage Judges
+ * @param {Object} target - as `selectCategory`, plus:
+ * @param {string} target.apparatus - e.g. `Pole Mallakhamb`; required
+ */
+export const selectPanel = async (page, { action, gender, ageGroup, competitionType, apparatus }) => {
+  await selectCategory(page, { action, gender, ageGroup, competitionType });
 
   /*
-   * NO APPARATUS STEP. Manage Judges used to ask for one, defaulting here to
-   * "All apparatus"; the question is gone and every seat is written
-   * `apparatus: null`.
+   * THE APPARATUS IS THE LAST RUNG, AND IT IS REQUIRED.
    *
-   * It is not a step that can be re-added on its own. `Judge`'s unique indexes
-   * carry no apparatus, so a meet holds one panel per category — seating that
-   * panel for a named apparatus leaves the athletes entered for the other two
-   * with no panel and their slips refused.
+   * A meet holds one panel per (gender, age group, apparatus) — `Judge`'s
+   * unique keys carry `apparatus` since migration 010 — so this choice picks
+   * WHICH panel, not a filter over one. Nothing is looked up until it is made:
+   * the screen's "already staffed" check and its Judge List both run off this
+   * handler, which is why the wait below comes after it and not after the
+   * competition type.
+   *
+   * The options are the meet's own `apparatusConfig` for the chosen type, so
+   * asking for one the competition does not run fails here rather than seating
+   * a panel no athlete can be judged by.
    */
+  if (!apparatus) {
+    throw new Error(
+      'selectPanel needs an apparatus — Manage Judges seats one panel per ' +
+      'apparatus and the rung is required. Pass e.g. "Pole Mallakhamb".'
+    );
+  }
+  await choose(page, 'Apparatus', apparatus);
 
   // Every ladder change re-queries the seated judges before the screen settles.
   await expect(page.getByText('Checking existing judges…')).toBeHidden({ timeout: 20_000 });

@@ -19,6 +19,7 @@ const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireAdmin, requireSuperAdmin, requireAdminOrScorer } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
 const scoringValidator = require('../validators/scoring.validator');
@@ -40,7 +41,14 @@ function createAdminRoutes(container) {
   // Get middleware from container
   const authMiddleware = createAuthMiddleware(container);
   const authorize = requireAdmin;
-  
+  /*
+   * After 23:59 UTC on a meet's end date, every write below is refused — an
+   * admin's authority over a competition ends when the competition does. The
+   * super admin keeps theirs, on /api/superadmin. See
+   * `middleware/competition-lock.middleware`.
+   */
+  const requireUnlockedCompetition = createCompetitionLockGuard(container);
+
   // Get controller from DI container
   const adminController = container.resolve('adminController');
   const performanceOrderController = container.resolve('performanceOrderController');
@@ -167,6 +175,7 @@ function createAdminRoutes(container) {
     '/teams/:teamId/approve',
     authMiddleware,
     authorize,
+    requireUnlockedCompetition(),
     adminValidator.approveTeam(),
     handleValidationErrors,
     adminController.approveTeam
@@ -181,6 +190,7 @@ function createAdminRoutes(container) {
     '/teams/:teamId/reject',
     authMiddleware,
     authorize,
+    requireUnlockedCompetition(),
     adminValidator.rejectTeam(),
     handleValidationErrors,
     adminController.rejectTeam
@@ -226,6 +236,7 @@ function createAdminRoutes(container) {
     '/players/:playerId/status',
     authMiddleware,
     authorize,
+    requireUnlockedCompetition(),
     adminValidator.updatePlayerStatus(),
     handleValidationErrors,
     adminController.updatePlayerStatus
@@ -240,6 +251,7 @@ function createAdminRoutes(container) {
     '/players/:playerId/team',
     authMiddleware,
     authorize,
+    requireUnlockedCompetition(),
     adminValidator.assignPlayerToTeam(),
     handleValidationErrors,
     adminController.assignPlayerToTeam
@@ -257,6 +269,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.saveJudges(),
     handleValidationErrors,
     adminController.saveJudges
@@ -310,6 +323,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.createSingleJudge(),
     handleValidationErrors,
     auditUserCreated,
@@ -326,6 +340,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.updateJudge(),
     handleValidationErrors,
     auditUserUpdated,
@@ -342,6 +357,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.deleteJudge(),
     handleValidationErrors,
     auditUserDeleted,
@@ -378,6 +394,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     scoringValidator.getScoreById(),
     handleValidationErrors,
     auditScoreUpdated,
@@ -394,6 +411,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.lockScores(),
     handleValidationErrors,
     adminController.lockScores
@@ -439,6 +457,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminController.saveScores
   );
 
@@ -497,6 +516,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.recalculateScores(),
     handleValidationErrors,
     adminController.recalculateScores
@@ -534,6 +554,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     performanceOrderValidator.drawLots(),
     handleValidationErrors,
     performanceOrderController.drawLots
@@ -549,6 +570,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     performanceOrderValidator.setTeamOrder(),
     handleValidationErrors,
     performanceOrderController.setTeamOrder
@@ -564,6 +586,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     performanceOrderValidator.setPlayerOrder(),
     handleValidationErrors,
     performanceOrderController.setPlayerOrder
@@ -581,6 +604,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.startAgeGroup(),
     handleValidationErrors,
     adminController.startAgeGroup
@@ -596,6 +620,7 @@ function createAdminRoutes(container) {
     authMiddleware,
     authorize,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     adminValidator.endAgeGroup(),
     handleValidationErrors,
     adminController.endAgeGroup

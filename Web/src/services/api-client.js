@@ -5,6 +5,7 @@ import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils.js';
 import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { logger } from '@/infrastructure/logger.js';
 import { dispatchAuthExpired } from '@/utils/auth/authEvents.js';
+import { isCompetitionLockedError, competitionLockedMessage } from '@/utils/scoring/competitionLock.js';
 
 logger.log('🏠 Using API URL:', apiConfig.getBaseUrl());
 
@@ -216,6 +217,29 @@ api.interceptors.response.use(
         originalRequest.headers = { ...originalRequest.headers, 'X-CSRF-Token': fresh };
         return api(originalRequest);
       }
+    }
+
+    /*
+     * --- The meet has closed (423 COMPETITION_LOCKED) ---
+     *
+     * Not retried, not redirected, not refreshed — there is nothing the client
+     * can do to make this succeed, and the session is perfectly valid. It is
+     * annotated and re-thrown so every existing catch block, which already
+     * shows `error.response.data.message`, says the right thing without being
+     * touched.
+     *
+     * `isCompetitionLocked` is put on the error as well so a caller can branch
+     * on it (flip a screen to read-only, drop a queued autosave) without
+     * re-deriving the status and code. See `utils/scoring/competitionLock.js`.
+     */
+    if (isCompetitionLockedError(error)) {
+      error.isCompetitionLocked = true;
+      error.competitionLockedMessage = competitionLockedMessage(error);
+      logger.warn('Write refused: competition is locked', {
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+      });
+      return Promise.reject(error);
     }
 
     // --- Silent refresh on 401 (Phase 2A) ---

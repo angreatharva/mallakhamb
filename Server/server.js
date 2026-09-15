@@ -69,6 +69,26 @@ if (require.main === module) {
     // Eagerly resolve the token invalidation service so the shim is wired
     container.resolve('tokenInvalidationService');
 
+    /*
+     * Bring every finished meet's `status` up to date, then keep it that way.
+     *
+     * Runs here rather than at bootstrap so importing the app for a test never
+     * arms a timer. The startup sweep is what catches meets that ended while
+     * this process was down or being redeployed; after that the service wakes
+     * itself at each UTC midnight.
+     *
+     * Non-blocking and non-fatal: the read-only lock is computed from `endDate`
+     * per request and does not depend on this having run.
+     */
+    const competitionStatusService = container.resolve('competitionStatusService');
+    competitionStatusService.start()
+      .then(({ completed }) => {
+        logger.info('Competition status sweeper started', { completedAtStartup: completed });
+      })
+      .catch((err) => {
+        logger.error('Competition status sweeper failed to start', { error: err.message });
+      });
+
     // Register graceful shutdown handler
     const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
     gracefulShutdownHandler.register({

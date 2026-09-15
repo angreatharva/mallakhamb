@@ -12,6 +12,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
   getCombinationChecklist,
@@ -242,6 +244,13 @@ const JudgeSlip = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showCopModal, setShowCopModal] = useState(false);
+  /*
+   * The meet closed at 23:59 UTC on its end date, so the server will refuse
+   * this slip with a 423 whatever the sheet does. Read here so the sheet says
+   * so up front instead of after a judge has marked a whole routine — the same
+   * reason `finalized` is checked before submitting rather than after.
+   */
+  const { locked: competitionLocked } = useCompetitionLock();
   // True while the judge is deliberately re-editing an already-submitted slip,
   // so the restore effect below does not pull them straight back to review.
   const editingRef = useRef(location.state?.resumeEditing === true);
@@ -478,6 +487,10 @@ const JudgeSlip = () => {
     if (!selectedPlayer) return;
     if (parseFloat(calcFinal()) === 0) { toast.error('Please enter scores'); return; }
     if (finalized) { toast.error('Panel score is already finalized'); return; }
+    if (competitionLocked) {
+      toast.error('This competition has closed. Scores can no longer be changed.');
+      return;
+    }
     setSubmitting(true);
     try {
       const finalScore = calcFinal();
@@ -618,6 +631,10 @@ const JudgeSlip = () => {
       </header>
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
+        {/* Before the sheet, not beside the button: the point is that the judge
+            sees it BEFORE marking a routine. Submit is disabled to match. */}
+        <CompetitionLockBanner className="mb-4" />
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE_OUT }}>
           
@@ -961,7 +978,7 @@ const JudgeSlip = () => {
                     <div className="flex flex-col gap-3">
                       <motion.button
                         onClick={submitScore}
-                        disabled={submitting || !isConnected || submitted}
+                        disabled={submitting || !isConnected || submitted || competitionLocked}
                         className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
                         style={{
                           background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
@@ -1025,11 +1042,11 @@ const JudgeSlip = () => {
                   </div>
                   <motion.button
                     onClick={submitScore}
-                    disabled={submitting || !isConnected || submitted}
+                    disabled={submitting || !isConnected || submitted || competitionLocked}
                     className="flex-1 py-3.5 rounded-2xl font-black text-sm text-white flex items-center justify-center gap-2 min-h-[52px]"
                     style={{
                       background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
-                      opacity: (!isConnected || submitting) ? 0.6 : 1,
+                      opacity: (!isConnected || submitting || competitionLocked) ? 0.6 : 1,
                     }}
                     whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
                   >

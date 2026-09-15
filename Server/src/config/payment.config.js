@@ -16,6 +16,7 @@ const crypto = require('crypto');
 
 const { ValidationError } = require('../errors');
 const { apparatusList } = require('../utils/data/apparatus.util');
+const { toDate, startOfUtcDay, endOfUtcDay } = require('../utils/data/day-boundary.util');
 
 const PAYMENT_CONFIG = {
   CURRENCY: 'INR',
@@ -125,38 +126,12 @@ const FEE_PHASE = {
   CLOSED: 'closed',
 };
 
-/** @param {unknown} value @returns {Date | null} */
-function toDate(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-/**
- * The last millisecond of the calendar day a date falls on — "23:59 on the End
- * Date", to the letter.
- *
- * UTC, because that is how these dates are STORED: an `<input type="date">`
- * sends `YYYY-MM-DD`, which both `express-validator`'s `.toDate()` and `new
- * Date()` read as UTC midnight, and the seed script writes `Date.UTC(...)`
- * outright. Reading the day back in any other zone would shift the boundary off
- * the day the super admin actually picked.
- *
- * @param {Date} date
- * @returns {Date}
+/*
+ * `toDate`, `endOfUtcDay` and `startOfUtcDay` used to be defined here. They now
+ * live in `utils/data/day-boundary.util`, because the competition LOCK closes
+ * at the same instant as the fee window (23:59 UTC on `endDate`) and the two
+ * must not be able to drift apart — see that module's header.
  */
-function endOfUtcDay(date) {
-  const end = new Date(date.getTime());
-  end.setUTCHours(23, 59, 59, 999);
-  return end;
-}
-
-/** Midnight opening the calendar day a date falls on. @param {Date} date @returns {Date} */
-function startOfUtcDay(date) {
-  const start = new Date(date.getTime());
-  start.setUTCHours(0, 0, 0, 0);
-  return start;
-}
 
 /**
  * Which fee phase a payment made at `at` falls into.

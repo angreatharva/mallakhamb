@@ -21,6 +21,7 @@ const { APPARATUS, AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const { createUserRateLimitMiddleware } = require('../middleware/security.middleware');
 
@@ -36,6 +37,15 @@ function createCoachRoutes(container) {
   const coachAuth = requireCoach;
   const coachController = container.resolve('coachController');
   const userRateLimit = createUserRateLimitMiddleware(container);
+  /*
+   * A coach's writes stop with the meet too. In practice the fee window has
+   * already closed by then — `assertPaymentWindowOpen` refuses payment past the
+   * same instant — but the roster endpoints below have no such check of their
+   * own, and "the competition is over" should not depend on which of two rules
+   * happens to cover a given route. Creating a TEAM is not competition data and
+   * stays open.
+   */
+  const requireUnlockedCompetition = createCompetitionLockGuard(container);
 
   /**
    * The discount code, at the boundary.
@@ -184,7 +194,13 @@ function createCoachRoutes(container) {
    * @desc    Select competition for team
    * @access  Authenticated coaches
    */
-  router.post('/select-competition', authMiddleware, coachAuth, coachController.selectCompetitionForTeam);
+  router.post(
+    '/select-competition',
+    authMiddleware,
+    coachAuth,
+    requireUnlockedCompetition(),
+    coachController.selectCompetitionForTeam
+  );
 
   /**
    * @route   POST /api/coaches/team/:teamId/register-competition
@@ -195,6 +211,7 @@ function createCoachRoutes(container) {
     '/team/:teamId/register-competition',
     authMiddleware,
     coachAuth,
+    requireUnlockedCompetition(),
     coachController.registerTeamForCompetition
   );
 
@@ -251,6 +268,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     addPlayerValidation,
     handleValidationErrors,
     coachController.addPlayerToAgeGroup
@@ -267,6 +285,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     coachController.removePlayerFromAgeGroup
   );
 
@@ -281,6 +300,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     coachController.createTeamPaymentOrder
   );
 
@@ -295,6 +315,7 @@ function createCoachRoutes(container) {
     authMiddleware,
     coachAuth,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     coachController.verifyTeamPaymentAndSubmit
   );
 
@@ -313,6 +334,7 @@ function createCoachRoutes(container) {
     coachAuth,
     userRateLimit,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     discountCodeValidation,
     handleValidationErrors,
     coachController.validateDiscountCode
@@ -324,6 +346,7 @@ function createCoachRoutes(container) {
     coachAuth,
     userRateLimit,
     validateCompetitionContext,
+    requireUnlockedCompetition(),
     discountCodeValidation,
     handleValidationErrors,
     coachController.redeemDiscountAndSubmit

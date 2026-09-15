@@ -12,6 +12,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -851,6 +852,14 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       {/* ─── Page Content ───────────────────────────────────────────────── */}
       <main id="main-content" className="pt-16">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+          {/*
+            * Above the tabs, not inside one: the lock applies to the whole meet,
+            * so an admin who moves from Teams to Scores to Lots must not have to
+            * rediscover it on each. Renders nothing while the meet is open, and
+            * nothing at all for a super admin, who keeps every write.
+            */}
+          <CompetitionLockBanner className="mb-6" />
+
           <Suspense fallback={
             <div className="flex justify-center items-center py-20">
               <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />

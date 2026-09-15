@@ -1633,6 +1633,12 @@ class ScoringService {
                 teamId: scoreData.teamId,
                 gender: scoreData.gender,
                 ageGroup: scoreData.ageGroup,
+                // A score is identified by (player, APPARATUS), and the room is
+                // not — it is per competition type, and a category now holds one
+                // panel per apparatus inside it. Without this every listener
+                // resolved the mark to Pole. See the same note in
+                // socket/handlers/scoring.handler.js.
+                apparatus: playerScore.apparatus || null,
                 isFinalSubmit: !!scoreData.isFinalSubmit,
                 isLocked: !!scoreData.isLocked,
                 timestamp: new Date().toISOString()
@@ -1646,6 +1652,9 @@ class ScoringService {
               playerName: playerScore.playerName,
               teamId: scoreData.teamId,
               finalScore: playerScore.finalScore,
+              // Same reason as the `score_updated` above: this locks a row, and
+              // the row is (player, apparatus).
+              apparatus: playerScore.apparatus || null,
               isFinalized: true,
               isLocked: true,
               timestamp: new Date().toISOString()

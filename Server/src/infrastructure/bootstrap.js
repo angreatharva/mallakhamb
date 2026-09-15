@@ -28,6 +28,7 @@ const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
 const JudgeAccountService = require('../services/user/judge-account.service');
 const CompetitionService = require('../services/competition/competition.service');
+const CompetitionStatusService = require('../services/competition/competition-status.service');
 const RegistrationService = require('../services/competition/registration.service');
 const PerformanceOrderService = require('../services/competition/performance-order.service');
 const TeamService = require('../services/team/team.service');
@@ -184,6 +185,16 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('cacheService'),
     null,
+    c.resolve('logger')
+  ), 'singleton');
+  /*
+   * Flips `status` to 'completed' at the instant a meet locks, so the stored
+   * status and the read-only state are one fact. Started from server.js, not
+   * here — resolving it must not arm a timer in the harnesses that build a
+   * container without running a server.
+   */
+  container.register('competitionStatusService', (c) => new CompetitionStatusService(
+    c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
   container.register('superAdminService', (c) => new SuperAdminService({
@@ -349,7 +360,11 @@ function initializeSocketIO(httpServer) {
       c.resolve('scoringService'),
       c.resolve('authorizationService'),
       c.resolve('logger'),
-      c.resolve('judgeService')
+      c.resolve('judgeService'),
+      // The competition lock needs the meet's endDate; the socket path is the
+      // one live-scoring surface that does not pass through Express, so it
+      // cannot borrow `competition-lock.middleware` and reads the record itself.
+      c.resolve('competitionRepository')
     );
     
     // Register event handlers

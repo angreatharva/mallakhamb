@@ -18,6 +18,7 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/auth.middleware');
+const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const publicValidator = require('../validators/public.validator');
 
@@ -44,6 +45,7 @@ function createPublicRoutes(container) {
   const publicController = container.resolve('publicController');
   const paymentController = container.resolve('paymentController');
   const authenticate = createAuthMiddleware(container);
+  const requireUnlockedCompetition = createCompetitionLockGuard(container);
 
   /**
    * @route   GET /api/public/competitions
@@ -112,13 +114,31 @@ function createPublicRoutes(container) {
    * @route   POST /api/public/save-score
    * @desc    Submit a score slip for a team/player
    * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous
+   *
+   * This is the path the DEPLOYED judge client actually posts slips to, so it
+   * carries the competition lock as well as its admin and judge twins. Guarding
+   * only /api/judge/scores/save and /api/admin/scores/save would leave the
+   * busiest write in the app open after the meet closed.
    */
-  router.post('/save-score', authenticate, requireScoringAccess, adminController.saveScores);
+  router.post(
+    '/save-score',
+    authenticate,
+    requireScoringAccess,
+    requireUnlockedCompetition(),
+    adminController.saveScores
+  );
 
   /**
    * @route   POST /api/public/payments/razorpay/webhook
    * @desc    Razorpay webhook reconciliation
    * @access  Public (verified by HMAC signature)
+   *
+   * Deliberately NOT behind the competition lock. Razorpay is not a user, and
+   * this callback records money that has ALREADY moved; refusing it after the
+   * meet closes would not undo the charge, it would only lose the record of it
+   * while Razorpay retried. The coach-facing half of payment — order creation,
+   * verify-and-submit, discount redemption — is locked, so nothing new can
+   * enter the window. See `middleware/competition-lock.middleware`.
    */
   router.post('/payments/razorpay/webhook', paymentController.reconcileRazorpayWebhook);
 

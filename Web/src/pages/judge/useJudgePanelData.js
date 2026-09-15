@@ -13,6 +13,7 @@ import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { judgeAPI } from '@/services/public/judge.api';
 import { apparatusKey, apparatusToJudge } from '@/utils/scoring/apparatus';
+import { panelSeats } from '@/utils/scoring/judgePanel';
 import { ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown } from './judgeShared';
 
 /**
@@ -263,9 +264,16 @@ export function useJudgePanelData({ judgeInfo, session }) {
           apparatus: selectedApparatus,
         });
         const judgesData = res.data?.data || [];
-        const panelJudges = (Array.isArray(judgesData) ? judgesData : [])
-          .filter((j) => !j.isEmpty && j.name?.trim())
-          .filter((j) => PANEL_TYPES.includes(j.judgeType));
+        /*
+         * One seat per role, even though the query already named an apparatus.
+         *
+         * The server answers an apparatus filter with that apparatus's seats
+         * PLUS any legacy category-wide ones (`{ $in: [apparatus, null, ''] }`),
+         * which is correct — an old seat really does judge this apparatus — but
+         * a meet part-way through being re-seated returns BOTH for a role, and
+         * the count below is the panel size.
+         */
+        const panelJudges = panelSeats(judgesData, selectedApparatus);
         const count = panelJudges.length;
         if (count >= 3 && count <= 5) setPanelSize(count);
         else if (count > 5) setPanelSize(5);
@@ -395,6 +403,16 @@ export function useJudgePanelData({ judgeInfo, session }) {
     if (judgeInfo && selectedPlayer) fetchExistingScores();
   }, [judgeInfo, selectedPlayer, fetchExistingScores]);
 
+  /*
+   * The apparatus on screen, readable from the socket handlers below.
+   *
+   * Those handlers are created once per connection and the apparatus can change
+   * without one — so a plain closure over `selectedApparatus` would go stale and
+   * start filtering against the apparatus the judge was on when they connected.
+   */
+  const selectedApparatusRef = useRef(selectedApparatus);
+  selectedApparatusRef.current = selectedApparatus;
+
   // Live panel feed
   useEffect(() => {
     if (!judgeInfo || !selectedCompetitionType) return;
@@ -437,9 +455,28 @@ export function useJudgePanelData({ judgeInfo, session }) {
     // listener for it was dead code that looked live — the same trap as the
     // cross-tab `storage` listener in HIGH-W4. Verified end to end in
     // Server/tests/integration/socket/scoring-socket.test.js.
+    /*
+     * The room is per (gender, ageGroup, competitionType) and carries EVERY
+     * apparatus panel in that category, so a mark has to match the athlete AND
+     * the apparatus on screen. Matching the athlete alone put the Rope Judge 2's
+     * slip into the Pole panel's review for anyone entered for both.
+     *
+     * `apparatusKey` on both sides, not `===`: a mark saved before the field was
+     * relayed arrives with no apparatus and resolves to Pole, which is the same
+     * fallback the score itself was stored under.
+     *
+     * Read through the ref rather than the closure. `selectedApparatus` is not
+     * in this effect's dependency array and must not be — adding it would tear
+     * down the socket and re-join the room every time the judge switches
+     * apparatus, mid-meet.
+     */
+    const isForThisPerformance = (data) =>
+      apparatusKey(data.apparatus) === apparatusKey(selectedApparatusRef.current);
+
     newSocket.on('score_updated', (data) => {
       const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
-      if (currentPlayerId && String(data.playerId) === currentPlayerId && PANEL_TYPES.includes(data.judgeType)) {
+      if (currentPlayerId && String(data.playerId) === currentPlayerId
+        && isForThisPerformance(data) && PANEL_TYPES.includes(data.judgeType)) {
         setPanelScores((prev) => ({
           ...prev,
           [data.judgeType]: {
@@ -454,7 +491,9 @@ export function useJudgePanelData({ judgeInfo, session }) {
     });
     newSocket.on('scores_saved_notification', (data) => {
       const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
-      if (currentPlayerId && String(data.playerId) === currentPlayerId) {
+      // Apparatus-matched for the same reason, and it matters more here: this
+      // one locks the slip, so a Rope finalization was closing the Pole panel.
+      if (currentPlayerId && String(data.playerId) === currentPlayerId && isForThisPerformance(data)) {
         setFinalized(true);
         toast.success('Panel score finalized and locked');
       }

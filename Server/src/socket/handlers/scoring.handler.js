@@ -9,6 +9,12 @@
 
 const EventTypes = require('../events/event-types');
 const { alternateRoomId } = require('../../utils/data/scoring-room.util');
+const {
+  isCompetitionLocked,
+  mayBypassCompetitionLock,
+  lockedMessage,
+  lockInstant,
+} = require('../../utils/security/competition-lock.util');
 
 class ScoringHandler {
   /**
@@ -17,13 +23,81 @@ class ScoringHandler {
    * @param {ScoringService} scoringService - Scoring service
    * @param {AuthorizationService} authorizationService - Authorization service
    * @param {Logger} logger - Logger instance
+   * @param {JudgeService} [judgeService]
+   * @param {CompetitionRepository} [competitionRepository] - for the end-date lock
    */
-  constructor(socketManager, scoringService, authorizationService, logger, judgeService = null) {
+  constructor(
+    socketManager,
+    scoringService,
+    authorizationService,
+    logger,
+    judgeService = null,
+    competitionRepository = null
+  ) {
     this.socketManager = socketManager;
     this.scoringService = scoringService;
     this.authorizationService = authorizationService;
     this.logger = logger;
     this.judgeService = judgeService;
+    this.competitionRepository = competitionRepository;
+  }
+
+  /**
+   * Refuse a live broadcast into a meet that has closed.
+   *
+   * The socket path does not persist anything — `handleScoreUpdate` says so,
+   * and POST /public/save-score is where slips are actually written — so this
+   * is not the lock's load-bearing half. It is here because a panel screen that
+   * keeps accepting and relaying marks into a frozen competition tells four
+   * judges their work is being recorded when the HTTP save behind it is
+   * answering 423. Better to refuse in the place the judge is looking.
+   *
+   * The meet comes from `socket.competitionId`, stamped from the JWT at
+   * handshake (`socket.manager.js`), NOT from the room id: rooms are
+   * `scoring_{gender}_{ageGroup}_{competitionType}` and name no competition at
+   * all.
+   *
+   * Fails OPEN when the competition cannot be determined or read — an
+   * unresolvable meet must not silently kill a live panel, and the write this
+   * broadcast accompanies is refused by the HTTP guard regardless.
+   *
+   * @param {Socket} socket
+   * @throws {Error} when the competition has locked
+   */
+  async assertCompetitionUnlocked(socket) {
+    // Same wiring check the HTTP guard makes: a harness that hands this class a
+    // stub repository leaves the lock inert here rather than throwing into
+    // every live broadcast.
+    if (typeof this.competitionRepository?.findById !== 'function') return;
+    if (mayBypassCompetitionLock(null, socket.userType)) return;
+
+    const competitionId = socket.competitionId;
+    if (!competitionId) return;
+
+    let competition;
+    try {
+      competition = await this.competitionRepository.findById(competitionId, {
+        select: 'name endDate',
+      });
+    } catch (error) {
+      this.logger.warn('Competition lock: could not read competition for socket write', {
+        competitionId: String(competitionId),
+        error: error.message,
+      });
+      return;
+    }
+
+    if (!competition || !isCompetitionLocked(competition)) return;
+
+    this.logger.warn('Competition lock: socket write refused, competition has closed', {
+      competitionId: String(competitionId),
+      competitionName: competition.name,
+      lockedSince: lockInstant(competition)?.toISOString(),
+      userId: socket.userId,
+      userType: socket.userType,
+    });
+
+    throw new Error(lockedMessage(competition, lockInstant(competition)));
   }
 
   /**
@@ -140,6 +214,8 @@ class ScoringHandler {
       throw new Error('Only judges can update scores');
     }
 
+    await this.assertCompetitionUnlocked(socket);
+
     const { roomId, playerId, teamId, judgeType, judgeNo, score, notes, breakdown, playerName } = data;
 
     // Validate required fields
@@ -192,6 +268,21 @@ class ScoringHandler {
       breakdown,
       teamId: teamId || null,
       judgeId: socket.userId,
+      /*
+       * WHICH PERFORMANCE THIS MARK IS FOR.
+       *
+       * A score's identity is (player, apparatus) — somebody entered for three
+       * apparatus performs three times and earns three separate scores — and
+       * the client has always sent this. It was dropped here, so every listener
+       * saw `undefined` and `apparatusKey` resolved it to Pole: a Rope slip
+       * landed on the athlete's Pole row in the scorer's live sheet.
+       *
+       * The room is `scoring_{gender}_{ageGroup}_{competitionType}` with no
+       * apparatus in it, and now that a category holds one panel PER apparatus
+       * that room carries all of them — so this field is the only thing telling
+       * the Pole panel's live review that a mark belongs to Rope.
+       */
+      apparatus: data.apparatus || null,
       timestamp: new Date().toISOString()
     };
 
@@ -253,6 +344,8 @@ class ScoringHandler {
     if (!['judge', 'admin', 'superadmin'].includes(socket.userType)) {
       throw new Error('Not authorized to save scores');
     }
+
+    await this.assertCompetitionUnlocked(socket);
 
     const { roomId, playerId, scores } = data;
 

@@ -455,6 +455,7 @@ components:
             - Hanging Mallakhamb
             - Rope Mallakhamb
           nullable: true
+          description: "Part of the panel's IDENTITY: a meet holds one panel per (gender, ageGroup, apparatus). `null` is the legacy shape and still covers every apparatus in its category; nothing writes it any more."
         judgeAccount:
           type: string
           format: objectid
@@ -5808,7 +5809,7 @@ paths:
     get:
       tags:
         - Judges
-      summary: The panel seated for a category
+      summary: The panel seated for a category and apparatus
       operationId: adminGetJudges
       parameters:
         - name: X-Competition-Id
@@ -5900,6 +5901,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
+        PASS `apparatus`. A category holds one panel per apparatus, so without it every one of them is returned end to end — and callers size the panel by counting the rows, which picks the averaging method. An apparatus filter answers with that apparatus's seats PLUS any legacy category-wide ones, since those genuinely judge it too.
+        
         **Roles:** admin, superadmin, scorer
         
         **Competition context required** — see the `X-Competition-Id` parameter.
@@ -6171,6 +6174,8 @@ paths:
       description: |-
         Refuses a panel missing any of Senior Judge, Judge 1, Judge 2 or Scorer. The panel size (3/4/5) decides the scoring method, so a partial panel would produce a believable score computed the wrong way.
         
+        ONE PANEL, ONE APPARATUS. `apparatus` scopes the whole panel, not a seat, and a category running three of them is three calls. One person may hold the same seat on each — they are different panels — but not two seats on one. `competitionTypes` behaves differently: it is MERGED on update, so seating the same seats again for another type widens the array in place.
+        
         **Roles:** admin, superadmin
         
         **Competition context required** — see the `X-Competition-Id` parameter.
@@ -6225,6 +6230,8 @@ paths:
                 $ref: "#/components/schemas/Error"
       description: |-
         Which categories have a complete panel and which are already started.
+        
+        Each `competitionTypes[slug]` entry carries `judges` (every seat in the category, whatever apparatus) and `byApparatus` (one bucket per apparatus the meet runs, each with its own `hasMinimumJudges`). The entry's own `hasMinimumJudges` — the flag behind the dashboard's Start button — is true only when EVERY bucket is, because a category whose Pole panel is complete and whose Rope panel is not cannot be scored. A meet declaring no apparatus for a type has no buckets and falls back to the flat list.
         
         **Roles:** admin, superadmin, scorer
         

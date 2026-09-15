@@ -3,9 +3,11 @@ import { COMPETITION_PLACE } from './support/admin-data.js';
 import {
   adminSignIn,
   alreadyStaffed,
+  apparatusChoices,
   openJudges,
   saveStaffedPanel,
   seatedJudges,
+  selectCategory,
   selectPanel,
   staffSlot,
 } from './support/admin-flows.js';
@@ -33,15 +35,26 @@ import {
  *
  * WHAT A PANEL IS, AND WHY THERE IS NO "COMPETITION II PANEL"
  *
- * `Judge`'s unique indexes are `{gender, ageGroup, judgeNo, competition}` and
- * `{gender, ageGroup, judgeType, competition}` — neither includes
- * `competitionTypes`. One meet holds exactly one panel per (gender, age group)
- * however many competition types run on it. Competition II is enabled by
- * staffing the SAME seats again with that type selected, which widens the
- * seat's `competitionTypes` array; the screen allows it because its "already
- * staffed" check is scoped to the type you picked. Scores stay separate
- * regardless: a Score document's identity is
+ * `Judge`'s unique indexes are `{gender, ageGroup, apparatus, judgeNo,
+ * competition}` and `{gender, ageGroup, apparatus, judgeType, competition}` —
+ * neither includes `competitionTypes`. One meet holds one panel per
+ * (gender, age group, apparatus) however many competition types run on it.
+ * Competition II is enabled by staffing the SAME seats again with that type
+ * selected, which widens the seat's `competitionTypes` array; the screen allows
+ * it because its "already staffed" check is scoped to the type you picked.
+ * Scores stay separate regardless: a Score document's identity is
  * `{teamId, gender, ageGroup, competition, competitionType}`.
+ *
+ * APPARATUS IS THE OTHER AXIS AND IS NOT LIKE THAT. It IS in both keys, so Pole
+ * and Rope in one category are two panels, each staffed in full. Which ones a
+ * meet runs is not in the plan — it is read off the Apparatus dropdown, which
+ * the screen fills from the competition's `apparatusConfig`, so this seeder and
+ * `Server/scripts/seatPanels.js` stand up the same meet without a second list
+ * to keep in step. The plan's SIZE is per category and applies to each of them.
+ *
+ * That makes this the long way round in earnest: three apparatus × two
+ * competition types × six debounced judge searches is 36 database round trips
+ * per category. `Server/scripts/seatPanels.js` does the same job in seconds.
  *
  * WHAT IT DOES NOT DO
  *
@@ -83,10 +96,11 @@ if (wanted.length === 0) {
 for (const panel of wanted) {
   const category = `${panel.gender} ${panel.ageGroup}`;
 
-  test(`${category} — ${panel.size} judges + Scorer`, async ({ page }) => {
-    // Six judge searches per seat per competition type, each debounced and
-    // each a database round trip.
-    test.setTimeout(8 * 60_000);
+  test(`${category} — ${panel.size} judges + Scorer, per apparatus`, async ({ page }) => {
+    // Six judge searches per seat per competition type PER APPARATUS, each
+    // debounced and each a database round trip. The apparatus multiplier is why
+    // this is generous.
+    test.setTimeout(20 * 60_000);
 
     const competitionId = await adminSignIn(page, PLACE);
     await openJudges(page, competitionId);
@@ -94,24 +108,31 @@ for (const panel of wanted) {
     const seats = seatsFor(panel.size);
 
     for (const competitionType of PLAN_COMPETITION_TYPES) {
-      await selectPanel(page, { action: 'add', ...panel, competitionType });
+      // Read from the screen, per competition type: a meet may run Competition I
+      // on Pole alone and Competition III on all three.
+      await selectCategory(page, { action: 'add', ...panel, competitionType });
+      const apparatusList = await apparatusChoices(page);
 
-      /*
-       * Already staffed for THIS type. Not a failure and not something to work
-       * around: the screen is telling us the panel exists, which is the state a
-       * re-run is supposed to find. Whether it is the RIGHT panel is checked in
-       * the verification test below, against the plan.
-       */
-      if (await alreadyStaffed(page).count()) {
-        console.log(`   ${category} · ${competitionType} — already staffed, left alone`);
-        continue;
-      }
+      for (const apparatus of apparatusList) {
+        await selectPanel(page, { action: 'add', ...panel, competitionType, apparatus });
 
-      for (const seat of seats) {
-        await staffSlot(page, seat, SEAT_EMAIL[seat]);
+        /*
+         * Already staffed for THIS type AND apparatus. Not a failure and not
+         * something to work around: the screen is telling us the panel exists,
+         * which is the state a re-run is supposed to find. Whether it is the
+         * RIGHT panel is checked in the verification test below, against the plan.
+         */
+        if (await alreadyStaffed(page).count()) {
+          console.log(`   ${category} · ${competitionType} · ${apparatus} — already staffed, left alone`);
+          continue;
+        }
+
+        for (const seat of seats) {
+          await staffSlot(page, seat, SEAT_EMAIL[seat]);
+        }
+        await saveStaffedPanel(page);
+        console.log(`   ${category} · ${competitionType} · ${apparatus} — staffed ${seats.join(', ')}`);
       }
-      await saveStaffedPanel(page);
-      console.log(`   ${category} · ${competitionType} — staffed ${seats.join(', ')}`);
     }
   });
 }
@@ -120,8 +141,8 @@ test.describe('what the screen shows afterwards', () => {
   for (const panel of wanted) {
     const category = `${panel.gender} ${panel.ageGroup}`;
 
-    test(`${category} is seated exactly as the plan says`, async ({ page }) => {
-      test.setTimeout(5 * 60_000);
+    test(`${category} is seated exactly as the plan says, on every apparatus`, async ({ page }) => {
+      test.setTimeout(10 * 60_000);
 
       const competitionId = await adminSignIn(page, PLACE);
       await openJudges(page, competitionId);
@@ -129,24 +150,33 @@ test.describe('what the screen shows afterwards', () => {
       const expected = seatsFor(panel.size);
 
       for (const competitionType of PLAN_COMPETITION_TYPES) {
-        await selectPanel(page, { action: 'list', ...panel, competitionType });
-        const seated = await seatedJudges(page);
+        await selectCategory(page, { action: 'list', ...panel, competitionType });
+        const apparatusList = await apparatusChoices(page);
 
-        /*
-         * Both directions, and the second is the one that matters. A panel
-         * MISSING a seat fails loudly the moment a judge tries to score; a
-         * panel carrying one seat too many does not fail at all — it silently
-         * switches the whole category to a different averaging method and
-         * produces a plausible number. Asserting the exact set is what turns
-         * that into a red line here rather than a wrong result later.
-         */
-        expect(
-          Object.keys(seated).sort(),
-          `${category} · ${competitionType} is not the ${panel.size}-judge panel the plan calls for`
-        ).toEqual([...expected].sort());
+        for (const apparatus of apparatusList) {
+          await selectPanel(page, { action: 'list', ...panel, competitionType, apparatus });
+          const seated = await seatedJudges(page);
 
-        for (const seat of expected) {
-          expect(seated[seat], `${category}: nobody in the ${seat} seat`).toBeTruthy();
+          /*
+           * Both directions, and the second is the one that matters. A panel
+           * MISSING a seat fails loudly the moment a judge tries to score; a
+           * panel carrying one seat too many does not fail at all — it silently
+           * switches the whole category to a different averaging method and
+           * produces a plausible number. Asserting the exact set is what turns
+           * that into a red line here rather than a wrong result later.
+           *
+           * Per apparatus, because each one is its own panel: a category whose
+           * Rope panel lost a seat while Pole kept it is exactly the state a
+           * category-wide assertion could not see.
+           */
+          expect(
+            Object.keys(seated).sort(),
+            `${category} · ${competitionType} · ${apparatus} is not the ${panel.size}-judge panel the plan calls for`
+          ).toEqual([...expected].sort());
+
+          for (const seat of expected) {
+            expect(seated[seat], `${category} · ${apparatus}: nobody in the ${seat} seat`).toBeTruthy();
+          }
         }
       }
     });

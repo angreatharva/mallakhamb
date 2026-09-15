@@ -395,23 +395,39 @@ async function seed() {
     registeredTeams,
   });
 
-  // Seat a full 6-judge panel on every category, so any category the benchmark
-  // picks has a complete panel and the "start age group" guard passes.
+  /*
+   * Seat a full 6-judge panel on every category AND every apparatus, so any
+   * category the benchmark picks has a complete panel and the "start age group"
+   * guard passes.
+   *
+   * Per apparatus because that is the shape the app now writes: `Judge`'s
+   * unique keys carry `apparatus`, Manage Judges asks for one, and
+   * `getAllJudgesSummary` decides `hasMinimumJudges` per apparatus — a fixture
+   * seated category-wide would answer "not ready" for a meet the benchmark
+   * needs started. It also multiplies the seat count by the apparatus, which is
+   * the realistic figure for a load fixture to carry.
+   *
+   * The same person sits in the same seat on every apparatus. Legal: the
+   * one-person-one-seat rule is scoped to a panel, and these are different
+   * panels.
+   */
   const judgeDocs = [];
   for (const { gender, ageGroup } of ageGroups) {
-    SEAT_ORDER.forEach((judgeType, index) => {
-      judgeDocs.push({
-        competition: competition._id,
-        gender,
-        ageGroup,
-        judgeNo: index + 1,
-        judgeType,
-        competitionTypes: COMPETITION_TYPES,
-        apparatus: null,
-        judgeAccount: judgeAccounts[index]._id,
-        isActive: true,
+    for (const apparatus of APPARATUS) {
+      SEAT_ORDER.forEach((judgeType, index) => {
+        judgeDocs.push({
+          competition: competition._id,
+          gender,
+          ageGroup,
+          apparatus,
+          judgeNo: index + 1,
+          judgeType,
+          competitionTypes: COMPETITION_TYPES,
+          judgeAccount: judgeAccounts[index]._id,
+          isActive: true,
+        });
       });
-    });
+    }
   }
   await insertBatched(Judge, judgeDocs);
 
