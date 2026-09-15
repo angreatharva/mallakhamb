@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { ADMIN } from './admin-data.js';
 import { clearSession, competitionIdFor } from './browser.js';
+import { chooseLevelForPlace } from './level-flows.js';
 
 /**
  * The admin screens, as reusable steps — sign-in, the meet picker, and the
@@ -83,6 +84,14 @@ export const adminSignIn = async (page, place) => {
   await page.locator('#admin-email').fill(ADMIN.email);
   await page.locator('#admin-password').fill(ADMIN.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
+
+  /*
+   * The level comes first now. The session was cleared above, so there is no
+   * stored level to skip past and this rung always runs — pick the level the
+   * meet in `place` actually sits at, or the arena screen behind it has nothing
+   * to show.
+   */
+  await chooseLevelForPlace(page, 'admin', place);
 
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
   const dashboard = page.getByRole('button', { name: 'Select competition' });

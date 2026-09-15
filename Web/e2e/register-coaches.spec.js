@@ -9,6 +9,7 @@ import {
 } from './support/browser.js';
 import {
   assertCoachProfilePersisted,
+  coachHasTeam,
   createTeam,
   submitCoachRegistration,
   tryCoachSignIn,
@@ -49,9 +50,14 @@ test.describe('coach seeding', () => {
           `${coach.email} exists with different credentials — left untouched`
         );
 
-        // A coach who already has a team lands past create-team; one stranded
-        // by an interrupted run is still sitting on it, and gets finished.
-        if (!page.url().includes('/coach/create-team')) {
+        /*
+         * Asked of the API rather than read off the URL. Every coach now lands
+         * on /coach/select-level after sign-in, whether or not they have a team
+         * — the old check looked for /coach/create-team, which nobody lands on
+         * any more, so a stranded coach would be reported as finished and left
+         * without a team permanently.
+         */
+        if (await coachHasTeam(page)) {
           console.log(`${coach.email} — already registered with a team`);
           return;
         }

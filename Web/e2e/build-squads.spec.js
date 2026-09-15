@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
 import { COACH_ROSTER } from './support/coach-roster.js';
 import { ROSTER } from './support/roster.js';
-import { coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
+import { coachHasEntry, coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
 import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
 
 /**
@@ -75,15 +75,22 @@ for (const coach of teamsToBuild()) {
     await clearSession(page);
     await coachSignIn(page, { ...coach, ...COMPETITION, competitionName: COMPETITION.name, competitionPlace: COMPETITION.place });
 
-    // Sign-in lands on the competition picker until a team is entered, and on
-    // the dashboard afterwards — so a re-run skips straight past this.
-    if (page.url().includes('/coach/select-competition')) {
+    /*
+     * Asked of the API, not read off the URL. Sign-in lands every coach on
+     * /coach/select-level now, entered or not, so the old check for
+     * /coach/select-competition never fired — and entering a team is a PAID
+     * act, so "did this already happen?" cannot be guessed from where we
+     * landed.
+     */
+    if (!(await coachHasEntry(page))) {
       await registerTeamForCompetition(page, {
         ...coach,
         competitionName: COMPETITION.name,
         competitionPlace: COMPETITION.place,
       });
       captureEntry(coach.email, coach.teamName, COMPETITION);
+    } else {
+      await page.goto('/coach/dashboard');
     }
     await expect(page).toHaveURL(/\/coach\/dashboard/, { timeout: 20_000 });
     captureEntry(coach.email, coach.teamName, COMPETITION);

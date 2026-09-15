@@ -70,12 +70,24 @@ const GENDERS = ['Male', 'Female'];
 /**
  * The three meets. December 2026 weekends, one per place.
  *
- * @type {{place: string, startDay: number}[]}
+ * ONE PER LEVEL, deliberately. All three used to be `district`, which made the
+ * level a constant across the whole seeded database — so the chooser every role
+ * now passes through after sign-in had exactly one non-empty option, and a
+ * filter that dropped the wrong meets would have looked identical to one that
+ * worked. Spreading them is what gives that screen something to be wrong about.
+ *
+ * `international` is left unseeded on purpose: it is the empty case, and the
+ * "Nothing at this level" state is worth being able to reach by hand.
+ *
+ * The levels are also what tell the three apart. They share a name and a year,
+ * so before this the place was the only distinguishing field.
+ *
+ * @type {{place: string, startDay: number, level: string}[]}
  */
 const MEETS = [
-  { place: 'Mumbai', startDay: 12 },
-  { place: 'Pune', startDay: 19 },
-  { place: 'Nashik', startDay: 26 },
+  { place: 'Mumbai', startDay: 12, level: 'district' },
+  { place: 'Pune', startDay: 19, level: 'state' },
+  { place: 'Nashik', startDay: 26, level: 'national' },
 ];
 
 /** @param {number} day @returns {Date} midnight UTC on that December day */
@@ -117,7 +129,7 @@ function assertWeekend(date, label) {
 
 /**
  * The document for one meet.
- * @param {{place: string, startDay: number}} meet
+ * @param {{place: string, startDay: number, level: string}} meet
  * @param {string[]} adminIds
  * @param {boolean} [late] - put the fee deadline in the past, so late fees bite now
  */
@@ -137,7 +149,7 @@ function buildCompetition(meet, adminIds, late = false) {
     name: NAME,
     place: meet.place,
     year: YEAR,
-    level: 'district',
+    level: meet.level,
     // `upcoming` keeps every transition open: `ongoing` is refused before the
     // start date, and a started meet cannot be deleted.
     status: 'upcoming',
@@ -272,8 +284,16 @@ async function main() {
     const start = december(meet.startDay);
     const end = december(meet.startDay + 1);
     console.log(
-      `  ${meet.place.padEnd(8)} ${day(start)} (Sat) -> ${day(end)} (Sun)`
+      `  ${meet.place.padEnd(8)} ${meet.level.padEnd(9)} ${day(start)} (Sat) -> ${day(end)} (Sun)`
     );
+  }
+  // Printed because the level is what every role now picks BEFORE the meet, so
+  // a run that leaves an existing database on its old levels should say so.
+  if (skipped.length) {
+    console.log(
+      `\n  ${skipped.length} meet(s) already existed and kept their stored level.`
+    );
+    console.log('  Re-run with --force to set the levels above.');
   }
 
   console.log('\nFees:');

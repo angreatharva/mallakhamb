@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { apiGet, captureTeam, submitAndReadOutcome } from './browser.js';
+import { chooseLevelForPlace } from './level-flows.js';
 
 /**
  * The coach onboarding steps, as reusable pieces.
@@ -47,10 +48,14 @@ export const submitCoachRegistration = async (page, coach) => {
 /**
  * Sign in through /coach/login.
  *
- * Login always routes a coach to /coach/select-competition, which then bounces
- * to /coach/create-team if they have no team yet
- * (CompetitionSelectionScreen.jsx fetchCoachData). Both are accepted here
- * because which one you land on depends on how far onboarding has got.
+ * Login routes a coach to /coach/select-level, then to
+ * /coach/select-competition, which bounces to /coach/create-team if they have
+ * no team yet (CompetitionSelectionScreen.jsx fetchCoachData). All of them are
+ * accepted here because which one you land on depends on how far onboarding has
+ * got — and on whether a level is already stored from an earlier sign-in.
+ *
+ * The level itself is not picked here — `registerTeamForCompetition` does that,
+ * so the choice sits next to the meet it has to match.
  *
  * @param {import('@playwright/test').Page} page
  * @param {Object} coach
@@ -64,7 +69,7 @@ export const coachSignIn = async (page, coach) => {
   await page.getByRole('button', { name: /^sign in$/i }).click();
 
   await expect(page).toHaveURL(
-    /\/coach\/(create-team|select-competition|dashboard)/,
+    /\/coach\/(select-level|create-team|select-competition|dashboard)/,
     { timeout: 20_000 }
   );
 };
@@ -131,9 +136,9 @@ export const createTeam = async (page, coach) => {
   await page.getByRole('button', { name: /^create team$/i }).click();
   const response = await created;
 
-  // Creating a team lands back on competition selection, this time with a team
-  // to register.
-  await expect(page).toHaveURL(/\/coach\/select-competition/, { timeout: 20_000 });
+  // Creating a team hands on to the level chooser, and from there to
+  // competition selection — this time with a team to register.
+  await expect(page).toHaveURL(/\/coach\/select-(level|competition)/, { timeout: 20_000 });
 
   if (response.ok()) {
     try {
@@ -150,6 +155,38 @@ export const createTeam = async (page, coach) => {
 };
 
 /**
+ * Does this signed-in coach already have a team?
+ *
+ * Asked of the API, not of the URL. Sign-in used to bounce a teamless coach to
+ * /coach/create-team, so the landing URL answered this — but every coach now
+ * lands on /coach/select-level regardless, and a URL check would report a
+ * stranded coach as finished and leave them permanently without a team.
+ *
+ * @param {import('@playwright/test').Page} page - signed in as this coach
+ * @returns {Promise<boolean>}
+ */
+export const coachHasTeam = async (page) => {
+  const status = await apiGet(page, '/coaches/status');
+  return Boolean(status?.hasTeam);
+};
+
+/**
+ * Has this coach already entered a team into a competition?
+ *
+ * Same reasoning as `coachHasTeam`: the landing URL used to answer this and no
+ * longer can, because every coach lands on /coach/select-level now. Entering a
+ * team twice is not harmless — it is a paid entry — so this has to be asked
+ * rather than guessed.
+ *
+ * @param {import('@playwright/test').Page} page - signed in as this coach
+ * @returns {Promise<boolean>}
+ */
+export const coachHasEntry = async (page) => {
+  const status = await apiGet(page, '/coaches/status');
+  return Boolean(status?.hasCompetition);
+};
+
+/**
  * Pick a competition and register the team for it.
  *
  * Competitions are disambiguated by place, not name: the seeded set is three
@@ -162,6 +199,13 @@ export const createTeam = async (page, coach) => {
  * @returns {Promise<string>} the competition heading actually chosen
  */
 export const registerTeamForCompetition = async (page, coach) => {
+  /*
+   * The level chooser sits in front of the competition list, and the list shows
+   * only meets at the chosen level — so picking the wrong one here finds no
+   * card at all. Skipped automatically when a level is already stored.
+   */
+  await chooseLevelForPlace(page, 'coach', coach.competitionPlace);
+
   const continueButton = page.getByRole('button', { name: /register team & continue/i });
   await expect(continueButton).toBeVisible({ timeout: 20_000 });
 

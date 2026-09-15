@@ -16,10 +16,11 @@ import {
 /**
  * One player, the whole onboarding path, driven through the real UI:
  *
- *   /player/register  → fill the form, submit
- *   /player/login     → sign in with the credentials just created
+ *   /player/register    → fill the form, submit
+ *   /player/login       → sign in with the credentials just created
+ *   /player/select-level → where every role lands after sign-in
  *   /player/select-team → join a team
- *   /player/dashboard → landed
+ *   /player/dashboard   → landed
  *
  * Step 2 deliberately clears the session and signs in from scratch. That is the
  * point: it proves the stored credentials actually work, rather than riding

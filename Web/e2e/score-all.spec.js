@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getDifficultyRequirement } from '../src/utils/scoring/copRules.js';
 import { apiGet, clearSession, competitionIdFor } from './support/browser.js';
-import { judgeSignIn } from './support/judge-flows.js';
+import { judgeSignIn, judgeSignInAt } from './support/judge-flows.js';
 import {
   PANELS,
   PLAN_PLACE,
@@ -215,11 +215,17 @@ const TIME_BANDS = [
   { time: '1:45', deduction: '0.50' }, // 15 over → the maximum
 ];
 
-/** Sign in as whoever holds one seat, from a cold session, and pick the category. */
+/**
+ * Sign in as whoever holds one seat, from a cold session, and pick the category.
+ *
+ * The meet is picked explicitly now: sign-in lands on the level chooser rather
+ * than the dashboard, and the category ladder only exists once a competition is
+ * chosen. PLAN_PLACE is the meet the panel plan seats everyone at.
+ */
 const asSeat = async (page, seat, category) => {
   await page.goto('/judge/login');
   await clearSession(page);
-  await judgeSignIn(page, judgeInSeat(seat));
+  await judgeSignInAt(page, judgeInSeat(seat), PLAN_PLACE);
   await chooseCategory(page, category);
 };
 
@@ -310,6 +316,8 @@ for (const type of TYPES) {
         };
 
         // ── Is this panel seated for this competition type at all? ──────────
+        // Only the API is read here, so the meet does not need choosing —
+        // /judge/assignments spans every competition the judge sits at.
         await page.goto('/judge/login');
         await clearSession(page);
         await judgeSignIn(page, judgeInSeat('Senior Judge'));

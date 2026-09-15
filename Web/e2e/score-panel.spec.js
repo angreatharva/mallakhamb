@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { getCombinationChecklist, getDifficultyRequirement } from '../src/utils/scoring/copRules.js';
 import { apiGet, clearSession } from './support/browser.js';
-import { judgeSignIn } from './support/judge-flows.js';
+import { judgeSignInAt } from './support/judge-flows.js';
 import { ROSTER } from './support/roster.js';
-import { PLAN_PROVENANCE, judgeInSeat, panelOfSize } from './support/panel-plan.js';
+import { PLAN_PLACE, PLAN_PROVENANCE, judgeInSeat, panelOfSize } from './support/panel-plan.js';
 import {
   chooseCategory,
   openPlayerSlip,
@@ -152,11 +152,17 @@ test.beforeAll(() => {
   })));
 });
 
-/** Sign in as whoever holds one seat, from a cold session, and pick the category. */
+/**
+ * Sign in as whoever holds one seat, from a cold session, and pick the category.
+ *
+ * The meet is picked explicitly now: sign-in lands on the level chooser rather
+ * than the dashboard, and the category ladder only exists once a competition is
+ * chosen. PLAN_PLACE is the meet the panel plan seats everyone at.
+ */
 const asSeat = async (page, seat, category) => {
   await page.goto('/judge/login');
   await clearSession(page);
-  await judgeSignIn(page, judgeInSeat(seat));
+  await judgeSignInAt(page, judgeInSeat(seat), PLAN_PLACE);
   await chooseCategory(page, category);
 };
 

@@ -72,18 +72,27 @@ export const signInAs = async (page, role) => {
   await page.getByRole('button', { name: /^sign in$/i }).click();
 
   /*
-   * An admin who is not bound to one meet is handed "Choose Your Arena"
-   * IN PLACE, so the URL still ends in /login and waiting on navigation alone
-   * hangs for the full timeout. Settle for either outcome, then clear the
-   * chooser so callers land on a dashboard.
+   * Sign-in now always navigates — to /{role}/select-level for every role but
+   * superadmin. The old in-place "Choose Your Arena" for admins is gone; both
+   * choosers are real routes.
+   *
+   * The two rungs are walked here so callers still land on a dashboard. Mumbai
+   * is the district meet (see MEETS in Server/scripts/createCompetitions.js),
+   * so the level has to be district for its card to be on the list at all.
    */
+  await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 90_000 });
+
+  const level = page.getByRole('heading', { name: 'Choose Your Level' });
+  if (await level.count().catch(() => 0)) {
+    await page.getByRole('button', { name: /^district\b/i }).first().click({ timeout: 10_000 }).catch(() => {});
+    await page.getByRole('button', { name: /^continue$/i }).click({ timeout: 10_000 }).catch(() => {});
+    await page.waitForTimeout(900);
+  }
+
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
-  await Promise.race([
-    page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 90_000 }),
-    arena.waitFor({ state: 'visible', timeout: 90_000 }),
-  ]);
   if (await arena.count().catch(() => 0)) {
     await page.getByRole('button', { name: /Mumbai/i }).first().click({ timeout: 10_000 }).catch(() => {});
+    await page.getByRole('button', { name: /Continue to Dashboard/i }).click({ timeout: 10_000 }).catch(() => {});
     await page.waitForTimeout(1500);
   }
   await page.waitForTimeout(1000);
@@ -97,9 +106,19 @@ export const signInAs = async (page, role) => {
  * @param {import('@playwright/test').Page} page
  */
 export const dismissContextChooser = async (page) => {
+  // The level chooser sits in front of the arena chooser now, so it has to be
+  // cleared first or the arena list behind it is never reached.
+  const level = page.getByRole('heading', { name: 'Choose Your Level' });
+  if (await level.count().catch(() => 0)) {
+    await page.getByRole('button', { name: /^district\b/i }).first().click({ timeout: 5000 }).catch(() => {});
+    await page.getByRole('button', { name: /^continue$/i }).click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(900);
+  }
+
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
   if (await arena.count().catch(() => 0)) {
     await page.getByRole('button', { name: /Mumbai/i }).first().click({ timeout: 5000 }).catch(() => {});
+    await page.getByRole('button', { name: /Continue to Dashboard/i }).click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(900);
   }
   for (const name of [/^Male$/, /^Under14$/, /Pole Mallakhamb/, /^Competition I$/, /^(Continue|Confirm|Start Judging|Select|Done)$/i]) {
@@ -116,6 +135,8 @@ export const ROUTES_BY_AREA = {
   judge: {
     login: true,
     routes: [
+      { name: 'Judge select level', url: '/judge/select-level' },
+      { name: 'Judge select competition', url: '/judge/select-competition' },
       { name: 'Judge dashboard', url: '/judge/dashboard' },
       { name: 'Judge dashboard picked', url: '/judge/dashboard', prepare: dismissContextChooser },
       { name: 'Judge profile', url: '/judge/profile' },
@@ -148,6 +169,7 @@ export const ROUTES_BY_AREA = {
     routes: [
       { name: 'Coach dashboard', url: '/coach/dashboard', prepare: dismissContextChooser },
       { name: 'Coach create team', url: '/coach/create-team' },
+      { name: 'Coach select level', url: '/coach/select-level' },
       { name: 'Coach select competition', url: '/coach/select-competition' },
       { name: 'Coach payment', url: '/coach/payment' },
     ],
@@ -156,12 +178,16 @@ export const ROUTES_BY_AREA = {
     login: true,
     routes: [
       { name: 'Player dashboard', url: '/player/dashboard', prepare: dismissContextChooser },
+      { name: 'Player select level', url: '/player/select-level' },
+      { name: 'Player select competition', url: '/player/select-competition' },
       { name: 'Player team selection', url: '/player/select-team' },
     ],
   },
   admin: {
     login: true,
     routes: [
+      { name: 'Admin select level', url: '/admin/select-level' },
+      { name: 'Admin select competition', url: '/admin/select-competition' },
       { name: 'Admin dashboard', url: '/admin/dashboard', prepare: dismissContextChooser },
       { name: 'Admin teams', url: '/admin/teams' },
       { name: 'Admin scoring', url: '/admin/scoring' },

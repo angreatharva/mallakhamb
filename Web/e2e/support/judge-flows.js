@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { apiGet, submitAndReadOutcome } from './browser.js';
+import { chooseLevelForPlace } from './level-flows.js';
 
 /**
  * The judge onboarding steps, as reusable pieces.
@@ -86,7 +87,43 @@ export const judgeSignIn = async (page, judge, { timeout = 90_000 } = {}) => {
   await page.locator('#judge-password').fill(judge.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
 
-  await expect(page).toHaveURL(/\/judge\/dashboard/, { timeout });
+  /*
+   * Login lands on the level chooser now, not the dashboard. A judge with no
+   * panel seat has nothing behind any level and stops there, which is the
+   * correct place for an unseated judge to be told so — so both are accepted.
+   */
+  await expect(page).toHaveURL(/\/judge\/(select-level|select-competition|dashboard)/, { timeout });
+};
+
+/**
+ * Sign in and pick the meet, all the way to the dashboard.
+ *
+ * For callers that need a judge actually seated at a competition rather than
+ * merely authenticated — scoring runs, panel walks. A judge's meets are their
+ * panel seats, so the level has to be the one their seat sits at.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {Object} judge
+ * @param {string} place - the meet they are seated at, e.g. 'Mumbai'
+ * @param {{timeout?: number}} [options]
+ */
+export const judgeSignInAt = async (page, judge, place, options = {}) => {
+  await judgeSignIn(page, judge, options);
+  await chooseLevelForPlace(page, 'judge', place);
+
+  const card = page.getByRole('button', { name: new RegExp(`\\b${place}\\b`) });
+  await expect(
+    card,
+    `Expected exactly one competition in "${place}" on the judge's list. ` +
+    'A judge only sees meets they hold a seat at — check the panel assignments.'
+  ).toHaveCount(1, { timeout: 20_000 });
+  await card.click();
+
+  const go = page.getByRole('button', { name: /Continue to Dashboard/i });
+  await expect(go, 'the competition card did not register the click').toBeEnabled();
+  await go.click();
+
+  await expect(page).toHaveURL(/\/judge\/dashboard/, { timeout: 30_000 });
 };
 
 /**

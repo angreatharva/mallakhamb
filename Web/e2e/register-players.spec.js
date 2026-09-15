@@ -8,6 +8,7 @@ import {
 } from './support/browser.js';
 import {
   assertProfilePersisted,
+  hasTeam,
   joinTeam,
   submitRegistration,
   trySignIn,
@@ -61,8 +62,15 @@ test.describe('roster seeding', () => {
           !signedIn,
           `${player.email} exists with different credentials — left untouched`
         );
+        /*
+         * Asked of the API rather than read off the URL. Every player now lands
+         * on /player/select-level after sign-in, whether or not they have a
+         * team — the old check looked for /player/dashboard, which nobody lands
+         * on directly any more, so every stranded player would have been
+         * reported as finished and the roster left empty.
+         */
         test.skip(
-          page.url().includes('/player/dashboard'),
+          await hasTeam(page),
           `${player.email} is already registered and on a team`
         );
 

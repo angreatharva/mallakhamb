@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { apiGet, captureMembership, submitAndReadOutcome } from './browser.js';
+import { chooseLevelForPlace } from './level-flows.js';
 
 /**
  * The player onboarding steps, as reusable pieces.
@@ -42,20 +43,27 @@ export const submitRegistration = async (page, player) => {
   );
   if (outcome !== 'registered') return outcome;
 
-  // Registration signs the player in and hands them straight to team selection.
-  // A bounce to /player/login here means the response envelope is not being
-  // unwrapped — see UnifiedRegister.jsx onSubmit.
-  await expect(page).toHaveURL(/\/player\/select-team/);
+  // Registration signs the player in and hands them to the level chooser —
+  // team selection comes after a meet has been picked, since the roster is
+  // scoped to one. A bounce to /player/login here means the response envelope
+  // is not being unwrapped — see UnifiedRegister.jsx onSubmit.
+  await expect(page).toHaveURL(/\/player\/select-level/);
   return outcome;
 };
 
 /**
  * Sign in through /player/login with the given credentials.
+ *
+ * Login lands on /player/select-level now — team selection has moved to AFTER
+ * the competition, because a squad only means something inside a meet and the
+ * teams endpoint is scoped by one. Callers that need the roster screen should
+ * use `signInAndPickMeet` rather than widening this expectation.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {Object} player
  * @param {RegExp} [expectedUrl] - where login should land
  */
-export const signIn = async (page, player, expectedUrl = /\/player\/select-team/) => {
+export const signIn = async (page, player, expectedUrl = /\/player\/select-level/) => {
   await page.goto('/player/login');
   await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
@@ -79,11 +87,58 @@ export const signIn = async (page, player, expectedUrl = /\/player\/select-team/
  */
 export const trySignIn = async (page, player) => {
   try {
-    await signIn(page, player, /\/player\/(select-team|dashboard)/);
+    await signIn(page, player, /\/player\/(select-level|select-competition|select-team|dashboard)/);
     return true;
   } catch {
     return false;
   }
+};
+
+/**
+ * Is this signed-in player already on a squad?
+ *
+ * Asked of the API, not of the URL. Sign-in used to land a teamless player on
+ * /player/select-team and a finished one on /player/dashboard, so the landing
+ * URL answered this — but every player now lands on /player/select-level
+ * regardless, and a URL check would report everyone as finished. That failure
+ * is silent: a seeding run would skip the join and leave the roster empty.
+ *
+ * @param {import('@playwright/test').Page} page - signed in as this player
+ * @returns {Promise<boolean>}
+ */
+export const hasTeam = async (page) => {
+  const profile = await apiGet(page, '/players/profile');
+  return Boolean(profile?.team);
+};
+
+/**
+ * Sign in and walk the level → competition rungs to the team roster.
+ *
+ * For callers that need a player positioned to JOIN a squad. The roster is
+ * scoped to the chosen meet — `/players/teams` reads `req.query.competitionId`
+ * and without it lists teams across every open competition at once — so the
+ * meet has to be picked before the teams mean anything.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {Object} player
+ * @param {string} place - the meet to join a squad in, e.g. 'Mumbai'
+ */
+export const signInAndPickMeet = async (page, player, place) => {
+  await signIn(page, player, /\/player\/(select-level|select-competition|select-team|dashboard)/);
+  await chooseLevelForPlace(page, 'player', place);
+
+  const card = page.getByRole('button', { name: new RegExp(`\\b${place}\\b`) });
+  await expect(
+    card,
+    `Expected exactly one competition in "${place}" on the player's list`
+  ).toHaveCount(1, { timeout: 20_000 });
+  await card.click();
+
+  const go = page.getByRole('button', { name: /Continue to Dashboard/i });
+  await expect(go, 'the competition card did not register the click').toBeEnabled();
+  await go.click();
+
+  await expect(page).toHaveURL(/\/player\/(select-team|dashboard)/, { timeout: 30_000 });
 };
 
 /**
@@ -125,6 +180,26 @@ export const assertProfilePersisted = async (page, player) => {
  */
 export const joinTeam = async (page, player) => {
   const { email, teamName = null } = player;
+
+  /*
+   * Straight to the roster, skipping the level and competition rungs in front
+   * of it.
+   *
+   * Sign-in and registration both land on /player/select-level now, so this
+   * used to be reached by falling through from there — it no longer is. Going
+   * direct is sound for seeding because the roster is NOT scoped to a meet:
+   * PlayerService.getAvailableTeams ignores its competition argument and
+   * returns every active team. It matters here because the seeded squads are
+   * not entered into any competition at all — register-coaches.spec.js stops
+   * at the team, deliberately, since entering a meet costs an entry fee — so
+   * walking the rungs would land on an empty list for every player.
+   *
+   * If that scoping is ever implemented, this has to walk the rungs instead,
+   * and the coach seeding chain has to enter the squads first.
+   */
+  if (!page.url().includes('/player/select-team')) {
+    await page.goto('/player/select-team');
+  }
 
   const locateCard = async () => {
     await expect(page.getByRole('heading', { name: 'Select Your Team' })).toBeVisible();
