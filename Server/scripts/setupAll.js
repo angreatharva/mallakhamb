@@ -148,6 +148,7 @@ const STEPS = [
     id: 'panels',
     where: 'server',
     needsApi: true,
+    needsEnv: ['SEED_ADMIN_PASSWORD'],
     title: 'Judging panels',
     command: ['npm', 'run', 'seed:panels'],
     why: 'Seats judges on every category of every meet, to the sizes fixed in '
@@ -164,6 +165,7 @@ const STEPS = [
     id: 'pay',
     where: 'server',
     needsApi: true,
+    needsEnv: ['DISCOUNT_CODE_ENABLED', 'DISCOUNT_CODE'],
     title: 'Final submission and payment',
     command: ['npm', 'run', 'pay:discount'],
     why: 'A team reaches a judge only once the coach has final-submitted AND paid. '
@@ -305,6 +307,45 @@ async function main() {
   }
 
   const steps = selectSteps(args);
+
+  /*
+   * Every environment variable the SELECTED steps need, checked before the
+   * first one runs.
+   *
+   * Up front, because the steps that need one are last and the steps before
+   * them are slow. Without this, a full run spends well over an hour seeding
+   * accounts and squads through a browser and then stops dead on `panels` with
+   * "SEED_ADMIN_PASSWORD is not set" — a one-line fix discovered in the worst
+   * possible place. `--dry-run` still checks, because finding out what a real
+   * run would need is most of what a dry run is for.
+   */
+  const missingEnv = [];
+  for (const step of steps) {
+    for (const key of step.needsEnv || []) {
+      if (!process.env[key]) missingEnv.push({ step: step.id, key });
+    }
+  }
+  // Set-but-false is its own failure: payWithDiscount refuses anything but the
+  // literal string, and "I did set it" is a confusing place to be stuck.
+  if (steps.some((s) => s.id === 'pay')
+      && process.env.DISCOUNT_CODE_ENABLED
+      && process.env.DISCOUNT_CODE_ENABLED !== 'true') {
+    missingEnv.push({ step: 'pay', key: 'DISCOUNT_CODE_ENABLED (must be exactly "true")' });
+  }
+
+  if (missingEnv.length > 0) {
+    line('\n  Missing environment variables in Server/.env:\n');
+    for (const { step, key } of missingEnv) {
+      line(`    ${key.padEnd(42)} needed by "${step}"`);
+    }
+    if (missingEnv.some((m) => m.key === 'SEED_ADMIN_PASSWORD')) {
+      line('\n  SEED_ADMIN_PASSWORD is the password createAdmin.js sets — Admin@2026 by');
+      line('  default. The panel seating signs in as that account over the admin API.');
+    }
+    line('\n  Add them and run this again. Nothing has been changed.');
+    process.exit(1);
+  }
+
   const apiSteps = steps.filter((s) => s.needsApi);
 
   /*
