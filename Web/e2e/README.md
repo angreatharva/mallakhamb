@@ -27,11 +27,11 @@ against one role, so a run that fails names the thing that broke:
 
 | Spec | Role | For | npm script |
 | --- | --- | --- | --- |
-| `register-coaches` | coach | Seeding coaches and their teams. | `seed:coaches` |
-| `register-players` | player | Seeding the standing squad. Idempotent, 70 players. | `seed:players` |
+| `register-coaches` | coach | Seeding 20 coaches and their teams, five per level. | `seed:coaches` |
+| `register-players` | player | Seeding the standing squad. Idempotent, 274 athletes across 20 teams. | `seed:players` |
 | `register-judges` | judge | Seeding judge accounts. Registration only — seating is an admin act. | `seed:judges` |
-| `build-squads` | coach | Entering each team into a meet and filling its squad. | `seed:squads` |
-| `seat-panels` | admin | Staffing every panel, at the size the plan gives it. | `seed:panels` |
+| `build-squads` | coach | Entering each team into all three meets at its level, and filling each squad. | `seed:squads` |
+| `seat-panels` | admin | Staffing every panel of one meet, at the size the plan gives it (the server script does all twelve). | `seed:panels` |
 | `score-all` | judges | The whole meet: every athlete, every apparatus, both types. | `seed:scores` |
 | `register-player` | player | Scrutinising the player flow with one ad-hoc player. | `test:e2e:player` |
 | `register-coach` | coach | The coach flow in full: register, create a team, enter a meet. | `test:e2e:coach` |
@@ -123,12 +123,40 @@ averaging methods never meet real data. Spreading them is the only requirement;
 *which* category gets which is arbitrary, so it is drawn, with the seed recorded
 so a draw can be reproduced.
 
+**One plan per meet.** The file holds a `meets` array of twelve, and duplicates
+the default meet's `place`/`seats`/`panels` at the top level — `score-all`,
+`score-panel` and both seating paths each work on one meet by design, so the
+meet they mean is named once rather than threaded through every call.
+
+| Level | Sizes | Seats |
+| --- | --- | --- |
+| `district` | frozen | frozen |
+| everything else | drawn per meet | six judges dealt from the pool |
+
+District is frozen because the scoring specs run against a district meet and
+reach for seats **by name** — redrawing would mean rewriting them for no gain.
+`planForPlace(place)` gets any other meet's plan.
+
+Seats are dealt from the **whole** sixteen-judge pool, not a per-level slice: a
+judge sitting at meets on several levels is the normal case, and it is what the
+post-login level chooser exists to let them switch between. A pool partitioned
+by level would give every judge exactly one level and leave that flow with
+nothing to choose. The draw refuses to seat one person twice on a panel — the
+schema forbids it, so a repeat would otherwise fail deep in the seating run on a
+duplicate-key error.
+
 Four things read that one file — the two seating paths and the two scoring specs
 — and that is the point. The table used to be duplicated in the seating script
 and in `score-all.spec.js`, each with a comment asking the reader to keep them in
 step. Drift there does not break a spec: a panel seated with four judges and
 scored as five produces a **believable number by the wrong method**, which is the
 worst shape a scoring bug can take.
+
+The judge pool lives in `Server/scripts/seed/judges.json`, read by both stacks
+for the same reason. `planPanels.js` used to hardcode six seat emails separately
+from the roster that creates those accounts, so seating somebody who had never
+registered failed inside the admin screen with a name simply absent from the
+search results.
 
 ## seat-panels
 
@@ -149,8 +177,16 @@ Off localhost the defaults are refused and the credentials must be passed
 deliberately: seating and vacating panels is a meet-wide, destructive act and
 `E2E_BASE_URL` will happily point at a deployed environment.
 
-`Server/scripts/seatPanels.js` is the same job without a browser, and does one
-thing this cannot:
+This spec seats **one** meet — the plan's default, or `COMPETITION_PLACE`.
+Seating all twelve through the screen is 120 panels and five dropdowns each, so
+the setup chain uses the server script for that and keeps this one as the way to
+exercise the Manage Judges ladder itself.
+
+`Server/scripts/seatPanels.js` is the same job without a browser. It seats
+**every** planned meet by default (`--place=` narrows it to one), signing in
+once — the admin routes take the meet from the `X-Competition-Id` header rather
+than the token claim, so one session covers all twelve. A meet that fails does
+not stop the rest. It also does one thing this spec cannot:
 
 ```bash
 SEED_ADMIN_PASSWORD='…' npm --prefix Server run seed:panels
@@ -330,7 +366,7 @@ whatever happens to hold that id there. So a competition travels as
 
 Accounts alone are not a usable database, which is why the other six sections
 exist. Registrations and nothing else leaves coaches parked on
-`/coach/create-team` and 70 players with `team: null`. Accounts and teams and
+`/coach/create-team` and 274 athletes with `team: null`. Accounts and teams and
 nothing else leaves a database of people with nothing to compete in: no meet, no
 entries, no age groups, and no panel — so a judge signs in to the "no panel
 assignments yet" screen and the app looks broken rather than unseeded. Both
@@ -377,24 +413,41 @@ repairing one of them.
 
 Registration alone does not put anybody in front of a judge. `register-coaches`
 creates the coach and their team and stops, because entering a competition costs
-an entry fee. This is the step that follows: enter each team into a meet, then
-add every athlete to a group and an apparatus.
+an entry fee. This is the step that follows: enter each team into **all three
+meets at its level**, then add every athlete to a group and an apparatus at each.
 
 ```bash
-npm --prefix Web run seed:squads
-TEAM=SGAM-A npm --prefix Web run seed:squads
+npm --prefix Web run seed:squads              # all 60: 20 teams × 3 meets
+LEVEL=state npm --prefix Web run seed:squads  # one level's 15
+PLACE=Pune npm --prefix Web run seed:squads   # one meet's 5
+TEAM=SGAM-A npm --prefix Web run seed:squads  # one team's 3
 npm --prefix Web run seed:squads:headed
 ```
 
 What a judge actually sees is the SQUAD, and a squad place is (athlete, gender,
-age group, apparatus) inside one competition's registration — not team
+age group, apparatus) inside **one competition's registration** — not team
 membership. A team can be fully registered and still read as "No eligible
 players" on every panel.
 
+That is also why this is sixty tests and not twenty: a squad belongs to one
+meet, so a team at three meets needs its squad built three times. There is no
+"copy last meet's squad" in the product, and inventing one here would seed a
+shape the app cannot produce. **The full run is hours** — each test is
+independent and re-running finishes what is outstanding, so do it a level at a
+time.
+
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `TEAM` | Build one squad instead of all three | all |
-| `COMPETITION_NAME` / `COMPETITION_PLACE` / `COMPETITION_YEAR` | Which meet | `Bhausaheb Ranade Navodit` / `Mumbai` / `2026` |
+| `TEAM` | One team's three meets | all 20 |
+| `LEVEL` | One level's meets, for every team | all four |
+| `PLACE` | One meet | all twelve |
+
+> Whether an entry is still owed is asked of the API **per meet**
+> (`coachEnteredPlaces`), never inferred. `coachHasEntry` answers "any at all",
+> which stopped being the useful question once a team entered three: a coach
+> entered at Mumbai but not Pune answers yes to it, and the two entries still
+> owed would be skipped — silently, because entering is a paid act the run would
+> then never perform.
 
 The age group and apparatus come from `support/roster.js`, where both are now
 required inputs rather than documentation — the dashboard refuses a date of

@@ -184,7 +184,7 @@ async function main() {
 
   if (list) {
     const existing = await Competition.find({ name: NAME, year: YEAR }).lean();
-    if (existing.length === 0) console.log('  none of the three meets exist yet.');
+    if (existing.length === 0) console.log(`  none of the ${MEETS.length} meets exist yet.`);
     for (const competition of existing) {
       const day = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '—');
       console.log(
