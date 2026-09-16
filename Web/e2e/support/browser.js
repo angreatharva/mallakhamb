@@ -317,9 +317,27 @@ export const captureMembership = (playerEmail, teamName) => {
  * @returns {Promise<'registered'|'already-exists'>}
  */
 export const submitAndReadOutcome = async (page, endpoint, submit, role = null) => {
+  /*
+   * GENEROUS ON PURPOSE, for the same reason `judgeSignIn` is.
+   *
+   * Registering hashes a password with bcrypt at cost 12. `bcryptjs` is pure
+   * JavaScript and Node runs it on the one thread that also serves every other
+   * request, so it is the first thing to suffer when the machine is busy — and
+   * a seeding run is a hundred of these back to back against a database that
+   * may not be local.
+   *
+   * At twenty seconds this gave up on the twelfth of twelve coaches while the
+   * server was still working. The account was created; the run was not there to
+   * see it, so the team that should have followed never was — leaving 12
+   * coaches and 11 teams, which the next step reads as a coach who never
+   * finished onboarding.
+   *
+   * Waiting longer costs nothing when the response is quick. Giving up early
+   * costs a half-written account.
+   */
   const responsePromise = page.waitForResponse(
     (r) => r.url().includes(endpoint) && r.request().method() === 'POST',
-    { timeout: 20_000 }
+    { timeout: 90_000 }
   );
   await submit.click();
   const response = await responsePromise;
