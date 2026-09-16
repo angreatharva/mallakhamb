@@ -216,32 +216,78 @@ async function ensureCsrf() {
  * One call. Authenticated calls ride the Bearer exemption; the rest carry the
  * CSRF pair.
  */
+/** How many times a request that failed for an infrastructure reason is tried. */
+const ATTEMPTS = 4;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function call(pathname, { method = 'GET', body, token, competitionId } = {}) {
   const isWrite = method !== 'GET';
   if (isWrite && !token) await ensureCsrf();
 
-  const response = await fetch(`${API}${pathname}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(competitionId ? { 'X-Competition-Id': competitionId } : {}),
-      ...(isWrite && !token && csrf.token
-        ? { 'X-CSRF-Token': csrf.token, Cookie: csrf.cookie }
-        : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  /*
+   * RETRIED, because the failures this hits are about the route to the
+   * database rather than about the data.
+   *
+   * The API answers 500 when its own connection to Mongo drops or its hostname
+   * briefly fails to resolve — `MongoServerSelectionError: connection closed`,
+   * `getaddrinfo ENOTFOUND ...mongodb.net`. Against a cloud cluster those are
+   * routine, and one of them took out an entire meet 14 categories in: the run
+   * had already posted ~180 slips, and the meet was abandoned with its
+   * categories half-judged.
+   *
+   * 4xx is NOT retried. A 403 or a 409 is the server stating something true
+   * about the request, and asking again will not change it.
+   *
+   * Retrying WRITES is safe here specifically: a judge slip is keyed by
+   * (judge, athlete, category) and a lock by the category, so re-posting one is
+   * an update rather than a duplicate — this seeder already relies on that when
+   * it posts a slip wrong and then corrects it.
+   */
+  let lastError;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(`${API}${pathname}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(competitionId ? { 'X-Competition-Id': competitionId } : {}),
+          ...(isWrite && !token && csrf.token
+            ? { 'X-CSRF-Token': csrf.token, Cookie: csrf.cookie }
+            : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      // The API itself is unreachable — nothing was answered at all.
+      lastError = new Error(`${method} ${pathname} -> ${error.message}`);
+      if (attempt === ATTEMPTS) throw lastError;
+      await sleep(1000 * attempt);
+      continue;
+    }
 
-  const text = await response.text();
-  let payload;
-  try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text.slice(0, 300) }; }
+    const text = await response.text();
+    let payload;
+    try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text.slice(0, 300) }; }
 
-  if (!response.ok) {
+    if (response.ok) {
+      return payload?.data !== undefined ? payload.data : payload;
+    }
+
     const detail = payload?.error?.message || payload?.message || text.slice(0, 200);
-    throw new Error(`${method} ${pathname} -> ${response.status}: ${detail}`);
+    lastError = new Error(`${method} ${pathname} -> ${response.status}: ${detail}`);
+
+    if (response.status < 500 || attempt === ATTEMPTS) throw lastError;
+
+    console.log(`    retrying after ${response.status} (${attempt}/${ATTEMPTS - 1}): ${detail.slice(0, 80)}`);
+    // Backs off — a dropped Mongo connection or a failed DNS lookup takes a
+    // moment to come back, and an immediate retry just spends an attempt.
+    await sleep(1000 * attempt);
   }
-  return payload?.data !== undefined ? payload.data : payload;
+
+  throw lastError;
 }
 
 /** Sign in every seat once, and hold the tokens. */
