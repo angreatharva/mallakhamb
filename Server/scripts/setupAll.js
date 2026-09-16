@@ -1,5 +1,5 @@
 /**
- * Part 1 of a competition, from an empty database to teams ready to be judged.
+ * A whole competition season, from an empty database to published results.
  *
  *   node scripts/setupAll.js --list        # the plan, run nothing
  *   node scripts/setupAll.js --dry-run     # print each command, run nothing
@@ -33,9 +33,20 @@
  * To exercise the real Razorpay flow instead, stop at `--to=panels` and pay
  * through the UI in test mode.
  *
- * That is the Part 1 / Part 2 boundary: after payment, `npm --prefix Server run
- * seed:scores` posts the slips over the API in minutes, or `npm --prefix Web
- * run seed:scores` drives the judges through the browser in hours.
+ * WHY THIS IS ONE RUN AND NOT TWO
+ *
+ * It used to stop after payment and hand the judging back to you as a separate
+ * "Part 2", because payment was the thing a script could not honestly do. The
+ * discount code removed that: a 100%-off entry is a real product path, so there
+ * is no longer a step in the middle that needs a person. Splitting it in two
+ * only meant the obvious command left every meet unjudged while reporting
+ * success.
+ *
+ * BUDGET ABOUT TWO HOURS end to end, most of it in two steps: `squads` builds
+ * 36 squads through the coach dashboard (~25 min) and `scores` judges all
+ * twelve meets (~35 min). Both are resumable — every step is independent and
+ * re-running finishes only what is outstanding — so `--from=` and `--to=` are
+ * there for doing it in sittings.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
@@ -173,6 +184,19 @@ const STEPS = [
       + 'path that needs no Razorpay order because there is nothing to charge, not a '
       + 'forged signature. Needs DISCOUNT_CODE_ENABLED=true in .env.',
   },
+  {
+    id: 'scores',
+    where: 'server',
+    needsApi: true,
+    title: 'Judging every meet',
+    command: ['npm', 'run', 'seed:scores'],
+    why: 'Judges all twelve meets over the API — every athlete, every apparatus, '
+      + 'both competition types, each meet by its OWN panel sizes and its own six '
+      + 'judges. Posts the slips wrong first and corrects them, the way a panel '
+      + 'actually reaches a score, rather than writing the settled numbers. THE '
+      + 'SECOND-LONGEST STEP, about 35 minutes. `npm --prefix Server run '
+      + 'seed:scores:one -- --place=Delhi` does a single meet.',
+  },
 ];
 
 const line = (text = '') => process.stdout.write(`${text}\n`);
@@ -287,7 +311,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const database = String(process.env.MONGODB_URI || '').split('/').pop().split('?')[0];
 
-  line('\nMallakhamb — Part 1 setup');
+  line('\nMallakhamb — full seed');
   line(`  database  ${database}`);
   line(`  server    ${SERVER_DIR}`);
   line(`  web       ${WEB_DIR}`);
@@ -302,7 +326,7 @@ async function main() {
     }
     line('Start the API before any step marked "needs the API": npm --prefix Server start');
     line('Vite is started by Playwright itself — you do not need to run it.');
-    line('Part 2 (judging) is: npm --prefix Server run seed:scores  — all 12 meets, ~35 min');
+    line('End to end this is about two hours — squads ~25 min, scores ~35 min.');
     return;
   }
 
@@ -414,7 +438,7 @@ async function main() {
   }
 
   line(`\n${'='.repeat(72)}`);
-  line(`Part 1 complete — ${done.length} step(s): ${done.join(', ')}`);
+  line(`Setup complete — ${done.length} step(s): ${done.join(', ')}`);
   line(`${'='.repeat(72)}`);
   line('\nWhere this leaves you:');
   line('  12 meets — three each at district, state, national and international');
@@ -423,6 +447,7 @@ async function main() {
   line('  110 athletes, placed into squads by age group, gender and apparatus');
   line('  16 judges registered and seated across every category of every meet');
   line('  every team final-submitted and paid, so the judges can see them');
+  line('  every meet judged and published — 20 categories each, 240 in total');
   line('');
   line('ABOUT THAT PAYMENT:');
   line('  The `pay` step redeems the DISCOUNT CODE as each coach, over HTTP. That is');
@@ -438,12 +463,16 @@ async function main() {
   line('    npm --prefix Server run create-competitions -- --force --late');
   line('  and re-run it without --late to put the deadlines back.');
   line('');
-  line('THEN — Part 2, the judging:');
-  line('  Nothing above scores anything — all twelve meets are unjudged.');
+  line('CHECK IT:');
+  line('  npm --prefix Server run meet:status    # every meet, category by category');
   line('');
-  line('  npm --prefix Server run seed:scores       # all 12 over the API, ~35 min');
-  line('  npm --prefix Server run seed:scores:one -- --place=Delhi   # just one');
-  line('  npm --prefix Web run seed:scores          # ONE meet, through the browser, hours');
+  line('RE-RUN A PIECE — every step is independent and finishes only what is owed:');
+  line('  npm --prefix Server run setup -- --only=scores');
+  line('  npm --prefix Server run seed:scores:one -- --place=Delhi   # one meet');
+  line('  LEVEL=state npm --prefix Web run seed:squads               # one level');
+  line('');
+  line('  npm --prefix Web run seed:scores        # judging through the BROWSER instead');
+  line('  — one meet, hours. Use it to exercise the scoring screens, not to get data.');
 }
 
 main().catch((error) => {

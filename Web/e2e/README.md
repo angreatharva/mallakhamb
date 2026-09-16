@@ -47,6 +47,13 @@ npm --prefix Web run seed:ui        # coaches → players → judges → squads 
 npm --prefix Web run seed:scores    # then judge the meet
 ```
 
+> **For a database rather than a UI exercise, use the Server chain instead:**
+> `npm --prefix Server run setup -- --drop` does all eleven steps end to end —
+> migrations through judging — in about two hours. It seats panels and scores
+> over the API, which is minutes rather than hours for the same result. These
+> browser specs exist to prove the SCREENS work; reach for them when the UI
+> changes, not when you want data.
+
 > `seed:ui` ends with the browser seating, which staffs **one** meet. That is
 > the point of it — it is the all-through-the-UI path — but it leaves the other
 > eleven unseated. `npm --prefix Server run setup` uses the server script for
