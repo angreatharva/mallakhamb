@@ -302,7 +302,7 @@ async function main() {
     }
     line('Start the API before any step marked "needs the API": npm --prefix Server start');
     line('Vite is started by Playwright itself — you do not need to run it.');
-    line('Part 2 (judging) is: npm --prefix Server run seed:scores  (or --prefix Web, through the browser)');
+    line('Part 2 (judging) is: npm --prefix Server run seed:scores  — all 12 meets, ~35 min');
     return;
   }
 
@@ -439,8 +439,11 @@ async function main() {
   line('  and re-run it without --late to put the deadlines back.');
   line('');
   line('THEN — Part 2, the judging:');
-  line('  npm --prefix Server run seed:scores   # minutes, over the API');
-  line('  npm --prefix Web run seed:scores      # hours, through the browser');
+  line('  Nothing above scores anything — all twelve meets are unjudged.');
+  line('');
+  line('  npm --prefix Server run seed:scores       # all 12 over the API, ~35 min');
+  line('  npm --prefix Server run seed:scores:one -- --place=Delhi   # just one');
+  line('  npm --prefix Web run seed:scores          # ONE meet, through the browser, hours');
 }
 
 main().catch((error) => {

@@ -1,15 +1,19 @@
 /**
  * Judge the whole meet through the API instead of a browser.
  *
- *   node scripts/seedScores.js                          # the default meet, in full
- *   node scripts/seedScores.js --place=Delhi            # a different meet
+ *   node scripts/seedScores.js --all                    # ALL TWELVE MEETS
+ *   node scripts/seedScores.js                          # the default meet only
+ *   node scripts/seedScores.js --place=Delhi            # one named meet
  *   node scripts/seedScores.js --type=competition_2
  *   node scripts/seedScores.js --gender=Male --age=Under14
  *   node scripts/seedScores.js --dry-run                # plan only, no writes
  *   node scripts/seedScores.js --no-lock                # judge, leave unlocked
  *
- * ONE MEET PER RUN. There are twelve, and each has its own panel sizes and its
- * own six judges, so scoring them all is twelve runs — `--place` picks which.
+ * WITHOUT `--all` THIS DOES ONE MEET. A meet is the unit everything here works
+ * in — the panel sizes, the seats and the categories all belong to one — but
+ * the seeded database has twelve, so the bare command leaves eleven reading
+ * "no scoring has started" while reporting success. Use `--all` unless you mean
+ * one.
  *
  * `npm --prefix Web run seed:scores` does the same job through Playwright and
  * takes SEVEN HOURS, most of it waiting for a browser to paint a score sheet
@@ -339,8 +343,13 @@ module.exports = {
 
 /** @param {string[]} argv */
 function parseArgs(argv) {
+  /*
+   * LAST occurrence wins, which is the usual CLI convention and is what lets
+   * `--all` append its own `--place=` per meet and have it beat one the caller
+   * typed. Taking the first would silently score the same meet twelve times.
+   */
   const flag = (name) => {
-    const hit = argv.find((a) => a.startsWith(`--${name}=`));
+    const hit = argv.findLast((a) => a.startsWith(`--${name}=`));
     return hit ? hit.slice(name.length + 3) : null;
   };
   return {
@@ -353,8 +362,15 @@ function parseArgs(argv) {
   };
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+/**
+ * Judge ONE meet.
+ *
+ * @param {string[]} [extraArgv] - appended to the command line, so `--all` can
+ *   drive this per meet. Later flags win, which is what lets it override
+ *   `--place`.
+ */
+async function main(extraArgv = []) {
+  const args = parseArgs([...process.argv.slice(2), ...extraArgv]);
 
   const plan = JSON.parse(fs.readFileSync(PLAN_PATH, 'utf8'));
   if (!fs.existsSync(CAPTURE_PATH)) {
@@ -568,6 +584,54 @@ async function main() {
 }
 
 /**
+ * Judge EVERY planned meet, one after another.
+ *
+ * `main` does one meet, because a meet is the unit everything else here works
+ * in — the panel sizes, the seats and the categories all belong to one. But the
+ * seeded database has twelve, and "run it twelve times with a different
+ * --place" is a footgun rather than an interface: the obvious command scored
+ * one meet, reported success, and left eleven reading "no scoring has started"
+ * on the status board.
+ *
+ * Sequential on purpose. Each meet signs in six judges and posts a few hundred
+ * slips, and the API is one Node process — running them at once would queue on
+ * the same thread and only make each one look slow.
+ *
+ * One meet failing does not stop the rest; the exit code still reports it.
+ */
+async function scoreEveryMeet() {
+  const plan = JSON.parse(fs.readFileSync(PLAN_PATH, 'utf8'));
+  const places = (plan.meets || []).map((m) => m.place);
+
+  if (places.length === 0) {
+    throw new Error(
+      `${PLAN_PATH} has no per-meet plans, so --all has nothing to iterate.\n`
+      + 'Redraw it: npm --prefix Server run seed:panels:plan -- --force'
+    );
+  }
+
+  console.log(`\n  Scoring ${places.length} meet(s): ${places.join(', ')}`);
+
+  const failed = [];
+  for (const place of places) {
+    try {
+      await main([`--place=${place}`]);
+    } catch (error) {
+      failed.push(place);
+      console.error(`\n  ${place} FAILED: ${error.message}`);
+    }
+  }
+
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`Scored ${places.length - failed.length} of ${places.length} meet(s)`);
+  if (failed.length) {
+    console.log(`Failed: ${failed.join(', ')}`);
+    console.log('Re-run just those with:  node scripts/seedScores.js --place=<place>');
+    process.exitCode = 1;
+  }
+}
+
+/**
  * The Scorer's pass over one category: a time for every athlete, cycling the
  * five deduction bands, then the lock that publishes the sheet.
  *
@@ -652,7 +716,8 @@ async function runScorer({ competitionId, panel, type, places, tokens }) {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
+  const run = process.argv.includes('--all') ? scoreEveryMeet() : main();
+  run.catch((error) => {
     console.error(`\nScoring seed failed: ${error.message}`);
     process.exit(1);
   });
