@@ -1,11 +1,15 @@
 /**
  * Judge the whole meet through the API instead of a browser.
  *
- *   node scripts/seedScores.js                          # everything
+ *   node scripts/seedScores.js                          # the default meet, in full
+ *   node scripts/seedScores.js --place=Delhi            # a different meet
  *   node scripts/seedScores.js --type=competition_2
  *   node scripts/seedScores.js --gender=Male --age=Under14
  *   node scripts/seedScores.js --dry-run                # plan only, no writes
  *   node scripts/seedScores.js --no-lock                # judge, leave unlocked
+ *
+ * ONE MEET PER RUN. There are twelve, and each has its own panel sizes and its
+ * own six judges, so scoring them all is twelve runs — `--place` picks which.
  *
  * `npm --prefix Web run seed:scores` does the same job through Playwright and
  * takes SEVEN HOURS, most of it waiting for a browser to paint a score sheet
@@ -237,7 +241,7 @@ async function call(pathname, { method = 'GET', body, token, competitionId } = {
 }
 
 /** Sign in every seat once, and hold the tokens. */
-async function signInSeats(plan, capture, competitionId) {
+async function signInSeats(meetPlan, capture, competitionId) {
   const passwords = new Map(
     (capture.registrations || [])
       .filter((r) => r.role === 'judge')
@@ -245,7 +249,9 @@ async function signInSeats(plan, capture, competitionId) {
   );
 
   const tokens = {};
-  for (const [seat, email] of Object.entries(plan.seats)) {
+  // THIS meet's seats. Every meet deals its own six from the judge pool, and
+  // signing in the wrong six gets slips refused — they hold no seat here.
+  for (const [seat, email] of Object.entries(meetPlan.seats)) {
     const password = passwords.get(String(email).toLowerCase());
     if (!password) {
       throw new Error(
@@ -257,9 +263,23 @@ async function signInSeats(plan, capture, competitionId) {
     const token = result?.token;
     if (!token) throw new Error(`No token returned when signing in ${email} as ${seat}`);
 
-    // Bind the session to the meet, as the picker does.
-    await call(`/judge/competition/${competitionId}/set`, { method: 'PUT', body: {}, token });
-    tokens[seat] = token;
+    /*
+     * Bind the session to the meet, as the picker does — AND KEEP THE TOKEN IT
+     * RETURNS.
+     *
+     * The re-scoped token used to be thrown away and the login one kept, which
+     * worked only for as long as every judge sat at exactly one meet: login
+     * picks a judge's meet silently, and with one seat that is always the right
+     * one. Once judges hold seats at several, login picks whichever comes first
+     * and the slip is posted against THAT meet's panel — so the server answers
+     * 403 "Only a panel judge or an admin can submit a judge slip", naming a
+     * permission problem for what is really a session pointed at the wrong
+     * competition.
+     */
+    const scoped = await call(`/judge/competition/${competitionId}/set`, {
+      method: 'PUT', body: {}, token,
+    });
+    tokens[seat] = scoped?.token || token;
   }
   return tokens;
 }
@@ -343,6 +363,29 @@ async function main() {
   const capture = JSON.parse(fs.readFileSync(CAPTURE_PATH, 'utf8'));
   const place = args.place || plan.place;
 
+  /*
+   * THIS MEET'S plan, not the file's default one.
+   *
+   * The plan holds an entry per meet and repeats the default meet's panels and
+   * seats at the top level for the consumers that only ever work on one. This
+   * script takes `--place`, so it is not one of them — reading the top level
+   * here would score whatever meet was asked for using the DEFAULT meet's panel
+   * sizes and sign in as the DEFAULT meet's judges.
+   *
+   * Both halves are quiet failures. The judges hold no seat at the meet, so
+   * their slips are refused; and a category seated with four judges but scored
+   * as a five averages by drop-high-low instead of copying the chief into the
+   * vacant slot, which produces a believable number rather than an error. That
+   * is the exact failure the plan is a committed file to prevent.
+   */
+  const meetPlan = (plan.meets || []).find((m) => m.place === place);
+  if (!meetPlan) {
+    throw new Error(
+      `No panel plan for "${place}". Planned: ${(plan.meets || []).map((m) => m.place).join(', ')}.\n`
+      + 'Redraw after adding a meet: npm --prefix Server run seed:panels:plan -- --force'
+    );
+  }
+
   // The meet, found the way everything else finds it.
   const competitions = await call('/public/competitions');
   const competition = (competitions || []).find((c) => c.place === place);
@@ -351,15 +394,15 @@ async function main() {
   }
   const competitionId = competition._id;
 
-  console.log(`\n  meet     ${competition.name} — ${place}`);
+  console.log(`\n  meet     ${competition.name} — ${place} [${meetPlan.level}]`);
   console.log(`  api      ${API}`);
-  console.log(`  panels   ${plan.panels.length} (plan drawn ${plan.generatedAt?.slice(0, 10) || 'unknown'})`);
+  console.log(`  panels   ${meetPlan.panels.length} (plan drawn ${plan.generatedAt?.slice(0, 10) || 'unknown'})`);
   console.log(`  mode     ${args.dryRun ? 'DRY RUN — nothing is written' : 'writing'}\n`);
 
-  const tokens = args.dryRun ? {} : await signInSeats(plan, capture, competitionId);
+  const tokens = args.dryRun ? {} : await signInSeats(meetPlan, capture, competitionId);
 
   const types = TYPES.filter((t) => !args.type || t.slug === args.type);
-  const panels = plan.panels.filter((p) =>
+  const panels = meetPlan.panels.filter((p) =>
     (!args.gender || p.gender === args.gender) && (!args.age || p.ageGroup === args.age));
 
   let slips = 0;
