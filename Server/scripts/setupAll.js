@@ -51,6 +51,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 const readline = require('node:readline');
 
@@ -201,6 +202,61 @@ const STEPS = [
 
 const line = (text = '') => process.stdout.write(`${text}\n`);
 
+const LOCK_PATH = path.join(SERVER_DIR, 'scripts', 'seed', '.setup-running');
+
+/**
+ * Refuse to start while another run is working on the same database.
+ *
+ * Two of these at once is quietly destructive and the failure does not look
+ * like the cause: a second run's `--drop` emptied the database underneath a
+ * first that was 5 meets into scoring, and that first run then failed with
+ * `No competition at "Chennai". Seen:` — an empty list, reported as if the
+ * meets had never been created. An hour of work, and nothing pointing at the
+ * real reason.
+ *
+ * Advisory, not enforced: a stale lock from a killed run is cleared
+ * automatically once it is older than the longest a step can plausibly take,
+ * and `--force` overrides it. The point is to make the collision visible, not
+ * to make it impossible.
+ *
+ * @returns {boolean} whether the lock was taken
+ */
+function takeLock(force) {
+  const STALE_AFTER_MS = 3 * 60 * 60 * 1000; // longer than a full run
+
+  try {
+    const raw = fs.readFileSync(LOCK_PATH, 'utf8');
+    const held = JSON.parse(raw);
+    const age = Date.now() - new Date(held.startedAt).getTime();
+
+    if (!force && age < STALE_AFTER_MS) {
+      const minutes = Math.round(age / 60000);
+      line(`\n  Another seed run is already working on "${held.database}".`);
+      line(`  Started ${minutes} min ago by pid ${held.pid}.`);
+      line('\n  Two runs against one database destroy each other\'s work, and the');
+      line('  failure surfaces far from the cause — a dropped database reads as');
+      line('  "no competitions exist" in whatever else is mid-flight.');
+      line('\n  Wait for it, or override if you are certain it is gone:');
+      line('    npm --prefix Server run setup -- --force');
+      return false;
+    }
+  } catch {
+    // No lock, or an unreadable one. Either way, take it.
+  }
+
+  fs.mkdirSync(path.dirname(LOCK_PATH), { recursive: true });
+  fs.writeFileSync(LOCK_PATH, JSON.stringify({
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+    database: String(process.env.MONGODB_URI || '').split('/').pop().split('?')[0],
+  }));
+  return true;
+}
+
+const releaseLock = () => {
+  try { fs.unlinkSync(LOCK_PATH); } catch { /* already gone */ }
+};
+
 /**
  * Count what actually landed in the database.
  *
@@ -231,6 +287,7 @@ function parseArgs(argv) {
     dryRun: argv.includes('--dry-run'),
     drop: argv.includes('--drop'),
     yes: argv.includes('--yes'),
+    force: argv.includes('--force'),
     from: flag('from'),
     to: flag('to'),
     only: flag('only'),
@@ -450,6 +507,15 @@ async function main() {
    * question at the end is "what worked and what did not", and that was left to
    * be reconstructed by scrolling back through an hour of output.
    */
+  /*
+   * Taken here rather than at the top: --list and --dry-run change nothing, so
+   * they have no business blocking a real run or being blocked by one.
+   */
+  if (!takeLock(args.force)) process.exit(1);
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => { releaseLock(); process.exit(130); });
+  }
+
   const outcomes = [];
   let failedStep = null;
 
@@ -490,6 +556,7 @@ async function main() {
     // Still verify — knowing exactly how far the data got is most of what you
     // need in order to decide whether resuming is enough.
     if (!args.dryRun) verifySeed();
+    releaseLock();
     process.exit(1);
   }
 
@@ -503,8 +570,11 @@ async function main() {
   if (!args.dryRun && !verifySeed()) {
     line('\n  The steps all ran, but the database is not what it should be.');
     line('  The failures above say which part — re-run that step with --only=<id>.');
+    releaseLock();
     process.exit(1);
   }
+
+  releaseLock();
 
   line(`\n${'='.repeat(72)}`);
   line(`Setup complete — ${outcomes.length} step(s)`);
