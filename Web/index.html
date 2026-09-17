@@ -15,10 +15,20 @@
         - vite.config.js `server.headers`, so dev matches production
     -->
     <!-- (X-Frame-Options: DENY is also set in render.yaml for older browsers.) -->
-    <meta http-equiv="Content-Security-Policy" 
+    <!--
+      worker-src is set EXPLICITLY because it falls back to script-src when it
+      is not, and script-src has no `blob:` — so anything spawning a worker from
+      a blob URL is blocked with "Note that 'worker-src' was not explicitly set".
+      Razorpay's checkout.js does exactly that, which put this on the payment
+      page rather than anywhere obvious; it first surfaced as a console error in
+      a seeding run. `blob:` here is the worker's own source, not a script
+      origin, so it does not widen what may be loaded and executed as a script.
+    -->
+    <meta http-equiv="Content-Security-Policy"
           content="default-src 'self'; 
-                   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; 
-                   style-src 'self' 'unsafe-inline'; 
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com;
+                   worker-src 'self' blob:;
+                   style-src 'self' 'unsafe-inline';
                    img-src 'self' data: https:; 
                    font-src 'self' data:; 
                    connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://*.onrender.com https://*.ngrok-free.app https://*.ngrok.io http://localhost:* ws://localhost:* wss://*.onrender.com wss://*.ngrok-free.app wss://*.ngrok.io;

@@ -92,6 +92,11 @@ function createHelmetMiddleware(container) {
         defaultSrc: ["'self'"],
         styleSrc: styleSrc,
         scriptSrc: scriptSrc,
+        // Set explicitly: without it, worker-src falls back to script-src, and
+        // script-src has no `blob:` — so a library spawning a worker from a
+        // blob URL (Razorpay's checkout does) is blocked. Kept in step with the
+        // SPA's own meta CSP in Web/index.html.
+        workerSrc: ["'self'", 'blob:'],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: [
           "'self'",
