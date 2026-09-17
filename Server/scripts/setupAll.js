@@ -201,6 +201,25 @@ const STEPS = [
 
 const line = (text = '') => process.stdout.write(`${text}\n`);
 
+/**
+ * Count what actually landed in the database.
+ *
+ * A child process rather than a require, for the same reason every step is one:
+ * it connects to Mongo and disconnects, and owning that lifecycle inside a
+ * script whose job is to spawn other scripts is a needless way to leave a
+ * handle open and hang the run at the very end.
+ *
+ * @returns {boolean} whether every check passed
+ */
+function verifySeed() {
+  const result = spawnSync('node', ['scripts/verifySeed.js'], {
+    cwd: SERVER_DIR,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  return result.status === 0;
+}
+
 /** @param {string[]} argv */
 function parseArgs(argv) {
   const flag = (name) => {
@@ -421,24 +440,74 @@ async function main() {
     if (answer !== 'yes') { line('  Cancelled.'); return; }
   }
 
-  const done = [];
+  /*
+   * Every step's outcome, so the run ends with a report rather than with
+   * whatever the last command happened to print.
+   *
+   * Stopping at the first failure is still right — each step needs the one
+   * before it, and running `squads` after `players` failed only produces a
+   * second, more confusing error. But stopping quietly was not: the useful
+   * question at the end is "what worked and what did not", and that was left to
+   * be reconstructed by scrolling back through an hour of output.
+   */
+  const outcomes = [];
+  let failedStep = null;
+
   for (const step of steps) {
-    if (!runStep(step, args.dryRun)) {
-      line(`\n${'='.repeat(72)}`);
-      line(`STOPPED at "${step.id}".`);
-      line(`${'='.repeat(72)}`);
-      line('\n  Every later step depends on this one, so nothing else ran.');
-      if (step.where === 'web') {
-        line('  Browser steps need the API and the Vite dev server up — check both.');
-      }
-      line(`\n  Fix it, then resume with:  node scripts/setupAll.js --from=${step.id}`);
-      process.exit(1);
+    if (failedStep) {
+      outcomes.push({ id: step.id, state: 'not run', seconds: null });
+      continue;
     }
-    done.push(step.id);
+    const startedAt = Date.now();
+    const ok = runStep(step, args.dryRun);
+    const seconds = Math.round((Date.now() - startedAt) / 1000);
+    outcomes.push({ id: step.id, state: ok ? 'ok' : 'FAILED', seconds });
+    if (!ok) failedStep = step;
+  }
+
+  // ── The step report, printed whether the run succeeded or not ──────────────
+  line(`\n${'='.repeat(72)}`);
+  line(failedStep ? `STOPPED at "${failedStep.id}"` : 'ALL STEPS PASSED');
+  line('='.repeat(72));
+
+  const mmss = (s) => (s === null ? '' : `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`);
+  const width = Math.max(...outcomes.map((o) => o.id.length)) + 2;
+  for (const outcome of outcomes) {
+    const mark = { ok: '[ok]     ', 'FAILED': '[FAILED] ', 'not run': '[not run]' }[outcome.state];
+    line(`  ${mark} ${outcome.id.padEnd(width)}${mmss(outcome.seconds)}`);
+  }
+
+  const total = outcomes.reduce((n, o) => n + (o.seconds || 0), 0);
+  line(`  ${' '.repeat(10)}${'total'.padEnd(width)}${mmss(total)}`);
+
+  if (failedStep) {
+    line('\n  Every later step depends on this one, so nothing after it ran.');
+    if (failedStep.needsApi) {
+      line('  This step needs the API up: npm --prefix Server start');
+    }
+    line(`\n  Fix it, then resume with:  npm --prefix Server run setup -- --from=${failedStep.id}`);
+
+    // Still verify — knowing exactly how far the data got is most of what you
+    // need in order to decide whether resuming is enough.
+    if (!args.dryRun) verifySeed();
+    process.exit(1);
+  }
+
+  /*
+   * Every command exited zero. That is not the same as the fixture being
+   * complete, and the difference is where this project's worst bugs have lived
+   * — a competition chooser that scoped writes to the wrong meet passed sixty
+   * browser tests while leaving four meets' squads empty. So the run ends by
+   * COUNTING what is actually in the database.
+   */
+  if (!args.dryRun && !verifySeed()) {
+    line('\n  The steps all ran, but the database is not what it should be.');
+    line('  The failures above say which part — re-run that step with --only=<id>.');
+    process.exit(1);
   }
 
   line(`\n${'='.repeat(72)}`);
-  line(`Setup complete — ${done.length} step(s): ${done.join(', ')}`);
+  line(`Setup complete — ${outcomes.length} step(s)`);
   line(`${'='.repeat(72)}`);
   line('\nWhere this leaves you:');
   line('  12 meets — three each at district, state, national and international');
