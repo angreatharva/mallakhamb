@@ -235,6 +235,76 @@ describe('RequestCoalescingMiddleware', () => {
 
       expect(calls).toBe(2);
     });
+
+    /*
+     * THE CROSS-ACCOUNT LEAK, both spellings of the credential.
+     *
+     * This middleware is mounted app-wide, above the routers, so `req.user` is
+     * undefined when the key is built — authentication has not run yet. The key
+     * read it anyway, fell back to `anonymous` for everyone, and two signed-in
+     * users asking the same path at the same moment shared one response: the
+     * second was served the first's body. Caught by a parallel seeding run,
+     * where a coach was handed another coach's team.
+     *
+     * Asserted on the BODY rather than the handler count, because the defect is
+     * not a lost optimisation — it is the wrong answer.
+     */
+    it.each([
+      ['a cookie', (r, who) => r.set('Cookie', `access_token=token-for-${who}`)],
+      ['an Authorization header', (r, who) => r.set('Authorization', `Bearer token-for-${who}`)],
+    ])('never serves one caller the body of another, given %s', async (_label, authenticate) => {
+      const { app } = buildApp((a) => {
+        a.get('/api/mine', async (req, res) => {
+          // Stands in for the auth middleware, which in the real app runs BELOW
+          // this point — which is the whole reason the key cannot use req.user.
+          const credential = req.headers.authorization || req.headers.cookie || '';
+          const who = credential.replace(/.*token-for-/, '') || 'anonymous';
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          res.json({ who });
+        });
+      });
+
+      const [alice, bob] = await Promise.all([
+        authenticate(request(app).get('/api/mine'), 'alice'),
+        authenticate(request(app).get('/api/mine'), 'bob'),
+      ]);
+
+      expect(alice.body.who).toBe('alice');
+      expect(bob.body.who).toBe('bob');
+    });
+
+    it('still coalesces two identical requests from the SAME caller', async () => {
+      let calls = 0;
+      const { app } = buildApp((a) => {
+        a.get('/api/mine', async (req, res) => {
+          calls += 1;
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          res.json({ ok: true });
+        });
+      });
+
+      // The SPA fires duplicate effects constantly; that is what this is for.
+      await Promise.all([
+        request(app).get('/api/mine').set('Cookie', 'access_token=same-token'),
+        request(app).get('/api/mine').set('Cookie', 'access_token=same-token'),
+      ]);
+
+      expect(calls).toBe(1);
+    });
+
+    it('keeps the credential out of the key, which is logged', () => {
+      const coalescer = new RequestCoalescingMiddleware(silentLogger);
+      const key = coalescer.generateRequestKey({
+        method: 'GET',
+        path: '/api/mine',
+        query: {},
+        headers: { authorization: 'Bearer super-secret-token' },
+        cookies: { access_token: 'another-secret' },
+      });
+
+      expect(key).not.toContain('super-secret-token');
+      expect(key).not.toContain('another-secret');
+    });
   });
 
   describe('errors', () => {

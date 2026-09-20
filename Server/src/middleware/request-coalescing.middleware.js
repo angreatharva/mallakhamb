@@ -11,6 +11,10 @@
  * Requirements: 16.6
  */
 
+const crypto = require('node:crypto');
+
+const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+
 class RequestCoalescingMiddleware {
   constructor(logger) {
     this.logger = logger;
@@ -21,7 +25,69 @@ class RequestCoalescingMiddleware {
   }
 
   /**
-   * Generate a unique key for a request based on method, path, query, and user
+   * WHO this request is from, decided WITHOUT waiting for authentication.
+   *
+   * This is the part of the key that stops one user being served another
+   * user's response, and it cannot be `req.user`. This middleware is mounted
+   * app-wide in `createApp.js`, several layers ABOVE the routers, and
+   * `authMiddleware` runs per route — so `req.user` is still undefined here on
+   * every request, authenticated or not.
+   *
+   * It used to read exactly that, `req.user?._id ... || 'anonymous'`, which
+   * meant every signed-in GET keyed as `anonymous`: two coaches asking
+   * `GET /api/coaches/teams` at the same moment collided on one key and the
+   * second was served the FIRST one's body. Reproduced deterministically —
+   * four coaches, four concurrent reads, three of them got the first coach's
+   * team, every round. Sequentially it never happened, because coalescing only
+   * engages while a request is still in flight. In a live event, where several
+   * people load the same screen at once and the SPA itself fires duplicate
+   * effects, that is a cross-account data leak.
+   *
+   * So the identity comes from the CREDENTIAL, which is present this early:
+   * the access-token cookie and the Authorization header. Both, because the
+   * cookie outranks the header downstream and a request may carry either.
+   *
+   * HASHED, not stored raw: this value goes into `requestKey`, which is
+   * written to the debug log on every coalesced request. A key is not a place
+   * to put a bearer token.
+   *
+   * Requests carrying no credential at all key as `anonymous` together, which
+   * is the case coalescing was written for — a public leaderboard hit by a
+   * hundred spectators at once.
+   *
+   * @param {Object} req - Express request object
+   * @returns {string}
+   */
+  callerKey(req) {
+    // Correct if this is ever mounted after authentication; never true today.
+    const authenticated = req.user?._id?.toString();
+    if (authenticated) return `u:${authenticated}`;
+
+    /*
+     * The RAW Cookie header, not `req.cookies`.
+     *
+     * `req.cookies` exists only once `cookie-parser` has run. It does today —
+     * createApp mounts it above this — but that is an ordering assumption, and
+     * getting it wrong does not crash: `req.cookies` is undefined, every
+     * signed-in caller keys as `anonymous` again, and the leak returns in
+     * silence. The header is on the request whatever has or has not run, so
+     * this cannot be undone by moving a `use`.
+     *
+     * Only the access token is extracted, deliberately. Hashing the whole
+     * header would split the key on any unrelated cookie — a rotating CSRF
+     * value, say — and public endpoints, which are where coalescing actually
+     * pays, would stop sharing a key at all.
+     */
+    const rawCookie = req.headers?.cookie || '';
+    const cookie = new RegExp(`(?:^|;\\s*)${COOKIE_NAMES.ACCESS_TOKEN}=([^;]*)`).exec(rawCookie)?.[1] || '';
+    const header = req.headers?.authorization || '';
+    if (!cookie && !header) return 'anonymous';
+
+    return `c:${crypto.createHash('sha256').update(`${cookie}\0${header}`).digest('hex').slice(0, 32)}`;
+  }
+
+  /**
+   * Generate a unique key for a request based on method, path, query, and caller
    * @param {Object} req - Express request object
    * @returns {string} Unique request key
    */
@@ -29,10 +95,10 @@ class RequestCoalescingMiddleware {
     const method = req.method;
     const path = req.path;
     const query = JSON.stringify(req.query || {});
-    const userId = req.user?._id?.toString() || 'anonymous';
+    const caller = this.callerKey(req);
     const competitionId = req.headers['x-competition-id'] || '';
-    
-    return `${method}:${path}:${query}:${userId}:${competitionId}`;
+
+    return `${method}:${path}:${query}:${caller}:${competitionId}`;
   }
 
   /**
