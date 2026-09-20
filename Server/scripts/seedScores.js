@@ -62,6 +62,8 @@ const {
   POINT_CEILINGS,
 } = require('../src/config/cop-rules');
 const { calculateIndividualScore } = require('../src/utils/scoring/calculation.util');
+const roster = require('./lib/roster');
+const { JUDGES_PATH } = require('./lib/judges');
 
 const API = (process.env.SEED_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
 const PLAN_PATH = path.join(__dirname, 'seed', 'panel-plan.json');
@@ -290,14 +292,57 @@ async function call(pathname, { method = 'GET', body, token, competitionId } = {
   throw lastError;
 }
 
-/** Sign in every seat once, and hold the tokens. */
-async function signInSeats(meetPlan, capture, competitionId) {
-  const passwords = new Map(
-    (capture.registrations || [])
-      .filter((r) => r.role === 'judge')
-      .map((r) => [String(r.payload.email).toLowerCase(), r.payload.password])
-  );
+/**
+ * Every judge password this database could have been seeded with.
+ *
+ * THE ROSTER IS THE SOURCE, not the capture. This used to read only
+ * `registrations.generated.json`, which is written by the BROWSER specs as they
+ * register each person — so the API chain, which creates the same sixteen
+ * judges through `POST /judge/register` and records nothing, reached this step
+ * with an empty `registrations` array and failed every meet with "that judge is
+ * not in registrations.generated.json". The judges existed; only the recording
+ * of them did not.
+ *
+ * Both chains register from `Web/e2e/support/judge-roster.js`, which derives the
+ * password from the person (`people.js` `passwordFor`), so the roster answers
+ * this for a database seeded either way — the same trade `payWithDiscount.js`
+ * makes for coaches.
+ *
+ * The capture still fills gaps, for an account that is in the database but not
+ * on the roster. It cannot contradict the roster in practice: the password is a
+ * function of the first name and so is half the email, so two rows under one
+ * address carry one password.
+ *
+ * @returns {Promise<Map<string, string>>} lowercased email -> password
+ */
+async function judgePasswords() {
+  const passwords = new Map();
 
+  for (const judge of await roster.allJudges()) {
+    passwords.set(String(judge.email).toLowerCase(), judge.password);
+  }
+
+  if (fs.existsSync(CAPTURE_PATH)) {
+    let capture = {};
+    try {
+      capture = JSON.parse(fs.readFileSync(CAPTURE_PATH, 'utf8'));
+    } catch (error) {
+      // A half-written capture is not a reason to refuse to score: the roster
+      // already holds every judge the plan can seat.
+      console.log(`    ignoring ${path.basename(CAPTURE_PATH)}: ${error.message}`);
+    }
+    for (const row of capture.registrations || []) {
+      if (row.role !== 'judge' || !row.payload?.email) continue;
+      const email = String(row.payload.email).toLowerCase();
+      if (!passwords.has(email)) passwords.set(email, row.payload.password);
+    }
+  }
+
+  return passwords;
+}
+
+/** Sign in every seat once, and hold the tokens. */
+async function signInSeats(meetPlan, passwords, competitionId) {
   const tokens = {};
   // THIS meet's seats. Every meet deals its own six from the judge pool, and
   // signing in the wrong six gets slips refused — they hold no seat here.
@@ -305,8 +350,10 @@ async function signInSeats(meetPlan, capture, competitionId) {
     const password = passwords.get(String(email).toLowerCase());
     if (!password) {
       throw new Error(
-        `The plan seats ${email} as ${seat}, but that judge is not in `
-        + `${path.basename(CAPTURE_PATH)} — so this script has no password for them.`
+        `The plan seats ${email} as ${seat}, but that judge is on neither the `
+        + `roster (${path.basename(JUDGES_PATH)}) nor ${path.basename(CAPTURE_PATH)} `
+        + '— so this script has no password for them. Redraw the plan after '
+        + 'changing the pool: npm --prefix Server run seed:panels:plan -- --force'
       );
     }
     const result = await call('/judge/login', { method: 'POST', body: { email, password } });
@@ -419,10 +466,6 @@ async function main(extraArgv = []) {
   const args = parseArgs([...process.argv.slice(2), ...extraArgv]);
 
   const plan = JSON.parse(fs.readFileSync(PLAN_PATH, 'utf8'));
-  if (!fs.existsSync(CAPTURE_PATH)) {
-    throw new Error(`No capture at ${CAPTURE_PATH} — this script reads the judges' passwords from it.`);
-  }
-  const capture = JSON.parse(fs.readFileSync(CAPTURE_PATH, 'utf8'));
   const place = args.place || plan.place;
 
   /*
@@ -461,7 +504,9 @@ async function main(extraArgv = []) {
   console.log(`  panels   ${meetPlan.panels.length} (plan drawn ${plan.generatedAt?.slice(0, 10) || 'unknown'})`);
   console.log(`  mode     ${args.dryRun ? 'DRY RUN — nothing is written' : 'writing'}\n`);
 
-  const tokens = args.dryRun ? {} : await signInSeats(meetPlan, capture, competitionId);
+  const tokens = args.dryRun
+    ? {}
+    : await signInSeats(meetPlan, await judgePasswords(), competitionId);
 
   const types = TYPES.filter((t) => !args.type || t.slug === args.type);
   const panels = meetPlan.panels.filter((p) =>
