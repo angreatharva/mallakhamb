@@ -8,7 +8,30 @@ const {
   string, 
   array 
 } = require('./common.validator');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
+
+/**
+ * The apparatus a panel seat may be scoped to.
+ *
+ * Optional, and `null` is meaningful rather than missing: it is the LEGACY
+ * "every apparatus in this category" seat, still honoured by every apparatus
+ * query. Manage Judges and both seeders now always name one, so a blank
+ * arriving here is either an old client or a deliberate category-wide seat —
+ * neither is an error, but a MISSPELLED apparatus is. It would be stored
+ * verbatim (the path is a free `String`), match no athlete's registration and
+ * no other seat, and produce a panel that silently judges nobody.
+ *
+ * Checking it against the meet's own `apparatusConfig` is deliberately NOT done
+ * here: the config is per competition type, the screen already narrows the
+ * dropdown to it, and a seat for an apparatus the meet later stops running
+ * should go quiet rather than make the request fail.
+ */
+const panelApparatus = (field) =>
+  body(field)
+    .optional({ values: 'falsy' })
+    .trim()
+    .isIn(APPARATUS)
+    .withMessage(`Apparatus must be one of: ${APPARATUS.join(', ')}`);
 
 /**
  * Validation rules for admin endpoints
@@ -201,6 +224,9 @@ const saveJudges = () => {
       .optional()
       .isMongoId()
       .withMessage('Invalid competition ID'),
+    // One apparatus for the whole panel — it is part of the panel's identity,
+    // not a per-seat field, so it is read from the top level of the body.
+    panelApparatus('apparatus'),
     array('judges', { minLength: 1, maxLength: 6 }),
     body('judges.*.judgeNo')
       .isInt({ min: 1, max: 6 })
@@ -248,7 +274,11 @@ const createSingleJudge = () => {
     body('competition')
       .optional()
       .isMongoId()
-      .withMessage('Invalid competition ID')
+      .withMessage('Invalid competition ID'),
+    // Which panel this one seat belongs to. The Judge List fills an empty slot
+    // through here, so it has to carry the same apparatus the rest of the
+    // panel was seated with or the new seat lands on a panel of its own.
+    panelApparatus('apparatus')
   ];
 };
 

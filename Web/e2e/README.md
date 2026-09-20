@@ -283,23 +283,41 @@ meet or to check what the screen shows; use the script after a redraw.
 from named seats on the command line — the repair tool.
 
 **There is no such thing as a Competition II panel.** `Judge`'s unique indexes
-are `{gender, ageGroup, judgeNo, competition}` and
-`{gender, ageGroup, judgeType, competition}`, and neither includes
-`competitionTypes` — so one meet holds exactly one panel per (gender, age group)
-however many competition types run on it, and seating a "second" panel for
-Competition II collides with the first. `competitionTypes` is an array for this
-reason and admin.service MERGES it on update, so Competition II is enabled by
-staffing the same seats again with that type selected. Scores stay separate
-regardless: a Score document's identity is
+are `{gender, ageGroup, apparatus, judgeNo, competition}` and
+`{gender, ageGroup, apparatus, judgeType, competition}`, and neither includes
+`competitionTypes` — so one meet holds one panel per (gender, age group,
+apparatus) however many competition types run on it, and seating a "second"
+panel for Competition II collides with the first. `competitionTypes` is an array
+for this reason and admin.service MERGES it on update, so Competition II is
+enabled by staffing the same seats again with that type selected. Scores stay
+separate regardless: a Score document's identity is
 `{teamId, gender, ageGroup, competition, competitionType}`.
 
-Seats carry **no apparatus**, and Manage Judges no longer asks for one — one
-panel judges every apparatus in its category and the score sheet follows the
-ATHLETE's registration. A per-apparatus panel would give somebody entered for
-three a panel for one of them and none for the other two, and their slips are
-then refused with "Only a panel judge or an admin can submit a judge slip".
-Making panels genuinely per-apparatus means widening both `Judge` unique
-indexes to include it first; neither carries apparatus today.
+**There IS such a thing as a Rope panel.** `apparatus` is in both keys, so Pole
+and Rope in one category are two panels, staffed separately and free to be
+different sizes. Manage Judges asks for one as the last rung of the ladder, with
+no "All apparatus" answer, and fills the dropdown from the meet's own
+`apparatusConfig` for the chosen competition type.
+
+Which apparatus a meet runs is **not in the panel plan**. `seat-panels.spec.js`
+reads them off that dropdown and `Server/scripts/seatPanels.js` reads them from
+the competition over the API, so the two seeders cannot stand up different meets
+from one plan. The plan's SIZE is per category and applies to every apparatus in
+it; a meet wanting Pole judged by three and Rope by five is legal, and
+`seatPanel.js` is the tool for it.
+
+A seat written before all this has `apparatus: null` and still judges every
+apparatus in its category — every apparatus query matches it
+(`{ $in: [apparatus, null, ''] }`). Nothing writes that shape any more, and
+`seatPanels.js` vacates one when it seats a named panel over the top.
+
+Migration **010** is what put `apparatus` in the two keys. Until it has run, the
+symptom is a duplicate-key error on the SECOND apparatus of a category, from a
+screen that has just offered the choice:
+
+```bash
+npm --prefix Server run migrate:up
+```
 
 The **judge** still picks one on their own dashboard, and must: it decides the
 combination checklist the slip renders and which of an athlete's scores the
@@ -969,9 +987,9 @@ number rather than a failure.
 The apparatus follows from the athlete, and so do the numbers that depend on it:
 the combination checklist is counted against what that apparatus declares (Pole
 and Hanging list ten requirements, Rope seven), and the mismatch penalty is read
-off the checklist rather than assumed. Panel seats carry no apparatus — one
-panel judges every apparatus in its category, and the score sheet follows the
-ATHLETE.
+off the checklist rather than assumed. The panel judging them is the one seated
+for that apparatus — seats name one — while the score sheet's ROSTER still
+follows the ATHLETE's own registration.
 
 It **finalizes the athletes it touches**, and a finalized athlete cannot be
 re-scored — so a second run needs fresh ones, or a cleared `scores` collection:

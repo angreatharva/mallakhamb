@@ -9,6 +9,7 @@ import Dropdown from '@/components/auth/Dropdown';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS } from '@/styles/tokens';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
@@ -508,6 +509,7 @@ const CoachDashboard = () => {
 
         <div className="max-w-4xl mx-auto px-4 py-10 pt-24">
           <CompetitionDisplay className="mb-8" />
+          <CompetitionLockBanner className="mb-8" />
           <div className="rounded-3xl border p-12 text-center"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
@@ -668,6 +670,7 @@ const CoachDashboard = () => {
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 pt-24">
         <CompetitionDisplay className="mb-8" />
+        <CompetitionLockBanner className="mb-8" />
 
         {/* Header card */}
         <FadeIn className="mb-6">

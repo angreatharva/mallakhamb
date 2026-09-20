@@ -1,7 +1,8 @@
 import { useCompetition } from '@/contexts/CompetitionContext';
-import { Calendar, MapPin, Trophy, Clock } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Clock, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SafeText from '@/components/auth/SafeText';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { COLORS } from '@/styles/tokens';
 
 
@@ -11,12 +12,26 @@ const statusConfig = {
   completed: { color: 'rgba(255,255,255,0.3)', label: 'Completed', pulse: false },
 };
 
+/**
+ * The badge a frozen meet gets, whatever its stored `status` says.
+ *
+ * `status` is a field somebody sets; the lock is a fact about the calendar, and
+ * the two disagree all the time — a meet whose end date has passed while the
+ * record still reads `ongoing` is the normal case, because nothing updates that
+ * field automatically. The badge shows the one the user cannot change.
+ */
+const lockedStatus = { color: '#F87171', label: 'Locked', pulse: false, icon: Lock };
+
 const CompetitionDisplay = ({ className = '' }) => {
   const { currentCompetition, isLoading } = useCompetition();
+  const { locked } = useCompetitionLock({ competition: currentCompetition });
 
   if (isLoading || !currentCompetition) return null;
 
-  const status = statusConfig[currentCompetition.status] || statusConfig.completed;
+  const status = locked
+    ? lockedStatus
+    : statusConfig[currentCompetition.status] || statusConfig.completed;
+  const StatusIcon = status.icon || Clock;
 
   return (
     <motion.div
@@ -83,7 +98,7 @@ const CompetitionDisplay = ({ className = '' }) => {
                 <span className="relative inline-flex rounded-full w-2 h-2" style={{ background: status.color }} />
               </span>
             ) : (
-              <Clock className="w-3 h-3" style={{ color: status.color }} aria-hidden="true" />
+              <StatusIcon className="w-3 h-3" style={{ color: status.color }} aria-hidden="true" />
             )}
             <span className="text-xs font-bold" style={{ color: status.color }}>{status.label}</span>
           </div>

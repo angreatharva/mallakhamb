@@ -17,11 +17,14 @@ const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
 import { apparatusFor, apparatusKey, apparatusToJudge, entryGender } from '@/utils/scoring/apparatus';
+import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -53,6 +56,16 @@ const ScorerScoring = () => {
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  /*
+   * Two different reasons this sheet can be read-only, and they are not the
+   * same thing. `isLocked` means THIS entry was saved and finalized; the
+   * competition lock means the whole MEET has closed and nothing in it can
+   * change again. `readOnly` is the union, and is what the inputs and the save
+   * button read — each reason keeps its own banner so the Scorer is told which
+   * one applies.
+   */
+  const { locked: competitionLocked } = useCompetitionLock();
+  const readOnly = isLocked || competitionLocked;
   const [existingScoreId, setExistingScoreId] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -196,16 +209,30 @@ const ScorerScoring = () => {
       setLoading(true);
       if (!selectedGender?.value || !selectedAgeGroup?.value) return;
 
+      /*
+       * ASK FOR ONE APPARATUS' PANEL, NOT THE CATEGORY'S SEATS.
+       *
+       * A category is seated per apparatus now, so leaving this off returns
+       * every apparatus's panel concatenated — and `judges.length` below picks
+       * the averaging method. See utils/scoring/judgePanel.js.
+       *
+       * The apparatus comes from the squad being scored: when its athletes are
+       * all entered for one, that is unambiguously the panel judging them. A
+       * squad spanning several has no single panel, and `panelSeats` folds them
+       * into one seat per role rather than leaving a count nobody meant.
+       */
+      const teamApparatus = soleApparatus(
+        (selectedTeam.players || [])
+          .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+          .flatMap(pe => apparatusFor(pe, selectedCompetitionType?.value).map(a => ({ apparatus: a })))
+      );
+
       const judgesParams = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value };
       if (selectedCompetitionType?.value) judgesParams.competitionTypes = selectedCompetitionType.value;
+      if (teamApparatus) judgesParams.apparatus = teamApparatus;
       const judgesResponse = await scorerAPI.getJudges(judgesParams);
       const judgesData = judgesResponse.data.data || judgesResponse.data;
-      const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
-      const activeJudges = (Array.isArray(judgesData) ? judgesData : [])
-        .filter(j => !j.isEmpty && j.name?.trim())
-        .filter(j => PANEL_TYPES.includes(j.judgeType))
-        .sort((a, b) => a.judgeNo - b.judgeNo);
-      setJudges(activeJudges);
+      setJudges(panelSeats(judgesData, teamApparatus));
 
       const summaryParams = {};
       const summaryResponse = await scorerAPI.getAllJudgesSummary(summaryParams);
@@ -408,6 +435,11 @@ const ScorerScoring = () => {
   const handleSaveScores = async () => {
     if (isLocked) {
       toast.error('Cannot save - this entry is already locked');
+      return;
+    }
+
+    if (competitionLocked) {
+      toast.error('This competition has closed. Scores can no longer be changed.');
       return;
     }
 
@@ -628,6 +660,8 @@ const ScorerScoring = () => {
       </motion.header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
+        <CompetitionLockBanner />
+
         {isLocked && (
           <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
             style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
@@ -703,7 +737,7 @@ const ScorerScoring = () => {
             <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: ADMIN_COLORS.saffron }}>
               <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
             </p>
-            <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={isLocked} />
+            <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={readOnly} />
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
@@ -728,15 +762,15 @@ const ScorerScoring = () => {
                   {label}
                   {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
-                <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
-                  onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
+                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
                   onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
               </div>
               );
             })}
           </div>
           <div className="flex justify-end">
-            {!isLocked ? (
+            {!readOnly ? (
               <motion.button onClick={handleSaveScores}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white min-h-[48px]"
                 style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }}
@@ -745,7 +779,8 @@ const ScorerScoring = () => {
               </motion.button>
             ) : (
               <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                <Lock className="w-4 h-4" /> Scores are saved and locked
+                <Lock className="w-4 h-4" />
+                {isLocked ? 'Scores are saved and locked' : 'This competition has closed'}
               </div>
             )}
           </div>

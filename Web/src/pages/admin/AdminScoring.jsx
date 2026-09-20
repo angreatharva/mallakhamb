@@ -16,7 +16,10 @@ import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { ADMIN_COLORS } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
-import { entryGender } from '@/utils/scoring/apparatus';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import { apparatusFor, entryGender } from '@/utils/scoring/apparatus';
+import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -35,6 +38,17 @@ const AdminScoring = () => {
     const [remarks, setRemarks] = useState('');
     const [loading, setLoading] = useState(true);
     const [isLocked, setIsLocked] = useState(false);
+    /*
+     * Two different reasons this sheet can be read-only. `isLocked` means THIS
+     * entry was saved and finalized — and an admin can still unlock it. The
+     * competition lock means the whole MEET closed at 23:59 UTC on its end
+     * date, which an admin cannot undo at all. `readOnly` is the union.
+     *
+     * On /superadmin/scoring the hook returns false by design: a super admin
+     * keeps every write, so only `isLocked` applies to them.
+     */
+    const { locked: competitionLocked } = useCompetitionLock();
+    const readOnly = isLocked || competitionLocked;
     const [existingScoreId, setExistingScoreId] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
@@ -171,21 +185,34 @@ const AdminScoring = () => {
     const fetchScoringData = async () => {
         try {
             setLoading(true);
+            /*
+             * ONE APPARATUS' PANEL. A category holds one panel per apparatus
+             * now, so without this filter every one of them comes back at once
+             * and `judges.length` — which picks the averaging method further
+             * down — counts them all. See utils/scoring/judgePanel.js.
+             *
+             * The apparatus is the one this squad is entered for, when they are
+             * all entered for the same; a squad spanning several has no single
+             * panel and `panelSeats` folds them to one seat per role.
+             */
+            const teamApparatus = soleApparatus(
+                (selectedTeam.players || [])
+                    .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+                    .flatMap(pe => apparatusFor(pe, selectedCompetitionType?.value).map(a => ({ apparatus: a })))
+            );
+
             const judgesParams = { gender: selectedGender.value, ageGroup: selectedAgeGroup.value };
             if (selectedCompetitionType?.value) judgesParams.competitionTypes = selectedCompetitionType.value;
+            if (teamApparatus) judgesParams.apparatus = teamApparatus;
             // Add competition ID for superadmin
             if (routePrefix === '/superadmin' && currentCompetition?._id) {
                 judgesParams.competition = currentCompetition._id;
             }
-            
+
             const judgesResponse = await api.getJudges(judgesParams);
             const judgesData = judgesResponse.data.data || judgesResponse.data;
-            const PANEL_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
             const allAssigned = (Array.isArray(judgesData) ? judgesData : []).filter(j => !j.isEmpty && j.name?.trim());
-            const activeJudges = allAssigned
-              .filter(j => PANEL_TYPES.includes(j.judgeType))
-              .sort((a, b) => a.judgeNo - b.judgeNo);
-            setJudges(activeJudges);
+            setJudges(panelSeats(judgesData, teamApparatus));
 
             const sc = allAssigned.find(j => j.judgeType === 'Scorer');
             if (sc?.name) setScorer((prev) => prev || sc.name);
@@ -369,7 +396,7 @@ const AdminScoring = () => {
     const calculateFinalScore = (ps) => { const r = panelAverage(ps); return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2); };
 
     const handleScoreChange = (playerId, field, value) => {
-        if (isLocked) { toast.error('Cannot edit scores - this entry is locked'); return; }
+        if (readOnly) { toast.error(isLocked ? 'Cannot edit scores - this entry is locked' : 'This competition has closed. Scores can no longer be changed.'); return; }
         
         setScores(prev => {
             const updatedPlayer = { ...prev[playerId], [field]: value };
@@ -404,6 +431,7 @@ const AdminScoring = () => {
 
     const handleSaveScores = async () => {
         if (isLocked) { toast.error('Cannot save - this entry is already locked'); return; }
+        if (competitionLocked) { toast.error('This competition has closed. Scores can no longer be changed.'); return; }
         
         // Validation: Check required fields (Time Keeper, Scorer)
         if (!timeKeeper?.trim()) {
@@ -599,6 +627,8 @@ const AdminScoring = () => {
             </motion.header>
 
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
+                <CompetitionLockBanner />
+
                 {isLocked && routePrefix === '/superadmin' && (
                     <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
                         style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
@@ -687,7 +717,7 @@ const AdminScoring = () => {
                         <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: ADMIN_COLORS.saffron }}>
                             <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
                         </p>
-                        <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={isLocked} />
+                        <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={readOnly} />
                     </div>
                 ) : (
                     <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
@@ -704,14 +734,14 @@ const AdminScoring = () => {
                                     {label}
                                     {required && <span className="text-red-500 ml-1">*</span>}
                                 </label>
-                                <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={isLocked} placeholder={placeholder} className={darkInput} style={darkInputStyle(isLocked)}
-                                    onFocus={(e) => { if (!isLocked) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                                <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
+                                    onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
                                     onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
                             </div>
                         ))}
                     </div>
                     <div className="flex justify-end">
-                        {!isLocked ? (
+                        {!readOnly ? (
                             <motion.button onClick={handleSaveScores}
                                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white min-h-[48px]"
                                 style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }}
@@ -720,7 +750,8 @@ const AdminScoring = () => {
                             </motion.button>
                         ) : (
                             <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                                <Lock className="w-4 h-4" /> Scores are saved and locked
+                                <Lock className="w-4 h-4" />
+                                {isLocked ? 'Scores are saved and locked' : 'This competition has closed'}
                             </div>
                         )}
                     </div>

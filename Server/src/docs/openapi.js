@@ -344,7 +344,15 @@ const schemas = {
       judgeNo: { type: 'integer', minimum: 1, maximum: 6 },
       judgeType: { type: 'string', enum: JUDGE_TYPES },
       competitionTypes: { type: 'array', items: { type: 'string', enum: COMPETITION_TYPES } },
-      apparatus: { type: 'string', enum: APPARATUS, nullable: true },
+      apparatus: {
+        type: 'string',
+        enum: APPARATUS,
+        nullable: true,
+        description:
+          'Part of the panel\'s IDENTITY: a meet holds one panel per '
+          + '(gender, ageGroup, apparatus). `null` is the legacy shape and still '
+          + 'covers every apparatus in its category; nothing writes it any more.',
+      },
       judgeAccount: { type: 'string', format: 'objectid', nullable: true, description: 'null = empty slot' },
       isActive: { type: 'boolean' },
     },
@@ -1301,7 +1309,13 @@ function buildPaths() {
 
   add('/api/admin/judges', 'get', op({
     tag: 'Judges', roles: 'admin, superadmin, scorer', competitionContext: true, operationId: 'adminGetJudges',
-    summary: 'The panel seated for a category',
+    summary: 'The panel seated for a category and apparatus',
+    description:
+      'PASS `apparatus`. A category holds one panel per apparatus, so without it '
+      + 'every one of them is returned end to end — and callers size the panel by '
+      + 'counting the rows, which picks the averaging method. An apparatus filter '
+      + 'answers with that apparatus\'s seats PLUS any legacy category-wide ones, '
+      + 'since those genuinely judge it too.',
     parameters: CATEGORY_QUERY,
     responses: { 200: ok('Seats', { type: 'array', items: ref('Judge') }) },
   }));
@@ -1325,7 +1339,12 @@ function buildPaths() {
     description:
       'Refuses a panel missing any of Senior Judge, Judge 1, Judge 2 or Scorer. '
       + 'The panel size (3/4/5) decides the scoring method, so a partial panel would '
-      + 'produce a believable score computed the wrong way.',
+      + 'produce a believable score computed the wrong way.\n\n'
+      + 'ONE PANEL, ONE APPARATUS. `apparatus` scopes the whole panel, not a seat, '
+      + 'and a category running three of them is three calls. One person may hold '
+      + 'the same seat on each — they are different panels — but not two seats on '
+      + 'one. `competitionTypes` behaves differently: it is MERGED on update, so '
+      + 'seating the same seats again for another type widens the array in place.',
     requestBody: jsonBody(inline({
       ...categoryBody,
       competition: S.id,
@@ -1342,7 +1361,15 @@ function buildPaths() {
   add('/api/admin/judges/summary', 'get', op({
     tag: 'Judges', roles: 'admin, superadmin, scorer', competitionContext: true, operationId: 'adminJudgesSummary',
     summary: 'Panel coverage across every category',
-    description: 'Which categories have a complete panel and which are already started.',
+    description:
+      'Which categories have a complete panel and which are already started.\n\n'
+      + 'Each `competitionTypes[slug]` entry carries `judges` (every seat in the '
+      + 'category, whatever apparatus) and `byApparatus` (one bucket per apparatus '
+      + 'the meet runs, each with its own `hasMinimumJudges`). The entry\'s own '
+      + '`hasMinimumJudges` — the flag behind the dashboard\'s Start button — is '
+      + 'true only when EVERY bucket is, because a category whose Pole panel is '
+      + 'complete and whose Rope panel is not cannot be scored. A meet declaring '
+      + 'no apparatus for a type has no buckets and falls back to the flat list.',
     responses: { 200: ok('Summary') },
   }));
 

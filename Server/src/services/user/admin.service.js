@@ -1985,10 +1985,25 @@ class AdminService extends UserService {
       const judges = (await this.judgeRepository.find(
         { competition: compId },
         {
-          select: 'judgeAccount gender ageGroup competitionTypes judgeType judgeNo isActive',
+          select: 'judgeAccount gender ageGroup competitionTypes apparatus judgeType judgeNo isActive',
           populate: { path: 'judgeAccount', select: JUDGE_ACCOUNT_CARD_FIELDS },
         }
       )).map(flattenJudgeAccount);
+
+      /**
+       * The apparatus this meet runs for one competition type.
+       *
+       * `apparatusConfig` is a Map on a hydrated document and a plain object on
+       * a lean one, and this method is reached both ways.
+       *
+       * @param {string} competitionType
+       * @returns {string[]} empty when the meet declares none
+       */
+      const apparatusForType = (competitionType) => {
+        const config = competition.apparatusConfig;
+        const raw = config instanceof Map ? config.get(competitionType) : config?.[competitionType];
+        return Array.isArray(raw) ? raw.filter(Boolean) : [];
+      };
 
       /*
        * Seat count for THIS competition, not every competition ever run.
@@ -2022,6 +2037,14 @@ class AdminService extends UserService {
         competition.competitionTypes?.forEach(ct => {
           summaryMap.get(key).competitionTypes[ct] = {
             judges: [],
+            // One bucket per apparatus the meet runs, because a panel is
+            // seated per apparatus now. Pre-created from the meet's config
+            // rather than from the seats found, so an apparatus with NO panel
+            // at all is an empty bucket that fails the minimum — rather than a
+            // missing key that nothing checks.
+            byApparatus: Object.fromEntries(
+              apparatusForType(ct).map((apparatus) => [apparatus, { judges: [] }])
+            ),
             hasMinimumJudges: false,
             isStarted: false
           };
@@ -2050,17 +2073,40 @@ class AdminService extends UserService {
           if (!entry.competitionTypes[ct]) {
             entry.competitionTypes[ct] = {
               judges: [],
+              byApparatus: Object.fromEntries(
+                apparatusForType(ct).map((apparatus) => [apparatus, { judges: [] }])
+              ),
               hasMinimumJudges: false,
               isStarted: false
             };
           }
 
-          entry.competitionTypes[ct].judges.push({
+          const seat = {
             _id: judge._id,
             name: judge.name,
             email: judge.email,
             judgeType: judge.judgeType,
             judgeNo: judge.judgeNo,
+            apparatus: judge.apparatus || null,
+          };
+
+          // The flat list is every seat in the category, whatever apparatus —
+          // unchanged, because callers count it to show who is on staff.
+          entry.competitionTypes[ct].judges.push(seat);
+
+          /*
+           * The per-apparatus buckets are what "can this start" is decided on.
+           *
+           * A seat naming an apparatus counts for that one. A LEGACY seat with
+           * no apparatus judges the whole category, so it counts for all of
+           * them — which is what keeps a meet seated before the apparatus rung
+           * existed reporting itself as ready.
+           */
+          const buckets = entry.competitionTypes[ct].byApparatus;
+          const covers = judge.apparatus ? [judge.apparatus] : Object.keys(buckets);
+          covers.forEach((apparatus) => {
+            if (!buckets[apparatus]) buckets[apparatus] = { judges: [] };
+            buckets[apparatus].judges.push(seat);
           });
         });
       });
@@ -2076,17 +2122,38 @@ class AdminService extends UserService {
         }
       });
 
-      // Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required.
-      // The list is MINIMUM_PANEL_SEATS in utils/data/judge-assignment.util —
-      // it was an anonymous literal buried in this loop, which made the rule
-      // that gates whether a category can be scored at all invisible to anyone
-      // not reading this function.
+      /*
+       * Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required.
+       *
+       * The list is MINIMUM_PANEL_SEATS in utils/data/judge-assignment.util —
+       * it was an anonymous literal buried in this loop, which made the rule
+       * that gates whether a category can be scored at all invisible to anyone
+       * not reading this function.
+       *
+       * ASKED PER APPARATUS, AND ANSWERED FOR ALL OF THEM AT ONCE. This is the
+       * flag behind the dashboard's Start button, and panels are seated per
+       * apparatus — so counting the category's seats in one flat list would
+       * call a category ready when Pole had the chief and Rope had the Scorer.
+       * Every apparatus the meet runs has to stand on its own.
+       *
+       * A meet that declares no apparatus for a type has no buckets, and falls
+       * back to the flat list. That is not a special case bolted on: it is the
+       * same question with one nameless apparatus.
+       */
+      const minimallyStaffed = (judges) =>
+        MINIMUM_PANEL_SEATS.every((type) => (judges || []).some((j) => j.judgeType === type));
+
       summaryMap.forEach(entry => {
         Object.keys(entry.competitionTypes).forEach(ct => {
-          const judges = entry.competitionTypes[ct].judges || [];
-          entry.competitionTypes[ct].hasMinimumJudges = MINIMUM_PANEL_SEATS.every(
-            (type) => judges.some((j) => j.judgeType === type)
-          );
+          const bucketEntries = Object.entries(entry.competitionTypes[ct].byApparatus || {});
+
+          bucketEntries.forEach(([, bucket]) => {
+            bucket.hasMinimumJudges = minimallyStaffed(bucket.judges);
+          });
+
+          entry.competitionTypes[ct].hasMinimumJudges = bucketEntries.length > 0
+            ? bucketEntries.every(([, bucket]) => bucket.hasMinimumJudges)
+            : minimallyStaffed(entry.competitionTypes[ct].judges);
         });
       });
 

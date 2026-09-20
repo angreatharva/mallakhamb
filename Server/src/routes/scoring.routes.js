@@ -14,6 +14,7 @@
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireAdmin, requireJudge } = require('../middleware/auth.middleware');
+const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const scoringValidators = require('../validators/scoring.validator');
@@ -28,6 +29,13 @@ function createScoringRoutes(container) {
   const router = express.Router();
   const authMiddleware = createAuthMiddleware(container);
   const scoringService = container.resolve('scoringService');
+  /*
+   * These routes address a SCORE, not a competition — the meet is a field on
+   * the score document, so the guard is pointed at the `:scoreId` param and
+   * looks it up. `POST /` is the exception: it creates a score and carries its
+   * competition in the body, which the default resolution chain already reads.
+   */
+  const requireUnlockedCompetition = createCompetitionLockGuard(container);
 
   router.use(authMiddleware);
 
@@ -41,6 +49,7 @@ function createScoringRoutes(container) {
     scoringValidators.submitScore(),
     handleValidationErrors,
     requireJudge,
+    requireUnlockedCompetition(),
     asyncHandler(async (req, res) => {
       const score = await scoringService.submitScore(req.body);
       res.status(201).json({ success: true, data: score });
@@ -72,6 +81,7 @@ function createScoringRoutes(container) {
     scoringValidators.updateScore(),
     handleValidationErrors,
     requireJudge,
+    requireUnlockedCompetition({ scoreParam: 'scoreId' }),
     asyncHandler(async (req, res) => {
       const score = await scoringService.updateScore(req.params.scoreId, req.body);
       res.json({ success: true, data: score });
@@ -88,6 +98,7 @@ function createScoringRoutes(container) {
     scoringValidators.deleteScore(),
     handleValidationErrors,
     requireAdmin,
+    requireUnlockedCompetition({ scoreParam: 'scoreId' }),
     asyncHandler(async (req, res) => {
       await scoringService.deleteScore(req.params.scoreId);
       res.json({ success: true, message: 'Score deleted successfully' });
@@ -119,6 +130,7 @@ function createScoringRoutes(container) {
     scoringValidators.getScoreById(),
     handleValidationErrors,
     requireAdmin,
+    requireUnlockedCompetition({ scoreParam: 'scoreId' }),
     asyncHandler(async (req, res) => {
       const score = await scoringService.lockScore(req.params.scoreId);
       res.json({ success: true, data: score });
@@ -135,6 +147,7 @@ function createScoringRoutes(container) {
     scoringValidators.getScoreById(),
     handleValidationErrors,
     requireAdmin,
+    requireUnlockedCompetition({ scoreParam: 'scoreId' }),
     asyncHandler(async (req, res) => {
       const score = await scoringService.unlockScore(req.params.scoreId);
       res.json({ success: true, data: score });

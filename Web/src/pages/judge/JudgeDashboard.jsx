@@ -17,6 +17,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { JudgeAmbience } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
 import {
@@ -697,7 +698,13 @@ const JudgeDashboard = () => {
       </header>
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
-        
+
+        {/* The meet this session is scoped to may have closed. `activeCompetition`
+            is passed rather than left to storage: this screen is what WRITES
+            `judge_current_competition`, so its own state is the fresher copy —
+            it is already correct for the meet the judge just switched to. */}
+        <CompetitionLockBanner competition={activeCompetition} className="mb-6" />
+
         {/* Top Section */}
         <FadeIn delay={0}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

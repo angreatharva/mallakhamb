@@ -188,7 +188,12 @@ async function captureEnvironment() {
    */
   const panelSummary = {};
   for (const seat of captured.panels) {
-    const key = `${seat.competition.place} · ${seat.gender} ${seat.ageGroup}`;
+    // Keyed by apparatus too, because that is what a panel IS now: a category
+    // running Pole and Rope holds two, staffed separately and free to be
+    // different sizes. Grouping them together printed one 10-seat panel where
+    // the meet has a 5 and a 5.
+    const key = `${seat.competition.place} · ${seat.gender} ${seat.ageGroup}`
+      + `${seat.apparatus ? ` · ${seat.apparatus}` : ''}`;
     const tally = panelSummary[key] || (panelSummary[key] = { filled: 0, empty: 0 });
     if (seat.judgeEmail) tally.filled += 1;
     else tally.empty += 1;

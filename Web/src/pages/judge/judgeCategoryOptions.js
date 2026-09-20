@@ -11,10 +11,12 @@
  *
  *   - `competitionTypes: []` on a seat covers EVERY competition type — a Scorer
  *     is routinely created that way;
- *   - `apparatus: null` on a seat covers EVERY apparatus in its category, and
- *     is now the ONLY shape a seat comes in — Manage Judges no longer asks for
- *     one, because a meet holds a single panel per category and scoping it to
- *     one apparatus strands the athletes entered for the others;
+ *   - a seat NAMES an apparatus and covers only that one. Manage Judges asks
+ *     which, from the meet's own `apparatusConfig`, and a category running Pole
+ *     and Rope is two panels seated separately;
+ *   - `apparatus: null` on a seat covers EVERY apparatus in its category. That
+ *     is the LEGACY shape, from before the apparatus rung and before `Judge`'s
+ *     unique keys carried apparatus. Still honoured, never written;
  *   - a category the judge holds no seat for is never offered.
  *
  * The lists come from GET /api/judge/assignments, which spans every meet the
