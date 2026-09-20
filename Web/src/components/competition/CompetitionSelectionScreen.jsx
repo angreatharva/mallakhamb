@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { competitionsAtLevel, levelLabel } from '@/utils/competition/levels';
+import { idOf } from '@/pages/judge/judgeCategoryOptions';
 import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock, Layers,
 } from 'lucide-react';
@@ -345,9 +346,43 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
       const { token, competition } = response.data?.data || {};
       if (!token) throw new Error('No competition-scoped token returned');
 
-      // Every other judge page reads the meet out of the stored `judge_user`,
-      // so that copy has to move with the token.
-      login({ ...(user || {}), competition: competitionId }, token, 'judge');
+      /*
+       * Every other judge page reads the meet out of the stored `judge_user`,
+       * so that copy has to move with the token — AND SO DOES THE SEAT.
+       *
+       * This used to spread `user` and change `competition` alone, which kept
+       * `judgeType`, `judgeNo`, `gender` and `ageGroup` from the meet just
+       * left. A judge does not hold the same seat everywhere: the panel plan
+       * makes someone Scorer at one meet and Senior Judge at another, and
+       * `JudgeDashboard.handleTeamSelect` routes on `judgeType` alone. So the
+       * Scorer arrived at Delhi still labelled Senior Judge, was sent to the
+       * evaluation roster instead of the score sheet, and nothing anywhere
+       * reported a problem — the server had them correctly seated the whole
+       * time.
+       *
+       * `JudgeDashboard.selectCompetition` re-derives all of this when it
+       * switches meets. This is the same derivation for the other door into a
+       * meet, and it fails soft: an assignments fetch that does not answer
+       * leaves the seat null rather than confidently wrong.
+       */
+      const seats = await judgeAPI.getAssignments()
+        .then((assignments) => assignments.data?.data || [])
+        .catch(() => []);
+      const atThisMeet = seats
+        .filter((seat) => idOf(seat.competition) === competitionId)
+        .map((seat) => ({ ...seat, competition: competitionId }));
+      const primary = atThisMeet[0] || null;
+
+      login({
+        ...(user || {}),
+        competition: competitionId,
+        judgeType: primary?.judgeType ?? null,
+        judgeNo: primary?.judgeNo ?? null,
+        gender: primary?.gender ?? null,
+        ageGroup: primary?.ageGroup ?? null,
+        competitionTypes: primary?.competitionTypes || [],
+        allAssignments: atThisMeet,
+      }, token, 'judge');
       secureStorage.setItem('judge_competition_id', competitionId);
       if (competition) {
         secureStorage.setItem('judge_current_competition', JSON.stringify(competition));
