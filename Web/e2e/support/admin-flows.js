@@ -80,10 +80,25 @@ export const adminSignIn = async (page, place) => {
   await clearSession(page);
   await page.goto('/admin/login');
 
-  await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible({ timeout: 60_000 });
   await page.locator('#admin-email').fill(ADMIN.email);
   await page.locator('#admin-password').fill(ADMIN.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
+
+  /*
+   * WAIT FOR THE SIGN-IN TO LAND before going anywhere.
+   *
+   * `chooseLevel` navigates with `page.goto`, and a navigation issued while the
+   * login POST is still in flight ABORTS it. The session is then never stored,
+   * the protected route it lands on sits on its `Loading…` fallback forever,
+   * and the failure reads "the admin level chooser did not render — is this
+   * account signed in?" about an account that was in the middle of signing in.
+   *
+   * It is a race, so it only bites when the login is slow — a remote database,
+   * a cold bcrypt compare, a busy machine — which is exactly when a seeding run
+   * is least able to afford a misleading error.
+   */
+  await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 90_000 });
 
   /*
    * The level comes first now. The session was cleared above, so there is no

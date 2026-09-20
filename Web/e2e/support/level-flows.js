@@ -29,7 +29,17 @@ import { levelForPlace } from './meets.js';
  * @param {string} level - district | state | national | international
  * @param {{timeout?: number}} [options]
  */
-export const chooseLevel = async (page, role, level, { timeout = 30_000 } = {}) => {
+/*
+ * SIXTY seconds, not thirty, and it is the first screen of a run that pays for
+ * it. Playwright starts each run with a cold HTTP cache, so the first visit to
+ * a role's area fetches every lazy chunk in its tree and Vite transforms them
+ * on demand — the chooser sat on its `Loading…` fallback for well over thirty
+ * seconds on a cold dev server, and the run failed with "did not render — is
+ * this account signed in?", which accuses the sign-in that had just worked.
+ * The second visit is instant, so this costs nothing once warm. `judgeSignIn`
+ * carries 90s for the same reason.
+ */
+export const chooseLevel = async (page, role, level, { timeout = 60_000 } = {}) => {
   await page.goto(`/${role}/select-level`);
 
   const heading = page.getByRole('heading', { name: 'Choose Your Level' });

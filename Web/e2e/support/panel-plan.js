@@ -132,6 +132,58 @@ export const planForPlace = (place) => {
 };
 
 /**
+ * The meets one run covers, each with its OWN panels and its own seats.
+ *
+ * Unset, this is the default meet alone — the district one the scoring specs
+ * were written against — so every existing command keeps meaning what it meant.
+ *
+ *   COMPETITION_PLACE=Pune          one named meet
+ *   COMPETITION_PLACE=Pune,Nashik   several
+ *   COMPETITION_PLACE=all           every planned meet
+ *   LEVEL=state                     the three at one level
+ *
+ * WHY THIS RETURNS WHOLE PLANS AND NOT PLACES. Panel sizes and seat holders are
+ * drawn per meet: Male Under10 is a 3-judge panel at Mumbai and may be a 5 at
+ * Delhi. A spec that took a place and then read the top-level `PANELS` would
+ * seat four judges and score them as five — a plausible number by the wrong
+ * method, which is the one failure in this system that does not announce
+ * itself. Handing back the meet's own plan is what makes that impossible.
+ *
+ * @returns {Array<{place: string, level: string, seats: Object, panels: Array}>}
+ */
+export const selectedMeets = () => {
+  const { COMPETITION_PLACE, LEVEL } = process.env;
+
+  if (!COMPETITION_PLACE && !LEVEL) return [planForPlace(PLAN_PLACE)];
+
+  let meets = PLAN.meets;
+
+  if (COMPETITION_PLACE && COMPETITION_PLACE !== 'all') {
+    const wanted = COMPETITION_PLACE.split(',').map((p) => p.trim()).filter(Boolean);
+    const unknown = wanted.filter((p) => !meets.some((m) => m.place === p));
+    if (unknown.length > 0) {
+      throw new Error(
+        `COMPETITION_PLACE names ${unknown.join(', ')}, which the panel plan does not cover. ` +
+        `Planned: ${meets.map((m) => m.place).join(', ')}.`
+      );
+    }
+    meets = meets.filter((m) => wanted.includes(m.place));
+  }
+
+  if (LEVEL) {
+    meets = meets.filter((m) => m.level === LEVEL);
+    if (meets.length === 0) {
+      throw new Error(
+        `LEVEL="${LEVEL}"${COMPETITION_PLACE ? ` within COMPETITION_PLACE="${COMPETITION_PLACE}"` : ''} ` +
+        `matches no planned meet. Levels: ${[...new Set(PLAN.meets.map((m) => m.level))].join(', ')}.`
+      );
+    }
+  }
+
+  return meets;
+};
+
+/**
  * The roster entry for whoever holds a seat — the specs need a password too.
  *
  * The plan records people by email because that is what the admin API resolves;
@@ -139,10 +191,14 @@ export const planForPlace = (place) => {
  * point: a plan naming somebody the roster has never registered would otherwise
  * surface as a sign-in timeout with nothing pointing back at the plan.
  *
+ * `seats` is the meet's own seat map where one is given. The default is the
+ * default meet's, for the single-meet specs that predate per-meet plans.
+ *
  * @param {string} seat - e.g. 'Judge 1'
+ * @param {Object} [seats] - a meet's `seats`, from `selectedMeets` or `planForPlace`
  */
-export const judgeInSeat = (seat) => {
-  const email = SEAT_EMAIL[seat];
+export const judgeInSeat = (seat, seats = SEAT_EMAIL) => {
+  const email = seats[seat];
   if (!email) throw new Error(`The panel plan seats nobody as "${seat}"`);
   const found = JUDGE_ROSTER.find((j) => j.email.toLowerCase() === email.toLowerCase());
   if (!found) {

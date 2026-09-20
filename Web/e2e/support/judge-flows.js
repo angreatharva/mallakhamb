@@ -109,7 +109,50 @@ export const judgeSignIn = async (page, judge, { timeout = 90_000 } = {}) => {
  */
 export const judgeSignInAt = async (page, judge, place, options = {}) => {
   await judgeSignIn(page, judge, options);
+
+  /*
+   * THE ARENA CHOOSER IS NOT ALWAYS SHOWN, and that is not a failure.
+   *
+   * A judge whose session already carries a competition — login picks one
+   * silently, from whichever assignment the database returned first — is taken
+   * straight to the dashboard, past it. So is one whose level leaves a single
+   * meet to choose from.
+   *
+   * Which screen we are on has to be WAITED FOR, not sampled. Reading
+   * `page.url()` the instant `chooseLevelForPlace` returns catches the app
+   * mid-flight: it is on /judge/select-competition for a beat before
+   * auto-advancing, so the check said "chooser" and the card query then matched
+   * the DASHBOARD's own competition button. Clicking that is harmless and does
+   * nothing for the chooser, so the run failed on a Continue button that was
+   * never going to appear — while sitting on the very dashboard it wanted.
+   *
+   * Landing on the dashboard is fine to return from: `chooseCategory` selects
+   * the meet there itself, and that is the only place it can still be changed.
+   */
+  const picker = page.getByRole('heading', { name: 'Select Judging Category' });
+  const levelHeading = page.getByRole('heading', { name: 'Choose Your Level' });
+  const go = page.getByRole('button', { name: /Continue to Dashboard/i });
+
+  /** @returns {Promise<'dashboard'|'arena'|'level'>} */
+  const settledOn = async () => {
+    await expect(async () => {
+      expect(
+        (await picker.count()) + (await levelHeading.count()) + (await go.count()),
+        'the judge landed on none of the level chooser, the arena chooser or the dashboard'
+      ).toBeGreaterThan(0);
+    }).toPass({ timeout: 30_000 });
+
+    if (await picker.count()) return 'dashboard';
+    if (await go.count()) return 'arena';
+    return 'level';
+  };
+
+  if (await settledOn() === 'dashboard') return;
+
+  // The level rung is walked even from the arena screen: the list behind it is
+  // filtered by the stored level, which may be another meet's.
   await chooseLevelForPlace(page, 'judge', place);
+  if (await settledOn() === 'dashboard') return;
 
   const card = page.getByRole('button', { name: new RegExp(`\\b${place}\\b`) });
   await expect(
@@ -119,7 +162,6 @@ export const judgeSignInAt = async (page, judge, place, options = {}) => {
   ).toHaveCount(1, { timeout: 20_000 });
   await card.click();
 
-  const go = page.getByRole('button', { name: /Continue to Dashboard/i });
   await expect(go, 'the competition card did not register the click').toBeEnabled();
   await go.click();
 

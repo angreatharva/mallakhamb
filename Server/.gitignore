@@ -53,6 +53,16 @@ scripts/*
 !scripts/seatPanels.js
 !scripts/resetScores.js
 
+# The three seeding chains and the API seeder behind one of them. `setupAll.js`
+# predates this rule and is tracked without being named here; the others have to
+# be, or a fresh checkout gets `setup:api` and `setup:ui` as npm scripts with no
+# files behind them — which fails as "Cannot find module" long after the reason
+# is visible.
+!scripts/setupApi.js
+!scripts/setupUi.js
+!scripts/seedApi.js
+!scripts/verifySeed.js
+
 # The panel scripts and their shared plumbing. Re-including a nested file takes
 # three lines, not one: `scripts/*` already excluded `scripts/lib`, and git will
 # not look inside an excluded directory however many `!` lines name files in it.
@@ -62,6 +72,11 @@ scripts/lib/*
 !scripts/lib/panel-plan.js
 !scripts/lib/meets.js
 !scripts/lib/judges.js
+# Shared by the three chains: the chain runner itself, the roster bridge that
+# reads the browser suite's people, and the one definition of a seeded meet.
+!scripts/lib/setup-chain.js
+!scripts/lib/roster.js
+!scripts/lib/competition-document.js
 
 # The panel plan is a DECISION and is committed; the registration capture is a
 # record of one environment and is not.

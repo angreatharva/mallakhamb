@@ -9,6 +9,21 @@
  *   node scripts/setupAll.js --only=squads # one step
  *   node scripts/setupAll.js --drop        # DROP the database first, then run
  *
+ * THE FAST ONE, AND THE MIXED ONE. This chain picks whichever surface seeds a
+ * given step quickest: the browser where only the browser has ever driven it
+ * (coaches, players, judges, squads), the API everywhere else. That makes it
+ * the one to run when what you want is a seeded database, and the wrong one to
+ * run when what you want is to TEST a surface — half of it never touches the
+ * API and half of it never opens a page.
+ *
+ * Two siblings exist for that:
+ *
+ *   npm --prefix Server run setup:api    every step over HTTP
+ *   npm --prefix Server run setup:ui     every step through the browser
+ *
+ * All three share `lib/setup-chain.js`, so they take the same flags, hold the
+ * same lock and end with the same verification.
+ *
  * Each step is an independent script that works on its own — this only decides
  * the ORDER and stops at the first failure, because every step depends on the
  * one before it. Running them out of order is the usual way a seeded database
@@ -50,26 +65,23 @@
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
-const { spawnSync } = require('node:child_process');
-const fs = require('node:fs');
-const path = require('node:path');
-const readline = require('node:readline');
-
-const SERVER_DIR = path.join(__dirname, '..');
-const WEB_DIR = path.join(__dirname, '..', '..', 'Web');
+const { start, line } = require('./lib/setup-chain');
 
 /**
  * The chain.
  *
  * `where` decides which directory a step runs in. `needsApi` is a SEPARATE
  * question and the two do not line up: `web` steps drive a real browser against
- * the real app and obviously need it, but so do two `server` steps — `panels`
- * seats over the admin API and `pay` redeems over HTTP. Only Mongo-direct steps
- * need nothing running.
+ * the real app and obviously need it, but so do three `server` steps — `panels`
+ * seats over the admin API, `pay` redeems over HTTP and `scores` judges over
+ * it. Only Mongo-direct steps need nothing running.
  *
  * They used to be conflated, and the check keyed off `where === 'web'`, so
  * `--only=pay` against a stopped API failed with a connection error instead of
  * the one-line "start it" message this exists to give.
+ *
+ * `bootstrap` marks the two steps no surface can perform: migrations, and the
+ * first superadmin. They are in all three chains for that reason.
  *
  * The Vite dev server is never a prerequisite — Playwright starts it itself
  * (playwright.config.js, `webServer` with `reuseExistingServer: true`). So the
@@ -79,6 +91,7 @@ const STEPS = [
   {
     id: 'prepare',
     where: 'server',
+    bootstrap: true,
     title: 'Migrations and indexes',
     command: ['npm', 'run', 'prepare:db'],
     why: 'Applies every migration and reconciles every index against the schemas. '
@@ -87,6 +100,7 @@ const STEPS = [
   {
     id: 'superadmin',
     where: 'server',
+    bootstrap: true,
     title: 'Super admin account',
     command: ['node', 'scripts/createSuperAdmin.js'],
     why: 'Superadmin@gmail.com / Superadmin@2026. Reaches every competition by '
@@ -200,421 +214,46 @@ const STEPS = [
   },
 ];
 
-const line = (text = '') => process.stdout.write(`${text}\n`);
-
-const LOCK_PATH = path.join(SERVER_DIR, 'scripts', 'seed', '.setup-running');
-
-/**
- * Refuse to start while another run is working on the same database.
- *
- * Two of these at once is quietly destructive and the failure does not look
- * like the cause: a second run's `--drop` emptied the database underneath a
- * first that was 5 meets into scoring, and that first run then failed with
- * `No competition at "Chennai". Seen:` — an empty list, reported as if the
- * meets had never been created. An hour of work, and nothing pointing at the
- * real reason.
- *
- * Advisory, not enforced: a stale lock from a killed run is cleared
- * automatically once it is older than the longest a step can plausibly take,
- * and `--force` overrides it. The point is to make the collision visible, not
- * to make it impossible.
- *
- * @returns {boolean} whether the lock was taken
- */
-function takeLock(force) {
-  const STALE_AFTER_MS = 3 * 60 * 60 * 1000; // longer than a full run
-
-  try {
-    const raw = fs.readFileSync(LOCK_PATH, 'utf8');
-    const held = JSON.parse(raw);
-    const age = Date.now() - new Date(held.startedAt).getTime();
-
-    if (!force && age < STALE_AFTER_MS) {
-      const minutes = Math.round(age / 60000);
-      line(`\n  Another seed run is already working on "${held.database}".`);
-      line(`  Started ${minutes} min ago by pid ${held.pid}.`);
-      line('\n  Two runs against one database destroy each other\'s work, and the');
-      line('  failure surfaces far from the cause — a dropped database reads as');
-      line('  "no competitions exist" in whatever else is mid-flight.');
-      line('\n  Wait for it, or override if you are certain it is gone:');
-      line('    npm --prefix Server run setup -- --force');
-      return false;
-    }
-  } catch {
-    // No lock, or an unreadable one. Either way, take it.
-  }
-
-  fs.mkdirSync(path.dirname(LOCK_PATH), { recursive: true });
-  fs.writeFileSync(LOCK_PATH, JSON.stringify({
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    database: String(process.env.MONGODB_URI || '').split('/').pop().split('?')[0],
-  }));
-  return true;
-}
-
-const releaseLock = () => {
-  try { fs.unlinkSync(LOCK_PATH); } catch { /* already gone */ }
-};
-
-/**
- * Count what actually landed in the database.
- *
- * A child process rather than a require, for the same reason every step is one:
- * it connects to Mongo and disconnects, and owning that lifecycle inside a
- * script whose job is to spawn other scripts is a needless way to leave a
- * handle open and hang the run at the very end.
- *
- * @returns {boolean} whether every check passed
- */
-function verifySeed() {
-  const result = spawnSync('node', ['scripts/verifySeed.js'], {
-    cwd: SERVER_DIR,
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  });
-  return result.status === 0;
-}
-
-/** @param {string[]} argv */
-function parseArgs(argv) {
-  const flag = (name) => {
-    const hit = argv.find((a) => a.startsWith(`--${name}=`));
-    return hit ? hit.slice(name.length + 3) : null;
-  };
-  return {
-    list: argv.includes('--list'),
-    dryRun: argv.includes('--dry-run'),
-    drop: argv.includes('--drop'),
-    yes: argv.includes('--yes'),
-    force: argv.includes('--force'),
-    from: flag('from'),
-    to: flag('to'),
-    only: flag('only'),
-  };
-}
-
-function ask(question) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(question, (a) => { rl.close(); resolve(a.trim()); }));
-}
-
-/**
- * Which steps to run, honouring --only, or the --from/--to range.
- * @param {Object} args
- */
-function selectSteps(args) {
-  const known = STEPS.map((s) => s.id).join(', ');
-  const indexOf = (id, flagName) => {
-    const index = STEPS.findIndex((s) => s.id === id);
-    if (index === -1) throw new Error(`Unknown --${flagName} step "${id}". Known: ${known}`);
-    return index;
-  };
-
-  if (args.only) return [STEPS[indexOf(args.only, 'only')]];
-
-  // A range. `--to` exists so the server-side steps can be run on their own —
-  // they need no browser, and the natural first move is everything up to the
-  // point where the API and Vite have to be running.
-  const start = args.from ? indexOf(args.from, 'from') : 0;
-  const end = args.to ? indexOf(args.to, 'to') : STEPS.length - 1;
-
-  if (end < start) {
-    throw new Error(`--to "${args.to}" comes before --from "${args.from}".`);
-  }
-
-  return STEPS.slice(start, end + 1);
-}
-
-/**
- * Is the API up?
- *
- * The browser steps drive the real app, and the app is useless without the API
- * behind it. Playwright starts VITE itself (playwright.config.js has a
- * `webServer` block with `reuseExistingServer`), so the dev server is not a
- * prerequisite — but the API is, and without it every spec fails deep inside a
- * page interaction after a two-minute timeout, with an error about a missing
- * element rather than a missing server.
- *
- * Checking here turns that into an immediate, accurate message.
- *
- * @param {number} port
- * @returns {Promise<boolean>}
- */
-async function apiIsUp(port) {
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/health/live`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Run one step, inheriting stdio so its own output is the output.
- * @param {Object} step
- * @param {boolean} dryRun
- * @returns {boolean} whether it succeeded
- */
-function runStep(step, dryRun) {
-  const cwd = step.where === 'web' ? WEB_DIR : SERVER_DIR;
-  const [command, ...rest] = step.command;
-  const shown = `${step.where === 'web' ? 'Web' : 'Server'}$ ${step.command.join(' ')}`;
-
-  line(`\n${'='.repeat(72)}`);
-  line(`${step.id.toUpperCase()} — ${step.title}`);
-  line(`${'='.repeat(72)}`);
-  line(`  ${shown}\n`);
-
-  if (dryRun) {
-    line('  (dry run — not executed)');
-    return true;
-  }
-
-  const result = spawnSync(command, rest, {
-    cwd,
-    stdio: 'inherit',
-    // npm is a .cmd on Windows and is not executable without a shell.
-    shell: process.platform === 'win32',
-  });
-
-  return result.status === 0;
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const database = String(process.env.MONGODB_URI || '').split('/').pop().split('?')[0];
-
-  line('\nMallakhamb — full seed');
-  line(`  database  ${database}`);
-  line(`  server    ${SERVER_DIR}`);
-  line(`  web       ${WEB_DIR}`);
-
-  if (args.list) {
-    line('\nSteps:\n');
-    for (const [i, step] of STEPS.entries()) {
-      const needs = step.needsApi ? ' (needs the API running)' : '';
-      line(`  ${i + 1}. ${step.id.padEnd(13)} [${step.where}]${needs} ${step.title}`);
-      line(`     ${step.why.replace(/\s+/g, ' ')}`);
-      line('');
-    }
-    line('Start the API before any step marked "needs the API": npm --prefix Server start');
-    line('Vite is started by Playwright itself — you do not need to run it.');
-    line('End to end this is about two hours — squads ~25 min, scores ~35 min.');
-    return;
-  }
-
-  const steps = selectSteps(args);
-
-  /*
-   * Every environment variable the SELECTED steps need, checked before the
-   * first one runs.
-   *
-   * Up front, because the steps that need one are last and the steps before
-   * them are slow. Without this, a full run spends well over an hour seeding
-   * accounts and squads through a browser and then stops dead on `panels` with
-   * "SEED_ADMIN_PASSWORD is not set" — a one-line fix discovered in the worst
-   * possible place. `--dry-run` still checks, because finding out what a real
-   * run would need is most of what a dry run is for.
-   */
-  const missingEnv = [];
-  for (const step of steps) {
-    for (const key of step.needsEnv || []) {
-      if (!process.env[key]) missingEnv.push({ step: step.id, key });
-    }
-  }
-  // Set-but-false is its own failure: payWithDiscount refuses anything but the
-  // literal string, and "I did set it" is a confusing place to be stuck.
-  if (steps.some((s) => s.id === 'pay')
-      && process.env.DISCOUNT_CODE_ENABLED
-      && process.env.DISCOUNT_CODE_ENABLED !== 'true') {
-    missingEnv.push({ step: 'pay', key: 'DISCOUNT_CODE_ENABLED (must be exactly "true")' });
-  }
-
-  if (missingEnv.length > 0) {
-    line('\n  Missing environment variables in Server/.env:\n');
-    for (const { step, key } of missingEnv) {
-      line(`    ${key.padEnd(42)} needed by "${step}"`);
-    }
-    if (missingEnv.some((m) => m.key === 'SEED_ADMIN_PASSWORD')) {
-      line('\n  SEED_ADMIN_PASSWORD is the password createAdmin.js sets — Admin@2026 by');
-      line('  default. The panel seating signs in as that account over the admin API.');
-    }
-    line('\n  Add them and run this again. Nothing has been changed.');
-    process.exit(1);
-  }
-
-  const apiSteps = steps.filter((s) => s.needsApi);
-
-  /*
-   * The one thing this script cannot do for you.
-   *
-   * Starting the API from here would mean owning a long-lived child process and
-   * its shutdown, which is a worse job than asking.
-   *
-   * Keyed off `needsApi`, NOT off `where === 'web'`. Two server-side steps talk
-   * to the running API — `panels` seats over the admin API and `pay` redeems
-   * over HTTP — so the old check let `--only=pay` through to fail on a
-   * connection error instead of the message below.
-   *
-   * Only the API has to be started by hand. Playwright brings up Vite itself.
-   */
-  if (apiSteps.length > 0 && !args.dryRun) {
-    const port = process.env.PORT || 5000;
-    const up = await apiIsUp(port);
-
-    if (!up) {
-      line(`\n  The API is not answering on port ${port}, and ${apiSteps.length}`
-        + ` of these steps need it (${apiSteps.map((s) => s.id).join(', ')}).`);
-      line('\n  Start it in another terminal, then run this again:');
-      line('    npm --prefix Server start');
-      line('\n  (The Vite dev server does NOT need starting — Playwright does that.)');
-      line('\n  Or run just the steps that need nothing running:');
-      line('    npm --prefix Server run setup -- --to=competitions');
-      process.exit(1);
-    }
-
-    line(`\n  API is up on port ${port}. Vite will be started by Playwright as needed.`);
-  }
-
-  if (args.drop && !args.dryRun) {
-    line(`\n  --drop will DELETE EVERYTHING in "${database}".`);
-    if (!args.yes) {
-      const typed = await ask(`  Type the database name ("${database}") to confirm: `);
-      if (typed !== database) { line('  Cancelled.'); return; }
-    }
-    const mongoose = require('mongoose');
-    await mongoose.connect(process.env.MONGODB_URI);
-    await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
-    line(`  Dropped "${database}".`);
-  }
-
-  if (!args.dryRun && !args.yes && !args.only) {
-    const answer = await ask(`\n  Run ${steps.length} step(s) against "${database}"? (yes/no) `);
-    if (answer !== 'yes') { line('  Cancelled.'); return; }
-  }
-
-  /*
-   * Every step's outcome, so the run ends with a report rather than with
-   * whatever the last command happened to print.
-   *
-   * Stopping at the first failure is still right — each step needs the one
-   * before it, and running `squads` after `players` failed only produces a
-   * second, more confusing error. But stopping quietly was not: the useful
-   * question at the end is "what worked and what did not", and that was left to
-   * be reconstructed by scrolling back through an hour of output.
-   */
-  /*
-   * Taken here rather than at the top: --list and --dry-run change nothing, so
-   * they have no business blocking a real run or being blocked by one.
-   */
-  if (!takeLock(args.force)) process.exit(1);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.on(signal, () => { releaseLock(); process.exit(130); });
-  }
-
-  const outcomes = [];
-  let failedStep = null;
-
-  for (const step of steps) {
-    if (failedStep) {
-      outcomes.push({ id: step.id, state: 'not run', seconds: null });
-      continue;
-    }
-    const startedAt = Date.now();
-    const ok = runStep(step, args.dryRun);
-    const seconds = Math.round((Date.now() - startedAt) / 1000);
-    outcomes.push({ id: step.id, state: ok ? 'ok' : 'FAILED', seconds });
-    if (!ok) failedStep = step;
-  }
-
-  // ── The step report, printed whether the run succeeded or not ──────────────
-  line(`\n${'='.repeat(72)}`);
-  line(failedStep ? `STOPPED at "${failedStep.id}"` : 'ALL STEPS PASSED');
-  line('='.repeat(72));
-
-  const mmss = (s) => (s === null ? '' : `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`);
-  const width = Math.max(...outcomes.map((o) => o.id.length)) + 2;
-  for (const outcome of outcomes) {
-    const mark = { ok: '[ok]     ', 'FAILED': '[FAILED] ', 'not run': '[not run]' }[outcome.state];
-    line(`  ${mark} ${outcome.id.padEnd(width)}${mmss(outcome.seconds)}`);
-  }
-
-  const total = outcomes.reduce((n, o) => n + (o.seconds || 0), 0);
-  line(`  ${' '.repeat(10)}${'total'.padEnd(width)}${mmss(total)}`);
-
-  if (failedStep) {
-    line('\n  Every later step depends on this one, so nothing after it ran.');
-    if (failedStep.needsApi) {
-      line('  This step needs the API up: npm --prefix Server start');
-    }
-    line(`\n  Fix it, then resume with:  npm --prefix Server run setup -- --from=${failedStep.id}`);
-
-    // Still verify — knowing exactly how far the data got is most of what you
-    // need in order to decide whether resuming is enough.
-    if (!args.dryRun) verifySeed();
-    releaseLock();
-    process.exit(1);
-  }
-
-  /*
-   * Every command exited zero. That is not the same as the fixture being
-   * complete, and the difference is where this project's worst bugs have lived
-   * — a competition chooser that scoped writes to the wrong meet passed sixty
-   * browser tests while leaving four meets' squads empty. So the run ends by
-   * COUNTING what is actually in the database.
-   */
-  if (!args.dryRun && !verifySeed()) {
-    line('\n  The steps all ran, but the database is not what it should be.');
-    line('  The failures above say which part — re-run that step with --only=<id>.');
-    releaseLock();
-    process.exit(1);
-  }
-
-  releaseLock();
-
-  line(`\n${'='.repeat(72)}`);
-  line(`Setup complete — ${outcomes.length} step(s)`);
-  line(`${'='.repeat(72)}`);
-  line('\nWhere this leaves you:');
-  line('  12 meets — three each at district, state, national and international');
-  line('  12 coaches with one team apiece, three per level');
-  line('  36 entries — every team in all three meets at its level, three per meet');
-  line('  110 athletes, placed into squads by age group, gender and apparatus');
-  line('  16 judges registered and seated across every category of every meet');
-  line('  every team final-submitted and paid, so the judges can see them');
-  line('  every meet judged and published — 20 categories each, 240 in total');
-  line('');
-  line('ABOUT THAT PAYMENT:');
-  line('  The `pay` step redeems the DISCOUNT CODE as each coach, over HTTP. That is');
-  line('  a shipped product path — a 100%-off entry needs no Razorpay order because');
-  line('  there is nothing to charge — not a forged signature, which this chain still');
-  line('  will not produce. To exercise the real Razorpay flow instead, skip it with');
-  line('  --to=panels and pay through the UI in test mode.');
-  line('');
-  line('  Fees: ₹500 per athlete plus any apparatus add-on. Registration opened on');
-  line('  1 Jan 2026, and the base fee runs until a week before each meet — so the');
-  line('  seeded meets are payable at the base price right now.');
-  line('  To see the late fee (₹200 per athlete) charged instead:');
-  line('    npm --prefix Server run create-competitions -- --force --late');
-  line('  and re-run it without --late to put the deadlines back.');
-  line('');
-  line('CHECK IT:');
-  line('  npm --prefix Server run meet:status    # every meet, category by category');
-  line('');
-  line('RE-RUN A PIECE — every step is independent and finishes only what is owed:');
-  line('  npm --prefix Server run setup -- --only=scores');
-  line('  npm --prefix Server run seed:scores:one -- --place=Delhi   # one meet');
-  line('  LEVEL=state npm --prefix Web run seed:squads               # one level');
-  line('');
-  line('  npm --prefix Web run seed:scores        # judging through the BROWSER instead');
-  line('  — one meet, hours. Use it to exercise the scoring screens, not to get data.');
-}
-
-main().catch((error) => {
-  console.error(`\nSetup failed: ${error.message}`);
-  process.exit(1);
+start({
+  name: 'Mallakhamb — full seed',
+  tagline: 'The fast, mixed chain: browser where only the browser drives it, API everywhere else.',
+  duration: 'End to end this is about two hours — squads ~25 min, scores ~35 min.',
+  resume: 'npm --prefix Server run setup',
+  steps: () => STEPS,
+  epilogue: () => {
+    line('\nWhere this leaves you:');
+    line('  12 meets — three each at district, state, national and international');
+    line('  12 coaches with one team apiece, three per level');
+    line('  36 entries — every team in all three meets at its level, three per meet');
+    line('  110 athletes, placed into squads by age group, gender and apparatus');
+    line('  16 judges registered and seated across every category of every meet');
+    line('  every team final-submitted and paid, so the judges can see them');
+    line('  every meet judged and published — 20 categories each, 240 in total');
+    line('');
+    line('ABOUT THAT PAYMENT:');
+    line('  The `pay` step redeems the DISCOUNT CODE as each coach, over HTTP. That is');
+    line('  a shipped product path — a 100%-off entry needs no Razorpay order because');
+    line('  there is nothing to charge — not a forged signature, which this chain still');
+    line('  will not produce. To exercise the real Razorpay flow instead, skip it with');
+    line('  --to=panels and pay through the UI in test mode.');
+    line('');
+    line('  Fees: ₹500 per athlete plus any apparatus add-on. Registration opened on');
+    line('  1 Jan 2026, and the base fee runs until a week before each meet — so the');
+    line('  seeded meets are payable at the base price right now.');
+    line('  To see the late fee (₹200 per athlete) charged instead:');
+    line('    npm --prefix Server run create-competitions -- --force --late');
+    line('  and re-run it without --late to put the deadlines back.');
+    line('');
+    line('CHECK IT:');
+    line('  npm --prefix Server run meet:status    # every meet, category by category');
+    line('');
+    line('TEST ONE SURFACE INSTEAD OF SEEDING QUICKLY:');
+    line('  npm --prefix Server run setup:api -- --drop   # every step over HTTP');
+    line('  npm --prefix Server run setup:ui  -- --drop   # every step through the browser');
+    line('');
+    line('RE-RUN A PIECE — every step is independent and finishes only what is owed:');
+    line('  npm --prefix Server run setup -- --only=scores');
+    line('  npm --prefix Server run seed:scores:one -- --place=Delhi   # one meet');
+    line('  LEVEL=state npm --prefix Web run seed:squads               # one level');
+  },
 });

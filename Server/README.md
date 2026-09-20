@@ -304,6 +304,31 @@ npm run create-superadmin
 npm run create-admin
 ```
 
+### Seeding a whole season
+
+Three chains, same steps, different surfaces. All take the same flags
+(`--list`, `--dry-run`, `--drop`, `--from=`, `--to=`, `--only=`), hold the same
+lock, and end by counting what actually landed in the database.
+
+```bash
+npm run setup -- --drop       # FAST: whichever surface seeds each step quickest (~2 h)
+npm run setup:api -- --drop   # every step over HTTP, no browser (~25-40 min)
+npm run setup:ui -- --drop    # every step through the browser (all 12 meets: most of a day)
+```
+
+`--list` prints the plan without running anything, and labels each step `API`,
+`UI` or `bootstrap`. Two steps are bootstrap in every chain because no surface
+can perform them: migrations, and the first super admin.
+
+Pick `setup` when you want data, `setup:api` when you want to know the API alone
+can run a season, and `setup:ui` when you want every screen exercised.
+`setup:ui` narrows with `--meets=one-per-level` or `--meets=Mumbai,Delhi`, and
+its per-meet steps run in parallel (`--workers=N`, default 4).
+
+The people come from one roster either way — `Web/e2e/support/*-roster.js`, read
+on this side through `scripts/lib/roster.js` — so a database that comes out
+different came out of different code.
+
 > **Stale entries.** `package.json` also lists `migrate:up|down|status`, `populate-db`, `create-coach`, `create-player`, `create-competition`, `test-email`, `test-resend`, `test:coach-flow`, `setup:test` and `cleanup:test`. The files they point at do not exist in this repo (`scripts/` is gitignored and holds only the two create-user scripts), so those commands fail. Migrations still work — just not through the npm alias (see below).
 
 ---

@@ -24,14 +24,36 @@
       a seeding run. `blob:` here is the worker's own source, not a script
       origin, so it does not widen what may be loaded and executed as a script.
     -->
+    <!--
+      connect-src lists BOTH SPELLINGS OF LOOPBACK, and that is not redundancy.
+
+      `localhost` and `127.0.0.1` are the same machine, but CSP matches the
+      host STRING and not the address it resolves to — so a policy naming only
+      one of them blocks the other. That bit whenever the API was addressed as
+      127.0.0.1: every call failed as a bare axios "Network Error", with no
+      request in the server log and nothing on screen pointing at a policy,
+      because a CSP refusal never reaches the network at all.
+
+      Both spellings are unavoidable together. Node's fetch resolves `localhost`
+      to ::1 on Windows while the API listens on IPv4, so the seeding scripts
+      have to say 127.0.0.1 — while the BROWSER has to be given a host this
+      policy names. `vite.config.js` already allows the pair in `allowedHosts`
+      for the same reason.
+
+      No widening: an origin that can reach one loopback spelling can reach the
+      other, and a page that may talk to its own machine at all may already do
+      so via `localhost:*`. (`[::1]` is deliberately absent — CSP's host grammar
+      has no place for an IPv6 literal, so browsers discard the source
+      expression as invalid and log a warning on every page load.)
+    -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; 
+          content="default-src 'self';
                    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com;
                    worker-src 'self' blob:;
                    style-src 'self' 'unsafe-inline';
-                   img-src 'self' data: https:; 
-                   font-src 'self' data:; 
-                   connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://*.onrender.com https://*.ngrok-free.app https://*.ngrok.io http://localhost:* ws://localhost:* wss://*.onrender.com wss://*.ngrok-free.app wss://*.ngrok.io;
+                   img-src 'self' data: https:;
+                   font-src 'self' data:;
+                   connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://*.onrender.com https://*.ngrok-free.app https://*.ngrok.io http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:* wss://*.onrender.com wss://*.ngrok-free.app wss://*.ngrok.io;
                    frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;
                    base-uri 'self';
                    form-action 'self' https://api.razorpay.com;">

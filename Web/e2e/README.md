@@ -22,24 +22,26 @@ Vite dev server, and reuses it if `localhost:5173` is already served:
 npm --prefix Server start
 ```
 
-Nine specs, **one per use case, deliberately not combined**. Each does one job
+Eleven specs, **one per use case, deliberately not combined**. Each does one job
 against one role, so a run that fails names the thing that broke:
 
 | Spec | Role | For | npm script |
 | --- | --- | --- | --- |
+| `create-competitions` | super admin | The organiser account and the twelve meets, through the Create Competition modal. | `seed:competitions` |
 | `register-coaches` | coach | Seeding 20 coaches and their teams, five per level. | `seed:coaches` |
 | `register-players` | player | Seeding the standing squad. Idempotent, 274 athletes across 20 teams. | `seed:players` |
 | `register-judges` | judge | Seeding judge accounts. Registration only — seating is an admin act. | `seed:judges` |
 | `build-squads` | coach | Entering each team into all three meets at its level, and filling each squad. | `seed:squads` |
-| `seat-panels` | admin | Staffing every panel of one meet, at the size the plan gives it (the server script does all twelve). | `seed:panels` |
+| `seat-panels` | admin | Staffing every panel, at the size **that meet's** plan gives it. | `seed:panels` |
+| `pay-entries` | coach | Final submission and payment, with a 100%-off code rather than a forged signature. | `seed:pay` |
 | `score-all` | judges | The whole meet: every athlete, every apparatus, both types. | `seed:scores` |
 | `register-player` | player | Scrutinising the player flow with one ad-hoc player. | `test:e2e:player` |
 | `register-coach` | coach | The coach flow in full: register, create a team, enter a meet. | `test:e2e:coach` |
 | `score-panel` | judges | Every scoring rule, and every state that blocks Final Submit. | `test:e2e:scoring` |
 
-The first five build an environment, in that order — each needs the one above
-it — and `score-all` is what you run once they have. `seed:ui` is exactly that
-first sequence: an ordering, not a use case of its own. Run the pieces
+The first seven build an environment, in that order — each needs the one above
+it — and `score-all` is what you run once they have. `seed:ui` is the middle of
+that sequence: an ordering, not a use case of its own. Run the pieces
 individually when something needs repairing.
 
 ```bash
@@ -47,18 +49,35 @@ npm --prefix Web run seed:ui        # coaches → players → judges → squads 
 npm --prefix Web run seed:scores    # then judge the meet
 ```
 
-> **For a database rather than a UI exercise, use the Server chain instead:**
-> `npm --prefix Server run setup -- --drop` does all eleven steps end to end —
-> migrations through judging — in about two hours. It seats panels and scores
-> over the API, which is minutes rather than hours for the same result. These
-> browser specs exist to prove the SCREENS work; reach for them when the UI
-> changes, not when you want data.
+> **There is a chain that runs all of this in order:**
+> `npm --prefix Server run setup:ui -- --drop` walks every spec above, twelve
+> meets, in dependency order, with the per-meet steps running in parallel. It is
+> the browser counterpart of `setup:api`, which does the same season entirely
+> over HTTP. Both end by counting what actually landed in the database.
+>
+> `npm --prefix Server run setup` remains the FAST chain and is the one to reach
+> for when what you want is data rather than a UI exercise: it drives whichever
+> surface seeds a given step quickest, and finishes in about two hours.
 
-> `seed:ui` ends with the browser seating, which staffs **one** meet. That is
-> the point of it — it is the all-through-the-UI path — but it leaves the other
-> eleven unseated. `npm --prefix Server run setup` uses the server script for
-> that step instead; after a `seed:ui` run, seat the rest with
-> `SEED_ADMIN_PASSWORD='…' npm --prefix Server run seed:panels`.
+### Which meets a spec covers
+
+`seat-panels` and `score-all` default to the panel plan's own meet and take a
+list:
+
+```bash
+COMPETITION_PLACE=all        # every planned meet
+COMPETITION_PLACE=Pune,Delhi # named meets
+LEVEL=state                  # the three at one level
+```
+
+Each meet is seated and judged to **its own plan**. That matters more than it
+looks: sizes and seats are drawn per meet, so reading the default meet's plan
+while working on another seats four judges and scores them as five — a
+believable number by the wrong method, which is the one failure here that does
+not announce itself.
+
+`build-squads` and `pay-entries` walk a team's own meets, so they take `PLACE`
+(also a list) and `LEVEL`, plus `TEAM=` for one squad.
 
 The last three are the ones you read rather than run for data. `score-panel` and
 `score-all` are companions and neither replaces the other: `score-panel` proves
@@ -171,6 +190,52 @@ from the roster that creates those accounts, so seating somebody who had never
 registered failed inside the admin screen with a name simply absent from the
 search results.
 
+## create-competitions
+
+The only screen in the app that creates a competition, and the only one that
+creates an organiser account — so it is the first step of the browser chain.
+
+```bash
+npm --prefix Web run seed:competitions
+PLACE=Pune npm --prefix Web run seed:competitions
+```
+
+The values come from `Server/scripts/lib/competition-document.js`, imported
+rather than restated, so a meet created here is the same meet the other two
+chains create — fee window included. One difference is unavoidable and is the
+screen being right: the document names all fourteen (gender, age group) pairs
+and the form offers only the ten the sport runs, so "Select All" produces ten.
+Nobody on the roster is in the other four and no panel is seated for them.
+
+Idempotent — a meet that already exists is skipped, asked of the API rather than
+read off the table, because the twelve meets share a name and differ only by
+place.
+
+## pay-entries
+
+Final submission and payment, through the coach's payment page.
+
+```bash
+DISCOUNT_CODE='…' npm --prefix Web run seed:pay
+DISCOUNT_CODE='…' TEAM=SGAM-A npm --prefix Web run seed:pay
+```
+
+A team reaches a judge only once its coach has final-submitted **and** paid, and
+`build-squads` deliberately stops before both. This applies a 100%-off code and
+submits at no charge: at ₹0 the page calls `redeemDiscountCode` instead of
+opening Razorpay, because the gateway has no zero-value order. That is a shipped
+path with a real endpoint behind it — no signature is forged here, and if
+submission or the discount path breaks, this fails.
+
+Needs `DISCOUNT_CODE_ENABLED=true` and `DISCOUNT_CODE` **on the server** (the
+code never reaches the browser, so the page only offers the box when the server
+says one is being accepted) and the same code in the spec's own environment to
+type into it. `Server/scripts/payWithDiscount.js` is the same job over HTTP, in
+about a minute; this one proves the screen works.
+
+Submission is irreversible from the coach's side, so an entry that is already
+submitted is skipped rather than retried.
+
 ## seat-panels
 
 Staffs every panel through Manage Judges, the way an organiser does.
@@ -184,16 +249,18 @@ ONLY_GENDER=Female npm --prefix Web run seed:panels
 | --- | --- | --- |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | The organiser's login | the pair in `Server/scripts/createAdmin.js`, **localhost only** |
 | `ONLY_GENDER` / `ONLY_AGE` | Narrow to one category | all ten |
-| `COMPETITION_PLACE` | Which meet | the plan's own |
+| `COMPETITION_PLACE` | Which meets — one, a list, or `all` | the plan's own |
+| `LEVEL` | The three meets at one level | all |
 
 Off localhost the defaults are refused and the credentials must be passed
 deliberately: seating and vacating panels is a meet-wide, destructive act and
 `E2E_BASE_URL` will happily point at a deployed environment.
 
-This spec seats **one** meet — the plan's default, or `COMPETITION_PLACE`.
-Seating all twelve through the screen is 120 panels and five dropdowns each, so
-the setup chain uses the server script for that and keeps this one as the way to
-exercise the Manage Judges ladder itself.
+Tests are parallel **across meets** and serial within one, so `--workers=N`
+spreads them. Seating all twelve through the screen is 120 panels at five
+dropdowns per seat, which is why `npm --prefix Server run setup` uses the server
+script for this step — `setup:ui` uses this one, because exercising the Manage
+Judges ladder is the whole point of that chain.
 
 `Server/scripts/seatPanels.js` is the same job without a browser. It seats
 **every** planned meet by default (`--place=` narrows it to one), signing in

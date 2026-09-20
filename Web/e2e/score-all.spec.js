@@ -3,11 +3,10 @@ import { getDifficultyRequirement } from '../src/utils/scoring/copRules.js';
 import { apiGet, clearSession, competitionIdFor } from './support/browser.js';
 import { judgeSignIn, judgeSignInAt } from './support/judge-flows.js';
 import {
-  PANELS,
-  PLAN_PLACE,
   PLAN_PROVENANCE,
   evaluatorSeats,
   judgeInSeat,
+  selectedMeets,
 } from './support/panel-plan.js';
 import {
   chooseCategory,
@@ -81,7 +80,25 @@ import {
 
 test.describe.configure({ mode: 'parallel' });
 
-const PLACE = process.env.COMPETITION_PLACE || PLAN_PLACE;
+/**
+ * The meets this run judges, each carrying its OWN panels and seats.
+ *
+ * Unset, that is the plan's default meet alone — what this spec has always
+ * done. `COMPETITION_PLACE=all` judges every planned meet and `LEVEL=state`
+ * judges one level's three; see `selectedMeets`.
+ *
+ * READING THE PLAN PER MEET IS NOT A CONVENIENCE. Panel sizes are drawn per
+ * meet, so Male Under10 is a 3-judge panel at Mumbai and may be a 5 at Delhi.
+ * This spec used to score at `COMPETITION_PLACE` while reading the DEFAULT
+ * meet's `PANELS`, which meant judging any other meet by the wrong method —
+ * and a wrong method does not fail, it returns a believable number.
+ */
+const MEETS = selectedMeets();
+
+test.beforeAll(() => {
+  console.log(`Panel plan: ${PLAN_PROVENANCE}`);
+  console.log(`Judging ${MEETS.length} meet(s): ${MEETS.map((m) => m.place).join(', ')}`);
+});
 
 /**
  * Slug for the API and the panel seat, label for the UI's category picker.
@@ -218,15 +235,31 @@ const TIME_BANDS = [
 /**
  * Sign in as whoever holds one seat, from a cold session, and pick the category.
  *
- * The meet is picked explicitly now: sign-in lands on the level chooser rather
- * than the dashboard, and the category ladder only exists once a competition is
- * chosen. PLAN_PLACE is the meet the panel plan seats everyone at.
+ * The meet is picked explicitly: sign-in lands on the level chooser rather than
+ * the dashboard, and the category ladder only exists once a competition is
+ * chosen.
+ *
+ * Both the PERSON and the MEET come from the same plan entry. Seats are drawn
+ * per meet as well as sizes, so signing in as the default meet's Judge 3 and
+ * then choosing Delhi would land on a judge who holds no seat there — an empty
+ * competition list, which reads as a missing panel rather than a wrong person.
+ *
+ * @param {Object} meet - one entry from `selectedMeets()`
  */
-const asSeat = async (page, seat, category) => {
+const asSeat = async (page, seat, category, meet) => {
   await page.goto('/judge/login');
   await clearSession(page);
-  await judgeSignInAt(page, judgeInSeat(seat), PLAN_PLACE);
-  await chooseCategory(page, category);
+  await judgeSignInAt(page, judgeInSeat(seat, meet.seats), meet.place);
+  /*
+   * The MEET goes to the category picker too, not just to the sign-in.
+   *
+   * `chooseCategory` selects the competition on the dashboard before the
+   * gender and age-group rungs, and defaults that to the plan's own meet.
+   * Passing the seat's meet and not the category's was how this spec would
+   * have judged every meet's categories against Mumbai's roster — silently,
+   * because a judge seated at both is offered both.
+   */
+  await chooseCategory(page, { ...category, place: meet.place });
 };
 
 /**
@@ -286,288 +319,301 @@ const walkFlight = async (page, places, slipFor, afterSubmit) => {
   return { scored, alreadyDone };
 };
 
-for (const type of TYPES) {
-  if (process.env.ONLY_TYPE && process.env.ONLY_TYPE !== type.slug) continue;
+/*
+ * meet × competition type × category.
+ *
+ * Every combination is its own `describe.serial`, which is what distributes
+ * them: a serial block runs start to finish in ONE worker, and the blocks
+ * themselves spread across the pool. Categories share nothing — a Score
+ * document's identity is `{teamId, gender, ageGroup, competition,
+ * competitionType}` — so meets parallelise for free at whatever `--workers`
+ * the API can actually keep up with. Two is the measured ceiling for sign-ins
+ * on one Node process; see the note at the top of this file.
+ */
+for (const meet of MEETS) {
+  for (const type of TYPES) {
+    if (process.env.ONLY_TYPE && process.env.ONLY_TYPE !== type.slug) continue;
 
-  for (const panel of PANELS) {
-    if (process.env.ONLY_GENDER && process.env.ONLY_GENDER !== panel.gender) continue;
-    if (process.env.ONLY_AGE && process.env.ONLY_AGE !== panel.ageGroup) continue;
+    for (const panel of meet.panels) {
+      if (process.env.ONLY_GENDER && process.env.ONLY_GENDER !== panel.gender) continue;
+      if (process.env.ONLY_AGE && process.env.ONLY_AGE !== panel.ageGroup) continue;
 
-    const title = `${type.label} · ${panel.gender} ${panel.ageGroup} · ${panel.size}-judge panel`;
+      const title = `${meet.place} · ${type.label} · ${panel.gender} ${panel.ageGroup} · ${panel.size}-judge panel`;
 
-    test.describe.serial(title, () => {
-      /*
-       * Resolved once, in the first test, and shared by the rest of the block.
-       * A describe.serial runs in one worker, so this is safe — and enumerating
-       * per test would sign a judge in three more times to ask the same
-       * question.
-       */
-      let flight = null;
-
-      test('the panel judges every athlete, and the chief resolves what blocks him', async ({ page }) => {
-        // Roughly a second per slip plus a sign-in per judge; Male Above18 Pole
-        // is 9 athletes across 5 seats and is the long pole.
-        test.setTimeout(30 * 60_000);
-
-        const category = {
-          gender: panel.gender,
-          ageGroup: panel.ageGroup,
-          competitionType: type.label,
-        };
-
-        // ── Is this panel seated for this competition type at all? ──────────
-        // Only the API is read here, so the meet does not need choosing —
-        // /judge/assignments spans every competition the judge sits at.
-        await page.goto('/judge/login');
-        await clearSession(page);
-        await judgeSignIn(page, judgeInSeat('Senior Judge'));
-
-        const assignments = await apiGet(page, '/judge/assignments');
-        const seated = (assignments || []).some(
-          (a) =>
-            a.competition?.place === PLACE &&
-            a.gender === panel.gender &&
-            a.ageGroup === panel.ageGroup &&
-            (a.competitionTypes || []).includes(type.slug)
-        );
-        test.skip(
-          !seated,
-          `No panel seated for ${panel.gender} ${panel.ageGroup} · ${type.slug} at ${PLACE}. ` +
-          `The plan (${PLAN_PROVENANCE}) calls for ${panel.size} judges + Scorer there. ` +
-          'Seat it: SEED_ADMIN_PASSWORD=... npm --prefix Server run seed:panels'
-        );
-
-        const competitionId = await competitionIdFor(page, PLACE);
-
-        // Every apparatus this category is entered for. Male Above18 has Pole,
-        // Hanging AND Rope athletes judged by the one panel, and each is a
-        // separate squad place earning a separate score.
-        const byApparatus = new Map();
-        for (const place of await squadPlaces(page, {
-          competitionId,
-          gender: panel.gender,
-          ageGroup: panel.ageGroup,
-          competitionType: type.slug,
-        })) {
-          if (!byApparatus.has(place.apparatus)) byApparatus.set(place.apparatus, []);
-          byApparatus.get(place.apparatus).push(place);
-        }
-
-        test.skip(
-          byApparatus.size === 0,
-          `No squad places in ${panel.gender} ${panel.ageGroup} · ${type.slug}. ` +
-          'A team can be fully registered and still have nobody in this group — ' +
-          'run `npm --prefix Web run seed:squads` first.'
-        );
-
-        flight = { competitionId, category, byApparatus };
-        const evaluators = evaluatorSeats(panel.size);
-
-        for (const [apparatus, places] of byApparatus) {
-          const scoped = { ...category, apparatus };
-          const plans = places.map(
-            (_, i) => planFor(scenarioFor(panel.size, i), panel.size, difficultyFor(type.slug))
-          );
-
-          // ── The evaluation judges, one session each ──────────────────────
-          for (const seat of evaluators) {
-            await asSeat(page, seat, scoped);
-            await walkFlight(page, places, (_place, i) => plans[i].evaluatorSlip(seat));
-          }
-
-          // ── The Senior Judge: mark, be shown the blocks, resolve, lock ────
-          //
-          // One pass rather than two. The chief's slip is the reference every
-          // comparison is made against, so nothing can be raised until he has
-          // marked — and once he has, that athlete is ready to finalize. There
-          // is nothing to come back for.
-          await asSeat(page, 'Senior Judge', scoped);
-          await walkFlight(
-            page,
-            places,
-            (_place, i) => plans[i].chiefSlip,
-            async (place, i) => {
-              const plan = plans[i];
-              const who = `${place.playerName} (${apparatus}, ${scenarioFor(panel.size, i)})`;
-
-              /*
-               * What the chief is SHOWN, asserted before anything is dismissed.
-               *
-               * The two alerts QUEUE rather than stack — the second only mounts
-               * once the first is gone — so only the front one can be checked
-               * here, and which one that is depends on the scenario: the slip
-               * mismatch is raised first when there is one, and the tolerance
-               * breach is in front when it is the only block. The banners
-               * checked below cover both at once either way.
-               */
-              if (plan.expectMismatch) {
-                await expect(
-                  page.getByText(MISMATCH_ALERT, { exact: true }),
-                  `${who}: Judge 1 recorded a different routine, so the chief must be warned`
-                ).toBeVisible();
-              } else if (plan.expectTolerance) {
-                await expect(
-                  page.getByText(TOLERANCE_ALERT, { exact: true }),
-                  `${who}: the evaluators are 1.00 off the chief, so the chief must be warned`
-                ).toBeVisible();
-              }
-              await dismissAnyAlerts(page);
-
-              if (plan.expectMismatch) {
-                await expect(page.getByText(/mismatch detected/)).toBeVisible();
-              } else {
-                await expect(page.getByText(/mismatch detected/)).toBeHidden();
-              }
-              if (plan.expectTolerance) {
-                await expect(
-                  page.getByText(/Tolerance exceeded/),
-                  `${who}: the evaluators are 1.00 off the chief on a ${panel.size}-seat panel`
-                ).toBeVisible();
-              } else {
-                // A 3-seat panel has no tolerance concept, however far apart
-                // the marks are — this is the assertion that proves it.
-                await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
-              }
-
-              // Anything blocking means Final Submit is not offered.
-              if (plan.expectMismatch || plan.expectTolerance) {
-                await expect(finalSubmitButton(page)).toBeDisabled();
-              }
-
-              // ── Resolve, as the chief would, from Panel Review ───────────
-              for (const fix of plan.fixes) {
-                await overrideJudge(page, fix.judgeType, fix.changes);
-                await dismissAnyAlerts(page);
-              }
-
-              await expect(page.getByText(/mismatch detected/)).toBeHidden();
-              await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
-
-              await expect(
-                finalSubmitButton(page),
-                `${who}: everything is resolved, so the panel must be lockable`
-              ).toBeEnabled();
-              // An override can re-raise an alert, whose overlay would swallow
-              // this click and leave the athlete silently unfinalized.
-              await clickPastAlerts(page, finalSubmitButton(page));
-              await expect(
-                page.getByText(new RegExp(`Final score ${plan.finalScore} locked for ${place.playerName}`))
-              ).toBeVisible({ timeout: 20_000 });
-            }
-          );
-        }
-      });
-
-      test('the Scorer times the whole sheet, across every deduction band', async ({ page }) => {
-        test.setTimeout(20 * 60_000);
-        test.skip(!flight, 'the panel did not run, so there is no sheet to time');
-
+      test.describe.serial(title, () => {
         /*
-         * ONE sheet per (team, category, competition type) — deliberately not
-         * per apparatus. A Score document's identity has no apparatus in it, so
-         * Male Above18's Pole, Hanging and Rope athletes share a sheet, and
-         * timing it once per apparatus would lock it on the first pass and find
-         * it locked on the second.
+         * Resolved once, in the first test, and shared by the rest of the block.
+         * A describe.serial runs in one worker, so this is safe — and enumerating
+         * per test would sign a judge in three more times to ask the same
+         * question.
          */
-        const teams = [...new Set(
-          [...flight.byApparatus.values()].flat().map((p) => p.teamName)
-        )];
+        let flight = null;
 
-        await asSeat(page, SCORER_SEAT, flight.category);
+        test('the panel judges every athlete, and the chief resolves what blocks him', async ({ page }) => {
+          // Roughly a second per slip plus a sign-in per judge; Male Above18 Pole
+          // is 9 athletes across 5 seats and is the long pole.
+          test.setTimeout(30 * 60_000);
 
-        for (const teamName of teams) {
-          await page.goto('/judge/dashboard');
-          await openTeamAsScorer(page, teamName);
+          const category = {
+            gender: panel.gender,
+            ageGroup: panel.ageGroup,
+            competitionType: type.label,
+          };
 
-          if (await page.getByText('Scoring session is locked').count()) {
-            // Locking is one-way and only a superadmin can reopen it, so this
-            // is a state to report rather than fail on: the sheet is DONE.
-            console.log(`   ${teamName} ${flight.category.ageGroup} — already locked, skipping`);
-            continue;
+          // ── Is this panel seated for this competition type at all? ──────────
+          // Only the API is read here, so the meet does not need choosing —
+          // /judge/assignments spans every competition the judge sits at.
+          await page.goto('/judge/login');
+          await clearSession(page);
+          await judgeSignIn(page, judgeInSeat('Senior Judge', meet.seats));
+
+          const assignments = await apiGet(page, '/judge/assignments');
+          const seated = (assignments || []).some(
+            (a) =>
+              a.competition?.place === meet.place &&
+              a.gender === panel.gender &&
+              a.ageGroup === panel.ageGroup &&
+              (a.competitionTypes || []).includes(type.slug)
+          );
+          test.skip(
+            !seated,
+            `No panel seated for ${panel.gender} ${panel.ageGroup} · ${type.slug} at ${meet.place}. ` +
+            `The plan (${PLAN_PROVENANCE}) calls for ${panel.size} judges + Scorer there. ` +
+            'Seat it: SEED_ADMIN_PASSWORD=... npm --prefix Server run seed:panels'
+          );
+
+          const competitionId = await competitionIdFor(page, meet.place);
+
+          // Every apparatus this category is entered for. Male Above18 has Pole,
+          // Hanging AND Rope athletes judged by the one panel, and each is a
+          // separate squad place earning a separate score.
+          const byApparatus = new Map();
+          for (const place of await squadPlaces(page, {
+            competitionId,
+            gender: panel.gender,
+            ageGroup: panel.ageGroup,
+            competitionType: type.slug,
+          })) {
+            if (!byApparatus.has(place.apparatus)) byApparatus.set(place.apparatus, []);
+            byApparatus.get(place.apparatus).push(place);
           }
+
+          test.skip(
+            byApparatus.size === 0,
+            `No squad places in ${panel.gender} ${panel.ageGroup} · ${type.slug}. ` +
+            'A team can be fully registered and still have nobody in this group — ' +
+            'run `npm --prefix Web run seed:squads` first.'
+          );
+
+          flight = { competitionId, category, byApparatus };
+          const evaluators = evaluatorSeats(panel.size);
+
+          for (const [apparatus, places] of byApparatus) {
+            const scoped = { ...category, apparatus };
+            const plans = places.map(
+              (_, i) => planFor(scenarioFor(panel.size, i), panel.size, difficultyFor(type.slug))
+            );
+
+            // ── The evaluation judges, one session each ──────────────────────
+            for (const seat of evaluators) {
+              await asSeat(page, seat, scoped, meet);
+              await walkFlight(page, places, (_place, i) => plans[i].evaluatorSlip(seat));
+            }
+
+            // ── The Senior Judge: mark, be shown the blocks, resolve, lock ────
+            //
+            // One pass rather than two. The chief's slip is the reference every
+            // comparison is made against, so nothing can be raised until he has
+            // marked — and once he has, that athlete is ready to finalize. There
+            // is nothing to come back for.
+            await asSeat(page, 'Senior Judge', scoped, meet);
+            await walkFlight(
+              page,
+              places,
+              (_place, i) => plans[i].chiefSlip,
+              async (place, i) => {
+                const plan = plans[i];
+                const who = `${place.playerName} (${apparatus}, ${scenarioFor(panel.size, i)})`;
+
+                /*
+                 * What the chief is SHOWN, asserted before anything is dismissed.
+                 *
+                 * The two alerts QUEUE rather than stack — the second only mounts
+                 * once the first is gone — so only the front one can be checked
+                 * here, and which one that is depends on the scenario: the slip
+                 * mismatch is raised first when there is one, and the tolerance
+                 * breach is in front when it is the only block. The banners
+                 * checked below cover both at once either way.
+                 */
+                if (plan.expectMismatch) {
+                  await expect(
+                    page.getByText(MISMATCH_ALERT, { exact: true }),
+                    `${who}: Judge 1 recorded a different routine, so the chief must be warned`
+                  ).toBeVisible();
+                } else if (plan.expectTolerance) {
+                  await expect(
+                    page.getByText(TOLERANCE_ALERT, { exact: true }),
+                    `${who}: the evaluators are 1.00 off the chief, so the chief must be warned`
+                  ).toBeVisible();
+                }
+                await dismissAnyAlerts(page);
+
+                if (plan.expectMismatch) {
+                  await expect(page.getByText(/mismatch detected/)).toBeVisible();
+                } else {
+                  await expect(page.getByText(/mismatch detected/)).toBeHidden();
+                }
+                if (plan.expectTolerance) {
+                  await expect(
+                    page.getByText(/Tolerance exceeded/),
+                    `${who}: the evaluators are 1.00 off the chief on a ${panel.size}-seat panel`
+                  ).toBeVisible();
+                } else {
+                  // A 3-seat panel has no tolerance concept, however far apart
+                  // the marks are — this is the assertion that proves it.
+                  await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
+                }
+
+                // Anything blocking means Final Submit is not offered.
+                if (plan.expectMismatch || plan.expectTolerance) {
+                  await expect(finalSubmitButton(page)).toBeDisabled();
+                }
+
+                // ── Resolve, as the chief would, from Panel Review ───────────
+                for (const fix of plan.fixes) {
+                  await overrideJudge(page, fix.judgeType, fix.changes);
+                  await dismissAnyAlerts(page);
+                }
+
+                await expect(page.getByText(/mismatch detected/)).toBeHidden();
+                await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
+
+                await expect(
+                  finalSubmitButton(page),
+                  `${who}: everything is resolved, so the panel must be lockable`
+                ).toBeEnabled();
+                // An override can re-raise an alert, whose overlay would swallow
+                // this click and leave the athlete silently unfinalized.
+                await clickPastAlerts(page, finalSubmitButton(page));
+                await expect(
+                  page.getByText(new RegExp(`Final score ${plan.finalScore} locked for ${place.playerName}`))
+                ).toBeVisible({ timeout: 20_000 });
+              }
+            );
+          }
+        });
+
+        test('the Scorer times the whole sheet, across every deduction band', async ({ page }) => {
+          test.setTimeout(20 * 60_000);
+          test.skip(!flight, 'the panel did not run, so there is no sheet to time');
 
           /*
-           * The row count, once the table has stopped redrawing itself — see
-           * `scorerRows`. This used to be a three-second pause and a single
-           * `count()`, and the sheet's second load landed inside that gap often
-           * enough to report an empty sheet for a sheet whose own failure
-           * screenshot showed six athletes with marks on them.
+           * ONE sheet per (team, category, competition type) — deliberately not
+           * per apparatus. A Score document's identity has no apparatus in it, so
+           * Male Above18's Pole, Hanging and Rope athletes share a sheet, and
+           * timing it once per apparatus would lock it on the first pass and find
+           * it locked on the second.
            */
-          const rowCount = await scorerRows(page);
-          expect(rowCount, `${teamName} has no athletes on its ${flight.category.ageGroup} sheet`).toBeGreaterThan(0);
+          const teams = [...new Set(
+            [...flight.byApparatus.values()].flat().map((p) => p.teamName)
+          )];
 
-          const rows = page.locator('tbody tr');
+          await asSeat(page, SCORER_SEAT, flight.category, meet);
 
-          for (let i = 0; i < rowCount; i += 1) {
-            const row = rows.nth(i);
-            const inputs = row.locator('input');
-            const inputCount = await inputs.count();
-            // [time, one per judge, deduction, other deduction] — the judge
-            // columns vary with the panel, so the deductions are counted from
-            // the end rather than assumed to be at a fixed index.
-            const TIME = 0;
-            const DEDUCTION = inputCount - 2;
+          for (const teamName of teams) {
+            await page.goto('/judge/dashboard');
+            await openTeamAsScorer(page, teamName);
 
-            const band = TIME_BANDS[i % TIME_BANDS.length];
-            // Cleared first so the derivation actually runs on a re-run: React
-            // suppresses onChange when a field is filled with the value it
-            // already holds, and a saved sheet comes back with a time in it.
-            await inputs.nth(TIME).fill('');
-            await inputs.nth(TIME).fill(band.time);
-            await expect(
-              inputs.nth(DEDUCTION),
-              `row ${i + 1} of ${teamName}: ${band.time} must derive ${band.deduction || 'no deduction'}`
-            ).toHaveValue(band.deduction);
-          }
+            if (await page.getByText('Scoring session is locked').count()) {
+              // Locking is one-way and only a superadmin can reopen it, so this
+              // is a state to report rather than fail on: the sheet is DONE.
+              console.log(`   ${teamName} ${flight.category.ageGroup} — already locked, skipping`);
+              continue;
+            }
 
-          await page.getByLabel(/Time Keeper/).fill('Suraj Turte');
-          await page.getByLabel(/^Scorer/).fill('Preetesh Gamre');
-          await page.getByRole('button', { name: /Save & Lock Scores/ }).click();
-
-          // Draft or lock is decided by the SHEET, not by this spec: the Scorer
-          // locks only once every athlete on it has both a mark and a time.
-          const lockIt = page.getByRole('button', { name: /^Lock & Submit$/ });
-          if (await lockIt.count()) {
-            await lockIt.click();
-            await expect(page.getByText('Scoring session is locked')).toBeVisible({ timeout: 20_000 });
-          } else {
-            await page.getByRole('button', { name: /^Save Draft$/ }).click();
-            await expect(page.getByText(/Scores saved as draft/)).toBeVisible({ timeout: 20_000 });
-          }
-        }
-      });
-
-      test('the server stored a finalized score for every squad place', async ({ page }) => {
-        test.setTimeout(5 * 60_000);
-        test.skip(!flight, 'the panel did not run, so there is nothing to read back');
-
-        await asSeat(page, 'Senior Judge', flight.category);
-
-        const query = new URLSearchParams({
-          gender: panel.gender,
-          ageGroup: panel.ageGroup,
-          competitionType: type.slug,
-        });
-        const teams = await apiGet(page, `/judge/scores/team?${query}`);
-        const stored = teams.flatMap((t) => t.scores || []);
-
-        for (const [apparatus, places] of flight.byApparatus) {
-          for (const place of places) {
             /*
-             * Found by athlete AND apparatus. Somebody entered for three
-             * apparatus holds three rows, and `find` on the name alone returns
-             * whichever was written first — which is how a Rope result came to
-             * be read while Pole's numbers were asserted against it.
+             * The row count, once the table has stopped redrawing itself — see
+             * `scorerRows`. This used to be a three-second pause and a single
+             * `count()`, and the sheet's second load landed inside that gap often
+             * enough to report an empty sheet for a sheet whose own failure
+             * screenshot showed six athletes with marks on them.
              */
-            const row = stored.find(
-              (s) => s.playerName === place.playerName && s.apparatus === apparatus
-            );
-            expect(row, `no stored score for ${place.playerName} on ${apparatus}`).toBeTruthy();
-            expect(row.panelSize, `${place.playerName}: wrong panel size stored`).toBe(panel.size);
-            expect(row.isFinalized, `${place.playerName} was never finalized`).toBe(true);
+            const rowCount = await scorerRows(page);
+            expect(rowCount, `${teamName} has no athletes on its ${flight.category.ageGroup} sheet`).toBeGreaterThan(0);
+
+            const rows = page.locator('tbody tr');
+
+            for (let i = 0; i < rowCount; i += 1) {
+              const row = rows.nth(i);
+              const inputs = row.locator('input');
+              const inputCount = await inputs.count();
+              // [time, one per judge, deduction, other deduction] — the judge
+              // columns vary with the panel, so the deductions are counted from
+              // the end rather than assumed to be at a fixed index.
+              const TIME = 0;
+              const DEDUCTION = inputCount - 2;
+
+              const band = TIME_BANDS[i % TIME_BANDS.length];
+              // Cleared first so the derivation actually runs on a re-run: React
+              // suppresses onChange when a field is filled with the value it
+              // already holds, and a saved sheet comes back with a time in it.
+              await inputs.nth(TIME).fill('');
+              await inputs.nth(TIME).fill(band.time);
+              await expect(
+                inputs.nth(DEDUCTION),
+                `row ${i + 1} of ${teamName}: ${band.time} must derive ${band.deduction || 'no deduction'}`
+              ).toHaveValue(band.deduction);
+            }
+
+            await page.getByLabel(/Time Keeper/).fill('Suraj Turte');
+            await page.getByLabel(/^Scorer/).fill('Preetesh Gamre');
+            await page.getByRole('button', { name: /Save & Lock Scores/ }).click();
+
+            // Draft or lock is decided by the SHEET, not by this spec: the Scorer
+            // locks only once every athlete on it has both a mark and a time.
+            const lockIt = page.getByRole('button', { name: /^Lock & Submit$/ });
+            if (await lockIt.count()) {
+              await lockIt.click();
+              await expect(page.getByText('Scoring session is locked')).toBeVisible({ timeout: 20_000 });
+            } else {
+              await page.getByRole('button', { name: /^Save Draft$/ }).click();
+              await expect(page.getByText(/Scores saved as draft/)).toBeVisible({ timeout: 20_000 });
+            }
           }
-        }
+        });
+
+        test('the server stored a finalized score for every squad place', async ({ page }) => {
+          test.setTimeout(5 * 60_000);
+          test.skip(!flight, 'the panel did not run, so there is nothing to read back');
+
+          await asSeat(page, 'Senior Judge', flight.category, meet);
+
+          const query = new URLSearchParams({
+            gender: panel.gender,
+            ageGroup: panel.ageGroup,
+            competitionType: type.slug,
+          });
+          const teams = await apiGet(page, `/judge/scores/team?${query}`);
+          const stored = teams.flatMap((t) => t.scores || []);
+
+          for (const [apparatus, places] of flight.byApparatus) {
+            for (const place of places) {
+              /*
+               * Found by athlete AND apparatus. Somebody entered for three
+               * apparatus holds three rows, and `find` on the name alone returns
+               * whichever was written first — which is how a Rope result came to
+               * be read while Pole's numbers were asserted against it.
+               */
+              const row = stored.find(
+                (s) => s.playerName === place.playerName && s.apparatus === apparatus
+              );
+              expect(row, `no stored score for ${place.playerName} on ${apparatus}`).toBeTruthy();
+              expect(row.panelSize, `${place.playerName}: wrong panel size stored`).toBe(panel.size);
+              expect(row.isFinalized, `${place.playerName} was never finalized`).toBe(true);
+            }
+          }
+        });
       });
-    });
+    }
   }
 }

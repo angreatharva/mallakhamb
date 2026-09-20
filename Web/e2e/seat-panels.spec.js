@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { COMPETITION_PLACE } from './support/admin-data.js';
 import {
   adminSignIn,
   alreadyStaffed,
@@ -10,18 +9,18 @@ import {
   staffSlot,
 } from './support/admin-flows.js';
 import {
-  PANELS,
   PLAN_COMPETITION_TYPES,
-  PLAN_PLACE,
   PLAN_PROVENANCE,
-  SEAT_EMAIL,
   seatsFor,
+  selectedMeets,
 } from './support/panel-plan.js';
 
 /**
  * Seat every panel the meet needs, through the admin screen.
  *
  *   ADMIN_PASSWORD=… npm --prefix Web run seed:panels
+ *   ADMIN_PASSWORD=… COMPETITION_PLACE=all npm --prefix Web run seed:panels
+ *   ADMIN_PASSWORD=… LEVEL=state npm --prefix Web run seed:panels
  *   ADMIN_PASSWORD=… ONLY_GENDER=Female npm --prefix Web run seed:panels
  *
  * The UI half of a pair. `Server/scripts/seatPanels.js` does the same job
@@ -30,6 +29,16 @@ import {
  * what proves the screen can actually produce them. Both read the SAME plan —
  * `Server/scripts/seed/panel-plan.json` — so neither can seat a panel the other
  * would judge differently.
+ *
+ * ONE TEST PER (MEET, PANEL), and each meet uses ITS OWN plan.
+ *
+ * That last part was a real defect and a quiet one. This spec used to seat at
+ * `COMPETITION_PLACE` while reading the top-level `PANELS` — the DEFAULT meet's
+ * sizes. Pointing it at any other meet therefore seated Mumbai's panel sizes at
+ * Delhi, and nothing failed: a category seated with four judges and scored as
+ * five produces a believable number by the wrong method. `selectedMeets()`
+ * hands back each meet's own plan, so the sizes cannot be taken from the wrong
+ * one.
  *
  * WHAT A PANEL IS, AND WHY THERE IS NO "COMPETITION II PANEL"
  *
@@ -55,100 +64,112 @@ import {
  * Like every spec in this directory it writes to the real database.
  */
 
-const PLACE = COMPETITION_PLACE || PLAN_PLACE;
+const MEETS = selectedMeets();
 
-test.describe.configure({ mode: 'serial' });
+/*
+ * Serial WITHIN a meet, parallel ACROSS meets.
+ *
+ * Manage Judges is one screen per admin session and the filter ladder is
+ * stateful, so two tests working the same meet in one worker would fight over
+ * it. Different meets share nothing — a panel seat is unique on
+ * `{gender, ageGroup, judgeType, competition}` — so they distribute across
+ * workers cleanly. Twelve meets of add-only seating is the difference between
+ * an afternoon and an evening; see `--workers` on the npm script.
+ */
+test.describe.configure({ mode: 'parallel' });
 
 test.beforeAll(() => {
   console.log(`Panel plan: ${PLAN_PROVENANCE}`);
-  console.table(PANELS.map((p) => ({
-    panel: `${p.gender} ${p.ageGroup}`,
-    seats: `${p.size} eval + Scorer`,
-  })));
+  console.log(`Seating ${MEETS.length} meet(s): ${MEETS.map((m) => m.place).join(', ')}`);
 });
 
-const wanted = PANELS.filter(
-  (panel) =>
-    (!process.env.ONLY_GENDER || process.env.ONLY_GENDER === panel.gender) &&
-    (!process.env.ONLY_AGE || process.env.ONLY_AGE === panel.ageGroup)
-);
-
-if (wanted.length === 0) {
-  throw new Error(
-    `ONLY_GENDER/ONLY_AGE matched no panel in the plan. It runs: ` +
-    PANELS.map((p) => `${p.gender} ${p.ageGroup}`).join(', ')
+for (const meet of MEETS) {
+  const wanted = meet.panels.filter(
+    (panel) =>
+      (!process.env.ONLY_GENDER || process.env.ONLY_GENDER === panel.gender) &&
+      (!process.env.ONLY_AGE || process.env.ONLY_AGE === panel.ageGroup)
   );
-}
 
-for (const panel of wanted) {
-  const category = `${panel.gender} ${panel.ageGroup}`;
+  if (wanted.length === 0) {
+    throw new Error(
+      `ONLY_GENDER/ONLY_AGE matched no panel at ${meet.place}. It runs: ` +
+      meet.panels.map((p) => `${p.gender} ${p.ageGroup}`).join(', ')
+    );
+  }
 
-  test(`${category} — ${panel.size} judges + Scorer`, async ({ page }) => {
-    // Six judge searches per seat per competition type, each debounced and
-    // each a database round trip.
-    test.setTimeout(8 * 60_000);
+  test.describe.serial(`${meet.place} (${meet.level})`, () => {
+    for (const panel of wanted) {
+      const category = `${panel.gender} ${panel.ageGroup}`;
 
-    const competitionId = await adminSignIn(page, PLACE);
-    await openJudges(page, competitionId);
+      test(`${meet.place}: ${category} — ${panel.size} judges + Scorer`, async ({ page }) => {
+        // Six judge searches per seat per competition type, each debounced and
+        // each a database round trip.
+        test.setTimeout(8 * 60_000);
 
-    const seats = seatsFor(panel.size);
+        const competitionId = await adminSignIn(page, meet.place);
+        await openJudges(page, competitionId);
 
-    for (const competitionType of PLAN_COMPETITION_TYPES) {
-      await selectPanel(page, { action: 'add', ...panel, competitionType });
+        const seats = seatsFor(panel.size);
 
-      /*
-       * Already staffed for THIS type. Not a failure and not something to work
-       * around: the screen is telling us the panel exists, which is the state a
-       * re-run is supposed to find. Whether it is the RIGHT panel is checked in
-       * the verification test below, against the plan.
-       */
-      if (await alreadyStaffed(page).count()) {
-        console.log(`   ${category} · ${competitionType} — already staffed, left alone`);
-        continue;
-      }
+        for (const competitionType of PLAN_COMPETITION_TYPES) {
+          await selectPanel(page, { action: 'add', ...panel, competitionType });
 
-      for (const seat of seats) {
-        await staffSlot(page, seat, SEAT_EMAIL[seat]);
-      }
-      await saveStaffedPanel(page);
-      console.log(`   ${category} · ${competitionType} — staffed ${seats.join(', ')}`);
-    }
-  });
-}
+          /*
+           * Already staffed for THIS type. Not a failure and not something to
+           * work around: the screen is telling us the panel exists, which is
+           * the state a re-run is supposed to find. Whether it is the RIGHT
+           * panel is checked in the verification test below, against the plan.
+           */
+          if (await alreadyStaffed(page).count()) {
+            console.log(`   ${meet.place} ${category} · ${competitionType} — already staffed, left alone`);
+            continue;
+          }
 
-test.describe('what the screen shows afterwards', () => {
-  for (const panel of wanted) {
-    const category = `${panel.gender} ${panel.ageGroup}`;
-
-    test(`${category} is seated exactly as the plan says`, async ({ page }) => {
-      test.setTimeout(5 * 60_000);
-
-      const competitionId = await adminSignIn(page, PLACE);
-      await openJudges(page, competitionId);
-
-      const expected = seatsFor(panel.size);
-
-      for (const competitionType of PLAN_COMPETITION_TYPES) {
-        await selectPanel(page, { action: 'list', ...panel, competitionType });
-        const seated = await seatedJudges(page);
-
-        /*
-         * Both directions, and the second is the one that matters. A panel
-         * MISSING a seat fails loudly the moment a judge tries to score; a
-         * panel carrying one seat too many does not fail at all — it silently
-         * switches the whole category to a different averaging method and
-         * produces a plausible number. Asserting the exact set is what turns
-         * that into a red line here rather than a wrong result later.
-         */
-        expect(
-          Object.keys(seated).sort(),
-          `${category} · ${competitionType} is not the ${panel.size}-judge panel the plan calls for`
-        ).toEqual([...expected].sort());
-
-        for (const seat of expected) {
-          expect(seated[seat], `${category}: nobody in the ${seat} seat`).toBeTruthy();
+          for (const seat of seats) {
+            await staffSlot(page, seat, meet.seats[seat]);
+          }
+          await saveStaffedPanel(page);
+          console.log(`   ${meet.place} ${category} · ${competitionType} — staffed ${seats.join(', ')}`);
         }
+      });
+    }
+
+    test.describe('what the screen shows afterwards', () => {
+      for (const panel of wanted) {
+        const category = `${panel.gender} ${panel.ageGroup}`;
+
+        test(`${meet.place}: ${category} is seated exactly as the plan says`, async ({ page }) => {
+          test.setTimeout(5 * 60_000);
+
+          const competitionId = await adminSignIn(page, meet.place);
+          await openJudges(page, competitionId);
+
+          const expected = seatsFor(panel.size);
+
+          for (const competitionType of PLAN_COMPETITION_TYPES) {
+            await selectPanel(page, { action: 'list', ...panel, competitionType });
+            const seated = await seatedJudges(page);
+
+            /*
+             * Both directions, and the second is the one that matters. A panel
+             * MISSING a seat fails loudly the moment a judge tries to score; a
+             * panel carrying one seat too many does not fail at all — it
+             * silently switches the whole category to a different averaging
+             * method and produces a plausible number. Asserting the exact set
+             * is what turns that into a red line here rather than a wrong
+             * result later.
+             */
+            expect(
+              Object.keys(seated).sort(),
+              `${meet.place} ${category} · ${competitionType} is not the ${panel.size}-judge panel the plan calls for`
+            ).toEqual([...expected].sort());
+
+            for (const seat of expected) {
+              expect(seated[seat], `${meet.place} ${category}: nobody in the ${seat} seat`).toBeTruthy();
+            }
+          }
+        });
       }
     });
-  }
-});
+  });
+}

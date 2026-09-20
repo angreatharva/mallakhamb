@@ -73,20 +73,41 @@ const teamsToBuild = () => {
  * every team at all three meets of its level — and that is hours of modal
  * interactions. Narrowing lets it be done a level at a time; each test is
  * independent and re-running finishes what is outstanding.
+ *
+ * `PLACE` takes a list — `PLACE=Pune,Delhi` — so a chain can hand it the same
+ * subset it hands every other per-meet step.
  */
 const meetsToBuild = (coach) => {
   const level = process.env.LEVEL;
-  const place = process.env.PLACE;
+  const places = (process.env.PLACE || '').split(',').map((p) => p.trim()).filter(Boolean);
 
   let meets = meetsForTeam(coach.teamName);
   if (level) meets = meets.filter((m) => m.level === level);
-  if (place) meets = meets.filter((m) => m.place === place);
+  if (places.length > 0) meets = meets.filter((m) => places.includes(m.place));
   return meets;
 };
+
+/*
+ * Parallel ACROSS teams, serial WITHIN one.
+ *
+ * Sixty squads through an eight-interaction modal is the longest step in the
+ * whole seed, and the twelve teams share nothing that would make running them
+ * together unsafe: a squad place is written by team and athlete, never by array
+ * position (`CompetitionRepository.updateRegistrationFields`), so two coaches
+ * adding athletes to the same meet do not race.
+ *
+ * One coach's three meets DO stay serial. They are one person with one session,
+ * and moving between meets re-scopes it — running them concurrently would mean
+ * two sessions for the same coach picking competitions independently, which is
+ * the shape of the bug that once wrote four meets' squads into the wrong
+ * competition while every screen looked right.
+ */
+test.describe.configure({ mode: 'parallel' });
 
 for (const coach of teamsToBuild()) {
   const squad = ROSTER.filter((p) => p.teamName === coach.teamName);
 
+  test.describe.serial(coach.teamName, () => {
   /*
    * One test per (team, meet).
    *
@@ -135,24 +156,84 @@ for (const coach of teamsToBuild()) {
     await expect(page).toHaveURL(/\/coach\/dashboard/, { timeout: 20_000 });
     captureEntry(coach.email, coach.teamName, COMPETITION);
 
-    // The coach dashboard has no <main> landmark, so the whole body is the
-    // cheapest honest way to ask "is this athlete already in the squad?".
-    const alreadyThere = await page.locator('body').innerText();
+    /*
+     * What this meet already holds for this team, ASKED OF THE SERVER.
+     *
+     * Two things depend on it, and the dashboard can answer neither reliably.
+     *
+     * A SUBMITTED ENTRY IS FROZEN. `CoachDashboard` renders Add Player as
+     * `disabled={team?.isSubmitted}`, because a coach cannot change a squad
+     * they have final-submitted and paid for — "Team already submitted.
+     * Contact admin to make changes." So once the `pay` step has run, every
+     * one of these tests re-runs into a permanently disabled button and spends
+     * fifteen seconds per athlete discovering it. That is the product being
+     * right and the spec being wrong about what a re-run means.
+     *
+     * WHO IS ALREADY IN also used to be read off the rendered page, and that
+     * raced the roster: the body text was taken one line after the navigation,
+     * so a dashboard still fetching read as an empty squad and the spec set
+     * about re-adding athletes that were already there.
+     *
+     * `/coaches/dashboard` rather than `/auth/competitions/assigned`, because
+     * only the dashboard POPULATES the athletes — the assigned list leaves
+     * `players[].player` as a bare id, which cannot be matched to a roster
+     * entry. The assigned list is still what supplies the meet's ID.
+     *
+     * THE MEET HAS TO BE NAMED IN THE QUERY. `apiGet` goes through
+     * `page.request`, which carries the cookies but not the app's own
+     * `X-Competition-Id` header — that one is added by the axios layer from
+     * client state, and nothing outside the page has it. Without it the
+     * dashboard answers 400 "Competition context is required", which reads
+     * like a broken session rather than a missing header.
+     */
+    const assignedNow = await apiGet(page, '/auth/competitions/assigned');
+    const thisMeetNow = (assignedNow?.competitions || []).find((c) => c.place === meet.place);
+    expect(
+      thisMeetNow,
+      `${coach.teamName} is not entered at ${meet.place} after the chooser said it was`
+    ).toBeTruthy();
+
+    const dashboard = await apiGet(page, `/coaches/dashboard?competitionId=${thisMeetNow._id}`);
+    const entry = dashboard?.team;
+
+    if (entry?.isSubmitted) {
+      expect(
+        (entry.players || []).length,
+        `${coach.teamName} is submitted at ${meet.place} with the wrong squad size — ` +
+        'a submitted entry cannot be repaired through the UI, only by an admin'
+      ).toBe(squad.length);
+      // Still recorded: the capture describes what the fixture IS, and a run
+      // that resumed past this entry should not leave a hole in it.
+      for (const player of squad) {
+        captureSquad(player.email, coach.teamName, COMPETITION, {
+          gender: player.gender,
+          ageGroup: player.ageGroup,
+          apparatus: player.apparatus,
+        });
+      }
+      console.log(`   ${coach.teamName} @ ${meet.place} — submitted and frozen, left alone`);
+      return;
+    }
+
+    const entered = entry?.players || [];
+
     for (const player of squad) {
-      const name = `${player.firstName} ${player.lastName}`;
       /*
        * Re-running finishes what is outstanding rather than redoing it — the
        * modal costs eight interactions and sixty of them is ten minutes.
        *
-       * The apparatus is part of "already done", not just the name: an athlete
-       * whose entry predates multi-apparatus is on the dashboard with one
-       * apparatus, and skipping on the name alone would leave them there
-       * forever. Re-adding updates the existing squad place rather than
-       * duplicating it.
+       * The apparatus is part of "already done", not just the athlete: an entry
+       * made before a roster change carries the old set, and skipping on the
+       * athlete alone would leave it that way forever. Re-adding updates the
+       * existing squad place rather than duplicating it.
        */
-      const done = alreadyThere.includes(name)
-        && alreadyThere.includes(player.apparatus.join(' · '));
-      if (!done) {
+      const existing = entered.find(
+        (p) => String(p.player?.email || '').toLowerCase() === player.email.toLowerCase()
+      );
+      const apparatusMatches = existing
+        && player.apparatus.every((name) => JSON.stringify(existing.apparatus || '').includes(name));
+
+      if (!existing || !apparatusMatches) {
         await addPlayerToSquad(page, player);
       }
       captureSquad(player.email, coach.teamName, COMPETITION, {
@@ -209,4 +290,5 @@ for (const coach of teamsToBuild()) {
     ).toEqual([]);
     });
   }
+  });
 }

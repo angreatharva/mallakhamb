@@ -140,6 +140,24 @@ export const chooseCategory = async (page, {
   const apparatusButtons = page.getByRole('button', { name: /Mallakhamb$/ });
   const continueButton = page.getByRole('button', { name: /Continue to Dashboard/ });
 
+  /**
+   * Is the picker ready to continue?
+   *
+   * COUNTED BEFORE IT IS QUERIED. `isEnabled()` is an auto-waiting call: on a
+   * locator matching nothing it does not answer false, it blocks for the action
+   * timeout and then throws. And this button matches nothing for most of the
+   * ladder — while the selection is incomplete the screen renders it as
+   * "Please complete selection", which is a different accessible name.
+   *
+   * Unguarded, every "is it ready yet?" on an unfinished ladder cost fifteen
+   * seconds and then reported `locator.isEnabled: Timeout` about a button that
+   * was on screen the whole time.
+   *
+   * @returns {Promise<boolean>}
+   */
+  const canContinue = async () =>
+    (await continueButton.count()) > 0 && (await continueButton.isEnabled());
+
   /** @returns {Promise<boolean>} whether the apparatus question is settled */
   const pickApparatus = async () => {
     if ((await apparatusButtons.count()) === 0) {
@@ -151,10 +169,10 @@ export const chooseCategory = async (page, {
       /*
        * No preference, so take the first on offer. The screen requires one
        * whenever it has any to give — Continue stays disabled until then — so
-       * the `isEnabled` check only lets through the genuinely empty case,
-       * where the meet declares no apparatus and nobody has entered.
+       * this check only lets through the genuinely empty case, where the meet
+       * declares no apparatus and nobody has entered.
        */
-      if (await continueButton.isEnabled()) return true;
+      if (await canContinue()) return true;
       await apparatusButtons.first().click();
       return true;
     }
@@ -201,7 +219,7 @@ export const chooseCategory = async (page, {
   // an immediate read sees nothing whether or not there is anything to see.
   await expect(async () => {
     expect(
-      (await apparatusButtons.count()) > 0 || (await continueButton.isEnabled()),
+      (await apparatusButtons.count()) > 0 || (await canContinue()),
       'the picker is showing neither an apparatus to choose nor a way to continue'
     ).toBe(true);
   }).toPass({ timeout: 20_000 });
@@ -222,7 +240,7 @@ export const chooseCategory = async (page, {
     // DIFFERENT apparatus being kept, which the assertion below catches.
     await expect(async () => {
       expect(
-        (await apparatusButtons.count()) > 0 || (await continueButton.isEnabled()),
+        (await apparatusButtons.count()) > 0 || (await canContinue()),
         'the re-opened picker settled on neither an apparatus nor a way to continue'
       ).toBe(true);
     }).toPass({ timeout: 20_000 });
