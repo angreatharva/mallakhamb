@@ -46,7 +46,7 @@ function readWindowDate(payload, field) {
  * the payload may not carry — so anything absent falls back to what is already
  * stored. Ordering is checked here rather than in a schema validator because
  * the repository updates through `findByIdAndUpdate`, where a validator cannot
- * see its sibling paths (see the comment on `models/Competition.js`).
+ * see its sibling paths (see the comment on `src/models/Competition.js`).
  *
  * @param {Object} payload - incoming body (mutated copy is returned)
  * @param {Object} [existing] - the stored competition, on update

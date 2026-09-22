@@ -20,7 +20,7 @@
 const mongoose = require('mongoose');
 
 const CompetitionRepository = require('../../src/repositories/competition.repository');
-const Competition = require('../../models/Competition');
+const Competition = require('../../src/models/Competition');
 
 const quiet = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 

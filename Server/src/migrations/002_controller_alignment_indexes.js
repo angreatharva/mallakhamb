@@ -1,7 +1,7 @@
-const Team = require('../../models/Team');
-const Player = require('../../models/Player');
-const Competition = require('../../models/Competition');
-const Transaction = require('../../models/Transaction');
+const Team = require('../models/Team');
+const Player = require('../models/Player');
+const Competition = require('../models/Competition');
+const Transaction = require('../models/Transaction');
 
 async function up() {
   await Team.collection.createIndex({ coach: 1, isActive: 1 });

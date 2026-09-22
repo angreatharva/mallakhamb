@@ -22,8 +22,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 
 const mongoose = require('mongoose');
 
-const Competition = require('../models/Competition');
-const Score = require('../models/Score');
+const Competition = require('../src/models/Competition');
+const Score = require('../src/models/Score');
 const { resolveFeeWindow } = require('../src/config/payment.config');
 
 /** @param {string[]} argv */

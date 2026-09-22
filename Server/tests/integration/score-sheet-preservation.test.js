@@ -23,7 +23,7 @@ const mongoose = require('mongoose');
 const ScoringService = require('../../src/services/scoring/scoring.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const ScoreRepository = require('../../src/repositories/score.repository');
-const Score = require('../../models/Score');
+const Score = require('../../src/models/Score');
 
 const quiet = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 const oid = () => new mongoose.Types.ObjectId();

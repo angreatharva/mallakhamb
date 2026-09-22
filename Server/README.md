@@ -101,10 +101,6 @@ CSP nonce → helmet → compression → HTTPS enforce (prod) → CORS → JSON 
 ```
 Server/
 ├── server.js                     # Entry point (thin — bootstrap + listen)
-├── models/                       # Mongoose models — NOTE: outside src/
-│   ├── Admin.js  Coach.js  Player.js  Judge.js  JudgeAccount.js
-│   ├── Team.js   Competition.js  Score.js  PerformanceOrder.js
-│   └── Transaction.js  RefreshToken.js
 ├── scripts/                      # tracked; seeding chains, admin tools, migrations,
 │                                 # perf/ harness. Only *.generated.json is ignored
 ├── tests/                        # setup.js + unit/ (20) + integration/ (12) + security/ (11).
@@ -136,12 +132,19 @@ Server/
     ├── validators/               # express-validator schemas, one per domain
     ├── errors/                   # typed domain errors + error-codes
     ├── socket/                   # socket.manager.js, events/, handlers/
-    ├── models/                   # AuditLog.js ONLY
+    ├── models/                   # Mongoose models — all twelve
+    │   ├── Admin.js  Coach.js  Player.js  Judge.js  JudgeAccount.js
+    │   ├── Team.js   Competition.js  Score.js  PerformanceOrder.js
+    │   └── Transaction.js  RefreshToken.js  AuditLog.js
     ├── migrations/               # 001_initial_indexes, 002_controller_alignment_indexes, …
     └── infrastructure/           # see table above + database/
 ```
 
-> **Gotcha:** the Mongoose models live in `Server/models/`, *not* `Server/src/models/`. `src/models/` contains only `AuditLog.js`.
+> The models used to live in `Server/models/`, outside `src/`, with `AuditLog.js`
+> alone inside it — a split that this README carried as a standing "Gotcha" for
+> long enough to be worth fixing instead. They are all in `src/models/` now
+> (2026-09-22), so every layer of the diagram above sits under one root and
+> `require('../models/X')` means the same thing from every repository.
 
 ---
 
@@ -155,10 +158,10 @@ Server/
 | `Judge` | `judgeType` ∈ `Senior Judge`, `Judge 1…4`, `Scorer`; assigned per competition + gender + ageGroup + apparatus; unique on `(gender, ageGroup, judgeNo, competition)` |
 | `Competition` | Apparatus, categories `competition_1/2/3`, entry-fee + Razorpay config |
 | `Team` | Roster of players, submission state |
-| `Score` | One document per `(teamId, gender, ageGroup, competition)` — **unique index**; embeds `playerScores[]` |
+| `Score` | One document per `(teamId, gender, ageGroup, competition, competitionType)` — **unique index** `score_identity_unique`; embeds `playerScores[]`. `competitionType` joined the key in migration 003; without it, scoring a team in a second category is rejected with E11000 |
 | `Transaction` | Razorpay records; `userType` ∈ `coach`, `superadmin` |
 | `RefreshToken` | Rotation store for httpOnly refresh cookies |
-| `AuditLog` | Admin action trail (`src/models/`) |
+| `AuditLog` | Admin action trail |
 
 **Competition structure:** apparatus = Pole / Hanging / Rope Mallakhamb; categories = `competition_1` (Team) / `competition_2` (Individual) / `competition_3` (Apparatus); every category is split by gender and age group.
 

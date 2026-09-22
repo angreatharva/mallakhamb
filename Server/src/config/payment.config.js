@@ -5,7 +5,7 @@
  * There is no global base fee or default player rate.
  *
  * A competition may also define a registration window (`registrationOpenDate`,
- * `feeDueDate`, `lateFee` on `models/Competition.js`). `resolveFeeWindow` below
+ * `feeDueDate`, `lateFee` on `src/models/Competition.js`). `resolveFeeWindow` below
  * is the SINGLE place that turns those three fields plus an instant into a
  * phase; `Web/src/utils/scoring/competitionFee.js` mirrors it for the browser so
  * the coach is quoted what the server will charge. The mirror is deliberate —

@@ -12,7 +12,7 @@
  *   this is the one that is wired up.
  * - **superadmin** — every meet, by role.
  * - **judge** — scoped, but not from the account document. A seat lives in the
- *   separate `judgeassignments` collection (see `models/JudgeAccount.js`), so
+ *   separate `judgeassignments` collection (see `src/models/JudgeAccount.js`), so
  *   only `JudgeService.setCompetitionContext` can answer it, and it does.
  * - **coach / player** — NOT scoped. A coach registers a squad for a meet they
  *   have no relationship to yet, and a player joins a team before appearing on

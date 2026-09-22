@@ -25,10 +25,10 @@ const PaymentService = require('../../src/services/payment/payment.service');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const TransactionRepository = require('../../src/repositories/transaction.repository');
 
-const Competition = require('../../models/Competition');
-const Team = require('../../models/Team');
-const Coach = require('../../models/Coach');
-const Transaction = require('../../models/Transaction');
+const Competition = require('../../src/models/Competition');
+const Team = require('../../src/models/Team');
+const Coach = require('../../src/models/Coach');
+const Transaction = require('../../src/models/Transaction');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

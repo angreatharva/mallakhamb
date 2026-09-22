@@ -12,7 +12,7 @@
  * created by running the feature before this migration.
  */
 
-const PerformanceOrder = require('../../models/PerformanceOrder');
+const PerformanceOrder = require('../models/PerformanceOrder');
 
 async function up() {
   await PerformanceOrder.collection.createIndex(

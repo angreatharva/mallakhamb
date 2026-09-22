@@ -18,8 +18,8 @@ const mongoose = require('mongoose');
 
 const { bootstrap, initializeSocketIO } = require('../../../src/infrastructure/bootstrap');
 const EventTypes = require('../../../src/socket/events/event-types');
-const Judge = require('../../../models/Judge');
-const JudgeAccount = require('../../../models/JudgeAccount');
+const Judge = require('../../../src/models/Judge');
+const JudgeAccount = require('../../../src/models/JudgeAccount');
 
 let httpServer;
 let container;

@@ -41,9 +41,9 @@ const AdminRepository = require('../../src/repositories/admin.repository');
 const ScoringService = require('../../src/services/scoring/scoring.service');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
-const Judge = require('../../models/Judge');
-const JudgeAccount = require('../../models/JudgeAccount');
-const Score = require('../../models/Score');
+const Judge = require('../../src/models/Judge');
+const JudgeAccount = require('../../src/models/JudgeAccount');
+const Score = require('../../src/models/Score');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

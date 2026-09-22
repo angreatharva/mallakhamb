@@ -31,10 +31,10 @@ const AdminRepository = require('../../src/repositories/admin.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
-const Judge = require('../../models/Judge');
-const JudgeAccount = require('../../models/JudgeAccount');
-const Competition = require('../../models/Competition');
-const Score = require('../../models/Score');
+const Judge = require('../../src/models/Judge');
+const JudgeAccount = require('../../src/models/JudgeAccount');
+const Competition = require('../../src/models/Competition');
+const Score = require('../../src/models/Score');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

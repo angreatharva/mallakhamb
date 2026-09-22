@@ -27,7 +27,7 @@
  * another name as satisfied.
  */
 
-const JudgeAccount = require('../../models/JudgeAccount');
+const JudgeAccount = require('../models/JudgeAccount');
 const { reconcileModel } = require('../infrastructure/database/index-manager');
 
 async function up() {

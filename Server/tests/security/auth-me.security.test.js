@@ -15,7 +15,7 @@ const createAuthController = require('../../src/controllers/auth.controller');
 const CoachRepository = require('../../src/repositories/coach.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
-const Coach = require('../../models/Coach');
+const Coach = require('../../src/models/Coach');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 const issuedTokens = new Map();

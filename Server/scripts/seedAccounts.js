@@ -5,12 +5,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const mongoose = require('mongoose');
 
-const Player = require('../models/Player');
-const Coach = require('../models/Coach');
-const Team = require('../models/Team');
-const JudgeAccount = require('../models/JudgeAccount');
-const Competition = require('../models/Competition');
-const Judge = require('../models/Judge');
+const Player = require('../src/models/Player');
+const Coach = require('../src/models/Coach');
+const Team = require('../src/models/Team');
+const JudgeAccount = require('../src/models/JudgeAccount');
+const Competition = require('../src/models/Competition');
+const Judge = require('../src/models/Judge');
 
 /**
  * Rebuild the player, coach and judge side of a dev database from what the UI
@@ -570,7 +570,7 @@ async function seedSquads(squads, commit, plan) {
 /**
  * Phase 7 — the judging panels.
  *
- * A seat is not a login (see models/Judge.js): this writes the slot and points
+ * A seat is not a login (see src/models/Judge.js): this writes the slot and points
  * it at an account, and it is the only thing standing between a registered
  * judge and an empty dashboard. Nothing else in the seed can produce it — a
  * judge cannot seat themselves, and the admin screen refuses to re-seat a panel

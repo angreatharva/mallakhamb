@@ -105,8 +105,8 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const server = await startHarnessServer({ uri: PERF_URI, sockets: true });
   const mongoose = require('mongoose');
-  const Competition = require('../../models/Competition');
-  const Judge = require('../../models/Judge');
+  const Competition = require('../../src/models/Competition');
+  const Judge = require('../../src/models/Judge');
 
   const competition = await Competition.findOne({ name: 'Perf Benchmark Championship' }).lean();
   if (!competition) throw new Error('No perf fixture — run seedScale.js first.');

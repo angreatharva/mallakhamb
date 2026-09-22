@@ -12,8 +12,8 @@
  */
 
 const { validationResult } = require('express-validator');
-const Player = require('../../models/Player');
-const Coach = require('../../models/Coach');
+const Player = require('../../src/models/Player');
+const Coach = require('../../src/models/Coach');
 const { phone } = require('../../src/validators/common.validator');
 
 const playerFixture = (overrides = {}) => ({

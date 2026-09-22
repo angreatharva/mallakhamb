@@ -5,12 +5,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const mongoose = require('mongoose');
 
-require('../models/Team');
-require('../models/Coach');
-require('../models/Player');
-require('../models/JudgeAccount');
-const Competition = require('../models/Competition');
-const Judge = require('../models/Judge');
+require('../src/models/Team');
+require('../src/models/Coach');
+require('../src/models/Player');
+require('../src/models/JudgeAccount');
+const Competition = require('../src/models/Competition');
+const Judge = require('../src/models/Judge');
 
 /**
  * Record the parts of a competition environment that no form ever posts as one

@@ -47,9 +47,9 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const mongoose = require('mongoose');
 const { readPlan } = require('./lib/panel-plan');
 
-const Competition = require('../models/Competition');
-const Score = require('../models/Score');
-const Team = require('../models/Team');
+const Competition = require('../src/models/Competition');
+const Score = require('../src/models/Score');
+const Team = require('../src/models/Team');
 
 /** Slug or display form in, the stored display form out. */
 const DISPLAY_TYPE = {

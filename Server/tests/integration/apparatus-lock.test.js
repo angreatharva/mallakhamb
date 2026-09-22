@@ -23,10 +23,10 @@ const ScoringService = require('../../src/services/scoring/scoring.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const PublicService = require('../../src/services/public/public.service');
 const ScoreRepository = require('../../src/repositories/score.repository');
-const Score = require('../../models/Score');
+const Score = require('../../src/models/Score');
 // `getPublicScores` populates `teamId`, so the model has to be registered on
 // this connection even though these tests never read a team's fields.
-require('../../models/Team');
+require('../../src/models/Team');
 
 const quiet = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 const oid = () => new mongoose.Types.ObjectId();

@@ -13,7 +13,7 @@ import { chooseLevelForPlace } from './level-flows.js';
  * Fill and submit the coach registration form.
  *
  * Coaches are `firstName` + `lastName`, like players and judges — the single
- * `name` field this used to fill is gone (Server/models/Coach.js).
+ * `name` field this used to fill is gone (Server/src/models/Coach.js).
  *
  * @param {import('@playwright/test').Page} page
  * @param {Object} coach

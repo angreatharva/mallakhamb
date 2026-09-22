@@ -43,7 +43,7 @@
  * Irreversible by design — see `down()`.
  */
 
-const Competition = require('../../models/Competition');
+const Competition = require('../models/Competition');
 const {
   toCanonicalApparatus,
   isCanonicalApparatus,

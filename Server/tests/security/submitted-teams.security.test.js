@@ -35,12 +35,12 @@ const JudgeRepository = require('../../src/repositories/judge.repository');
 const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
-const Competition = require('../../models/Competition');
-const Team = require('../../models/Team');
-const Coach = require('../../models/Coach');
-const Player = require('../../models/Player');
-const Judge = require('../../models/Judge');
-const JudgeAccount = require('../../models/JudgeAccount');
+const Competition = require('../../src/models/Competition');
+const Team = require('../../src/models/Team');
+const Coach = require('../../src/models/Coach');
+const Player = require('../../src/models/Player');
+const Judge = require('../../src/models/Judge');
+const JudgeAccount = require('../../src/models/JudgeAccount');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 // Required for its side effect: registering the JudgeAccount schema. Every
 // panel query populates `judgeAccount`, and a populate against an unregistered
 // model throws MissingSchemaError at request time rather than at startup.

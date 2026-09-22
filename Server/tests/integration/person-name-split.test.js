@@ -8,8 +8,8 @@
  */
 
 const { up, down, splitName } = require('../../src/migrations/006_split_person_names');
-const Coach = require('../../models/Coach');
-const JudgeAccount = require('../../models/JudgeAccount');
+const Coach = require('../../src/models/Coach');
+const JudgeAccount = require('../../src/models/JudgeAccount');
 
 /** A pre-split document: one `name`, written straight through the driver. */
 async function legacy(model, name, email) {

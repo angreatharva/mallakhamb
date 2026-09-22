@@ -10,8 +10,8 @@
  */
 
 const { APPARATUS } = require('../config/cop-rules');
-const Player = require('../../models/Player');
-const Judge = require('../../models/Judge');
+const Player = require('../models/Player');
+const Judge = require('../models/Judge');
 
 /** Age groups, read off the Player schema's own enum. */
 const AGE_GROUPS = Player.schema.path('ageGroup').enumValues;

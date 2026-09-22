@@ -248,7 +248,7 @@ function createAuthMiddleware(container) {
       }
 
       /**
-       * A judge principal is an ACCOUNT (models/JudgeAccount.js). Everything
+       * A judge principal is an ACCOUNT (src/models/JudgeAccount.js). Everything
        * that used to read a panel field straight off `req.user` — judgeType,
        * gender, ageGroup — now reads the assignments this account holds, and
        * picks the one matching the category being acted on.

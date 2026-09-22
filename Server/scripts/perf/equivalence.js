@@ -99,7 +99,7 @@ function firstDifference(a, b) {
 async function main() {
   const server = await startHarnessServer({ uri: PERF_URI });
   const mongoose = require('mongoose');
-  const Competition = require('../../models/Competition');
+  const Competition = require('../../src/models/Competition');
 
   const competition = await Competition.findOne({ name: 'Perf Benchmark Championship' }).lean();
   if (!competition) throw new Error('No perf fixture — run seedScale.js first.');

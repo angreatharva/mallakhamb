@@ -15,7 +15,7 @@ const {
 } = require('../../errors');
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
 const EventTypes = require('../../socket/events/event-types');
-const Admin = require('../../../models/Admin');
+const Admin = require('../../models/Admin');
 const { pageMeta } = require('../../utils/data/pagination.util');
 
 /**

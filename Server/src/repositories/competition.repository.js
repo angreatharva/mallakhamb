@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Competition = require('../../models/Competition');
+const Competition = require('../models/Competition');
 const { convertToObjectId } = require('../utils/data/objectid.util');
 
 /**

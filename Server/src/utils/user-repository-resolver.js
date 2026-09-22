@@ -24,7 +24,7 @@ function createUserRepositoryResolver(repositories) {
     coachRepository,
     adminRepository,
     judgeRepository = null,
-    // The judge PRINCIPAL is an account (models/JudgeAccount.js); the judge
+    // The judge PRINCIPAL is an account (src/models/JudgeAccount.js); the judge
     // repository serves panel assignments, which are not logins. Callers that
     // predate the split pass only `judgeRepository`, so it stays the fallback.
     judgeAccountRepository = null,

@@ -5,14 +5,14 @@
  * Based on Requirements 16.1 (Performance Optimization) and 24.1 (Database Migration Support)
  */
 
-const Player = require('../../models/Player');
-const Coach = require('../../models/Coach');
-const Admin = require('../../models/Admin');
-const Judge = require('../../models/Judge');
-const Competition = require('../../models/Competition');
-const Team = require('../../models/Team');
-const Score = require('../../models/Score');
-const Transaction = require('../../models/Transaction');
+const Player = require('../models/Player');
+const Coach = require('../models/Coach');
+const Admin = require('../models/Admin');
+const Judge = require('../models/Judge');
+const Competition = require('../models/Competition');
+const Team = require('../models/Team');
+const Score = require('../models/Score');
+const Transaction = require('../models/Transaction');
 
 /**
  * Run the migration - Create indexes
@@ -65,7 +65,7 @@ async function up() {
     // {gender, ageGroup, judgeType, competition}).
     //
     // This key used to be {username, competition}. Judges hold their own
-    // accounts now (models/JudgeAccount.js) and the seat carries no
+    // accounts now (src/models/JudgeAccount.js) and the seat carries no
     // credentials, so any stale build of the old index is dropped — MongoDB
     // rejects createIndex with the same key pattern and different options
     // (IndexOptionsConflict) rather than replacing it, so the drop is required

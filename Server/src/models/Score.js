@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../src/config/cop-rules');
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 const playerScoreSchema = new mongoose.Schema({
   playerId: {

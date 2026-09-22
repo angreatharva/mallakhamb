@@ -18,8 +18,8 @@
  * unset as they are. Running it twice is a no-op.
  */
 
-const Coach = require('../../models/Coach');
-const JudgeAccount = require('../../models/JudgeAccount');
+const Coach = require('../models/Coach');
+const JudgeAccount = require('../models/JudgeAccount');
 
 /**
  * @param {string} name

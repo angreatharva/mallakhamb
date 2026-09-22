@@ -2,7 +2,7 @@
  * Competition levels — the single client-side source of truth.
  *
  * These four values MIRROR the server's `Competition.level` enum
- * (Server/models/Competition.js), which is a required field validated on both
+ * (Server/src/models/Competition.js), which is a required field validated on both
  * create and update (Server/src/validators/competition.validator.js). They are
  * stored lowercase; anything that renders them capitalises for display rather
  * than storing a second casing.
@@ -16,7 +16,7 @@
  * checks (admin assignment, judge panel seats).
  *
  * Deliberately NOT reused from the judge's `certificationLevel`
- * (Server/models/JudgeAccount.js), which is a judging credential that happens
+ * (Server/src/models/JudgeAccount.js), which is a judging credential that happens
  * to share three of these words and uses different casing.
  *
  * @module utils/competition/levels

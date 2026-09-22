@@ -1692,7 +1692,7 @@ Body: { password: "NewPassword123!" }
 | 11 | No account lockout on login | Medium | ✅ Fixed | `src/utils/security/account-lockout.util.js`, `src/controllers/*` login flows |
 | 12 | Password min length too short (8) | Medium | ✅ Fixed | `src/utils/auth/password.util.js` |
 | 13 | Bcrypt salt rounds too low (10) | Medium-High | ✅ Fixed | All models |
-| 14 | Missing email indexes on user models | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js` |
+| 14 | Missing email indexes on user models | Medium | ✅ Fixed | `src/models/Player.js`, `src/models/Coach.js`, `src/models/Admin.js` |
 | 15 | No database connection pooling | Medium | ✅ Fixed | `config/db.js` |
 | 16 | No query timeouts | Medium | ✅ Fixed | `config/db.js` |
 | 17 | Request size limit too large (10MB) | Medium | ✅ Fixed | `server.js` |
@@ -1701,7 +1701,7 @@ Body: { password: "NewPassword123!" }
 | 20 | Email credentials in plain env vars | High | ⚠️ Acknowledged — production hardening |
 | 21 | Duplicate Socket.IO initialization (crash) | Critical | ✅ Fixed | `server.js` |
 | 22 | Premature `module.exports` in controllers | Critical | ✅ Fixed | `src/controllers/*` |
-| 23 | Password `minlength` schema inconsistency | Medium | ✅ Fixed | `models/Player.js`, `models/Coach.js`, `models/Admin.js`, `routes/authRoutes.js` |
+| 23 | Password `minlength` schema inconsistency | Medium | ✅ Fixed | `src/models/Player.js`, `src/models/Coach.js`, `src/models/Admin.js`, `routes/authRoutes.js` |
 | 24 | Pagination missing on list endpoints | Medium | ⚠️ Add when needed at scale |
 
 ### Security Features Implemented

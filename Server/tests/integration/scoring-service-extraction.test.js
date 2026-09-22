@@ -22,11 +22,11 @@ const AdminRepository = require('../../src/repositories/admin.repository');
 const JudgeRepository = require('../../src/repositories/judge.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 
-const Competition = require('../../models/Competition');
-const Team = require('../../models/Team');
-const Coach = require('../../models/Coach');
-const Player = require('../../models/Player');
-const Score = require('../../models/Score');
+const Competition = require('../../src/models/Competition');
+const Team = require('../../src/models/Team');
+const Coach = require('../../src/models/Coach');
+const Player = require('../../src/models/Player');
+const Score = require('../../src/models/Score');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

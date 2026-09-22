@@ -29,10 +29,10 @@ const PlayerRepository = require('../../src/repositories/player.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 const { errorHandler } = require('../../src/middleware/error.middleware');
 
-const Competition = require('../../models/Competition');
-const Team = require('../../models/Team');
-const Coach = require('../../models/Coach');
-const Player = require('../../models/Player');
+const Competition = require('../../src/models/Competition');
+const Team = require('../../src/models/Team');
+const Coach = require('../../src/models/Coach');
+const Player = require('../../src/models/Player');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

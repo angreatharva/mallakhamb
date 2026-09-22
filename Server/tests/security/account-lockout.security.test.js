@@ -18,9 +18,9 @@ const JudgeRepository = require('../../src/repositories/judge.repository');
 const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
 const CompetitionRepository = require('../../src/repositories/competition.repository');
 
-const Coach = require('../../models/Coach');
-const Judge = require('../../models/Judge');
-const JudgeAccount = require('../../models/JudgeAccount');
+const Coach = require('../../src/models/Coach');
+const Judge = require('../../src/models/Judge');
+const JudgeAccount = require('../../src/models/JudgeAccount');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

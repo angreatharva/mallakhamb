@@ -7,7 +7,7 @@
  * it ran — and Manage Judges could not offer an apparatus step, because seating
  * a second panel in the same category collided on `judgeNo` with the first.
  *
- * The schema now declares both keys with `apparatus` in them (models/Judge.js).
+ * The schema now declares both keys with `apparatus` in them (src/models/Judge.js).
  * `index-manager` creates those on startup, but it NEVER drops an index it did
  * not expect — deliberately, so it cannot silently remove something a live
  * query depends on. The old pair therefore survives alongside the new one and
@@ -34,7 +34,7 @@
  * reverting has to be a decision about those panels, not a silent one.
  */
 
-const Judge = require('../../models/Judge');
+const Judge = require('../models/Judge');
 
 /** The pair that made a category single-panel. Default mongoose names. */
 const NARROW = [

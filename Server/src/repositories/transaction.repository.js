@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Transaction = require('../../models/Transaction');
+const Transaction = require('../models/Transaction');
 
 class TransactionRepository extends BaseRepository {
   /**

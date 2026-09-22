@@ -6,7 +6,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const JudgeAccount = require('../../models/JudgeAccount');
+const JudgeAccount = require('../models/JudgeAccount');
 const { fullName } = require('../utils/data/user-projection.util');
 
 /**

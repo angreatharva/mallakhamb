@@ -4,8 +4,8 @@
  * Everything a judge does inside a competition: sign in, see the teams in
  * their category, read a team's athletes, submit a score.
  *
- * The judge PRINCIPAL is a JudgeAccount (models/JudgeAccount.js) and the panel
- * seats they hold are Judge documents (models/Judge.js). Every method here
+ * The judge PRINCIPAL is a JudgeAccount (src/models/JudgeAccount.js) and the panel
+ * seats they hold are Judge documents (src/models/Judge.js). Every method here
  * takes an account id and resolves the assignment that covers the category
  * being acted on — see utils/data/judge-assignment.util.js. A registered judge
  * with no assignments is a normal state: they can sign in and see nothing.

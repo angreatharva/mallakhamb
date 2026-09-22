@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Team = require('../../models/Team');
+const Team = require('../models/Team');
 
 class TeamRepository extends BaseRepository {
   /**
@@ -47,7 +47,7 @@ class TeamRepository extends BaseRepository {
     try {
       // This requires querying the Competition model to get registered teams
       // We'll use aggregation to join with Competition
-      const Competition = require('../../models/Competition');
+      const Competition = require('../models/Competition');
       
       const competition = await Competition.findById(competitionId)
         .select('registeredTeams')
@@ -77,7 +77,7 @@ class TeamRepository extends BaseRepository {
   async addPlayer(teamId, playerId) {
     try {
       // Update the player's team field
-      const Player = require('../../models/Player');
+      const Player = require('../models/Player');
       await Player.findByIdAndUpdate(playerId, { team: teamId });
       return true;
     } catch (error) {
@@ -99,7 +99,7 @@ class TeamRepository extends BaseRepository {
   async removePlayer(teamId, playerId) {
     try {
       // Update the player's team field to null
-      const Player = require('../../models/Player');
+      const Player = require('../models/Player');
       const player = await Player.findById(playerId).select('team').lean();
       
       if (player && player.team && player.team.toString() === teamId.toString()) {

@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Admin = require('../../models/Admin');
+const Admin = require('../models/Admin');
 
 class AdminRepository extends BaseRepository {
   /**

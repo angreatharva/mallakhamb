@@ -24,14 +24,14 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.e
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
-const Player = require('../../models/Player');
-const Coach = require('../../models/Coach');
-const Team = require('../../models/Team');
-const Judge = require('../../models/Judge');
-const JudgeAccount = require('../../models/JudgeAccount');
-const Competition = require('../../models/Competition');
-const Admin = require('../../models/Admin');
-const Score = require('../../models/Score');
+const Player = require('../../src/models/Player');
+const Coach = require('../../src/models/Coach');
+const Team = require('../../src/models/Team');
+const Judge = require('../../src/models/Judge');
+const JudgeAccount = require('../../src/models/JudgeAccount');
+const Competition = require('../../src/models/Competition');
+const Admin = require('../../src/models/Admin');
+const Score = require('../../src/models/Score');
 const { COMBINATION_CHECKLISTS } = require('../../src/config/cop-rules');
 
 const PERF_URI = process.env.PERF_MONGODB_URI || 'mongodb://127.0.0.1:27017/mallakhamb_perf';
@@ -49,7 +49,7 @@ const SEAT_ORDER = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 
  * The accounts the harness signs in as.
  *
  * Admin carries a single `name` while everybody else carries the split pair —
- * the Admin model was never migrated (models/Admin.js), and writing the wrong
+ * the Admin model was never migrated (src/models/Admin.js), and writing the wrong
  * shape fails validation rather than silently dropping the field.
  */
 const PRINCIPALS = {

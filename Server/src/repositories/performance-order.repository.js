@@ -7,7 +7,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const PerformanceOrder = require('../../models/PerformanceOrder');
+const PerformanceOrder = require('../models/PerformanceOrder');
 
 class PerformanceOrderRepository extends BaseRepository {
   /**

@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Judge = require('../../models/Judge');
+const Judge = require('../models/Judge');
 
 class JudgeRepository extends BaseRepository {
   /**

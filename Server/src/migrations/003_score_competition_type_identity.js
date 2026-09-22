@@ -26,7 +26,7 @@
  * Never run this during a live competition.
  */
 
-const Score = require('../../models/Score');
+const Score = require('../models/Score');
 
 const OLD_INDEX_KEY = { teamId: 1, gender: 1, ageGroup: 1, competition: 1 };
 const NEW_INDEX_KEY = { teamId: 1, gender: 1, ageGroup: 1, competition: 1, competitionType: 1 };

@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Player = require('../../models/Player');
+const Player = require('../models/Player');
 const { pageMeta } = require('../utils/data/pagination.util');
 
 class PlayerRepository extends BaseRepository {

@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Coach = require('../../models/Coach');
+const Coach = require('../models/Coach');
 const { pageMeta } = require('../utils/data/pagination.util');
 
 class CoachRepository extends BaseRepository {

@@ -26,7 +26,7 @@
  * a second run reports zero repairs.
  */
 
-const Score = require('../../models/Score');
+const Score = require('../models/Score');
 const { calculateIndividualScore } = require('../utils/scoring/calculation.util');
 
 /**

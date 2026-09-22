@@ -14,7 +14,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { AuthenticationError } = require('../../errors');
-const RefreshToken = require('../../../models/RefreshToken');
+const RefreshToken = require('../../models/RefreshToken');
 
 /**
  * Token rotation threshold in milliseconds.

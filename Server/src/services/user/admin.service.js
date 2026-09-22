@@ -59,7 +59,7 @@ class AdminService extends UserService {
     this.teamRepository = dependencies.teamRepository;
     this.judgeRepository = dependencies.judgeRepository;
     // The people behind the assignments. Separate collection, separate
-    // repository — see models/JudgeAccount.js.
+    // repository — see src/models/JudgeAccount.js.
     this.judgeAccountRepository = dependencies.judgeAccountRepository;
     this.scoreRepository = dependencies.scoreRepository;
     this.transactionRepository = dependencies.transactionRepository;

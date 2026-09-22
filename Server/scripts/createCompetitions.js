@@ -57,8 +57,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 
 const mongoose = require('mongoose');
 
-const Competition = require('../models/Competition');
-const Admin = require('../models/Admin');
+const Competition = require('../src/models/Competition');
+const Admin = require('../src/models/Admin');
 const { allMeets, startDateOf, endDateOf, LEVELS } = require('./lib/meets');
 const {
   NAME,

@@ -27,7 +27,7 @@
  * already run it from the file that claims to describe them.
  */
 
-const Competition = require('../../models/Competition');
+const Competition = require('../models/Competition');
 
 const INDEX_NAME = 'registeredTeams.paymentStatus_1';
 

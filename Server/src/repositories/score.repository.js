@@ -8,7 +8,7 @@
  */
 
 const BaseRepository = require('./base.repository');
-const Score = require('../../models/Score');
+const Score = require('../models/Score');
 
 class ScoreRepository extends BaseRepository {
   /**
