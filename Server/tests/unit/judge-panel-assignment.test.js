@@ -1,14 +1,19 @@
 /**
- * AdminService judge management — assigning registered judges to panel slots.
+ * JudgePanelService — assigning registered judges to panel slots.
  *
  * Admins no longer mint judge credentials; they choose a person who has
  * registered. What has to hold: an empty slot is skipped rather than erroring,
  * an unknown or deactivated account is refused, one person cannot occupy two
  * slots on the same panel, and a slot edit cannot smuggle in a name or a
  * password.
+ *
+ * These methods lived on AdminService until 2026-09-22 and this suite pointed
+ * there. It now tests their owner directly — AdminService still exposes each
+ * one as a delegate, which `admin-delegates-to-judge-panel` below pins.
  */
 
 const AdminService = require('../../src/services/user/admin.service');
+const JudgePanelService = require('../../src/services/user/judge-panel.service');
 const { BusinessRuleError, NotFoundError } = require('../../src/errors');
 
 const noopLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
@@ -65,8 +70,7 @@ function buildService({ accounts = [{ _id: ACCOUNT, name: 'Pat', isActive: true 
     findById: jest.fn(async (id) => accounts.find((a) => String(a._id) === String(id)) || null),
   };
 
-  const service = new AdminService({
-    adminRepository: {},
+  const service = new JudgePanelService({
     judgeRepository,
     judgeAccountRepository,
     logger: noopLogger,
@@ -74,6 +78,42 @@ function buildService({ accounts = [{ _id: ACCOUNT, name: 'Pat', isActive: true 
 
   return { service, judgeRepository, judgeAccountRepository, rows };
 }
+
+describe('admin-delegates-to-judge-panel', () => {
+  /*
+   * The delegation is the compatibility promise: admin.controller,
+   * super-admin.controller and the seeding scripts all still call these on
+   * AdminService. If one is dropped, this fails here rather than at a venue.
+   */
+  const DELEGATED = [
+    'saveJudges', 'getJudges', 'createSingleJudge', 'updateJudge',
+    'deleteJudge', 'getAllJudgesSummary', 'assignJudgeToCompetition',
+  ];
+
+  it('forwards every seating method to JudgePanelService', async () => {
+    const calls = [];
+    const judgePanelService = Object.fromEntries(
+      DELEGATED.map((m) => [m, jest.fn(async (...args) => { calls.push([m, args]); return m; })])
+    );
+    const admin = new AdminService({
+      adminRepository: {},
+      logger: noopLogger,
+      judgePanelService,
+    });
+
+    for (const method of DELEGATED) {
+      await expect(admin[method]('a', 'b', 'c')).resolves.toBe(method);
+    }
+
+    expect(calls.map(([m]) => m)).toEqual(DELEGATED);
+  });
+
+  it('says what is missing when the panel service was not injected', async () => {
+    const admin = new AdminService({ adminRepository: {}, logger: noopLogger });
+
+    await expect(admin.getJudges('comp-1')).rejects.toThrow(/judgePanelService is not set/);
+  });
+});
 
 describe('saveJudges', () => {
   it('assigns a registered judge to the slot and marks it active', async () => {

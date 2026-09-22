@@ -16,7 +16,7 @@
  * only for that one; a LEGACY seat naming none answers for all of them.
  */
 
-const AdminService = require('../../src/services/user/admin.service');
+const JudgePanelService = require('../../src/services/user/judge-panel.service');
 
 const noopLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 
@@ -100,8 +100,7 @@ function buildService({ accounts, rows = [], competition } = {}) {
     }),
   };
 
-  const service = new AdminService({
-    adminRepository: {},
+  const service = new JudgePanelService({
     judgeRepository,
     judgeAccountRepository: {
       findById: jest.fn(async (id) => people.find((a) => String(a._id) === String(id)) || null),

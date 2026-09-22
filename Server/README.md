@@ -117,7 +117,8 @@ Server/
     │                             # request-coalescing, error
     ├── services/
     │   ├── auth/                 # authentication, authorization, token, token-invalidation, otp
-    │   ├── user/                 # admin, coach, judge, player, super-admin, user
+    │   ├── user/                 # admin, coach, judge, judge-account, judge-panel,
+    │   │                         # player, super-admin, user
     │   ├── competition/          # competition, registration, performance-order,
     │   │                         # competition-status
     │   ├── team/  scoring/  payment/  public/

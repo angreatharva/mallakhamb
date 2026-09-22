@@ -33,6 +33,7 @@ const mongoose = require('mongoose');
 const createPublicRoutes = require('../../src/routes/public.routes');
 const createAdminController = require('../../src/controllers/admin.controller');
 const AdminService = require('../../src/services/user/admin.service');
+const JudgePanelService = require('../../src/services/user/judge-panel.service');
 const CalculationService = require('../../src/services/scoring/calculation.service');
 const JudgeRepository = require('../../src/repositories/judge.repository');
 const JudgeAccountRepository = require('../../src/repositories/judge-account.repository');
@@ -96,6 +97,19 @@ function buildApp() {
     calculationService
   );
 
+  /*
+   * Judge seating left AdminService the same way scoring did, and CRIT-2 lives
+   * on this path: `getJudges` is where the credential projection is applied,
+   * so the harness wires the REAL service rather than a stub — a stub would
+   * prove only that the stub withholds a password.
+   */
+  const judgePanelService = new JudgePanelService({
+    judgeRepository,
+    judgeAccountRepository,
+    competitionRepository: null, // unused by getJudges
+    logger: noopLogger,
+  });
+
   const adminService = new AdminService({
     adminRepository,
     judgeRepository,
@@ -103,6 +117,7 @@ function buildApp() {
     scoreRepository,
     calculationService,
     scoringService,
+    judgePanelService,
     logger: noopLogger,
   });
 

@@ -28,6 +28,7 @@ const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
 const JudgeAccountService = require('../services/user/judge-account.service');
+const JudgePanelService = require('../services/user/judge-panel.service');
 const CompetitionService = require('../services/competition/competition.service');
 const CompetitionStatusService = require('../services/competition/competition-status.service');
 const RegistrationService = require('../services/competition/registration.service');
@@ -160,6 +161,15 @@ function bootstrap() {
     c.resolve('transactionRepository')
   ), 'singleton');
   container.register('calculationService', (c) => new CalculationService(c.resolve('logger')), 'singleton');
+  // Seating judges on panels. Registered before adminService because that one
+  // delegates to it; resolve this directly for anything new.
+  container.register('judgePanelService', (c) => new JudgePanelService({
+    judgeRepository: c.resolve('judgeRepository'),
+    judgeAccountRepository: c.resolve('judgeAccountRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+
   container.register('adminService', (c) => new AdminService({
     adminRepository: c.resolve('adminRepository'),
     playerRepository: c.resolve('playerRepository'),
@@ -172,8 +182,10 @@ function bootstrap() {
     transactionRepository: c.resolve('transactionRepository'),
     calculationService: c.resolve('calculationService'),
     // Task 3.1: scoring moved to ScoringService; adminService delegates so
-    // every existing caller and route keeps working.
+    // every existing caller and route keeps working. Judge seating moved out
+    // the same way on 2026-09-22.
     scoringService: c.resolve('scoringService'),
+    judgePanelService: c.resolve('judgePanelService'),
     socketManager: null,
     logger: c.resolve('logger'),
     cacheService: c.resolve('cacheService'),

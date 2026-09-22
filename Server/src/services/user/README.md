@@ -9,6 +9,9 @@ The user services follow a hierarchical structure:
 - **PlayerService**: Player-specific operations extending UserService
 - **CoachService**: Coach-specific operations extending UserService
 - **AdminService**: Admin-specific operations extending UserService
+- **JudgeAccountService**: the judge as a PERSON — registration, profile, password
+- **JudgePanelService**: who occupies which SEAT at which meet (a seat is not a login)
+- **SuperAdminService**: operations only a superadmin may perform
 
 ## Architecture
 
@@ -111,10 +114,29 @@ const team = await coachService.getTeam('coach123');
 
 Service for admin-specific operations and user management.
 
-**Constructor:**
+**Constructor** — one `dependencies` object, not a positional list (this section
+documented a positional signature that the class has never had):
 ```javascript
-new AdminService(adminRepository, playerRepository, coachRepository, competitionRepository, logger)
+new AdminService({
+  adminRepository, playerRepository, coachRepository, competitionRepository,
+  teamRepository, judgeRepository, judgeAccountRepository, scoreRepository,
+  transactionRepository, calculationService, scoringService, judgePanelService,
+  authenticationService, emailService, cacheService, socketManager, logger,
+})
 ```
+
+**Two clusters have been extracted, and AdminService delegates to both.** The
+methods stay on the class so existing callers are unaffected, but new code
+should resolve the owner directly:
+
+| Cluster | Owner | Reached through |
+|---|---|---|
+| Scoring — save, lock/unlock, recalculate, rankings | `ScoringService` (task 3.1) | `adminService.scoring` |
+| Judge seating — `saveJudges`, `getJudges`, `createSingleJudge`, `updateJudge`, `deleteJudge`, `getAllJudgesSummary`, `assignJudgeToCompetition` | `JudgePanelService` (2026-09-22) | `adminService.panels` |
+
+Both are getters that throw a named error when the dependency is missing, rather
+than failing later as `Cannot read properties of undefined`. Tests that build
+AdminService by hand need to pass the service they exercise.
 
 **Methods:**
 - `getProfile(adminId)` - Get admin profile with competitions
