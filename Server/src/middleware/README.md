@@ -82,33 +82,38 @@ router.get('/admin/dashboard', authMiddleware, requireAdmin, (req, res) => {
 - `req.userType` - User type (player, coach, admin, judge)
 - `req.user.currentCompetition` - Competition ID from token (if present)
 
-### 3. Authorization Middleware (`authorization.middleware.js`)
+### 3. Competition Context Middleware (`competition-context.middleware.js`)
 
-Handles permission checks and competition context validation using AuthorizationService.
+Resolves the meet a request acts on and, for principals the meet is an access
+boundary for, proves they may act on it.
+
+> There is no `authorization.middleware.js`. This section used to describe one,
+> exporting `createCompetitionContextMiddleware`, `requireResourceOwnership` and
+> `requirePermission` — none of which exist anywhere in `src/`. Role checks live
+> in `auth.middleware.js` (`requireCoach`, `requireSuperAdmin`, …); the
+> competition check is the module below.
 
 **Exports:**
-- `createCompetitionContextMiddleware(container)` - Validate competition access
-- `requireResourceOwnership(getResourceOwnerId)` - Verify resource ownership
-- `requirePermission(container, ...roles)` - Check user permissions
+- `validateCompetitionContext(req, res, next)` — resolve the meet and authorize it
+- `judgeHoldsSeatAt(assignments, competitionId)` — a judge's clearance is their seat
+
+Resolution order is **token > header > body > query**. The token wins because it
+was minted by an access-checked path; everything after it is a caller-supplied
+string. The access rule itself is not here — it is
+`utils/security/competition-access.util.mayActOnCompetition`, so that this
+middleware and `AuthenticationService.setCompetitionContext` cannot drift apart.
+Read that module for why coaches and players are deliberately *not* scoped this
+way.
 
 **Usage:**
 ```javascript
-const { createCompetitionContextMiddleware, requireResourceOwnership } = require('./middleware');
+const { validateCompetitionContext } = require('./middleware/competition-context.middleware');
 
-// Validate competition context
-const competitionContext = createCompetitionContextMiddleware(container);
-router.use('/competitions/:id', competitionContext);
-
-// Verify resource ownership
-router.put('/teams/:id', requireResourceOwnership(async (req) => {
-  const team = await teamRepository.findById(req.params.id);
-  return team.coach;
-}));
+router.use('/competitions/:id', validateCompetitionContext);
 ```
 
 **Request Properties Added:**
 - `req.competitionId` - Validated competition ID
-- `req.competition` - Competition document
 
 ### 4. Correlation Middleware (`correlation.middleware.js`)
 
@@ -321,11 +326,13 @@ All middleware maintains backward compatibility with existing API contracts:
 - `Server/middleware/securityLogger.js`
 
 ### New Middleware Location
-- `Server/src/middleware/auth.middleware.js`
-- `Server/src/middleware/authorization.middleware.js`
+- `Server/src/middleware/auth.middleware.js` (role checks live here, not in a
+  separate authorization middleware)
+- `Server/src/middleware/competition-context.middleware.js`
 - `Server/src/middleware/error.middleware.js`
 - `Server/src/middleware/audit.middleware.js`
-- Plus new modules: correlation, timing, security
+- Plus: correlation, security, csrf, metrics, competition-lock,
+  request-coalescing, validation
 
 ### Key Differences
 

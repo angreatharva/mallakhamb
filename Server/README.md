@@ -102,24 +102,28 @@ CSP nonce → helmet → compression → HTTPS enforce (prod) → CORS → JSON 
 Server/
 ├── server.js                     # Entry point (thin — bootstrap + listen)
 ├── models/                       # Mongoose models — NOTE: outside src/
-│   ├── Admin.js  Coach.js  Player.js  Judge.js
-│   ├── Team.js   Competition.js  Score.js
+│   ├── Admin.js  Coach.js  Player.js  Judge.js  JudgeAccount.js
+│   ├── Team.js   Competition.js  Score.js  PerformanceOrder.js
 │   └── Transaction.js  RefreshToken.js
-├── scripts/                      # gitignored; only createAdmin.js + createSuperAdmin.js
-├── tests/                        # setup.js + unit/ (integration/ holds a README only)
-├── docs/                         # architecture, DI, deployment, testing, troubleshooting, Razorpay
+├── scripts/                      # tracked; seeding chains, admin tools, migrations,
+│                                 # perf/ harness. Only *.generated.json is ignored
+├── tests/                        # setup.js + unit/ (20) + integration/ (12) + security/ (11).
+│                                 # A further 12 *.test.js sit beside their subject in src/
+├── docs/                         # openapi.{json,yaml} (generated), system-handbook,
+│                                 # architecture, DI, deployment, testing, Razorpay, AUDIT
 └── src/
     ├── config/                   # config-manager.js, cop-rules.js, payment.config.js
     ├── controllers/              # admin, auth, coach, competition, health, judge,
     │                             # payment, player, public, super_admin, team
     ├── routes/                   # index.js mounts every router below
-    ├── middleware/               # auth, authorization, audit, csrf, security, validation,
-    │                             # correlation, metrics, timing, feature-flag,
-    │                             # competition-context, request-coalescing, error
+    ├── middleware/               # auth, audit, csrf, security, validation, correlation,
+    │                             # metrics, competition-context, competition-lock,
+    │                             # request-coalescing, error
     ├── services/
     │   ├── auth/                 # authentication, authorization, token, token-invalidation, otp
     │   ├── user/                 # admin, coach, judge, player, super-admin, user
-    │   ├── competition/          # competition, registration
+    │   ├── competition/          # competition, registration, performance-order,
+    │   │                         # competition-status
     │   ├── team/  scoring/  payment/  public/
     │   ├── email/                # email.service + nodemailer/resend adapters + templates
     │   ├── cache/                # cache.service, cache-warmer
@@ -257,7 +261,7 @@ Base URL `http://localhost:5000`. Authenticated requests use the httpOnly `acces
 
 Rate limiting is applied to `/api/auth` and to the `register`/`login` endpoints of players, coaches and admins. It is deliberately **not** applied to judges and superadmins.
 
-See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for request/response detail.
+For request/response detail, read the OpenAPI document — [`docs/openapi.yaml`](./docs/openapi.yaml), served at `/api/docs` — and not a table in a Markdown file. `npm run docs:openapi:check` diffs it against the live Express router and exits non-zero if either side has a path the other does not, which is the only reason to trust it.
 
 ### Integrations
 
@@ -286,7 +290,7 @@ Copy `.env_example` to `.env`. Every variable is read through `ConfigManager`, w
 
 **Dev tunnelling:** `NGROK_ENABLED=false`, `NGROK_AUTH_TOKEN` (required when enabled; only active in development).
 
-`.env.scripts` holds variables used only by the CLI scripts. Neither `.env` file is committed.
+`.env` and `.env.production` are not committed. `.env.scripts` **is** committed, and is not loaded by anything — nothing calls `dotenv.config({ path: '.env.scripts' })`. It is a reference for what to export in your shell before running a CLI script, which is why it is safe to track: the values in it are defaults and placeholders, never secrets.
 
 ---
 
@@ -295,7 +299,9 @@ Copy `.env_example` to `.env`. Every variable is read through `ConfigManager`, w
 Working today:
 
 ```bash
-npm start                 # production (node server.js)
+npm start                 # production — scripts/startup.js (supervised boot: config
+                          #   check, index sync, then server.js). Skips migrations.
+npm run start:bare        # server.js directly, no supervision
 npm run server            # development (nodemon)
 npm test                  # Jest
 npm run test:watch
@@ -414,10 +420,12 @@ See [docs/deployment-guide.md](./docs/deployment-guide.md).
 
 | Document | Contents |
 |---|---|
-| [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) | Endpoint reference |
+| [docs/openapi.yaml](./docs/openapi.yaml) | **Endpoint reference** — generated, and verified against the live router by `docs:openapi:check` |
+| [docs/system-handbook.md](./docs/system-handbook.md) | System narrative: entity relationships, user flows, role workflows, lifecycle. Was `API_DOCUMENTATION.md` at the repo root; its hand-written route tables are gone, because nothing proved them true and they had drifted |
 | [docs/architecture.md](./docs/architecture.md) | Layered architecture deep-dive |
 | [docs/dependency-injection-guide.md](./docs/dependency-injection-guide.md) | DI container usage |
-| [docs/api-documentation.md](./docs/api-documentation.md) | Service & repository APIs |
+| [docs/api-documentation.md](./docs/api-documentation.md) | Service & repository APIs (internal interfaces — not HTTP) |
+| [docs/AUDIT.md](./docs/AUDIT.md) | The 2026-08 security audit. Still cited by `tests/security/` and `RELEASE-RUNBOOK.md`, so it is a live reference rather than history |
 | [docs/razorpay-payment-handling.md](./docs/razorpay-payment-handling.md) | Payment + webhook flow |
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Production deployment |
 | [docs/migration-guide.md](./docs/migration-guide.md) | Code migration guide |
