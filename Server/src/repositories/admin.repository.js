@@ -86,6 +86,33 @@ class AdminRepository extends BaseRepository {
       throw error;
     }
   }
+
+  /**
+   * Remove a competition from every admin's assignment list.
+   *
+   * The other half of deleting a meet: `Competition.isDeleted` is set on the
+   * competition, and this clears the back-reference so a soft-deleted meet
+   * stops appearing in the admins' scope. Without it an admin keeps an id that
+   * resolves to nothing, and `competition-access.util` still counts it.
+   *
+   * @param {string} competitionId
+   * @returns {Promise<number>} Number of admins whose list changed
+   */
+  async removeCompetitionFromAll(competitionId) {
+    try {
+      const result = await this.updateMany(
+        { competitions: competitionId },
+        { $pull: { competitions: competitionId } },
+      );
+      return result?.modifiedCount ?? 0;
+    } catch (error) {
+      this.logger.error('AdminRepository.removeCompetitionFromAll error', {
+        competitionId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
 }
 
 module.exports = AdminRepository;

@@ -9,7 +9,7 @@
 
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
-const { fullName, stripSensitiveFields } = require('../../utils/data/user-projection.util');
+const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // One shape on the way in, whatever the two clients post — see the module header.
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const { idStr } = require('../../utils/data/objectid.util');
@@ -1382,60 +1382,22 @@ class CoachService extends UserService {
     }
   }
 
-  /**
-   * Get coach's team with players
-   * @param {string} coachId - Coach ID
-   * @returns {Promise<Object|null>} Team with players or null if no team
-   * @throws {NotFoundError} If coach not found
+  /*
+   * `getTeam(coachId)` was removed here on 2026-09-22. It was unreachable — no
+   * controller, route, script or test called it — and it had rotted in two ways
+   * that only an unreachable method can:
+   *
+   *   1. `require('../../models/Player')` resolved to src/models/Player, which
+   *      did not exist at the time; the call would have thrown MODULE_NOT_FOUND
+   *      rather than returning a team.
+   *   2. It read the roster with `Player.find({ team }).lean()` and NO
+   *      projection, which is the CRIT-4 shape: every athlete's `email` and
+   *      `dateOfBirth`, most of them minors, in the response body.
+   *
+   * What coaches actually use is `getTeamDashboard` / `getTeamStatus`, which go
+   * through the repositories and project through `user-projection.util`. If a
+   * plain "my team with its players" read is ever wanted, build it there.
    */
-  async getTeam(coachId) {
-    try {
-      // Check if coach exists
-      const coach = await this.repository.findById(coachId);
-
-      if (!coach) {
-        this.logger.warn('Get team failed: Coach not found', { coachId });
-        throw new NotFoundError('Coach');
-      }
-
-      // If coach has no team, return null
-      if (!coach.team) {
-        this.logger.info('Coach has no team', { coachId });
-        return null;
-      }
-
-      // Get team with coach populated
-      const team = await this.teamRepository.findById(coach.team, {
-        populate: 'coach'
-      });
-
-      // Fetch players for this team (players reference teams, not the other way around)
-      const Player = require('../../models/Player');
-      const players = await Player.find({ team: coach.team }).lean();
-
-      this.logger.info('Coach team retrieved', { 
-        coachId, 
-        teamId: coach.team 
-      });
-
-      return {
-        ...team,
-        // People are stored as two name halves; anything that displays one
-        // string composes it at the boundary.
-        coach: team?.coach ? { ...team.coach, name: fullName(team.coach) } : team?.coach,
-        players
-      };
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
-      this.logger.error('Get team error', { 
-        coachId, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
 
   /**
    * Get all active coaches

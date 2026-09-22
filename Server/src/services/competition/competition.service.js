@@ -15,7 +15,6 @@ const {
 } = require('../../errors');
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
 const EventTypes = require('../../socket/events/event-types');
-const Admin = require('../../models/Admin');
 const { pageMeta } = require('../../utils/data/pagination.util');
 
 /**
@@ -48,12 +47,14 @@ class CompetitionService {
    * @param {CacheService} cacheService - Cache service
    * @param {SocketManager} socketManager - Socket.IO manager (optional)
    * @param {Logger} logger - Logger instance
+   * @param {AdminRepository} adminRepository - For the bidirectional cleanup on delete
    */
-  constructor(competitionRepository, cacheService, socketManager, logger) {
+  constructor(competitionRepository, cacheService, socketManager, logger, adminRepository) {
     this.competitionRepository = competitionRepository;
     this.cacheService = cacheService;
     this.socketManager = socketManager;
     this.logger = logger;
+    this.adminRepository = adminRepository;
   }
 
   /**
@@ -264,10 +265,7 @@ class CompetitionService {
       }
 
       // Remove this competition from every admin's assignments (bidirectional cleanup)
-      await Admin.updateMany(
-        { competitions: competitionId },
-        { $pull: { competitions: competitionId } }
-      );
+      await this.adminRepository.removeCompetitionFromAll(competitionId);
 
       // Invalidate cache - clear all competition-related caches
       this.cacheService.delete(`competition:${competitionId}`);

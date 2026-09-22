@@ -14,7 +14,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { AuthenticationError } = require('../../errors');
-const RefreshToken = require('../../models/RefreshToken');
 
 /**
  * Token rotation threshold in milliseconds.
@@ -31,10 +30,12 @@ class TokenService {
    * Create a token service
    * @param {ConfigManager} configManager - Configuration manager instance
    * @param {Logger} logger - Logger instance
+   * @param {RefreshTokenRepository} refreshTokenRepository - Rotation store
    */
-  constructor(configManager, logger) {
+  constructor(configManager, logger, refreshTokenRepository) {
     this.config = configManager;
     this.logger = logger;
+    this.refreshTokenRepository = refreshTokenRepository;
   }
 
   /**
@@ -202,7 +203,7 @@ class TokenService {
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000);
 
-    await RefreshToken.create({
+    await this.refreshTokenRepository.create({
       tokenHash,
       userId,
       userType,
@@ -233,8 +234,10 @@ class TokenService {
   async rotateRefreshToken(rawToken) {
     const tokenHash = this._hashToken(rawToken);
 
-    // Look up the token record
-    const tokenRecord = await RefreshToken.findOne({ tokenHash });
+    // Look up the token record in WHATEVER state it is in — a spent token has
+    // to come back, because "absent" and "already used" mean different things
+    // three lines down.
+    const tokenRecord = await this.refreshTokenRepository.findByHash(tokenHash);
 
     if (!tokenRecord) {
       this.logger.warn('Refresh token not found — possible theft or expired');
@@ -247,7 +250,7 @@ class TokenService {
         userId: tokenRecord.userId,
         family: tokenRecord.family,
       });
-      await RefreshToken.revokeFamily(tokenRecord.family);
+      await this.refreshTokenRepository.revokeFamily(tokenRecord.family);
       throw new AuthenticationError('Refresh token reuse detected. Please log in again.');
     }
 
@@ -257,8 +260,7 @@ class TokenService {
     }
 
     // Mark old token as used
-    tokenRecord.isUsed = true;
-    await tokenRecord.save();
+    await this.refreshTokenRepository.markUsed(tokenHash);
 
     // Issue new access + refresh tokens in the same family
     const accessToken = this.generateToken(
@@ -295,7 +297,7 @@ class TokenService {
    * @returns {Promise<void>}
    */
   async revokeAllRefreshTokens(userId) {
-    await RefreshToken.revokeAllForUser(userId);
+    await this.refreshTokenRepository.revokeAllForUser(userId);
     this.logger.info('All refresh tokens revoked', { userId });
   }
 

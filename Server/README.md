@@ -110,7 +110,7 @@ Server/
 └── src/
     ├── config/                   # config-manager.js, cop-rules.js, payment.config.js
     ├── controllers/              # admin, auth, coach, competition, health, judge,
-    │                             # payment, player, public, super_admin, team
+    │                             # payment, player, public, super-admin, team
     ├── routes/                   # index.js mounts every router below
     ├── middleware/               # auth, audit, csrf, security, validation, correlation,
     │                             # metrics, competition-context, competition-lock,

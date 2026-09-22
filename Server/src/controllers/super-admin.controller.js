@@ -4,7 +4,7 @@
  * Handles super-admin operations: login, admin/coach/team/judge management,
  * competition management, system statistics, and transactions.
  *
- * @module controllers/super_admin.controller
+ * @module controllers/super-admin.controller
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');

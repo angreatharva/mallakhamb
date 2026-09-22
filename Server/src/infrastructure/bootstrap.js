@@ -13,6 +13,7 @@ const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
+const RefreshTokenRepository = require('../repositories/refresh-token.repository');
 
 const CacheService = require('../services/cache/cache.service');
 const CacheWarmer = require('../services/cache/cache-warmer');
@@ -46,7 +47,7 @@ const createPublicController = require('../controllers/public.controller');
 const createAuthController = require('../controllers/auth.controller');
 const createPlayerController = require('../controllers/player.controller');
 const createJudgeController = require('../controllers/judge.controller');
-const createSuperAdminController = require('../controllers/super_admin.controller');
+const createSuperAdminController = require('../controllers/super-admin.controller');
 const createPaymentController = require('../controllers/payment.controller');
 const createPerformanceOrderController = require('../controllers/performance-order.controller');
 
@@ -98,10 +99,15 @@ function bootstrap() {
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
+  container.register('refreshTokenRepository', (c) => new RefreshTokenRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('featureFlagService', (c) => new FeatureFlagService(c.resolve('config'), c.resolve('logger')), 'singleton');
-  container.register('tokenService', (c) => new TokenService(c.resolve('config'), c.resolve('logger')), 'singleton');
+  container.register('tokenService', (c) => new TokenService(
+    c.resolve('config'),
+    c.resolve('logger'),
+    c.resolve('refreshTokenRepository'),
+  ), 'singleton');
   container.register('otpService', (c) => new OTPService(
     c.resolve('config'),
     c.resolve('logger'),
@@ -185,7 +191,8 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('cacheService'),
     null,
-    c.resolve('logger')
+    c.resolve('logger'),
+    c.resolve('adminRepository')
   ), 'singleton');
   /*
    * Flips `status` to 'completed' at the instant a meet locks, so the stored
