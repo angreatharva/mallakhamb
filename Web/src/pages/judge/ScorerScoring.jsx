@@ -16,8 +16,9 @@ import { createAdminAPI } from '@/services/user/admin.api';
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
-import { apparatusFor, apparatusKey, apparatusToJudge, entryGender } from '@/utils/scoring/apparatus';
-import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
+import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
+import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
+import { buildScorerRows } from './scorerRows';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
@@ -45,7 +46,22 @@ const ScorerScoring = () => {
     return null;
   }, [location.state]);
 
-  const { selectedTeam, selectedCompetitionType, gender, ageGroup } = activeSessionData || {};
+  /*
+   * THE APPARATUS IS THE SCORER'S SEAT, AND IT WAS BEING DROPPED HERE.
+   *
+   * `JudgeDashboard` has always put `apparatus: selectedApparatus` into the
+   * navigation state, but this line destructured four fields out of five, so
+   * the sheet never knew which apparatus it was for. It listed every apparatus
+   * each athlete is entered for — three rows per athlete for a squad entered on
+   * all three — when a panel is seated for ONE of them and the Scorer sitting
+   * with it can only record that one.
+   *
+   * Older sessions stored in `scorer_scoring_active_session` before the picker
+   * existed have no apparatus, so this can still be undefined; everything below
+   * falls back to the previous squad-derived behaviour when it is.
+   */
+  const { selectedTeam, selectedCompetitionType, gender, ageGroup, apparatus: seatApparatus } =
+    activeSessionData || {};
 
   const [socket, setSocket] = useState(null);
   const [judges, setJudges] = useState([]);
@@ -149,7 +165,22 @@ const ScorerScoring = () => {
 
       const scoreMetadata = teamData.scoreMetadata;
       if (scoreMetadata) {
-        setIsLocked(scoreMetadata.isLocked || false);
+        /*
+         * Locked for THIS apparatus, not for the squad.
+         *
+         * One document holds all three apparatus, so reading its `isLocked`
+         * alone made the Pole panel's "Lock & Submit" hand the Rope and Hanging
+         * sheets back read-only. `isLocked` is now only the admin's whole-sheet
+         * freeze; `lockedApparatus` says which panels have finished.
+         */
+        const lockedSet = new Set((scoreMetadata.lockedApparatus || []).map(apparatusKey));
+        // With no seat apparatus — a meet that declares none, so the sheet still
+        // shows every apparatus — it is locked only once all of them are.
+        const onScreen = seatApparatus
+          ? [apparatusKey(seatApparatus)]
+          : [...new Set((currentPlayers || []).map(p => apparatusKey(p.apparatus)))];
+        const lockedHere = onScreen.length > 0 && onScreen.every(a => lockedSet.has(a));
+        setIsLocked(!!scoreMetadata.isLocked || lockedHere);
         setExistingScoreId(scoreMetadata._id);
         if (scoreMetadata.timeKeeper) setTimeKeeper(scoreMetadata.timeKeeper);
         if (scoreMetadata.scorer) setScorer(scoreMetadata.scorer);
@@ -216,12 +247,13 @@ const ScorerScoring = () => {
        * every apparatus's panel concatenated — and `judges.length` below picks
        * the averaging method. See utils/scoring/judgePanel.js.
        *
-       * The apparatus comes from the squad being scored: when its athletes are
-       * all entered for one, that is unambiguously the panel judging them. A
-       * squad spanning several has no single panel, and `panelSeats` folds them
-       * into one seat per role rather than leaving a count nobody meant.
+       * The Scorer's own seat answers this directly — they sit with ONE panel —
+       * so it is preferred over anything inferred from the squad. Deriving it
+       * from the entries only works while a squad is entered for a single
+       * apparatus; one spanning all three yields nothing, the filter comes off,
+       * and the query returns three panels concatenated.
        */
-      const teamApparatus = soleApparatus(
+      const teamApparatus = seatApparatus || soleApparatus(
         (selectedTeam.players || [])
           .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
           .flatMap(pe => apparatusFor(pe, selectedCompetitionType?.value).map(a => ({ apparatus: a })))
@@ -250,38 +282,15 @@ const ScorerScoring = () => {
         setCompetitionType(match ? match[1] : 'Competition I');
       }
 
-      /*
-       * One ROW PER APPARATUS, not per athlete.
-       *
-       * Somebody entered for Pole, Hanging and Rope performs three times and
-       * earns three separate scores, each with its own time and its own
-       * deductions. A single row per athlete could only ever hold one of them,
-       * and whichever was typed last would be the one that reached the
-       * database.
-       *
-       * `id` is therefore the row's identity — athlete AND apparatus — and the
-       * athlete's own id is kept alongside it for the payload.
-       */
-      const competitionTypeSlug = selectedCompetitionType?.value;
-      const teamPlayers = (selectedTeam.players || [])
-        .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
-        .flatMap(pe => {
-          const entered = apparatusFor(pe, competitionTypeSlug);
-          // An athlete with no apparatus recorded still gets one row, judged on
-          // whatever the slip falls back to.
-          const list = entered.length > 0 ? entered : [apparatusToJudge(null, pe, competitionTypeSlug)];
-          return list.map(apparatus => ({
-            id: `${pe.player._id}::${apparatusKey(apparatus)}`,
-            playerId: pe.player._id,
-            apparatus,
-            name: `${pe.player.firstName} ${pe.player.lastName}`,
-            // Shown in the table so two rows for one athlete are tellable apart.
-            teamName: list.length > 1 ? `${selectedTeam.name} · ${apparatus}` : selectedTeam.name,
-            gender: pe.player.gender,
-            ageGroup: pe.ageGroup,
-            teamId: selectedTeam._id,
-          }));
-        });
+      // One row per (athlete, apparatus), narrowed to this Scorer's seat.
+      // See scorerRows.js for why both halves of that matter.
+      const teamPlayers = buildScorerRows({
+        team: selectedTeam,
+        gender: selectedGender.value,
+        ageGroup: selectedAgeGroup.value,
+        competitionType: selectedCompetitionType?.value,
+        apparatus: seatApparatus,
+      });
       setPlayers(teamPlayers);
 
       const initialScores = {};
@@ -385,6 +394,22 @@ const ScorerScoring = () => {
   }, [socket, players, isLocked, fetchScoringData]);
 
   /*
+   * WHAT THE SHEET DRAWS IS NOT WHAT THE PANEL IS.
+   *
+   * A 4-judge panel is scored as a five: the Sr. Judge's mark fills the vacant
+   * fourth evaluation slot, and drop-high-low then runs over four marks of
+   * which one is the Chief's. The sheet used to draw four columns and print an
+   * Average computed over five marks — the fifth appearing nowhere. It now
+   * draws five, the last of them the Sr. Judge's own cell repeated.
+   *
+   * `judges` stays the SEATS that were staffed. It is what records the panel in
+   * `judgeDetails`, and its length is what picks the averaging method — the
+   * copy must never be counted there. See mirrorChiefSeat.
+   */
+  const sheetSeats = useMemo(() => mirrorChiefSeat(judges), [judges]);
+  const seatedPanelSize = judges.length || undefined;
+
+  /*
    * Panel averaging comes from copRules, the same module the judges' own pages
    * and the score table use. This file used to carry a private copy that took
    * the MEDIAN of three execution marks where copRules took the mean, so a
@@ -392,7 +417,7 @@ const ScorerScoring = () => {
    * different one in the payload this screen posted. The panel-size rules live
    * in one place now; see calculateAverageMarks there.
    */
-  const panelAverage = (playerScores) => calculateAverageMarks(playerScores, judges.length || undefined);
+  const panelAverage = (playerScores) => calculateAverageMarks(playerScores, seatedPanelSize);
 
   const calculateFinalScore = (ps) => {
     const r = panelAverage(ps);
@@ -542,10 +567,21 @@ const ScorerScoring = () => {
       const response = await scorerAPI.saveScores(scoringData);
 
       const responseData = response.data.data || response.data;
-      const { scoreId, isLocked: responseLocked, playerScores: calculatedPlayerScores } = responseData;
+      const {
+        scoreId, isLocked: responseLocked, lockedApparatus, playerScores: calculatedPlayerScores,
+      } = responseData;
 
       setCalculatedScores(calculatedPlayerScores || []);
-      setIsLocked(responseLocked);
+      /*
+       * A Scorer's lock is recorded against the apparatus, not the document, so
+       * `responseLocked` stays false for it — reading that alone handed the
+       * sheet straight back as editable after a successful "Lock & Submit".
+       */
+      const lockedSet = new Set((lockedApparatus || []).map(apparatusKey));
+      const onScreen = seatApparatus
+        ? [apparatusKey(seatApparatus)]
+        : [...new Set(players.map(p => apparatusKey(p.apparatus)))];
+      setIsLocked(!!responseLocked || (onScreen.length > 0 && onScreen.every(a => lockedSet.has(a))));
       setExistingScoreId(scoreId);
 
       toast.success(
@@ -692,10 +728,18 @@ const ScorerScoring = () => {
             {/* 2. Judges Panel */}
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Judges Panel</p>
-              {judges.length > 0 ? (
-                <div className="flex flex-row items-center gap-2 flex-nowrap overflow-x-auto">
-                  {judges.map((jud) => {
-                    const isSenior = jud.judgeType === 'Senior Judge';
+              {sheetSeats.length > 0 ? (
+                <div className="flex flex-row flex-wrap items-center gap-2">
+                  {/* Five chips for a panel of four: the last is the Sr. Judge
+                      again, in the seat their mark is counted in.
+
+                      They WRAP rather than scroll. Five never fit across a
+                      third of the card, and the ones past the edge were
+                      reachable only by dragging a scrollbar nobody looks for
+                      — on a screen whose whole job is showing who marked
+                      what. */}
+                  {sheetSeats.map((jud) => {
+                    const isSenior = jud.judgeType === 'Senior Judge' || jud.isChiefCopy;
                     return (
                       <div key={jud._id} className="rounded-xl border p-2 text-center min-w-[90px] flex-shrink-0"
                         style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
@@ -704,7 +748,9 @@ const ScorerScoring = () => {
                           {jud.judgeType}
                         </span>
                         <p className="font-bold text-white text-xs truncate">{jud.name}</p>
-                        <p className="text-[10px] text-white/40 truncate">{jud.email}</p>
+                        {jud.isChiefCopy
+                          ? <p className="text-[10px] text-white/40 truncate">Senior Judge&rsquo;s mark</p>
+                          : <p className="text-[10px] text-white/40 truncate">{jud.email}</p>}
                       </div>
                     );
                   })}
@@ -737,7 +783,10 @@ const ScorerScoring = () => {
             <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: ADMIN_COLORS.saffron }}>
               <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
             </p>
-            <ResponsiveScoringTable players={players} scores={scores} judges={judges} onScoreChange={handleScoreChange} isLocked={readOnly} />
+            {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
+                the Chief's copy on a 4-judge panel, and the size is what picks
+                the averaging rule. */}
+            <ResponsiveScoringTable players={players} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly} />
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>

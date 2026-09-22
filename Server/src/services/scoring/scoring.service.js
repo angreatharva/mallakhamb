@@ -427,6 +427,10 @@ class ScoringService {
 
       const updated = await this.scoreRepository.updateById(scoreId, {
         isLocked: false,
+        // Clearing the sheet lock without clearing the per-apparatus ones would
+        // not reopen anything: `saveScores` refuses a write naming a locked
+        // apparatus whatever `isLocked` says.
+        lockedApparatus: [],
         updatedAt: new Date()
       });
 
@@ -697,6 +701,10 @@ class ScoringService {
           scoreMetadata: latestScoreDoc ? {
             _id: latestScoreDoc._id,
             isLocked: latestScoreDoc.isLocked,
+            // Which panels have finished. The Scorer's sheet is opened one
+            // apparatus at a time, so `isLocked` alone cannot tell it whether
+            // the apparatus IT is showing is still being scored.
+            lockedApparatus: latestScoreDoc.lockedApparatus || [],
             timeKeeper: latestScoreDoc.timeKeeper,
             scorer: latestScoreDoc.scorer,
             remarks: latestScoreDoc.remarks,
@@ -984,6 +992,9 @@ class ScoringService {
 
       await this.scoreRepository.updateById(scoreId, {
         isLocked: false,
+        // As in `unlockScore`: the per-apparatus locks are the ones `saveScores`
+        // actually tests, so an unlock that left them standing reopens nothing.
+        lockedApparatus: [],
         unlockedBy: adminId,
         unlockedAt: new Date()
       });
@@ -1025,7 +1036,9 @@ class ScoringService {
       // Update scores to unlocked state
       await this.scoreRepository.updateMany(
         { competition: competitionId, ageGroup },
-        { isLocked: false, unlockedBy: adminId, unlockedAt: new Date() }
+        // `lockedApparatus` cleared for the same reason as the single-score
+        // unlocks: it is what `saveScores` refuses writes on.
+        { isLocked: false, lockedApparatus: [], unlockedBy: adminId, unlockedAt: new Date() }
       );
 
       this.logger.info('Scores unlocked', { competitionId, ageGroup, adminId });
@@ -1475,21 +1488,62 @@ class ScoringService {
         // sheet just by asserting the flag. The only way back is an explicit
         // admin unlock (unlockScore / unlockScores), which clears isLocked.
         //
-        // Note this is the *document* lock set by an admin (or by a Scorer's
-        // "Lock & Submit"). The separate per-player finalize lock inside
-        // buildMergedPlayerScores still honours `isFinalSubmit` /
-        // `allowFinalizedEdit`, because the Senior Judge's final submit and the
-        // Scorer's post-finalize edits both operate on unlocked documents.
+        // This is the whole-sheet lock an ADMIN sets. The separate per-player
+        // finalize lock inside buildMergedPlayerScores still honours
+        // `isFinalSubmit` / `allowFinalizedEdit`, because the Senior Judge's
+        // final submit and the Scorer's post-finalize edits both operate on
+        // unlocked documents.
         if (existingScore?.isLocked) {
           throw new ValidationError('Scores are locked and cannot be modified');
         }
 
+        /*
+         * The Scorer's lock is narrower, and stops only its own apparatus.
+         *
+         * One document holds every apparatus this squad competes on, so the
+         * Scorer finishing with the Pole panel must not freeze the Rope and
+         * Hanging rows nobody has performed for yet. Their "Lock & Submit"
+         * therefore records WHICH apparatus it finalized, and only writes
+         * naming one of those are refused.
+         */
+        const lockedAlready = new Set(
+          (existingScore?.lockedApparatus || []).map(apparatusKey)
+        );
+        const blocked = [...new Set(
+          processedPlayerScores
+            .map((ps) => apparatusKey(ps.apparatus))
+            .filter((name) => lockedAlready.has(name))
+        )];
+        if (blocked.length > 0) {
+          throw new ValidationError(
+            `Scores for ${blocked.join(', ')} are locked and cannot be modified`
+          );
+        }
+
+        /*
+         * What this write leaves locked. `scoreData.isLocked` is the caller
+         * asking to finalize, and what it finalizes is the apparatus it just
+         * sent — not the document.
+         */
+        const lockedAfter = new Set(lockedAlready);
+        if (scoreData.isLocked) {
+          for (const ps of processedPlayerScores) lockedAfter.add(apparatusKey(ps.apparatus));
+        }
+        scoreDocData.lockedApparatus = [...lockedAfter];
+
+        /*
+         * `isLocked` is NOT set from a Scorer's lock any more.
+         *
+         * It would have to mean "every apparatus is done", and the document
+         * cannot know that: `playerScores` holds the apparatus that have been
+         * SCORED, so a squad entered for three whose Pole sheet is the first
+         * one saved would look complete and freeze the other two — the very
+         * bug this is fixing. It stays the admin's whole-sheet freeze, and
+         * published results read `lockedApparatus` alongside it.
+         */
         if (existingScore) {
           scoreDocData.playerScores = buildMergedPlayerScores(existingScore);
-          // Keep existing document lock unless admin explicitly locks
-          if (!scoreData.isLocked) {
-            scoreDocData.isLocked = existingScore.isLocked;
-          }
+          scoreDocData.isLocked = existingScore.isLocked;
 
           /*
            * The Scorer's sheet survives a judge's slip.
@@ -1561,6 +1615,17 @@ class ScoringService {
           savedScore = await this.scoreRepository.findById(existingScore._id);
           didUpdateExisting = true;
         } else {
+          /*
+           * A first save that also locks freezes ONE apparatus, not the sheet.
+           *
+           * `buildScoreDocData` copies `scoreData.isLocked` straight through,
+           * which on the very first save of a squad entered for three apparatus
+           * would have created the document already frozen — the Pole panel
+           * finishing first would have ended the other two before they began.
+           * `lockedApparatus` above already records what was actually locked.
+           */
+          scoreDocData.isLocked = false;
+
           // Create new record
           if (scoreData.isFinalSubmit) {
             scoreDocData.playerScores = processedPlayerScores.map((ps) => ({
@@ -1672,6 +1737,11 @@ class ScoringService {
       return {
         scoreId: savedScore._id,
         isLocked: savedScore.isLocked,
+        // The caller needs to know what IT just locked: `isLocked` is the
+        // admin's whole-sheet freeze and a Scorer's lock no longer sets it, so
+        // a sheet that returned only that flag would come back editable the
+        // instant after it was submitted.
+        lockedApparatus: savedScore.lockedApparatus || [],
         playerScores: savedScore.playerScores
       };
     } catch (error) {

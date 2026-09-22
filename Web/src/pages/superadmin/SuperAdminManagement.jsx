@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Dropdown from '@/components/auth/Dropdown';
 import AddPlayerForm from '../../components/superadmin/AddPlayerForm';
 import {
@@ -226,7 +227,8 @@ const StatusBadge = ({ active }) => (
 // ─── Dark Modal wrapper ───────────────────────────────────────────────────────
 const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidth = 'max-w-md' }) => {
   const { isMobile } = useResponsive();
-  
+  useBodyScrollLock(isOpen);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -255,7 +257,26 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
                 <X className="w-5 h-5 text-white/60" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-4" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>{children}</div>
+            {/*
+              * `relative` is load-bearing, not decoration.
+              *
+              * Every checkbox in these forms hides its real `<input>` behind
+              * Tailwind's `.sr-only`, which is `position: absolute`. An
+              * absolutely positioned box ignores a scroll container that is
+              * itself `position: static`, so each input was being placed
+              * against the nearest positioned ancestor — `.modal-overlay` —
+              * at the offset it would have had if this list had never been
+              * scrolled. On a scrolled form that put the input hundreds of
+              * pixels below the window while its visible tick box was in
+              * plain sight. Clicking the label focuses that input, the
+              * browser scrolls an ancestor to reveal it, and the overlay
+              * jumped to the end of the dialog.
+              *
+              * Positioning the scroll box makes it the containing block, so
+              * the input travels with the row it belongs to and focusing it
+              * moves nothing.
+              */}
+            <div className="relative flex-1 overflow-y-auto space-y-4" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>{children}</div>
             {footer && (
               <div className="flex gap-3 border-t flex-shrink-0" 
                 style={{ 
@@ -401,6 +422,10 @@ const SuperAdminManagement = () => {
     Under16:'Under 16 (Girls)', Under18:'Under 18 (Boys)',
     Above16:'Above 16 (Girls)', Above18:'Above 18 (Boys)'
   };
+
+  // The three confirmations below are written inline rather than through
+  // `DarkModal`, so they do not inherit its lock and have to ask for one.
+  useBodyScrollLock(showDeleteConfirmation || showRemoveAdminConfirmation || showDeleteAdminConfirmation);
 
   useEffect(() => { fetchData(); }, [activeSection]);
 
@@ -1299,7 +1324,10 @@ const SuperAdminManagement = () => {
               </span>
             </label>
           </div>
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+          {/* `relative` for the same reason as the dialog body: this list
+              scrolls, so the `.sr-only` inputs inside it need it as their
+              containing block or they stay behind when it moves. */}
+          <div className="relative space-y-2 max-h-56 overflow-y-auto pr-1">
             {defaultAgeGroups.map(ag => (
               <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                 <p className="text-xs font-bold text-white/60 mb-2">{ageGroupLabels[ag]}</p>
@@ -1338,7 +1366,7 @@ const SuperAdminManagement = () => {
                 className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all"
                 style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
             </div>
-            <div className="space-y-1 max-h-40 overflow-y-auto">
+            <div className="relative space-y-1 max-h-40 overflow-y-auto">
               {filteredAdmins.map(admin => {
                 const checked = competitionFormData.admins.includes(admin._id);
                 return (

@@ -76,6 +76,66 @@ export function panelSeats(seats, apparatus = null) {
 }
 
 /**
+ * The panel as a scoring SHEET draws it: five seats, even when four sat.
+ *
+ * A 4-judge panel is not scored as four. The rule — `calculateAverageMarks` in
+ * copRules here, `calculateIndividualScore` on the server — puts the Sr.
+ * Judge's mark into the vacant fourth evaluation slot and then runs the 5-judge
+ * method unchanged: sort the four, drop the highest and the lowest, average the
+ * middle two. The Sr. Judge is counted twice, once as an evaluator and once as
+ * the Chief the tolerance is measured against.
+ *
+ * That doubling was invisible. The sheet drew one column per SEAT, so a 4-judge
+ * panel showed four columns while the Average beside them was computed over
+ * five marks — one of which appeared nowhere on screen, and a Scorer reading
+ * the sheet had no way to see which mark was used twice. This returns the seats
+ * the sheet draws: the four real ones plus a fifth, `Judge 4`, holding the Sr.
+ * Judge again.
+ *
+ * The copy is a DISPLAY seat and nothing else:
+ *   - `scoreField` points it back at `seniorJudge`, so the column mirrors that
+ *     one cell rather than owning a value of its own. There is no second mark
+ *     to type and no way for the two to disagree.
+ *   - it must not reach `judgeDetails` — that is the record of who sat, and
+ *     this person sat once.
+ *   - it must not reach `judgeScores.judge4`. Nobody gave that mark, and the
+ *     tie-break's panel mean divides by the seats the panel HAS (sum / 4 for a
+ *     four, sum / 5 for a five — see Server tie-breaker.util.js), so a 4-judge
+ *     panel that stored five marks would be averaged over five.
+ *   - it must not be counted as panel SIZE. Pass the real `panelSeats` length
+ *     to anything that picks an averaging method; `judges.length` is no longer
+ *     that number once this has been applied.
+ *
+ * Panels of 3 and 5 come back untouched — a 3 has no Chief role and no slot to
+ * fill, a 5 has no vacancy.
+ *
+ * @param {Array} seats - ONE panel, as `panelSeats` returns it
+ * @returns {Array} the seats to draw, ordered Senior Judge → Judge 4
+ */
+export function mirrorChiefSeat(seats) {
+  const panel = Array.isArray(seats) ? seats : [];
+  if (panel.length !== 4) return panel;
+
+  const chief = panel.find((seat) => seat?.judgeType === 'Senior Judge');
+  // Four seats with no Judge 4 is exactly Senior + Judge 1 + Judge 2 + Judge 3;
+  // anything else already fills the slot this would copy into.
+  if (!chief || panel.some((seat) => seat?.judgeType === 'Judge 4')) return panel;
+
+  return [
+    ...panel,
+    {
+      ...chief,
+      // Its own id: the column and the panel chip are keyed on it, and two
+      // keyed alike collapse into one.
+      _id: `${chief._id}::chief-copy`,
+      judgeType: 'Judge 4',
+      scoreField: 'seniorJudge',
+      isChiefCopy: true,
+    },
+  ];
+}
+
+/**
  * The single apparatus a set of rows is entered for, or null.
  *
  * Null covers both "none recorded" and "more than one" — in either case there

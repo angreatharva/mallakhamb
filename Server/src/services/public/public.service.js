@@ -9,7 +9,7 @@
 const { ValidationError } = require('../../errors');
 // The slug→display map used to be a fourth private copy in this file. It lives
 // in config/cop-rules, which is also what GET /api/public/cop-rules serves.
-const { toCompetitionTypeDisplay } = require('../../config/cop-rules');
+const { toCompetitionTypeDisplay, apparatusKey } = require('../../config/cop-rules');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const {
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -89,8 +89,24 @@ class PublicService {
         throw new ValidationError('competitionId is required', 'competitionId');
       }
 
-      // Gate 2 — the Scorer has saved AND locked this sheet.
-      const query = { isLocked: true, competition: competitionId };
+      /*
+       * Gate 2 — the Scorer has saved AND locked, for THIS apparatus.
+       *
+       * A squad's three apparatus share one score document, and the Scorer
+       * finishes them one panel at a time, so the lock is recorded per
+       * apparatus in `lockedApparatus`. `isLocked` remains the admin's
+       * whole-sheet freeze and still publishes everything in the document;
+       * a document with any apparatus locked qualifies, and the row filter
+       * below is what keeps the unlocked ones back.
+       *
+       * `lockedApparatus.0` rather than `$ne: []`: on a document written
+       * before the field existed the path is missing, and `$ne: []` would
+       * count that as non-empty and publish an unlocked sheet.
+       */
+      const query = {
+        competition: competitionId,
+        $or: [{ isLocked: true }, { 'lockedApparatus.0': { $exists: true } }],
+      };
 
       /*
        * Scoping to one team is allowed.
@@ -133,12 +149,26 @@ class PublicService {
         let playerScores = (scoreObj.playerScores || [])
           .filter((ps) => ps.isFinalized === true)
           .map((ps) => stripSlipBreakdowns(this.enrichPlayerScore(ps)));
-        
+
+        /*
+         * Gate 2, per row. The document qualified because SOMETHING in it is
+         * locked; this is what decides which rows that was. Without it, the
+         * Scorer locking Pole would publish the Rope marks sitting unfinished
+         * in the same document — the disclosure the lock exists to prevent.
+         *
+         * A document the admin froze outright publishes in full, which is what
+         * `isLocked` has always meant.
+         */
+        if (!scoreObj.isLocked) {
+          const published = new Set((scoreObj.lockedApparatus || []).map(apparatusKey));
+          playerScores = playerScores.filter((ps) => published.has(apparatusKey(ps.apparatus)));
+        }
+
         // Filter by apparatus if specified
         if (filters.apparatus) {
           playerScores = playerScores.filter((ps) => ps.apparatus === filters.apparatus);
         }
-        
+
         const teamName = scoreObj.teamId?.name || 'Unknown Team';
 
         return {

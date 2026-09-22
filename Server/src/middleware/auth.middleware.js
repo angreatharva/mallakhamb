@@ -116,6 +116,68 @@ function createAuthMiddleware(container) {
         });
       }
 
+      /*
+       * THE COOKIE AND THE HEADER HAVE TO BE THE SAME PERSON.
+       *
+       * The cookie wins whenever both are sent (see the extraction above), and
+       * that silently decided who a request was FROM. The two stores do not
+       * have the same scope: the client keeps its bearer token in
+       * sessionStorage, which is per TAB, while the access-token cookie is per
+       * ORIGIN and shared by every tab. Sign four judges into four tabs to
+       * staff one panel and each tab holds its own judge, but all four send the
+       * cookie of whoever signed in LAST.
+       *
+       * The observed case was three judges' slips arriving as the panel's
+       * Scorer, who is not allowed to submit one — a 403, and the lucky
+       * outcome. Had the last sign-in been a panel judge the slips would have
+       * been ACCEPTED: `admin.controller.js` binds a panel judge to their own
+       * seat and discards the body's `judgeType`, so three slips would have
+       * been written into one judge's slot, each overwriting the last, with a
+       * 200 every time and no way to tell from the scores that anything went
+       * wrong.
+       *
+       * So a disagreement is refused rather than resolved. A header token that
+       * will not verify — stale, expired, from a signed-out session — is not a
+       * disagreement; there is no identity in it to conflict with, and the
+       * cookie carries the request as before.
+       */
+      if (tokenSource === 'cookie') {
+        const authHeader = req.header('Authorization');
+        const headerToken = authHeader && authHeader.startsWith('Bearer ')
+          ? authHeader.slice('Bearer '.length)
+          : null;
+
+        if (headerToken && headerToken !== token) {
+          let headerUserId = null;
+          try {
+            headerUserId = tokenService.verifyToken(headerToken)?.userId;
+          } catch {
+            headerUserId = null;
+          }
+
+          if (headerUserId != null && decoded.userId != null
+            && String(headerUserId) !== String(decoded.userId)) {
+            logger.warn('Authentication failed: cookie and Authorization header disagree', {
+              cookieUserId: String(decoded.userId),
+              headerUserId: String(headerUserId),
+              path: req.path,
+              method: req.method,
+              ip: req.ip,
+            });
+            return res.status(401).json({
+              success: false,
+              message: 'This tab is signed in as a different user than the browser session. '
+                + 'Sign in again in this tab, or use a separate browser profile per user.',
+              error: {
+                message: 'This tab is signed in as a different user than the browser session. '
+                  + 'Sign in again in this tab, or use a separate browser profile per user.',
+                code: 'IDENTITY_MISMATCH',
+              },
+            });
+          }
+        }
+      }
+
       // Check logout-based invalidation (now async for Redis support)
       if (
         decoded.userId != null &&

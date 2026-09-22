@@ -34,11 +34,11 @@ const COMPETITION_TYPE_LABEL = {
  * only thing telling them apart is the `<label>` that precedes the control.
  * The label carries a trailing `*`, hence `starts-with` rather than equality.
  */
+const dropdownRoot = (page, labelText) =>
+  page.locator(`xpath=//label[starts-with(normalize-space(.), "${labelText}")]/following-sibling::div[1]`);
+
 const dropdown = (page, labelText) =>
-  page.locator(
-    `xpath=//label[starts-with(normalize-space(.), "${labelText}")]` +
-    '/following-sibling::div[1]//button[@aria-haspopup="listbox"]'
-  );
+  dropdownRoot(page, labelText).locator('button[aria-haspopup="listbox"]');
 
 /**
  * Choose a value from one of them.
@@ -86,7 +86,16 @@ export const apparatusChoices = async (page) => {
   ).toBeEnabled();
 
   await trigger.click();
-  const labels = await page.getByRole('option').allInnerTexts();
+  /*
+   * Scoped to THIS dropdown, not to the page.
+   *
+   * `page.getByRole('option')` collects every option in the document, and the
+   * competition-type list one rung up is still in the DOM for the length of its
+   * close animation — so an unscoped read returned
+   * "Competition I - Team Championship" as the first apparatus and the seeder
+   * then tried to staff a panel for it.
+   */
+  const labels = await dropdownRoot(page, 'Apparatus').getByRole('option').allInnerTexts();
   // Closed again so the caller is left exactly where it was — `selectPanel`
   // opens it itself, and a second open on an already-open list selects nothing.
   await page.keyboard.press('Escape');
@@ -146,10 +155,19 @@ export const adminSignIn = async (page, place) => {
    */
   await chooseLevelForPlace(page, 'admin', place);
 
+  /*
+   * Either the arena screen is up, or we are already through to the dashboard.
+   *
+   * This used to wait for the arena heading OR the navbar's "Select competition"
+   * button, and an admin assigned exactly ONE meet has neither: there is no
+   * arena to choose from, and `CompetitionSelector` returns null rather than
+   * offer a picker with a single entry (see its `length <= 1` guard). The wait
+   * then timed out on an account that was signed in and looking at its
+   * dashboard. The URL is the thing that is true in both cases.
+   */
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
-  const dashboard = page.getByRole('button', { name: 'Select competition' });
   await expect(async () => {
-    expect(await arena.count() + await dashboard.count()).toBeGreaterThan(0);
+    expect(await arena.count() > 0 || /\/admin\/dashboard/.test(page.url())).toBe(true);
   }).toPass({ timeout: 30_000 });
 
   if (await arena.count()) {
@@ -178,7 +196,6 @@ export const adminSignIn = async (page, place) => {
   }
 
   await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 30_000 });
-  await expect(dashboard, 'signed in, but no meet is selected').not.toBeEmpty();
 
   /*
    * Which meet, confirmed against the API rather than the screen.

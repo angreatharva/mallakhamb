@@ -268,10 +268,35 @@ const scoreSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  /**
+   * The WHOLE sheet is frozen. An admin's lockScores, and the guard that
+   * updateScore and deleteScore test. Nothing in the document may change.
+   */
   isLocked: {
     type: Boolean,
     default: false,
     required: true
+  },
+  /**
+   * The apparatus a Scorer has finalized, and the reason this is not `isLocked`.
+   *
+   * A panel is seated per apparatus, so one squad in one category is judged
+   * three separate times by three separate panels — but all three sets of marks
+   * live in the `playerScores` of ONE document, because the identity index
+   * `score_identity_unique` is {teamId, gender, ageGroup, competition,
+   * competitionType} and carries no apparatus. A single boolean therefore
+   * finalized all three at once: a Scorer locking Pole, which is simply the
+   * apparatus their panel had finished, froze Rope and Hanging before anyone
+   * had performed on them, and the sheet came back read-only with no way
+   * forward short of an admin unlock.
+   *
+   * Empty on every document written before this existed, which reads correctly:
+   * nothing is locked per-apparatus, and `isLocked` alone decides, exactly as
+   * it did.
+   */
+  lockedApparatus: {
+    type: [String],
+    default: []
   },
   // Panel / scorer metadata written by the save + lock/unlock/recalculate flows.
   // Declared explicitly so Mongoose strict mode persists them (previously they

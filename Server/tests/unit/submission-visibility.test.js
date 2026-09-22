@@ -339,6 +339,19 @@ describe('publicService.getPublicScores — the /scores results page', () => {
     const results = await service.getPublicScores('comp-1', { lockedOnly: 'false' });
 
     expect(results).toEqual([]);
-    expect(scoreRepository.find.mock.calls[0][0]).toMatchObject({ isLocked: true });
+
+    /*
+     * The gate is asserted by what it ACCEPTS, not by the query's shape. It
+     * used to be the literal `{ isLocked: true }`; a squad's three apparatus
+     * are locked one panel at a time now, so it is that flag OR a non-empty
+     * `lockedApparatus`. What must stay true is that both branches are about
+     * the lock and neither can be reached from the request.
+     */
+    const query = scoreRepository.find.mock.calls[0][0];
+    expect(query).not.toHaveProperty('lockedOnly');
+    expect(query.$or).toEqual([
+      { isLocked: true },
+      { 'lockedApparatus.0': { $exists: true } },
+    ]);
   });
 });

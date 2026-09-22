@@ -299,8 +299,24 @@ const AdminScoring = () => {
             logger.info('Score metadata:', scoreMetadata);
             
             if (scoreMetadata) {
-                logger.info('Setting isLocked to:', scoreMetadata.isLocked);
-                setIsLocked(scoreMetadata.isLocked || false);
+                /*
+                 * ANY locked apparatus locks this sheet, unlike the Scorer's.
+                 *
+                 * A Scorer works one apparatus at a time — their sheet is
+                 * narrowed to the apparatus their panel is seated for, so it
+                 * can go on accepting the others after one is locked. This
+                 * screen is not narrowed: it lists every apparatus the squad is
+                 * entered for and posts them all in one payload. Once Pole is
+                 * locked, `saveScores` refuses a write naming it, which would
+                 * fail the whole save including the Rope rows beside it.
+                 *
+                 * So it stays closed as soon as anything is locked, which is
+                 * exactly how it behaved when the lock was a single flag. An
+                 * admin who needs it open again has the unlock.
+                 */
+                const anyApparatusLocked = (scoreMetadata.lockedApparatus || []).length > 0;
+                logger.info('Setting isLocked to:', scoreMetadata.isLocked, 'lockedApparatus:', scoreMetadata.lockedApparatus);
+                setIsLocked(!!scoreMetadata.isLocked || anyApparatusLocked);
                 setExistingScoreId(scoreMetadata._id);
                 if (scoreMetadata.timeKeeper) setTimeKeeper(scoreMetadata.timeKeeper);
                 if (scoreMetadata.scorer) setScorer(scoreMetadata.scorer);
@@ -514,11 +530,15 @@ const AdminScoring = () => {
             // Extract calculated scores from backend response (Requirement 5.1, 5.2)
             // Backend returns { success: true, data: { scoreId, isLocked, playerScores } }
             const responseData = response.data.data || response.data;
-            const { scoreId, isLocked: responseLocked, playerScores: calculatedPlayerScores } = responseData;
-            
+            const {
+                scoreId, isLocked: responseLocked, lockedApparatus, playerScores: calculatedPlayerScores,
+            } = responseData;
+
             // Update local state with calculated values
             setCalculatedScores(calculatedPlayerScores || []);
-            setIsLocked(responseLocked);
+            // Same rule as the load above: a lock on any apparatus closes this
+            // sheet, because it posts every apparatus in one payload.
+            setIsLocked(!!responseLocked || (lockedApparatus || []).length > 0);
             setExistingScoreId(scoreId);
             
             // Display success message with calculation info

@@ -9,7 +9,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { PANEL_TYPES, panelSeats, soleApparatus } from './judgePanel';
+import { PANEL_TYPES, mirrorChiefSeat, panelSeats, soleApparatus } from './judgePanel';
+import { calculateAverageMarks } from './copRules';
 
 const POLE = 'Pole Mallakhamb';
 const ROPE = 'Rope Mallakhamb';
@@ -95,6 +96,65 @@ describe('panelSeats', () => {
     expect(panelSeats(undefined, POLE)).toEqual([]);
     expect(panelSeats(null)).toEqual([]);
     expect(panelSeats({ data: [] })).toEqual([]);
+  });
+});
+
+describe('mirrorChiefSeat', () => {
+  const four = [seat('Senior Judge', POLE, 'Chief'), seat('Judge 1', POLE), seat('Judge 2', POLE), seat('Judge 3', POLE)];
+
+  it('draws a 4-judge panel as five, the last seat the Sr. Judge again', () => {
+    const sheet = mirrorChiefSeat(four);
+
+    expect(roles(sheet)).toEqual(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4']);
+    expect(sheet[4].name).toBe('Chief');
+    expect(sheet[4].isChiefCopy).toBe(true);
+    // Reads the Sr. Judge's own cell, so there is no second mark to type and
+    // the two can never hold different numbers.
+    expect(sheet[4].scoreField).toBe('seniorJudge');
+  });
+
+  it('gives the copy its own id — two columns keyed alike collapse into one', () => {
+    const sheet = mirrorChiefSeat(four);
+
+    expect(sheet[4]._id).not.toBe(sheet[0]._id);
+    expect(new Set(sheet.map((s) => s._id)).size).toBe(5);
+  });
+
+  it('leaves panels of 3 and 5 exactly as they were', () => {
+    const three = [seat('Senior Judge', POLE), seat('Judge 1', POLE), seat('Judge 2', POLE)];
+    const five = [...four, seat('Judge 4', POLE)];
+
+    // A 3 has no Chief role and no slot to fill; a 5 has no vacancy.
+    expect(mirrorChiefSeat(three)).toBe(three);
+    expect(mirrorChiefSeat(five)).toBe(five);
+  });
+
+  it('copies nothing when the four seats do not include a Sr. Judge', () => {
+    const chiefless = [seat('Judge 1', POLE), seat('Judge 2', POLE), seat('Judge 3', POLE), seat('Judge 4', POLE)];
+
+    expect(mirrorChiefSeat(chiefless)).toBe(chiefless);
+  });
+
+  it('survives a missing or non-array list', () => {
+    expect(mirrorChiefSeat(undefined)).toEqual([]);
+    expect(mirrorChiefSeat(null)).toEqual([]);
+  });
+
+  it('shows a column whose mark the 4-judge rule really does use', () => {
+    /*
+     * The reason the copy exists. The 4-judge rule puts the Chief's mark in the
+     * vacant fourth evaluation slot and then runs the 5-judge method unchanged,
+     * so the sheet is drawn as the arithmetic already works: the same marks
+     * scored as a four and as a five with Judge 4 = the Chief give one number.
+     */
+    const marks = { seniorJudge: 9.2, judge1: 9.5, judge2: 8.8, judge3: 9.1 };
+
+    const asFour = calculateAverageMarks(marks, 4);
+    const asFive = calculateAverageMarks({ ...marks, judge4: marks.seniorJudge }, 5);
+
+    expect(asFour.average).toBe(asFive.average);
+    // 9.5 and 8.8 dropped, (9.2 + 9.1) / 2 = 9.15 — the Chief inside the pool.
+    expect(asFour.executionAvg).toBeCloseTo(9.15, 2);
   });
 });
 
