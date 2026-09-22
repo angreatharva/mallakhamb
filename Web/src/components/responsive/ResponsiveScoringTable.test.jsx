@@ -127,6 +127,35 @@ describe('the Scorer sheet for a 4-judge panel', () => {
   });
 });
 
+describe('the sheet fits the card', () => {
+  /*
+   * jsdom computes no layout, so what is asserted here is the mechanism rather
+   * than the pixels: a table that divides the width it HAS, and inputs that
+   * fill their cell. Measured in a real browser at 1024px with a 5-column
+   * panel, that took the sheet from 1156px in an 837px card — the Scorer had
+   * to drag sideways to reach the deductions — to no overflow at all.
+   */
+  it('sizes its columns from the space available, not from its contents', () => {
+    const { container } = sheet(FOUR);
+    const table = container.querySelector('table');
+
+    expect(table.style.tableLayout).toBe('fixed');
+    expect(table.style.width).toBe('100%');
+    // Nothing may insist on a width the column cannot give it.
+    expect(cells(container).map((input) => input.style.width)).toEqual(Array(8).fill('100%'));
+  });
+
+  it('leaves the phone cards on their fixed-width fields', () => {
+    // There the field sits opposite its label with room to spare, and a
+    // full-width input would push the label off its own row.
+    responsive.isMobile = true;
+    const { container } = sheet(FOUR);
+
+    expect(container.querySelector('table')).toBeNull();
+    expect(cells(container).map((input) => input.style.width)).toEqual(Array(8).fill('80px'));
+  });
+});
+
 describe('the Scorer sheet for the other panel sizes', () => {
   it('leaves a 5-judge panel alone — five real seats, all of them typable', () => {
     const { container } = sheet(FIVE, { ...MARKS, judge4: '9.3' });
