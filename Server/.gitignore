@@ -36,103 +36,33 @@ old_config/
 
 # Operational scripts.
 #
-# Ignore the *contents* of scripts/ (`scripts/*`), not the directory itself.
-# The directory form (`scripts/`) excludes the directory, and git cannot
-# re-include a file whose parent directory is excluded — so every `!` negation
-# below would have been silently ignored. createAdmin.js and createSuperAdmin.js
-# were only ever tracked because they predate this rule (LOW-1 / task 3.4).
-scripts/*
-!scripts/createAdmin.js
-!scripts/createSuperAdmin.js
-!scripts/migrate.js
-!scripts/migrate-superadmin-role.js
-!scripts/seedAccounts.js
-!scripts/captureEnvironment.js
-!scripts/planPanels.js
-!scripts/seatPanel.js
-!scripts/seatPanels.js
-!scripts/resetScores.js
-
-# The three seeding chains and the API seeder behind one of them. `setupAll.js`
-# predates this rule and is tracked without being named here; the others have to
-# be, or a fresh checkout gets `setup:api` and `setup:ui` as npm scripts with no
-# files behind them — which fails as "Cannot find module" long after the reason
-# is visible.
-!scripts/setupApi.js
-!scripts/setupUi.js
-!scripts/seedApi.js
-!scripts/verifySeed.js
-
-# The panel scripts and their shared plumbing. Re-including a nested file takes
-# three lines, not one: `scripts/*` already excluded `scripts/lib`, and git will
-# not look inside an excluded directory however many `!` lines name files in it.
-!scripts/lib/
-scripts/lib/*
-!scripts/lib/admin-api.js
-!scripts/lib/panel-plan.js
-!scripts/lib/meets.js
-!scripts/lib/judges.js
-# Shared by the three chains: the chain runner itself, the roster bridge that
-# reads the browser suite's people, and the one definition of a seeded meet.
-!scripts/lib/setup-chain.js
-!scripts/lib/roster.js
-!scripts/lib/competition-document.js
-
-# The panel plan is a DECISION and is committed; the registration capture is a
-# record of one environment and is not.
+# Everything in scripts/ is TRACKED. This block used to be the other way round —
+# a blanket `scripts/*` followed by 47 `!` negations — and the failure mode was
+# always the same one: a script landed on disk, was wired into package.json, and
+# was never added to the allow-list, so a fresh checkout got an npm script with
+# no file behind it. It fails as "Cannot find module", long after the reason is
+# visible. setupApi.js, setupUi.js, seedApi.js and startup.js each had to be
+# rescued from it by hand; payWithDiscount.js — which `npm run setup` and
+# `npm run setup:api` both call — was found missing from HEAD the same way.
 #
-# scripts/seed/panel-plan.json fixes which categories get 3, 4 and 5 seats. It
-# is drawn once (scripts/planPanels.js) and then read by everything that seats
-# or judges a panel, including two Playwright specs — a plan that only existed
-# on the machine that drew it would let a second machine seat a 4-judge panel
-# and score it as a 5, which produces a believable number rather than an error.
+# Ignoring by exception is the only shape that does not depend on someone
+# remembering. Adding a script now needs no edit here.
 #
-# scripts/seed/registrations.generated.json is deliberately NOT allow-listed: it
-# holds plaintext passwords and describes one database's state. Regenerate it
-# with `npm --prefix Web run seed:ui`.
-!scripts/seed/
-scripts/seed/*
-!scripts/seed/panel-plan.json
-# meets.json and judges.json are the same kind of thing as the panel plan: a
-# DECISION about what the fixture is, hand-maintained, and read by both stacks.
-# Leaving them uncommitted would give a second machine a different set of meets
-# or a judge pool the panel plan seats people from who were never registered.
-!scripts/seed/meets.json
-!scripts/seed/judges.json
-
-# The API documentation and performance harness (scripts/perf/). Same nesting
-# rule as scripts/lib above: re-include the directory, exclude its contents,
-# then name the files.
+# GENERATED files are the exception, by naming convention: anything written by a
+# tool rather than by a person is called *.generated.json and is not committed,
+# because it is reproduced in seconds from a live system and a stale copy would
+# be believed rather than questioned.
 #
-# routes.generated.json is NOT allow-listed — it is a build artefact of
-# extract-routes.js, regenerated in a second from the live router, and a stale
-# committed copy would be believed.
-!scripts/perf/
-scripts/perf/*
-!scripts/perf/extract-routes.js
-!scripts/perf/seedScale.js
-!scripts/perf/testApi.js
-!scripts/perf/benchmarkApi.js
-!scripts/perf/countQueries.js
-!scripts/perf/probe.js
-!scripts/perf/loadTest.js
-!scripts/perf/equivalence.js
-!scripts/perf/socketLoad.js
-!scripts/perf/lib/
-scripts/perf/lib/*
-!scripts/perf/lib/client.js
-!scripts/perf/lib/harness-server.js
-
-!scripts/generateOpenApi.js
-
-# The supervised boot path. `npm start` and render.yaml's startCommand both run
-# this, so leaving it ignored means the deployed service has no entry point at
-# all — which is exactly what `scripts/*` did to it until a pre-merge check
-# noticed the file existed on disk and not in HEAD.
-!scripts/startup.js
-!scripts/checkEnv.js
-!scripts/createCompetitions.js
-!scripts/syncDatabase.js
-!scripts/setupAll.js
-!scripts/meetStatus.js
-!scripts/seedScores.js
+#   scripts/perf/routes.generated.json         read off the live Express router
+#                                              by scripts/perf/extract-routes.js
+#   scripts/seed/registrations.generated.json  holds plaintext passwords and
+#                                              describes one database's state;
+#                                              regenerate it with
+#                                              `npm --prefix Web run seed:ui`
+#
+# scripts/seed/panel-plan.json, meets.json and judges.json are NOT generated in
+# this sense. They are DECISIONS about what the fixture is — hand-maintained and
+# read by both stacks — so they stay tracked. A panel plan that existed only on
+# the machine that drew it would let a second machine seat a 4-judge panel and
+# score it as a 5, which produces a believable number rather than an error.
+*.generated.json
