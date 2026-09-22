@@ -5,7 +5,7 @@
  * repository instance. Previously duplicated in AuthenticationService and
  * OTPService (MED-13). The OTP version was also missing the `judge` type.
  * 
- * @module utils/user-repository-resolver
+ * @module utils/auth/user-repository-resolver
  */
 
 /**

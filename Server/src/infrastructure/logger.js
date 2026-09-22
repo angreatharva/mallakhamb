@@ -38,7 +38,18 @@ class Logger {
    * @returns {winston.Logger}
    */
   createLogger() {
-    const isDevelopment = this.getConfig('server.nodeEnv') === 'development';
+    const nodeEnv = this.getConfig('server.nodeEnv');
+    const isDevelopment = nodeEnv === 'development';
+
+    /*
+     * Tests log to the console and nowhere else.
+     *
+     * `isDevelopment` is false under NODE_ENV=test, so every `npm test` run was
+     * taking the production branch and writing fourteen days of
+     * combined-YYYY-MM-DD.log into Server/logs/ — a test suite should not leave
+     * artefacts on disk, and these were indistinguishable from real ones.
+     */
+    const isTest = nodeEnv === 'test';
 
     // Format for development (human-readable, colorized)
     const devFormat = winston.format.combine(
@@ -68,12 +79,22 @@ class Logger {
       })
     ];
 
+    /*
+     * Log files belong to Server/, not to whoever's directory the process was
+     * started from. `path.join('logs', ...)` is resolved against `process.cwd()`,
+     * so `node Server/server.js` from the repo root quietly wrote its logs to
+     * the repo root instead.
+     */
+    const LOG_DIR = path.join(__dirname, '..', '..', 'logs');
+
     // Add file transports with rotation
-    if (!isDevelopment) {
+    if (isTest) {
+      // Nothing. See the note above `isTest`.
+    } else if (!isDevelopment) {
       // Error log with rotation
       transports.push(
         new DailyRotateFile({
-          filename: path.join('logs', 'error-%DATE%.log'),
+          filename: path.join(LOG_DIR, 'error-%DATE%.log'),
           datePattern: 'YYYY-MM-DD',
           level: 'error',
           maxSize: '20m',
@@ -85,7 +106,7 @@ class Logger {
       // Combined log with rotation
       transports.push(
         new DailyRotateFile({
-          filename: path.join('logs', 'combined-%DATE%.log'),
+          filename: path.join(LOG_DIR, 'combined-%DATE%.log'),
           datePattern: 'YYYY-MM-DD',
           maxSize: '20m',
           maxFiles: '14d',
@@ -93,22 +114,37 @@ class Logger {
         })
       );
     } else {
-      // Simple file transports for development
+      /*
+       * Development: size-based rollover, and `tailable` is what BOUNDS it.
+       *
+       * Without it winston writes combined.log, then combined1.log, 2, 3 … and
+       * prunes only the files IT created in the current process. Every restart
+       * begins a fresh generation and abandons the previous one, so the cap of
+       * five is a cap per process rather than on disk. Fifteen orphaned files
+       * across three generations — combined3-7, 13-17, 20-24, 74 MB — is what
+       * that looked like by 2026-09-22.
+       *
+       * `tailable: true` keeps the newest data in combined.log and shifts the
+       * older content down a FIXED set of names, so the five files are the same
+       * five files across restarts.
+       */
       transports.push(
         new winston.transports.File({
-          filename: path.join('logs', 'error.log'),
+          filename: path.join(LOG_DIR, 'error.log'),
           level: 'error',
           maxsize: 5242880, // 5MB
           maxFiles: 5,
+          tailable: true,
           format: prodFormat
         })
       );
 
       transports.push(
         new winston.transports.File({
-          filename: path.join('logs', 'combined.log'),
+          filename: path.join(LOG_DIR, 'combined.log'),
           maxsize: 5242880, // 5MB
           maxFiles: 5,
+          tailable: true,
           format: prodFormat
         })
       );

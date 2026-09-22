@@ -20,7 +20,7 @@
  * assignment-level checks in the services.
  *
  * `getRepositoryByType` here also disagreed with the shared
- * `utils/user-repository-resolver`: it mapped 'judge' to the ASSIGNMENTS
+ * `utils/auth/user-repository-resolver`: it mapped 'judge' to the ASSIGNMENTS
  * collection, where a judge principal's id would never be found.
  *
  * Requirements: 1.2, 1.8

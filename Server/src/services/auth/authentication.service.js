@@ -31,7 +31,7 @@ const {
   clearedLockoutState,
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
-const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
+const { createUserRepositoryResolver } = require('../../utils/auth/user-repository-resolver');
 // Shared so /auth/me and login can never disagree about what is sensitive.
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // Shared with judge.service, which authenticates against a different collection

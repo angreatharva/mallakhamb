@@ -9,7 +9,7 @@
 
 const crypto = require('crypto');
 const { ValidationError } = require('../../errors');
-const { createUserRepositoryResolver } = require('../../utils/user-repository-resolver');
+const { createUserRepositoryResolver } = require('../../utils/auth/user-repository-resolver');
 
 class OTPService {
   /**

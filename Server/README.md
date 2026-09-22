@@ -126,10 +126,9 @@ Server/
     │   ├── cache/                # cache.service, cache-warmer
     │   └── feature-flags/
     ├── repositories/             # base.repository.js + one per entity
-    ├── utils/
-    │   ├── scoring/              # calculation, ranking, tie-breaker
-    │   ├── auth/  data/  security/  validation/
-    │   └── user-repository-resolver.js
+    ├── utils/                    # every util lives in one of these five
+    │   ├── scoring/              # calculation, ranking, tie-breaker, judge-slip, player-row
+    │   └── auth/  data/  security/  validation/
     ├── validators/               # express-validator schemas, one per domain
     ├── errors/                   # typed domain errors + error-codes
     ├── socket/                   # socket.manager.js, events/, handlers/
@@ -146,6 +145,23 @@ Server/
 > long enough to be worth fixing instead. They are all in `src/models/` now
 > (2026-09-22), so every layer of the diagram above sits under one root and
 > `require('../models/X')` means the same thing from every repository.
+
+### File naming
+
+Two conventions, on purpose, split by directory:
+
+| Where | Convention | Example |
+|---|---|---|
+| `src/**` | kebab-case, with a role suffix | `judge-panel.service.js`, `auth.middleware.js`, `refresh-token.repository.js` |
+| `src/models/**` | PascalCase, matching the Mongoose model name | `JudgeAccount.js` |
+| `scripts/**` | camelCase, matching the verb you run | `seatPanels.js`, `payWithDiscount.js` |
+
+`scripts/` being camelCase against `src/`'s kebab-case is a **decision, not
+drift** — all 26 files follow it, and renaming them would mean rewriting ~160
+references spread across `package.json`, the release runbook, `.env.scripts` and
+the Web stack's docs, several of which a person follows by hand. The upside is
+cosmetic and the downside is a missed reference failing as `Cannot find module`
+on a deploy. Match the directory you are adding to.
 
 ---
 

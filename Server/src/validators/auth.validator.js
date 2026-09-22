@@ -1,102 +1,21 @@
 const { body } = require('express-validator');
-const { email, password, enumValue } = require('./common.validator');
-const { GENDERS } = require('../config/cop-rules');
+const { email, password } = require('./common.validator');
 
 /**
- * Validation rules for authentication endpoints
+ * Validation rules for the /api/auth endpoints.
+ *
+ * THESE THREE ARE THE WHOLE SURFACE. auth.routes.js mounts forgot-password,
+ * verify-otp and reset-password and nothing else — the per-role register and
+ * login endpoints carry their own rules in player.routes.js, coach.routes.js
+ * and admin.routes.js.
+ *
+ * This file used to export five more: login, registerPlayer, registerCoach,
+ * registerAdmin and changePassword. None had a caller, and two of them still
+ * validated a `name` field that migration 006_split_person_names replaced with
+ * firstName/lastName — the same rot that had `coach.validator.js` deleted.
+ * Unused validation is worse than none: it reads like the contract while the
+ * live rules sit somewhere else and may differ.
  */
-
-/**
- * Validate login request
- */
-const login = () => {
-  return [
-    email('email'),
-    body('password')
-      .trim()
-      .notEmpty()
-      .withMessage('Password is required'),
-    enumValue('userType', ['player', 'coach', 'admin', 'judge'])
-  ];
-};
-
-/**
- * Validate player registration
- */
-const registerPlayer = () => {
-  return [
-    body('firstName')
-      .trim()
-      .notEmpty()
-      .withMessage('First name is required')
-      .isLength({ min: 2, max: 50 })
-      .withMessage('First name must be between 2 and 50 characters')
-      .escape(),
-    body('lastName')
-      .trim()
-      .notEmpty()
-      .withMessage('Last name is required')
-      .isLength({ min: 2, max: 50 })
-      .withMessage('Last name must be between 2 and 50 characters')
-      .escape(),
-    email('email'),
-    body('dateOfBirth')
-      .trim()
-      .notEmpty()
-      .withMessage('Date of birth is required')
-      .isISO8601()
-      .withMessage('Date of birth must be a valid date')
-      .toDate()
-      .custom((value) => {
-        const age = Math.floor((new Date() - new Date(value)) / (365.25 * 24 * 60 * 60 * 1000));
-        if (age < 5 || age > 100) {
-          throw new Error('Age must be between 5 and 100 years');
-        }
-        return true;
-      }),
-    password('password'),
-    enumValue('gender', GENDERS)
-  ];
-};
-
-/**
- * Validate coach registration
- */
-const registerCoach = () => {
-  return [
-    body('name')
-      .trim()
-      .notEmpty()
-      .withMessage('Name is required')
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters')
-      .escape(),
-    email('email'),
-    password('password')
-  ];
-};
-
-/**
- * Validate admin registration
- */
-const registerAdmin = () => {
-  return [
-    body('name')
-      .trim()
-      .notEmpty()
-      .withMessage('Name is required')
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Name must be between 2 and 100 characters')
-      .escape(),
-    email('email'),
-    password('password'),
-    body('role')
-      .optional()
-      .trim()
-      .isIn(['admin', 'superadmin'])
-      .withMessage('Role must be either admin or superadmin')
-  ];
-};
 
 /**
  * Validate forgot password request
@@ -142,36 +61,8 @@ const resetPassword = () => {
   ];
 };
 
-/**
- * Validate change password request
- */
-const changePassword = () => {
-  return [
-    body('currentPassword')
-      .trim()
-      .notEmpty()
-      .withMessage('Current password is required'),
-    password('newPassword'),
-    body('confirmPassword')
-      .trim()
-      .notEmpty()
-      .withMessage('Confirm password is required')
-      .custom((value, { req }) => {
-        if (value !== req.body.newPassword) {
-          throw new Error('Passwords do not match');
-        }
-        return true;
-      })
-  ];
-};
-
 module.exports = {
-  login,
-  registerPlayer,
-  registerCoach,
-  registerAdmin,
   forgotPassword,
   verifyOTP,
   resetPassword,
-  changePassword
 };

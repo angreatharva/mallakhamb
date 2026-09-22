@@ -28,15 +28,19 @@ Reusable validation rules used across multiple validators:
 - `array()` - Validate array fields with length constraints
 
 ### auth.validator.js
-Authentication and authorization endpoints:
-- `login()` - Validate login credentials (email, password, userType)
-- `registerPlayer()` - Validate player registration (firstName, lastName, email, dateOfBirth, password, gender)
-- `registerCoach()` - Validate coach registration (name, email, password)
-- `registerAdmin()` - Validate admin registration (name, email, password, role)
+The `/api/auth` endpoints — and only these three, because that is all
+`auth.routes.js` mounts:
 - `forgotPassword()` - Validate forgot password request (email)
 - `verifyOTP()` - Validate OTP verification (email, 6-digit OTP)
-- `resetPassword()` - Validate password reset with OTP (email, OTP, newPassword)
-- `changePassword()` - Validate password change (currentPassword, newPassword, confirmPassword)
+- `resetPassword()` - Validate password reset with OTP (email, OTP, password)
+
+> Registration and login are validated in the ROUTERS that own them —
+> `player.routes.js`, `coach.routes.js`, `admin.routes.js` — not here. This
+> section used to also list `login()`, `registerPlayer()`, `registerCoach()`,
+> `registerAdmin()` and `changePassword()`; all five were exported, none was
+> imported anywhere, and two still validated a `name` field that migration
+> `006_split_person_names` replaced with `firstName`/`lastName`. They were
+> deleted on 2026-09-22.
 
 ### player.validator.js
 Player management endpoints:
