@@ -15,7 +15,7 @@
  * every discovered file conforms, and the numbering has no gaps.
  */
 
-const MigrationRunner = require('./migration-runner');
+const MigrationRunner = require('../../../../src/infrastructure/database/migration-runner');
 
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 

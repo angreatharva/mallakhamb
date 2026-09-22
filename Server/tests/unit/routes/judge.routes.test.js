@@ -16,7 +16,7 @@ const express = require('express');
 // "Route.put() requires a callback function" while the router is being BUILT,
 // failing the whole suite at load time rather than in one test. Keep the shape
 // in sync with module.exports at the bottom of src/middleware/auth.middleware.js.
-jest.mock('../middleware/auth.middleware', () => {
+jest.mock('../../../src/middleware/auth.middleware', () => {
   // A judge's token carries the meet they signed in for — JudgeService.loginJudge
   // puts the active competition in the claim — and the real middleware copies it
   // to `req.user.currentCompetition` and loads their seats FILTERED BY IT. The
@@ -104,7 +104,7 @@ const mockContainer = {
   }),
 };
 
-const createJudgeRoutes = require('./judge.routes');
+const createJudgeRoutes = require('../../../src/routes/judge.routes');
 
 const app = express();
 app.use(express.json());

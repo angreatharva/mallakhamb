@@ -1,5 +1,5 @@
-const OTPService = require('./otp.service');
-const { ValidationError } = require('../../errors');
+const OTPService = require('../../../../src/services/auth/otp.service');
+const { ValidationError } = require('../../../../src/errors');
 
 describe('OTPService', () => {
   let otpService;

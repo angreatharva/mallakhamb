@@ -13,7 +13,7 @@ app.use(express.json());
 // which fails the whole suite at load time rather than in a single test.
 // Keep the shape in sync with module.exports at the bottom of
 // src/middleware/auth.middleware.js.
-jest.mock('../middleware/auth.middleware', () => {
+jest.mock('../../../src/middleware/auth.middleware', () => {
   // The real middleware sets BOTH req.userType and req.user; the guards below
   // read both, so the mock has to populate both to be faithful.
   //
@@ -104,7 +104,7 @@ const mockContainer = {
   })
 };
 
-const createAdminRoutes = require('./admin.routes');
+const createAdminRoutes = require('../../../src/routes/admin.routes');
 app.use('/api/admin', createAdminRoutes(mockContainer));
 
 describe('Admin Routes - Auth Guards', () => {

@@ -11,7 +11,7 @@ const {
   registerFailedAttempt,
   clearedLockoutState,
   lockoutMessage,
-} = require('./account-lockout.util');
+} = require('../../../../src/utils/security/account-lockout.util');
 
 const NOW = Date.parse('2026-08-07T12:00:00.000Z');
 const POLICY = { maxAttempts: 5, lockoutMinutes: 15 };

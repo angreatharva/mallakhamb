@@ -1,10 +1,10 @@
-const { createAuthMiddleware, requireRole } = require('./auth.middleware');
+const { createAuthMiddleware, requireRole } = require('../../../src/middleware/auth.middleware');
 
 // Mock token invalidation util
-jest.mock('../utils/security/token-invalidation.util', () => ({
+jest.mock('../../../src/utils/security/token-invalidation.util', () => ({
   isTokenLoggedOut: jest.fn()
 }));
-const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
+const { isTokenLoggedOut } = require('../../../src/utils/security/token-invalidation.util');
 
 // Mock cookie util.
 //
@@ -12,7 +12,7 @@ const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util'
 // module. A missing one is `undefined` at require time and only fails when the
 // middleware factory runs — which is the same shape as the auth-guard mock trap
 // documented on admin.routes.test.js, just one module further down.
-jest.mock('../utils/security/cookie.util', () => ({
+jest.mock('../../../src/utils/security/cookie.util', () => ({
   COOKIE_NAMES: { ACCESS_TOKEN: 'access_token' },
   isProductionLike: jest.fn(() => false),
   setAccessTokenCookie: jest.fn()

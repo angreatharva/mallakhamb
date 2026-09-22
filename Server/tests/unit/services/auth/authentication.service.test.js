@@ -1,5 +1,5 @@
-const AuthenticationService = require('./authentication.service');
-const { ValidationError } = require('../../errors');
+const AuthenticationService = require('../../../../src/services/auth/authentication.service');
+const { ValidationError } = require('../../../../src/errors');
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({

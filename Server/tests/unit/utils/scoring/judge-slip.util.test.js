@@ -15,7 +15,7 @@ const {
   getJudgeRoleMapping,
   isPanelJudgeType,
   buildJudgeSlipPlayerScore,
-} = require('./judge-slip.util');
+} = require('../../../../src/utils/scoring/judge-slip.util');
 
 describe('the panel-role mapping', () => {
   test('covers exactly the five evaluating roles', () => {

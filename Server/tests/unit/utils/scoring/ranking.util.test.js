@@ -15,7 +15,7 @@
 const {
   calculateTeamRankings,
   calculateIndividualRankings,
-} = require('./ranking.util');
+} = require('../../../../src/utils/scoring/ranking.util');
 
 const team = (name, totalScore) => ({ _id: `team-${name}`, name, totalScore });
 

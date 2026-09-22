@@ -388,9 +388,11 @@ npm test
 npm run test:coverage
 ```
 
-Jest (config inline in `package.json`) with `maxWorkers: 1`, a 30 s timeout, `mongodb-memory-server`, `supertest` and `fast-check`. Tests are colocated as `*.test.js` next to their source, plus `tests/unit/` for the scoring suites and `tests/security/` for the audit guards; `tests/setup.js` runs before each suite.
+Jest (config inline in `package.json`) with `maxWorkers: 1`, a 30 s timeout, `mongodb-memory-server`, `supertest` and `socket.io-client`. `tests/setup.js` starts one in-memory MongoDB for the run and clears every collection after each test.
 
-**Current state:** 132 tests pass across 9 suites.
+**Every test lives under `tests/`** — `unit/`, `integration/`, `security/` — and `testMatch` is pinned to `<rootDir>/tests/**/*.test.js`, so a `*.test.js` left in `src/` is silently *not run* rather than quietly setting a second convention. Twelve suites were colocated in `src/` until 2026-09-22; they now mirror their subject's path under `tests/unit/` (`tests/unit/middleware/auth.middleware.test.js` tests `src/middleware/auth.middleware.js`). `src/` is shipping code only.
+
+**Current state:** 702 tests pass across 56 suites (~2 min).
 
 ### Security guards — read before you touch them
 
@@ -407,7 +409,8 @@ When adding a guard, wire the service under test **completely**. A missing repos
 npx jest tests/security
 ```
 
-`tests/integration/socket/` still holds a README only — there is no end-to-end coverage of the judge submit path yet.
+`tests/integration/` covers the judge submit path end to end, including
+`socket/scoring-socket.test.js` over a real Socket.IO connection.
 
 ---
 

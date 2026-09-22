@@ -14,7 +14,7 @@ const {
   keySignature,
   reconcileModel,
   formatResults,
-} = require('./index-manager');
+} = require('../../../../src/infrastructure/database/index-manager');
 
 /**
  * A stand-in for a Mongoose model: the reconciler only needs the schema's

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const AuditLogRepository = require('./audit-log.repository');
-const AuditLog = require('../models/AuditLog');
+const AuditLogRepository = require('../../../src/repositories/audit-log.repository');
+const AuditLog = require('../../../src/models/AuditLog');
 
 describe('AuditLogRepository', () => {
   let repository;

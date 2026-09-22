@@ -12,7 +12,7 @@
 const express = require('express');
 const request = require('supertest');
 
-const RequestCoalescingMiddleware = require('./request-coalescing.middleware');
+const RequestCoalescingMiddleware = require('../../../src/middleware/request-coalescing.middleware');
 
 const silentLogger = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
 

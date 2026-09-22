@@ -61,7 +61,21 @@ npm test -- --testNamePattern="login"
 npm run test:watch
 ```
 
-Test files are co-located with source files (e.g., `player.service.test.js` next to `player.service.js`) or in the `tests/` directory for integration and E2E tests.
+**Every test file lives under `tests/`.** `jest.testMatch` is pinned to
+`<rootDir>/tests/**/*.test.js`, so a `*.test.js` written anywhere else is not
+collected — it does not fail, it simply never runs, which is the failure mode
+worth ruling out mechanically.
+
+| Directory | Holds |
+|---|---|
+| `tests/unit/` | One module in isolation, dependencies mocked. Suites that test a specific source file mirror its path — `tests/unit/middleware/auth.middleware.test.js` ↔ `src/middleware/auth.middleware.js` |
+| `tests/integration/` | Real router → controller → service → repository → in-memory MongoDB |
+| `tests/security/` | The audit guards; see the warning below about wiring services completely |
+
+This guide previously said tests were co-located next to their source. They were,
+in twelve cases, while forty-three others sat under `tests/` — so neither rule
+described the repository. The twelve moved on 2026-09-22 and `src/` is now
+shipping code only.
 
 ---
 
@@ -72,7 +86,7 @@ Unit tests verify a single class or function in complete isolation. All dependen
 ### Testing a Service
 
 ```javascript
-// src/services/user/player.service.test.js
+// tests/unit/services/user/player.service.test.js
 const PlayerService = require('./player.service');
 const { NotFoundError } = require('../../errors');
 
@@ -168,7 +182,7 @@ describe('PlayerService', () => {
 Repository unit tests mock the Mongoose model.
 
 ```javascript
-// src/repositories/base.repository.test.js
+// tests/unit/repositories/base.repository.test.js
 const BaseRepository = require('./base.repository');
 
 // Mock Mongoose model
@@ -230,7 +244,7 @@ describe('BaseRepository', () => {
 ### Testing Error Classes
 
 ```javascript
-// src/errors/errors.test.js
+// tests/unit/errors/errors.test.js
 const { ValidationError, NotFoundError, AuthenticationError } = require('./index');
 
 describe('Error Classes', () => {
@@ -301,7 +315,7 @@ module.exports = { connectTestDatabase, disconnectTestDatabase, clearDatabase };
 ### Testing a Repository with Real Database
 
 ```javascript
-// src/repositories/player.repository.integration.test.js
+// tests/integration/player.repository.test.js
 const { connectTestDatabase, disconnectTestDatabase, clearDatabase } = require('../../tests/helpers/test-setup');
 const PlayerRepository = require('./player.repository');
 const Player = require('../models/Player');
