@@ -46,13 +46,12 @@ Player management endpoints:
 - `deletePlayer()` - Validate player ID parameter
 - `assignTeam()` - Validate team assignment (playerId, teamId)
 
-### coach.validator.js
-Coach management endpoints:
-- `createCoach()` - Validate coach creation (name, email, password, optional team)
-- `updateCoach()` - Validate coach updates (all fields optional)
-- `getCoachById()` - Validate coach ID parameter
-- `deleteCoach()` - Validate coach ID parameter
-- `assignTeam()` - Validate team assignment (coachId, teamId)
+> **Coach endpoints have no validator file.** `coach.validator.js` was deleted
+> once it was found to have no callers: `coach.routes.js` declares its rules
+> inline with `body()`, and the file had gone on validating a `name` field that
+> migration `006_split_person_names` replaced with `firstName`/`lastName`. It
+> read as the coach contract while being neither used nor correct. Reinstating
+> it means pulling the rules out of `coach.routes.js`, not restoring the file.
 
 ### competition.validator.js
 Competition management endpoints:

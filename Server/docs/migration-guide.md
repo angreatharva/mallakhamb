@@ -287,12 +287,27 @@ Utilities in the legacy `utils/` folder should be moved to the organized `src/ut
 |---|---|
 | `utils/generateOTP.js` | `src/utils/auth/otp.util.js` |
 | `utils/generateToken.js` | `src/utils/auth/token.util.js` |
-| `utils/hashPassword.js` | `src/utils/auth/password.util.js` |
+| `utils/hashPassword.js` | *(dropped — see below)* |
 | `utils/sanitize.js` | `src/utils/validation/sanitization.util.js` |
 | `utils/pagination.js` | `src/utils/data/pagination.util.js` |
 | `utils/accountLockout.js` | `src/utils/security/account-lockout.util.js` |
 
 Each utility module exports named functions. Update imports in services and middleware to use the new paths.
+
+Two of these landings turned out to be dead ends and have since been deleted —
+nothing ever required either file:
+
+- `src/utils/auth/password.util.js`. Password strength is enforced at the
+  request boundary by `password()` in `src/validators/common.validator.js`
+  (min 8, upper, lower, digit). The util demanded a special character on top of
+  that, which reads as the policy but was never applied to a single request.
+  Hashing itself belongs to the models' `pre('save')` hooks.
+- `src/utils/validation/score-validation.util.js`. Its 0–10 bound is the same
+  one `scoring.validator.js` already applies to every submitted score.
+
+Both are the migration hazard worth naming: a file arrives at its new home, its
+last caller is refactored away, and it stays on as documentation of a rule that
+is not running.
 
 ---
 
