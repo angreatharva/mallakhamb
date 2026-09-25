@@ -35,6 +35,50 @@ describe('copRules — apparatus combination checklists', () => {
   it('defaults unknown apparatus to the Pole checklist', () => {
     expect(getCombinationChecklist('nonsense')).toBe(getCombinationChecklist('Pole Mallakhamb'));
   });
+
+  /*
+   * Transcribed from COP Mallakhamb.pdf §2.3.2.1–2.3.2.3 (PDF p.28). Judges read
+   * the slip against the printed Code, so a paraphrase — which is what shipped
+   * before — is a defect even when every penalty is right. Also pins each
+   * penalty to its own requirement, which the sum above cannot.
+   */
+  it.each([
+    ['Pole Mallakhamb', [
+      ['All parts of the Pole should be properly utilized.', 0.10],
+      ["One Acrobatic element of 'B' part should be executed from both sides.", 0.20],
+      ["Continuous 3 Acrobatic elements of which at least one should be 'B' part", 0.20],
+      ['At least one Vertical Hold part.', 0.20],
+      ['At least one Horizontal Hold part.', 0.20],
+      ['One Hold part demonstrating flexibility of back bone.', 0.10],
+      ['At least B mount.', 0.10],
+      ['At least C dismounts.', 0.20],
+      ['At least two transitions from one hold position to another Hold position.', 0.20],
+      ['Minimum 16 elements in one Set.', 0.10],
+    ]],
+    ['Hanging Mallakhamb', [
+      ['All parts of the Hanging Mallakhamb should be properly utilized.', 0.10],
+      ["Acrobatic element of 'A' part from both sides.", 0.20],
+      ["Continuous 3 Acrobatic elements of which at least 1 should be 'B' part", 0.20],
+      ['At least one Vertical Hold part.', 0.20],
+      ['At least one Horizontal Hold part.', 0.20],
+      ['Back bone flexibility', 0.10],
+      ['At least B mount.', 0.10],
+      ['At least C dismounts.', 0.20],
+      ['At least one transitions from one hold position to another Hold position.', 0.20],
+      ['Minimum 14 elements in one Set.', 0.10],
+    ]],
+    ['Rope Mallakhamb', [
+      ['At Least once the rope should be held in legs at 4 meter height', 0.20],
+      ['At least 2 hold parts showing forward & backward flexibility (Both elements should be performed)', 0.30],
+      ['At least one Vertical and one Horizontal Hold part.', 0.30],
+      ['At least B-Part mount.', 0.20],
+      ['At least C-Part Dismount.', 0.20],
+      ['At least one Strength Part', 0.20],
+      ['Minimum 18 elements in one Set', 0.20],
+    ]],
+  ])('%s quotes the COP combination requirements word for word', (apparatus, expected) => {
+    expect(getCombinationChecklist(apparatus).map((i) => [i.rule, i.penalty])).toEqual(expected);
+  });
 });
 
 describe('copRules — computeCombinationTotal', () => {

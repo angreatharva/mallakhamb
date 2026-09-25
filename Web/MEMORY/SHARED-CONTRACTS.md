@@ -90,11 +90,11 @@ diffing table shapes — this survives either side refactoring an
 if-ladder into a data table), then diffs `combinationChecklists` by id
 and `penalty` per apparatus. Checklist **rule text** is intentionally
 excluded from `differences` and reported separately as
-`textDifferences` — the two sides already disagree cosmetically
-(server: `"One 'B' acrobatic element executed from both sides"`,
-client: `"...element from both sides"`, copRulesSync.js:22-26) and a
-naive deep-equal would false-alarm on day one, which is how alarms get
-ignored.
+`textDifferences` — a reworded requirement changes no score, so it must
+not raise the runtime drift alarm. Since 2026-09-25 both stacks quote
+COP Mallakhamb.pdf §2.3.2.1–2.3.2.3 verbatim, and the wording is pinned
+in CI instead: `copRulesSync.test.js` requires `textDifferences` to be
+empty, and `copRules.test.js` holds the transcription itself.
 
 **It does not compare `calculateAverageMarks` or
 `resolveDifficultyValue` output at all** — see next section.

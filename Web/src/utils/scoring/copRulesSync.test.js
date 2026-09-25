@@ -28,15 +28,11 @@ describe('the two stacks agree on the COP rules', () => {
     expect(result.inSync).toBe(true);
   });
 
-  it('the known rule-text differences are cosmetic and do not fail the check', () => {
-    const result = compareCopRules(serverPayload);
-
-    // e.g. "One 'B' acrobatic element executed from both sides" (server) vs
-    // "...element from both sides" (client). No score depends on this string,
-    // and failing on it would make the alarm wrong on day one — which is how
-    // alarms get ignored.
-    expect(result.inSync).toBe(true);
-    expect(Array.isArray(result.textDifferences)).toBe(true);
+  it('quotes the same COP wording for every checklist item', () => {
+    // Both stacks quote COP §2.3.2 verbatim, so there is one right wording,
+    // not two paraphrases. Runtime still treats text-only drift as
+    // informational (no score depends on it); CI does not let it land.
+    expect(compareCopRules(serverPayload).textDifferences).toEqual([]);
   });
 });
 

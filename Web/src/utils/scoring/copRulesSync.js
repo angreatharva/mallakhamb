@@ -19,13 +19,11 @@
  * stay authoritative for AVAILABILITY. Drift stops being silent, and scoring
  * keeps working when the network does not.
  *
- * IMPORTANT: the two stacks already differ in checklist RULE TEXT — e.g.
- * "One 'B' acrobatic element executed from both sides" (server) versus
- * "One 'B' acrobatic element from both sides" (client). That difference is
- * cosmetic and affects no score. A naive deep-equal would flag it on day one,
- * and an alarm that is wrong on day one is an alarm everybody learns to ignore.
- * Scoring-relevant values are therefore compared strictly and reported as
- * differences; rule text is reported separately as informational.
+ * Checklist RULE TEXT is reported separately, as informational, never as a
+ * difference: a reworded requirement changes no score, so it must not raise a
+ * scoring-drift alarm at runtime. The wording is pinned in CI instead — both
+ * stacks quote COP §2.3.2 verbatim, and copRulesSync.test.js requires them to
+ * agree word for word. Scoring-relevant values are compared strictly here.
  */
 
 import { logger } from '@/infrastructure/logger';

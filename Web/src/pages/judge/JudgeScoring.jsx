@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X
+  Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -193,6 +193,37 @@ const CheckRow = ({ checked, onChange, label, penalty }) => (
     {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>{penalty.toFixed(2)}</span>}
   </label>
 );
+
+/**
+ * Ticks every combination requirement at once, or clears them all when every
+ * one is already ticked. Mixed while only some are, so a routine that met
+ * nearly everything is one tap to select all and one to untick the misses.
+ */
+const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
+  const all = itemCount > 0 && metCount === itemCount;
+  const some = metCount > 0 && !all;
+  const inputRef = useRef(null);
+  // `indeterminate` has no HTML attribute; it can only be set on the element.
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = some;
+  }, [some]);
+  return (
+    <label className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px] ${className}`}
+      style={{
+        background: all ? 'rgba(34,197,94,0.08)' : 'rgba(168,85,247,0.08)',
+        borderColor: all ? 'rgba(34,197,94,0.3)' : 'rgba(168,85,247,0.3)',
+      }}>
+      <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
+        style={{ borderColor: all || some ? J.green : 'rgba(255,255,255,0.2)', background: all ? J.green : 'transparent' }}>
+        {all && <CheckCircle className="w-3.5 h-3.5 text-white" aria-hidden="true" />}
+        {some && <Minus className="w-3.5 h-3.5" style={{ color: J.green }} aria-hidden="true" />}
+      </div>
+      <input ref={inputRef} type="checkbox" checked={all} onChange={onChange} className="sr-only" />
+      <span className="text-sm font-bold text-white">Select all</span>
+      <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>{metCount} / {itemCount}</span>
+    </label>
+  );
+};
 
 /**
  * The judge's own scoring slip.
@@ -465,6 +496,17 @@ const JudgeSlip = () => {
 
   const handleCombination = (itemId) => {
     const checked = { ...scores.combination.checked, [itemId]: !scores.combination.checked[itemId] };
+    const total = computeCombinationTotal(selectedApparatus, checked);
+    setScores({ ...scores, combination: { checked, total } });
+  };
+
+  const combinationMet = combinationChecklist.filter((item) => scores.combination.checked[item.id]).length;
+
+  // Select all: tick every requirement, or clear them when all are ticked.
+  const handleCombinationAll = () => {
+    const tick = combinationMet < combinationChecklist.length;
+    const checked = { ...scores.combination.checked };
+    combinationChecklist.forEach((item) => { checked[item.id] = tick; });
     const total = computeCombinationTotal(selectedApparatus, checked);
     setScores({ ...scores, combination: { checked, total } });
   };
@@ -761,6 +803,8 @@ const JudgeSlip = () => {
                           </div>
 
                           <div className="space-y-2 pt-1">
+                            <SelectAllRow metCount={combinationMet} itemCount={combinationChecklist.length}
+                              onChange={handleCombinationAll} />
                             {combinationChecklist.map((item) => (
                               <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
                                 onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
@@ -931,6 +975,8 @@ const JudgeSlip = () => {
                         <span className="text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
+                        <SelectAllRow metCount={combinationMet} itemCount={combinationChecklist.length}
+                          onChange={handleCombinationAll} className="col-span-2" />
                         {combinationChecklist.map((item) => (
                           <CheckRow key={item.id} checked={scores.combination.checked[item.id]}
                             onChange={() => handleCombination(item.id)} label={item.rule} penalty={item.penalty} />
