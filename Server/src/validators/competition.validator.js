@@ -57,6 +57,12 @@ const createCompetition = () => {
         }
         return true;
       }),
+    // Per-gender apparatus; the service validates the contents and derives
+    // `apparatusConfig` from it (utils/data/competition-apparatus.util).
+    body('apparatusByGender')
+      .optional()
+      .isObject()
+      .withMessage('apparatusByGender must be an object keyed by competition type'),
     body('place')
       .trim()
       .notEmpty()
@@ -158,6 +164,12 @@ const updateCompetition = () => {
         }
         return true;
       }),
+    // Per-gender apparatus; the service validates the contents and derives
+    // `apparatusConfig` from it (utils/data/competition-apparatus.util).
+    body('apparatusByGender')
+      .optional()
+      .isObject()
+      .withMessage('apparatusByGender must be an object keyed by competition type'),
     body('place')
       .optional()
       .trim()

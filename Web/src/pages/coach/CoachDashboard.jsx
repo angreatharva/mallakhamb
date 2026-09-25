@@ -12,8 +12,8 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS } from '@/styles/tokens';
-import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
-import { apparatusFor } from '@/utils/scoring/apparatus';
+import { apparatusFor, offeredApparatus } from '@/utils/scoring/apparatus';
+import { countedScoresFor } from '@/utils/scoring/teamSize';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -177,20 +177,15 @@ const CoachDashboard = () => {
   }, [currentCompetition?._id]);
   useEffect(() => { if (selectedGender && selectedPlayerData) setSelectedAgeGroup(null); }, [selectedGender, selectedPlayerData]);
 
-  // Extract unique apparatuses configured for the current competition by SuperAdmin
-  const availableApparatuses = Array.from(
-    new Set(
-      Object.values(currentCompetition?.apparatusConfig || {}).flat()
-    )
-  );
-  
   /*
-   * Women's competitions do not include Hanging Mallakhamb (COP §11 / 1.8.2),
-   * so it is not offered once the athlete's gender is known — the athlete is
-   * picked before the apparatus, so the gender always is.
+   * What this meet runs for the athlete's gender, across every competition
+   * type — the superadmin configures Male and Female separately. A meet saved
+   * before that split falls back to its per-type list, less Hanging Mallakhamb
+   * for women (COP §11 / 1.8.2). The athlete is picked before the apparatus,
+   * so the gender is always known here. The server narrows each competition
+   * type to what that type offers.
    */
-  const apparatusOptions = availableApparatuses
-    .filter(app => !selectedGender || isApparatusAllowedForGender(app, selectedGender.value))
+  const apparatusOptions = (selectedGender ? offeredApparatus(currentCompetition, null, selectedGender.value) : [])
     .map(app => ({ value: app, label: app }));
 
   /**
@@ -310,6 +305,16 @@ const CoachDashboard = () => {
       return toast.error('Please select player, age group, and at least one apparatus');
     }
     const { age } = selectedPlayerData;
+    // The server enforces the cap; checking here saves the coach a round trip.
+    if (team?.maxTeamSize) {
+      const inCategory = (team.players || []).filter((p) =>
+        p.gender === selectedGender.value && p.ageGroup === selectedAgeGroup.value
+        && String(p.player?._id || p.player) !== String(selectedPlayer.value)
+      ).length;
+      if (inCategory >= team.maxTeamSize) {
+        return toast.error(`This is a ${team.maxTeamSize}-player team — ${selectedAgeGroup.label} already has ${team.maxTeamSize} athletes`);
+      }
+    }
     if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
       return toast.error(`Player is ${age} years old and cannot play in ${selectedAgeGroup.label} (max: ${selectedAgeGroup.maxAge})`);
     }
@@ -564,7 +569,7 @@ const CoachDashboard = () => {
             className="text-xs px-2 py-0.5 rounded-full"
             style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}
           >
-            {groupPlayers.length}
+            {team?.maxTeamSize ? `${groupPlayers.length} / ${team.maxTeamSize}` : groupPlayers.length}
           </span>
         </div>
         <div className="space-y-1.5">
@@ -684,7 +689,12 @@ const CoachDashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl font-black text-white">{team.name}</h1>
-                  <p className="text-white/40 text-sm">Team Dashboard</p>
+                  <p className="text-white/40 text-sm">
+                    Team Dashboard
+                    {team.maxTeamSize && (
+                      <> · {team.maxTeamSize}-player team (best {countedScoresFor(team.maxTeamSize)} count)</>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">

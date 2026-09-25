@@ -1,4 +1,6 @@
+const { query } = require('express-validator');
 const { objectId } = require('./common.validator');
+const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation for the anonymous public endpoints.
@@ -34,11 +36,23 @@ const getPublicScores = () => [
   objectId('teamId', 'query', { isOptional: true }),
 ];
 
+/*
+ * A Team Championship standing is one category's, so gender and age group are
+ * required along with the competition — the same reasoning as `competitionId`
+ * above: an unscoped request has no legitimate caller.
+ */
+const getPublicTeamChampionship = () => [
+  objectId('competitionId', 'query'),
+  query('gender').isIn(GENDERS).withMessage(`gender must be one of: ${GENDERS.join(', ')}`),
+  query('ageGroup').isIn(AGE_GROUPS).withMessage('A valid ageGroup is required'),
+];
+
 const getPublicTeams = () => [
   objectId('competitionId', 'query', { isOptional: true }),
 ];
 
 module.exports = {
   getPublicScores,
+  getPublicTeamChampionship,
   getPublicTeams,
 };

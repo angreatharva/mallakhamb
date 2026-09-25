@@ -6,7 +6,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
-import { APPARATUS } from '@/utils/scoring/apparatus';
+import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -409,7 +409,13 @@ const Judges = () => {
     if (!selectedCompetitionType) return [];
     const config = competitionForAgeGroups?.apparatusConfig || {};
     const configured = config[selectedCompetitionType.value];
-    const list = Array.isArray(configured) && configured.length > 0 ? configured : APPARATUS;
+    // A meet that declares its apparatus is narrowed to the chosen gender's —
+    // a Female panel has no seats on an apparatus women do not compete on.
+    const list = Array.isArray(configured) && configured.length > 0
+      ? (selectedGender
+        ? offeredApparatus(competitionForAgeGroups, selectedCompetitionType.value, selectedGender.value)
+        : configured)
+      : APPARATUS;
     return list.map((apparatus) => ({ value: apparatus, label: apparatus }));
   };
 
