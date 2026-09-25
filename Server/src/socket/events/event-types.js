@@ -13,6 +13,14 @@ module.exports = {
   // Room management events
   JOIN_SCORING_ROOM: 'join_scoring_room',
   LEAVE_SCORING_ROOM: 'leave_scoring_room',
+  // A socket auto-joins its own competition's room at connect (from the JWT's
+  // competitionId claim — see socket.manager.js:handleConnection). These two
+  // are for a socket whose context wasn't known at handshake, or that changes
+  // competition mid-session without reconnecting (e.g. right after
+  // POST /auth/set-competition mints a new token but the socket is still the
+  // old one).
+  JOIN_COMPETITION_ROOM: 'join_competition_room',
+  LEAVE_COMPETITION_ROOM: 'leave_competition_room',
   ROOM_JOINED: 'room_joined',
   ROOM_LEFT: 'room_left',
 

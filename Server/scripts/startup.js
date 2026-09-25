@@ -208,7 +208,7 @@ async function reconcileIndexes({ apply }) {
  */
 async function serve(container, config) {
   heading('Server');
-  const { initializeSocketIO } = require('../src/infrastructure/bootstrap');
+  const { initializeSocketIO, warmCache } = require('../src/infrastructure/bootstrap');
   const { createApp } = require('../src/infrastructure/createApp');
 
   const app = createApp(container);
@@ -232,6 +232,16 @@ async function serve(container, config) {
     line(`  redis unavailable, using in-memory fallback: ${error.message}`);
   });
   container.resolve('tokenInvalidationService');
+
+  // Non-blocking: warmCache() catches its own errors and always resolves, so
+  // this never delays "Ready."
+  warmCache()
+    .then((stats) => {
+      line(`  cache warmed (${stats.errors?.length || 0} error(s))`);
+    })
+    .catch((error) => {
+      line(`  cache warming failed to start: ${error.message}`);
+    });
 
   container.resolve('gracefulShutdownHandler').register({
     server,

@@ -23,7 +23,82 @@ class NotificationHandler {
    * Register all notification event handlers
    */
   register() {
+    this.socketManager.registerEventHandler(
+      EventTypes.JOIN_COMPETITION_ROOM,
+      this.handleJoinCompetitionRoom.bind(this)
+    );
+    this.socketManager.registerEventHandler(
+      EventTypes.LEAVE_COMPETITION_ROOM,
+      this.handleLeaveCompetitionRoom.bind(this)
+    );
+
     this.logger.info('Notification event handlers registered');
+  }
+
+  /**
+   * Join `competition_{competitionId}`.
+   *
+   * A socket already auto-joins its own competition at connect (from the
+   * JWT claim — see socket.manager.js:handleConnection), so this is for the
+   * case that isn't covered by that: no competition selected yet at
+   * handshake, or a competition switch mid-session (`/auth/set-competition`
+   * mints a new token, but the existing socket connection keeps the old
+   * claim until it reconnects).
+   *
+   * Admins/superadmins may join any competition's room (they can legitimately
+   * be scoped to more than one, or none yet). Coach/player/judge sockets may
+   * only join the room matching their OWN authenticated competition context
+   * — `socket.competitionId`, the same trusted claim the auto-join above
+   * uses — so this cannot be used to eavesdrop on a different meet.
+   *
+   * @param {Socket} socket
+   * @param {{competitionId: string}} data
+   */
+  async handleJoinCompetitionRoom(socket, data) {
+    const { competitionId } = data || {};
+
+    if (!competitionId) {
+      throw new Error('competitionId required');
+    }
+
+    const roomId = `competition_${competitionId}`;
+
+    const validator = async (sock) => {
+      if (['admin', 'superadmin'].includes(sock.userType)) {
+        return true;
+      }
+      return sock.competitionId != null && String(sock.competitionId) === String(competitionId);
+    };
+
+    const joined = await this.socketManager.joinRoom(socket, roomId, validator);
+
+    if (joined) {
+      socket.emit(EventTypes.ROOM_JOINED, {
+        roomId,
+        message: 'Joined competition room',
+      });
+    }
+  }
+
+  /**
+   * Leave `competition_{competitionId}`.
+   * @param {Socket} socket
+   * @param {{competitionId: string}} data
+   */
+  async handleLeaveCompetitionRoom(socket, data) {
+    const { competitionId } = data || {};
+
+    if (!competitionId) {
+      throw new Error('competitionId required');
+    }
+
+    const roomId = `competition_${competitionId}`;
+    this.socketManager.leaveRoom(socket, roomId);
+
+    socket.emit(EventTypes.ROOM_LEFT, {
+      roomId,
+      message: 'Left competition room',
+    });
   }
 
   /**

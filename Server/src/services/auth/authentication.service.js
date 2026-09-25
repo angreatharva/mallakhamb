@@ -441,6 +441,89 @@ class AuthenticationService {
   }
 
   /**
+   * Reset password with a URL token (legacy flow, kept for the routed
+   * `POST /api/auth/reset-password/:token` endpoint).
+   *
+   * Unlike the OTP flow, the caller does not identify the account by email —
+   * the token itself is the lookup key. It is matched against the same
+   * `resetPasswordToken`/`resetPasswordExpires` pair the OTP flow writes, so
+   * both flows share one storage mechanism; only the read path differs.
+   * Tried across user types in the same order as `findUserAcrossTypes`.
+   * @param {string} token - Reset token from the URL
+   * @param {string} newPassword - New password
+   * @returns {Promise<void>}
+   * @throws {ValidationError} If the token is missing, invalid, or expired
+   */
+  async resetPasswordWithToken(token, newPassword) {
+    try {
+      if (!token) {
+        throw new ValidationError('Reset token is required');
+      }
+
+      // Validate password strength (MED-9) — same rule as the OTP flow.
+      if (!newPassword || newPassword.length < 8) {
+        throw new ValidationError('Password must be at least 8 characters long');
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        throw new ValidationError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+      }
+
+      // MED-3: read the configured cost rather than hardcoding one, so a
+      // password set through this flow is hashed exactly as strongly as one
+      // set at registration.
+      const salt = await bcrypt.genSalt(securitySetting('security.bcryptRounds', DEFAULT_BCRYPT_ROUNDS));
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      const repositoriesByType = [
+        ['player', this.playerRepository],
+        ['coach', this.coachRepository],
+        ['admin', this.adminRepository],
+        ['judge', this.judgeAccountRepository],
+      ];
+
+      for (const [userType, repository] of repositoriesByType) {
+        if (!repository?.model?.findOneAndUpdate) continue;
+
+        // Atomic find-and-update: the token is the only thing distinguishing
+        // "this is the account" from "a stranger", so the condition and the
+        // write happen in one step — the same TOCTOU-safe shape as
+        // resetPasswordWithOTP — instead of a read-then-decide that a
+        // concurrent replay of the same (now-cleared) token could race.
+        const updatedUser = await repository.model.findOneAndUpdate(
+          {
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: new Date() },
+          },
+          {
+            $set: {
+              password: hashedPassword,
+              resetPasswordToken: null,
+              resetPasswordExpires: null,
+            },
+          },
+          { new: true }
+        );
+
+        if (updatedUser) {
+          this.logger.info('Password reset successful (token flow)', {
+            userId: updatedUser._id,
+            userType,
+          });
+          return;
+        }
+      }
+
+      throw new ValidationError('Invalid or expired reset token');
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      this.logger.error('Password reset (token) error', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
    * Set competition context for user
    * @param {string} userId - User ID
    * @param {string} userType - User type

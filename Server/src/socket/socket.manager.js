@@ -178,6 +178,24 @@ class SocketManager {
       await this.autoJoinJudgeRoom(socket);
     }
 
+    // Auto-join this socket's own competition room, from the trusted JWT
+    // claim stamped at handshake. Without this, nothing ever joins
+    // `competition_{id}` — several real broadcasts (team approval/rejection,
+    // age-group start/end, score lock/unlock, competition update) target this
+    // room and previously reached nobody. A socket with no competitionId
+    // claim (e.g. a coach/admin who hasn't selected one yet) joins nothing
+    // here; see handleJoinCompetitionRoom for the explicit join a client can
+    // call after `/auth/set-competition`.
+    if (socket.competitionId) {
+      const competitionRoomId = `competition_${socket.competitionId}`;
+      socket.join(competitionRoomId);
+      this.logger.debug('Socket auto-joined its competition room', {
+        socketId: socket.id,
+        userId: socket.userId,
+        roomId: competitionRoomId,
+      });
+    }
+
     // Register all event handlers for this socket
     this.registerSocketEvents(socket);
 

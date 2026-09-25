@@ -239,4 +239,21 @@ describe('reconcileWebhook', () => {
     // the neighbouring squad back over the top of it.
     expect(theirs.paymentStatus).toBe('pending');
   });
+
+  test('a redelivered webhook for the same payment does not create a second Transaction', async () => {
+    // Razorpay retries a delivery until it gets a 200. Both deliveries carry
+    // the identical event, so this simulates a genuine redelivery rather than
+    // two different payments.
+    const event = capturedEvent(ORDER_ID, 250000);
+
+    const first = await deliver(event);
+    const second = await deliver(event);
+
+    expect(first.processed).toBe(true);
+    expect(second.processed).toBe(true);
+
+    const transactions = await Transaction.find({ competition: competitionId }).lean();
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0].metadata.razorpay_payment_id).toBe('pay_TEST01');
+  });
 });

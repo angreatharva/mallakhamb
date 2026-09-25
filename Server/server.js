@@ -8,7 +8,7 @@ const config = require('./src/config/config-manager');
 // Load and validate configuration at startup
 config.load();
 
-const { bootstrap, initializeSocketIO } = require('./src/infrastructure/bootstrap');
+const { bootstrap, initializeSocketIO, warmCache } = require('./src/infrastructure/bootstrap');
 const { createApp } = require('./src/infrastructure/createApp');
 
 // Bootstrap application (initialize DI container and services)
@@ -68,6 +68,18 @@ if (require.main === module) {
     
     // Eagerly resolve the token invalidation service so the shim is wired
     container.resolve('tokenInvalidationService');
+
+    // Warm frequently-accessed caches (active/upcoming competitions, teams).
+    // Non-blocking and non-fatal: warmCache() already catches its own errors
+    // and returns a stats object rather than throwing, so a slow or failing
+    // warm-up never delays or blocks the server from serving.
+    warmCache()
+      .then((stats) => {
+        logger.info('Cache warmed', stats);
+      })
+      .catch((err) => {
+        logger.error('Cache warming failed to start', { error: err.message });
+      });
 
     /*
      * Bring every finished meet's `status` up to date, then keep it that way.

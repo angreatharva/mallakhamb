@@ -1,0 +1,117 @@
+---
+doc: 15-DEPLOYMENT
+covers:
+  - render.yaml
+  - docs/RELEASE-RUNBOOK.md
+read_when: "deploying, rolling back, or changing render.yaml/deployment-relevant env vars"
+depends_on: [01-ARCHITECTURE, 12-CONFIG-AND-ENV]
+verified_against_commit: f0bdc1d
+last_verified: 2026-09-23
+---
+
+## Topology
+
+Two Render services from one `render.yaml` at the repo root:
+
+- **`mallakhamb-server`** — `type: web`, `env: node`, `region: oregon`,
+  `plan: free`, `rootDir: Server`, `buildCommand: npm install`,
+  `startCommand: npm start` (→ `scripts/startup.js`, see
+  [01-ARCHITECTURE.md](01-ARCHITECTURE.md)).
+- **`mallakhamb-web`** — `type: web`, `env: static`, `rootDir: Web`,
+  `buildCommand: npm install && npm run build`,
+  `staticPublishPath: ./dist`, SPA rewrite (`/* → /index.html`), and its own
+  security headers (`X-Frame-Options: DENY`, `Content-Security-Policy:
+  frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy`, `Permissions-Policy`, long-cache `Cache-Control` on
+  `/assets/*`).
+
+The SPA and API are **different sites on the Public Suffix List** — see
+*Cross-Site Cookie Topology* and
+[06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md) for why this makes CSRF
+and `SameSite=None` cookies load-bearing, not optional, in production.
+
+## Why there's no `preDeployCommand`
+
+`render.yaml` used to set `preDeployCommand: npm run prepare:db` to apply
+migrations once per deploy — pre-deploy commands are a **paid** Render
+feature, and this service is on `plan: free`, so it silently never ran while
+looking configured. Removed as "dead configuration that implies a guarantee
+is worse than none." `MIGRATE_ON_START=true` does the job instead — safe
+here specifically because the free plan runs **exactly one instance**, which
+is precisely the condition that makes per-instance migration application
+safe (no race between instances). **If this service is ever moved to a paid
+plan and scaled past one instance, unset `MIGRATE_ON_START` and restore
+`preDeployCommand`** — see [01-ARCHITECTURE.md](01-ARCHITECTURE.md) for the
+full reasoning.
+
+## Env vars set in `render.yaml`
+
+Static values (safe to be in the Blueprint): `NODE_ENV=production`,
+`PORT=10000`, `MIGRATE_ON_START=true`, `NGROK_ENABLED=false` (vestigial, see
+[12-CONFIG-AND-ENV.md](12-CONFIG-AND-ENV.md)), `JWT_EXPIRES_IN=24h`,
+`CORS_ORIGINS`/`CLIENT_URL`/`FRONTEND_URL`/`PRODUCTION_URL` all pointing at
+`https://mallakhamb-web.onrender.com`.
+
+**Dashboard-owned (`sync: false`) — deliberately NOT in the Blueprint,
+because a sync would silently reset an incident mitigation:**
+- `MONGODB_URI`, `JWT_SECRET` — sensitive.
+- `CSRF_ENABLED` — dashboard-owned so a CSRF-caused login outage can be
+  rolled back (flip to `false`) by restarting the service, without a
+  redeploy and without reverting any other fix (see Release Runbook §6).
+  **Default when unset is `true`** (config-manager's own default), so
+  leaving the dashboard field blank is the secure resting state.
+- `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` —
+  sensitive; note the webhook secret var is actually unused (see
+  [12-CONFIG-AND-ENV.md](12-CONFIG-AND-ENV.md)).
+- `DISCOUNT_CODE_ENABLED`/`DISCOUNT_CODE` — dashboard-owned for the same
+  reason as CSRF: turning the discount off is an incident action; both
+  unset means disabled, the correct resting state (server refuses to boot
+  with the switch on and the code blank).
+- `REDIS_URL` — optional; unset means the in-memory token-invalidation
+  fallback, per-process, reset on every deploy.
+- `EMAIL_USER`/`EMAIL_PASS`/`RESEND_API_KEY`/`RESEND_FROM_EMAIL` — sensitive.
+
+## Deploy sequence
+
+1. Push to the branch Render watches.
+2. Render runs `npm install` in `Server/` (`buildCommand`).
+3. Render runs `npm start` (`scripts/startup.js`): validates config →
+   connects DB → **applies pending migrations** (because
+   `MIGRATE_ON_START=true`) → reconciles indexes → serves. See
+   [01-ARCHITECTURE.md](01-ARCHITECTURE.md) for the exact staged sequence
+   and what makes it fail vs. degrade gracefully.
+4. Static site build (`Web/`) runs in parallel/independently, publishes
+   `dist/`.
+
+## Rollback
+
+- **Config-only incident** (CSRF, discount code): flip the dashboard env var
+  and restart — no redeploy, no code rollback, other fixes stay in place.
+  This is the documented reason those two vars are `sync: false`.
+- **Code rollback**: revert the deploy on Render (redeploys the previous
+  commit) — this also reverts any migration applied since, which
+  `scripts/startup.js`'s own migration semantics don't undo automatically;
+  check `docs/RELEASE-RUNBOOK.md` for the specific migration-rollback
+  procedure if one was applied between the two versions.
+
+## Stale docs
+
+- **`docs/deployment-guide.md`** recommends `node server.js` /
+  `pm2 start server.js` / a Dockerfile `CMD ["node","server.js"]`, and
+  claims Render "starts with `node server.js`" — the actual production
+  entrypoint is `npm start` → `scripts/startup.js` (the supervised path with
+  config validation, migration reporting/application, and index
+  reconciliation). Also documents an "Emergency Rollback with Feature
+  Flags" procedure depending on the deleted feature-flag middleware (see
+  GOTCHAS.md). Predates the whole audit-remediation branch — no mention of
+  CSRF, the cross-site cookie topology, or the unused
+  `RAZORPAY_WEBHOOK_SECRET`.
+- **`docs/RELEASE-RUNBOOK.md`** and **`docs/AUDIT.md`** are both current and
+  consistent with the code and with each other — prefer these over
+  `deployment-guide.md` for anything deploy-related.
+
+## Open questions
+- ⚠️ UNVERIFIED: whether `docs/RELEASE-RUNBOOK.md`'s specific migration
+  rollback steps were re-verified against the current migration set
+  (001-010) — it was read and found consistent in this pass, but not
+  exhaustively cross-checked migration-by-migration.

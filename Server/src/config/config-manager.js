@@ -121,8 +121,7 @@ class ConfigManager {
       },
       features: {
         enableCaching: this.getBoolean('ENABLE_CACHING', true),
-        enableMetrics: this.getBoolean('ENABLE_METRICS', true),
-        flags: this.getFeatureFlags()
+        enableMetrics: this.getBoolean('ENABLE_METRICS', true)
       },
       redis: {
         url: this.getString('REDIS_URL', ''),
@@ -331,22 +330,6 @@ class ConfigManager {
       return [];
     }
     return ['http://localhost:5173', 'http://localhost:3000'];
-  }
-
-  /**
-   * Get feature flags from environment
-   * Supports JSON string in FEATURES_FLAGS environment variable
-   * @returns {Object}
-   */
-  getFeatureFlags() {
-    const flagsJson = this.getString('FEATURES_FLAGS', '{}');
-    
-    try {
-      return JSON.parse(flagsJson);
-    } catch (error) {
-      console.warn('Failed to parse FEATURES_FLAGS, using empty object:', error.message);
-      return {};
-    }
   }
 
   /**

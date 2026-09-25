@@ -1,0 +1,121 @@
+---
+doc: modules/auth
+covers:
+  - src/services/auth/**
+  - src/utils/auth/**
+  - src/utils/security/**
+  - src/services/email/**
+read_when: "changing auth service internals, token/OTP mechanics, or email delivery"
+depends_on: [06-AUTH-AND-SECURITY]
+verified_against_commit: f0bdc1d
+last_verified: 2026-09-23
+---
+
+Flow-level narrative (login/refresh/logout/reset sequences, cookie
+precedence, lockout, CSRF, competition scope/lock) lives in
+[06-AUTH-AND-SECURITY.md](../06-AUTH-AND-SECURITY.md) — this doc is the
+file-by-file export map.
+
+## `authentication.service.js` (`AuthenticationService`)
+
+| Method | Contract |
+|---|---|
+| `login(email, password, userType)` | Full credential/lockout flow, returns `{user, token}` |
+| `register(userData, userType)` | Creates via the type's repository, returns `{user, token}` |
+| `forgotPassword(email)` | Cross-type lookup, triggers OTP email; silent no-op if not found |
+| `verifyOTP(email, otp)` | Cross-type lookup + `otpService.verifyOTP` |
+| `resetPasswordWithOTP(email, otp, newPassword)` | Verify, enforce password policy, atomic replay-safe update, clear OTP |
+| `setCompetitionContext(userId, userType, competitionId)` | Mints a competition-scoped token; **refuses judges** (`AuthorizationError`); enforces `mayActOnCompetition` for admins |
+| `getAssignedCompetitions(userId, userType)` | Role-specific query — admin/superadmin/judge/coach/player each branch differently |
+| `logout(userId, token)` | Records the logout timestamp; the `token` argument is read but functionally inert (only `hasToken` is logged) |
+| `findUserByType`/`findUserAcrossTypes`/`isEmailTaken`/`verifyPassword`/`getRepositoryByType` | Lookups/helpers |
+| `persistLockoutState(userType, userId, state)` | Direct `model.updateOne` (bypasses full validation) so an unrelated schema error can't turn a failed login into a 500 |
+
+## `authorization.service.js` (`AuthorizationService`) — much smaller than its own README claims
+
+| Method | Contract |
+|---|---|
+| `canJudgeScore(judgeAccountId, competitionId)` | True iff the account holds ≥1 panel assignment at that competition |
+| `getJudgeDetails(judgeAccountId)` | Merges `JudgeAccount` profile with assignment data, for the socket layer |
+
+Real role guards live in `auth.middleware.js`, not here — a whole RBAC
+surface (`checkRole`, `checkMinimumRole`, `checkCompetitionAccess`,
+`checkResourceOwnership`, `checkResourceAccess`, a `roleHierarchy` map) was
+deliberately deleted as dead code; the file's own header comment documents
+this, but the service's README was never updated — see GOTCHAS.md.
+
+## `token.service.js` (`TokenService`)
+
+| Method | Contract |
+|---|---|
+| `generateToken(userId, userType, competitionId?)` | Signs a JWT, `jwt.expiresIn` default 24h |
+| `verifyToken(token)` | Verify+decode, maps JWT errors to `AuthenticationError` |
+| `refreshToken(token)` | Legacy verify-then-resign (not the cookie-based refresh flow) |
+| `shouldRotateToken`/`rotateTokenIfNeeded(decoded)` | 12h-threshold silent access-token re-sign |
+| `decodeToken(token)` | Unverified decode, for logging |
+| `generateRefreshToken(userId, userType, family?, competitionId?)` | Random 40-byte hex, SHA-256 hashed for storage, 7-day expiry |
+| `rotateRefreshToken(rawToken)` | Reuse-detects, rotates, re-issues both tokens preserving `competitionId` |
+| `revokeAllRefreshTokens(userId)` | Marks all non-revoked tokens revoked |
+
+## `otp.service.js` (`OTPService`)
+
+`generateOTPCode` (crypto.randomInt, N digits per `OTP_LENGTH`),
+`generateAndSendOTP(user, userType)` (persists **plaintext** on
+`resetPasswordToken`/`resetPasswordExpires` — see GOTCHAS.md — emails via
+`emailService.sendOTP`, or dev-logs if no email service configured),
+`verifyOTP(user, otp, userType)` (presence+expiry+equality, no attempt
+cap), `clearOTP`, `getRepositoryByType` (includes judge account resolution).
+
+## `token-invalidation.service.js` (`TokenInvalidationService`)
+
+Redis-backed with a real, tested in-memory fallback — `_isRedisAvailable()`
+gates every Redis call, every branch try/catches and falls through.
+`recordLogout(userId)`/`isTokenLoggedOut(userId, iat)`/`clearLogoutRecord` —
+the login/logout half. `recordAdminAssignmentChange(adminId)`/
+`isTokenInvalidated(adminId, iat)`/`clearAdminAssignmentChange` — a
+**separate concern**, admin-competition-assignment-change invalidation
+(⚠️ UNVERIFIED whether anything actually calls this half — not traced).
+`getAdminsWithPendingChanges()` (in-memory-only, unreliable under Redis, by
+its own documentation). `clearAll()` — testing helper, SCANs and deletes
+every prefixed Redis key too.
+
+## Auth-adjacent utils
+
+`utils/auth/otp.util.js`, `token.util.js`, `user-repository-resolver.js` —
+shared helpers the services above call into.
+`utils/security/cookie.util.js` — `COOKIE_NAMES`, `crossSiteCookiePolicy`,
+`setAccessTokenCookie`, `isProductionLike`. `utils/security/login-response.util.js` —
+`sendLoginResponse` (sets both cookies, mints the refresh token, still
+returns `token` in the body). `utils/security/login-security.util.js` —
+`equalizeFailedLoginTiming`, `lockoutPolicy()`. `utils/security/account-lockout.util.js` —
+`getLockoutState`, `registerFailedAttempt`, `clearedLockoutState`. `utils/security/token-invalidation.util.js` —
+the synchronous-looking shim wired to `TokenInvalidationService` via
+`setTokenInvalidationService` at bootstrap.
+
+## Email — `src/services/email/`
+
+`email.service.js` selects a provider (`email.provider` config —
+`'nodemailer'` or `'resend'`) and delegates to `nodemailer.adapter.js`/
+`resend.adapter.js`, both implementing `email-provider.interface.js`.
+Templates: `templates/otp.template.js` (the only one with a real caller —
+`otp.service.js:generateAndSendOTP`), `templates/password-reset.template.js`
+and `templates/notification.template.js` (both fully implemented,
+**zero callers anywhere** — no password-reset confirmation email is ever
+sent, see GOTCHAS.md).
+
+## Change guidance
+
+- A new auth-adjacent utility belongs under `utils/auth/` or
+  `utils/security/` depending on whether it's token/OTP mechanics (auth) or
+  a cross-cutting policy (security) — follow the existing split.
+- Don't add RBAC logic to `authorization.service.js` — that pattern was
+  deliberately removed; role checks belong in `auth.middleware.js`'s
+  guards.
+
+## Open questions
+- ⚠️ UNVERIFIED: whether `TokenInvalidationService`'s admin-assignment-change
+  half (`recordAdminAssignmentChange`/`isTokenInvalidated`) has a real
+  caller anywhere in admin-management code.
+- ⚠️ UNVERIFIED: whether `AuthenticationService`'s constructor is supplied
+  `judgeAccountRepository` in production DI wiring vs. relying on its
+  `null`-defaulting fallback.

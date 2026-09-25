@@ -132,15 +132,32 @@ class PaymentService {
         });
       } catch (error) {
         /*
-         * The registration is already updated, and that is the part that
-         * matters. Throwing here would answer 5xx and make Razorpay redeliver
-         * an event that has in fact been applied.
+         * Razorpay redelivers a webhook until it gets a 200, and this handler
+         * has no delivery-id tracking of its own — the registration write
+         * above is a `$set` and idempotent by nature, but without the unique
+         * index on `metadata.razorpay_payment_id` (Transaction.js) a retry
+         * would insert a second row for the same payment. Code 11000 here
+         * means exactly that: this payment was already recorded, so treat it
+         * as success rather than a failure.
          */
-        this.logger.error('Failed to record webhook transaction', {
-          orderId,
-          event,
-          error: error.message,
-        });
+        if (error.code === 11000) {
+          this.logger.info('Webhook transaction already recorded, skipping duplicate', {
+            orderId,
+            event,
+            paymentId: paymentEntity.id,
+          });
+        } else {
+          /*
+           * Any other failure: the registration is already updated, and that
+           * is the part that matters. Throwing here would answer 5xx and make
+           * Razorpay redeliver an event that has in fact been applied.
+           */
+          this.logger.error('Failed to record webhook transaction', {
+            orderId,
+            event,
+            error: error.message,
+          });
+        }
       }
     }
 

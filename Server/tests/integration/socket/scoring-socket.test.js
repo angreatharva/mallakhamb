@@ -228,3 +228,56 @@ describe('HIGH-5 — scoring rooms over a real transport', () => {
     expect(await errored).not.toBeNull();
   });
 });
+
+/** Mint a token for a role socket auth never looks up in the DB. */
+function tokenForRole(userType, compId = competitionId) {
+  return container.resolve('tokenService')
+    .generateToken(String(new mongoose.Types.ObjectId()), userType, String(compId));
+}
+
+describe('competition rooms over a real transport', () => {
+  // Regression coverage for a live defect found while building Server/MEMORY:
+  // several real broadcasts (team approval/rejection, age-group start/end,
+  // score lock/unlock, competition update) target `competition_{id}`, and
+  // nothing ever joined that room — the broadcasts reached nobody.
+
+  test('a socket auto-joins its own competition room at connect', async () => {
+    const admin = await connect(tokenForRole('admin'));
+    const observer = await connect(tokenForRole('admin'));
+
+    const received = waitFor(observer, 'competition_updated');
+    container.resolve('socketManager').emitToRoom(
+      `competition_${competitionId}`,
+      'competition_updated',
+      { competitionId: String(competitionId) }
+    );
+
+    const payload = await received;
+    expect(payload).not.toBeNull();
+    expect(admin.connected).toBe(true);
+  });
+
+  test('an admin may explicitly join a different competition room', async () => {
+    const otherCompetitionId = new mongoose.Types.ObjectId();
+    const admin = await connect(tokenForRole('admin'));
+
+    const joined = waitFor(admin, EventTypes.ROOM_JOINED);
+    admin.emit(EventTypes.JOIN_COMPETITION_ROOM, { competitionId: String(otherCompetitionId) });
+
+    const ack = await joined;
+    expect(ack).not.toBeNull();
+    expect(ack.roomId).toBe(`competition_${otherCompetitionId}`);
+  });
+
+  test('a coach cannot join a competition room other than their own', async () => {
+    const otherCompetitionId = new mongoose.Types.ObjectId();
+    const coach = await connect(tokenForRole('coach', competitionId));
+
+    const errored = waitFor(coach, 'error', 1000);
+    const joined = waitFor(coach, EventTypes.ROOM_JOINED, 1000);
+    coach.emit(EventTypes.JOIN_COMPETITION_ROOM, { competitionId: String(otherCompetitionId) });
+
+    expect(await joined).toBeNull();
+    expect(await errored).not.toBeNull();
+  });
+});

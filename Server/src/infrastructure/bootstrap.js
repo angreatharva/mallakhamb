@@ -36,7 +36,6 @@ const PerformanceOrderService = require('../services/competition/performance-ord
 const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
-const FeatureFlagService = require('../services/feature-flags/feature-flag.service');
 const PaymentService = require('../services/payment/payment.service');
 
 const createCompetitionController = require('../controllers/competition.controller');
@@ -103,7 +102,6 @@ function bootstrap() {
   container.register('refreshTokenRepository', (c) => new RefreshTokenRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
-  container.register('featureFlagService', (c) => new FeatureFlagService(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('tokenService', (c) => new TokenService(
     c.resolve('config'),
     c.resolve('logger'),

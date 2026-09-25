@@ -205,7 +205,7 @@ class CompetitionService {
       // Emit Socket.IO event for real-time competition update
       if (this.socketManager) {
         this.socketManager.emitToRoom(
-          `competition:${competitionId}`,
+          `competition_${competitionId}`,
           EventTypes.COMPETITION_UPDATED,
           {
             competitionId,
@@ -282,6 +282,91 @@ class CompetitionService {
         competitionId,
         error: error.message
       });
+      throw error;
+    }
+  }
+
+  /**
+   * Assign an admin to a competition (bidirectional: competition.admins AND
+   * admin.competitions both get the link, mirroring
+   * SuperAdminService.assignAdminToCompetition).
+   * @param {string} competitionId - Competition ID
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Updated competition, admins populated
+   * @throws {NotFoundError} If the competition or admin doesn't exist
+   */
+  async assignAdmin(competitionId, adminId) {
+    try {
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition || competition.isDeleted) {
+        throw new NotFoundError('Competition', competitionId);
+      }
+
+      const admin = await this.adminRepository.findById(adminId);
+      if (!admin) {
+        throw new NotFoundError('Admin', adminId);
+      }
+
+      const admins = Array.from(new Set([...(competition.admins || []).map(String), String(adminId)]));
+      await this.competitionRepository.updateById(competitionId, { admins });
+
+      const adminCompetitions = Array.from(new Set([...(admin.competitions || []).map(String), String(competitionId)]));
+      await this.adminRepository.updateById(adminId, { competitions: adminCompetitions });
+
+      this.cacheService.delete(`competition:${competitionId}`);
+      this.cacheService.deletePattern('competitions:*');
+
+      this.logger.info('Admin assigned to competition', { competitionId, adminId });
+
+      return this.competitionRepository.findById(competitionId, {
+        populate: { path: 'admins', select: 'name email role isActive' }
+      });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Assign admin error', { competitionId, adminId, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove an admin from a competition (bidirectional cleanup — the inverse
+   * of assignAdmin).
+   * @param {string} competitionId - Competition ID
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Updated competition, admins populated
+   * @throws {NotFoundError} If the competition doesn't exist
+   */
+  async removeAdmin(competitionId, adminId) {
+    try {
+      const competition = await this.competitionRepository.findById(competitionId);
+      if (!competition || competition.isDeleted) {
+        throw new NotFoundError('Competition', competitionId);
+      }
+
+      const admins = (competition.admins || []).map(String).filter((v) => v !== String(adminId));
+      await this.competitionRepository.updateById(competitionId, { admins });
+
+      const admin = await this.adminRepository.findById(adminId);
+      if (admin) {
+        const adminCompetitions = (admin.competitions || []).map(String).filter((v) => v !== String(competitionId));
+        await this.adminRepository.updateById(adminId, { competitions: adminCompetitions });
+      }
+
+      this.cacheService.delete(`competition:${competitionId}`);
+      this.cacheService.deletePattern('competitions:*');
+
+      this.logger.info('Admin removed from competition', { competitionId, adminId });
+
+      return this.competitionRepository.findById(competitionId, {
+        populate: { path: 'admins', select: 'name email role isActive' }
+      });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      this.logger.error('Remove admin error', { competitionId, adminId, error: error.message });
       throw error;
     }
   }
@@ -486,7 +571,7 @@ class CompetitionService {
       // Emit Socket.IO event for real-time status update
       if (this.socketManager) {
         this.socketManager.emitToRoom(
-          `competition:${competitionId}`,
+          `competition_${competitionId}`,
           EventTypes.COMPETITION_STATUS_UPDATED,
           {
             competitionId,
