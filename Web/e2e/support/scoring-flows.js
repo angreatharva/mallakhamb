@@ -574,7 +574,8 @@ export const overrideJudge = async (page, judgeType, { execution, unmet }) => {
   }
 
   if (execution !== undefined) {
-    await page.locator('input[type="number"]').fill(String(execution));
+    // A text field with a decimal keypad, not type="number" — see DecimalInput.
+    await page.locator('input[inputmode="decimal"]').fill(String(execution));
   }
 
   /*

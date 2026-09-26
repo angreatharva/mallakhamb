@@ -75,6 +75,55 @@ export const J = {
 
 export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
+// ─── Decimal Input ────────────────────────────────────────────────────────────
+//
+// A mark field that never shows a leading "0". A `type="number"` input bound
+// to a numeric 0 renders "0", and typing 3 then reads "03" — React will not
+// rewrite it because "03" equals 3. So the field keeps the text the judge is
+// typing, strips leading zeros ("03" → "3", "0.5" stays), shows the
+// placeholder instead of a literal 0, and reports the parsed number upward.
+// The parent may round or clamp it; when that changes the number, the text
+// is re-synced to what the parent kept.
+const toDraft = (v) => (Number(v) ? String(Number(v)) : '');
+
+export const DecimalInput = ({ value, onValueChange, onBlur, placeholder = '0.00', ...rest }) => {
+  const [draft, setDraft] = useState(() => toDraft(value));
+
+  useEffect(() => {
+    setDraft((d) => (Math.abs((parseFloat(d) || 0) - (Number(value) || 0)) < 1e-9 ? d : toDraft(value)));
+  }, [value]);
+
+  const handleChange = (e) => {
+    const text = e.target.value.replace(/,/g, '.');
+    if (!/^\d*\.?\d*$/.test(text)) return;
+    const cleaned = text.replace(/^0+(?=\d)/, '');
+    setDraft(cleaned);
+    onValueChange(parseFloat(cleaned) || 0);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      value={draft}
+      onChange={handleChange}
+      // Rounding can leave the number unchanged ("3.02" → 3.00), in which case
+      // the effect above never fires — snap the text to the kept value here.
+      onBlur={(e) => { setDraft(toDraft(value)); onBlur?.(e); }}
+      placeholder={placeholder}
+      {...rest}
+    />
+  );
+};
+
+DecimalInput.propTypes = {
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onValueChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func,
+  placeholder: PropTypes.string,
+};
+
 // ─── Mismatch Modal ───────────────────────────────────────────────────────────
 //
 // Difficulty and Combination only. A tolerance breach is a different failure —
@@ -586,10 +635,9 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                   <h4 className="font-bold text-white text-sm">Execution</h4>
                   <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC' }}>Max 4.40</span>
                 </div>
-                <input type="number" step="0.05" min="0" max="4.40"
+                <DecimalInput
                   value={editScores.execution}
-                  onChange={e => {
-                    const raw = parseFloat(e.target.value) || 0;
+                  onValueChange={raw => {
                     const v = Math.round(raw * 20) / 20;
                     setEditScores({ ...editScores, execution: Math.max(0, Math.min(4.40, v)) });
                   }}

@@ -25,7 +25,7 @@ import {
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
-  playerIdOf, normalizeBreakdown,
+  playerIdOf, normalizeBreakdown, DecimalInput,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
@@ -85,7 +85,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
   );
 };
 
-const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
+const ScoreInput = ({ label, value, onChange, hint }) => {
   const [focused, setFocused] = useState(false);
   return (
     <div>
@@ -110,19 +110,13 @@ const ScoreInput = ({ label, value, onChange, max, step = 0.1, hint }) => {
             -moz-appearance: textfield;
           }
         `}</style>
-        <input
-          type="number"
-          inputMode="decimal"
-          step={step}
-          min="0"
-          max={max}
+        <DecimalInput
           value={value}
-          onChange={onChange}
+          onValueChange={onChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className="w-full px-4 py-3 text-2xl font-black text-center outline-none bg-transparent no-spinners"
           style={{ color: '#fff', background: 'rgba(255,255,255,0.04)', fontSize: '1.5rem' }}
-          placeholder="0.00"
         />
       </motion.div>
     </div>
@@ -845,9 +839,8 @@ const JudgeSlip = () => {
                               <h3 className="font-black text-white text-base">Execution Score</h3>
                               <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
                             </div>
-                            <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
-                              onChange={e => {
-                                const raw = parseFloat(e.target.value) || 0;
+                            <ScoreInput label="" value={scores.execution}
+                              onChange={raw => {
                                 const v = Math.round(raw * 20) / 20;
                                 setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
                               }} />
@@ -931,9 +924,8 @@ const JudgeSlip = () => {
                           <h3 className="font-black text-white text-sm">Execution</h3>
                           <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
                         </div>
-                        <ScoreInput label="" value={scores.execution} max={4.40} step={0.05}
-                          onChange={e => {
-                            const raw = parseFloat(e.target.value) || 0;
+                        <ScoreInput label="" value={scores.execution}
+                          onChange={raw => {
                             const v = Math.round(raw * 20) / 20;
                             setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
                           }} />
