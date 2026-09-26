@@ -29,6 +29,7 @@
 
 const { NotFoundError, ValidationError, BusinessRuleError } = require('../../errors');
 const { MINIMUM_PANEL_SEATS } = require('../../utils/data/judge-assignment.util');
+const { maySeatTogether } = require('../../config/judge-seats');
 /*
  * Positive whitelists, applied HERE rather than in the controller: `getJudges`
  * is reached by the admin router, the judge router and the public one, so
@@ -112,6 +113,7 @@ class JudgePanelService {
             ageGroup: judgeData.ageGroup,
             competitionTypes: judgeData.competitionTypes,
             apparatus: judgeData.apparatus,
+            judgeType: judgeData.judgeType,
             excludeJudgeId: existing?._id,
           });
 
@@ -287,6 +289,7 @@ class JudgePanelService {
     ageGroup,
     competitionTypes,
     apparatus,
+    judgeType = null,
     excludeJudgeId = null,
   }) {
     if (!judgeAccountId || !competitionId || !gender || !ageGroup) return;
@@ -314,7 +317,10 @@ class JudgePanelService {
     }
 
     const held = await this.judgeRepository.find(query, { select: '_id judgeType' });
-    const clash = held.find((row) => String(row._id) !== String(excludeJudgeId || ''));
+    // The one exception: the Scorer and the Time Keeper may be the same person
+    // — neither evaluates, so no slip is counted twice (config/judge-seats).
+    const clash = held.find((row) => String(row._id) !== String(excludeJudgeId || '')
+      && !maySeatTogether(row.judgeType, judgeType));
 
     if (clash) {
       throw new BusinessRuleError(
@@ -344,6 +350,7 @@ class JudgePanelService {
         ageGroup: judgeData.ageGroup,
         competitionTypes: judgeData.competitionTypes,
         apparatus: judgeData.apparatus,
+        judgeType: judgeData.judgeType,
       });
 
       const payload = { ...judgeData, judgeAccount: judgeAccountId, isActive: true };
@@ -402,6 +409,7 @@ class JudgePanelService {
           ageGroup: judge.ageGroup,
           competitionTypes: judge.competitionTypes,
           apparatus: judge.apparatus,
+          judgeType: judge.judgeType,
           excludeJudgeId: judgeId,
         });
         payload.judgeAccount = nextAccountId;
@@ -659,7 +667,7 @@ class JudgePanelService {
       });
 
       /*
-       * Update hasMinimumJudges: Senior Judge, J1, J2 & Scorer required.
+       * Update hasMinimumJudges: Senior Judge, J1, J2, Scorer & Time Keeper required.
        *
        * The list is MINIMUM_PANEL_SEATS in utils/data/judge-assignment.util —
        * it was an anonymous literal buried in this loop, which made the rule

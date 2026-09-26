@@ -33,12 +33,16 @@ const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
 /**
  * The seats a category must have filled before it can be scored at all.
  *
+ * The Time Keeper joined this list on 2026-09-26: the panel form asks for the
+ * Timer as a required seat. It may be the Scorer's own account (see
+ * config/judge-seats maySeatTogether).
+ *
  * Not the same question as the panel SIZE, which is 3, 4 or 5 evaluators and
  * decides the averaging method. This is the floor: a chief, two evaluators and
  * somebody to record. `AdminService.getAllJudgesSummary` renders it as
  * `hasMinimumJudges` on the admin dashboard.
  */
-const MINIMUM_PANEL_SEATS = Object.freeze(['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer']);
+const MINIMUM_PANEL_SEATS = Object.freeze(['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer', 'Time Keeper']);
 
 
 /**

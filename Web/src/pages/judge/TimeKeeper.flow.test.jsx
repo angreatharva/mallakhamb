@@ -184,3 +184,69 @@ describe('Scorer sheet', () => {
     expect(screen.getAllByText(/SGAM-TRIALS-TEAM-A/)).toHaveLength(1);
   });
 });
+
+describe('Stopwatch face', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    h.state.judge = { name: 'Kiran More', ...seat('Time Keeper'), allAssignments: [seat('Time Keeper')] };
+    h.state.location = { ...SESSION, isTimeKeeper: true };
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('draws the analog dial: 5…60 numerals and a seconds-only readout', () => {
+    render(<TimeKeeperScoring />);
+    for (const n of [5, 30, 55, 60]) {
+      expect(screen.getAllByText(String(n)).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByText('SECONDS')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Stopwatch at 0 seconds' })).toBeInTheDocument();
+  });
+
+  it('the right button runs the clock and the left one ends it', () => {
+    render(<TimeKeeperScoring />);
+    act(() => h.socket.fire('connect'));
+    // Idle: Reset (disabled) and Start
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    // Running: Stop and Pause
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeEnabled();
+    act(() => { vi.advanceTimersByTime(61_000); });
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    // Stopped: Reset and Next
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    expect(screen.getByTestId('timer-seconds')).toHaveTextContent('61');
+  });
+});
+
+describe('one person as both Scorer and Time Keeper', () => {
+  beforeEach(() => {
+    h.state.judge = {
+      name: 'Asha Patil', ...seat('Scorer'),
+      allAssignments: [seat('Scorer'), seat('Time Keeper')],
+    };
+    h.state.location = { ...SESSION, isScorer: true };
+  });
+
+  it('gets the stopwatch on the Scorer sheet, and Stop fills the athlete\'s Time', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<ScorerScoring />);
+    await screen.findByText('Timer');
+    await waitFor(() => expect(screen.getByLabelText(/^Scorer/)).toHaveValue('Asha Patil'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    act(() => { vi.advanceTimersByTime(88_400); });
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText('00:00')[0]).toHaveValue('88'));
+    vi.useRealTimers();
+  });
+
+  it('a Scorer who is not the Time Keeper has no stopwatch on the sheet', async () => {
+    h.state.judge = { name: 'Asha Patil', ...seat('Scorer'), allAssignments: [seat('Scorer')] };
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+    expect(screen.queryByText('Timer')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+  });
+});

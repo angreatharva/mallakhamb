@@ -109,15 +109,27 @@ const EMPTY_JUDGE_FORM = [
   { judgeNo: 4, judgeType: 'Judge 3', account: null },
   { judgeNo: 5, judgeType: 'Judge 4', account: null },
   { judgeNo: 6, judgeType: 'Scorer', account: null },
-  // Optional. Times each performance on /judge/scoring; the stopped time is
-  // sent to the Scorer's sheet. Seat 7 — see Server/src/config/judge-seats.js.
+  // "Timer" on this form. Required, and may be the Scorer's own account. Times
+  // each performance on /judge/scoring; the stopped time goes to the Scorer's
+  // sheet. Seat 7 — see Server/src/config/judge-seats.js.
   { judgeNo: 7, judgeType: 'Time Keeper', account: null },
 ];
 
 const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo, judgeType }));
 
 const SUPPORT_JUDGE_TYPES = ['Scorer', 'Time Keeper'];
-const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
+const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer', 'Time Keeper'];
+
+/** The seat as this screen names it — the Time Keeper's slot reads "Timer". */
+const seatLabel = (judgeType) => (judgeType === 'Time Keeper' ? 'Timer' : judgeType);
+
+/**
+ * May one person hold both seats? Only the Scorer and the Timer: neither
+ * evaluates, so no slip is counted twice. Mirrors maySeatTogether in
+ * Server/src/config/judge-seats.js, which the server enforces.
+ */
+const maySeatTogether = (a, b) =>
+  a !== b && SUPPORT_JUDGE_TYPES.includes(a) && SUPPORT_JUDGE_TYPES.includes(b);
 
 const REGISTER_PATH = '/judge/register';
 
@@ -286,7 +298,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
           </div>
           <div className="p-6 space-y-4">
             <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'rgba(255,255,255,0.5)' }}>
-              <span className="font-bold" style={{ color: ADMIN_COLORS.saffronLight }}>{judge.judgeType}</span>
+              <span className="font-bold" style={{ color: ADMIN_COLORS.saffronLight }}>{seatLabel(judge.judgeType)}</span>
               {judge.gender && <> · {judge.gender}</>}
               {judge.ageGroup && <> · {judge.ageGroup}</>}
               {judge.apparatus && <> · {judge.apparatus}</>}
@@ -643,7 +655,7 @@ const Judges = () => {
     const staffed = judgeFormData.filter((j) => j.account);
     const missingRequired = REQUIRED_JUDGE_TYPES.filter(
       (type) => !staffed.some((j) => j.judgeType === type)
-    );
+    ).map(seatLabel);
     if (missingRequired.length > 0) {
       toast.error(`${missingRequired.join(', ')} ${missingRequired.length === 1 ? 'is' : 'are'} required`);
       return;
@@ -652,10 +664,12 @@ const Judges = () => {
     // One person cannot hold two seats on the same panel — their single slip
     // would be averaged in twice. The server refuses it too; catching it here
     // means the admin is told before half the panel is written.
-    const seen = new Set();
+    // …except the Scorer and the Timer, which one person may hold together.
+    const seatsHeld = new Map();
     const duplicate = staffed.find((j) => {
-      if (seen.has(j.account._id)) return true;
-      seen.add(j.account._id);
+      const held = seatsHeld.get(j.account._id) || [];
+      if (held.some((seat) => !maySeatTogether(seat, j.judgeType))) return true;
+      seatsHeld.set(j.account._id, [...held, j.judgeType]);
       return false;
     });
     if (duplicate) {
@@ -705,7 +719,7 @@ const Judges = () => {
     if (!judge._id || !judge.judgeAccount) { toast.error('Cannot delete an empty judge slot'); return; }
     if (ageGroupStarted) { toast.error('Cannot delete judges. Age group has been started.'); return; }
     if (REQUIRED_JUDGE_TYPES.includes(judge.judgeType)) {
-      toast.error(`${judge.judgeType} is required and cannot be deleted`);
+      toast.error(`${seatLabel(judge.judgeType)} is required and cannot be deleted`);
       return;
     }
     if (!window.confirm(`Remove ${judge.name} from this panel?`)) return;
@@ -770,7 +784,9 @@ const Judges = () => {
         takenSeats={Object.fromEntries(
           judges
             .filter((seated) => seated.judgeNo !== editingJudge?.judgeNo)
-            .map((seated) => [seated.judgeAccount?._id || seated.judgeAccount, seated.judgeType])
+            // The Scorer may also be the Timer, and the other way round.
+            .filter((seated) => !maySeatTogether(seated.judgeType, editingJudge?.judgeType))
+            .map((seated) => [seated.judgeAccount?._id || seated.judgeAccount, seatLabel(seated.judgeType)])
             .filter(([id]) => id)
         )}
         selected={editSelection}
@@ -916,19 +932,23 @@ const Judges = () => {
                            */
                           const taken = {};
                           judgeFormData.forEach((other, otherIndex) => {
-                            if (otherIndex !== index && other.account?._id) {
-                              taken[other.account._id] = other.judgeType;
+                            if (otherIndex !== index && other.account?._id
+                              && !maySeatTogether(other.judgeType, judge.judgeType)) {
+                              taken[other.account._id] = seatLabel(other.judgeType);
                             }
                           });
                           judges.forEach((seated) => {
                             const id = seated.judgeAccount?._id || seated.judgeAccount;
-                            if (id && seated.judgeType !== judge.judgeType) taken[id] = seated.judgeType;
+                            if (id && seated.judgeType !== judge.judgeType
+                              && !maySeatTogether(seated.judgeType, judge.judgeType)) {
+                              taken[id] = seatLabel(seated.judgeType);
+                            }
                           });
                           return (
                             <div key={judge.judgeNo} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-2 mb-4">
                                 <span className="text-sm font-bold text-white">{judge.judgeNo}</span>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                 {REQUIRED_JUDGE_TYPES.includes(judge.judgeType) && (
                                   <span className="text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>* Required</span>
                                 )}
@@ -1003,7 +1023,7 @@ const Judges = () => {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-sm font-bold text-white">{judge.name || <span className="text-white/30 italic">Empty Slot</span>}</span>
-                                    <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{judge.judgeType}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                     {judge.judgeAccount
                                       ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Assigned</span>
                                       : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}>Available</span>}

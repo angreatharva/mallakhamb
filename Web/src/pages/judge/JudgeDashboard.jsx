@@ -11,7 +11,7 @@ import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { resolveJudgeSeat } from './useJudgePanelData';
+import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS } from '@/styles/tokens';
@@ -568,9 +568,18 @@ const JudgeDashboard = () => {
     // The JudgeScoring component will handle the role-based UI
     //
     // The Time Keeper goes straight there too, with the team, like the Scorer.
-    // Decided by the seat held in THIS category — a person can keep time on
-    // one panel and judge on another.
-    if ((myJudgeType || judgeInfo?.judgeType) === 'Time Keeper') {
+    // Decided by the seats held in THIS category — a person can keep time on
+    // one panel and judge on another. Someone who is BOTH Scorer and Time
+    // Keeper here takes the Scorer's sheet, which carries the stopwatch.
+    const heldHere = seatTypesFor(judgeInfo, {
+      gender, ageGroup, competitionType: selectedCompetitionType, apparatus: selectedApparatus,
+    });
+    const isScorerHere = heldHere.includes('Scorer')
+      || (heldHere.length === 0 && judgeInfo?.judgeType === 'Scorer');
+    const isTimeKeeperHere = !isScorerHere && (heldHere.includes('Time Keeper')
+      || (heldHere.length === 0 && judgeInfo?.judgeType === 'Time Keeper'));
+
+    if (isTimeKeeperHere) {
       navigate('/judge/scoring', {
         state: {
           selectedTeam: team,
@@ -581,7 +590,7 @@ const JudgeDashboard = () => {
           isTimeKeeper: true,
         },
       });
-    } else if (judgeInfo?.judgeType === 'Scorer') {
+    } else if (isScorerHere) {
       logger.log('Navigating to scorer scoring page');
       // Scorer: Navigate to scoring with team-level state
       navigate(`/judge/scoring`, {

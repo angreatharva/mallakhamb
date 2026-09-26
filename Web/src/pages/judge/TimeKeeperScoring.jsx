@@ -12,11 +12,10 @@
  * recorded are kept for the session, so a refresh does not lose them and any
  * that did not reach the Scorer can be sent again.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Timer, Play, Pause, Square, RotateCcw, Send, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Timer, Send, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -25,8 +24,9 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { buildScorerRows } from './scorerRows';
 import { apparatusKey } from '@/utils/scoring/apparatus';
-import { resolveJudgeSeat } from './useJudgePanelData';
-import { useStopwatch, playBeeps, BEEP_MARKS } from './timeKeeper';
+import { seatTypesFor } from './useJudgePanelData';
+import { useTimekeeping, BEEP_MARKS } from './timeKeeper';
+import StopwatchFace from './StopwatchFace';
 
 const SESSION_KEY = 'timekeeper_active_session';
 
@@ -62,18 +62,19 @@ const TimeKeeperScoring = () => {
 
   // Only the Time Keeper of THIS category belongs here — the role follows the
   // category, not the account (see resolveJudgeSeat).
-  const seat = resolveJudgeSeat(judgeInfo, { gender, ageGroup, competitionType: compType, apparatus });
+  const isTimeKeeper = seatTypesFor(judgeInfo, { gender, ageGroup, competitionType: compType, apparatus })
+    .includes('Time Keeper');
   useEffect(() => {
     if (!judgeInfo) {
       toast.error('Please login first');
       navigate('/judge/login');
     } else if (!selectedTeam || !gender || !ageGroup) {
       navigate('/judge/dashboard');
-    } else if (seat?.judgeType !== 'Time Keeper') {
+    } else if (!isTimeKeeper) {
       toast.error('This page is only for the Time Keeper of this category');
       navigate('/judge/dashboard');
     }
-  }, [judgeInfo, selectedTeam, gender, ageGroup, seat?.judgeType, navigate]);
+  }, [judgeInfo, selectedTeam, gender, ageGroup, isTimeKeeper, navigate]);
 
   const rows = useMemo(() => (selectedTeam ? buildScorerRows({
     team: selectedTeam, gender, ageGroup, competitionType: compType, apparatus,
@@ -94,17 +95,7 @@ const TimeKeeperScoring = () => {
   }, [rows, selectedId, times]);
   const selected = rows.find((r) => r.id === selectedId) || null;
 
-  // ── Sound ──────────────────────────────────────────────────────────────────
-  const audioRef = useRef(null);
-  const ensureAudio = () => {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    if (!audioRef.current) audioRef.current = new Ctx();
-    audioRef.current.resume?.();
-  };
-  useEffect(() => () => { audioRef.current?.close?.(); }, []);
-
-  const watch = useStopwatch({ onMark: (mark) => playBeeps(audioRef.current, mark.count) });
+  const watch = useTimekeeping();
 
   // ── Socket ─────────────────────────────────────────────────────────────────
   const [socket, setSocket] = useState(null);
@@ -152,14 +143,7 @@ const TimeKeeperScoring = () => {
   }, [socket, roomId, selectedTeam]);
 
   // ── Controls ───────────────────────────────────────────────────────────────
-  const handleStart = () => {
-    if (!selected) { toast.error('Choose the athlete first'); return; }
-    ensureAudio();
-    watch.start();
-  };
-
-  const handleStop = () => {
-    const seconds = watch.stop();
+  const handleStopped = (seconds) => {
     setTimes((prev) => ({ ...prev, [selected.id]: { seconds, sent: false } }));
     sendTime(selected, seconds);
   };
@@ -175,7 +159,6 @@ const TimeKeeperScoring = () => {
 
   if (!selectedTeam || !judgeInfo) return null;
 
-  const btn = 'flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-black text-base text-white min-h-[56px] flex-1 disabled:opacity-40 disabled:cursor-not-allowed';
   const nextMark = BEEP_MARKS.find((m) => watch.seconds < m.at);
 
   return (
@@ -254,68 +237,28 @@ const TimeKeeperScoring = () => {
           </div>
 
           {/* Stopwatch */}
-          <div className="lg:col-span-3 rounded-2xl border p-6 flex flex-col items-center text-center"
-            style={{ background: ADMIN_COLORS.darkCard, borderColor: running ? `${ADMIN_COLORS.saffron}55` : ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-sm font-bold text-white/70 min-h-[20px]">{selected ? selected.name : 'Choose an athlete'}</p>
-
-            <div className="my-6" role="timer" aria-live="off">
-              <span className="block font-black tabular-nums leading-none text-white"
-                style={{ fontSize: 'clamp(5rem, 22vw, 10rem)', color: watch.seconds >= 90 ? ADMIN_COLORS.red : '#fff' }}
-                data-testid="timer-seconds">
-                {watch.seconds}
-              </span>
-              <span className="text-xs uppercase tracking-widest text-white/40">seconds</span>
-            </div>
-
-            <p className="text-xs text-white/40 mb-5">
-              {watch.status === 'stopped'
-                ? (times[selectedId]?.sent ? 'Sent to the Scorer' : 'Stopped — not yet received by the Scorer')
-                : nextMark
-                  ? `${nextMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextMark.at}`
-                  : 'Past 90 — time deduction applies'}
-            </p>
-
-            <div className="w-full flex flex-col sm:flex-row gap-3">
-              {watch.status === 'idle' && (
-                <motion.button type="button" onClick={handleStart} disabled={!selected || competitionLocked}
-                  className={btn} style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }}
-                  whileTap={{ scale: 0.97 }}>
-                  <Play className="w-5 h-5" aria-hidden="true" /> Start
-                </motion.button>
-              )}
-              {running && (
-                <motion.button type="button" onClick={watch.pause} className={btn}
-                  style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.gold}, #D97706)` }} whileTap={{ scale: 0.97 }}>
-                  <Pause className="w-5 h-5" aria-hidden="true" /> Pause
-                </motion.button>
-              )}
-              {watch.status === 'paused' && (
-                <motion.button type="button" onClick={watch.resume} className={btn}
-                  style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }} whileTap={{ scale: 0.97 }}>
-                  <Play className="w-5 h-5" aria-hidden="true" /> Resume
-                </motion.button>
-              )}
-              {busy && (
-                <motion.button type="button" onClick={handleStop} className={btn}
-                  style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #B91C1C)` }} whileTap={{ scale: 0.97 }}>
-                  <Square className="w-5 h-5" aria-hidden="true" /> Stop
-                </motion.button>
-              )}
-              {watch.status === 'stopped' && (
-                <>
-                  {!times[selectedId]?.sent && (
-                    <motion.button type="button" onClick={() => sendTime(selected, times[selectedId].seconds)} className={btn}
-                      style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }} whileTap={{ scale: 0.97 }}>
-                      <Send className="w-5 h-5" aria-hidden="true" /> Send again
-                    </motion.button>
-                  )}
-                  <motion.button type="button" onClick={handleNext} className={btn}
-                    style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }} whileTap={{ scale: 0.97 }}>
-                    <RotateCcw className="w-5 h-5" aria-hidden="true" /> Next athlete
-                  </motion.button>
-                </>
-              )}
-            </div>
+          <div className="lg:col-span-3">
+            <StopwatchFace
+              watch={watch}
+              title={selected?.name}
+              subtitle={apparatus}
+              canStart={!!selected && !competitionLocked}
+              onStop={handleStopped}
+              onNext={handleNext}
+              footer={watch.status === 'stopped' && selected ? (
+                times[selectedId]?.sent ? (
+                  <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
+                    <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => sendTime(selected, times[selectedId]?.seconds)}
+                    className="flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
+                    style={{ color: '#FFD60A' }}>
+                    <Send className="w-3.5 h-3.5" aria-hidden="true" /> Not received — send again
+                  </button>
+                )
+              ) : nextMark ? `${nextMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextMark.at}` : 'Past 90 — deduction applies'}
+            />
           </div>
         </div>
       </main>

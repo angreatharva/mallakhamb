@@ -22,7 +22,8 @@ const SIZES = [3, 4, 5];
 const EVALUATION_SEATS = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
 
 /**
- * The seats a panel of N is staffed with: N evaluators plus the Scorer.
+ * The seats a panel of N is staffed with: N evaluators plus the Scorer and the
+ * Time Keeper (both required since 2026-09-26).
  *
  * The Senior Judge is one of the N. A "5-judge panel" is a chief and four
  * evaluation judges, not five evaluators — which is why `evaluatorSeats` below
@@ -31,7 +32,23 @@ const EVALUATION_SEATS = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judg
  * @param {number} size
  * @returns {string[]}
  */
-const seatsFor = (size) => [...EVALUATION_SEATS.slice(0, size), 'Scorer'];
+const seatsFor = (size) => [...EVALUATION_SEATS.slice(0, size), 'Scorer', 'Time Keeper'];
+
+/**
+ * A meet's seat holders with the Time Keeper filled in.
+ *
+ * Plans drawn before the Time Keeper was a required seat name nobody for it.
+ * The Scorer's account takes it then — the one pair of seats one person may
+ * hold (Server/src/config/judge-seats.js maySeatTogether) — so an existing
+ * plan still seats a complete panel without being redrawn.
+ *
+ * @param {Object} seats - { [seat]: email }
+ * @returns {Object}
+ */
+const withTimeKeeper = (seats) => ({
+  ...seats,
+  'Time Keeper': seats?.['Time Keeper'] || seats?.Scorer,
+});
 
 /**
  * The seats whose slips the chief compares against his own, on a panel of N.
@@ -85,7 +102,10 @@ function validateMeet(meet, path, { requireEverySize = true } = {}) {
    * and a draw that produced it would fail deep inside the seating run on a
    * duplicate-key error rather than here.
    */
-  const holders = Object.values(meet.seats);
+  // The Time Keeper may be the Scorer; every other seat is one person each.
+  const holders = Object.entries(meet.seats)
+    .filter(([seat, email]) => !(seat === 'Time Keeper' && email === meet.seats.Scorer))
+    .map(([, email]) => email);
   if (new Set(holders).size !== holders.length) {
     throw new Error(
       `${where} seats the same judge twice. One person cannot hold two seats on one panel.`
@@ -176,6 +196,7 @@ module.exports = {
   SIZES,
   EVALUATION_SEATS,
   seatsFor,
+  withTimeKeeper,
   evaluatorSeats,
   readPlan,
   planForPlace,

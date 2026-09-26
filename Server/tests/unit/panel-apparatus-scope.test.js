@@ -42,6 +42,9 @@ const MINIMUM = [
   { judgeNo: 2, judgeType: 'Judge 1', judgeAccount: 'account-2' },
   { judgeNo: 3, judgeType: 'Judge 2', judgeAccount: 'account-3' },
   { judgeNo: 6, judgeType: 'Scorer', judgeAccount: 'account-4' },
+  // Required too, and deliberately the Scorer's own account: the one pair of
+  // seats one person may hold (config/judge-seats maySeatTogether).
+  { judgeNo: 7, judgeType: 'Time Keeper', judgeAccount: 'account-4' },
 ];
 
 /** Does a stored row answer a query's apparatus clause? */
@@ -124,7 +127,7 @@ describe('seating a panel for one apparatus', () => {
     const result = await service.saveJudges(COMPETITION, minimumPanel(POLE), 'admin-1');
 
     expect(result.errors).toEqual([]);
-    expect(stored).toHaveLength(4);
+    expect(stored).toHaveLength(MINIMUM.length);
     expect(stored.every((row) => row.apparatus === POLE)).toBe(true);
   });
 
@@ -135,9 +138,9 @@ describe('seating a panel for one apparatus', () => {
     const second = await service.saveJudges(COMPETITION, minimumPanel(ROPE), 'admin-1');
 
     expect(second.errors).toEqual([]);
-    expect(second.created).toHaveLength(4);
+    expect(second.created).toHaveLength(MINIMUM.length);
     // Eight rows, not four updated in place: Pole and Rope are separate slots.
-    expect(stored).toHaveLength(8);
+    expect(stored).toHaveLength(2 * MINIMUM.length);
   });
 
   it('still refuses one person in two seats of the SAME apparatus panel', async () => {
@@ -242,5 +245,30 @@ describe('getAllJudgesSummary — readiness per apparatus', () => {
 
     expect(entry.byApparatus).toEqual({});
     expect(entry.hasMinimumJudges).toBe(true);
+  });
+});
+
+describe('the Scorer and the Time Keeper may be one person', () => {
+  it('seats one account as both Scorer and Time Keeper', async () => {
+    const { service, stored } = buildService();
+    const result = await service.saveJudges(COMPETITION, minimumPanel(POLE), 'admin-1');
+
+    expect(result.errors).toEqual([]);
+    const recorders = stored.filter((r) => ['Scorer', 'Time Keeper'].includes(r.judgeType));
+    expect(recorders.map((r) => r.judgeAccount)).toEqual(['account-4', 'account-4']);
+  });
+
+  it('still refuses that account a second EVALUATION seat', async () => {
+    const { service } = buildService();
+    await service.saveJudges(COMPETITION, minimumPanel(POLE), 'admin-1');
+
+    // The Scorer's account also trying to sit as Judge 3 — its slip would count.
+    const clash = await service.saveJudges(
+      COMPETITION,
+      [{ ...PANEL, apparatus: POLE, judgeNo: 4, judgeType: 'Judge 3', judgeAccount: 'account-4' }],
+      'admin-1'
+    );
+    expect(clash.created).toHaveLength(0);
+    expect(clash.errors).toHaveLength(1);
   });
 });

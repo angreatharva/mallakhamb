@@ -69,7 +69,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, planForPlace, seatsFor } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, withTimeKeeper } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -194,8 +194,9 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
   const competition = await findCompetition(meetPlan.place);
   console.log(`\n🏆 ${competition.name} — ${competition.place} ${competition.year} [${meetPlan.level}]`);
 
-  const accountId = await resolveSeatAccounts(meetPlan.seats);
-  for (const [seat, email] of Object.entries(meetPlan.seats)) {
+  const seatHolders = withTimeKeeper(meetPlan.seats);
+  const accountId = await resolveSeatAccounts(seatHolders);
+  for (const [seat, email] of Object.entries(seatHolders)) {
     console.log(`   ${seat.padEnd(13)} ${email}`);
   }
   console.log();

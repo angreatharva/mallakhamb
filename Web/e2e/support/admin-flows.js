@@ -297,9 +297,17 @@ export const alreadyStaffed = (page) =>
  * @param {string} seat - e.g. 'Judge 1'
  * @param {string} email - a registered judge's address
  */
+/**
+ * The label Manage Judges shows for a seat. The Time Keeper's slot reads
+ * "Timer" on the form (Web/src/pages/admin/AdminJudges.jsx seatLabel); every
+ * other seat is labelled with its own name.
+ */
+export const seatLabel = (seat) => (seat === 'Time Keeper' ? 'Timer' : seat);
+const seatFromLabel = (label) => (label === 'Timer' ? 'Time Keeper' : label);
+
 export const staffSlot = async (page, seat, email) => {
   const card = page.locator(
-    `xpath=//span[normalize-space(text())="${seat}"]/ancestor::div[contains(@class, "rounded-xl")][1]`
+    `xpath=//span[normalize-space(text())="${seatLabel(seat)}"]/ancestor::div[contains(@class, "rounded-xl")][1]`
   ).first();
   await expect(card, `no "${seat}" slot on the staffing form`).toBeVisible();
 
@@ -313,7 +321,8 @@ export const staffSlot = async (page, seat, email) => {
   ).toHaveCount(1, { timeout: 20_000 });
   await expect(
     result,
-    `${email} is already on this panel in another seat; one person cannot hold two`
+    `${email} is already on this panel in another seat; one person cannot hold two ` +
+    '(only the Scorer and the Timer may be the same person)'
   ).toBeEnabled();
   await result.click();
 
@@ -371,7 +380,7 @@ export const seatedJudges = async (page) => {
     const pills = row.locator('xpath=.//span[contains(@class, "rounded-full")]');
     const seat = await pills.first().innerText();
     const name = await row.locator('xpath=.//span[contains(@class, "font-bold")]').first().innerText();
-    seats[seat.trim()] = name.trim();
+    seats[seatFromLabel(seat.trim())] = name.trim();
   }
   return seats;
 };

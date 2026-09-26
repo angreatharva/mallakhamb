@@ -7,7 +7,8 @@
  * (scripts/lib/admin-api.js) use the same numbers.
  *
  * Only the first five EVALUATE (see utils/scoring/judge-slip.util). The other
- * two record for the panel and are never counted in its size:
+ * two record for the panel and are never counted in its size. Both are
+ * required on a panel (MINIMUM_PANEL_SEATS), and one person may hold both:
  *   Scorer       — fills the score sheet and locks it.
  *   Time Keeper  — times each performance; the stopped time is relayed to the
  *                  Scorer's sheet over the scoring room (socket `time_record`).
@@ -35,4 +36,18 @@ const JUDGE_SEAT_TYPES = Object.freeze(Object.keys(SEAT_NO));
 /** The highest seat number a panel can hold. */
 const MAX_SEAT_NO = Math.max(...Object.values(SEAT_NO));
 
-module.exports = { SEAT_NO, JUDGE_SEAT_TYPES, MAX_SEAT_NO };
+/**
+ * The two recording seats, which ONE person may hold together.
+ *
+ * Everywhere else on a panel it is one person, one seat — a second evaluation
+ * seat would count that person's single slip twice in the average. Neither of
+ * these evaluates, so nothing is double-counted, and at a small meet the same
+ * official often keeps the time and fills the sheet.
+ */
+const SHAREABLE_SEATS = Object.freeze(['Scorer', 'Time Keeper']);
+
+/** May one person hold both of these seats on the same panel? */
+const maySeatTogether = (a, b) =>
+  a !== b && SHAREABLE_SEATS.includes(a) && SHAREABLE_SEATS.includes(b);
+
+module.exports = { SEAT_NO, JUDGE_SEAT_TYPES, MAX_SEAT_NO, SHAREABLE_SEATS, maySeatTogether };

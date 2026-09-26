@@ -1217,8 +1217,15 @@ const JudgeScoring = () => {
   // The Time Keeper is routed by the seat held in the chosen category (the
   // dashboard sets `isTimeKeeper`); a stored primary seat covers a refresh
   // that lost the navigation state.
-  const isTimeKeeper = location.state?.isTimeKeeper || storedJudgeUser?.judgeType === 'Time Keeper';
-  const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
+  // The navigation state is the dashboard's per-category answer and wins; the
+  // stored primary seat only covers a refresh that lost it. A person who is
+  // both Scorer and Time Keeper is sent as a Scorer — that sheet carries the
+  // stopwatch.
+  const primary = storedJudgeUser?.judgeType;
+  const isScorer = location.state?.isScorer
+    || (!location.state?.isTimeKeeper && primary === 'Scorer');
+  const isTimeKeeper = !isScorer
+    && (location.state?.isTimeKeeper || primary === 'Time Keeper');
 
   if (isTimeKeeper) return <TimeKeeperScoring />;
   return isScorer ? <ScorerScoring /> : <JudgeSlip />;

@@ -14,6 +14,7 @@ import {
   PLAN_COMPETITION_TYPES,
   PLAN_PROVENANCE,
   seatsFor,
+  withTimeKeeper,
   selectedMeets,
 } from './support/panel-plan.js';
 
@@ -114,7 +115,7 @@ for (const meet of MEETS) {
     for (const panel of wanted) {
       const category = `${panel.gender} ${panel.ageGroup}`;
 
-      test(`${meet.place}: ${category} — ${panel.size} judges + Scorer, per apparatus`, async ({ page }) => {
+      test(`${meet.place}: ${category} — ${panel.size} judges + Scorer + Timer, per apparatus`, async ({ page }) => {
         // Six judge searches per seat per competition type PER APPARATUS, each
         // debounced and each a database round trip. The apparatus multiplier is
         // why this is generous.
@@ -147,7 +148,7 @@ for (const meet of MEETS) {
             }
 
             for (const seat of seats) {
-              await staffSlot(page, seat, meet.seats[seat]);
+              await staffSlot(page, seat, withTimeKeeper(meet.seats)[seat]);
             }
             await saveStaffedPanel(page);
             console.log(`   ${meet.place} ${category} · ${competitionType} · ${apparatus} — staffed ${seats.join(', ')}`);

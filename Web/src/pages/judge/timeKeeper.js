@@ -69,7 +69,9 @@ export function playBeeps(ctx, count) {
  *
  * @param {{ onMark?: (mark:{at:number,count:number}) => void, tickMs?: number }} [options]
  * @returns {{ seconds:number, status:'idle'|'running'|'paused'|'stopped',
- *   start:Function, pause:Function, resume:Function, stop:() => number, reset:Function }}
+ *   start:Function, pause:Function, resume:Function, stop:() => number, reset:Function,
+ *   elapsedMs:() => number }} `elapsedMs` reads the exact elapsed time without a
+ *   re-render — the dial's hand is driven from it every animation frame.
  */
 export function useStopwatch({ onMark, tickMs = 100 } = {}) {
   const [status, setStatus] = useState('idle');
@@ -144,5 +146,46 @@ export function useStopwatch({ onMark, tickMs = 100 } = {}) {
     setStatus('idle');
   }, []);
 
-  return { seconds, status, start, pause, resume, stop, reset };
+  return { seconds, status, start, pause, resume, stop, reset, elapsedMs };
+}
+
+/**
+ * The stopwatch as the Time Keeper uses it: beeps at 60 and 90, and the
+ * screen kept awake while the clock runs — a phone that dims and locks
+ * mid-routine is a lost time.
+ *
+ * The AudioContext is created on Start, inside the tap, because browsers keep
+ * a context created any other way silent.
+ */
+export function useTimekeeping() {
+  const audioRef = useRef(null);
+  const wakeRef = useRef(null);
+  const watch = useStopwatch({ onMark: (mark) => playBeeps(audioRef.current, mark.count) });
+
+  const start = useCallback(() => {
+    const Ctx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+    if (Ctx) {
+      if (!audioRef.current) audioRef.current = new Ctx();
+      audioRef.current.resume?.();
+    }
+    watch.start();
+  }, [watch.start]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const running = watch.status === 'running';
+    if (running && !wakeRef.current && typeof navigator !== 'undefined' && navigator.wakeLock?.request) {
+      navigator.wakeLock.request('screen').then((lock) => { wakeRef.current = lock; }).catch(() => {});
+    }
+    if (!running && wakeRef.current) {
+      wakeRef.current.release?.().catch?.(() => {});
+      wakeRef.current = null;
+    }
+  }, [watch.status]);
+
+  useEffect(() => () => {
+    audioRef.current?.close?.();
+    wakeRef.current?.release?.();
+  }, []);
+
+  return { ...watch, start };
 }

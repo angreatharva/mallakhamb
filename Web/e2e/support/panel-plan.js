@@ -210,8 +210,24 @@ export const judgeInSeat = (seat, seats = SEAT_EMAIL) => {
   return found;
 };
 
-/** The seats a panel of N is staffed with: N evaluators plus the Scorer. */
-export const seatsFor = (size) => [...EVALUATION_SEATS.slice(0, size), 'Scorer'];
+/**
+ * The seats a panel of N is staffed with: N evaluators plus the Scorer and the
+ * Time Keeper (both required since 2026-09-26).
+ */
+export const seatsFor = (size) => [...EVALUATION_SEATS.slice(0, size), 'Scorer', 'Time Keeper'];
+
+/**
+ * A meet's seat holders with the Time Keeper filled in — the plan's Scorer when
+ * the plan names nobody for it, which is the one pair of seats one person may
+ * hold. Mirrors Server/scripts/lib/panel-plan.js withTimeKeeper.
+ *
+ * @param {Object} seats - { [seat]: email }
+ * @returns {Object}
+ */
+export const withTimeKeeper = (seats) => ({
+  ...seats,
+  'Time Keeper': seats?.['Time Keeper'] || seats?.Scorer,
+});
 
 /**
  * The seats whose slips the chief compares against his own, on a panel of N.

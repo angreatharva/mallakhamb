@@ -161,25 +161,44 @@ export function useJudgeSession(locationState) {
  * @param {object} category - { gender, ageGroup, competitionType, apparatus }
  * @returns {object|null}
  */
+/** Does this seat cover the category? */
+const seatCovers = (seat, category) => {
+  if (category.gender && seat.gender !== category.gender) return false;
+  if (category.ageGroup && seat.ageGroup !== category.ageGroup) return false;
+  if (category.competitionType) {
+    const types = Array.isArray(seat.competitionTypes) ? seat.competitionTypes : [];
+    // An empty list means "every category in this gender/age group" — a
+    // Scorer is routinely created without competition types.
+    if (types.length > 0 && !types.includes(category.competitionType)) return false;
+  }
+  if (category.apparatus && seat.apparatus && seat.apparatus !== category.apparatus) return false;
+  return true;
+};
+
+const allSeats = (judgeInfo) =>
+  (judgeInfo?.allAssignments?.length ? judgeInfo.allAssignments : [judgeInfo]).filter(Boolean);
+
 export function resolveJudgeSeat(judgeInfo, category = {}) {
   if (!judgeInfo) return null;
+  const seats = allSeats(judgeInfo);
+  return seats.find((seat) => seatCovers(seat, category)) || seats[0] || null;
+}
 
-  const seats = judgeInfo.allAssignments?.length ? judgeInfo.allAssignments : [judgeInfo];
-
-  const match = seats.find((seat) => {
-    if (category.gender && seat.gender !== category.gender) return false;
-    if (category.ageGroup && seat.ageGroup !== category.ageGroup) return false;
-    if (category.competitionType) {
-      const types = Array.isArray(seat.competitionTypes) ? seat.competitionTypes : [];
-      // An empty list means "every category in this gender/age group" — a
-      // Scorer is routinely created without competition types.
-      if (types.length > 0 && !types.includes(category.competitionType)) return false;
-    }
-    if (category.apparatus && seat.apparatus && seat.apparatus !== category.apparatus) return false;
-    return true;
-  });
-
-  return match || seats[0] || null;
+/**
+ * EVERY seat type this judge holds for the category, not just the first.
+ *
+ * One person may be both Scorer and Time Keeper on a panel (the only pair that
+ * may share — Server/src/config/judge-seats.js), and resolveJudgeSeat can only
+ * name one of them. Routing needs both: such a person gets the Scorer's sheet
+ * with the stopwatch on it.
+ *
+ * @param {object|null} judgeInfo
+ * @param {object} category
+ * @returns {string[]}
+ */
+export function seatTypesFor(judgeInfo, category = {}) {
+  if (!judgeInfo) return [];
+  return [...new Set(allSeats(judgeInfo).filter((seat) => seatCovers(seat, category)).map((s) => s.judgeType))];
 }
 
 /**
