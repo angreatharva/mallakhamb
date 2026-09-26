@@ -25,8 +25,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** The committed meet list. */
 export const MEETS_PATH = resolve(HERE, '../../../Server/scripts/seed/meets.json');
 
-/** The four levels, mirroring the `Competition.level` enum. */
-export const LEVELS = ['district', 'state', 'national', 'international'];
+/**
+ * Every level, mirroring the `Competition.level` enum
+ * (Server/src/config/competition-levels.js). `dso` and `university` have no
+ * seeded meets — they are valid, and empty in the chooser.
+ */
+export const LEVELS = ['district', 'state', 'national', 'international', 'dso', 'university'];
 
 const read = () => {
   let file;

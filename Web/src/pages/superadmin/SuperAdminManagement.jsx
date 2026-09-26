@@ -21,6 +21,7 @@ import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGrou
 import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
+import { COMPETITION_LEVELS, levelLabel } from '@/utils/competition/levels';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -602,10 +603,7 @@ const SuperAdminManagement = () => {
   const openCompetitionModal = (comp = null) => {
     if (comp) {
       setEditingCompetition(comp);
-      const levelOption = { 
-        value: comp.level, 
-        label: comp.level.charAt(0).toUpperCase() + comp.level.slice(1) 
-      };
+      const levelOption = { value: comp.level, label: levelLabel(comp.level) };
       const yearOption = { 
         value: comp.year || new Date().getFullYear(), 
         label: (comp.year || new Date().getFullYear()).toString() 
@@ -851,7 +849,14 @@ const SuperAdminManagement = () => {
   });
 
   const compTypeLabel = (t) => ({ competition_1:'Competition I', competition_2:'Competition II', competition_3:'Competition III' }[t] || t);
-  const levelColor = (l) => ({ district: ADMIN_COLORS.blue, state: ADMIN_COLORS.purple, national: ADMIN_COLORS.saffron, international: ADMIN_COLORS.gold }[l] || ADMIN_COLORS.saffron);
+  const levelColor = (l) => ({
+    district: ADMIN_COLORS.blue,
+    state: ADMIN_COLORS.purple,
+    national: ADMIN_COLORS.saffron,
+    international: ADMIN_COLORS.gold,
+    dso: ADMIN_COLORS.green,
+    university: ADMIN_COLORS.purpleLight,
+  }[l] || ADMIN_COLORS.saffron);
   const statusColor = (s) => ({ ongoing: ADMIN_COLORS.green, upcoming: ADMIN_COLORS.gold, completed: 'rgba(255,255,255,0.4)' }[s] || 'rgba(255,255,255,0.4)');
 
   return (
@@ -912,9 +917,9 @@ const SuperAdminManagement = () => {
                       </div>
                     </Td>
                     <Td>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-bold capitalize"
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold"
                         style={{ background: `${levelColor(comp.level)}20`, color: levelColor(comp.level) }}>
-                        {comp.level}
+                        {levelLabel(comp.level)}
                       </span>
                     </Td>
                     <Td>{comp.place}</Td>
@@ -1172,12 +1177,9 @@ const SuperAdminManagement = () => {
             onChange={(e) => setCompetitionFormData({ ...competitionFormData, name: e.target.value })} />
           <Dropdown 
             label="Level" 
-            options={[
-              { value: 'district', label: 'District' },
-              { value: 'state', label: 'State' },
-              { value: 'national', label: 'National' },
-              { value: 'international', label: 'International' }
-            ]}
+            // From the shared level list, so a level added there (DSO,
+            // University) can be given to a meet without touching this form.
+            options={COMPETITION_LEVELS.map((value) => ({ value, label: levelLabel(value) }))}
             value={competitionFormData.level}
             onChange={(option) => setCompetitionFormData({ ...competitionFormData, level: option })}
             placeholder="Select level"

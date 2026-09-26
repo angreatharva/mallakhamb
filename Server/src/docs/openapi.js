@@ -20,7 +20,7 @@
  * @module docs/openapi
  */
 
-const { APPARATUS, COMPETITION_TYPES, AGE_GROUPS, GENDERS } = require('./api-enums');
+const { APPARATUS, COMPETITION_TYPES, AGE_GROUPS, GENDERS, COMPETITION_LEVELS } = require('./api-enums');
 
 const JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'];
 
@@ -200,7 +200,7 @@ const schemas = {
       name: { type: 'string', example: 'National Mallakhamb Championship' },
       year: { type: 'integer', example: 2026 },
       place: { type: 'string', example: 'Mumbai' },
-      level: { type: 'string', enum: ['District', 'State', 'National', 'International'] },
+      level: { type: 'string', enum: [...COMPETITION_LEVELS], description: 'Stored lowercase. dso = District Sports Office; university = inter-university.' },
       status: { type: 'string', enum: ['upcoming', 'open', 'ongoing', 'completed', 'cancelled'] },
       startDate: { type: 'string', format: 'date-time' },
       endDate: { type: 'string', format: 'date-time' },

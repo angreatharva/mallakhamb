@@ -155,10 +155,13 @@ components:
         level:
           type: string
           enum:
-            - District
-            - State
-            - National
-            - International
+            - district
+            - state
+            - national
+            - international
+            - dso
+            - university
+          description: Stored lowercase. dso = District Sports Office; university = inter-university.
         status:
           type: string
           enum:

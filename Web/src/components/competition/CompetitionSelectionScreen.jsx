@@ -87,9 +87,9 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
                   </span>
                 )}
                 {competition.level && (
-                  <span className="text-xs capitalize px-2 py-0.5 rounded-full"
+                  <span className="text-xs px-2 py-0.5 rounded-full"
                     style={{ background: `${COLORS.saffron}12`, color: COLORS.saffronLight }}>
-                    {competition.level}
+                    {levelLabel(competition.level)}
                   </span>
                 )}
               </div>

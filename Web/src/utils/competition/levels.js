@@ -1,9 +1,9 @@
 /**
  * Competition levels — the single client-side source of truth.
  *
- * These four values MIRROR the server's `Competition.level` enum
- * (Server/src/models/Competition.js), which is a required field validated on both
- * create and update (Server/src/validators/competition.validator.js). They are
+ * These values MIRROR the server's `Competition.level` enum
+ * (Server/src/config/competition-levels.js, read by the model and by both the
+ * create and update validators); levelsSync.test.js fails if they drift. They are
  * stored lowercase; anything that renders them capitalises for display rather
  * than storing a second casing.
  *
@@ -22,12 +22,17 @@
  * @module utils/competition/levels
  */
 
-/** The four levels, in ladder order. Mirrors the server enum exactly. */
-export const COMPETITION_LEVELS = ['district', 'state', 'national', 'international'];
+/**
+ * Every level, in chooser order: the district → international ladder, then the
+ * two separate circuits — DSO (District Sports Office, school) and University.
+ * Mirrors the server enum exactly.
+ */
+export const COMPETITION_LEVELS = ['district', 'state', 'national', 'international', 'dso', 'university'];
 
 /**
  * Display copy per level. The blurb is shown under the title on the level
- * chooser so the four cards are not four identical words.
+ * chooser so the cards are not identical words. Always render a level through
+ * `levelLabel` — capitalising the stored value would print "Dso".
  */
 export const LEVEL_META = {
   district: {
@@ -45,6 +50,14 @@ export const LEVEL_META = {
   international: {
     label: 'International',
     blurb: 'International meets and invitationals.',
+  },
+  dso: {
+    label: 'DSO',
+    blurb: 'District Sports Office meets for schools.',
+  },
+  university: {
+    label: 'University',
+    blurb: 'University and inter-university meets.',
   },
 };
 

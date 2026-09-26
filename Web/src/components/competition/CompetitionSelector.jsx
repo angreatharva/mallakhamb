@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { COLORS } from '@/styles/tokens';
+import { levelLabel } from '@/utils/competition/levels';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
@@ -237,8 +238,8 @@ const CompetitionSelector = ({ userType }) => {
                                 {competition.place}
                               </span>
                             )}
-                            <span className="text-xs capitalize" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                              {competition.level}
+                            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                              {levelLabel(competition.level)}
                             </span>
                           </div>
                           {competition.startDate && competition.endDate && (

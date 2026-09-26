@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { COLORS } from '@/styles/tokens';
+import { levelLabel } from '@/utils/competition/levels';
 
 
 const statusConfig = {
@@ -68,9 +69,9 @@ const CompetitionDisplay = ({ className = '' }) => {
                   </span>
                 )}
                 {currentCompetition.level && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize"
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
                     style={{ background: `${COLORS.saffron}15`, color: COLORS.saffronLight }}>
-                    {currentCompetition.level}
+                    {levelLabel(currentCompetition.level)}
                   </span>
                 )}
                 {currentCompetition.startDate && currentCompetition.endDate && (

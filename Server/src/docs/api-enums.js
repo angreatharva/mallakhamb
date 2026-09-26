@@ -10,6 +10,7 @@
  */
 
 const { APPARATUS } = require('../config/cop-rules');
+const { COMPETITION_LEVELS } = require('../config/competition-levels');
 const Player = require('../models/Player');
 const Judge = require('../models/Judge');
 
@@ -36,4 +37,4 @@ const COMPETITION_TYPES = [
 const JUDGE_TYPES = Judge.schema.path('judgeType')?.enumValues
   || ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'];
 
-module.exports = { APPARATUS, AGE_GROUPS, GENDERS, COMPETITION_TYPES, JUDGE_TYPES };
+module.exports = { APPARATUS, AGE_GROUPS, GENDERS, COMPETITION_TYPES, JUDGE_TYPES, COMPETITION_LEVELS };

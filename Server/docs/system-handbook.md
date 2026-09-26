@@ -361,7 +361,7 @@ Judge (Scoring Level)
 #### Competition Model
 
 **Core Fields:**
-- name, level (state/national/international), place, year
+- name, level (district/state/national/international/dso/university), place, year
 - startDate, endDate, status (upcoming/ongoing/completed)
 - description
 
@@ -626,7 +626,7 @@ const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 **Step 2: Create Competition**
 - Endpoint: `POST /api/superadmin/competitions`
 - Required Data:
-  - Name, Level (state/national/international), Place
+  - Name, Level (district/state/national/international/dso/university), Place
   - Start Date, End Date, Year
   - Age Groups (Gender + Age Group combinations)
   - Competition Types (Type I, Type II, Type III)
@@ -2308,9 +2308,14 @@ const recordFailedAttempt = async (identifier) => {
 
 | Level | Description |
 |-------|-------------|
+| district | District-level competition |
 | state | State-level competition |
 | national | National-level competition |
 | international | International-level competition |
+| dso | District Sports Office (school) competition |
+| university | Inter-university competition |
+
+Source of truth: `Server/src/config/competition-levels.js` (mirrored in `Web/src/utils/competition/levels.js`).
 
 ### Judge Types
 

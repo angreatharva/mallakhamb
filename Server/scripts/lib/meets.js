@@ -21,8 +21,12 @@ const path = require('node:path');
 
 const MEETS_PATH = path.join(__dirname, '..', 'seed', 'meets.json');
 
-/** The four levels, mirroring the `Competition.level` enum. */
-const LEVELS = ['district', 'state', 'national', 'international'];
+/**
+ * Every level, straight from the `Competition.level` enum. Not every level
+ * has a seeded meet: `dso` and `university` are valid but left empty, and the
+ * chooser shows them with 0 competitions.
+ */
+const { COMPETITION_LEVELS: LEVELS } = require('../../src/config/competition-levels');
 
 let cached = null;
 

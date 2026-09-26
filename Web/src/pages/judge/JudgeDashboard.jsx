@@ -20,6 +20,7 @@ import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { JudgeAmbience } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
+import { levelLabel } from '@/utils/competition/levels';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -936,7 +937,7 @@ const JudgeDashboard = () => {
                               <p>{comp.name || 'Untitled competition'}</p>
                               {(comp.place || comp.level) && (
                                 <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">
-                                  {[comp.place, comp.level].filter(Boolean).join(' · ')}
+                                  {[comp.place, comp.level && levelLabel(comp.level)].filter(Boolean).join(' · ')}
                                 </p>
                               )}
                             </div>

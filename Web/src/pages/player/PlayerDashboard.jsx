@@ -14,6 +14,7 @@ import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
 import PerformancePanel from '@/components/performance/PerformancePanel';
+import { levelLabel } from '@/utils/competition/levels';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
@@ -523,7 +524,7 @@ const PlayerDashboard = () => {
                           {competition.level && (
                             <>
                               <span>•</span>
-                              <span className="capitalize">{competition.level}</span>
+                              <span>{levelLabel(competition.level)}</span>
                             </>
                           )}
                           {competition.year && (

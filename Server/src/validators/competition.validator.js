@@ -1,6 +1,7 @@
 const { body, param } = require('express-validator');
 const { objectId, dateRange, enumValue, string, number, array } = require('./common.validator');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
 /**
  * Validation rules for competition endpoints
@@ -18,7 +19,7 @@ const createCompetition = () => {
       .isLength({ min: 3, max: 200 })
       .withMessage('Competition name must be between 3 and 200 characters')
       .escape(),
-    enumValue('level', ['district', 'state', 'national', 'international']),
+    enumValue('level', [...COMPETITION_LEVELS]),
     body('competitionTypes')
       .notEmpty()
       .withMessage('Competition types are required')
@@ -129,8 +130,8 @@ const updateCompetition = () => {
     body('level')
       .optional()
       .trim()
-      .isIn(['district', 'state', 'national', 'international'])
-      .withMessage('Level must be district, state, national, or international'),
+      .isIn([...COMPETITION_LEVELS])
+      .withMessage(`Level must be ${LEVELS_SENTENCE}`),
     body('competitionTypes')
       .optional()
       .isArray({ min: 1 })

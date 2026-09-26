@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const { TEAM_SIZES } = require('../utils/scoring/team-championship.util');
+const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
 const competitionSchema = new mongoose.Schema({
   name: {
@@ -12,8 +13,8 @@ const competitionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Competition level is required'],
     enum: {
-      values: ['district', 'state', 'national', 'international'],
-      message: 'Level must be district, state, national, or international'
+      values: [...COMPETITION_LEVELS],
+      message: `Level must be ${LEVELS_SENTENCE}`
     }
   },
   competitionTypes: [{

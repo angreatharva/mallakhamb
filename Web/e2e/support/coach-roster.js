@@ -103,15 +103,22 @@ validateRoster(COACH_ROSTER, { label: 'Coach roster' });
  * as a broken app rather than as a roster that is short a team.
  */
 const TEAMS_PER_LEVEL = 3;
-for (const level of LEVELS) {
+// Only the levels the seed actually holds meets at. DSO and University are
+// valid levels with no seeded meet, so they carry no teams either.
+for (const level of LEVELS.filter((l) => meetsAtLevel(l).length > 0)) {
   const teams = COACH_ROSTER.filter((c) => c.level === level);
   if (teams.length < TEAMS_PER_LEVEL) {
     throw new Error(
-      `Coach roster: "${level}" has ${teams.length} team(s); every level needs at least ${TEAMS_PER_LEVEL}. ` +
+      `Coach roster: "${level}" has ${teams.length} team(s); every level with meets needs at least ${TEAMS_PER_LEVEL}. ` +
       'Each team enters all three meets at its level, so this is what puts three teams in every competition.'
     );
   }
-  if (meetsAtLevel(level).length === 0) {
+}
+
+// The other direction: a team at a level with no meet has nothing to enter.
+for (const level of LEVELS.filter((l) => meetsAtLevel(l).length === 0)) {
+  const teams = COACH_ROSTER.filter((c) => c.level === level);
+  if (teams.length > 0) {
     throw new Error(
       `Coach roster: "${level}" has ${teams.length} team(s) but no meets to enter. ` +
       'Add meets at that level to Server/scripts/seed/meets.json.'
