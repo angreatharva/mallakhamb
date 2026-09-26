@@ -58,7 +58,7 @@ const path = require('node:path');
 const {
   getDifficultyRequirement,
   getCombinationChecklist,
-  getTimeDeduction,
+  getTimeDeductionForTime,
   POINT_CEILINGS,
 } = require('../src/config/cop-rules');
 const { calculateIndividualScore } = require('../src/utils/scoring/calculation.util');
@@ -629,7 +629,7 @@ async function main(extraArgv = []) {
     const legal = new Set();
     for (const base of [8.40, 9.40]) {
       for (const seconds of TIME_BANDS) {
-        legal.add(Number((base - getTimeDeduction(Number(seconds) - 90)).toFixed(2)));
+        legal.add(Number((base - getTimeDeductionForTime(seconds)).toFixed(2)));
       }
     }
 
@@ -763,7 +763,7 @@ async function runScorer({ competitionId, panel, type, places, tokens }) {
 
     const playerScores = (team.scores || []).map((row, index) => {
       const seconds = Number(TIME_BANDS[index % TIME_BANDS.length]);
-      const deduction = getTimeDeduction(seconds - 90);
+      const deduction = getTimeDeductionForTime(seconds);
       const computed = calculateIndividualScore(row.judgeScores, panel.size);
       const average = computed.averageMarks;
 

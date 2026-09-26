@@ -6,8 +6,9 @@
  * (elapsed time rounded DOWN), so the Time Keeper and the Scorer's sheet can
  * never disagree about it.
  *
- * Two audible marks: one beep when the display reaches 60 and two beeps at 90,
- * the point past which the time deduction starts (copRules getTimeDeduction).
+ * Two audible marks: one beep when the display reaches 60 and two beeps at 90
+ * — the edges of the deduction-free window. Stopped short of 60 or past 90,
+ * the same table deducts either way (copRules getTimeDeductionForTime).
  *
  * Elapsed time is measured against the clock, not by counting ticks, so a tab
  * that is throttled or briefly frozen still reads the right time when it wakes.
@@ -15,12 +16,29 @@
  * @module pages/judge/timeKeeper
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getTimeDeductionForTime, TIME_MINIMUM_SECONDS, TIME_LIMIT_SECONDS } from '@/utils/scoring/copRules';
 
 /** Audible marks: at `at` seconds, `count` beeps. */
 export const BEEP_MARKS = Object.freeze([
   Object.freeze({ at: 60, count: 1 }),
   Object.freeze({ at: 90, count: 2 }),
 ]);
+
+/**
+ * What a stopped time costs, in words — '' inside the 60–90 s window.
+ * e.g. "Deduction 0.30 · 5 s short", "Deduction 0.20 · 2 s over".
+ *
+ * @param {number} seconds
+ * @returns {string}
+ */
+export function deductionNote(seconds) {
+  const deduction = getTimeDeductionForTime(seconds);
+  if (!deduction) return '';
+  const gap = seconds < TIME_MINIMUM_SECONDS
+    ? `${TIME_MINIMUM_SECONDS - seconds} s short`
+    : `${seconds - TIME_LIMIT_SECONDS} s over`;
+  return `Deduction ${deduction.toFixed(2)} · ${gap}`;
+}
 
 /** Whole seconds shown for an elapsed time in milliseconds. */
 export const wholeSeconds = (elapsedMs) => Math.max(0, Math.floor(elapsedMs / 1000));

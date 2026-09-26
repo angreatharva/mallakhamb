@@ -207,7 +207,7 @@ Per player: `judgeScores` (`seniorJudge`, `judge1…judge4`), a legacy `scoreBre
 - **Difficulty cascade** (`resolveDifficultyValue`) — excess higher-class elements fill lower-class slots, but each element keeps its **original** class value (a C filling a B slot still scores 0.60). Returns a `shortfallFlag` when slots go unfilled.
 - **Combination** — per-apparatus checklist (10 items for Pole/Hanging, 7 for Rope); each unmet item deducts its penalty from 1.60.
 - **Tolerance table** — by execution average: ≥9.00 → 0.10, ≥8.00 → 0.20, ≥7.00 → 0.30, ≥6.00 → 0.40, ≥5.00 → 0.50, else 1.00.
-- **Time** — 90 s limit; overage ≤3 s → 0.20, ≤5 s → 0.30, ≤9 s → 0.40, else 0.50.
+- **Time** — a 60–90 s window; seconds short of 60 or over 90, the same table: ≤3 s → 0.20, ≤5 s → 0.30, ≤9 s → 0.40, else 0.50 (`getTimeDeductionForTime`).
 - **Hard block** — Hanging Mallakhamb is not available for women.
 - `validateSlipBreakdown()` enforces the ceilings server-side on every submitted slip.
 

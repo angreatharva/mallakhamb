@@ -74,8 +74,8 @@ project — see [01-ARCHITECTURE.md](../01-ARCHITECTURE.md)).
   judges' `difficulties` blocks locking (not saving) if judges disagree
   (`:480-498`).
 - **Time deduction is auto-calculated on every keystroke** in the Time
-  field via `getTimeDeduction(overage)` where overage = seconds beyond
-  90 (`:420-441`) — reads from the shared `copRules` module, not a
+  field via `getTimeDeductionForTime(seconds)` — the table applied to the
+  seconds short of 60 or over 90 (under-time added 2026-09-26) — reads from the shared `copRules` module, not a
   private copy (a prior private median calculator was removed, per
   `:400-410`'s comment).
 

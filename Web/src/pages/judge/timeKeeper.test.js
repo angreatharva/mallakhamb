@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useStopwatch, marksCrossed, wholeSeconds } from './timeKeeper';
+import { useStopwatch, marksCrossed, wholeSeconds, deductionNote } from './timeKeeper';
 
 describe('marksCrossed', () => {
   it('one beep at 60 and two at 90, each once', () => {
@@ -80,5 +80,14 @@ describe('useStopwatch', () => {
     act(() => result.current.reset());
     expect(result.current.seconds).toBe(0);
     expect(result.current.status).toBe('idle');
+  });
+});
+
+describe('deductionNote', () => {
+  it('says what a stopped time costs, and nothing inside 60–90', () => {
+    expect(deductionNote(55)).toBe('Deduction 0.30 · 5 s short');
+    expect(deductionNote(92)).toBe('Deduction 0.20 · 2 s over');
+    expect(deductionNote(60)).toBe('');
+    expect(deductionNote(90)).toBe('');
   });
 });

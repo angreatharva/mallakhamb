@@ -25,7 +25,7 @@ import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { buildScorerRows } from './scorerRows';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import { seatTypesFor } from './useJudgePanelData';
-import { useTimekeeping, BEEP_MARKS } from './timeKeeper';
+import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
 import StopwatchFace from './StopwatchFace';
 
 const SESSION_KEY = 'timekeeper_active_session';
@@ -247,8 +247,13 @@ const TimeKeeperScoring = () => {
               onNext={handleNext}
               footer={watch.status === 'stopped' && selected ? (
                 times[selectedId]?.sent ? (
-                  <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
-                    <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
+                  <span className="flex flex-col items-center gap-0.5">
+                    <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
+                    </span>
+                    {deductionNote(times[selectedId]?.seconds) && (
+                      <span style={{ color: '#FF453A' }}>{deductionNote(times[selectedId]?.seconds)}</span>
+                    )}
                   </span>
                 ) : (
                   <button type="button" onClick={() => sendTime(selected, times[selectedId]?.seconds)}

@@ -34,6 +34,7 @@ import {
   ELEMENT_CLASS_VALUES,
   DIFFICULTY_REQUIREMENTS,
   TIME_LIMIT_SECONDS,
+  TIME_MINIMUM_SECONDS,
   COMBINATION_CHECKLISTS,
   getTolerance,
   getTimeDeduction,
@@ -89,6 +90,10 @@ export function compareCopRules(server) {
 
   if (!sameNumber(server.timeLimitSeconds, TIME_LIMIT_SECONDS)) {
     differences.push(`timeLimitSeconds: server=${server.timeLimitSeconds} client=${TIME_LIMIT_SECONDS}`);
+  }
+  // An older server predates the minimum; only a server that names one is compared.
+  if (server.timeMinimumSeconds !== undefined && !sameNumber(server.timeMinimumSeconds, TIME_MINIMUM_SECONDS)) {
+    differences.push(`timeMinimumSeconds: server=${server.timeMinimumSeconds} client=${TIME_MINIMUM_SECONDS}`);
   }
 
   // Rather than compare table shapes, evaluate the client's own functions at

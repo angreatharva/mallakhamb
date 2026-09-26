@@ -4,10 +4,11 @@
  *
  *   Main dial   one turn = 60 s, quarter-second ticks, 5…60 numerals, an
  *               orange sweep hand with a counterweight tail.
- *   Sub-dial    one turn = 120 s. Its rim is shaded from 60 (the single beep)
- *               to 90 (the double beep, where the time deduction starts) and
- *               on into the deduction zone, so where the athlete stands is
- *               readable at a glance — the part Apple spends on minutes.
+ *   Sub-dial    one turn = 120 s. Its rim marks the deduction-free window —
+ *               green from 60 (single beep) to 90 (double beep) — with amber
+ *               before it (too short: a deduction if stopped there) and red
+ *               after it (over time). Where the athlete stands is readable at
+ *               a glance — the part Apple spends on minutes.
  *   Readout     whole seconds only (…59, 60, 61…), as the time is recorded.
  *
  * SMOOTHNESS. Both hands are turned from `requestAnimationFrame`, writing the
@@ -82,8 +83,11 @@ const Face = () => {
 
       {/* Sub-dial: one turn is 120 s, shaded from the first beep onward */}
       <circle cx={SUB.cx} cy={SUB.cy} r={SUB.r} fill="#0B0B0C" stroke="#2C2C2E" strokeWidth="1" />
+      {/* Too short / the deduction-free window / over time */}
+      <path d={arcPath(SUB.cx, SUB.cy, SUB.r - 3, 1, deg(beep.at))}
+        stroke="#FFD60A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.55" />
       <path d={arcPath(SUB.cx, SUB.cy, SUB.r - 3, deg(beep.at), deg(doubleBeep.at))}
-        stroke="#FFD60A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.9" />
+        stroke="#30D158" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.95" />
       <path d={arcPath(SUB.cx, SUB.cy, SUB.r - 3, deg(doubleBeep.at), 359)}
         stroke="#FF453A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.9" />
       {Array.from({ length: 24 }, (_, i) => {
@@ -220,7 +224,10 @@ const StopwatchFace = ({ watch, title, subtitle, canStart = true, onStop, onNext
         ? { label: 'Next', tone: 'green', onClick: onNext || watch.reset }
         : { label: 'Start', tone: 'green', onClick: watch.start, disabled: !canStart };
 
-  const pastDeduction = seconds >= BEEP_MARKS[1].at;
+  // Red when the time now costs a deduction: past 90, or stopped short of 60.
+  // (Running under 60 is normal — the routine is not over yet.)
+  const pastDeduction = seconds > BEEP_MARKS[1].at
+    || (stopped && seconds > 0 && seconds < BEEP_MARKS[0].at);
 
   return (
     <div className="w-full rounded-[28px] p-4 sm:p-5 flex flex-col items-center"

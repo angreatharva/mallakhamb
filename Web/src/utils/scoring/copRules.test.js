@@ -9,6 +9,7 @@ import {
   analyzePanelMismatches,
   calculateAverageMarks,
   roundExecution,
+  getTimeDeductionForTime,
   averageSlipBreakdown,
   describeSlipAverage,
   POINT_CEILINGS,
@@ -411,5 +412,14 @@ describe('copRules — averageSlipBreakdown (published per-section average)', ()
     expect(describeSlipAverage({ used: 3, panelSize: 3 })).toBe('Averaged from 3 judge slips');
     expect(describeSlipAverage({ used: 2, panelSize: 5 })).toMatch(/middle 2 of Judges 1–4 — Senior Judge excluded/);
     expect(describeSlipAverage({ used: 2, panelSize: 4 })).toMatch(/Senior Judge \(4th seat\)/);
+  });
+});
+
+describe('copRules — time deduction, short of 60 s as well as over 90 s', () => {
+  it.each([
+    [0, 0], [45, 0.5], [50, 0.5], [51, 0.4], [55, 0.3], [56, 0.3], [57, 0.2], [59, 0.2],
+    [60, 0], [75, 0], [90, 0], [91, 0.2], [95, 0.3], [99, 0.4], [100, 0.5],
+  ])('%is -> %f', (seconds, expected) => {
+    expect(getTimeDeductionForTime(seconds)).toBe(expected);
   });
 });

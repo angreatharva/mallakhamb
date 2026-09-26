@@ -94,8 +94,9 @@ see [09-REALTIME.md](../09-REALTIME.md).
   `responseLocked` flag stays false for a Scorer's apparatus-scoped
   lock.
 - **Time deduction auto-computed** from the time field via
-  `getTimeDeduction` (imported from `copRules.js`, `:18`): `overage =
-  max(0, seconds - 90)` then `getTimeDeduction(overage)` (`:436-453`) —
+  `getTimeDeductionForTime(seconds)` (from `copRules.js`): the same tier
+  table applied to seconds short of 60 OR over 90 (under-time added
+  2026-09-26) —
   see [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md) for the shared
   tier schedule this reads from.
 - **4-judge panel drawn as five columns** via `mirrorChiefSeat`

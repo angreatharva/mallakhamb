@@ -14,6 +14,7 @@ const {
 } = require('../../utils/scoring/ranking.util');
 const {
   TIME_LIMIT_SECONDS,
+  TIME_MINIMUM_SECONDS,
   getTimeDeduction
 } = require('../../config/cop-rules');
 
@@ -126,7 +127,7 @@ class CalculationService {
   /**
    * Calculate time deduction reference — judges apply this within their own
    * Execution score per v2 §3.5. This is NOT a system-level deduction step.
-   * Time overage penalty table is shown to judges as reference table only.
+   * Time penalty table (over 90 s, or short of 60 s) is a reference only.
    * @param {string|number} time - Time in seconds or "MM:SS" format
    * @param {number} maxTime - Maximum allowed time in seconds (default: 90)
    * @returns {number} Time deduction value (for UI reference)
@@ -151,8 +152,11 @@ class CalculationService {
         timeInSeconds = time;
       }
 
+      // Short of the 60s minimum or over the limit — the same table both ways.
       const overtime = timeInSeconds - maxTime;
-      const deduction = getTimeDeduction(overtime);
+      const deduction = timeInSeconds > 0 && timeInSeconds < TIME_MINIMUM_SECONDS
+        ? getTimeDeduction(TIME_MINIMUM_SECONDS - timeInSeconds)
+        : getTimeDeduction(overtime);
 
       if (deduction > 0) {
         this.logger.debug('Time deduction calculated', {

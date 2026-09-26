@@ -66,8 +66,11 @@ export function getTolerance(avgScore) {
   return 1.00;
 }
 
-// §3.5 — time limit + deduction table.
+// §3.5 — time window + deduction table. The same bands apply to the seconds
+// OVER the 90 s limit and (since 2026-09-26) the seconds SHORT of the 60 s
+// minimum. Mirrors Server/src/config/cop-rules.js.
 export const TIME_LIMIT_SECONDS = 90;
+export const TIME_MINIMUM_SECONDS = 60;
 export function getTimeDeduction(overageSeconds) {
   const over = Number(overageSeconds) || 0;
   if (over <= 0) return 0;
@@ -75,6 +78,22 @@ export function getTimeDeduction(overageSeconds) {
   if (over <= 5) return 0.30;
   if (over <= 9) return 0.40;
   return 0.50;
+}
+
+/**
+ * The time deduction for a performance of `seconds`: the table applied to how
+ * far it fell short of 60 s, or ran over 90 s. 60–90 s costs nothing; no time
+ * (0 / blank) is not a performance and costs nothing here.
+ *
+ * @param {number|string} seconds
+ * @returns {number}
+ */
+export function getTimeDeductionForTime(seconds) {
+  const s = Number(seconds) || 0;
+  if (s <= 0) return 0;
+  if (s < TIME_MINIMUM_SECONDS) return getTimeDeduction(TIME_MINIMUM_SECONDS - s);
+  if (s > TIME_LIMIT_SECONDS) return getTimeDeduction(s - TIME_LIMIT_SECONDS);
+  return 0;
 }
 
 // §5.1–5.3 — per-apparatus combination checklists. Penalties sum to 1.60.

@@ -15,12 +15,12 @@ import { createAdminAPI } from '@/services/user/admin.api';
 
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
-import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
+import { calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/copRules';
 import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
-import { useTimekeeping, BEEP_MARKS } from './timeKeeper';
+import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
 import StopwatchFace from './StopwatchFace';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -510,8 +510,8 @@ const ScorerScoring = () => {
         }
 
         if (seconds > 0) {
-          const overage = Math.max(0, seconds - 90);
-          const deduction = getTimeDeduction(overage);
+          // Short of 60 s or over 90 s — the same table both ways.
+          const deduction = getTimeDeductionForTime(seconds);
           updatedPlayer.deduction = deduction > 0 ? deduction.toFixed(2) : '';
         } else if (timeStr === '') {
           updatedPlayer.deduction = '';
@@ -882,7 +882,7 @@ const ScorerScoring = () => {
                   onStop={handleTimerStopped}
                   onNext={handleTimerNext}
                   footer={timerWatch.status === 'stopped'
-                    ? 'Time entered on the sheet'
+                    ? ['Time entered on the sheet', deductionNote(timerWatch.seconds)].filter(Boolean).join(' · ')
                     : nextTimerMark ? `${nextTimerMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextTimerMark.at}` : 'Past 90 — deduction applies'}
                 />
               </div>

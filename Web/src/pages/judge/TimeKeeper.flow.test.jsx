@@ -162,6 +162,16 @@ describe('Scorer sheet', () => {
     await waitFor(() => expect(screen.getAllByPlaceholderText('00:00')[1]).toHaveValue('84'));
   });
 
+  it('a time short of 60 s fills its deduction too', async () => {
+    await loaded();
+    act(() => h.socket.fire('time_recorded', {
+      playerId: 'p1', teamId: 'team-a', apparatus: 'Rope Mallakhamb', seconds: 55,
+    }));
+    await waitFor(() => expect(screen.getAllByPlaceholderText('00:00')[0]).toHaveValue('55'));
+    // 5 s short → 0.30, the same band as 5 s over.
+    expect(screen.getAllByDisplayValue('0.30').length).toBeGreaterThan(0);
+  });
+
   it('ignores a time meant for another team', async () => {
     await loaded();
     act(() => h.socket.fire('time_recorded', {

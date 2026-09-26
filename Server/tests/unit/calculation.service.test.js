@@ -308,3 +308,36 @@ describe('absent judges are excluded, never counted as zero', () => {
     expect(service.shouldApplyBaseScore).toBeUndefined();
   });
 });
+
+describe('time deduction — short of 60 s as well as over 90 s', () => {
+  const { getTimeDeductionForTime } = require('../../src/config/cop-rules');
+
+  it.each([
+    [0, 0],        // no time recorded — not a performance
+    [45, 0.50],    // 15 short
+    [50, 0.50],    // 10 short → 10 or above
+    [51, 0.40],    // 9 short
+    [55, 0.30],    // 5 short
+    [56, 0.30],    // 4 short → up to 5
+    [57, 0.20],    // 3 short
+    [59, 0.20],    // 1 short
+    [60, 0],       // the minimum itself is fine
+    [75, 0],
+    [90, 0],       // the limit itself is fine
+    [91, 0.20],
+    [95, 0.30],
+    [99, 0.40],
+    [100, 0.50],
+  ])('%is -> %f', (seconds, expected) => {
+    expect(getTimeDeductionForTime(seconds)).toBe(expected);
+  });
+
+  it('the service reference applies the same rule', () => {
+    const CalculationService = require('../../src/services/scoring/calculation.service');
+    const service = new CalculationService({ debug() {}, info() {}, warn() {}, error() {} });
+    expect(service.calculateTimeDeduction(55)).toBe(0.30);
+    expect(service.calculateTimeDeduction('0:57')).toBe(0.20);
+    expect(service.calculateTimeDeduction(95)).toBe(0.30);
+    expect(service.calculateTimeDeduction(70)).toBe(0);
+  });
+});

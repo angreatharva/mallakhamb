@@ -98,8 +98,11 @@ function getTolerance(avgScore) {
   return tier ? tier.tolerance : TOLERANCE_BELOW_MINIMUM;
 }
 
-// §3.5 — time-deduction table (overage beyond the 90s limit).
+// §3.5 — time-deduction table. Applies both ways: to the seconds OVER the 90s
+// limit, and (added 2026-09-26) to the seconds SHORT of the 60s minimum — the
+// same bands, ≤3 → 0.20, ≤5 → 0.30, ≤9 → 0.40, 10+ → 0.50.
 const TIME_LIMIT_SECONDS = 90;
+const TIME_MINIMUM_SECONDS = 60;
 const TIME_DEDUCTION_TIERS = Object.freeze([
   Object.freeze({ maxOverageSeconds: 3, deduction: 0.20 }),
   Object.freeze({ maxOverageSeconds: 5, deduction: 0.30 }),
@@ -113,6 +116,23 @@ function getTimeDeduction(overageSeconds) {
   if (over <= 0) return 0;
   const tier = TIME_DEDUCTION_TIERS.find((t) => over <= t.maxOverageSeconds);
   return tier ? tier.deduction : TIME_DEDUCTION_MAXIMUM;
+}
+
+/**
+ * The time deduction for a performance of `seconds`: the table applied to how
+ * far it fell SHORT of the 60s minimum, or ran OVER the 90s limit. 60–90 s
+ * (inclusive) costs nothing; no time at all (0 / blank) is not a performance
+ * and costs nothing here.
+ *
+ * @param {number|string} seconds
+ * @returns {number}
+ */
+function getTimeDeductionForTime(seconds) {
+  const s = Number(seconds) || 0;
+  if (s <= 0) return 0;
+  if (s < TIME_MINIMUM_SECONDS) return getTimeDeduction(TIME_MINIMUM_SECONDS - s);
+  if (s > TIME_LIMIT_SECONDS) return getTimeDeduction(s - TIME_LIMIT_SECONDS);
+  return 0;
 }
 
 // §5.1–5.3 — per-apparatus combination checklists. Penalties sum to 1.60.
@@ -394,6 +414,7 @@ function getCopRulesData() {
     toleranceTiers: TOLERANCE_TIERS,
     toleranceBelowMinimum: TOLERANCE_BELOW_MINIMUM,
     timeLimitSeconds: TIME_LIMIT_SECONDS,
+    timeMinimumSeconds: TIME_MINIMUM_SECONDS,
     timeDeductionTiers: TIME_DEDUCTION_TIERS,
     timeDeductionMaximum: TIME_DEDUCTION_MAXIMUM,
     combinationChecklists: COMBINATION_CHECKLISTS,
@@ -421,9 +442,11 @@ module.exports = {
   TOLERANCE_BELOW_MINIMUM,
   getTolerance,
   TIME_LIMIT_SECONDS,
+  TIME_MINIMUM_SECONDS,
   TIME_DEDUCTION_TIERS,
   TIME_DEDUCTION_MAXIMUM,
   getTimeDeduction,
+  getTimeDeductionForTime,
   COMBINATION_CHECKLISTS,
   getCopRulesData,
   normalizeApparatus,

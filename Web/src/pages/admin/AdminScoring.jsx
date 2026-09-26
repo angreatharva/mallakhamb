@@ -9,7 +9,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { calculateAverageMarks, getTimeDeduction } from '@/utils/scoring/copRules';
+import { calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/copRules';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
@@ -430,8 +430,8 @@ const AdminScoring = () => {
                 
                 // Only calculate deduction if time is valid and > 90s
                 if (seconds > 0) {
-                    const overage = Math.max(0, seconds - 90);
-                    const deduction = getTimeDeduction(overage);
+                    // Short of 60 s or over 90 s — the same table both ways.
+                    const deduction = getTimeDeductionForTime(seconds);
                     
                     // Always set the calculated deduction so it shows up in UI immediately
                     updatedPlayer.deduction = deduction > 0 ? deduction.toFixed(2) : '';
