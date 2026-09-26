@@ -9,6 +9,7 @@ const {
   array 
 } = require('./common.validator');
 const { AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
+const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
 
 /**
  * The apparatus a panel seat may be scoped to.
@@ -227,12 +228,12 @@ const saveJudges = () => {
     // One apparatus for the whole panel — it is part of the panel's identity,
     // not a per-seat field, so it is read from the top level of the body.
     panelApparatus('apparatus'),
-    array('judges', { minLength: 1, maxLength: 6 }),
+    array('judges', { minLength: 1, maxLength: JUDGE_SEAT_TYPES.length }),
     body('judges.*.judgeNo')
-      .isInt({ min: 1, max: 6 })
-      .withMessage('Judge number must be between 1 and 6'),
+      .isInt({ min: 1, max: MAX_SEAT_NO })
+      .withMessage(`Judge number must be between 1 and ${MAX_SEAT_NO}`),
     body('judges.*.judgeType')
-      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
+      .isIn([...JUDGE_SEAT_TYPES])
       .withMessage('Invalid judge type'),
     // The slot is filled by choosing a registered judge. Admins no longer set
     // names or passwords — those belong to the judge's own account.
@@ -261,10 +262,10 @@ const createSingleJudge = () => {
       .isIn(AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('judgeNo')
-      .isInt({ min: 1, max: 6 })
-      .withMessage('Judge number must be between 1 and 6'),
+      .isInt({ min: 1, max: MAX_SEAT_NO })
+      .withMessage(`Judge number must be between 1 and ${MAX_SEAT_NO}`),
     body('judgeType')
-      .isIn(['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'])
+      .isIn([...JUDGE_SEAT_TYPES])
       .withMessage('Invalid judge type'),
     body('judgeAccount')
       .notEmpty()

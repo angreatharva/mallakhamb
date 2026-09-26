@@ -281,3 +281,81 @@ describe('competition rooms over a real transport', () => {
     expect(await errored).not.toBeNull();
   });
 });
+
+describe('Time Keeper — a stopped time reaches the Scorer', () => {
+  const room = 'scoring_Male_Under14_competition_1';
+  const time = (overrides = {}) => ({
+    roomId: room,
+    playerId: String(new mongoose.Types.ObjectId()),
+    teamId: String(new mongoose.Types.ObjectId()),
+    apparatus: 'Pole Mallakhamb',
+    seconds: 92,
+    ...overrides,
+  });
+
+  test('the Time Keeper\'s time is relayed to the Scorer, named by the server', async () => {
+    const keeper = await createJudge({ judgeNo: 7, judgeType: 'Time Keeper', username: 'tk1' });
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', username: 'sc1' });
+
+    const tk = await connect(tokenFor(keeper));
+    const sc = await connect(tokenFor(scorer));
+
+    const received = waitFor(sc, EventTypes.TIME_RECORDED);
+    const acked = waitFor(tk, EventTypes.TIME_RECORDED);
+    tk.emit(EventTypes.TIME_RECORD, time({ seconds: 92 }));
+
+    const payload = await received;
+    expect(payload).not.toBeNull();
+    expect(payload.seconds).toBe(92);
+    expect(payload.apparatus).toBe('Pole Mallakhamb');
+    // The account's own name, not anything the client could send.
+    expect(payload.timeKeeperName).toMatch(/TimeKeeper/);
+    // …and the Time Keeper is told it went.
+    expect((await acked)?.ack).toBe(true);
+  });
+
+  test('a judge who is not the Time Keeper cannot record a time', async () => {
+    const judge = await createJudge({ judgeNo: 2, judgeType: 'Judge 1', username: 'notk' });
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', username: 'sc2' });
+
+    const j = await connect(tokenFor(judge));
+    const sc = await connect(tokenFor(scorer));
+
+    const received = waitFor(sc, EventTypes.TIME_RECORDED, 1000);
+    const errored = waitFor(j, 'error', 1000);
+    j.emit(EventTypes.TIME_RECORD, time());
+
+    expect(await received).toBeNull();
+    expect(await errored).not.toBeNull();
+  });
+
+  test('a Time Keeper from another category cannot record into this room', async () => {
+    const outsider = await createJudge({
+      judgeNo: 7, judgeType: 'Time Keeper', username: 'tkout', ageGroup: 'Under18',
+    });
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', username: 'sc3' });
+
+    const tk = await connect(tokenFor(outsider));
+    const sc = await connect(tokenFor(scorer));
+
+    const received = waitFor(sc, EventTypes.TIME_RECORDED, 1000);
+    tk.emit(EventTypes.TIME_RECORD, time());
+
+    expect(await received).toBeNull();
+  });
+
+  test('a time that is not whole seconds is refused', async () => {
+    const keeper = await createJudge({ judgeNo: 7, judgeType: 'Time Keeper', username: 'tk2' });
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', username: 'sc4' });
+
+    const tk = await connect(tokenFor(keeper));
+    const sc = await connect(tokenFor(scorer));
+
+    const received = waitFor(sc, EventTypes.TIME_RECORDED, 1000);
+    const errored = waitFor(tk, 'error', 1000);
+    tk.emit(EventTypes.TIME_RECORD, time({ seconds: 91.5 }));
+
+    expect(await received).toBeNull();
+    expect(await errored).not.toBeNull();
+  });
+});

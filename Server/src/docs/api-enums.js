@@ -35,6 +35,6 @@ const COMPETITION_TYPES = [
 
 /** Panel seats, read off the Judge schema. */
 const JUDGE_TYPES = Judge.schema.path('judgeType')?.enumValues
-  || ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'];
+  || [...require('../config/judge-seats').JUDGE_SEAT_TYPES];
 
 module.exports = { APPARATUS, AGE_GROUPS, GENDERS, COMPETITION_TYPES, JUDGE_TYPES, COMPETITION_LEVELS };

@@ -17,14 +17,7 @@
 const API = process.env.SEED_API_URL || 'http://127.0.0.1:5000/api';
 
 /** judgeNo per seat, matching the admin screen's fixed slot order. */
-const SLOT_NO = {
-  'Senior Judge': 1,
-  'Judge 1': 2,
-  'Judge 2': 3,
-  'Judge 3': 4,
-  'Judge 4': 5,
-  Scorer: 6,
-};
+const { SEAT_NO: SLOT_NO } = require('../../src/config/judge-seats');
 
 /** The four seats POST /admin/judges/bulk refuses a panel without. */
 const REQUIRED_SEATS = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];

@@ -24,6 +24,7 @@ import {
   POINT_CEILINGS,
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
+import TimeKeeperScoring from './TimeKeeperScoring';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
   playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey,
@@ -1213,8 +1214,13 @@ const JudgeScoring = () => {
     storedJudgeUser = null;
   }
 
+  // The Time Keeper is routed by the seat held in the chosen category (the
+  // dashboard sets `isTimeKeeper`); a stored primary seat covers a refresh
+  // that lost the navigation state.
+  const isTimeKeeper = location.state?.isTimeKeeper || storedJudgeUser?.judgeType === 'Time Keeper';
   const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
 
+  if (isTimeKeeper) return <TimeKeeperScoring />;
   return isScorer ? <ScorerScoring /> : <JudgeSlip />;
 };
 

@@ -5,7 +5,7 @@
  * Scorers can view and save scores (Time Keeper, Scorer name, Remarks)
  * but cannot unlock scores (only superadmin has that permission).
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
@@ -65,6 +65,12 @@ const ScorerScoring = () => {
 
   const [socket, setSocket] = useState(null);
   const [judges, setJudges] = useState([]);
+  // Every seat on this panel, the Scorer and Time Keeper included — `judges`
+  // above is the evaluation seats only, because its length picks the
+  // averaging rule.
+  const [panelStaff, setPanelStaff] = useState([]);
+  // Time Keeper times that arrived before the sheet finished loading.
+  const pendingTimesRef = useRef([]);
   const [players, setPlayers] = useState([]);
   const [scores, setScores] = useState({});
   const [timeKeeper, setTimeKeeper] = useState('');
@@ -265,6 +271,7 @@ const ScorerScoring = () => {
       const judgesResponse = await scorerAPI.getJudges(judgesParams);
       const judgesData = judgesResponse.data.data || judgesResponse.data;
       setJudges(panelSeats(judgesData, teamApparatus));
+      setPanelStaff(Array.isArray(judgesData) ? judgesData : []);
 
       const summaryParams = {};
       const summaryResponse = await scorerAPI.getAllJudgesSummary(summaryParams);
@@ -383,15 +390,42 @@ const ScorerScoring = () => {
     const handleScoresSaved = () => {
       fetchScoringData();
     };
+    /*
+     * The Time Keeper stopped the clock on an athlete: fill that row's Time.
+     * Through handleScoreChange, exactly as if it had been typed, so the time
+     * deduction is worked out the same way. A time for another team's sheet,
+     * or a row this sheet does not have, is not ours.
+     */
+    const handleTimeRecorded = (data) => {
+      if (readOnly || !data || data.ack) return;
+      if (data.teamId && String(data.teamId) !== String(selectedTeam?._id)) return;
+      // Still loading: the saved scores are about to replace every row, so
+      // hold the time and apply it once they have (see the effect below).
+      if (loading) {
+        pendingTimesRef.current.push(data);
+        return;
+      }
+      applyRecordedTime(data);
+    };
 
     socket.on('score_updated', handleScoreUpdate);
     socket.on('scores_saved_notification', handleScoresSaved);
+    socket.on('time_recorded', handleTimeRecorded);
 
     return () => {
       socket.off('score_updated', handleScoreUpdate);
       socket.off('scores_saved_notification', handleScoresSaved);
+      socket.off('time_recorded', handleTimeRecorded);
     };
-  }, [socket, players, isLocked, fetchScoringData]);
+  }, [socket, players, isLocked, readOnly, loading, selectedTeam, fetchScoringData]); // eslint-disable-line react-hooks/exhaustive-deps -- handleScoreChange is recreated every render
+
+  // Times that arrived while the sheet was loading, applied once it has.
+  useEffect(() => {
+    if (loading || pendingTimesRef.current.length === 0) return;
+    const pending = pendingTimesRef.current;
+    pendingTimesRef.current = [];
+    pending.forEach(applyRecordedTime);
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps -- applyRecordedTime is recreated every render
 
   /*
    * WHAT THE SHEET DRAWS IS NOT WHAT THE PANEL IS.
@@ -407,6 +441,26 @@ const ScorerScoring = () => {
    * copy must never be counted there. See mirrorChiefSeat.
    */
   const sheetSeats = useMemo(() => mirrorChiefSeat(judges), [judges]);
+
+  /*
+   * Time Keeper and Scorer names, filled in rather than typed: the Time Keeper
+   * seated on this panel, and the Scorer signed in here. Only into an empty
+   * field once the sheet has loaded — a name saved with the sheet wins, and a
+   * name the Scorer changes by hand is left alone.
+   */
+  const timeKeeperSeatName = useMemo(() => {
+    const seats = panelStaff.filter(j => j.judgeType === 'Time Keeper' && j.name?.trim());
+    const own = seats.find(j => seatApparatus && j.apparatus === seatApparatus);
+    return (own || seats[0])?.name || '';
+  }, [panelStaff, seatApparatus]);
+  const scorerSelfName = judgeInfo?.name
+    || [judgeInfo?.firstName, judgeInfo?.lastName].filter(Boolean).join(' ');
+
+  useEffect(() => {
+    if (loading || readOnly) return;
+    if (timeKeeperSeatName) setTimeKeeper(prev => (prev?.trim() ? prev : timeKeeperSeatName));
+    if (scorerSelfName) setScorer(prev => (prev?.trim() ? prev : scorerSelfName));
+  }, [loading, readOnly, timeKeeperSeatName, scorerSelfName]);
   const seatedPanelSize = judges.length || undefined;
 
   /*
@@ -418,6 +472,10 @@ const ScorerScoring = () => {
    * in one place now; see calculateAverageMarks there.
    */
   const panelAverage = (playerScores) => calculateAverageMarks(playerScores, seatedPanelSize);
+
+  // The sheet is one team on one apparatus, both named at the top — the line
+  // under each athlete's name repeated them on every row.
+  const tableRows = useMemo(() => players.map(({ teamName: _teamName, ...row }) => row), [players]);
 
   const calculateFinalScore = (ps) => {
     const r = panelAverage(ps);
@@ -455,6 +513,17 @@ const ScorerScoring = () => {
       return { ...prev, [playerId]: updatedPlayer };
     });
     setLastUpdated(new Date());
+  };
+
+  /** Put a Time Keeper's time into its athlete's row, as if it were typed. */
+  const applyRecordedTime = (data) => {
+    if (readOnly) return;
+    const rowId = `${data.playerId}::${apparatusKey(data.apparatus)}`;
+    const row = players.find(p => p.id === rowId);
+    if (!row) return;
+    handleScoreChange(rowId, 'time', String(data.seconds));
+    if (data.timeKeeperName) setTimeKeeper(prev => (prev?.trim() ? prev : data.timeKeeperName));
+    toast.success(`Time ${data.seconds} s recorded for ${row.name}`);
   };
 
   const handleSaveScores = async () => {
@@ -713,7 +782,7 @@ const ScorerScoring = () => {
         )}
 
         <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* 1. Scoring Session */}
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
@@ -725,42 +794,7 @@ const ScorerScoring = () => {
               </div>
             </div>
 
-            {/* 2. Judges Panel */}
-            <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Judges Panel</p>
-              {sheetSeats.length > 0 ? (
-                <div className="flex flex-row flex-wrap items-center gap-2">
-                  {/* Five chips for a panel of four: the last is the Sr. Judge
-                      again, in the seat their mark is counted in.
-
-                      They WRAP rather than scroll. Five never fit across a
-                      third of the card, and the ones past the edge were
-                      reachable only by dragging a scrollbar nobody looks for
-                      — on a screen whose whole job is showing who marked
-                      what. */}
-                  {sheetSeats.map((jud) => {
-                    const isSenior = jud.judgeType === 'Senior Judge' || jud.isChiefCopy;
-                    return (
-                      <div key={jud._id} className="rounded-xl border p-2 text-center min-w-[90px] flex-shrink-0"
-                        style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
-                        <span className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold mb-1 truncate max-w-full"
-                          style={{ background: isSenior ? `${ADMIN_COLORS.purple}25` : `${ADMIN_COLORS.blue}25`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
-                          {jud.judgeType}
-                        </span>
-                        <p className="font-bold text-white text-xs truncate">{jud.name}</p>
-                        {jud.isChiefCopy
-                          ? <p className="text-[10px] text-white/40 truncate">Senior Judge&rsquo;s mark</p>
-                          : <p className="text-[10px] text-white/40 truncate">{jud.email}</p>}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-white/30 text-sm py-4">No judges found for this category.</p>
-              )}
-            </div>
-
-            {/* 3. Players */}
+            {/* 2. Players */}
             <div className="text-left md:text-right flex-shrink-0">
               <p className="text-xs text-white/40 uppercase tracking-wide">Players</p>
               <p className="text-4xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</p>
@@ -786,7 +820,7 @@ const ScorerScoring = () => {
             {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
                 the Chief's copy on a 4-judge panel, and the size is what picks
                 the averaging rule. */}
-            <ResponsiveScoringTable players={players} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly} />
+            <ResponsiveScoringTable players={tableRows} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly} />
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>

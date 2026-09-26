@@ -136,6 +136,12 @@ class ScoringHandler {
       this.handleScoresSaved.bind(this)
     );
 
+    // Time Keeper: relay a stopped performance time to the Scorer's sheet
+    this.socketManager.registerEventHandler(
+      EventTypes.TIME_RECORD,
+      this.handleTimeRecord.bind(this)
+    );
+
     this.logger.info('Scoring event handlers registered');
   }
 
@@ -332,6 +338,66 @@ class ScoringHandler {
    */
   getAltRoomId(roomId) {
     return alternateRoomId(roomId);
+  }
+
+  /**
+   * Handle a Time Keeper's stopped time.
+   *
+   * Relay only — nothing is written here. The time lands in the Time field of
+   * that athlete's row on the Scorer's sheet, and is saved with the sheet like
+   * a typed one, deductions and all. Only someone seated as Time Keeper in the
+   * category may send one; the check reads every seat the person holds in the
+   * room, since one room carries all of a category's apparatus panels.
+   *
+   * @param {Socket} socket
+   * @param {Object} data - { roomId, playerId, teamId, apparatus, seconds }
+   */
+  async handleTimeRecord(socket, data) {
+    if (socket.userType !== 'judge') {
+      throw new Error('Only a Time Keeper can record a time');
+    }
+
+    await this.assertCompetitionUnlocked(socket);
+
+    const { roomId, playerId, teamId, apparatus } = data || {};
+    const seconds = Number(data?.seconds);
+
+    if (!roomId || !String(roomId).startsWith('scoring_') || !playerId) {
+      throw new Error('Missing required fields: roomId, playerId');
+    }
+    // Whole seconds, as the timer shows them. An hour is far past any routine
+    // and catches a runaway timer or a malformed payload.
+    if (!Number.isInteger(seconds) || seconds < 0 || seconds > 3600) {
+      throw new Error('Time must be a whole number of seconds');
+    }
+
+    const authorized = await this.socketManager.isJudgeAuthorizedForRoom(socket, roomId);
+    const seats = socket.judgeTypesByRoom?.get(roomId);
+    if (!authorized || !seats || !seats.has('Time Keeper')) {
+      throw new Error('Only the Time Keeper of this category can record a time');
+    }
+
+    const payload = {
+      playerId,
+      teamId: teamId || null,
+      apparatus: apparatus || null,
+      seconds,
+      timeKeeperName: socket.judgeName || null,
+      recordedBy: socket.userId,
+      timestamp: new Date().toISOString(),
+    };
+
+    socket.to(roomId).emit(EventTypes.TIME_RECORDED, payload);
+    const altRoomId = this.getAltRoomId(roomId);
+    if (altRoomId && altRoomId !== roomId) {
+      socket.to(altRoomId).emit(EventTypes.TIME_RECORDED, payload);
+    }
+    // Acknowledge to the Time Keeper, so their screen can say it was sent.
+    socket.emit(EventTypes.TIME_RECORDED, { ...payload, ack: true });
+
+    this.logger.info('Time recorded and relayed', {
+      roomId, altRoomId, playerId, teamId, apparatus, seconds, judgeId: socket.userId,
+    });
   }
 
   /**

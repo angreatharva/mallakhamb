@@ -566,7 +566,22 @@ const JudgeDashboard = () => {
 
     // Both scorers and regular judges go to /judge/scoring
     // The JudgeScoring component will handle the role-based UI
-    if (judgeInfo?.judgeType === 'Scorer') {
+    //
+    // The Time Keeper goes straight there too, with the team, like the Scorer.
+    // Decided by the seat held in THIS category — a person can keep time on
+    // one panel and judge on another.
+    if ((myJudgeType || judgeInfo?.judgeType) === 'Time Keeper') {
+      navigate('/judge/scoring', {
+        state: {
+          selectedTeam: team,
+          selectedCompetitionType: competitionTypeObj,
+          apparatus: selectedApparatus,
+          gender,
+          ageGroup,
+          isTimeKeeper: true,
+        },
+      });
+    } else if (judgeInfo?.judgeType === 'Scorer') {
       logger.log('Navigating to scorer scoring page');
       // Scorer: Navigate to scoring with team-level state
       navigate(`/judge/scoring`, {

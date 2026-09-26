@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 // Required for its side effect: registering the JudgeAccount schema. Every
 // panel query populates `judgeAccount`, and a populate against an unregistered
@@ -71,11 +72,11 @@ const judgeSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Judge number is required'],
     min: 1,
-    max: 7 // 7 allowed for legacy Scorer docs created before Time Keeper was removed
+    max: MAX_SEAT_NO // 7 = Time Keeper (see config/judge-seats)
   },
   judgeType: {
     type: String,
-    enum: ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'],
+    enum: [...JUDGE_SEAT_TYPES],
     required: [true, 'Judge type is required']
   },
   isActive: {

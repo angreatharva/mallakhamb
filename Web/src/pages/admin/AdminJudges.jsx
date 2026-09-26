@@ -109,11 +109,14 @@ const EMPTY_JUDGE_FORM = [
   { judgeNo: 4, judgeType: 'Judge 3', account: null },
   { judgeNo: 5, judgeType: 'Judge 4', account: null },
   { judgeNo: 6, judgeType: 'Scorer', account: null },
+  // Optional. Times each performance on /judge/scoring; the stopped time is
+  // sent to the Scorer's sheet. Seat 7 — see Server/src/config/judge-seats.js.
+  { judgeNo: 7, judgeType: 'Time Keeper', account: null },
 ];
 
 const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo, judgeType }));
 
-const SUPPORT_JUDGE_TYPES = ['Scorer'];
+const SUPPORT_JUDGE_TYPES = ['Scorer', 'Time Keeper'];
 const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer'];
 
 const REGISTER_PATH = '/judge/register';

@@ -41,6 +41,12 @@ module.exports = {
   // re-sorts without a refresh.
   PERFORMANCE_ORDER_UPDATED: 'performance_order_updated',
 
+  // Time Keeper: a stopped performance time, relayed into the scoring room so
+  // the Scorer's sheet fills that athlete's Time field. Client → server is
+  // TIME_RECORD; the broadcast is TIME_RECORDED.
+  TIME_RECORD: 'time_record',
+  TIME_RECORDED: 'time_recorded',
+
   // Notification events
   NOTIFICATION: 'notification',
   COMPETITION_UPDATE: 'competition_update',

@@ -274,11 +274,13 @@ class SocketManager {
     if (!judgeDetails) {
       socket.judgeRoomIds = new Set();
       socket.judgeTypeByRoom = new Map();
+      socket.judgeTypesByRoom = new Map();
       return null;
     }
 
     const roomIds = new Set();
     const judgeTypeByRoom = new Map();
+    const judgeTypesByRoom = new Map();
 
     for (const assignment of this.getJudgeAssignments(judgeDetails)) {
       for (const roomId of this.getRoomIdsForAssignment(assignment)) {
@@ -286,12 +288,22 @@ class SocketManager {
         // A judge can hold different roles in different categories, so remember
         // the role per room rather than assuming one global judgeType.
         judgeTypeByRoom.set(roomId, assignment.judgeType || judgeDetails.judgeType);
+        // EVERY seat held in the room, too. One room is a whole category and
+        // carries all its apparatus panels, so a person can be Time Keeper on
+        // Pole and Judge 1 on Rope there — the single map above keeps only the
+        // last one it saw.
+        if (!judgeTypesByRoom.has(roomId)) judgeTypesByRoom.set(roomId, new Set());
+        judgeTypesByRoom.get(roomId).add(assignment.judgeType || judgeDetails.judgeType);
       }
     }
 
     socket.judgeRoomIds = roomIds;
     socket.judgeTypeByRoom = judgeTypeByRoom;
+    socket.judgeTypesByRoom = judgeTypesByRoom;
     socket.judgeType = judgeDetails.judgeType;
+    // Server-side identity for broadcasts that name the sender (the Time
+    // Keeper's name on the Scorer's sheet) — never the name a client claims.
+    socket.judgeName = judgeDetails.name || null;
 
     return judgeDetails;
   }

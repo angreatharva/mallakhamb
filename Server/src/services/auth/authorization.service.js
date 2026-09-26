@@ -27,6 +27,7 @@
  */
 
 const { loadAssignments } = require('../../utils/data/judge-assignment.util');
+const { fullName } = require('../../utils/data/user-projection.util');
 
 class AuthorizationService {
   /**
@@ -121,7 +122,9 @@ class AuthorizationService {
 
       return {
         _id: judgeAccountId,
-        name: account?.name || '',
+        // Accounts store first and last name; `name` is only composed at the
+        // response boundary, so `account.name` was always empty here.
+        name: account?.name || fullName(account) || '',
         email: account?.email || null,
         judgeType: primary.judgeType || null,
         gender: primary.gender || null,

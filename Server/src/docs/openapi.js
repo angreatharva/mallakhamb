@@ -22,7 +22,9 @@
 
 const { APPARATUS, COMPETITION_TYPES, AGE_GROUPS, GENDERS, COMPETITION_LEVELS } = require('./api-enums');
 
-const JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4', 'Scorer'];
+const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
+
+const JUDGE_TYPES = [...JUDGE_SEAT_TYPES];
 
 // ---------------------------------------------------------------------------
 // Reusable pieces
@@ -342,7 +344,7 @@ const schemas = {
       competition: { type: 'string', format: 'objectid' },
       gender: { type: 'string', enum: GENDERS },
       ageGroup: { type: 'string', enum: AGE_GROUPS },
-      judgeNo: { type: 'integer', minimum: 1, maximum: 6 },
+      judgeNo: { type: 'integer', minimum: 1, maximum: MAX_SEAT_NO },
       judgeType: { type: 'string', enum: JUDGE_TYPES },
       competitionTypes: { type: 'array', items: { type: 'string', enum: COMPETITION_TYPES } },
       apparatus: {

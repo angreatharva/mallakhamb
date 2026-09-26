@@ -437,7 +437,7 @@ components:
         judgeNo:
           type: integer
           minimum: 1
-          maximum: 6
+          maximum: 7
         judgeType:
           type: string
           enum:
@@ -447,6 +447,7 @@ components:
             - Judge 3
             - Judge 4
             - Scorer
+            - Time Keeper
         competitionTypes:
           type: array
           items:
@@ -688,6 +689,7 @@ components:
             - Judge 3
             - Judge 4
             - Scorer
+            - Time Keeper
           description: Honoured only for admins, or a Senior Judge with `overrideBySenior`
         overrideBySenior:
           type: boolean
@@ -5982,6 +5984,7 @@ paths:
                     - Judge 3
                     - Judge 4
                     - Scorer
+                    - Time Keeper
                 judgeNo:
                   type: integer
                 gender:
@@ -6157,6 +6160,7 @@ paths:
                           - Judge 3
                           - Judge 4
                           - Scorer
+                          - Time Keeper
                       judgeNo:
                         type: integer
               required:
@@ -6319,6 +6323,7 @@ paths:
                     - Judge 3
                     - Judge 4
                     - Scorer
+                    - Time Keeper
                 isActive:
                   type: boolean
       responses:
@@ -12162,6 +12167,7 @@ paths:
                     - Judge 3
                     - Judge 4
                     - Scorer
+                    - Time Keeper
                 gender:
                   type: string
                   enum:
@@ -12337,6 +12343,7 @@ paths:
                     - Judge 3
                     - Judge 4
                     - Scorer
+                    - Time Keeper
       responses:
         "200":
           description: Updated

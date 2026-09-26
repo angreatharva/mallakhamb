@@ -574,7 +574,7 @@
           "judgeNo": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 6
+            "maximum": 7
           },
           "judgeType": {
             "type": "string",
@@ -584,7 +584,8 @@
               "Judge 2",
               "Judge 3",
               "Judge 4",
-              "Scorer"
+              "Scorer",
+              "Time Keeper"
             ]
           },
           "competitionTypes": {
@@ -894,7 +895,8 @@
               "Judge 2",
               "Judge 3",
               "Judge 4",
-              "Scorer"
+              "Scorer",
+              "Time Keeper"
             ],
             "description": "Honoured only for admins, or a Senior Judge with `overrideBySenior`"
           },
@@ -9163,7 +9165,8 @@
                       "Judge 2",
                       "Judge 3",
                       "Judge 4",
-                      "Scorer"
+                      "Scorer",
+                      "Time Keeper"
                     ]
                   },
                   "judgeNo": {
@@ -9405,7 +9408,8 @@
                             "Judge 2",
                             "Judge 3",
                             "Judge 4",
-                            "Scorer"
+                            "Scorer",
+                            "Time Keeper"
                           ]
                         },
                         "judgeNo": {
@@ -9642,7 +9646,8 @@
                       "Judge 2",
                       "Judge 3",
                       "Judge 4",
-                      "Scorer"
+                      "Scorer",
+                      "Time Keeper"
                     ]
                   },
                   "isActive": {
@@ -18640,7 +18645,8 @@
                       "Judge 2",
                       "Judge 3",
                       "Judge 4",
-                      "Scorer"
+                      "Scorer",
+                      "Time Keeper"
                     ]
                   },
                   "gender": {
@@ -18909,7 +18915,8 @@
                       "Judge 2",
                       "Judge 3",
                       "Judge 4",
-                      "Scorer"
+                      "Scorer",
+                      "Time Keeper"
                     ]
                   }
                 }
