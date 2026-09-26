@@ -41,7 +41,7 @@ import {
  * Two blocks stop a Senior Judge finalizing, and they are separate because they
  * are resolved differently:
  *
- *   slip mismatch — the judges recorded DIFFERENT ROUTINES (element mix or
+ *   slip mismatch — the judges recorded DIFFERENT ROUTINES (difficulty value or
  *                   combination checklist). Somebody wrote down the wrong thing.
  *   tolerance     — the judges recorded the same routine and marked it too far
  *                   apart (COP §3.4). Nobody is wrong; the panel is.

@@ -957,7 +957,7 @@ evaluators would have produced the same number either way and proved nothing.
 
 The two blocks are separate on purpose, and are asserted separately:
 
-- **Slip mismatch** — the judges wrote down different routines (A/B/C mix or
+- **Slip mismatch** — the judges wrote down different routines (difficulty value or
   combination checklist). Somebody recorded the wrong thing; it is fixed by
   correcting a slip. Checked at every panel size.
 - **Tolerance** (COP §3.4) — the judges agree on the routine and disagree about

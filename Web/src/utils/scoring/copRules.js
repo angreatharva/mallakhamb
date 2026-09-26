@@ -335,8 +335,9 @@ export function calculateAverageMarks(playerScores, panelSize) {
 
 /**
  * Cross-judge panel mismatch checks for Panel Review.
- * Combination/Difficulty compare the actual selections (checklist / A-B-C counts),
- * not only the section totals — two slips can share a total while disagreeing on why.
+ * Difficulty compares the final difficulty value only — differing A/B/C counts
+ * that produce the same value are not a mismatch. Combination compares the
+ * checklist selections as well as the total.
  * Tolerance mismatch applies only to 4/5-judge panels (not 3).
  *
  * @param {Object} panelScores - { [judgeType]: { judgeType, score, breakdown } }
@@ -364,16 +365,11 @@ export function analyzePanelMismatches(panelScores, panelSize) {
   // element-level comparisons to slips that carry real detail.
   const detailedSlips = slips.filter((s) => s.breakdown?.detailed !== false);
 
-  // Difficulty: totals OR A/B/C element counts must agree across judges
-  const difficultyMixKeys = detailedSlips.map((s) => {
-    const d = s.breakdown?.difficulty || {};
-    return `${d.aClass ?? 0}|${d.bClass ?? 0}|${d.cClass ?? 0}`;
-  });
-  const difficultyTotalMismatch =
+  // Difficulty: only the final difficulty value must agree across judges.
+  // Different A/B/C counts that land on the same value are not a mismatch —
+  // the score is what counts, not how each judge arrived at it.
+  const difficultyMismatch =
     difficultyValues.length >= 2 && !difficultyValues.every((v) => nearlyEqual(v, difficultyValues[0]));
-  const difficultyMixMismatch =
-    difficultyMixKeys.length >= 2 && !difficultyMixKeys.every((k) => k === difficultyMixKeys[0]);
-  const difficultyMismatch = difficultyTotalMismatch || difficultyMixMismatch;
 
   // Combination: totals OR checklist selections must agree across judges
   const allComboIds = new Set();
@@ -403,10 +399,6 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     const checked = s?.breakdown?.combination?.checked || {};
     return ids.map((id) => `${id}:${checked[id] ? 1 : 0}`).join(',');
   };
-  const mixKey = (s) => {
-    const d = s?.breakdown?.difficulty || {};
-    return `${d.aClass ?? 0}|${d.bClass ?? 0}|${d.cClass ?? 0}`;
-  };
 
   // Per-category divergence from the Senior Judge's slip, so each judge's own
   // mismatch popup can show only the category(ies) THEIR slip actually
@@ -418,10 +410,9 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     const bothDetailed =
       senior.breakdown?.detailed !== false && entry.breakdown?.detailed !== false;
 
-    let difficulty = !nearlyEqual(entry.breakdown?.difficulty?.total ?? 0, senior.breakdown?.difficulty?.total ?? 0);
+    const difficulty = !nearlyEqual(entry.breakdown?.difficulty?.total ?? 0, senior.breakdown?.difficulty?.total ?? 0);
     let combination = !nearlyEqual(entry.breakdown?.combination?.total ?? 0, senior.breakdown?.combination?.total ?? 0);
     if (bothDetailed) {
-      if (mixKey(entry) !== mixKey(senior)) difficulty = true;
       const ids = [...new Set([...comboIdsFor(senior), ...comboIdsFor(entry)])].sort((a, b) => a - b);
       if (comboFingerprint(entry, ids) !== comboFingerprint(senior, ids)) combination = true;
     }
@@ -475,7 +466,6 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     difficultyMismatch,
     combinationMismatch,
     combinationSelectionMismatch,
-    difficultyMixMismatch,
     toleranceMismatch,
     toleranceInfo,
     difficultyValues,

@@ -73,12 +73,14 @@ describe('analyzePanelMismatches with server-loaded slips', () => {
     expect(result.hasBlockingMismatch).toBeFalsy();
   });
 
-  it('still reports a genuine element-mix disagreement between detailed slips', () => {
+  it('does not report a mismatch when A/B/C counts differ but the difficulty value is the same', () => {
     const result = analyzePanelMismatches({
-      'Judge 1': detailed(7.95, { aClass: 1, bClass: 2, cClass: 3 }, { 1: true }),
-      'Judge 2': detailed(7.95, { aClass: 3, bClass: 2, cClass: 1 }, { 1: true }),
+      'Senior Judge': { ...detailed(7.95, { aClass: 1, bClass: 2, cClass: 3 }, { 1: true }), judgeType: 'Senior Judge' },
+      'Judge 1': { ...detailed(7.95, { aClass: 3, bClass: 2, cClass: 1 }, { 1: true }), judgeType: 'Judge 1' },
     }, 3);
-    expect(result.difficultyMismatch).toBe(true);
+    expect(result.difficultyMismatch).toBe(false);
+    expect(result.disagreeingJudges).toEqual([]);
+    expect(result.hasBlockingMismatch).toBe(false);
   });
 
   it('still reports differing section totals regardless of detail level', () => {

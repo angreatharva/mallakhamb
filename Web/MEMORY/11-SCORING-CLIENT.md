@@ -103,12 +103,12 @@ because they're shown in different dialogs and resolved differently:
   combinationMismatch`) — judges disagree about **what the athlete
   did**: either their difficulty/combination section *totals* disagree
   (comparing floats with a `< 0.005` tolerance,
-  `nearlyEqual`/copRules.js:345), or — when both slips carry
-  `detailed !== false` breakdowns — their actual A/B/C element counts
-  or checklist selections disagree even though the totals happen to
-  match (copRules.js:361-370, 383-388). The comment is explicit that
-  totals alone are not enough: *"two slips can share a total while
-  disagreeing on why"* (copRules.js:331-332).
+  `nearlyEqual`), or — when both slips carry `detailed !== false`
+  breakdowns — their combination checklist selections disagree even
+  though the totals happen to match. Difficulty is judged on its final
+  value ONLY: different A/B/C element counts that produce the same
+  difficulty value are deliberately NOT a mismatch (changed 2026-09-26
+  at the user's request).
 - **`hasToleranceBreach`** — judges agree on the routine, but the
   4/5-judge execution average is far enough from the Senior Judge's
   mark to trigger the base-score rule (`baseScoreApplied` from

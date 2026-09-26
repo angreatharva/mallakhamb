@@ -211,9 +211,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                 >
                   <p className="text-sm font-bold text-white mb-1">⛔ Difficulty Mismatch</p>
                   <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    {panelMismatch.difficultyMixMismatch
-                      ? 'A/B/C element counts differ between judges. The element mix must be identical across all judges.'
-                      : `Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
+                    {`Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
                   {!isSeniorJudge && seniorEntry && myEntry && (
                     <ReferenceRow
@@ -234,9 +232,9 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                         >
                           {jt === 'Senior Judge' ? 'SR' : jt.replace('Judge ', 'J')}
                           {judgeNameMap?.[jt] ? ` · ${judgeNameMap[jt]}` : ''}:{' '}
-                          {data.breakdown?.detailed === false
-                            ? Number(data.breakdown?.difficulty?.total ?? 0).toFixed(2)
-                            : `A${data.breakdown?.difficulty?.aClass ?? 0}/B${data.breakdown?.difficulty?.bClass ?? 0}/C${data.breakdown?.difficulty?.cClass ?? 0}`}
+                          {Number(data.breakdown?.difficulty?.total ?? 0).toFixed(2)}
+                          {data.breakdown?.detailed !== false &&
+                            ` (A${data.breakdown?.difficulty?.aClass ?? 0}/B${data.breakdown?.difficulty?.bClass ?? 0}/C${data.breakdown?.difficulty?.cClass ?? 0})`}
                         </span>
                       ))}
                     </div>

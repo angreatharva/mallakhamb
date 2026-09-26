@@ -53,8 +53,8 @@ than `judgePanel.js`, that's a regression.
 
 Two separate dialogs (`:85-274` and `:286-440`), deliberately not
 merged:
-- **`MismatchModal`** — `hasBlockingMismatch` (difficulty/combination
-  element-mix or checklist disagreement). Red.
+- **`MismatchModal`** — `hasBlockingMismatch` (difficulty value or
+  combination total/checklist disagreement). Red.
 - **`ToleranceModal`** — `hasToleranceBreach` (COP §3.4: execution
   average vs. Senior Judge mark outside tolerance). Amber "so a judge
   can tell which one they are looking at without reading the heading"

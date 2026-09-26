@@ -245,7 +245,7 @@ Client-only additions:
 - `computeCombinationTotal()` — 1.60 minus the penalties of unchecked checklist items.
 - `resolveDifficultyValue()` — the C→B→A cascade, where excess higher-class elements fill lower slots while keeping their original class value.
 - `calculateAverageMarks()` — the panel-size-aware average (3-judge simple average; 4-judge average of all three evaluation judges; 5-judge drop-high/low), with the tolerance check and base-score fallback.
-- `analyzePanelMismatches()` — cross-judge comparison for Panel Review. It compares the actual A/B/C counts and checklist selections, not just section totals, using the Senior Judge's slip as the reference, and returns per-judge detail so each judge is only shown the categories *their own* slip disagrees on.
+- `analyzePanelMismatches()` — cross-judge comparison for Panel Review. Difficulty is compared on its final value only (different A/B/C counts that give the same value are not a mismatch); Combination compares the checklist selections as well as the total, using the Senior Judge's slip as the reference, and returns per-judge detail so each judge is only shown the categories *their own* slip disagrees on.
 
 ---
 
