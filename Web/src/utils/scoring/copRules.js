@@ -348,6 +348,99 @@ export function calculateAverageMarks(playerScores, panelSize) {
   };
 }
 
+/** Stored slip role (judgeSlips[].judgeRole) → panel seat. SJ is an older name. */
+const SLIP_ROLE_TO_JUDGE_TYPE = Object.freeze({
+  SR_JUDGE: 'Senior Judge',
+  SJ: 'Senior Judge',
+  J1: 'Judge 1',
+  J2: 'Judge 2',
+  J3: 'Judge 3',
+  J4: 'Judge 4',
+});
+
+/**
+ * The published per-section breakdown — Difficulty, Combination, Execution,
+ * Originality — averaged over the slips the panel rule actually counts:
+ *
+ *   3 judges  every slip (Senior Judge, Judge 1, Judge 2), each section ÷ 3.
+ *   5 judges  the Senior Judge's slip is left out; of Judges 1–4 the highest
+ *             and lowest slip (by total) are dropped and the middle two are
+ *             averaged, each section ÷ 2.
+ *   4 judges  the same as five, the way calculateAverageMarks scores it: the
+ *             Senior Judge's slip fills the vacant fourth evaluation seat, then
+ *             the highest and lowest of the four are dropped and the middle
+ *             two averaged.
+ *
+ * Slips are chosen by their TOTAL — the same slips whose totals make the panel
+ * average — so the four sections add up to that average.
+ *
+ * @param {Array<Object>} slips - stored judgeSlips (judgeRole, *Score, total)
+ * @param {number} [panelSize] - seated panel, 3 | 4 | 5; inferred from the slips if absent
+ * @returns {{difficulty:number, combination:number, execution:number, bonus:number,
+ *   used:number, panelSize:number}|null} null when there are no slips
+ */
+export function averageSlipBreakdown(slips = [], panelSize) {
+  const bySeat = {};
+  (slips || []).forEach((s) => {
+    const seat = SLIP_ROLE_TO_JUDGE_TYPE[s?.judgeRole];
+    if (!seat) return;
+    bySeat[seat] = {
+      difficulty: Number(s.difficultyScore) || 0,
+      combination: Number(s.combinationScore) || 0,
+      execution: Number(s.executionScore) || 0,
+      bonus: Number(s.bonusScore) || 0,
+      total: Number(s.total) || 0,
+    };
+  });
+
+  const senior = bySeat['Senior Judge'];
+  const evaluators = ['Judge 1', 'Judge 2', 'Judge 3', 'Judge 4']
+    .map((seat) => bySeat[seat])
+    .filter(Boolean);
+  const seated = [3, 4, 5].includes(Number(panelSize))
+    ? Number(panelSize)
+    : Object.keys(bySeat).length;
+
+  let counted;
+  if (seated >= 4) {
+    const pool = seated === 4 && senior ? [...evaluators, senior] : evaluators;
+    // A stable sort, so on equal totals the earlier seat is the one dropped low.
+    counted = pool.length >= 3
+      ? [...pool].sort((a, b) => a.total - b.total).slice(1, -1)
+      : pool;
+  } else {
+    counted = [senior, ...evaluators].filter(Boolean);
+  }
+  if (counted.length === 0) return null;
+
+  const mean = (key) => counted.reduce((sum, s) => sum + s[key], 0) / counted.length;
+  return {
+    difficulty: mean('difficulty'),
+    combination: mean('combination'),
+    execution: mean('execution'),
+    bonus: mean('bonus'),
+    used: counted.length,
+    panelSize: seated,
+  };
+}
+
+/**
+ * One line saying which slips a breakdown from averageSlipBreakdown averaged.
+ * @param {Object|null} breakdown
+ * @returns {string}
+ */
+export function describeSlipAverage(breakdown) {
+  if (!breakdown) return '';
+  const { used, panelSize } = breakdown;
+  if (panelSize === 5) {
+    return `Averaged from the middle ${used} of Judges 1–4 — Senior Judge excluded, highest and lowest dropped`;
+  }
+  if (panelSize === 4) {
+    return `Averaged from the middle ${used} of Judges 1–3 and the Senior Judge (4th seat) — highest and lowest dropped`;
+  }
+  return `Averaged from ${used} judge slip${used === 1 ? '' : 's'}`;
+}
+
 /**
  * Cross-judge panel mismatch checks for Panel Review.
  * Difficulty compares the final difficulty value only — differing A/B/C counts

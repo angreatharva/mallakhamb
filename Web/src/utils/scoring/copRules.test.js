@@ -9,6 +9,8 @@ import {
   analyzePanelMismatches,
   calculateAverageMarks,
   roundExecution,
+  averageSlipBreakdown,
+  describeSlipAverage,
   POINT_CEILINGS,
 } from './copRules';
 
@@ -319,5 +321,95 @@ describe('copRules — roundExecution (one decimal, half rounds down)', () => {
     expect(roundExecution(4.46)).toBe(4.4);
     expect(roundExecution(9)).toBe(4.4);
     expect(roundExecution(-1)).toBe(0);
+  });
+});
+
+describe('copRules — averageSlipBreakdown (published per-section average)', () => {
+  // A stored slip: section totals plus the slip total, as the results feed ships it.
+  const slip = (judgeRole, difficulty, combination, execution, bonus = 0) => ({
+    judgeRole,
+    difficultyScore: difficulty,
+    combinationScore: combination,
+    executionScore: execution,
+    bonusScore: bonus,
+    total: difficulty + combination + execution + bonus,
+  });
+
+  it('3 judges: every slip, each section divided by 3', () => {
+    const b = averageSlipBreakdown([
+      slip('SR_JUDGE', 3.8, 1.6, 3.0),
+      slip('J1', 3.6, 1.4, 2.7),
+      slip('J2', 3.4, 1.2, 2.4, 0.2),
+    ], 3);
+    expect(b.used).toBe(3);
+    expect(b.difficulty).toBeCloseTo(3.6, 10);
+    expect(b.combination).toBeCloseTo(1.4, 10);
+    expect(b.execution).toBeCloseTo(2.7, 10);
+    expect(b.bonus).toBeCloseTo(0.2 / 3, 10);
+  });
+
+  it('5 judges: Senior Judge left out, highest and lowest dropped, middle two ÷ 2', () => {
+    const b = averageSlipBreakdown([
+      slip('SR_JUDGE', 1.0, 1.0, 1.0),      // excluded however it scores
+      slip('J1', 3.8, 1.6, 4.0),            // highest  → dropped
+      slip('J2', 3.8, 1.6, 3.0),            // counted
+      slip('J3', 3.6, 1.4, 2.6),            // counted
+      slip('J4', 2.0, 1.0, 1.0),            // lowest   → dropped
+    ], 5);
+    expect(b.used).toBe(2);
+    expect(b.difficulty).toBeCloseTo(3.7, 10);
+    expect(b.combination).toBeCloseTo(1.5, 10);
+    expect(b.execution).toBeCloseTo(2.8, 10);
+    expect(b.bonus).toBe(0);
+  });
+
+  it('4 judges: scored as five — the Senior Judge fills the 4th seat, middle two ÷ 2', () => {
+    const b = averageSlipBreakdown([
+      slip('SR_JUDGE', 3.8, 1.6, 3.0),      // 8.4 — counted in the 4th seat
+      slip('J1', 3.8, 1.6, 4.0),            // 9.4 — highest → dropped
+      slip('J2', 3.6, 1.4, 2.6),            // 7.6 — counted
+      slip('J3', 2.0, 1.0, 1.0),            // 4.0 — lowest  → dropped
+    ], 4);
+    expect(b.used).toBe(2);
+    expect(b.difficulty).toBeCloseTo(3.7, 10);
+    expect(b.combination).toBeCloseTo(1.5, 10);
+    expect(b.execution).toBeCloseTo(2.8, 10);
+  });
+
+  it('adds up to the panel average calculateAverageMarks gives, at 4 and 5 judges', () => {
+    const five = [
+      slip('SR_JUDGE', 3.8, 1.6, 3.2),
+      slip('J1', 3.8, 1.6, 3.9),
+      slip('J2', 3.8, 1.4, 3.0),
+      slip('J3', 3.6, 1.6, 2.8),
+      slip('J4', 3.4, 1.2, 2.2),
+    ];
+    const b = averageSlipBreakdown(five, 5);
+    const avg = calculateAverageMarks({
+      seniorJudge: five[0].total, judge1: five[1].total, judge2: five[2].total,
+      judge3: five[3].total, judge4: five[4].total,
+    }, 5).executionAvg;
+    expect(b.difficulty + b.combination + b.execution + b.bonus).toBeCloseTo(avg, 2);
+  });
+
+  it('infers the panel from the slips when the row has no panelSize, and reads the old SJ role', () => {
+    const b = averageSlipBreakdown([
+      slip('SJ', 3.8, 1.6, 3.0),
+      slip('J1', 3.8, 1.6, 3.0),
+      slip('J2', 3.8, 1.6, 3.0),
+    ]);
+    expect(b.panelSize).toBe(3);
+    expect(b.used).toBe(3);
+  });
+
+  it('returns null when there are no slips', () => {
+    expect(averageSlipBreakdown([], 5)).toBeNull();
+    expect(averageSlipBreakdown(undefined, 3)).toBeNull();
+  });
+
+  it('describes which slips were averaged', () => {
+    expect(describeSlipAverage({ used: 3, panelSize: 3 })).toBe('Averaged from 3 judge slips');
+    expect(describeSlipAverage({ used: 2, panelSize: 5 })).toMatch(/middle 2 of Judges 1–4 — Senior Judge excluded/);
+    expect(describeSlipAverage({ used: 2, panelSize: 4 })).toMatch(/Senior Judge \(4th seat\)/);
   });
 });

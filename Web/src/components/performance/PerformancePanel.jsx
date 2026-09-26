@@ -5,6 +5,7 @@ import { publicAPI } from '@/services/index.js';
 import { COLORS } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
 
 // ─── Design constants ─────────────────────────────────────────────────────────
 const COMP_TYPE_LABELS = {
@@ -56,17 +57,11 @@ const ScorePill = ({ label, value, accent }) => (
 );
 
 // ─── Score breakdown parser ───────────────────────────────────────────────────
+// The panel rule decides which slips count (all three on a 3-judge panel; the
+// middle two evaluation slips on a 4/5-judge one) — see averageSlipBreakdown.
 const parseBreakdown = (player) => {
-  const slips = player.judgeSlips || [];
-  if (slips.length > 0) {
-    const len = slips.length;
-    return {
-      difficulty: slips.reduce((acc, s) => acc + (Number(s.difficultyScore) || 0), 0) / len,
-      combination: slips.reduce((acc, s) => acc + (Number(s.combinationScore) || 0), 0) / len,
-      execution:   slips.reduce((acc, s) => acc + (Number(s.executionScore) || 0), 0) / len,
-      bonus:       slips.reduce((acc, s) => acc + (Number(s.bonusScore) || 0), 0) / len,
-    };
-  }
+  const fromSlips = averageSlipBreakdown(player.judgeSlips, player.panelSize);
+  if (fromSlips) return fromSlips;
   const sb = player.scoreBreakdown || {};
   return {
     difficulty:  Number(sb.difficulty?.total) || 0,
@@ -174,9 +169,9 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
                 <ScorePill label="Execution" value={breakdown.execution} accent={COLORS.saffron} />
                 <ScorePill label="Originality" value={breakdown.bonus} accent="#22C55E" />
               </div>
-              {player.judgeSlips && player.judgeSlips.length > 0 && (
+              {breakdown.used > 0 && (
                 <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                  Averaged from {player.judgeSlips.length} judge slip{player.judgeSlips.length > 1 ? 's' : ''}
+                  {describeSlipAverage(breakdown)}
                 </p>
               )}
             </div>

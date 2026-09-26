@@ -4,6 +4,7 @@ import { motion, useInView } from 'framer-motion';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { sortByRank } from './scoreRows';
+import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
 
 /**
  * The results board.
@@ -87,28 +88,20 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
 
   const rankAccent = rank === 1 ? '#F5A623' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : null;
 
-  const is3JudgePanel = player.panelSize === 3 || (!player.judgeScores?.judge3 && !player.judgeScores?.judge4);
-
-  const getAverageBreakdown = (p) => {
-    const slips = p.judgeSlips || [];
-    if (slips.length > 0) {
-      const len = slips.length;
-      const diff = slips.reduce((acc, s) => acc + (Number(s.difficultyScore) || 0), 0) / len;
-      const comb = slips.reduce((acc, s) => acc + (Number(s.combinationScore) || 0), 0) / len;
-      const exec = slips.reduce((acc, s) => acc + (Number(s.executionScore) || 0), 0) / len;
-      const bonus = slips.reduce((acc, s) => acc + (Number(s.bonusScore) || 0), 0) / len;
-      return { difficulty: diff, combination: comb, execution: exec, bonus };
-    }
-    const sb = p.scoreBreakdown || {};
-    return {
-      difficulty: Number(sb.difficulty?.total) || 0,
-      combination: Number(sb.combination?.total) || 0,
-      execution: Number(sb.execution) || 0,
-      bonus: Number(sb.originality) || 0,
-    };
+  /*
+   * The same breakdown at every panel size, averaged over the slips the panel
+   * rule counts: all three on a 3-judge panel, the middle two evaluation slips
+   * on a 4/5-judge one (see averageSlipBreakdown). Rows without stored slips
+   * fall back to the row's own breakdown.
+   */
+  const fromSlips = averageSlipBreakdown(player.judgeSlips, player.panelSize);
+  const sb = player.scoreBreakdown || {};
+  const avgBreakdown = fromSlips || {
+    difficulty: Number(sb.difficulty?.total) || 0,
+    combination: Number(sb.combination?.total) || 0,
+    execution: Number(sb.execution) || 0,
+    bonus: Number(sb.originality) || 0,
   };
-
-  const avgBreakdown = is3JudgePanel ? getAverageBreakdown(player) : null;
   const tieBreak = player.tieBreakInfo;
   const tieLabel = tieBreak ? TIE_BREAK_LABELS[tieBreak.method] : null;
 
@@ -168,31 +161,27 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
       </div>
 
       {/* Score breakdown — inside the SAME card */}
-      <div className="px-4 pb-4 flex flex-wrap gap-2">
-        {is3JudgePanel ? (
-          <>
-            <ScorePill label="Diff" value={toFixed(avgBreakdown.difficulty)} accent="#A855F7" />
-            <ScorePill label="Comb" value={toFixed(avgBreakdown.combination)} accent="#3B82F6" />
-            <ScorePill label="Exec" value={toFixed(avgBreakdown.execution)} accent="#22C55E" />
-            <ScorePill label="Bonus" value={toFixed(avgBreakdown.bonus)} accent="#F59E0B" />
-          </>
-        ) : (
-          <>
-            {player.judgeScores?.seniorJudge !== undefined && <ScorePill label="Senior" value={player.judgeScores.seniorJudge} accent={COLORS.saffron} />}
-            {player.judgeScores?.judge1 !== undefined && <ScorePill label="J1" value={player.judgeScores.judge1} accent="#A855F7" />}
-            {player.judgeScores?.judge2 !== undefined && <ScorePill label="J2" value={player.judgeScores.judge2} accent="#3B82F6" />}
-            {player.judgeScores?.judge3 > 0 && <ScorePill label="J3" value={player.judgeScores.judge3} accent="#22C55E" />}
-            {player.judgeScores?.judge4 > 0 && <ScorePill label="J4" value={player.judgeScores.judge4} accent="#F59E0B" />}
-            <ScorePill label="Avg" value={toFixed(player.averageMarks)} accent={COLORS.saffronLight} />
-          </>
-        )}
-        {player.deduction > 0 && <ScorePill label="Deduct" value={`-${player.deduction}`} accent="#EF4444" />}
-        {player.otherDeduction > 0 && <ScorePill label="Other" value={`-${player.otherDeduction}`} accent="#EF4444" />}
-        {player.baseScoreApplied && (
-          <span className="text-xs px-2 py-1 rounded-xl font-bold self-center"
-            style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC', border: '1px solid rgba(168,85,247,0.25)' }}>
-            Base Score
-          </span>
+      <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <p className="text-[10px] font-bold tracking-widest uppercase mb-2"
+          style={{ color: 'rgba(255,255,255,0.35)' }}>Score Breakdown (Average)</p>
+        <div className="flex flex-wrap gap-2">
+          <ScorePill label="Difficulty" value={toFixed(avgBreakdown.difficulty)} accent="#3B82F6" />
+          <ScorePill label="Combination" value={toFixed(avgBreakdown.combination)} accent="#A855F7" />
+          <ScorePill label="Execution" value={toFixed(avgBreakdown.execution)} accent={COLORS.saffron} />
+          <ScorePill label="Originality" value={toFixed(avgBreakdown.bonus)} accent="#22C55E" />
+          {player.deduction > 0 && <ScorePill label="Deduct" value={`-${player.deduction}`} accent="#EF4444" />}
+          {player.otherDeduction > 0 && <ScorePill label="Other" value={`-${player.otherDeduction}`} accent="#EF4444" />}
+          {player.baseScoreApplied && (
+            <span className="text-xs px-2 py-1 rounded-xl font-bold self-center"
+              style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC', border: '1px solid rgba(168,85,247,0.25)' }}>
+              Base Score
+            </span>
+          )}
+        </div>
+        {fromSlips && (
+          <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            {describeSlipAverage(fromSlips)}
+          </p>
         )}
       </div>
     </motion.div>
