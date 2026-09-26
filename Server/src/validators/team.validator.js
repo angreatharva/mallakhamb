@@ -1,15 +1,5 @@
 const { body, param } = require('express-validator');
 const { objectId, string, enumValue } = require('./common.validator');
-const { TEAM_SIZES } = require('../utils/scoring/team-championship.util');
-
-/** The squad size a coach declares — required on create, fixed thereafter. */
-const maxTeamSize = () => body('maxTeamSize')
-  .exists({ values: 'falsy' })
-  .withMessage('Max team size is required')
-  .bail()
-  .toInt()
-  .isIn(TEAM_SIZES)
-  .withMessage(`Max team size must be ${TEAM_SIZES.join(' or ')} players`);
 
 /**
  * Validation rules for team endpoints
@@ -27,7 +17,6 @@ const createTeam = () => {
       .isLength({ min: 3, max: 100 })
       .withMessage('Team name must be between 3 and 100 characters')
       .escape(),
-    maxTeamSize(),
     body('coachId')
       .optional()
       .trim()
@@ -192,7 +181,6 @@ const getTeamPlayers = () => {
 };
 
 module.exports = {
-  maxTeamSize,
   createTeam,
   updateTeam,
   getTeamById,

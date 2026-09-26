@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { TEAM_SIZES } = require('../utils/scoring/team-championship.util');
 
 const competitionSchema = new mongoose.Schema({
   name: {
@@ -39,6 +40,21 @@ const competitionSchema = new mongoose.Schema({
    * split keeps working. Absent on meets saved before it — those fall back to
    * `apparatusConfig` for both genders. See utils/data/competition-apparatus.util.
    */
+  /*
+   * Max athletes a team may enter per gender + age group in this meet — 4 or
+   * 6, chosen by the superadmin. It also decides the Team Championship count:
+   * 4 → best 3 per apparatus, 6 → best 5 (utils/scoring/team-championship.util).
+   *
+   * Required on create (super-admin.service), not here: meets saved before
+   * it existed have none, and are read as 6 and uncapped.
+   */
+  maxTeamSize: {
+    type: Number,
+    enum: {
+      values: TEAM_SIZES,
+      message: `Max team size must be one of: ${TEAM_SIZES.join(', ')}`
+    }
+  },
   apparatusByGender: {
     type: Map,
     of: new mongoose.Schema({

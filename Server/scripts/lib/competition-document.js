@@ -101,6 +101,8 @@ function buildCompetition(meet, adminIds, late = false) {
     }])),
     ageGroups,
     playerFee: PLAYER_FEE,
+    // Max athletes per team per age group; 6 → best 5 count toward Team Championship.
+    maxTeamSize: 6,
     apparatusFees: {},
     // The fee window. Base fee until a week before the meet; ₹200 per athlete on
     // top of that from then until 23:59 on the closing day.

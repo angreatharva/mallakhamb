@@ -57,6 +57,10 @@ const createCompetition = () => {
         }
         return true;
       }),
+    body('maxTeamSize')
+      .optional({ values: 'null' })
+      .isIn([4, 6, '4', '6'])
+      .withMessage('Max team size must be 4 or 6 players per age group'),
     // Per-gender apparatus; the service validates the contents and derives
     // `apparatusConfig` from it (utils/data/competition-apparatus.util).
     body('apparatusByGender')
@@ -164,6 +168,10 @@ const updateCompetition = () => {
         }
         return true;
       }),
+    body('maxTeamSize')
+      .optional({ values: 'null' })
+      .isIn([4, 6, '4', '6'])
+      .withMessage('Max team size must be 4 or 6 players per age group'),
     // Per-gender apparatus; the service validates the contents and derives
     // `apparatusConfig` from it (utils/data/competition-apparatus.util).
     body('apparatusByGender')

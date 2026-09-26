@@ -3,7 +3,9 @@ const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
 const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
-const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
+const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
+
+const TEAM_SIZE_MESSAGE = `Max team size must be ${TEAM_SIZES.join(' or ')} players per age group`;
 const {
   RAZORPAY_CURRENCY,
   razorpayClient,
@@ -371,6 +373,13 @@ class SuperAdminService {
     // derived from it, so the two cannot disagree.
     const body = applyApparatusByGender({ ...normalizeFeeWindow(payload), playerFee });
 
+    // Mandatory: it caps every team per age group and decides the Team
+    // Championship count (4 → best 3, 6 → best 5).
+    if (!isValidTeamSize(payload.maxTeamSize)) {
+      throw new ValidationError(TEAM_SIZE_MESSAGE);
+    }
+    body.maxTeamSize = Number(payload.maxTeamSize);
+
     // Use admins from payload if provided, otherwise default to the creator
     const assignedAdmins = body.admins && body.admins.length > 0 
       ? body.admins 
@@ -417,6 +426,13 @@ class SuperAdminService {
     if (!existing) throw new NotFoundError('Competition');
 
     const body = applyApparatusByGender(normalizeFeeWindow(payload, existing), existing.competitionTypes);
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'maxTeamSize')) {
+      if (!isValidTeamSize(payload.maxTeamSize)) {
+        throw new ValidationError(TEAM_SIZE_MESSAGE);
+      }
+      body.maxTeamSize = Number(payload.maxTeamSize);
+    }
 
     if (Object.prototype.hasOwnProperty.call(payload, 'playerFee')) {
       const rawFee = payload.playerFee;
@@ -712,10 +728,10 @@ class SuperAdminService {
 
       // Checked BEFORE any money moves: `addPlayer` refuses a full squad after
       // payment, which would leave the charge with no athlete to show for it.
-      if (!hasRoomInSquad(team.maxTeamSize, registeredTeam.players, playerData.gender, playerData.ageGroup)) {
+      if (!hasRoomInSquad(competition.maxTeamSize, registeredTeam.players, playerData.gender, playerData.ageGroup)) {
         throw new ValidationError(
-          `${team.name} is a ${team.maxTeamSize}-player team and already has `
-          + `${team.maxTeamSize} athletes in ${playerData.gender} ${playerData.ageGroup}`
+          `This competition allows at most ${competition.maxTeamSize} players per age group, `
+          + `and ${team.name}'s ${playerData.gender} ${playerData.ageGroup} is full`
         );
       }
 
@@ -983,12 +999,12 @@ class SuperAdminService {
       throw new ValidationError(`Age group ${ageGroup} for ${gender} is not available in this competition`);
     }
 
-    // The squad cap the coach declared applies here too: it is a rule of the
+    // The meet's per-age-group cap applies here too: it is a rule of the
     // Team Championship, not a registration-window permission.
-    if (!hasRoomInSquad(teamWithCoach?.maxTeamSize, registeredTeam.players, gender, ageGroup)) {
+    if (!hasRoomInSquad(competition.maxTeamSize, registeredTeam.players, gender, ageGroup)) {
       throw new ValidationError(
-        `${teamWithCoach.name} is a ${teamWithCoach.maxTeamSize}-player team and already has `
-        + `${teamWithCoach.maxTeamSize} athletes in ${gender} ${ageGroup}`
+        `This competition allows at most ${competition.maxTeamSize} players per age group, `
+        + `and ${teamWithCoach?.name || 'this team'}'s ${gender} ${ageGroup} is full`
       );
     }
 

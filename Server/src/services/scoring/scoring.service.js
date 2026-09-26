@@ -679,7 +679,6 @@ class ScoringService {
         return {
           _id: regTeam.team._id,
           name: regTeam.team.name,
-          maxTeamSize: regTeam.team.maxTeamSize ?? null,
           // Same defect class as CRIT-4: this returned the whole coach and
           // player documents. `select: false` now hides the bcrypt hash, but
           // coach/player e-mail and minors' dates of birth were still going
@@ -885,8 +884,11 @@ class ScoringService {
        * athlete's score added up — so a squad scored more simply by entering
        * more athletes. The same engine backs the public board.
        */
+      // The count is the meet's (4 → best 3, 6 → best 5), set by the superadmin.
+      const competition = await this.competitionRepository.findById(competitionId);
+      const maxTeamSize = competition?.maxTeamSize ?? null;
       const rankings = rankTeamChampionship(
-        teamsWithScores.map((t) => ({ ...t, performances: t.scores }))
+        teamsWithScores.map((t) => ({ ...t, maxTeamSize, performances: t.scores }))
       ).map(({ performances, ...t }) => ({ ...t, finalScore: t.totalScore }));
 
       this.logger.info('Team rankings calculated', { 

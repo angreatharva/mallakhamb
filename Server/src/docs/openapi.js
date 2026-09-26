@@ -205,6 +205,7 @@ const schemas = {
       startDate: { type: 'string', format: 'date-time' },
       endDate: { type: 'string', format: 'date-time' },
       playerFee: { type: 'number', description: 'Base entry fee per athlete, INR', example: 500 },
+      maxTeamSize: { type: 'integer', enum: [4, 6], nullable: true, description: 'Max athletes per team per gender + age group; 4 → best 3 count toward Team Championship, 6 → best 5. Null on meets saved before it existed (read as 6, uncapped).' },
       apparatusFees: {
         type: 'object',
         additionalProperties: { type: 'number' },
@@ -283,7 +284,6 @@ const schemas = {
       description: { type: 'string' },
       coach: ref('UserSummary'),
       isActive: { type: 'boolean' },
-      maxTeamSize: { type: 'integer', enum: [4, 6], nullable: true, description: 'Declared squad size; null on teams created before it existed (read as 6)' },
       createdAt: { type: 'string', format: 'date-time' },
     },
   },
@@ -821,7 +821,7 @@ function buildPaths() {
     tag: 'Coaches', roles: 'coach', operationId: 'coachCreateTeam',
     summary: 'Create a team',
     description: 'Team names are unique per coach, not globally.',
-    requestBody: jsonBody(inline({ name: S.str, description: S.str, maxTeamSize: { type: 'integer', enum: [4, 6], description: '4 → best 3 count toward Team Championship; 6 → best 5' } }, ['name', 'maxTeamSize'])),
+    requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
     responses: { 201: ok('Created', ref('Team')), ...VALIDATION_ERROR, 409: errorResponse('This coach already owns a team with that name') },
   }));
 
@@ -959,7 +959,7 @@ function buildPaths() {
   add('/api/teams', 'post', op({
     tag: 'Teams', roles: 'coach', operationId: 'createTeam',
     summary: 'Create a team',
-    requestBody: jsonBody(inline({ name: S.str, description: S.str, maxTeamSize: { type: 'integer', enum: [4, 6], description: '4 → best 3 count toward Team Championship; 6 → best 5' } }, ['name', 'maxTeamSize'])),
+    requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
     responses: { 201: ok('Created', ref('Team')), ...VALIDATION_ERROR },
   }));
 
