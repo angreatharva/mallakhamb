@@ -20,6 +20,7 @@ import {
   getDifficultyRequirement,
   computeCombinationTotal,
   resolveDifficultyValue,
+  roundExecution,
   POINT_CEILINGS,
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
@@ -894,10 +895,7 @@ const JudgeSlip = () => {
                               <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
                             </div>
                             <ScoreInput label="" value={scores.execution}
-                              onChange={raw => {
-                                const v = Math.round(raw * 20) / 20;
-                                setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
-                              }} />
+                              onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
                           </div>
 
                           {/* Originality Card */}
@@ -979,10 +977,7 @@ const JudgeSlip = () => {
                           <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
                         </div>
                         <ScoreInput label="" value={scores.execution}
-                          onChange={raw => {
-                            const v = Math.round(raw * 20) / 20;
-                            setScores({ ...scores, execution: Math.max(0, Math.min(4.40, v)) });
-                          }} />
+                          onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
                       </div>
 
                       <div className="rounded-2xl border p-4"

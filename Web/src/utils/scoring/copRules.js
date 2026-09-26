@@ -21,6 +21,21 @@ export const POINT_CEILINGS = Object.freeze({
   total: 10.00,
 });
 
+/**
+ * Round an execution mark to one decimal place, with the half going DOWN:
+ *   2.00 – 2.05 → 2.00,   2.06 – 2.10 → 2.10
+ * then clamp to 0 … POINT_CEILINGS.execution. Worked in whole hundredths so
+ * float noise (2.05 * 100 = 204.99…) cannot tip a value across the line.
+ *
+ * @param {number|string} raw
+ * @returns {number}
+ */
+export function roundExecution(raw) {
+  const hundredths = Math.round((parseFloat(raw) || 0) * 100);
+  const tenths = Math.ceil((hundredths - 5) / 10);
+  return Math.max(0, Math.min(POINT_CEILINGS.execution, tenths / 10));
+}
+
 // §3.1 — element class values.
 export const ELEMENT_CLASS_VALUES = Object.freeze({ A: 0.20, B: 0.40, C: 0.60 });
 

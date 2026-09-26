@@ -8,6 +8,7 @@ import {
   resolveDifficultyValue,
   analyzePanelMismatches,
   calculateAverageMarks,
+  roundExecution,
   POINT_CEILINGS,
 } from './copRules';
 
@@ -288,5 +289,35 @@ describe('copRules — panel-size rules', () => {
     const r = calculateAverageMarks(marks(0, 8.00, 8.40, 8.60, 0), 4);
     expect(r.executionAvg).toBeCloseTo(8.33, 2);
     expect(r.baseScoreApplied).toBe(false);
+  });
+});
+
+describe('copRules — roundExecution (one decimal, half rounds down)', () => {
+  it.each([2.0, 2.01, 2.02, 2.03, 2.04, 2.05])('%s → 2.00', (v) => {
+    expect(roundExecution(v)).toBe(2.0);
+  });
+
+  it.each([2.06, 2.07, 2.08, 2.09, 2.1])('%s → 2.10', (v) => {
+    expect(roundExecution(v)).toBe(2.1);
+  });
+
+  it('works the same across the range, whatever float noise the value carries', () => {
+    for (let whole = 0; whole <= 3; whole += 1) {
+      for (let tenth = 0; tenth <= 9; tenth += 1) {
+        const base = whole + tenth / 10;
+        const down = Math.round(base * 10) / 10;
+        const up = Math.round((base + 0.1) * 10) / 10;
+        expect(roundExecution(base + 0.05)).toBe(down);
+        expect(roundExecution(base + 0.06)).toBe(up);
+      }
+    }
+  });
+
+  it('accepts text as typed and clamps to 0 … 4.40', () => {
+    expect(roundExecution('3.26')).toBe(3.3);
+    expect(roundExecution('')).toBe(0);
+    expect(roundExecution(4.46)).toBe(4.4);
+    expect(roundExecution(9)).toBe(4.4);
+    expect(roundExecution(-1)).toBe(0);
   });
 });

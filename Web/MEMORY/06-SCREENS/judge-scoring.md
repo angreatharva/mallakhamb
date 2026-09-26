@@ -55,10 +55,12 @@ category, not cached globally.
 `@/utils/scoring/copRules`, see
 [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md)), Combination
 (apparatus-specific checklist from `getCombinationChecklist`),
-Execution (numeric, step 0.05, snapped to nearest 0.05 via
-`Math.round(raw * 20) / 20` in three separate places — mobile tab,
-desktop, and `SrEditModal` in `judgeShared.jsx` — not a native step
-enforcement), Originality/Bonus (binary None/+0.20 toggle).
+Execution (a `DecimalInput` text field — no leading "0" — rounded to
+one decimal with the half going DOWN by `roundExecution` in copRules.js:
+2.00–2.05 → 2.00, 2.06–2.10 → 2.10, clamped to 4.40; used by the mobile
+tab, desktop, and `SrEditModal` in `judgeShared.jsx`. The server still
+accepts any multiple of 0.05, so older stored marks like 2.55 stay valid),
+Originality/Bonus (binary None/+0.20 toggle).
 
 **Layout**: separate mobile (3-tab swipeable, touch-swipe handlers
 `:265-293`) and desktop (two-column grid) renders, both driving the

@@ -3,15 +3,16 @@ import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DecimalInput } from './judgeShared';
+import { roundExecution } from '@/utils/scoring/copRules';
 
-// Mirrors the Execution field: rounded to 0.05 and clamped to 4.40.
+// Mirrors the Execution field: rounded to 0.1 (half down) and clamped to 4.40.
 const Execution = ({ initial = 0 }) => {
   const [value, setValue] = useState(initial);
   return (
     <>
       <DecimalInput
         value={value}
-        onValueChange={(raw) => setValue(Math.max(0, Math.min(4.4, Math.round(raw * 20) / 20)))}
+        onValueChange={(raw) => setValue(roundExecution(raw))}
       />
       <output data-testid="kept">{value}</output>
     </>
@@ -51,6 +52,17 @@ describe('DecimalInput', () => {
     await userEvent.type(field(), '.02');
     await userEvent.tab();
     expect(field()).toHaveValue('3');
+  });
+
+  it('rounds x.x5 down and x.x6 up', async () => {
+    render(<Execution />);
+    await userEvent.type(field(), '2.05');
+    await userEvent.tab();
+    expect(field()).toHaveValue('2');
+    await userEvent.clear(field());
+    await userEvent.type(field(), '2.06');
+    expect(field()).toHaveValue('2.1');
+    expect(screen.getByTestId('kept')).toHaveTextContent('2.1');
   });
 
   it('ignores letters', async () => {

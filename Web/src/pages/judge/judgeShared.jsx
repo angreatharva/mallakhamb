@@ -18,6 +18,7 @@ import {
   pointCeilingsShape,
 } from '@/utils/scoring/scoringPropTypes';
 import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
+import { roundExecution } from '@/utils/scoring/copRules';
 
 export const SCORING_PATH = '/judge/scoring';
 export const PANEL_REVIEW_PATH = '/judge/scoring/panel-review';
@@ -637,10 +638,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 </div>
                 <DecimalInput
                   value={editScores.execution}
-                  onValueChange={raw => {
-                    const v = Math.round(raw * 20) / 20;
-                    setEditScores({ ...editScores, execution: Math.max(0, Math.min(4.40, v)) });
-                  }}
+                  onValueChange={raw => setEditScores({ ...editScores, execution: roundExecution(raw) })}
                   className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white outline-none"
                   style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
                 />
