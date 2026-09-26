@@ -33,7 +33,7 @@ import {
 } from '@/utils/scoring/copRules';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
-  SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown,
+  SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, scoringCacheKey,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
@@ -82,7 +82,9 @@ const JudgePanelReview = () => {
     orderedPanelEntries,
     allPanelSubmitted,
     isSeniorJudge,
-  } = useJudgePanelData({ judgeInfo, session });
+  // Re-read every 10 s: the socket is the fast path, this is what guarantees a
+  // judge's edited slip replaces their old one here even if a broadcast is lost.
+  } = useJudgePanelData({ judgeInfo, session, refreshMs: 10_000 });
 
   const [finalizing, setFinalizing] = useState(false);
   const [showMismatchModal, setShowMismatchModal] = useState(false);
@@ -151,6 +153,14 @@ const JudgePanelReview = () => {
     if (finalized) {
       toast.error('Cannot edit — panel score is already finalized');
       return;
+    }
+    // Drop any unsaved marks left by an earlier, abandoned edit, so the slip
+    // opens on the score actually submitted — which may since have changed.
+    try {
+      const key = scoringCacheKey(selectedTeam, selectedPlayer, judgeInfo);
+      if (key) localStorage.removeItem(key);
+    } catch {
+      // storage unavailable — the slip still loads the submitted score
     }
     navigate(SCORING_PATH, { state: { ...activeSessionData, resumeEditing: true } });
   };

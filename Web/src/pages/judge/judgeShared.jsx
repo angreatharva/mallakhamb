@@ -39,6 +39,18 @@ export const ACTIVE_SESSION_KEY = 'judge_scoring_active_session';
 export const playerIdOf = (player) => player?.id || player?._id;
 
 /**
+ * localStorage key for a judge's unsubmitted slip marks. Shared by the slip,
+ * which autosaves under it, and Panel Review, which clears it before the judge
+ * goes back to edit — so the edit opens on the SUBMITTED slip, not on the
+ * leftovers of an edit that was abandoned earlier.
+ */
+export const scoringCacheKey = (team, player, judgeInfo) => (
+  team && player
+    ? `judge_scores_${team._id}_${playerIdOf(player)}_${judgeInfo?.judgeType || 'unknown'}`
+    : null
+);
+
+/**
  * Coerce a stored/emitted breakdown into the shape the UI renders, filling in
  * zeros for anything missing.
  */

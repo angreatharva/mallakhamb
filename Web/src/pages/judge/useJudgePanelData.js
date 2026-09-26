@@ -226,9 +226,12 @@ export function useJudgeInfo() {
  * @param {object} args
  * @param {object|null} args.judgeInfo
  * @param {object} args.session - the object returned by useJudgeSession
+ * @param {number} [args.refreshMs] - re-read the panel from the server this
+ *   often (Panel Review). The live socket is the fast path, but a missed
+ *   broadcast would otherwise leave a judge's OLD slip on screen for good.
  * @returns {object} panel state, the socket, and a refetch handle
  */
-export function useJudgePanelData({ judgeInfo, session }) {
+export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
   const {
     selectedTeam,
     selectedPlayer,
@@ -243,6 +246,8 @@ export function useJudgePanelData({ judgeInfo, session }) {
   const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
   const [judgeNameMap, setJudgeNameMap] = useState({});
   const [finalized, setFinalized] = useState(false);
+  // True once the first read of the stored slips has settled, found or not.
+  const [loaded, setLoaded] = useState(false);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const joinedRoomRef = useRef(null);
@@ -384,7 +389,15 @@ export function useJudgePanelData({ judgeInfo, session }) {
         });
       }
 
-      setPanelScores((prev) => ({ ...loadedPanelScores, ...prev }));
+      /*
+       * The server wins for every slip it holds. This used to be the other way
+       * round ({ ...loaded, ...prev }), so a slip already on screen could never
+       * be replaced by a re-read — a judge who edited their score stayed at the
+       * old one on everyone else's Panel Review unless the live broadcast got
+       * through. Slips the server does not have yet (a mark that arrived over
+       * the socket a moment ago) are kept.
+       */
+      setPanelScores((prev) => ({ ...prev, ...loadedPanelScores }));
 
       if (targetPs.isFinalized || scoreDoc.isLocked) {
         setFinalized(true);
@@ -396,12 +409,33 @@ export function useJudgePanelData({ judgeInfo, session }) {
         toast.error('Your session expired — panel data could not be loaded. Please sign in again.');
       }
       logger.warn('Could not load existing player scores:', err);
+    } finally {
+      setLoaded(true);
     }
   }, [judgeInfo, selectedPlayer, selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);
 
   useEffect(() => {
     if (judgeInfo && selectedPlayer) fetchExistingScores();
   }, [judgeInfo, selectedPlayer, fetchExistingScores]);
+
+  // Latest fetch, for handlers created once per socket connection.
+  const fetchRef = useRef(fetchExistingScores);
+  fetchRef.current = fetchExistingScores;
+
+  // Periodic re-read (Panel Review only), plus one whenever the tab comes
+  // back into view — a phone that slept through a broadcast catches up then.
+  useEffect(() => {
+    if (!refreshMs || finalized || !judgeInfo || !selectedPlayer) return undefined;
+    const timer = setInterval(() => fetchRef.current(), refreshMs);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchRef.current();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refreshMs, finalized, judgeInfo, selectedPlayer]);
 
   /*
    * The apparatus on screen, readable from the socket handlers below.
@@ -422,8 +456,13 @@ export function useJudgePanelData({ judgeInfo, session }) {
     const newSocket = io(socketUrl, { auth: { token }, withCredentials: true });
     setSocket(newSocket);
 
+    let everConnected = false;
     newSocket.on('connect', () => {
       setIsConnected(true);
+      // A RE-connect: anything broadcast while the socket was down is lost,
+      // so read the panel again rather than trust what is on screen.
+      if (everConnected) fetchRef.current();
+      everConnected = true;
       const roomId = `scoring_${selectedGender || judgeInfo.gender}_${selectedAgeGroup || judgeInfo.ageGroup}_${selectedCompetitionType}`;
       if (joinedRoomRef.current !== roomId) {
         newSocket.emit('join_scoring_room', { roomId });
@@ -523,6 +562,7 @@ export function useJudgePanelData({ judgeInfo, session }) {
     socket,
     isConnected,
     refetchScores: fetchExistingScores,
+    loaded,
     panelScoresCount,
     effectivePanelSize,
     orderedPanelEntries,

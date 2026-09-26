@@ -26,7 +26,7 @@ import {
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
-  playerIdOf, normalizeBreakdown, DecimalInput,
+  playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
@@ -251,7 +251,9 @@ const JudgeSlip = () => {
   } = session;
 
   const judgeInfo = useJudgeInfo();
-  const { panelScores, setPanelScores, finalized, socket, isConnected } = useJudgePanelData({ judgeInfo, session });
+  const {
+    panelScores, setPanelScores, finalized, socket, isConnected, loaded: panelLoaded,
+  } = useJudgePanelData({ judgeInfo, session });
 
   /**
    * The seat this judge holds for the category being scored. A judge working
@@ -282,6 +284,13 @@ const JudgeSlip = () => {
   const editingRef = useRef(location.state?.resumeEditing === true);
   // Guards the one-shot restore of an already-submitted slip.
   const restoredRef = useRef(false);
+  /*
+   * Re-editing opens on the slip the judge SUBMITTED, and that is read from the
+   * server after the page mounts. Until it lands the form would show zeros —
+   * and anything the judge changed in the meantime was then overwritten by the
+   * late load, putting the old score back. So the sheet waits for it.
+   */
+  const [slipReady, setSlipReady] = useState(() => location.state?.resumeEditing !== true);
 
   // Active mobile tab state
   const [activeMobileTab, setActiveMobileTab] = useState('difficulty'); // 'difficulty' | 'combination' | 'exec_orig'
@@ -357,10 +366,7 @@ const JudgeSlip = () => {
   };
 
   // Generate a unique key for this scoring session
-  const getScoringCacheKey = () => {
-    if (!selectedPlayer || !selectedTeam) return null;
-    return `judge_scores_${selectedTeam._id}_${playerIdOf(selectedPlayer)}_${judgeInfo?.judgeType || 'unknown'}`;
-  };
+  const getScoringCacheKey = () => scoringCacheKey(selectedTeam, selectedPlayer, judgeInfo);
 
   // Load initial scores from cache or create new
   const getInitialScores = () => {
@@ -409,6 +415,13 @@ const JudgeSlip = () => {
       const parsed = JSON.parse(cached);
       if (parsed.difficulty && parsed.combination && typeof parsed.execution === 'number') {
         setScores(parsed);
+        // Re-editing: these are this edit's unsaved changes (Panel Review
+        // clears the key on the way in), so the submitted slip must not
+        // replace them when it loads.
+        if (editingRef.current) {
+          restoredRef.current = true;
+          setSlipReady(true);
+        }
       }
     } catch (e) {
       logger.warn('Failed to restore cached scores', e);
@@ -497,11 +510,17 @@ const JudgeSlip = () => {
         bonus: b.bonus || 0,
       });
     }
+    setSlipReady(true);
     if (editingRef.current) return;
     setSubmitted(true);
     // Replace rather than push so Back still leaves the page.
     navigate(PANEL_REVIEW_PATH, { replace: true, state: activeSessionData });
   }, [panelScores, judgeInfo, navigate, activeSessionData]);
+
+  // The read settled without a slip of ours (or failed): nothing to wait for.
+  useEffect(() => {
+    if (panelLoaded) setSlipReady(true);
+  }, [panelLoaded]);
 
   // Covers the judge who is re-editing their slip (resumeEditing) at the
   // moment the Senior Judge finalizes elsewhere — the panel score is now
@@ -725,6 +744,13 @@ const JudgeSlip = () => {
         {/* Before the sheet, not beside the button: the point is that the judge
             sees it BEFORE marking a routine. Submit is disabled to match. */}
         <CompetitionLockBanner className="mb-4" />
+
+        {!slipReady && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(10,10,10,0.85)' }} role="status" aria-live="polite">
+            <p className="text-sm font-bold text-white">Loading your submitted score…</p>
+          </div>
+        )}
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE_OUT }}>
