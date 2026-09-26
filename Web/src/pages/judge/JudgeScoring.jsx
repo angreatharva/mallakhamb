@@ -388,10 +388,37 @@ const JudgeSlip = () => {
 
   const [scores, setScores] = useState(getInitialScores);
 
-  // Auto-save scores to localStorage whenever they change
+  /*
+   * Restore the autosaved marks after a refresh.
+   *
+   * The cache key names the judge, and useJudgeInfo reads the judge in an
+   * effect — so on the first render it is still null, getInitialScores looks
+   * under `…_unknown`, finds nothing, and the marks the judge had entered were
+   * never read back. Load them once, as soon as the real key exists.
+   */
+  const cacheRestoredRef = useRef(false);
+  useEffect(() => {
+    if (cacheRestoredRef.current || !judgeInfo) return;
+    const cacheKey = getScoringCacheKey();
+    if (!cacheKey) return;
+    cacheRestoredRef.current = true;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return;
+      const parsed = JSON.parse(cached);
+      if (parsed.difficulty && parsed.combination && typeof parsed.execution === 'number') {
+        setScores(parsed);
+      }
+    } catch (e) {
+      logger.warn('Failed to restore cached scores', e);
+    }
+  }, [judgeInfo]);
+
+  // Auto-save scores to localStorage whenever they change. Not before the judge
+  // is known: the key would be `…_unknown`, a slot nothing ever reads back.
   useEffect(() => {
     const cacheKey = getScoringCacheKey();
-    if (cacheKey && !submitted && !finalized) {
+    if (judgeInfo && cacheKey && !submitted && !finalized) {
       try {
         localStorage.setItem(cacheKey, JSON.stringify(scores));
       } catch (e) {
@@ -399,6 +426,33 @@ const JudgeSlip = () => {
       }
     }
   }, [scores, submitted, finalized]);
+
+  /*
+   * Warn before a refresh or tab close throws away an unsubmitted slip.
+   *
+   * Browsers do not let a page draw its own dialog here — returning from
+   * `beforeunload` is the only hook, and the browser shows its standard
+   * "Reload site? Changes may not be saved" prompt. iOS Safari ignores it
+   * entirely, which is why the marks are also autosaved and restored above.
+   */
+  const hasUnsubmittedMarks =
+    !submitted && !finalized && (
+      scores.difficulty.total > 0 ||
+      Object.values(scores.combination.checked || {}).some(Boolean) ||
+      parseFloat(scores.execution || 0) > 0 ||
+      parseFloat(scores.bonus || 0) > 0
+    );
+  useEffect(() => {
+    if (!hasUnsubmittedMarks) return undefined;
+    const warn = (e) => {
+      e.preventDefault();
+      // Chrome/Edge still need returnValue set to show the prompt.
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasUnsubmittedMarks]);
 
   // Clear cached scores when score is submitted or finalized
   useEffect(() => {
