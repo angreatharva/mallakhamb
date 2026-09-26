@@ -1,8 +1,9 @@
 /**
  * Team Championship — how a squad's athletes add up to one team score.
  *
- * A coach declares the squad size when the team is created (`Team.maxTeamSize`),
- * and the size decides how many scores count:
+ * The superadmin sets the squad size per COMPETITION (`Competition.maxTeamSize`,
+ * on the Create/Edit Competition form). It applies to every team in that meet,
+ * and decides how many scores count:
  *
  *   4-player team → best 3 per apparatus
  *   6-player team → best 5 per apparatus
@@ -22,14 +23,14 @@
 const { rankByScore } = require('./ranking.util');
 const { apparatusKey } = require('../../config/cop-rules');
 
-/** The squad sizes a coach may declare, and how many scores each counts. */
+/** The squad sizes a competition may set, and how many scores each counts. */
 const TEAM_SIZE_COUNTED = Object.freeze({ 4: 3, 6: 5 });
 const TEAM_SIZES = Object.freeze(Object.keys(TEAM_SIZE_COUNTED).map(Number));
 
 /**
- * Teams created before the size existed carry none. Five is what this code
- * base always documented as the team rule ("sum of top 5"), so a legacy team
- * is read as a 6-player squad rather than having every score counted.
+ * Competitions saved before the size existed carry none. Five is what this
+ * code base always documented as the team rule ("sum of top 5"), so their teams
+ * are read as 6-player squads rather than having every score counted.
  */
 const DEFAULT_TEAM_SIZE = 6;
 
@@ -42,7 +43,7 @@ function isValidTeamSize(value) {
 }
 
 /**
- * The declared size, or the legacy default when none was declared.
+ * The competition's size, or the legacy default when it sets none.
  * @param {*} maxTeamSize
  * @returns {number}
  */
@@ -82,8 +83,8 @@ function entriesInCategory(entries, gender, ageGroup, excludePlayerId = null) {
 }
 
 /**
- * Is there room for one more athlete in this category? A team with no declared
- * size (created before the field existed) is not capped.
+ * Is there room for one more athlete in this category? A competition with no
+ * size set (saved before the field existed) does not cap its teams.
  *
  * @param {*} maxTeamSize
  * @param {Object[]} entries
