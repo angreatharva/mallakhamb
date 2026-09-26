@@ -2,8 +2,6 @@ const { fullName, coachCard, enteredPlayerCard } = require('../../utils/data/use
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
-const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
-const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const {
   RAZORPAY_CURRENCY,
   razorpayClient,
@@ -367,9 +365,7 @@ class SuperAdminService {
     if (!Number.isFinite(playerFee) || playerFee < 0) {
       throw new ValidationError('A valid per-player fee (INR) is required for each competition');
     }
-    // The per-gender apparatus is validated here and `apparatusConfig` is
-    // derived from it, so the two cannot disagree.
-    const body = applyApparatusByGender({ ...normalizeFeeWindow(payload), playerFee });
+    const body = { ...normalizeFeeWindow(payload), playerFee };
 
     // Use admins from payload if provided, otherwise default to the creator
     const assignedAdmins = body.admins && body.admins.length > 0 
@@ -416,7 +412,7 @@ class SuperAdminService {
     const existing = await this.competitionRepository.findById(id);
     if (!existing) throw new NotFoundError('Competition');
 
-    const body = applyApparatusByGender(normalizeFeeWindow(payload, existing), existing.competitionTypes);
+    const body = normalizeFeeWindow(payload, existing);
 
     if (Object.prototype.hasOwnProperty.call(payload, 'playerFee')) {
       const rawFee = payload.playerFee;
@@ -710,15 +706,6 @@ class SuperAdminService {
         throw new NotFoundError('Team not found');
       }
 
-      // Checked BEFORE any money moves: `addPlayer` refuses a full squad after
-      // payment, which would leave the charge with no athlete to show for it.
-      if (!hasRoomInSquad(team.maxTeamSize, registeredTeam.players, playerData.gender, playerData.ageGroup)) {
-        throw new ValidationError(
-          `${team.name} is a ${team.maxTeamSize}-player team and already has `
-          + `${team.maxTeamSize} athletes in ${playerData.gender} ${playerData.ageGroup}`
-        );
-      }
-
       /*
        * Calculate payment amount using centralized config with
        * competition-specific player fee, plus any late fee in force.
@@ -981,15 +968,6 @@ class SuperAdminService {
     
     if (!validAgeGroup) {
       throw new ValidationError(`Age group ${ageGroup} for ${gender} is not available in this competition`);
-    }
-
-    // The squad cap the coach declared applies here too: it is a rule of the
-    // Team Championship, not a registration-window permission.
-    if (!hasRoomInSquad(teamWithCoach?.maxTeamSize, registeredTeam.players, gender, ageGroup)) {
-      throw new ValidationError(
-        `${teamWithCoach.name} is a ${teamWithCoach.maxTeamSize}-player team and already has `
-        + `${teamWithCoach.maxTeamSize} athletes in ${gender} ${ageGroup}`
-      );
     }
 
     // Check player email uniqueness

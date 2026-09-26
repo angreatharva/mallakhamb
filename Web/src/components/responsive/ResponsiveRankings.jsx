@@ -293,7 +293,7 @@ export const ResponsiveTeamRankings = ({
 
         {/* Top players */}
         <div style={{ borderTop: `1px solid ${border}`, paddingTop: 12 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textMuted, marginBottom: 10 }}>Counted Scores</p>
+          <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textMuted, marginBottom: 10 }}>Top Players</p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
             {team.topPlayerScores?.map(player => (
               <div key={player.playerId} style={{
@@ -307,9 +307,7 @@ export const ResponsiveTeamRankings = ({
               }}>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>{player.playerName}</p>
-                  <p style={{ fontSize: 11, color: textSecondary, marginTop: 1 }}>
-                    {player.apparatus ? `${String(player.apparatus).replace(' Mallakhamb', '')} · ` : ''}Time: {player.time || 'N/A'}
-                  </p>
+                  <p style={{ fontSize: 11, color: textSecondary, marginTop: 1 }}>Time: {player.time || 'N/A'}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: C.green }}>{player.finalScore?.toFixed(2) || '0.00'}</p>

@@ -7,15 +7,13 @@ import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
 import { COLORS } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
-import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
 
 const CoachCreateTeam = () => {
   const [loading, setLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
-  const selectedTeamSize = Number(watch('maxTeamSize'));
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
   // Check if coach already has a team and should skip this page
   useEffect(() => {
@@ -57,7 +55,7 @@ const CoachCreateTeam = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await coachAPI.createTeam({ ...data, maxTeamSize: Number(data.maxTeamSize) });
+      await coachAPI.createTeam(data);
       toast.success('Team created successfully! Now register it for a competition.');
       // Small delay to ensure the team is available in the backend
       setTimeout(() => {
@@ -164,43 +162,6 @@ const CoachCreateTeam = () => {
               />
               {errors.name && <p className="mt-1.5 text-xs text-red-400" role="alert">{errors.name.message}</p>}
             </div>
-
-            {/*
-              * Radios, not a dropdown: two choices, each with a consequence the
-              * coach should read before committing — the size is fixed once
-              * the team exists.
-              */}
-            <fieldset>
-              <legend className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                style={{ color: COLORS.saffronLight }}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="w-3 h-3" aria-hidden="true" />
-                  Max Team Size
-                </span>
-                <span aria-hidden="true" style={{ color: COLORS.saffron }}> *</span>
-              </legend>
-              <div className="grid grid-cols-2 gap-3">
-                {TEAM_SIZE_OPTIONS.map((option) => {
-                  const checked = selectedTeamSize === option.value;
-                  return (
-                    <label key={option.value}
-                      className="flex flex-col gap-1 px-4 py-3 rounded-xl border cursor-pointer transition-colors min-h-[44px] focus-within:ring-2 focus-within:ring-orange-400"
-                      style={{
-                        background: checked ? `${COLORS.saffron}1A` : 'rgba(255,255,255,0.05)',
-                        borderColor: checked ? COLORS.saffron : (errors.maxTeamSize ? '#EF4444' : COLORS.darkBorderSubtle),
-                      }}>
-                      <input type="radio" value={option.value} className="sr-only"
-                        {...register('maxTeamSize', { required: 'Choose a team size' })} />
-                      <span className="text-white font-bold text-sm">{option.value} Players</span>
-                      <span className="text-white/45 text-xs">Best {option.counted} scores count</span>
-                    </label>
-                  );
-                })}
-              </div>
-              {errors.maxTeamSize
-                ? <p className="mt-1.5 text-xs text-red-400" role="alert">{errors.maxTeamSize.message}</p>
-                : <p className="mt-1.5 text-xs text-white/25">Caps athletes per age group, counted per apparatus. Cannot be changed later.</p>}
-            </fieldset>
 
             <div>
               <label htmlFor="team-desc" className="block text-xs font-semibold tracking-wide uppercase mb-2"

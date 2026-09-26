@@ -14,7 +14,6 @@ import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
-import { offeredApparatus } from '@/utils/scoring/apparatus';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -198,10 +197,8 @@ const Scores = () => {
       }))
     : DEFAULT_COMPETITION_TYPES;
 
-  // Only what the chosen gender competes on in this type.
-  const apparatusOptions = selectedCompetitionType && selectedGender && activeCompetition
-    ? offeredApparatus(activeCompetition, selectedCompetitionType.value, selectedGender.value)
-      .map((app) => ({ value: app, label: app }))
+  const apparatusOptions = selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType.value]
+    ? activeCompetition.apparatusConfig[selectedCompetitionType.value].map((app) => ({ value: app, label: app }))
     : [];
 
   useEffect(() => {
@@ -331,13 +328,10 @@ const Scores = () => {
         const teamTotalScore = team.totalScore || team.finalScore || 0;
         const averageTeamScore = playerCount > 0 ? teamTotalScore / playerCount : 0;
 
-        // The scores that COUNTED toward the team total — best 3 of a 4-player
-        // team, best 5 of a 6-player team, per apparatus — as decided on the
-        // server (team-championship.util). Keyed per apparatus so an athlete
-        // counted on two apparatus appears twice.
-        const topPlayerScores = (team.apparatus || [])
-          .flatMap((app) => app.counted.map((p) => ({ ...p, playerId: `${p.playerId}-${app.apparatus}` })))
-          .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+        // Get top 3 players by final score
+        const topPlayerScores = [...playerScores]
+          .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+          .slice(0, 3);
 
         return {
           teamId: team._id,

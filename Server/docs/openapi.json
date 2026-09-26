@@ -396,15 +396,6 @@
           "isActive": {
             "type": "boolean"
           },
-          "maxTeamSize": {
-            "type": "integer",
-            "enum": [
-              4,
-              6
-            ],
-            "nullable": true,
-            "description": "Declared squad size; null on teams created before it existed (read as 6)"
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3086,19 +3077,10 @@
                   },
                   "description": {
                     "type": "string"
-                  },
-                  "maxTeamSize": {
-                    "type": "integer",
-                    "enum": [
-                      4,
-                      6
-                    ],
-                    "description": "4 → best 3 count toward Team Championship; 6 → best 5"
                   }
                 },
                 "required": [
-                  "name",
-                  "maxTeamSize"
+                  "name"
                 ]
               }
             }
@@ -4710,19 +4692,10 @@
                   },
                   "description": {
                     "type": "string"
-                  },
-                  "maxTeamSize": {
-                    "type": "integer",
-                    "enum": [
-                      4,
-                      6
-                    ],
-                    "description": "4 → best 3 count toward Team Championship; 6 → best 5"
                   }
                 },
                 "required": [
-                  "name",
-                  "maxTeamSize"
+                  "name"
                 ]
               }
             }
@@ -15253,159 +15226,6 @@
           }
         },
         "description": "Two gates: the Scorer has LOCKED the sheet, and the Senior Judge has finalized that athlete. The second is applied per row — locking a sheet does not retroactively publish a performer nobody signed off.\n\n`competitionId` is **required**. It used to be optional, and omitting it returned every published score in the database — 19.5 MB on one 1000-team meet, with no bound across competitions.\n\nEach `judgeSlips[]` entry carries its section totals but **not** its `breakdown` (the A/B/C element counts and combination checklist). That exists so the judge who wrote a slip can re-open it for edit, and is 43% of a row.\n\n**Public** — no authentication required.",
-        "security": []
-      }
-    },
-    "/api/public/team-championship": {
-      "get": {
-        "tags": [
-          "Public"
-        ],
-        "summary": "Team Championship standing for one category",
-        "operationId": "publicTeamChampionship",
-        "parameters": [
-          {
-            "name": "competitionId",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "objectid"
-            },
-            "description": "Competition id"
-          },
-          {
-            "name": "gender",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Male",
-                "Female"
-              ]
-            },
-            "description": "Category gender"
-          },
-          {
-            "name": "ageGroup",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Under10",
-                "Under12",
-                "Under14",
-                "Under16",
-                "Under18",
-                "Above16",
-                "Above18"
-              ]
-            },
-            "description": "Category age group"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ranked teams",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "rank": {
-                            "type": "integer"
-                          },
-                          "teamId": {
-                            "type": "string",
-                            "format": "objectid"
-                          },
-                          "teamName": {
-                            "type": "string"
-                          },
-                          "teamSize": {
-                            "type": "integer"
-                          },
-                          "countedPerApparatus": {
-                            "type": "integer"
-                          },
-                          "totalScore": {
-                            "type": "number"
-                          },
-                          "apparatus": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "apparatus": {
-                                  "type": "string",
-                                  "enum": [
-                                    "Pole Mallakhamb",
-                                    "Hanging Mallakhamb",
-                                    "Rope Mallakhamb"
-                                  ]
-                                },
-                                "subtotal": {
-                                  "type": "number"
-                                },
-                                "counted": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object"
-                                  }
-                                },
-                                "dropped": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Request failed validation — `error.details` names the field",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "description": "Competition I only, from the same published scores as `/api/public/scores`. Per apparatus, a 4-player team counts its best 3 scores and a 6-player team its best 5; the team total is the sum of those subtotals. Teams level on the total share a placing.\n\n**Public** — no authentication required.",
         "security": []
       }
     },

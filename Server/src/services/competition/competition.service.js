@@ -14,7 +14,6 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
-const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
 const EventTypes = require('../../socket/events/event-types');
 const { pageMeta } = require('../../utils/data/pagination.util');
 
@@ -91,9 +90,7 @@ class CompetitionService {
   async createCompetition(competitionData, createdBy) {
     try {
       // Sanitize string inputs
-      const sanitizedData = applyApparatusByGender(
-        stripSuperAdminFeeFields(sanitizeCompetitionData(competitionData))
-      );
+      const sanitizedData = stripSuperAdminFeeFields(sanitizeCompetitionData(competitionData));
 
       // Validate dates
       this.validateDates(sanitizedData.startDate, sanitizedData.endDate);
@@ -173,6 +170,8 @@ class CompetitionService {
   async updateCompetition(competitionId, updates) {
     try {
       // Sanitize string inputs
+      const sanitizedUpdates = stripSuperAdminFeeFields(sanitizeCompetitionData(updates));
+
       // Find competition
       const competition = await this.competitionRepository.findById(competitionId);
 
@@ -180,11 +179,6 @@ class CompetitionService {
         this.logger.warn('Competition update failed: Not found', { competitionId });
         throw new NotFoundError('Competition', competitionId);
       }
-
-      const sanitizedUpdates = applyApparatusByGender(
-        stripSuperAdminFeeFields(sanitizeCompetitionData(updates)),
-        competition.competitionTypes
-      );
 
       // Validate dates if being updated
       if (sanitizedUpdates.startDate || sanitizedUpdates.endDate) {

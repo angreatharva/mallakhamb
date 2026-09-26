@@ -54,18 +54,6 @@ function createPublicController(container) {
     }),
 
     /**
-     * @route GET /api/public/team-championship
-     *
-     * One category's Team Championship (Competition I) standing, from the
-     * same published scores the player board shows.
-     */
-    getPublicTeamChampionship: asyncHandler(async (req, res) => {
-      const { competitionId, gender, ageGroup } = req.query;
-      const standings = await publicService.getPublicTeamChampionship(competitionId, { gender, ageGroup });
-      res.json({ success: true, data: standings });
-    }),
-
-    /**
      * @route GET /api/public/cop-rules
      *
      * Serves the COP Nov 2022 constants so the client can stop maintaining a

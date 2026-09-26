@@ -11,7 +11,6 @@ const { ValidationError } = require('../../errors');
 // in config/cop-rules, which is also what GET /api/public/cop-rules serves.
 const { toCompetitionTypeDisplay, apparatusKey } = require('../../config/cop-rules');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
-const { rankTeamChampionship } = require('../../utils/scoring/team-championship.util');
 const {
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
@@ -215,59 +214,6 @@ class PublicService {
   }
 
   /**
-   * The Team Championship standing for one category.
-   *
-   * Team Championship is Competition I. Built on `getPublicScores`, so a score
-   * counts toward a team only once it would be shown on the player board — the
-   * Senior Judge's Final Submit and the Scorer's lock both apply. Then each
-   * apparatus counts the squad's best 3 (4-player team) or best 5 (6-player
-   * team), and the team total is the sum — see utils/scoring/team-championship.util.
-   *
-   * @param {string} competitionId
-   * @param {{gender: string, ageGroup: string}} filters
-   * @returns {Promise<Array>} ranked teams, best first
-   */
-  async getPublicTeamChampionship(competitionId, { gender, ageGroup } = {}) {
-    const scoreDocs = await this.getPublicScores(competitionId, {
-      gender,
-      ageGroup,
-      competitionType: 'competition_1',
-    });
-
-    const teams = new Map();
-    for (const doc of scoreDocs) {
-      const teamId = String(doc.team?._id || doc.teamId?._id || doc.teamId || '');
-      if (!teamId) continue;
-      if (!teams.has(teamId)) {
-        teams.set(teamId, {
-          teamId,
-          teamName: doc.teamName,
-          maxTeamSize: doc.team?.maxTeamSize ?? null,
-          performances: [],
-        });
-      }
-      // Only what the board needs; the rows carry judge marks we do not publish here.
-      for (const ps of doc.playerScores) {
-        teams.get(teamId).performances.push({
-          playerId: ps.playerId,
-          playerName: ps.playerName,
-          apparatus: ps.apparatus,
-          finalScore: ps.finalScore || 0,
-        });
-      }
-    }
-
-    const ranked = rankTeamChampionship([...teams.values()])
-      .map(({ performances, ...team }) => team);
-
-    this.logger.info('Public team championship retrieved', {
-      competitionId, gender, ageGroup, count: ranked.length,
-    });
-
-    return ranked;
-  }
-
-  /**
    * Get teams registered for a competition (for public score filters).
    * @param {string} [competitionId]
    * @returns {Promise<Array>}
@@ -342,7 +288,7 @@ class PublicService {
     try {
       const competitions = await this.competitionRepository.findActive({
         sort: { startDate: -1 },
-        select: 'name year place status competitionTypes startDate endDate level apparatusConfig apparatusByGender',
+        select: 'name year place status competitionTypes startDate endDate level apparatusConfig',
       });
 
       this.logger.info('Public competitions retrieved', { count: competitions.length });

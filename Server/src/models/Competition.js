@@ -30,23 +30,6 @@ const competitionSchema = new mongoose.Schema({
     }],
     default: {}
   },
-  /*
-   * The apparatus each gender competes on, per competition type:
-   * `{ competition_1: { Male: [...], Female: [...] } }`.
-   *
-   * The source of truth when present; `apparatusConfig` above is derived from
-   * it on write (the union of both genders) so every reader that predates the
-   * split keeps working. Absent on meets saved before it — those fall back to
-   * `apparatusConfig` for both genders. See utils/data/competition-apparatus.util.
-   */
-  apparatusByGender: {
-    type: Map,
-    of: new mongoose.Schema({
-      Male: [{ type: String, enum: ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'] }],
-      Female: [{ type: String, enum: ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'] }]
-    }, { _id: false }),
-    default: undefined
-  },
   place: {
     type: String,
     required: [true, 'Competition place is required'],

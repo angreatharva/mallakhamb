@@ -93,12 +93,6 @@ function buildCompetition(meet, adminIds, late = false) {
     description: `${NAME} — ${meet.place} ${YEAR}`,
     competitionTypes: COMPETITION_TYPES,
     apparatusConfig: Object.fromEntries(COMPETITION_TYPES.map((type) => [type, APPARATUS])),
-    // Per gender: women do not compete on Hanging Mallakhamb (COP §11), so the
-    // union above is still all three.
-    apparatusByGender: Object.fromEntries(COMPETITION_TYPES.map((type) => [type, {
-      Male: APPARATUS,
-      Female: APPARATUS.filter((name) => name !== 'Hanging Mallakhamb'),
-    }])),
     ageGroups,
     playerFee: PLAYER_FEE,
     apparatusFees: {},

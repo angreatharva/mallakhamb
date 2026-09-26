@@ -128,9 +128,6 @@ export const createTeam = async (page, coach) => {
   if (coach.teamDescription) {
     await page.locator('#team-desc').fill(coach.teamDescription);
   }
-  // Mandatory. The radio is visually hidden behind its card, so the card is
-  // what gets clicked — exactly as a coach would.
-  await page.locator('label', { hasText: `${coach.maxTeamSize || 6} Players` }).click();
 
   const created = page.waitForResponse(
     (r) => r.url().includes('/coaches/team') && r.request().method() === 'POST',

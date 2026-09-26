@@ -19,7 +19,7 @@
  * every competition seeded before this field was used depends on.
  */
 
-import { normalizeApparatus, isApparatusAllowedForGender } from './copRules';
+import { normalizeApparatus } from './copRules';
 
 /**
  * The apparatus a score belongs to, as a comparable key.
@@ -44,41 +44,6 @@ export const APPARATUS = Object.freeze([
   'Hanging Mallakhamb',
   'Rope Mallakhamb',
 ]);
-
-/**
- * What a meet offers one gender in one competition type.
- *
- * Mirrors `offeredApparatus` in Server/src/utils/data/competition-apparatus.util.js.
- * `competition.apparatusByGender` (`{ competition_1: { Male: [...], Female: [...] } }`)
- * decides when the meet declares it. A meet saved before the gender split has
- * only `apparatusConfig`; its per-type list then applies to both genders, less
- * what COP bars a gender from (Hanging Mallakhamb for women).
- *
- * With no `competitionType`, the answer is the union across every type the
- * meet runs — what a coach picks from when entering an athlete.
- *
- * @param {Object} competition
- * @param {string} [competitionType] - slug, e.g. 'competition_1'
- * @param {string} gender - 'Male' | 'Female'
- * @returns {string[]} in COP order
- */
-export function offeredApparatus(competition, competitionType, gender) {
-  const types = competitionType
-    ? [competitionType]
-    : (competition?.competitionTypes?.length
-      ? competition.competitionTypes
-      : Object.keys(competition?.apparatusConfig || {}));
-
-  const seen = new Set();
-  for (const type of types) {
-    const configured = competition?.apparatusByGender?.[type]?.[gender];
-    const list = Array.isArray(configured)
-      ? configured
-      : (competition?.apparatusConfig?.[type] || []).filter((name) => isApparatusAllowedForGender(name, gender));
-    for (const name of list) seen.add(name);
-  }
-  return APPARATUS.filter((name) => seen.has(name));
-}
 
 /**
  * The apparatus list on a registration entry, for one competition type.

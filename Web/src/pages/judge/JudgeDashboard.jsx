@@ -19,7 +19,7 @@ import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { JudgeAmbience } from './judgeShared';
-import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
+import { apparatusInUse, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -258,12 +258,8 @@ const JudgeDashboard = () => {
     const gender = selectedGender || judgeInfo.gender;
     const ageGroup = selectedAgeGroup || judgeInfo.ageGroup;
 
-    // What the meet runs for THIS gender in this type; a meet saved before the
-    // gender split answers with its per-type list.
     const configured =
-      (selectedCompetitionType && activeCompetition && gender
-        ? offeredApparatus(activeCompetition, selectedCompetitionType, gender)
-        : []);
+      (selectedCompetitionType && activeCompetition?.apparatusConfig?.[selectedCompetitionType]) || [];
     const registered = apparatusInUse(
       teams.flatMap((team) => (team.players || []).filter(
         (e) => e.player && entryGender(e) === gender && e.ageGroup === ageGroup

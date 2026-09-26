@@ -52,10 +52,6 @@ const ScoreCategoryFilters = ({
   onApparatusChange,
 
   onClearFilters,
-
-  // Team Championship is one category (competition, gender, age group); the
-  // competition type is fixed and every apparatus counts, so those two go.
-  categoryOnly = false,
 }) => {
   const competitionChosen = Boolean(selectedCompetition);
 
@@ -74,7 +70,7 @@ const ScoreCategoryFilters = ({
         />
       </div>
 
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${categoryOnly ? '' : 'lg:grid-cols-4'} gap-4`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <FilterLabel>Gender *</FilterLabel>
           <Dropdown
@@ -99,7 +95,6 @@ const ScoreCategoryFilters = ({
           />
         </div>
 
-        {!categoryOnly && (<>
         <div>
           <FilterLabel>Competition Type *</FilterLabel>
           <Dropdown
@@ -123,7 +118,6 @@ const ScoreCategoryFilters = ({
             disabled={!selectedCompetitionType}
           />
         </div>
-        </>)}
       </div>
 
       <div className="flex justify-end pt-1">

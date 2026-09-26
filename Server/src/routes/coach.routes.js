@@ -17,7 +17,6 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { phone } = require('../validators/common.validator');
-const teamValidator = require('../validators/team.validator');
 const { APPARATUS, AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
@@ -92,8 +91,7 @@ function createCoachRoutes(container) {
 
   const createTeamValidation = [
     body('name').trim().notEmpty().withMessage('Team name is required'),
-    body('description').optional().trim(),
-    teamValidator.maxTeamSize()
+    body('description').optional().trim()
   ];
 
   const addPlayerValidation = [

@@ -9,7 +9,6 @@ import Dropdown from '@/components/auth/Dropdown';
 import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
-import { offeredApparatus } from '@/utils/scoring/apparatus';
 
 /** Keep in sync with SuperAdminAddPlayerPayment.jsx */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -233,24 +232,20 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     }
   }, [selectedCompetition]); 
   
-  // What the selected competition runs for this athlete's gender, per type.
-  // Nothing is offered until the gender is known — the superadmin configures
-  // Male and Female separately.
+  // Calculate available apparatuses for the selected competition per type
   const availableApparatusesByType = React.useMemo(() => {
-    if (!selectedCompetition || !selectedGender) return {};
+    if (!selectedCompetition) return {};
     const doc = competitions.find(c => c._id === selectedCompetition.value);
-    if (!doc || !doc.competitionTypes) return {};
-
+    if (!doc || !doc.apparatusConfig || !doc.competitionTypes) return {};
+    
     const config = {};
     doc.competitionTypes.forEach(type => {
-      const offered = offeredApparatus(doc, type, selectedGender.value);
-      if (offered.length > 0) config[type] = offered;
+      if (doc.apparatusConfig[type] && doc.apparatusConfig[type].length > 0) {
+        config[type] = [...doc.apparatusConfig[type]].sort();
+      }
     });
     return config;
-  }, [selectedCompetition, selectedGender, competitions]);
-
-  // A gender change can take apparatus off the menu; drop what was ticked.
-  useEffect(() => { setSelectedApparatus({}); }, [selectedGender]);
+  }, [selectedCompetition, competitions]);
   
   // Toggle apparatus selection for a specific competition type
   const toggleApparatus = (compType, app) => {
