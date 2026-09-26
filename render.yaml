@@ -20,7 +20,15 @@ services:
     # If this service is ever moved to a paid plan AND scaled past one instance,
     # unset MIGRATE_ON_START and restore preDeployCommand.
     startCommand: npm start
+    # Render's own probe: no database, so a slow Atlas never fails a deploy.
+    healthCheckPath: /api/health/live
     envVars:
+      # Keep-alive: the server pings `${RENDER_EXTERNAL_URL}/api/health/ping`
+      # (Render sets that variable) every 10 minutes, so the free plan never
+      # sleeps. Set KEEP_ALIVE=false to turn it off. One always-on free
+      # service uses ~744 of the 750 free instance-hours a month.
+      - key: KEEP_ALIVE_INTERVAL_MINUTES
+        value: 10
       - key: NODE_ENV
         value: production
       - key: PORT

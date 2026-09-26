@@ -243,6 +243,14 @@ async function serve(container, config) {
       line(`  cache warming failed to start: ${error.message}`);
     });
 
+  // Keep Render's free plan from sleeping: pings our own public URL. Off
+  // unless RENDER_EXTERNAL_URL (set by Render) or KEEP_ALIVE_URL is present.
+  const keepAlive = require('../src/infrastructure/keep-alive')
+    .startKeepAlive({ logger: container.resolve('logger') });
+  line(keepAlive.url
+    ? `  keep-alive pinging ${keepAlive.url} every ${keepAlive.intervalMs / 60_000} min`
+    : '  keep-alive off (no RENDER_EXTERNAL_URL / KEEP_ALIVE_URL)');
+
   container.resolve('gracefulShutdownHandler').register({
     server,
     socketManager,

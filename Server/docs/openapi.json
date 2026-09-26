@@ -1200,6 +1200,49 @@
         "security": []
       }
     },
+    "/api/health/ping": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Uptime ping",
+        "operationId": "healthPing",
+        "responses": {
+          "200": {
+            "description": "Alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "For uptime pingers (UptimeRobot, cron-job.org) and the built-in keep-alive that stops Render's free plan sleeping. Same body as `/api/health/live`; no I/O, `Cache-Control: no-store`. HEAD works too.\n\n**Public** — no authentication required.",
+        "security": []
+      }
+    },
     "/api/health/ready": {
       "get": {
         "tags": [

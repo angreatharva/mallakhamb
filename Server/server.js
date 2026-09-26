@@ -101,6 +101,10 @@ if (require.main === module) {
         logger.error('Competition status sweeper failed to start', { error: err.message });
       });
 
+    // Keep Render's free plan from sleeping: pings our own public URL.
+    // Off unless RENDER_EXTERNAL_URL or KEEP_ALIVE_URL is set.
+    require('./src/infrastructure/keep-alive').startKeepAlive({ logger });
+
     // Register graceful shutdown handler
     const gracefulShutdownHandler = container.resolve('gracefulShutdownHandler');
     gracefulShutdownHandler.register({

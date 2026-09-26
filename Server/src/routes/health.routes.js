@@ -25,6 +25,18 @@ function createHealthRoutes(container) {
   router.get('/live', (req, res) => healthController.liveness(req, res));
 
   /**
+   * @route GET|HEAD /health/ping
+   * @desc Uptime-pinger target (keeps Render's free plan awake). Same answer as
+   *       /live — no auth, no database — and never cached, so every ping
+   *       reaches the process rather than a proxy's copy.
+   * @access Public
+   */
+  router.get('/ping', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return healthController.liveness(req, res);
+  });
+
+  /**
    * @route GET /health/ready
    * @desc Readiness probe - checks if server is ready for traffic
    * @access Public

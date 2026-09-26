@@ -625,6 +625,15 @@ function buildPaths() {
     responses: { 200: ok('Alive') },
   }));
 
+  add('/api/health/ping', 'get', op({
+    tag: 'Health', auth: false, operationId: 'healthPing',
+    summary: 'Uptime ping',
+    description: 'For uptime pingers (UptimeRobot, cron-job.org) and the built-in keep-alive that stops '
+      + 'Render\'s free plan sleeping. Same body as `/api/health/live`; no I/O, `Cache-Control: no-store`. '
+      + 'HEAD works too.',
+    responses: { 200: ok('Alive') },
+  }));
+
   add('/api/health/ready', 'get', op({
     tag: 'Health', auth: false, operationId: 'healthReady',
     summary: 'Readiness probe',
