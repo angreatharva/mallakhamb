@@ -30,6 +30,7 @@ const {
   toMongoProjection,
 } = require('../../utils/data/user-projection.util');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
+const { rankTeamChampionship } = require('../../utils/scoring/team-championship.util');
 const {
   JUDGE_SCORE_FIELDS,
   JUDGE_TYPE_BY_FIELD,
@@ -678,6 +679,7 @@ class ScoringService {
         return {
           _id: regTeam.team._id,
           name: regTeam.team.name,
+          maxTeamSize: regTeam.team.maxTeamSize ?? null,
           // Same defect class as CRIT-4: this returned the whole coach and
           // player documents. `select: false` now hides the bcrypt hash, but
           // coach/player e-mail and minors' dates of birth were still going
@@ -876,13 +878,16 @@ class ScoringService {
     try {
       const teamsWithScores = await this.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus);
 
-      // Calculate rankings using CalculationService
-      const rankings = this.calculationService.calculateRankings(
-        teamsWithScores.map(t => ({
-          ...t,
-          finalScore: t.totalScore
-        }))
-      );
+      /*
+       * Team Championship: each apparatus counts the squad's best 3 (4-player
+       * team) or best 5 (6-player team), and the team total is the sum. This
+       * used to rank on `totalScore` as getTeamScores returns it — every
+       * athlete's score added up — so a squad scored more simply by entering
+       * more athletes. The same engine backs the public board.
+       */
+      const rankings = rankTeamChampionship(
+        teamsWithScores.map((t) => ({ ...t, performances: t.scores }))
+      ).map(({ performances, ...t }) => ({ ...t, finalScore: t.totalScore }));
 
       this.logger.info('Team rankings calculated', { 
         competitionId, 

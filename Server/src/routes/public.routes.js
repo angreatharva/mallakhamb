@@ -111,6 +111,19 @@ function createPublicRoutes(container) {
   );
 
   /**
+   * @route   GET /api/public/team-championship
+   * @desc    Team Championship standing for one category (best 3 of a 4-player
+   *          team / best 5 of a 6-player team, per apparatus)
+   * @access  Public
+   */
+  router.get(
+    '/team-championship',
+    publicValidator.getPublicTeamChampionship(),
+    handleValidationErrors,
+    publicController.getPublicTeamChampionship
+  );
+
+  /**
    * @route   POST /api/public/save-score
    * @desc    Submit a score slip for a team/player
    * @access  Judge (any judgeType), Admin, SuperAdmin — 401 when anonymous

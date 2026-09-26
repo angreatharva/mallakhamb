@@ -12,6 +12,8 @@ const { NotFoundError, ValidationError, AuthorizationError } = require('../../er
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // One shape on the way in, whatever the two clients post — see the module header.
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
+const { offeredApparatus, hasGenderApparatus } = require('../../utils/data/competition-apparatus.util');
+const { TEAM_SIZES, isValidTeamSize, hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { idStr } = require('../../utils/data/objectid.util');
 const {
   calculateTeamPaymentAmount,
@@ -130,10 +132,17 @@ class CoachService extends UserService {
     if (!teamData || typeof teamData !== 'object') {
       throw new ValidationError('Team data is required');
     }
+    // Mandatory: it caps the squad and decides how many scores count toward
+    // the Team Championship. The route validates it too; this is the backstop
+    // for any other caller.
+    if (!isValidTeamSize(teamData.maxTeamSize)) {
+      throw new ValidationError(`Max team size must be ${TEAM_SIZES.join(' or ')} players`, 'maxTeamSize');
+    }
     
     // Create the team
     const created = await this.teamRepository.create({
       ...teamData,
+      maxTeamSize: Number(teamData.maxTeamSize),
       coach: coachId,
       isActive: true,
       createdAt: new Date(),
@@ -395,6 +404,8 @@ class CoachService extends UserService {
         coach: team.coach,
         description: team.description,
         isActive: team.isActive,
+        // Declared squad size (4 or 6); absent on teams created before it.
+        maxTeamSize: team.maxTeamSize ?? null,
         players: playersWithDetails,
         isSubmitted: registeredTeam.isSubmitted,
         paymentStatus: registeredTeam.paymentStatus,
@@ -541,6 +552,23 @@ class CoachService extends UserService {
     );
 
     /*
+     * The squad cap the coach declared when creating the team: at most
+     * `maxTeamSize` athletes in one gender + age group. The athlete being
+     * written is left out of the count, so moving someone between age groups
+     * (which re-posts them here) is not blocked by their own old place.
+     *
+     * A team created before the size existed has none, and is not capped.
+     */
+    const team = teams.find((t) => String(t._id) === String(teamId))
+      || (this.teamRepository ? await this.teamRepository.findById(teamId) : null);
+    if (team && !hasRoomInSquad(team.maxTeamSize, registeredTeam.players, gender, ageGroup, playerId)) {
+      throw new ValidationError(
+        `${team.name} is a ${team.maxTeamSize}-player team and already has ${team.maxTeamSize} athletes in ${gender} ${ageGroup}`,
+        'ageGroup'
+      );
+    }
+
+    /*
      * Written in ONE shape, whatever the client sent.
      *
      * The coach dashboard posts a flat list and the superadmin's Add Player
@@ -549,7 +577,37 @@ class CoachService extends UserService {
      * is spread across the meet's own competition types, which is what the
      * reader already did with it. See utils/data/apparatus.util.
      */
-    const entryApparatus = toCanonicalApparatus(apparatus, competition.competitionTypes);
+    let entryApparatus = toCanonicalApparatus(apparatus, competition.competitionTypes);
+
+    /*
+     * Only what the meet runs for THIS gender.
+     *
+     * The coach picks from a flat list, which the line above spreads across
+     * every competition type. A meet that declares apparatus per gender may
+     * run Rope for women in Competition III and not in Competition I, so each
+     * type keeps only the apparatus it offers this athlete's gender — and an
+     * entry left with nothing at all is refused rather than stored empty.
+     *
+     * A meet saved before the gender split is left as it was: its per-type
+     * list applies to both genders, and some seeded meets have none at all.
+     */
+    if (hasGenderApparatus(competition)) {
+      const requested = Object.keys(entryApparatus).length > 0;
+      entryApparatus = Object.fromEntries(
+        Object.entries(entryApparatus)
+          .map(([type, list]) => {
+            const offered = offeredApparatus(competition, type, gender);
+            return [type, list.filter((name) => offered.includes(name))];
+          })
+          .filter(([, list]) => list.length > 0)
+      );
+      if (requested && Object.keys(entryApparatus).length === 0) {
+        throw new ValidationError(
+          `None of the selected apparatus is offered for ${gender} athletes in this competition`,
+          'apparatus'
+        );
+      }
+    }
 
     if (alreadyEntered) {
       await this.competitionRepository.updatePlayerInRegistration(

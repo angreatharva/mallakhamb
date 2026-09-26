@@ -31,7 +31,7 @@ const TIE_BREAK_LABELS = {
   panel_scores_unavailable: 'Tied — panel scores unavailable',
 };
 
-const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
+export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   const colors = {
     1: { bg: 'rgba(245,166,35,0.2)', border: 'rgba(245,166,35,0.5)', text: '#F5A623' },
     2: { bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', text: '#C0C0C0' },

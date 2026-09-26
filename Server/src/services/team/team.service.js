@@ -14,6 +14,7 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const { sanitizeTeamData } = require('../../utils/validation/sanitization.util');
+const { TEAM_SIZES, isValidTeamSize } = require('../../utils/scoring/team-championship.util');
 const {
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -75,9 +76,14 @@ class TeamService {
         throw new ConflictError('Team with this name already exists for this coach');
       }
 
+      if (!isValidTeamSize(sanitizedData.maxTeamSize)) {
+        throw new ValidationError(`Max team size must be ${TEAM_SIZES.join(' or ')} players`, 'maxTeamSize');
+      }
+
       // Create team
       const team = await this.teamRepository.create({
         ...sanitizedData,
+        maxTeamSize: Number(sanitizedData.maxTeamSize),
         coach: coachId,
         isActive: true
       });
@@ -164,7 +170,9 @@ class TeamService {
       }
 
       // Don't allow updating certain fields
-      const { _id, coach, isActive, createdAt, updatedAt, ...allowedUpdates } = sanitizedUpdates;
+      // `maxTeamSize` is fixed at creation: shrinking a squad that already
+      // fields six would leave it over its own cap.
+      const { _id, coach, isActive, createdAt, updatedAt, maxTeamSize, ...allowedUpdates } = sanitizedUpdates;
 
       // Update team
       const updated = await this.teamRepository.updateById(teamId, allowedUpdates);

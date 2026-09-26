@@ -11,6 +11,8 @@ import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows';
+import TeamChampionshipBoard from '@/components/scores/TeamChampionshipBoard';
+import { offeredApparatus } from '@/utils/scoring/apparatus';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 // ─── Ambient orb ─────────────────────────────────────────────────────────────
@@ -18,6 +20,56 @@ const COMPETITION_TYPE_LABELS = {
   competition_1: 'Competition I - Team Championship & Qualifier',
   competition_2: 'Competition II - All Round Individual Final',
   competition_3: 'Competition III - Apparatus Championship',
+};
+
+// ─── Team Championship view ──────────────────────────────────────────────────
+const EmptyState = ({ icon: Icon, title, children }) => (
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
+    <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+      style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}20` }}>
+      <Icon className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
+    </div>
+    <p className="text-white font-bold text-lg mb-2">{title}</p>
+    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>{children}</p>
+  </motion.div>
+);
+
+const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, standings, caption }) => {
+  if (!filtersSet) {
+    return (
+      <EmptyState icon={Filter} title="Select Filters to View Team Championship">
+        Pick a competition, gender and age group. Per apparatus, a 4-player team counts its
+        best 3 scores and a 6-player team its best 5.
+      </EmptyState>
+    );
+  }
+  if (!runsTeamChampionship) {
+    return (
+      <EmptyState icon={Trophy} title="No Team Championship">
+        This competition does not run Competition I — Team Championship.
+      </EmptyState>
+    );
+  }
+  if (loading) {
+    return <div className="space-y-3">{[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}</div>;
+  }
+  if (!standings.length) {
+    return (
+      <EmptyState icon={Medal} title="No Team Scores Yet">
+        Team totals appear once Competition I scores are published.
+      </EmptyState>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
+        style={{ background: `${COLORS.saffron}10`, borderColor: `${COLORS.saffron}30`, color: COLORS.saffronLight }}>
+        <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
+        {caption} · {COMPETITION_TYPE_LABELS.competition_1}
+      </div>
+      <TeamChampionshipBoard teams={standings} />
+    </div>
+  );
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -32,6 +84,10 @@ const PublicScores = () => {
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(null);
   const [selectedApparatus, setSelectedApparatus] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // 'players' — the individual board; 'team' — the Team Championship standing.
+  const [view, setView] = useState('players');
+  const [teamStandings, setTeamStandings] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
 
   // Boys and girls do not share the top two brackets; the shared helper owns
   // that rule and narrows it further to whatever this competition runs.
@@ -48,10 +104,11 @@ const PublicScores = () => {
   };
 
   const getAvailableApparatus = () => {
-    if (!selectedCompetition || !selectedCompetitionType) return [];
-    const apparatusConfig = selectedCompetition.apparatusConfig || {};
-    const apparatusList = apparatusConfig[selectedCompetitionType.value] || [];
-    return apparatusList.map((app) => ({ value: app, label: app }));
+    if (!selectedCompetition || !selectedCompetitionType || !selectedGender) return [];
+    // Only what this gender competes on in this type — the meet configures
+    // Male and Female separately.
+    return offeredApparatus(selectedCompetition, selectedCompetitionType.value, selectedGender.value)
+      .map((app) => ({ value: app, label: app }));
   };
 
   // Cascade resets — changing a filter invalidates everything below it
@@ -96,6 +153,34 @@ const PublicScores = () => {
     }
   }, [selectedCompetition, selectedGender, selectedAgeGroup, selectedCompetitionType, selectedApparatus]);
 
+  const runsTeamChampionship = Boolean(selectedCompetition?.competitionTypes?.includes('competition_1'));
+  const teamFiltersSet = Boolean(selectedCompetition && selectedGender && selectedAgeGroup);
+
+  // Team Championship needs only the category: the type is Competition I and
+  // every apparatus the gender competes on counts toward the team total.
+  useEffect(() => {
+    if (view !== 'team' || !teamFiltersSet || !runsTeamChampionship) {
+      setTeamStandings([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setTeamLoading(true);
+    publicAPI.getTeamChampionship({
+      competitionId: selectedCompetition.value,
+      gender: selectedGender.value,
+      ageGroup: selectedAgeGroup.value,
+    })
+      .then((response) => { if (!cancelled) setTeamStandings(response.data.data || []); })
+      .catch((error) => {
+        if (cancelled) return;
+        toast.error('Failed to load team championship');
+        logger.error('Error fetching team championship:', error);
+        setTeamStandings([]);
+      })
+      .finally(() => { if (!cancelled) setTeamLoading(false); });
+    return () => { cancelled = true; };
+  }, [view, teamFiltersSet, runsTeamChampionship, selectedCompetition, selectedGender, selectedAgeGroup]);
+
   const fetchCompetitions = async () => {
     setLoadingCompetitions(true);
     try {
@@ -106,6 +191,7 @@ const PublicScores = () => {
         label: `${c.name} (${c.year}) — ${c.place}`,
         competitionTypes: c.competitionTypes || [],
         apparatusConfig: c.apparatusConfig || {},
+        apparatusByGender: c.apparatusByGender || {},
         // Absent from the public payload today, so the age-group filter falls
         // back to the gender's full list. Carried through so that it narrows
         // on its own if the endpoint ever starts sending it.
@@ -158,6 +244,7 @@ const PublicScores = () => {
     setSelectedCompetitionType(null);
     setSelectedApparatus(null);
     setScores([]);
+    setTeamStandings([]);
     setSearchTerm('');
   };
 
@@ -195,7 +282,7 @@ const PublicScores = () => {
               <h1 className="text-white font-black text-sm sm:text-base">Competition Scores</h1>
             </div>
           </div>
-          {allFiltersSet && (
+          {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
             <button onClick={handleClearFilters}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
               style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
@@ -215,10 +302,37 @@ const PublicScores = () => {
               View <GradientText>Scores</GradientText>
             </h2>
             <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Select a category to see players from all teams ranked together
+              {view === 'team'
+                ? 'Teams ranked on their best scores per apparatus'
+                : 'Select a category to see players from all teams ranked together'}
             </p>
           </div>
         </FadeIn>
+
+        {/* Player Scores | Team Championship */}
+        <div role="tablist" aria-label="Results view"
+          className="flex p-1 rounded-2xl border max-w-md mx-auto"
+          style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
+          {[
+            { id: 'players', label: 'Player Scores', icon: Medal },
+            { id: 'team', label: 'Team Championship', icon: Users },
+          ].map(({ id, label, icon: Icon }) => {
+            const active = view === id;
+            return (
+              <button key={id} type="button" role="tab" aria-selected={active}
+                onClick={() => setView(id)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-colors min-h-[44px]"
+                style={{
+                  background: active ? `${COLORS.saffron}20` : 'transparent',
+                  color: active ? COLORS.saffronLight : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${active ? `${COLORS.saffron}40` : 'transparent'}`,
+                }}>
+                <Icon className="w-4 h-4" aria-hidden="true" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* Filters card */}
         <FadeIn delay={0.1}>
@@ -241,11 +355,21 @@ const PublicScores = () => {
               selectedApparatus={selectedApparatus}
               onApparatusChange={setSelectedApparatus}
               onClearFilters={handleClearFilters}
+              categoryOnly={view === 'team'}
             />
           </div>
         </FadeIn>
 
         {/* Content area */}
+        {view === 'team' ? (
+          <TeamChampionshipSection
+            filtersSet={teamFiltersSet}
+            runsTeamChampionship={runsTeamChampionship}
+            loading={teamLoading}
+            standings={teamStandings}
+            caption={teamFiltersSet ? `${selectedCompetition.label} · ${selectedGender.label} · ${selectedAgeGroup.label}` : ''}
+          />
+        ) : (
         <AnimatePresence mode="wait">
           {!allFiltersSet ? (
             <motion.div key="empty-state"
@@ -354,6 +478,7 @@ const PublicScores = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </main>
     </div>
   );

@@ -339,6 +339,8 @@ async function seedCoaches() {
     const team = await client.post('/api/coaches/team', {
       name: coach.teamName,
       description: coach.teamDescription || '',
+      // Required since the Team Championship rule: 6 → best 5 count.
+      maxTeamSize: coach.maxTeamSize || 6,
     });
     if (!team.ok) {
       failed(who, 'create team', reasonFor(team));

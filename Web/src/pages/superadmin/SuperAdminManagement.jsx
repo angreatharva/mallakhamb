@@ -18,6 +18,8 @@ import {
   getCompetitionPlayerFeeRupees, resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
 } from '@/utils/scoring/competitionFee';
 import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
+import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
+import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -186,6 +188,47 @@ const previousDay = (value) => {
  * @param {Object} form
  * @returns {string | null} the first problem found, or null
  */
+/** The two columns of the Competition Types & Apparatus picker. */
+const GENDER_COLUMNS = [
+  { gender: 'Male', label: 'Male', accent: '#3B82F6' },
+  { gender: 'Female', label: 'Female', accent: '#EC4899' },
+];
+
+const TYPE_LABELS = { competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III' };
+
+/**
+ * A stored meet's apparatus, per type and gender, for the edit form. A meet
+ * saved before the gender split has only `apparatusConfig`, which applied to
+ * both genders — so that is what the form starts from (less Hanging for women).
+ */
+const apparatusByGenderOf = (comp) => Object.fromEntries(
+  (comp?.competitionTypes || []).map((type) => [type, {
+    Male: offeredApparatus(comp, type, 'Male'),
+    Female: offeredApparatus(comp, type, 'Female'),
+  }])
+);
+
+/**
+ * The per-gender apparatus for the types actually selected, the per-type union
+ * the older readers use, and the first selected type that runs nothing at all.
+ * The server derives the union itself; it is sent for older servers.
+ */
+const activeApparatus = ({ competitionTypes, apparatusByGender }) => {
+  const byGender = {};
+  const config = {};
+  let missing = null;
+  for (const type of competitionTypes) {
+    const entry = apparatusByGender?.[type] || {};
+    const male = APPARATUS.filter((a) => (entry.Male || []).includes(a));
+    const female = APPARATUS.filter((a) => (entry.Female || []).includes(a) && isApparatusAllowedForGender(a, 'Female'));
+    const union = APPARATUS.filter((a) => male.includes(a) || female.includes(a));
+    if (union.length === 0 && !missing) missing = TYPE_LABELS[type] || type;
+    byGender[type] = { Male: male, Female: female };
+    config[type] = union;
+  }
+  return { apparatusByGender: byGender, apparatusConfig: config, missing };
+};
+
 const validateFeeWindow = ({ registrationOpenDate, feeDueDate, startDate, endDate, lateFee }) => {
   const amount = lateFee === '' || lateFee === undefined || lateFee === null ? 0 : Number(lateFee);
   if (!Number.isFinite(amount) || amount < 0) {
@@ -386,7 +429,7 @@ const SuperAdminManagement = () => {
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [competitionFormData, setCompetitionFormData] = useState({
-    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
@@ -549,7 +592,7 @@ const SuperAdminManagement = () => {
 
   // ─── Competition CRUD ──────────────────────────────────────────────────────
   const resetCompetitionForm = () => setCompetitionFormData({
-    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusConfig: {},
+    name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
@@ -567,7 +610,7 @@ const SuperAdminManagement = () => {
         label: (comp.year || new Date().getFullYear()).toString() 
       };
       setCompetitionFormData({
-        name: comp.name, level: levelOption, competitionTypes: comp.competitionTypes || [], apparatusConfig: comp.apparatusConfig || {},
+        name: comp.name, level: levelOption, competitionTypes: comp.competitionTypes || [], apparatusByGender: apparatusByGenderOf(comp),
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
@@ -586,15 +629,11 @@ const SuperAdminManagement = () => {
     if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
     if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
-    const activeApparatusConfig = Object.fromEntries(
-      Object.entries(competitionFormData.apparatusConfig || {}).filter(([key]) => competitionFormData.competitionTypes.includes(key))
-    );
-    for (const compType of competitionFormData.competitionTypes) {
-      if (!activeApparatusConfig[compType] || activeApparatusConfig[compType].length === 0) {
-        const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
-        toast.error(`Select at least one apparatus for ${typeLabel}`);
-        return;
-      }
+    const { apparatusByGender: activeApparatusByGender, apparatusConfig: activeApparatusConfig, missing } =
+      activeApparatus(competitionFormData);
+    if (missing) {
+      toast.error(`Select at least one apparatus for ${missing}`);
+      return;
     }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
       toast.error('Enter a per-player fee (INR) for this competition');
@@ -611,6 +650,7 @@ const SuperAdminManagement = () => {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
         apparatusConfig: activeApparatusConfig,
+        apparatusByGender: activeApparatusByGender,
         level: competitionFormData.level.value,
         year: competitionFormData.year.value,
         playerFee,
@@ -627,15 +667,11 @@ const SuperAdminManagement = () => {
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
-    const activeApparatusConfig = Object.fromEntries(
-      Object.entries(competitionFormData.apparatusConfig || {}).filter(([key]) => competitionFormData.competitionTypes.includes(key))
-    );
-    for (const compType of competitionFormData.competitionTypes) {
-      if (!activeApparatusConfig[compType] || activeApparatusConfig[compType].length === 0) {
-        const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
-        toast.error(`Select at least one apparatus for ${typeLabel}`);
-        return;
-      }
+    const { apparatusByGender: activeApparatusByGender, apparatusConfig: activeApparatusConfig, missing } =
+      activeApparatus(competitionFormData);
+    if (missing) {
+      toast.error(`Select at least one apparatus for ${missing}`);
+      return;
     }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
       toast.error('Enter a per-player fee (INR) for this competition');
@@ -651,7 +687,8 @@ const SuperAdminManagement = () => {
     try {
       await superAdminAPI.updateCompetition(editingCompetition._id, {
         name: competitionFormData.name, level: competitionFormData.level.value,
-        competitionTypes: competitionFormData.competitionTypes, apparatusConfig: activeApparatusConfig, place: competitionFormData.place,
+        competitionTypes: competitionFormData.competitionTypes, apparatusConfig: activeApparatusConfig,
+        apparatusByGender: activeApparatusByGender, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
         playerFee,
@@ -690,6 +727,16 @@ const SuperAdminManagement = () => {
       ? prev.competitionTypes.filter(t => t !== type)
       : [...prev.competitionTypes, type]
   }));
+
+  const toggleGenderApparatus = (type, gender, app) => setCompetitionFormData(prev => {
+    const forType = prev.apparatusByGender[type] || { Male: [], Female: [] };
+    const current = forType[gender] || [];
+    const next = current.includes(app) ? current.filter(a => a !== app) : [...current, app];
+    return {
+      ...prev,
+      apparatusByGender: { ...prev.apparatusByGender, [type]: { ...forType, [gender]: next } },
+    };
+  });
 
   const toggleAgeGroup = (ag, gender) => setCompetitionFormData(prev => {
     const groups = [...prev.ageGroups];
@@ -1266,32 +1313,30 @@ const SuperAdminManagement = () => {
                   </label>
                   
                   {checked && (
-                    <div className="ml-7 mt-3 pl-3 border-l-2 space-y-2" style={{ borderColor: `${ADMIN_COLORS.purple}30` }}>
-                      <p className="text-[10px] font-bold tracking-wider uppercase text-white/40 mb-1">Select Apparatus</p>
-                      {['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'].map(app => {
-                        const appChecked = (competitionFormData.apparatusConfig[ct.id] || []).includes(app);
-                        return (
-                          <label key={app} className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" className="sr-only" checked={appChecked} onChange={() => {
-                              setCompetitionFormData(prev => {
-                                const current = prev.apparatusConfig[ct.id] || [];
-                                return {
-                                  ...prev,
-                                  apparatusConfig: {
-                                    ...prev.apparatusConfig,
-                                    [ct.id]: current.includes(app) ? current.filter(a => a !== app) : [...current, app]
-                                  }
-                                };
-                              });
-                            }} />
-                            <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                              style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
-                              {appChecked && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                            </div>
-                            <span className="text-xs font-semibold text-white/80">{app}</span>
-                          </label>
-                        );
-                      })}
+                    /* Male on the left, Female on the right: each gender runs
+                       its own apparatus in each competition type. */
+                    <div className="ml-7 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {GENDER_COLUMNS.map(({ gender, label, accent }) => (
+                        <div key={gender} className="pl-3 border-l-2 space-y-2" style={{ borderColor: `${accent}50` }}>
+                          <p className="text-[10px] font-bold tracking-wider uppercase mb-1" style={{ color: accent }}>{label}</p>
+                          {APPARATUS.map(app => {
+                            const allowed = isApparatusAllowedForGender(app, gender);
+                            const appChecked = allowed && (competitionFormData.apparatusByGender[ct.id]?.[gender] || []).includes(app);
+                            return (
+                              <label key={app} className={`flex items-center gap-2 ${allowed ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
+                                title={allowed ? undefined : "Not part of the women's events (COP §11)"}>
+                                <input type="checkbox" className="sr-only" checked={appChecked} disabled={!allowed}
+                                  onChange={() => toggleGenderApparatus(ct.id, gender, app)} />
+                                <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                                  style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                                  {appChecked && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                </div>
+                                <span className="text-xs font-semibold text-white/80">{app}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

@@ -283,6 +283,7 @@ const schemas = {
       description: { type: 'string' },
       coach: ref('UserSummary'),
       isActive: { type: 'boolean' },
+      maxTeamSize: { type: 'integer', enum: [4, 6], nullable: true, description: 'Declared squad size; null on teams created before it existed (read as 6)' },
       createdAt: { type: 'string', format: 'date-time' },
     },
   },
@@ -820,7 +821,7 @@ function buildPaths() {
     tag: 'Coaches', roles: 'coach', operationId: 'coachCreateTeam',
     summary: 'Create a team',
     description: 'Team names are unique per coach, not globally.',
-    requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
+    requestBody: jsonBody(inline({ name: S.str, description: S.str, maxTeamSize: { type: 'integer', enum: [4, 6], description: '4 → best 3 count toward Team Championship; 6 → best 5' } }, ['name', 'maxTeamSize'])),
     responses: { 201: ok('Created', ref('Team')), ...VALIDATION_ERROR, 409: errorResponse('This coach already owns a team with that name') },
   }));
 
@@ -958,7 +959,7 @@ function buildPaths() {
   add('/api/teams', 'post', op({
     tag: 'Teams', roles: 'coach', operationId: 'createTeam',
     summary: 'Create a team',
-    requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
+    requestBody: jsonBody(inline({ name: S.str, description: S.str, maxTeamSize: { type: 'integer', enum: [4, 6], description: '4 → best 3 count toward Team Championship; 6 → best 5' } }, ['name', 'maxTeamSize'])),
     responses: { 201: ok('Created', ref('Team')), ...VALIDATION_ERROR },
   }));
 
@@ -1818,6 +1819,36 @@ function buildPaths() {
       ...CATEGORY_QUERY,
     ],
     responses: { 200: ok('Published scores', { type: 'array', items: ref('Score') }), ...VALIDATION_ERROR },
+  }));
+
+  add('/api/public/team-championship', 'get', op({
+    tag: 'Public', auth: false, operationId: 'publicTeamChampionship',
+    summary: 'Team Championship standing for one category',
+    description:
+      'Competition I only, from the same published scores as `/api/public/scores`. '
+      + 'Per apparatus, a 4-player team counts its best 3 scores and a 6-player team '
+      + 'its best 5; the team total is the sum of those subtotals. Teams level on '
+      + 'the total share a placing.',
+    parameters: [
+      queryParam('competitionId', S.id, 'Competition id', true),
+      queryParam('gender', { type: 'string', enum: GENDERS }, 'Category gender', true),
+      queryParam('ageGroup', { type: 'string', enum: AGE_GROUPS }, 'Category age group', true),
+    ],
+    responses: {
+      200: ok('Ranked teams', {
+        type: 'array',
+        items: inline({
+          rank: S.int,
+          teamId: S.id,
+          teamName: S.str,
+          teamSize: S.int,
+          countedPerApparatus: S.int,
+          totalScore: S.num,
+          apparatus: { type: 'array', items: inline({ apparatus: S.apparatus, subtotal: S.num, counted: { type: 'array', items: { type: 'object' } }, dropped: { type: 'array', items: { type: 'object' } } }) },
+        }),
+      }),
+      ...VALIDATION_ERROR,
+    },
   }));
 
   add('/api/public/judges', 'get', op({
