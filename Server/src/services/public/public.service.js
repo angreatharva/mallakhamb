@@ -234,6 +234,10 @@ class PublicService {
       competitionType: 'competition_1',
     });
 
+    // The count is the meet's (4 → best 3, 6 → best 5), set by the superadmin.
+    const competition = await this.competitionRepository.findById(competitionId);
+    const maxTeamSize = competition?.maxTeamSize ?? null;
+
     const teams = new Map();
     for (const doc of scoreDocs) {
       const teamId = String(doc.team?._id || doc.teamId?._id || doc.teamId || '');
@@ -242,7 +246,7 @@ class PublicService {
         teams.set(teamId, {
           teamId,
           teamName: doc.teamName,
-          maxTeamSize: doc.team?.maxTeamSize ?? null,
+          maxTeamSize,
           performances: [],
         });
       }

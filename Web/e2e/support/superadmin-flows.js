@@ -232,8 +232,14 @@ export const createCompetition = async (page, meet) => {
      * which.
      */
     const boxes = page.getByRole('checkbox', { name: apparatus, exact: true });
-    for (let i = 0; i < await boxes.count(); i += 1) await tick(boxes.nth(i));
+    for (let i = 0; i < await boxes.count(); i += 1) {
+      // Male and Female columns per type; Female Hanging is disabled (COP §11).
+      if (await boxes.nth(i).isEnabled()) await tick(boxes.nth(i));
+    }
   }
+
+  // Required: max athletes per team per age group (6 → best 5 count).
+  await tick(page.getByRole('radio', { name: new RegExp(`^${meet.maxTeamSize || 6} Players`) }));
 
   if (meet.description) {
     await field(page, 'Description', 'textarea').fill(meet.description);

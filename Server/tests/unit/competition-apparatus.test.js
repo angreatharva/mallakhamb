@@ -118,8 +118,9 @@ describe('addPlayerToAgeGroup — apparatus per gender and the squad cap', () =>
     return { service, updates };
   }
 
-  const meet = (players = []) => ({
+  const meet = (players = [], maxTeamSize = 6) => ({
     _id: COMPETITION_ID,
+    maxTeamSize,
     competitionTypes: ['competition_1', 'competition_3'],
     apparatusConfig: { competition_1: [POLE, ROPE], competition_3: [POLE, ROPE] },
     apparatusByGender: {
@@ -150,16 +151,16 @@ describe('addPlayerToAgeGroup — apparatus per gender and the squad cap', () =>
     expect(updates).toHaveLength(0);
   });
 
-  it('refuses a fifth athlete in one category of a 4-player team', async () => {
+  it('refuses a fifth athlete per age group when the competition allows 4', async () => {
     const others = ['a', 'b', 'c', 'd'].map((suffix) => ({
       player: `6a8a9286fe57edf060353c0${suffix}`, gender: 'Female', ageGroup: 'Under14',
     }));
     const { service, updates } = buildService({
-      competition: meet(others), team: { _id: TEAM_ID, name: 'SGAM-A', maxTeamSize: 4 },
+      competition: meet(others, 4), team: { _id: TEAM_ID, name: 'SGAM-A' },
     });
     await expect(service.addPlayerToAgeGroup(COACH_ID, COMPETITION_ID, {
       playerId: PLAYER_ID, ageGroup: 'Under14', gender: 'Female', apparatus: [POLE],
-    })).rejects.toThrow(/4-player team and already has 4 athletes in Female Under14/);
+    })).rejects.toThrow(/at most 4 players per age group, and Female Under14 is full/);
     expect(updates).toHaveLength(0);
   });
 });

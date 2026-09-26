@@ -289,9 +289,7 @@ async function seedTeams(teams, commit, plan) {
       }
 
       if (commit) {
-        // Captures made before the size was required carry none; 6 is the
-        // same default the Team Championship engine reads a missing size as.
-        const team = await Team.create({ maxTeamSize: 6, ...payload, coach: coach._id, isActive: true });
+        const team = await Team.create({ ...payload, coach: coach._id, isActive: true });
         await Coach.updateOne({ _id: coach._id }, { team: team._id });
       }
 

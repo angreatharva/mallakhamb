@@ -177,6 +177,13 @@ components:
           type: number
           description: Base entry fee per athlete, INR
           example: 500
+        maxTeamSize:
+          type: integer
+          enum:
+            - 4
+            - 6
+          nullable: true
+          description: Max athletes per team per gender + age group; 4 → best 3 count toward Team Championship, 6 → best 5. Null on meets saved before it existed (read as 6, uncapped).
         apparatusFees:
           type: object
           additionalProperties:
@@ -304,13 +311,6 @@ components:
           $ref: "#/components/schemas/UserSummary"
         isActive:
           type: boolean
-        maxTeamSize:
-          type: integer
-          enum:
-            - 4
-            - 6
-          nullable: true
-          description: Declared squad size; null on teams created before it existed (read as 6)
         createdAt:
           type: string
           format: date-time
@@ -2120,15 +2120,8 @@ paths:
                   type: string
                 description:
                   type: string
-                maxTeamSize:
-                  type: integer
-                  enum:
-                    - 4
-                    - 6
-                  description: 4 → best 3 count toward Team Championship; 6 → best 5
               required:
                 - name
-                - maxTeamSize
       responses:
         "201":
           description: Created
@@ -3158,15 +3151,8 @@ paths:
                   type: string
                 description:
                   type: string
-                maxTeamSize:
-                  type: integer
-                  enum:
-                    - 4
-                    - 6
-                  description: 4 → best 3 count toward Team Championship; 6 → best 5
               required:
                 - name
-                - maxTeamSize
       responses:
         "201":
           description: Created

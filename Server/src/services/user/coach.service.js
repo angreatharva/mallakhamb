@@ -13,7 +13,7 @@ const { stripSensitiveFields } = require('../../utils/data/user-projection.util'
 // One shape on the way in, whatever the two clients post — see the module header.
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const { offeredApparatus, hasGenderApparatus } = require('../../utils/data/competition-apparatus.util');
-const { TEAM_SIZES, isValidTeamSize, hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
+const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { idStr } = require('../../utils/data/objectid.util');
 const {
   calculateTeamPaymentAmount,
@@ -132,17 +132,10 @@ class CoachService extends UserService {
     if (!teamData || typeof teamData !== 'object') {
       throw new ValidationError('Team data is required');
     }
-    // Mandatory: it caps the squad and decides how many scores count toward
-    // the Team Championship. The route validates it too; this is the backstop
-    // for any other caller.
-    if (!isValidTeamSize(teamData.maxTeamSize)) {
-      throw new ValidationError(`Max team size must be ${TEAM_SIZES.join(' or ')} players`, 'maxTeamSize');
-    }
     
     // Create the team
     const created = await this.teamRepository.create({
       ...teamData,
-      maxTeamSize: Number(teamData.maxTeamSize),
       coach: coachId,
       isActive: true,
       createdAt: new Date(),
@@ -404,8 +397,8 @@ class CoachService extends UserService {
         coach: team.coach,
         description: team.description,
         isActive: team.isActive,
-        // Declared squad size (4 or 6); absent on teams created before it.
-        maxTeamSize: team.maxTeamSize ?? null,
+        // The meet's max per age group (4 or 6); absent on meets saved before it.
+        maxTeamSize: competition.maxTeamSize ?? null,
         players: playersWithDetails,
         isSubmitted: registeredTeam.isSubmitted,
         paymentStatus: registeredTeam.paymentStatus,
@@ -552,18 +545,17 @@ class CoachService extends UserService {
     );
 
     /*
-     * The squad cap the coach declared when creating the team: at most
-     * `maxTeamSize` athletes in one gender + age group. The athlete being
-     * written is left out of the count, so moving someone between age groups
-     * (which re-posts them here) is not blocked by their own old place.
+     * The meet's cap, set by the superadmin: at most `maxTeamSize` athletes in
+     * one gender + age group. The athlete being written is left out of the
+     * count, so moving someone between age groups (which re-posts them here)
+     * is not blocked by their own old place.
      *
-     * A team created before the size existed has none, and is not capped.
+     * A meet saved before the size existed has none, and is not capped.
      */
-    const team = teams.find((t) => String(t._id) === String(teamId))
-      || (this.teamRepository ? await this.teamRepository.findById(teamId) : null);
-    if (team && !hasRoomInSquad(team.maxTeamSize, registeredTeam.players, gender, ageGroup, playerId)) {
+    if (!hasRoomInSquad(competition.maxTeamSize, registeredTeam.players, gender, ageGroup, playerId)) {
       throw new ValidationError(
-        `${team.name} is a ${team.maxTeamSize}-player team and already has ${team.maxTeamSize} athletes in ${gender} ${ageGroup}`,
+        `This competition allows at most ${competition.maxTeamSize} players per age group, `
+        + `and ${gender} ${ageGroup} is full`,
         'ageGroup'
       );
     }

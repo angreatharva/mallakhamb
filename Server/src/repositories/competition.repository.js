@@ -651,7 +651,7 @@ class CompetitionRepository extends BaseRepository {
         teamIds.length
           ? this.model.db.collection('teams').find(
             { _id: { $in: teamIds.map(convertToObjectId) } },
-            { projection: { name: 1, coach: 1, description: 1, isActive: 1, maxTeamSize: 1 } }
+            { projection: { name: 1, coach: 1, description: 1, isActive: 1 } }
           ).toArray()
           : [],
         playerIds.length

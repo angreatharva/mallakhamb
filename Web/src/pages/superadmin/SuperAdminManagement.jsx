@@ -20,6 +20,7 @@ import {
 import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
+import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
 
 // ─── Reduced-motion hook ──────────────────────────────────────────────────────
 const useReducedMotion = () => {
@@ -431,7 +432,7 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
@@ -594,7 +595,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {},
+    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
@@ -615,6 +616,7 @@ const SuperAdminManagement = () => {
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
         ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {},
+        maxTeamSize: comp.maxTeamSize ?? null,
         registrationOpenDate: toDateInputValue(comp.registrationOpenDate),
         feeDueDate: toDateInputValue(comp.feeDueDate),
         lateFee: Number.isFinite(Number(comp.lateFee)) && Number(comp.lateFee) > 0 ? Number(comp.lateFee) : ''
@@ -633,6 +635,10 @@ const SuperAdminManagement = () => {
       activeApparatus(competitionFormData);
     if (missing) {
       toast.error(`Select at least one apparatus for ${missing}`);
+      return;
+    }
+    if (!competitionFormData.maxTeamSize) {
+      toast.error('Select the max team size per age group (4 or 6 players)');
       return;
     }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
@@ -654,6 +660,7 @@ const SuperAdminManagement = () => {
         level: competitionFormData.level.value,
         year: competitionFormData.year.value,
         playerFee,
+        maxTeamSize: competitionFormData.maxTeamSize,
         apparatusFees: competitionFormData.apparatusFees,
         registrationOpenDate: competitionFormData.registrationOpenDate || null,
         feeDueDate: competitionFormData.feeDueDate || null,
@@ -671,6 +678,10 @@ const SuperAdminManagement = () => {
       activeApparatus(competitionFormData);
     if (missing) {
       toast.error(`Select at least one apparatus for ${missing}`);
+      return;
+    }
+    if (!competitionFormData.maxTeamSize) {
+      toast.error('Select the max team size per age group (4 or 6 players)');
       return;
     }
     if (competitionFormData.playerFee === '' || competitionFormData.playerFee === undefined) {
@@ -692,6 +703,7 @@ const SuperAdminManagement = () => {
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
         description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
         playerFee,
+        maxTeamSize: competitionFormData.maxTeamSize,
         apparatusFees: competitionFormData.apparatusFees,
         // `null` rather than omitted: an emptied date must CLEAR the stored one,
         // and a key that is absent from the body is left alone by the service.
@@ -1283,6 +1295,34 @@ const SuperAdminManagement = () => {
               />
             ))}
           </div>
+        </div>
+
+        {/* Max Team Size — per team, per gender + age group */}
+        <div>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+            Max Team Size (per age group) <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          </p>
+          <div role="radiogroup" aria-label="Max team size per age group" className="grid grid-cols-2 gap-3">
+            {TEAM_SIZE_OPTIONS.map((option) => {
+              const checked = competitionFormData.maxTeamSize === option.value;
+              return (
+                <label key={option.value}
+                  className="flex flex-col gap-0.5 p-3 rounded-xl border cursor-pointer transition-all duration-200 min-h-[44px]"
+                  style={{
+                    background: checked ? `${ADMIN_COLORS.purple}14` : 'rgba(255,255,255,0.02)',
+                    borderColor: checked ? ADMIN_COLORS.purple : ADMIN_COLORS.darkBorderSubtle,
+                  }}>
+                  <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
+                    onChange={() => setCompetitionFormData(prev => ({ ...prev, maxTeamSize: option.value }))} />
+                  <span className="text-sm font-bold text-white">{option.value} Players</span>
+                  <span className="text-xs text-white/40">Best {option.counted} scores count per apparatus</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-xs text-white/30 mt-2">
+            A coach can enter at most this many athletes per age group, and the Team Championship counts the best {TEAM_SIZE_OPTIONS.map(o => o.counted).join(' / ')}.
+          </p>
         </div>
 
         {/* Competition Types & Apparatus */}

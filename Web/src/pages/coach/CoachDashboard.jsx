@@ -312,7 +312,7 @@ const CoachDashboard = () => {
         && String(p.player?._id || p.player) !== String(selectedPlayer.value)
       ).length;
       if (inCategory >= team.maxTeamSize) {
-        return toast.error(`This is a ${team.maxTeamSize}-player team — ${selectedAgeGroup.label} already has ${team.maxTeamSize} athletes`);
+        return toast.error(`This competition allows at most ${team.maxTeamSize} players per age group — ${selectedAgeGroup.label} is full`);
       }
     }
     if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
@@ -692,7 +692,7 @@ const CoachDashboard = () => {
                   <p className="text-white/40 text-sm">
                     Team Dashboard
                     {team.maxTeamSize && (
-                      <> · {team.maxTeamSize}-player team (best {countedScoresFor(team.maxTeamSize)} count)</>
+                      <> · max {team.maxTeamSize} players per age group (best {countedScoresFor(team.maxTeamSize)} count)</>
                     )}
                   </p>
                 </div>
