@@ -167,14 +167,30 @@ export const ResponsiveTable = ({
 };
 
 // ─── ScoreInputCell ───────────────────────────────────────────────────────────
-const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'number', step, min, max, fluid = false }) => (
+//
+// A mark cell (type "number") is a plain TEXT field that only accepts a
+// decimal number — never a native `type="number"` input. Those carry spinner
+// arrows, and the mouse wheel over a focused one changes the value: a scorer
+// scrolling the sheet was silently altering marks. Digits and one point only
+// ("," is read as "."), with leading zeros dropped ("03" → "3", "0.5" stays).
+// Values stay strings, as the sheet has always stored them.
+const toMarkText = (raw) => {
+  const text = String(raw).replace(/,/g, '.');
+  if (!/^\d*\.?\d*$/.test(text)) return null;
+  return text.replace(/^0+(?=\d)/, '');
+};
+
+const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'number', fluid = false }) => (
   <input
-    type={type}
-    step={step}
-    min={min}
-    max={max}
-    value={value}
-    onChange={e => onChange(e.target.value)}
+    type="text"
+    inputMode={type === 'number' ? 'decimal' : undefined}
+    autoComplete="off"
+    value={value ?? ''}
+    onChange={e => {
+      if (type !== 'number') { onChange(e.target.value); return; }
+      const text = toMarkText(e.target.value);
+      if (text !== null) onChange(text);
+    }}
     disabled={isLocked}
     placeholder={placeholder}
     style={inputStyle(isLocked, fluid)}
@@ -270,9 +286,6 @@ export const ResponsiveScoringTable = ({
                       isLocked={isLocked || !!judge.isChiefCopy}
                       placeholder="0.0"
                       type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
                     />
                   </div>
                 );
@@ -306,8 +319,6 @@ export const ResponsiveScoringTable = ({
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
-                    step="0.1"
-                    min="0"
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -318,8 +329,6 @@ export const ResponsiveScoringTable = ({
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
-                    step="0.1"
-                    min="0"
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
@@ -420,9 +429,6 @@ export const ResponsiveScoringTable = ({
                         isLocked={isLocked || !!judge.isChiefCopy}
                         placeholder="0.0"
                         type="number"
-                        step="0.1"
-                        min="0"
-                        max="10"
                         fluid
                       />
                     </td>
@@ -458,8 +464,6 @@ export const ResponsiveScoringTable = ({
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
-                    step="0.1"
-                    min="0"
                     fluid
                   />
                 </td>
@@ -470,8 +474,6 @@ export const ResponsiveScoringTable = ({
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
-                    step="0.1"
-                    min="0"
                     fluid
                   />
                 </td>

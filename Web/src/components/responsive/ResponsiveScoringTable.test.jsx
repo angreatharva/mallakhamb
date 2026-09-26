@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 const responsive = vi.hoisted(() => ({ isMobile: false }));
 
@@ -175,5 +175,62 @@ describe('the Scorer sheet for the other panel sizes', () => {
     expect(inputs).toHaveLength(6);
     expect([...container.querySelectorAll('thead th')].map((th) => th.textContent)
       .filter((h) => h.includes('Judge'))).toHaveLength(3);
+  });
+});
+
+// Native number inputs carry spinner arrows and change value under the mouse
+// wheel, so a scorer scrolling the sheet altered marks. Every cell is text.
+describe('mark cells are plain number-only text fields', () => {
+  it.each([false, true])('has no native number input (mobile: %s)', (isMobile) => {
+    responsive.isMobile = isMobile;
+    const { container } = sheet(FIVE);
+    expect(container.querySelector('input[type="number"]')).toBeNull();
+    const marks = cells(container).filter((el) => el.getAttribute('inputmode') === 'decimal');
+    // five judge marks, deduction, other deduction
+    expect(marks).toHaveLength(7);
+  });
+
+  it('passes digits and a point, drops a leading zero, and refuses anything else', () => {
+    const onScoreChange = vi.fn();
+    const { container } = render(
+      <ResponsiveScoringTable
+        players={[PLAYER]}
+        scores={{ [PLAYER.id]: { ...MARKS, judge1: '' } }}
+        judges={FIVE}
+        panelSize={5}
+        onScoreChange={onScoreChange}
+      />
+    );
+    const judge1 = cells(container)[2];
+
+    fireEvent.change(judge1, { target: { value: '8.5' } });
+    expect(onScoreChange).toHaveBeenLastCalledWith(PLAYER.id, 'judge1', '8.5');
+
+    fireEvent.change(judge1, { target: { value: '03' } });
+    expect(onScoreChange).toHaveBeenLastCalledWith(PLAYER.id, 'judge1', '3');
+
+    fireEvent.change(judge1, { target: { value: '8,5' } });
+    expect(onScoreChange).toHaveBeenLastCalledWith(PLAYER.id, 'judge1', '8.5');
+
+    onScoreChange.mockClear();
+    fireEvent.change(judge1, { target: { value: '8e1' } });
+    fireEvent.change(judge1, { target: { value: '-1' } });
+    fireEvent.change(judge1, { target: { value: '8.5.1' } });
+    expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  it('leaves the time cell as free text', () => {
+    const onScoreChange = vi.fn();
+    const { container } = render(
+      <ResponsiveScoringTable
+        players={[PLAYER]}
+        scores={{ [PLAYER.id]: MARKS }}
+        judges={FIVE}
+        panelSize={5}
+        onScoreChange={onScoreChange}
+      />
+    );
+    fireEvent.change(cells(container)[0], { target: { value: '1:35' } });
+    expect(onScoreChange).toHaveBeenLastCalledWith(PLAYER.id, 'time', '1:35');
   });
 });
