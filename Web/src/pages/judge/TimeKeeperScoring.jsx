@@ -202,7 +202,36 @@ const TimeKeeperScoring = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          {/* Athletes */}
+          {/* Stopwatch — first: it is what the Time Keeper is here for */}
+          <div className="lg:col-span-3">
+            <StopwatchFace
+              watch={watch}
+              title={selected?.name}
+              subtitle={apparatus}
+              canStart={!!selected && !competitionLocked}
+              onStop={handleStopped}
+              onNext={handleNext}
+              footer={watch.status === 'stopped' && selected ? (
+                times[selectedId]?.sent ? (
+                  <span className="flex flex-col items-center gap-0.5">
+                    <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
+                    </span>
+                    {deductionNote(times[selectedId]?.seconds) && (
+                      <span style={{ color: '#FF453A' }}>{deductionNote(times[selectedId]?.seconds)}</span>
+                    )}
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => sendTime(selected, times[selectedId]?.seconds)}
+                    className="flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
+                    style={{ color: '#FFD60A' }}>
+                    <Send className="w-3.5 h-3.5" aria-hidden="true" /> Not received — send again
+                  </button>
+                )
+              ) : nextMark ? `${nextMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextMark.at}` : 'Past 90 — deduction applies'}
+            />
+          </div>
+          {/* Athletes — below the clock (beside it on a wide screen) */}
           <div className="lg:col-span-2 rounded-2xl border p-4" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Athletes</p>
             {rows.length === 0 ? (
@@ -236,35 +265,6 @@ const TimeKeeperScoring = () => {
             )}
           </div>
 
-          {/* Stopwatch */}
-          <div className="lg:col-span-3">
-            <StopwatchFace
-              watch={watch}
-              title={selected?.name}
-              subtitle={apparatus}
-              canStart={!!selected && !competitionLocked}
-              onStop={handleStopped}
-              onNext={handleNext}
-              footer={watch.status === 'stopped' && selected ? (
-                times[selectedId]?.sent ? (
-                  <span className="flex flex-col items-center gap-0.5">
-                    <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
-                      <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
-                    </span>
-                    {deductionNote(times[selectedId]?.seconds) && (
-                      <span style={{ color: '#FF453A' }}>{deductionNote(times[selectedId]?.seconds)}</span>
-                    )}
-                  </span>
-                ) : (
-                  <button type="button" onClick={() => sendTime(selected, times[selectedId]?.seconds)}
-                    className="flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
-                    style={{ color: '#FFD60A' }}>
-                    <Send className="w-3.5 h-3.5" aria-hidden="true" /> Not received — send again
-                  </button>
-                )
-              ) : nextMark ? `${nextMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextMark.at}` : 'Past 90 — deduction applies'}
-            />
-          </div>
         </div>
       </main>
     </div>

@@ -112,6 +112,14 @@ describe('Time Keeper screen', () => {
     });
   });
 
+  it('shows the stopwatch first, then the athletes', () => {
+    render(<TimeKeeperScoring />);
+    const clock = screen.getByText('SECONDS');
+    const athletes = screen.getByText('Athletes');
+    // DOCUMENT_POSITION_FOLLOWING: the athletes come after the clock.
+    expect(clock.compareDocumentPosition(athletes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('pausing holds the clock', () => {
     render(<TimeKeeperScoring />);
     act(() => h.socket.fire('connect'));
