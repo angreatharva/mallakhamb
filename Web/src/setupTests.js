@@ -23,9 +23,12 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Mock ResizeObserver
-window.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// Mock ResizeObserver — a class, like the real one: code calls `new
+// ResizeObserver(cb)`, and a vi.fn with an arrow implementation cannot be
+// constructed under Vitest 4.
+window.ResizeObserver = class ResizeObserver {
+  constructor(callback) { this.callback = callback; }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

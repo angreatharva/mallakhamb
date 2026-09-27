@@ -147,3 +147,25 @@ describe('JudgeScoring — difficulty number grid', () => {
     expect(screen.getAllByText('3.80').length).toBeGreaterThan(0);
   });
 });
+
+describe('JudgeScoring — phone layout pins the score under the header', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('pins Live Final Score + tabs at the header\'s measured height, not a fixed 57px', () => {
+    // jsdom has no layout: report a two-row phone header of 121px.
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function rect() {
+      if (this.tagName === 'HEADER') return { height: 121, top: 0, bottom: 121, left: 0, right: 375, width: 375 };
+      return original.call(this);
+    };
+    try {
+      renderSlip('Pole Mallakhamb');
+      const bar = screen.getByTestId('mobile-score-bar');
+      expect(bar.style.top).toBe('121px');
+      expect(bar).toHaveTextContent('Live Final Score');
+      expect(bar).toHaveTextContent('Difficulty');
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
+    }
+  });
+});

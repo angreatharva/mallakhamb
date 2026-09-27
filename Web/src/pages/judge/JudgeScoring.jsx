@@ -199,6 +199,17 @@ const JudgeSlip = () => {
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
 
+  /*
+   * The page header's real height, so the phone layout's pinned block (Live
+   * Final Score + the Difficulty / Combination / Exec & Orig tabs) sits right
+   * under it. It was pinned at a fixed 57px — the one-row desktop header —
+   * but on a phone the header is two rows (judge + athlete banner), so it
+   * covered the score card and only the tabs stayed in view. Measured, and
+   * re-measured on resize, so a wrapped name or larger text still fits.
+   */
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(57);
+
   // Session, judge identity and the live panel feed are shared with the
   // Panel Review page — see useJudgePanelData.
   const session = useJudgeSession(location.state);
@@ -641,6 +652,19 @@ const JudgeSlip = () => {
     toast.success('Logged out successfully');
   };
 
+  // Measure once the header exists, then follow its size.
+  // (A hook, so it sits above the early return below.)
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return undefined;
+    const update = () => setHeaderHeight(Math.round(el.getBoundingClientRect().height) || 57);
+    update();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [judgeInfo, selectedPlayer]);
+
   if (!judgeInfo || !selectedPlayer) return null;
 
   const finalScore = parseFloat(calcFinal());
@@ -649,7 +673,7 @@ const JudgeSlip = () => {
       <JudgeAmbience />
 
       {/*  Header  */}
-      <header className="sticky top-0 z-40 border-b"
+      <header ref={headerRef} className="sticky top-0 z-40 border-b"
         style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
@@ -720,8 +744,9 @@ const JudgeSlip = () => {
                 {/* ─── MOBILE VIEW (lg:hidden) ─── */}
                 <div className="block lg:hidden space-y-3 pb-20">
                   {/* 1. Fixed Top Score Header */}
-                  <div className="sticky top-[57px] z-30 pt-2 pb-3 -mx-3 px-3 backdrop-blur-xl border-b"
-                    style={{ background: 'rgba(10,10,10,0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                  <div className="sticky z-30 pt-2 pb-3 -mx-3 px-3 backdrop-blur-xl border-b"
+                    data-testid="mobile-score-bar"
+                    style={{ top: headerHeight, background: 'rgba(10,10,10,0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
                     <div className="rounded-2xl p-3 flex items-center justify-between relative overflow-hidden"
                       style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(124,58,237,0.18))', border: '1px solid rgba(168,85,247,0.35)' }}>
                       <div className="min-w-0 pr-2">
