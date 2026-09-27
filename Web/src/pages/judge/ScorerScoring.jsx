@@ -787,25 +787,43 @@ const ScorerScoring = () => {
           </motion.div>
         )}
 
-        <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            {/* 1. Scoring Session */}
+        {/* Scoring session — one compact strip: the category, the four facts
+            the Scorer checks at a glance, and the player count. */}
+        <div className="rounded-2xl border px-4 py-3 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6"
+          style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          <div className="flex items-center justify-between gap-4 sm:block sm:flex-shrink-0">
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
-              <h2 className="text-xl sm:text-2xl font-black text-white">{selectedGender.label} — {selectedAgeGroup.label}</h2>
-              <div className="mt-2 space-y-1 text-sm text-white/50">
-                <p>Team: <span className="text-white font-semibold">{selectedTeam.name}</span></p>
-                <p>Coach: <span className="text-white font-semibold">{selectedTeam.coach?.name}</span></p>
-                {selectedCompetitionType && <p>Competition: <span className="text-white font-semibold">{selectedCompetitionType.label}</span></p>}
-              </div>
+              <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
+              <h2 className="text-lg sm:text-xl font-black text-white leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
             </div>
-
-            {/* 2. Players */}
-            <div className="text-left md:text-right flex-shrink-0">
-              <p className="text-xs text-white/40 uppercase tracking-wide">Players</p>
-              <p className="text-4xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</p>
-            </div>
+            {/* Count on the right of the title on a phone… */}
+            <p className="sm:hidden flex items-baseline gap-1.5">
+              <span className="text-2xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
+              <span className="text-[10px] uppercase tracking-widest text-white/40">Players</span>
+            </p>
           </div>
+
+          <div className="hidden sm:block w-px self-stretch bg-white/10" aria-hidden="true" />
+
+          <dl className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
+            {[
+              ['Team', selectedTeam.name],
+              ['Coach', selectedTeam.coach?.name],
+              ['Competition', selectedCompetitionType?.label],
+              ['Apparatus', seatApparatus],
+            ].filter(([, value]) => value).map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-[10px] uppercase tracking-widest text-white/40">{label}</dt>
+                <dd className="text-sm font-semibold text-white truncate">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* …and at the far end on a wide screen. */}
+          <p className="hidden sm:flex flex-col items-end flex-shrink-0 leading-none">
+            <span className="text-3xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
+            <span className="text-[10px] uppercase tracking-widest text-white/40 mt-1">Players</span>
+          </p>
         </div>
 
         {/* <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
