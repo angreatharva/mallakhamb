@@ -27,7 +27,7 @@ import ScorerScoring from './ScorerScoring'; // Import scorer component
 import TimeKeeperScoring from './TimeKeeperScoring';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
-  playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey,
+  playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 
@@ -121,45 +121,6 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
           style={{ color: '#fff', background: 'rgba(255,255,255,0.04)', fontSize: '1.5rem' }}
         />
       </motion.div>
-    </div>
-  );
-};
-
-const Stepper = ({ label, hint, value, onChange, min = 0 }) => {
-  const dec = () => onChange(Math.max(min, value - 1));
-  const inc = () => onChange(value + 1);
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>{label}</label>
-        {hint && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{hint}</span>}
-      </div>
-      <div className="flex items-center gap-0 rounded-xl border overflow-hidden"
-        style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
-        <motion.button type="button" onClick={dec} aria-label={`Decrease ${label}`}
-          className="flex items-center justify-center flex-shrink-0 text-xl font-black select-none"
-          style={{
-            width: 44, height: 52, color: value <= min ? 'rgba(255,255,255,0.15)' : J.purpleLight,
-            background: 'rgba(255,255,255,0.04)', borderRight: '1px solid rgba(255,255,255,0.08)'
-          }}
-          whileTap={value > min ? { scale: 0.9 } : {}}
-          disabled={value <= min}>
-          −
-        </motion.button>
-        <span className="flex-1 text-center text-2xl font-black py-2 select-none"
-          style={{ color: '#fff', minWidth: 0 }}>
-          {value}
-        </span>
-        <motion.button type="button" onClick={inc} aria-label={`Increase ${label}`}
-          className="flex items-center justify-center flex-shrink-0 text-xl font-black select-none"
-          style={{
-            width: 44, height: 52, color: J.purpleLight,
-            background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid rgba(255,255,255,0.08)'
-          }}
-          whileTap={{ scale: 0.9 }}>
-          +
-        </motion.button>
-      </div>
     </div>
   );
 };
@@ -835,9 +796,9 @@ const JudgeSlip = () => {
                             <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
                           </div>
 
-                          <div className="space-y-4 pt-1">
-                            {[['aClass', 'A - Class - 0.20', '0.20 per element'], ['bClass', 'B - Class - 0.40', '0.40 per element'], ['cClass', 'C - Class - 0.60', '0.60 per element']].map(([key, lbl, hint]) => (
-                              <Stepper key={key} label={lbl} hint={hint} value={scores.difficulty[key]}
+                          <div className="space-y-5 pt-1">
+                            {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
+                              <DifficultyPicker key={key} cls={cls} value={value} count={scores.difficulty[key]}
                                 onChange={v => handleDifficulty(key, v)} />
                             ))}
                           </div>
@@ -1066,9 +1027,9 @@ const JudgeSlip = () => {
                         <h3 className="font-black text-white text-sm">Difficulty</h3>
                         <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
                       </div>
-                      <div className="space-y-3">
-                        {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl, mult]) => (
-                          <Stepper key={key} label={`${lbl} - Class - ${mult}`} hint="" value={scores.difficulty[key]}
+                      <div className="space-y-4">
+                        {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
+                          <DifficultyPicker key={key} cls={cls} value={value} count={scores.difficulty[key]}
                             onChange={v => handleDifficulty(key, v)} />
                         ))}
                       </div>

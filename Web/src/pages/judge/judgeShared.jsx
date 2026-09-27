@@ -88,6 +88,98 @@ export const J = {
 
 export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
+// ─── Difficulty Picker ────────────────────────────────────────────────────────
+//
+// One element class (A 0.20, B 0.40, C 0.60): a 1–10 grid to set the count in
+// a single tap, and a vertical − / count / + stepper beside it for anything
+// the grid does not cover (0, or more than 10). Tapping the number already
+// chosen clears it back to 0.
+//
+// Accessible names are kept stable for the e2e flows: the stepper buttons are
+// "Increase A - Class - 0.20" / "Decrease …" (Web/e2e/support/scoring-flows.js)
+// and each number is "A - Class - 0.20: 4".
+
+const PICKER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+export const DifficultyPicker = ({ cls, value, count, onChange, compact = false }) => {
+  const name = `${cls} - Class - ${value.toFixed(2)}`;
+  const n = Number(count) || 0;
+  const cell = compact ? 'h-9 text-sm' : 'h-11 text-base';
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
+          {cls} - {value.toFixed(2)}
+        </span>
+        <span className="text-xs tabular-nums" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          {n} × {value.toFixed(2)} = {(n * value).toFixed(2)}
+        </span>
+      </div>
+      <div className="flex items-stretch gap-2 sm:gap-3">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 flex-1 min-w-0" role="group" aria-label={`${name} count`}>
+          {PICKER_NUMBERS.map((num) => {
+            const selected = n === num;
+            return (
+              <button
+                key={num}
+                type="button"
+                aria-label={`${name}: ${num}`}
+                aria-pressed={selected}
+                onClick={() => onChange(selected ? 0 : num)}
+                className={`${cell} rounded-xl border font-black tabular-nums select-none transition-[background-color,border-color,color,transform] duration-150 active:scale-95`}
+                style={{
+                  background: selected ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgba(255,255,255,0.03)',
+                  borderColor: selected ? J.purple : 'rgba(255,255,255,0.12)',
+                  color: selected ? '#fff' : 'rgba(255,255,255,0.75)',
+                  boxShadow: selected ? `0 0 0 3px ${J.purple}25` : 'none',
+                  touchAction: 'manipulation',
+                }}
+              >
+                {num}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* − on top, the count, + below — as drawn */}
+        <div className={`${compact ? 'w-12' : 'w-14'} flex-shrink-0 flex flex-col rounded-xl border overflow-hidden`}
+          style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}>
+          <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
+            onClick={() => onChange(Math.max(0, n - 1))}
+            className="flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-white/10"
+            style={{ color: n <= 0 ? 'rgba(255,255,255,0.15)' : J.purpleLight, borderBottom: '1px solid rgba(255,255,255,0.08)', touchAction: 'manipulation' }}>
+            −
+          </button>
+          <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-white select-none">
+            {n}
+          </span>
+          <button type="button" aria-label={`Increase ${name}`}
+            onClick={() => onChange(n + 1)}
+            className="flex-1 flex items-center justify-center text-lg font-black select-none active:bg-white/10"
+            style={{ color: J.purpleLight, borderTop: '1px solid rgba(255,255,255,0.08)', touchAction: 'manipulation' }}>
+            +
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+DifficultyPicker.propTypes = {
+  cls: PropTypes.oneOf(['A', 'B', 'C']).isRequired,
+  value: PropTypes.number.isRequired,
+  count: PropTypes.number,
+  onChange: PropTypes.func.isRequired,
+  compact: PropTypes.bool,
+};
+
+/** The three classes, in the order drawn: [stateKey, class letter, value]. */
+export const DIFFICULTY_CLASSES = Object.freeze([
+  ['aClass', 'A', 0.20],
+  ['bClass', 'B', 0.40],
+  ['cClass', 'C', 0.60],
+]);
+
 // ─── Decimal Input ────────────────────────────────────────────────────────────
 //
 // A mark field that never shows a leading "0". A `type="number"` input bound
@@ -599,19 +691,9 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                   <h4 className="font-bold text-white text-sm">Difficulty</h4>
                   <span className="text-lg font-black" style={{ color: '#F59E0B' }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>
                 </div>
-                {[['aClass', 'A', '0.20'], ['bClass', 'B', '0.40'], ['cClass', 'C', '0.60']].map(([key, lbl]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase" style={{ color: '#C084FC' }}>{lbl} - Class</label>
-                    <div className="flex items-center gap-0 rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
-                      <button type="button" onClick={() => handleDiff(key, Math.max(0, editScores.difficulty[key] - 1))}
-                        className="flex items-center justify-center text-xl font-black select-none"
-                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>−</button>
-                      <span className="w-10 text-center text-lg font-black text-white">{editScores.difficulty[key]}</span>
-                      <button type="button" onClick={() => handleDiff(key, editScores.difficulty[key] + 1)}
-                        className="flex items-center justify-center text-xl font-black select-none"
-                        style={{ width: 36, height: 40, color: '#C084FC', background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>+</button>
-                    </div>
-                  </div>
+                {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
+                  <DifficultyPicker key={key} cls={cls} value={value} count={editScores.difficulty[key]}
+                    onChange={(v) => handleDiff(key, v)} compact />
                 ))}
               </div>
 

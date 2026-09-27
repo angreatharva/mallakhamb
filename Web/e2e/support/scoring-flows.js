@@ -434,9 +434,9 @@ export const combinationItems = (page) => shown(page.locator('input[type="checkb
 /**
  * Set one difficulty class to a count, from wherever it currently sits.
  *
- * Relative rather than absolute because the control is a stepper with no text
- * field: the only way to reach 6 is to press + the right number of times, and
- * a resubmitted slip starts from the judge's previous entry, not from zero.
+ * 1–10 is one tap on the number grid (DifficultyPicker in judgeShared.jsx).
+ * 0, or anything above 10, is driven with the − / + stepper beside it — the
+ * grid has no 0, and a resubmitted slip starts from the judge's previous entry.
  */
 const setDifficultyClass = async (page, cls, target) => {
   const label = DIFFICULTY_LABEL[cls];
@@ -444,6 +444,13 @@ const setDifficultyClass = async (page, cls, target) => {
   const decrease = shown(page.getByRole('button', { name: `Decrease ${label}` }));
   // The stepper is [− , value , +]; the value is the only <span> in that box.
   const value = increase.locator('..').locator('span').first();
+
+  if (target >= 1 && target <= 10) {
+    const number = shown(page.getByRole('button', { name: `${label}: ${target}`, exact: true }));
+    // A second tap on the chosen number clears it, so only tap when it isn't.
+    if (Number((await value.innerText()).trim()) !== target) await number.click();
+    if (Number((await value.innerText()).trim()) === target) return;
+  }
 
   /*
    * Driven in one burst per pass, then re-read.

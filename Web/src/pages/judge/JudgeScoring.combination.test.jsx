@@ -135,3 +135,15 @@ describe('JudgeScoring — combination checklist', () => {
     expect(all.every((box) => box.checked)).toBe(true);
   });
 });
+
+describe('JudgeScoring — difficulty number grid', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('A4 B6 C1 picked on the grid is the full 3.80', () => {
+    renderSlip('Pole Mallakhamb');
+    fireEvent.click(screen.getAllByRole('button', { name: 'A - Class - 0.20: 4' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'B - Class - 0.40: 6' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'C - Class - 0.60: 1' })[0]);
+    expect(screen.getAllByText('3.80').length).toBeGreaterThan(0);
+  });
+});
