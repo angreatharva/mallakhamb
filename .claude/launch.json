@@ -12,6 +12,17 @@
       "port": 5173
     },
     {
+      "name": "web-crosssite",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.VITE_API_URL='http://127.0.0.1:5000/api';require('child_process').spawn('npx',['vite','--port','5174','--strictPort'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Web",
+      "port": 5174,
+      "//": "SPA on localhost, API on 127.0.0.1: two different SITES, so the API's cookies are third-party, exactly as on Render. Reproduces what iPhones (WebKit ITP) see."
+    },
+    {
       "name": "api",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

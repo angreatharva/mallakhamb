@@ -122,17 +122,30 @@ describe('cross-site cookie policy', () => {
       return app;
     }
 
-    it('rejects a cookie-only login when the cookie never came back', async () => {
-      // This is exactly the production failure: the header is present because the
-      // client read it from the response body, but the browser withheld the
-      // cookie because it was cross-site.
+    it('accepts login when the cookie never came back but the header is server-signed', async () => {
+      // The iPhone case: the client read the token from the response body, but
+      // WebKit refused the third-party cookie. `request(app)` keeps no cookie
+      // jar, which is exactly that browser. This used to be a 403 for every
+      // iPhone login — see csrf-cookieless.security.test.js.
+      const app = buildApp();
+      const { csrfToken } = (await request(app).get('/api/csrf-token')).body;
+
+      const res = await request(app)
+        .post('/api/admin/login')
+        .set('X-CSRF-Token', csrfToken)
+        .send({ username: 'a', password: 'b' });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('still rejects a cookieless login whose header this server did not sign', async () => {
       const res = await request(buildApp())
         .post('/api/admin/login')
         .set('X-CSRF-Token', 'a'.repeat(64))
         .send({ username: 'a', password: 'b' });
 
       expect(res.status).toBe(403);
-      expect(res.body.error.code).toBe('CSRF_TOKEN_MISSING');
+      expect(res.body.error.code).toBe('CSRF_TOKEN_INVALID');
     });
 
     it('accepts login when the cookie is returned alongside the header', async () => {
