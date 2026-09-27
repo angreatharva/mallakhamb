@@ -127,6 +127,17 @@ export const signInAndPickMeet = async (page, player, place) => {
   await signIn(page, player, /\/player\/(select-level|select-competition|select-team|dashboard)/);
   await chooseLevelForPlace(page, 'player', place);
 
+  /*
+   * A level holding ONE competition skips the chooser entirely — the app goes
+   * straight on to that meet (CompetitionSelectionScreen `autoTarget`). The
+   * meet at that level is then necessarily `place`, so there is nothing left
+   * to pick.
+   */
+  const passedThrough = await page
+    .waitForURL(/\/player\/(select-team|dashboard)/, { timeout: 5_000 })
+    .then(() => true, () => false);
+  if (passedThrough) return;
+
   const card = page.getByRole('button', { name: new RegExp(`\\b${place}\\b`) });
   await expect(
     card,

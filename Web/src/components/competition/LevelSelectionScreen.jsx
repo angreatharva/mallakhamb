@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
-import { Layers, ArrowRight, Check, Trophy } from 'lucide-react';
+import { Layers, ArrowRight, Check, Trophy, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
@@ -31,10 +31,10 @@ const SELECT_COMPETITION_PATH = {
 
 // ─── Level card ───────────────────────────────────────────────────────────────
 
-const LevelCard = ({ level, count, isSelected, onSelect, disabled, index }) => {
+const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disabled, index }) => {
   const reduced = useReducedMotion();
   const meta = LEVEL_META[level];
-  const isEmpty = count === 0;
+  const isEmpty = !counting && count === 0;
 
   return (
     <motion.button
@@ -80,13 +80,24 @@ const LevelCard = ({ level, count, isSelected, onSelect, disabled, index }) => {
           <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {meta.blurb}
           </p>
-          <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
-            style={{
-              background: isEmpty ? 'rgba(255,255,255,0.05)' : `${COLORS.saffron}12`,
-              color: isEmpty ? 'rgba(255,255,255,0.35)' : COLORS.saffronLight,
-            }}>
-            {count === 1 ? '1 competition' : `${count} competitions`}
-          </span>
+          {counting ? (
+            // The meets are still being fetched: say so, rather than showing a
+            // "0 competitions" that turns into a real number a moment later.
+            <span className="inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)' }}
+              role="status" aria-label={`Counting ${meta.label} competitions`}>
+              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+              Counting…
+            </span>
+          ) : (
+            <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
+              style={{
+                background: isEmpty ? 'rgba(255,255,255,0.05)' : `${COLORS.saffron}12`,
+                color: isEmpty ? 'rgba(255,255,255,0.35)' : COLORS.saffronLight,
+              }}>
+              {count === 1 ? '1 competition' : `${count} competitions`}
+            </span>
+          )}
         </div>
 
         {isSelected && (
@@ -107,6 +118,7 @@ const LevelCard = ({ level, count, isSelected, onSelect, disabled, index }) => {
 LevelCard.propTypes = {
   level: PropTypes.oneOf(COMPETITION_LEVELS).isRequired,
   count: PropTypes.number.isRequired,
+  counting: PropTypes.bool,
   isSelected: PropTypes.bool,
   onSelect: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
@@ -190,7 +202,14 @@ const LevelSelectionScreen = ({ userType }) => {
   const sourceCompetitions = scopedCompetitions ?? assignedCompetitions;
   const counts = useMemo(() => countByLevel(sourceCompetitions), [sourceCompetitions]);
 
-  const loading = scopedCompetitions === null ? isLoading : scopedLoading;
+  /*
+   * Still counting? Coach, player and judge fetch their own list, so until it
+   * arrives the answer is "loading" — not the shared context's flag, which for
+   * them had already settled and let every card show "0 competitions" for as
+   * long as the fetch took. Admins count from the context.
+   */
+  const fetchesOwnList = ['coach', 'player', 'judge'].includes(userType);
+  const counting = fetchesOwnList ? (scopedCompetitions === null || scopedLoading) : isLoading;
 
   const handleContinue = () => {
     if (!pendingLevel) {
@@ -202,7 +221,9 @@ const LevelSelectionScreen = ({ userType }) => {
     navigate(SELECT_COMPETITION_PATH[userType] || '/');
   };
 
-  if (loading) {
+  // Only a first load with nothing to show yet takes the whole screen; while
+  // counting, the cards are drawn and each count shows its own spinner.
+  if (!fetchesOwnList && isLoading && !assignedCompetitions?.length) {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
@@ -261,6 +282,7 @@ const LevelSelectionScreen = ({ userType }) => {
                   key={level}
                   level={level}
                   count={counts[level]}
+                  counting={counting}
                   isSelected={pendingLevel === level}
                   onSelect={setPendingLevel}
                   index={i}

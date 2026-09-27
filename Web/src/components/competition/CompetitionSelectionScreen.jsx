@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -156,10 +156,14 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   } = useCompetition();
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  // The automatic pass-through failed: show the list so it can be done by hand.
+  const [autoFailed, setAutoFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [coachCompetitions, setCoachCompetitions] = useState([]);
   const [coachTeam, setCoachTeam] = useState(null);
-  const [coachLoading, setCoachLoading] = useState(false);
+  // True from the first render for a coach, so the screen never draws an
+  // empty list before the coach's data has even been asked for.
+  const [coachLoading, setCoachLoading] = useState(userType === 'coach');
   const [coachError, setCoachError] = useState(null);
   /*
    * Judges and teamless players read from their own endpoints rather than from
@@ -298,9 +302,19 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const sourceCompetitions = userType === 'coach'
     ? coachCompetitions
     : (scopedCompetitions ?? assignedCompetitions);
+  /*
+   * Loading until THIS role's list is in. Judges and teamless players fetch
+   * their own list, and reading the shared context's flag for them (it settles
+   * early) drew an empty "Nothing at this level" for the length of the fetch.
+   * Coaches also need the context's entered-meets list to know whether a meet
+   * is one they are already in.
+   */
+  const fetchesOwnList = userType === 'judge' || (userType === 'player' && !playerHasTeam);
   const loading = userType === 'coach'
-    ? coachLoading
-    : (scopedCompetitions === null ? isLoading : scopedLoading);
+    ? (coachLoading || isLoading)
+    : fetchesOwnList
+      ? (scopedCompetitions === null || scopedLoading)
+      : isLoading;
   const error = userType === 'coach' ? coachError : scopedError;
 
   /*
@@ -312,19 +326,28 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const competitions = competitionsAtLevel(sourceCompetitions, selectedLevel);
 
   /*
-   * One meet at this level and nothing to decide — go straight through.
+   * One meet at this level and nothing to decide — go straight through, for
+   * every role, without ever drawing the list (see `autoTarget` in the render).
    *
-   * Gated on `selectedLevel` so it can never fire before the level step has
-   * happened, which would skip the choice this flow exists to ask for. Coaches
-   * are excluded because selecting is not a navigation for them, it registers
-   * a team; players because a teamless one still has a squad to pick.
+   * Gated on `selectedLevel` so it can never fire before the level step.
+   * A player goes on to pick a squad for that meet on the next screen, as
+   * before. A COACH only when their team is already entered there: for a coach,
+   * choosing a meet they are not in registers the team for it, and that stays
+   * a deliberate tap.
    */
+  const onlyCompetition = competitions?.length === 1 ? competitions[0] : null;
+  const coachAlreadyIn = (id) => (assignedCompetitions || [])
+    .some((c) => String(c._id || c.id) === String(id));
+  const autoTarget = !loading && selectedLevel && onlyCompetition
+    && (userType !== 'coach' || coachAlreadyIn(onlyCompetition._id || onlyCompetition.id))
+    ? onlyCompetition
+    : null;
+  const autoStartedRef = useRef(false);
   useEffect(() => {
-    if (!loading && selectedLevel && competitions?.length === 1
-        && userType !== 'coach' && userType !== 'player') {
-      handleAutoSelect(competitions[0]._id);
-    }
-  }, [loading, competitions, userType, selectedLevel]);
+    if (!autoTarget || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    handleAutoSelect(autoTarget._id || autoTarget.id);
+  }, [autoTarget]);
 
   /**
    * Scope the session to a meet, by whatever route this role uses.
@@ -430,12 +453,14 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const handleAutoSelect = async (competitionId) => {
     try {
       setIsSelecting(true);
-      await activateCompetition(competitionId);
+      await enterCompetition(competitionId, { quiet: true });
       if (onCompetitionSelected) onCompetitionSelected(competitionId);
       navigateToDashboard(competitionId);
     } catch (error) {
       logger.error('Failed to auto-select competition:', error);
-      toast.error(error.response?.data?.message || 'Failed to select competition');
+      toast.error(error.response?.data?.message || error.message || 'Failed to select competition');
+      // Fall back to the list, so the one meet can still be chosen by hand.
+      setAutoFailed(true);
       setIsSelecting(false);
     }
   };
@@ -450,13 +475,38 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     try {
       setIsSelecting(true);
       logger.log('[Competition Selection] Starting competition selection process');
-      
+      await enterCompetition(selectedCompetition);
+
+      if (onCompetitionSelected) onCompetitionSelected(selectedCompetition);
+
+      logger.log('[Competition Selection] About to navigate to dashboard');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      navigateToDashboard(selectedCompetition);
+    } catch (error) {
+      logger.error('Failed to select competition:', error);
+      const errorMsg = error.response?.data?.message ||
+        error.message ||
+        `Failed to ${userType === 'coach' ? 'register team' : 'select competition'}`;
+      toast.error(errorMsg);
+      setIsSelecting(false);
+    }
+  };
+
+  /**
+   * Scope the session to one meet — for a coach, entering the team first when
+   * it is not in yet. Shared by the tap on "Continue" and by the automatic
+   * pass-through when a level has a single meet, so both do exactly the same.
+   *
+   * @param {string} competitionId
+   * @param {{ quiet?: boolean }} [options] - no toast (the automatic path)
+   */
+  const enterCompetition = async (competitionId, { quiet = false } = {}) => {
+    const selectedCompetition = competitionId;
       if (userType === 'coach') {
         // Coach-specific flow: register team for competition
         if (!coachTeam) {
-          toast.error('No team found. Please create a team first.');
-          setIsSelecting(false);
-          return;
+          // Thrown, not returned: the caller must not go on to the dashboard.
+          throw new Error('No team found. Please create a team first.');
         }
         
         /*
@@ -524,29 +574,17 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           mergeAssignedAndSelectCompetition(competitionForContext);
         }
         await fetchAssignedCompetitions();
-        toast.success(
-          alreadyEntered
-            ? 'Switched to this competition.'
-            : 'Team registered for competition successfully!'
-        );
+        if (!quiet) {
+          toast.success(
+            alreadyEntered
+              ? 'Switched to this competition.'
+              : 'Team registered for competition successfully!'
+          );
+        }
       } else {
         // Admin, superadmin, judge and player all just scope the session.
         await activateCompetition(selectedCompetition);
       }
-
-      if (onCompetitionSelected) onCompetitionSelected(selectedCompetition);
-
-      logger.log('[Competition Selection] About to navigate to dashboard');
-      await new Promise(resolve => setTimeout(resolve, 300));
-      navigateToDashboard(selectedCompetition);
-    } catch (error) {
-      logger.error('Failed to select competition:', error);
-      const errorMsg = error.response?.data?.message ||
-        error.message ||
-        `Failed to ${userType === 'coach' ? 'register team' : 'select competition'}`;
-      toast.error(errorMsg);
-      setIsSelecting(false);
-    }
   };
 
   /**
@@ -592,7 +630,10 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   });
 
   // ── Loading ──
-  if (loading || isSelecting) {
+  // A single meet goes straight through: the list is never drawn for it, not
+  // even for the one render before the pass-through starts.
+  const passingThrough = !!autoTarget && !autoFailed;
+  if (loading || isSelecting || passingThrough) {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
@@ -605,7 +646,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
           </motion.div>
           <p className="text-white/50 text-sm">
-            {isSelecting ? 'Loading your dashboard...' : 'Loading competitions...'}
+            {passingThrough
+              ? `Opening ${autoTarget.name || 'your competition'}…`
+              : isSelecting ? 'Loading your dashboard...' : 'Loading competitions...'}
           </p>
         </div>
       </div>
