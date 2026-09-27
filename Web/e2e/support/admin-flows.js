@@ -286,6 +286,14 @@ export const alreadyStaffed = (page) =>
   page.getByRole('heading', { name: 'Judges Already Exist' });
 
 /**
+ * The label Manage Judges shows for a seat — its own name, for every seat
+ * (Web/src/pages/admin/AdminJudges.jsx seatLabel). The Time Keeper's slot read
+ * "Timer" for a day; kept as the one place to map a label if that returns.
+ */
+export const seatLabel = (seat) => seat;
+const seatFromLabel = (label) => label;
+
+/**
  * Put one registered judge into one slot of the Add Judge form.
  *
  * The slot cards are told apart by the seat badge they carry — the form renders
@@ -297,14 +305,6 @@ export const alreadyStaffed = (page) =>
  * @param {string} seat - e.g. 'Judge 1'
  * @param {string} email - a registered judge's address
  */
-/**
- * The label Manage Judges shows for a seat. The Time Keeper's slot reads
- * "Timer" on the form (Web/src/pages/admin/AdminJudges.jsx seatLabel); every
- * other seat is labelled with its own name.
- */
-export const seatLabel = (seat) => (seat === 'Time Keeper' ? 'Timer' : seat);
-const seatFromLabel = (label) => (label === 'Timer' ? 'Time Keeper' : label);
-
 export const staffSlot = async (page, seat, email) => {
   const card = page.locator(
     `xpath=//span[normalize-space(text())="${seatLabel(seat)}"]/ancestor::div[contains(@class, "rounded-xl")][1]`
@@ -322,7 +322,7 @@ export const staffSlot = async (page, seat, email) => {
   await expect(
     result,
     `${email} is already on this panel in another seat; one person cannot hold two ` +
-    '(only the Scorer and the Timer may be the same person)'
+    '(only the Scorer and the Time Keeper may be the same person)'
   ).toBeEnabled();
   await result.click();
 

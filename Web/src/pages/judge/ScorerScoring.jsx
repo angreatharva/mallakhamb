@@ -20,8 +20,6 @@ import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparat
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
-import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
-import StopwatchFace from './StopwatchFace';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS } from '../../styles/tokens';
@@ -534,37 +532,6 @@ const ScorerScoring = () => {
     toast.success(`Time ${data.seconds} s recorded for ${row.name}`);
   };
 
-  /*
-   * ONE PERSON AS SCORER AND TIME KEEPER.
-   *
-   * Allowed on a panel (the only two seats that may be shared), and then the
-   * stopwatch lives here, on the sheet: Stop puts the time straight into the
-   * athlete's row, with no relay in between.
-   */
-  const alsoTimeKeeper = seatTypesFor(judgeInfo, {
-    gender: selectedGender?.value, ageGroup: selectedAgeGroup?.value,
-    competitionType: selectedCompetitionType?.value, apparatus: seatApparatus,
-  }).includes('Time Keeper');
-  const timerWatch = useTimekeeping();
-  const [timerRowId, setTimerRowId] = useState(null);
-  const timerRow = players.find(p => p.id === timerRowId)
-    || players.find(p => !scores[p.id]?.time?.trim()) || players[0] || null;
-  const timerBusy = timerWatch.status === 'running' || timerWatch.status === 'paused';
-  const nextTimerMark = BEEP_MARKS.find(m => timerWatch.seconds < m.at);
-
-  const handleTimerStopped = (seconds) => {
-    if (!timerRow) return;
-    setTimerRowId(timerRow.id);
-    applyRecordedTime({
-      playerId: timerRow.playerId, apparatus: timerRow.apparatus, seconds, timeKeeperName: scorerSelfName,
-    });
-  };
-  const handleTimerNext = () => {
-    timerWatch.reset();
-    const next = players.find(p => p.id !== timerRow?.id && !scores[p.id]?.time?.trim());
-    setTimerRowId(next ? next.id : null);
-  };
-
   const handleSaveScores = async () => {
     if (isLocked) {
       toast.error('Cannot save - this entry is already locked');
@@ -850,45 +817,6 @@ const ScorerScoring = () => {
             <p><span className="text-white/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
           </div>
         </div> */}
-
-        {alsoTimeKeeper && players.length > 0 && !readOnly && (
-          <div className="rounded-2xl border p-4 sm:p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: ADMIN_COLORS.saffron }}>Timer</p>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-              <div className="lg:col-span-2 flex flex-wrap gap-2">
-                {players.map(p => {
-                  const active = p.id === timerRow?.id;
-                  const time = scores[p.id]?.time?.trim();
-                  return (
-                    <button key={p.id} type="button" onClick={() => setTimerRowId(p.id)}
-                      disabled={timerBusy && !active} aria-pressed={active}
-                      className="px-3 py-2 rounded-xl border text-sm font-semibold min-h-[44px] transition-colors disabled:opacity-40"
-                      style={{
-                        background: active ? `${ADMIN_COLORS.saffron}14` : 'rgba(255,255,255,0.02)',
-                        borderColor: active ? `${ADMIN_COLORS.saffron}55` : ADMIN_COLORS.darkBorderSubtle,
-                        color: '#fff',
-                      }}>
-                      {p.name}{time ? <span className="ml-2 text-xs" style={{ color: ADMIN_COLORS.green }}>{time} s</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="lg:col-span-3">
-                <StopwatchFace
-                  watch={timerWatch}
-                  title={timerRow?.name}
-                  subtitle={seatApparatus}
-                  canStart={!!timerRow && !readOnly}
-                  onStop={handleTimerStopped}
-                  onNext={handleTimerNext}
-                  footer={timerWatch.status === 'stopped'
-                    ? ['Time entered on the sheet', deductionNote(timerWatch.seconds)].filter(Boolean).join(' · ')
-                    : nextTimerMark ? `${nextTimerMark.count === 1 ? 'Beep' : 'Double beep'} at ${nextTimerMark.at}` : 'Past 90 — deduction applies'}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {players.length > 0 ? (
           <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>

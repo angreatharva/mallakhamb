@@ -109,7 +109,7 @@ const EMPTY_JUDGE_FORM = [
   { judgeNo: 4, judgeType: 'Judge 3', account: null },
   { judgeNo: 5, judgeType: 'Judge 4', account: null },
   { judgeNo: 6, judgeType: 'Scorer', account: null },
-  // "Timer" on this form. Required, and may be the Scorer's own account. Times
+  // Required, and may be the Scorer's own account. Times
   // each performance on /judge/scoring; the stopped time goes to the Scorer's
   // sheet. Seat 7 — see Server/src/config/judge-seats.js.
   { judgeNo: 7, judgeType: 'Time Keeper', account: null },
@@ -120,11 +120,15 @@ const JUDGE_SLOTS = EMPTY_JUDGE_FORM.map(({ judgeNo, judgeType }) => ({ judgeNo,
 const SUPPORT_JUDGE_TYPES = ['Scorer', 'Time Keeper'];
 const REQUIRED_JUDGE_TYPES = ['Senior Judge', 'Judge 1', 'Judge 2', 'Scorer', 'Time Keeper'];
 
-/** The seat as this screen names it — the Time Keeper's slot reads "Timer". */
-const seatLabel = (judgeType) => (judgeType === 'Time Keeper' ? 'Timer' : judgeType);
+/**
+ * The seat as this screen names it. Every seat reads its own name — the Time
+ * Keeper's slot was briefly labelled "Timer" and was renamed back on
+ * 2026-09-27 at the user's request. Kept as the one place to change a label.
+ */
+const seatLabel = (judgeType) => judgeType;
 
 /**
- * May one person hold both seats? Only the Scorer and the Timer: neither
+ * May one person hold both seats? Only the Scorer and the Time Keeper: neither
  * evaluates, so no slip is counted twice. Mirrors maySeatTogether in
  * Server/src/config/judge-seats.js, which the server enforces.
  */
@@ -664,7 +668,7 @@ const Judges = () => {
     // One person cannot hold two seats on the same panel — their single slip
     // would be averaged in twice. The server refuses it too; catching it here
     // means the admin is told before half the panel is written.
-    // …except the Scorer and the Timer, which one person may hold together.
+    // …except the Scorer and the Time Keeper, which one person may hold together.
     const seatsHeld = new Map();
     const duplicate = staffed.find((j) => {
       const held = seatsHeld.get(j.account._id) || [];
@@ -784,7 +788,7 @@ const Judges = () => {
         takenSeats={Object.fromEntries(
           judges
             .filter((seated) => seated.judgeNo !== editingJudge?.judgeNo)
-            // The Scorer may also be the Timer, and the other way round.
+            // The Scorer may also be the Time Keeper, and the other way round.
             .filter((seated) => !maySeatTogether(seated.judgeType, editingJudge?.judgeType))
             .map((seated) => [seated.judgeAccount?._id || seated.judgeAccount, seatLabel(seated.judgeType)])
             .filter(([id]) => id)

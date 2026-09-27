@@ -115,7 +115,7 @@ for (const meet of MEETS) {
     for (const panel of wanted) {
       const category = `${panel.gender} ${panel.ageGroup}`;
 
-      test(`${meet.place}: ${category} — ${panel.size} judges + Scorer + Timer, per apparatus`, async ({ page }) => {
+      test(`${meet.place}: ${category} — ${panel.size} judges + Scorer + Time Keeper, per apparatus`, async ({ page }) => {
         // Six judge searches per seat per competition type PER APPARATUS, each
         // debounced and each a database round trip. The apparatus multiplier is
         // why this is generous.

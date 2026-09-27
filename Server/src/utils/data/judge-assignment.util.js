@@ -33,8 +33,8 @@ const SEQUENCE_JUDGE_TYPES = Object.freeze(['Senior Judge', 'Scorer']);
 /**
  * The seats a category must have filled before it can be scored at all.
  *
- * The Time Keeper joined this list on 2026-09-26: the panel form asks for the
- * Timer as a required seat. It may be the Scorer's own account (see
+ * The Time Keeper joined this list on 2026-09-26: the panel form asks for it
+ * as a required seat. It may be the Scorer's own account (see
  * config/judge-seats maySeatTogether).
  *
  * Not the same question as the panel SIZE, which is 3, 4 or 5 evaluators and

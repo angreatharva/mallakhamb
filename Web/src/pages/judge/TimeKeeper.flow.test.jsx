@@ -230,6 +230,8 @@ describe('Stopwatch face', () => {
 });
 
 describe('one person as both Scorer and Time Keeper', () => {
+  // The dashboard's role popup decides which screen they get. Having picked
+  // Scorer, it is the plain sheet — the stopwatch is the Time Keeper's screen.
   beforeEach(() => {
     h.state.judge = {
       name: 'Asha Patil', ...seat('Scorer'),
@@ -238,25 +240,26 @@ describe('one person as both Scorer and Time Keeper', () => {
     h.state.location = { ...SESSION, isScorer: true };
   });
 
-  it('gets the stopwatch on the Scorer sheet, and Stop fills the athlete\'s Time', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    render(<ScorerScoring />);
-    await screen.findByText('Timer');
-    await waitFor(() => expect(screen.getByLabelText(/^Scorer/)).toHaveValue('Asha Patil'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
-    act(() => { vi.advanceTimersByTime(88_400); });
-    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
-
-    await waitFor(() => expect(screen.getAllByPlaceholderText('00:00')[0]).toHaveValue('88'));
-    vi.useRealTimers();
-  });
-
-  it('a Scorer who is not the Time Keeper has no stopwatch on the sheet', async () => {
-    h.state.judge = { name: 'Asha Patil', ...seat('Scorer'), allAssignments: [seat('Scorer')] };
+  it('as Scorer: the sheet, with no stopwatch on it', async () => {
     render(<ScorerScoring />);
     await screen.findByText('Riya Mane');
-    expect(screen.queryByText('Timer')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^Scorer/)).toHaveValue('Asha Patil'));
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+  });
+
+  it('as Scorer: still receives times sent from the Time Keeper screen', async () => {
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+    act(() => h.socket.fire('time_recorded', {
+      playerId: 'p1', teamId: 'team-a', apparatus: 'Rope Mallakhamb', seconds: 88,
+    }));
+    await waitFor(() => expect(screen.getAllByPlaceholderText('00:00')[0]).toHaveValue('88'));
+  });
+
+  it('as Time Keeper: the stopwatch screen', () => {
+    h.state.location = { ...SESSION, isTimeKeeper: true };
+    render(<TimeKeeperScoring />);
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByText('SECONDS')).toBeInTheDocument();
   });
 });

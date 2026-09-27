@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
   Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
-  CalendarDays, Loader2
+  CalendarDays, Loader2, ClipboardList, Timer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -38,6 +38,14 @@ import {
 
 /** Judge roles that may set the panel's running order (server: SEQUENCE_JUDGE_TYPES). */
 const SEQUENCE_JUDGE_TYPES = ['Senior Judge', 'Scorer'];
+
+/**
+ * The two seats one person may hold on the same panel
+ * (Server/src/config/judge-seats.js maySeatTogether). Holding both in a
+ * category is what raises the role popup.
+ */
+const RECORDER_ROLES = ['Scorer', 'Time Keeper'];
+const holdsBothRecorderSeats = (seatTypes) => RECORDER_ROLES.every((role) => seatTypes.includes(role));
 
 // Design tokens for judge theme
 const J = {
@@ -136,6 +144,14 @@ const JudgeDashboard = () => {
    */
   const [showModal, setShowModal] = useState(false);
   const autoOpenedPickerRef = useRef(false);
+  /*
+   * Which role this person is working as, when the category seats them as BOTH
+   * Scorer and Time Keeper (the one pair of seats one person may hold). Asked
+   * right after the category, in a popup of its own, and kept for the session
+   * so a refresh does not ask again. Cleared whenever the category changes.
+   */
+  const [chosenRole, setChosenRole] = useState(() => sessionStorage.getItem('judge_selected_role') || '');
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   /**
    * The seats this judge holds, fetched rather than read from storage.
@@ -173,6 +189,20 @@ const JudgeDashboard = () => {
     autoOpenedPickerRef.current = true;
     setShowModal(true);
   }, [assignmentsLoading, assignments, judgeInfo]);
+
+  // The category is chosen and seats this person as Scorer AND Time Keeper,
+  // but no role is on record (first time, or a session that lost it): ask.
+  useEffect(() => {
+    if (!judgeInfo || showModal || !selectedCompetitionType) return;
+    if (!sessionStorage.getItem('judge_category_selected')) return;
+    const both = holdsBothRecorderSeats(seatTypesFor(judgeInfo, {
+      gender: selectedGender || judgeInfo.gender,
+      ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+      competitionType: selectedCompetitionType,
+      apparatus: selectedApparatus,
+    }));
+    if (both && !RECORDER_ROLES.includes(chosenRole)) setShowRoleModal(true);
+  }, [judgeInfo, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup, selectedApparatus, chosenRole]);
 
   const competitionTypes = COMPETITION_TYPES;
 
@@ -352,6 +382,8 @@ const JudgeDashboard = () => {
        */
       sessionStorage.setItem('judge_selected_competition', nextId);
       sessionStorage.removeItem('judge_category_selected');
+      sessionStorage.removeItem('judge_selected_role');
+      setChosenRole('');
       sessionStorage.removeItem('judge_selected_comp_type');
       sessionStorage.removeItem('judge_selected_gender');
       sessionStorage.removeItem('judge_selected_age_group');
@@ -570,14 +602,24 @@ const JudgeDashboard = () => {
     // The Time Keeper goes straight there too, with the team, like the Scorer.
     // Decided by the seats held in THIS category — a person can keep time on
     // one panel and judge on another. Someone who is BOTH Scorer and Time
-    // Keeper here takes the Scorer's sheet, which carries the stopwatch.
+    // Keeper here goes wherever the role popup sent them.
     const heldHere = seatTypesFor(judgeInfo, {
       gender, ageGroup, competitionType: selectedCompetitionType, apparatus: selectedApparatus,
     });
-    const isScorerHere = heldHere.includes('Scorer')
-      || (heldHere.length === 0 && judgeInfo?.judgeType === 'Scorer');
-    const isTimeKeeperHere = !isScorerHere && (heldHere.includes('Time Keeper')
-      || (heldHere.length === 0 && judgeInfo?.judgeType === 'Time Keeper'));
+    // Both seats here: the role chosen in the popup decides — and without one
+    // there is nothing to open yet.
+    const bothHere = holdsBothRecorderSeats(heldHere);
+    if (bothHere && !RECORDER_ROLES.includes(chosenRole)) {
+      setShowRoleModal(true);
+      return;
+    }
+    const isScorerHere = bothHere
+      ? chosenRole === 'Scorer'
+      : heldHere.includes('Scorer') || (heldHere.length === 0 && judgeInfo?.judgeType === 'Scorer');
+    const isTimeKeeperHere = bothHere
+      ? chosenRole === 'Time Keeper'
+      : !isScorerHere && (heldHere.includes('Time Keeper')
+        || (heldHere.length === 0 && judgeInfo?.judgeType === 'Time Keeper'));
 
     if (isTimeKeeperHere) {
       navigate('/judge/scoring', {
@@ -634,6 +676,25 @@ const JudgeDashboard = () => {
       sessionStorage.removeItem('judge_selected_apparatus');
     }
     setShowModal(false);
+
+    // A new category means a new answer: ask again when it seats this person
+    // as both Scorer and Time Keeper, and forget the old one either way.
+    setChosenRole('');
+    sessionStorage.removeItem('judge_selected_role');
+    if (holdsBothRecorderSeats(seatTypesFor(judgeInfo, {
+      gender: categoryParams.gender,
+      ageGroup: categoryParams.ageGroup,
+      competitionType: categoryParams.competitionType,
+      apparatus: selectedApparatus,
+    }))) {
+      setShowRoleModal(true);
+    }
+  };
+
+  const chooseRole = (role) => {
+    setChosenRole(role);
+    sessionStorage.setItem('judge_selected_role', role);
+    setShowRoleModal(false);
   };
 
   if (!judgeInfo) return null;
@@ -663,9 +724,25 @@ const JudgeDashboard = () => {
     competitionType: selectedCompetitionType,
     apparatus: selectedApparatus,
   });
-  const myJudgeType = mySeat?.judgeType;
+  /*
+   * Every seat held in this category. Scorer + Time Keeper together is the one
+   * case with a question to ask — the role popup — and until it is answered
+   * the dashboard waits rather than guessing which screen they meant.
+   */
+  const seatsHere = seatTypesFor(judgeInfo, {
+    gender: selectedGender || judgeInfo.gender,
+    ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+    competitionType: selectedCompetitionType,
+    apparatus: selectedApparatus,
+  });
+  const needsRoleChoice = !!selectedCompetitionType && holdsBothRecorderSeats(seatsHere);
+  const roleChosen = needsRoleChoice && RECORDER_ROLES.includes(chosenRole);
+  const myJudgeType = needsRoleChoice ? (roleChosen ? chosenRole : null) : mySeat?.judgeType;
 
   const canSequence = SEQUENCE_JUDGE_TYPES.includes(myJudgeType);
+  // The category is settled but the role is not (e.g. after a refresh that lost
+  // it): the team list waits behind the role popup.
+  const awaitingRole = needsRoleChoice && !roleChosen;
 
   // Anyone can register as a judge; being seated on a panel is a separate act
   // by an organiser. Until that happens there is no category to pick and no
@@ -754,6 +831,14 @@ const JudgeDashboard = () => {
                     Set Sequence
                   </button>
                 )}
+                {needsRoleChoice && (
+                  <button
+                    onClick={() => setShowRoleModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                    {chosenRole === 'Time Keeper' ? <Timer className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
+                    Change Role
+                  </button>
+                )}
                 <button
                   onClick={() => setShowModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
@@ -784,6 +869,9 @@ const JudgeDashboard = () => {
                   // '—' rather than "All apparatus": the meet declared none and
                   // nobody has entered, so there was nothing to choose.
                   { label: 'Apparatus', value: selectedApparatus || '—' },
+                  // Only when there was a choice to make — otherwise the seat
+                  // is the role and says nothing new.
+                  ...(needsRoleChoice && roleChosen ? [{ label: 'Role', value: chosenRole }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</span>
@@ -818,8 +906,8 @@ const JudgeDashboard = () => {
           </FadeIn>
         )}
 
-        {/* Search & Team List */}
-        {!showModal && selectedCompetitionType && (
+        {/* Search & Team List — waits for the role when there is one to choose */}
+        {!showModal && selectedCompetitionType && !awaitingRole && (
           <FadeIn delay={0.1} className="flex-1 flex flex-col">
             <div className="relative mb-6">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
@@ -1092,6 +1180,61 @@ const JudgeDashboard = () => {
                   </button>
                 </div>
 
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Role Modal — Scorer or Time Keeper, for someone seated as both here */}
+      <AnimatePresence>
+        {showRoleModal && !showModal && needsRoleChoice && (
+          <motion.div
+            className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div
+              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
+              role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
+              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
+
+              {/* Closable only once a role is on record */}
+              {roleChosen && (
+                <button
+                  onClick={() => setShowRoleModal(false)}
+                  aria-label="Close"
+                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className="p-8 space-y-8">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
+                    <ClipboardList className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <h2 id="role-modal-title" className="text-2xl font-black text-white">Select Your Role</h2>
+                  <p className="text-white/50 text-sm mt-2">
+                    You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {selectedAgeGroup || judgeInfo.ageGroup} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    { role: 'Scorer', Icon: ClipboardList, desc: 'Fill the score sheet, set the running order, save and lock.' },
+                    { role: 'Time Keeper', Icon: Timer, desc: 'Time each performance; the time goes to the Scorer’s sheet.' },
+                  ].map(({ role, Icon, desc }) => (
+                    <SelectBtn key={role} selected={chosenRole === role} onClick={() => chooseRole(role)}>
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-300" aria-hidden="true" />
+                        <div>
+                          <p className="font-bold text-white">{role}</p>
+                          <p className="text-xs text-white/50 mt-0.5">{desc}</p>
+                        </div>
+                      </div>
+                    </SelectBtn>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </motion.div>
