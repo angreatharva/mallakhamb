@@ -1,450 +1,581 @@
-# Responsive UI/UX Transformation — Audit & Implementation Plan
+# Responsive UI/UX + Appearance (Light/Dark) — Audit & Implementation Plan
 
-**Status:** Phase 1 (Discovery) complete. No application code modified.
-**Branch at audit time:** `feat/competition-level-selection`
-**Date:** 2026-09-20
+**Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
+**Audited against:** `master` @ `5a9cae8`, 2026-09-28
+**Status:** Discovery complete for both scopes. **No application code modified.**
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
 
 ---
 
-## 0. The single most important finding
+## What changed in v2
 
-**This is not a greenfield responsive project. Roughly half of it already exists, and the half that is missing is not the half you would guess.**
-
-Commit `29d34fc` — *"feat(web): adapt every screen for mobile, desktop unchanged"* — is merged into the current branch. It introduced a deliberate, well-reasoned mobile adaptation built on four shared primitives, plus a Playwright audit harness covering 38 routes. That work is good and must be preserved, not redone.
-
-Its explicit design decision was that **every primitive stops at the `md` breakpoint (767px)** so the desktop baseline stayed untouched. The consequence, never addressed:
-
-> **Tablets get the full desktop layout at 768px wide, with desktop touch metrics, and no test ever measures it.**
-
-The evidence is unambiguous:
-
-| Signal | Count | Meaning |
-|---|---:|---|
-| `md:` prefixes in JSX | 166 | Layouts switch mobile→desktop at 768px |
-| `lg:` prefixes in JSX | 60 | Only 60 refinements exist at 1024px |
-| `tablet:` prefixes in JSX | **0** | The dedicated tablet breakpoint is never used |
-| Tablet widths in the audit harness | **0** | `MOBILE_WIDTHS` + `DESKTOP_WIDTHS` only |
-
-`MOBILE_WIDTHS = [320, 360, 375, 390, 414, 430]`, `DESKTOP_WIDTHS = [1366, 1440, 1920]` (`e2e/support/responsive-audit.js:15`). The 768–1024 band — iPad portrait, the single most common tablet posture — is measured by nothing.
-
-**Revised project shape:** Mobile = verify and close gaps. Tablet = build, this is the real work. Desktop = density and viewport efficiency, per your §8/§29.
+| | |
+|---|---|
+| **New scope** | Light/Dark appearance option (Parts II and IV §14). Today the app is dark-only. |
+| **Re-verified** | Every v1 number re-measured on `master` after ~40 commits of judge-screen work. Table in §1.1. |
+| **Correction 1** | v1 listed `ResponsiveContainer` as dead code and Phase 3.8 would have deleted it. **It is live** — it wraps `ResponsiveTable`, `ResponsiveRankings` and `ResponsiveFilters`. v1's count excluded the component's own directory. Real dead set is in §3.2. |
+| **Correction 2** | v1 said rewrite the three `desktop:` prefixes to `xl:`. That is **not** behaviour-preserving: `desktop` is 1440px and `xl` is 1280px, so containers would widen between 1280 and 1439. They become `min-[1440px]:` (§12). |
+| **New constraints** | Nine protected behaviours from judge trials and recent user rules (§15). Several are easy to break by accident with exactly the kind of work this plan does. |
+| **Decisions** | v1's two open questions are now decided, plus six new ones for appearance (§22). Per the standing working-style rule, I chose the recommended option wherever it does not change a user flow, and say so in one line each. |
+| **New finding** | The **current dark theme already fails contrast** in 228 text sites and on the primary button of three roles (§9). The appearance work has to fix this regardless of light mode. |
 
 ---
 
-# PART I — AUDIT FINDINGS
+## 0. The shape of the project
 
-## 1. Stack and architecture (verified against source)
+**Width.** Commit `29d34fc` adapted every screen for phones and deliberately stopped every primitive at 767px so desktop stayed untouched. Nobody built the band in between. Tablets (768–1023px) get the full desktop layout **and** desktop touch metrics, and no test measures them.
 
-- React 19.1 + Vite 7 + Tailwind 3, SPA, package `mallakhambindia`. Path alias `@/` → `src/`.
-- Router: react-router-dom 7. All pages lazy via `routes/lazy-pages.js`.
-- Provider chain (`App.jsx`): `ErrorBoundary → BrowserRouter → AuthProvider → AppContent → CompetitionProvider → Navbar? + AppRoutes`.
-- Per-role layouts wrap `ProtectedRoute` + `RouteErrorBoundary` (own ErrorBoundary + Suspense) + `<Outlet/>`.
-- Data: imperative axios (`services/api-client.js`), two instances (`api`, `publicApi`). **No TanStack Query** — it was removed. No cache layer.
-- Real-time: socket.io-client in judge scoring + `AdminScoring`.
-- Global theme is **dark**: `#0a0a0a` background, `color-scheme: dark`, text `#f3f4f6`.
-- Source size: 94 `.jsx`, 64 `.js`, 1 `.css` (`src/index.css`), 30,820 JSX lines total.
-- Tests: 17 Vitest files, 17 Playwright specs (4 of them responsive audits).
+**Appearance.** Dark is not a theme here; it is hard-coded. About 2,300 colour literals assume a near-black page, there are only 3 `dark:` prefixes in the codebase, and 428 places build colours by concatenating strings in a way that silently breaks the moment a token becomes a CSS variable.
+
+**Consequence for sequencing.** Both scopes touch the same ~40 files. The plan does each file **once**, doing its tablet review and its colour migration in the same pass and checking both with the same screenshot diff (§17, Phase 5).
+
+---
+
+# PART I — RESPONSIVE AUDIT
+
+## 1. Stack (verified)
+
+React 19.1 · Vite 7 · Tailwind **3.4.18 installed** (`^3.3.6` declared) · react-router-dom 7 · framer-motion 12 · react-hot-toast 2.4 · lucide-react 0.546. SPA, all pages lazy. Imperative axios; no query cache. Socket.IO on judge/admin scoring. Global dark `#0a0a0a`. CSP is a `<meta>` tag in `Web/index.html`.
+
+### 1.1 v1 → v2 measurements
+
+| Signal | v1 (09-20) | Now (09-28) |
+|---|---:|---:|
+| `.jsx` / `.js` files | 94 / 64 | 108 / 77 |
+| JSX lines (non-test) | 30,820 | 32,823 |
+| `md:` / `lg:` / `tablet:` prefixes | 166 / 60 / 0 | 167 / 65 / **0** |
+| `style={{` | 1,505 | 1,562 |
+| Arbitrary Tailwind values | 274 | 297 |
+| `focus-visible` | 0 | **0** |
+| `outline-none` | 38 | 38 |
+| Dialogs on `.modal-overlay` / hand-rolled | 10 / 4 | 10 / 4 |
+| `<table>` elements | 5 | 5 |
+| Files with `overflow-x-auto` | 3 | 2 |
+| `grid-cols-` | 108 | 116 |
+| `<input>` vs `htmlFor` | 40 vs 26 | 42 vs 26 |
+| `100vh` | 3 | 3 |
+
+Nothing got better on the a11y axes, and the gap between inputs and labels widened.
 
 ## 2. Route and page inventory
 
-### 2.1 Public / unauthenticated (14 route entries, 5 components)
+### 2.1 Public / unauthenticated
+| Route | Component |
+|---|---|
+| `/` | `public/Home.jsx` (839 L, **36 `md:` sites — the most of any file**) |
+| `/scores` | `public/PublicScores.jsx` + `scores/PlayerRankingBoard`, **`scores/TeamChampionshipBoard` (new)** |
+| `/forgot-password` | `shared/ForgotPassword.jsx` |
+| `/reset-password`, `/reset-password/:token` | `shared/ResetPassword.jsx` |
+| `*` | `NotFound` (deliberately not a redirect) |
+| `/{player,coach,admin,judge,superadmin}/login` | `unified/UnifiedLogin.jsx` — one component, five routes, role from URL |
+| `/{player,coach,judge}/register` | `unified/UnifiedRegister.jsx` |
+| `/admin/register` | `admin/AdminRegister.jsx` |
 
-| Route | Component | Notes |
-|---|---|---|
-| `/` | `public/Home.jsx` (839 L) | Marketing home, heavy decoration |
-| `/scores` | `public/PublicScores.jsx` | Public leaderboards, data-dense |
-| `/forgot-password` | `shared/ForgotPassword.jsx` | |
-| `/reset-password`, `/reset-password/:token` | `shared/ResetPassword.jsx` (548 L) | |
-| `*` | `NotFound` | Catch-all; deliberately **not** a redirect |
-| `/{player,coach,admin,judge,superadmin}/login` | `unified/UnifiedLogin.jsx` (724 L) | **One component, 5 routes.** Role derived from URL path |
-| `/{player,coach,judge}/register` | `unified/UnifiedRegister.jsx` (934 L) | |
-| `/admin/register` | `admin/AdminRegister.jsx` (516 L) | Separate from UnifiedRegister |
+### 2.2 Player — `select-level` → `select-competition` → `select-team` → `dashboard`
+### 2.3 Coach — `create-team`, `select-level`, `select-competition`, `dashboard` (1,141 L), `payment` (Razorpay)
+### 2.4 Admin — `select-level`, `select-competition`, `dashboard`, `dashboard/:tab`, `teams`, `scoring`
+Tabs inside `UnifiedDashboard`: `dashboard`, `teams`, `lots`, `scores`, `judges`, `transactions`.
 
-### 2.2 Player (4 routes)
-`select-level` → `select-competition` → `select-team` → `dashboard` (`PlayerDashboard.jsx`, 549 L).
-Level and competition render the shared `components/competition/LevelSelectionScreen.jsx` / `CompetitionSelectionScreen.jsx` (854 L).
+### 2.5 Judge — `select-level`, `select-competition`, `dashboard` (1,248 L), `profile`, `team/:teamId`, `scoring`, `scoring/panel-review`, `sequence`
+`/judge/scoring` renders **one of three screens by seat**: `JudgeScoring` (evaluation seats), `ScorerScoring`, or **`TimeKeeperScoring` + `StopwatchFace` (new, seat 7)**. A person seated as both Scorer and Time Keeper picks a role in a popup on the dashboard.
 
-### 2.3 Coach (5 routes)
-`create-team`, `select-level`, `select-competition`, `dashboard` (`CoachDashboard.jsx`, **1,128 L**), `payment` (`CoachPayment.jsx`, 716 L — Razorpay).
+### 2.6 SuperAdmin — `dashboard`, `dashboard/:tab`, `add-player-payment`, `scoring`
+Tabs: `overview`, `management` (`SuperAdminManagement.jsx`, **1,721 L, largest file**), `teams`, `lots`, `scores`, `judges`, `transactions`. **No `select-level`/`select-competition` for superadmin — intentional, preserve it.**
 
-### 2.4 Admin (6 routes + 6 dashboard tabs)
-Routes: `select-level`, `select-competition`, `dashboard`, `dashboard/:tab`, `teams`, `scoring` (`AdminScoring.jsx`, 745 L, socket).
-Tabs (rendered inside `UnifiedDashboard`, **not** top-level routes): `dashboard`, `teams`, `lots`, `scores`, `judges`, `transactions`.
-
-### 2.5 Judge (8 routes)
-`select-level`, `select-competition`, `dashboard` (1,069 L), `profile` (457 L), `team/:teamId` (562 L), `scoring` (**1,092 L**), `scoring/panel-review` (695 L), `sequence`.
-Plus `ScorerScoring.jsx` (768 L) for Scorer-type judges, and shared plumbing in `judgeShared.jsx` (726 L) + `useJudgePanelData.js`.
-
-### 2.6 SuperAdmin (4 routes + 7 dashboard tabs)
-Routes: `dashboard`, `dashboard/:tab`, `add-player-payment` (488 L), `scoring` (reuses `AdminScoring`).
-Tabs: `overview`, `management` (`SuperAdminManagement.jsx`, **1,606 L — largest file in the app**), `teams`, `lots`, `scores`, `judges`, `transactions`.
-
-**Note:** `select-level` / `select-competition` exist for player, coach, admin and judge — **but not superadmin**. Preserve that asymmetry; it is intentional (superadmin is not competition-scoped).
-
-**Distinct rendered screens: ~48.**
+**Distinct rendered screens: ~50** (two more than v1: Time Keeper sheet, Team Championship board).
 
 ## 3. Component inventory
 
-### 3.1 Design system — `components/design-system/` (33 files)
-`theme/` (ThemeProvider, useTheme) · `forms/` (ThemedButton, ThemedInput, ThemedSelect, ThemedTextarea) · `cards/` (GlassCard, DarkCard, StatCard, TiltCard) · `backgrounds/` (AmbientOrbs, Constellation, DiagonalBurst, HexGrid, HexMesh, RadialBurst) · `ornaments/` (GradientText, ShieldOrnament, CoachOrnament) · `animations/` (FadeIn, useReducedMotion) · `accessibility/` (LiveRegion) · `audit/` (DesignTokenAudit).
+### 3.1 Design system (`components/design-system/`)
+`theme/` (ThemeProvider = **role accent**, see §10.4) · `forms/` (ThemedButton/Input/Select/Textarea) · `cards/` (Glass/Dark/Stat/TiltCard) · `backgrounds/` · `ornaments/` · `animations/` (FadeIn, useReducedMotion) · `accessibility/` (LiveRegion) · `audit/`.
 
-This is a real design system and is the correct foundation to build on.
+### 3.2 Dead code — corrected
 
-### 3.2 `components/responsive/` — **5 of 8 are dead code**
+| Component | Lines | Static refs | Dynamic/lazy refs |
+|---|---:|---:|---:|
+| `responsive/ResponsiveForm.jsx` | 289 | 0 | 0 |
+| `responsive/ResponsiveGrid.jsx` | 326 | 0 | 0 |
+| `responsive/ResponsiveImage.jsx` | 233 | 0 | 0 |
+| `responsive/ResponsiveTypography.jsx` | 442 | 0 | 0 |
+| `design-system/audit/DesignTokenAudit.jsx` | 709 | 0 | 0 |
+| `backgrounds/Constellation.jsx` | — | 0 | 0 |
+| `backgrounds/DiagonalBurst.jsx` | — | 0 | 0 |
+| `backgrounds/HexMesh.jsx` | — | 0 | 0 |
+| `backgrounds/RadialBurst.jsx` | — | 0 | 0 |
+| **Total** | **2,349** | | |
 
-| Component | Used outside its own dir | Verdict |
-|---|---:|---|
-| `ResponsiveTable.jsx` (479 L) | 4 files | Keep, extend for tablet |
-| `ResponsiveFilters.jsx` | 1 file | Keep |
-| `ResponsiveRankings.jsx` | 1 file | Keep |
-| `ResponsiveContainer.jsx` | **0** | Dead |
-| `ResponsiveForm.jsx` | **0** | Dead |
-| `ResponsiveGrid.jsx` | **0** | Dead |
-| `ResponsiveImage.jsx` | **0** | Dead |
-| `ResponsiveTypography.jsx` | **0** | Dead |
+Also dead once `ResponsiveForm` goes: the `ResponsiveFormContainer` export inside `ResponsiveContainer.jsx` (0 other users).
 
-**1,452 lines of unused responsive abstraction**, while pages hand-roll their own layout inline. Plus `design-system/audit/DesignTokenAudit.jsx` (709 L, 0 references) = **2,161 lines of dead UI code.**
+**Live and must stay:** `ResponsiveContainer` (used by 3 live components), `ResponsiveTable` (includes `ResponsiveScoringTable`, the score sheet — protected, §15), `ResponsiveFilters`, `ResponsiveRankings`, `AmbientOrbs`, `HexGrid`.
 
-This is the central irony of the current codebase: the reusable primitives you are asking for were written, then never adopted.
+### 3.3 New since v1 (must be included in every pass)
+`competition/CompetitionLockBanner.jsx` · `scores/TeamChampionshipBoard.jsx` · `judge/StopwatchFace.jsx` · `judge/TimeKeeperScoring.jsx` · `judge/scorerRows.js` · `judge/timeKeeper.js` · `hooks/useBodyScrollLock.js` · `hooks/useCompetitionLock.js`.
 
-### 3.3 The four merged mobile primitives (preserve — these are correct)
+### 3.4 The four merged mobile primitives — preserve
+`AmbientOrbs` (one clipping layer; its sizing lives in CSS on purpose) · `.modal-overlay` + `.modal-panel` (`flex-start` + auto margins, so a too-tall dialog never overflows off the top) · `.tap-safe` (44px below `md`) · `.stacked-table` (labelled cards below `md`, headers clipped, not hidden).
 
-1. **`AmbientOrbs`** — one clipping layer replacing six per-page orb implementations. Fixed a real bug: an orb at `left: 95%` grew the document and made **judge screens scroll sideways at 1440px**, not just on phones. Size scales via `--orb-scale` set by media query in CSS, deliberately not JS.
-2. **`.modal-overlay` + `.modal-panel`** — replaced 17 hand-written dialog shells. Uses `align-items: flex-start` + auto block margins, because `align-items: center` sends a too-tall panel's overflow off the **top**, where browsers refuse to scroll. Save/Cancel rows were unreachable on phones.
-3. **`.tap-safe`** — 44px floor, `max-width: 767px` only. Exists because `.touch-target` applies at every width and would inflate dense desktop toolbars.
-4. **`.stacked-table`** — table → labelled cards below `md`, via `data-label`. Headers are clipped (not `display: none`) so they stay available to screen readers. No column is dropped.
+## 4. Design-system audit
 
-## 4. Design system audit
-
-### 4.1 Breakpoints — explosion, and three competing sources of truth
-
-`tailwind.config.js` defines **11 screens**:
-`xs` 320 · `mobile` 320 · `mobile-lg` 480 · `sm` 640 · `md` 768 · `tablet` 768 · `lg` 1024 · `xl` 1280 · `desktop` 1440 · `2xl` 1536 · `desktop-lg` 1920
-
-Actual usage in JSX: `sm:` 114, `md:` 166, `lg:` 60, `xl:` 1, `desktop:` 3, and **`xs:` / `mobile:` / `mobile-lg:` / `tablet:` / `2xl:` / `desktop-lg:` = 0**.
-
-Six unused aliases, two exact duplicates (`xs`≡`mobile` at 320, `md`≡`tablet` at 768). Directly violates your §18 "avoid breakpoint explosion".
-
-Three separate definitions of the same concept:
-- `tailwind.config.js` `theme.screens`
-- `src/utils/ui/responsive.js` `BREAKPOINTS` + `RESPONSIVE_RANGES`
-- Hardcoded `@media` queries in `src/index.css`
-
-And **"desktop" means two different things** inside `responsive.js` alone: `BREAKPOINT_HELPERS.desktop` = `min-width: 1440px`, while `BREAKPOINT_HELPERS.desktopOnly` = `min-width: 1024px` and `RESPONSIVE_RANGES.desktop.min` = 1024.
-
-### 4.2 Off-by-one breakpoint overlap
-`index.css:269` uses `@media (max-width: 768px)` while every primitive uses `max-width: 767px`. **At exactly 768px both the mobile and the tablet rule apply.**
-
-### 4.3 Light-theme utilities inside a dark application
-
-The app background is `#0a0a0a`. These all render light-on-dark:
-
-| Location | Problem |
+### 4.1 Breakpoints — four sources of truth, not three
+| Source | "desktop" means |
 |---|---|
-| `tailwind.config.js` `.responsive-input` | `backgroundColor: white`, `color: gray.900`, `border: gray.300` |
-| `.responsive-select`, `.responsive-button` | Same |
-| `.mobile-menu-panel` | `backgroundColor: white` |
-| `index.css:55-60` scrollbar | track `#f1f1f1`, thumb `#c1c1c1` |
-| `index.css:78` `.scrollbar-thin` | thumb `#d1d5db` |
-| `index.css:238` `.image-loading` | `#f0f0f0 → #e0e0e0` gradient |
-| `index.css:254` `.image-error` | bg `#f5f5f5`, text `#999` — fails contrast on any background |
-| `.table-mobile-cards` | border `#e5e7eb` |
+| `tailwind.config.js` `screens` (11 entries, 6 unused) | 1440px |
+| `utils/ui/responsive.js` `BREAKPOINT_HELPERS.desktop` | 1440px |
+| `utils/ui/responsive.js` `desktopOnly` / `RESPONSIVE_RANGES.desktop` | 1024px |
+| **`styles/tokens.js` `DESIGN_TOKENS.breakpoints`** (missed in v1) | **1024px** (`wide` = 1280) |
 
-### 4.4 Inverted touch targets — tablets lose the 44px floor
+Plus hard-coded `@media` in `index.css`, one of which is `max-width: 768px` against everyone else's 767 — **both rules apply at exactly 768px**.
 
-`.responsive-input`, `.responsive-select` and `.responsive-button` each set `minHeight: 44px` at mobile, then at `@screen md` (768px+) set **`minHeight: auto`** and drop font to `sm`.
+### 4.2 Two z-index scales that collide
+Tailwind: `mobile-menu 50 · modal 100 · tooltip 200`, plus `.mobile-dropdown` hard-coding `'100'`. `tokens.js`: `dropdown 10 · sticky 20 · fixed 30 · modalBackdrop 40 · modal 50 · popover 60 · tooltip 70`. **Tailwind's mobile menu and the tokens' modal are both 50.**
 
-Combined with `.tap-safe` stopping at 767px, the result is systemic: **a tablet is a touch device that receives desktop touch metrics.** This is the mechanism behind the tablet gap, not just an oversight in page layout.
+### 4.3 Light-theme utilities in a dark app
+`.responsive-input/-select/-button` (white background, gray-900 text), `.mobile-menu-panel` (white), scrollbars (`#f1f1f1` track), `.scrollbar-thin`, `.image-loading`, `.image-error` (`#999` on `#f5f5f5`), `.table-mobile-cards`. These are dealt with in the appearance foundation (Phase 3), since they're exactly what a scheme-aware token layer replaces.
 
-### 4.5 Duplicate and conflicting primitives
+### 4.4 Inverted touch targets
+`.responsive-input/-select/-button` set 44px on mobile, then `minHeight: auto` + `text-sm` at `md`. `.tap-safe` stops at 767. **Tablets get desktop touch sizing.** Second iOS consequence: inputs under 16px make iOS Safari zoom the page on focus, and `text-sm` is 14px from 768px up. **Every text field on an iPad triggers a zoom.**
 
-| Concern | Implementations | Issue |
-|---|---|---|
-| Stacked tables | `.stacked-table` (correct) **and** `.table-mobile-cards` (legacy) | Legacy uses `thead { display: none }` — removes headers from screen readers — plus `paddingLeft: 50%` absolute positioning |
-| Touch targets | `.touch-target` / `.touch-target-lg` (all widths) **and** `.tap-safe` (<768 only) | Conflicting philosophies |
-| Reduced motion | `hooks/useResponsive.js:243` **and** `design-system/animations/useReducedMotion.js:18`, re-exported again in `public/Home.jsx:23` | Three call sites for one hook |
-| Aspect ratios | `index.css` `.aspect-square` / `.aspect-video` **and** Tailwind's built-ins | Shadowing |
-| Colors | Tailwind `primary`(blue)/`secondary`(green) **and** `styles/tokens.js` `DESIGN_TOKENS` (per-role saffron/purple/green/gold) | Two unrelated palettes |
+### 4.5 Duplicates
+`.stacked-table` vs `.table-mobile-cards` (the latter hides `thead` from screen readers) · `.touch-target` vs `.tap-safe` · `useReducedMotion` defined twice and re-exported a third time · `.aspect-*` shadowing Tailwind · Tailwind `primary`/`secondary` (blue/green) vs `DESIGN_TOKENS` role colours.
 
-### 4.6 Broken Tailwind plugin code
+### 4.6 Suspected broken plugin output
+`addComponents({ '.responsive-container': { '@apply container-responsive': {} } })` and three siblings. **Unconfirmed** — must be settled against the built CSS (Phase 3.1), not assumed.
 
-```js
-const responsiveComponents = {
-  '.responsive-container': { '@apply container-responsive': {} },
-  ...
-};
-addComponents(responsiveComponents);
-```
+### 4.7 Patterns the brief forbids, already present
+`.no-horizontal-scroll` (`overflow-x: hidden; max-width: 100vw`; `100vw` includes the scrollbar, so it causes overflow on desktop) · `.mobile-full-width` (`calc(-50vw + 50%)`) · `100vh` ×3.
 
-`@apply` is not valid inside an `addComponents` object literal this way. `.responsive-container`, `.responsive-grid`, `.responsive-flex` and `.responsive-text` are almost certainly emitting nothing. **Must be confirmed against built CSS before removal** — see Phase 3, Task 3.1.
-
-### 4.7 Forbidden patterns already in the codebase
-
-Your §48 / GUARDRAIL 7 explicitly prohibits these, and they are present:
-
-- `.no-horizontal-scroll` = `overflowX: hidden` + `maxWidth: 100vw`. This is overflow-hidden as a generic patch. Worse, `100vw` **includes the scrollbar width**, so on desktop it actively causes the overflow it claims to prevent.
-- `.mobile-full-width` uses `calc(-50vw + 50%)` — same scrollbar mismatch.
-- `100vh` used 3× (`body`, `#root`, `.responsive-img-hero`) — the classic mobile address-bar bug. Needs `100svh`/`100dvh`.
-
-### 4.8 Inline styles — 1,505 occurrences
-
-`style={{` appears **1,505 times** across the app. Worst offenders:
-
-| File | Count |
-|---|---:|
-| `superadmin/SuperAdminManagement.jsx` | 93 |
-| `coach/CoachDashboard.jsx` | 82 |
-| `components/responsive/ResponsiveRankings.jsx` | 79 |
-| `judge/JudgeScoring.jsx` | 78 |
-| `components/responsive/ResponsiveTable.jsx` | 70 |
-| `design-system/audit/DesignTokenAudit.jsx` | 70 |
-| `public/Home.jsx` | 69 |
-| `judge/judgeShared.jsx` | 67 |
-| `admin/AdminJudges.jsx` | 51 |
-
-Three consequences: (1) it is the root cause of the visual inconsistency, since values are authored per-site rather than from tokens; (2) every inline object is a **new identity on every render**, defeating `React.memo` on any child receiving it; (3) inline styles cannot carry media queries, which is *why* responsive behaviour had to be bolted on separately.
-
-Also 274 arbitrary Tailwind values (`p-[13px]`-style). No `!important` anywhere — genuinely clean on that axis.
+### 4.8 Inline styles
+1,562 `style={{`. Worst: SuperAdminManagement 97, CoachDashboard 82, ResponsiveRankings 79, JudgeScoring 77, judgeShared 69, Home 69, AdminJudges 54. They defeat memoisation, cannot carry media queries, and — new in v2 — **are where most of the hard-coded dark colour lives** (§8).
 
 ## 5. Accessibility audit
 
-### 5.1 Focus visibility — systemic WCAG 2.4.7 failure (P0)
+- **Focus visible — P0.** `focus-visible` ×0, `outline-none` ×38, and a global `input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1) }`, a 10%-opacity glow on `#0a0a0a`. Fails WCAG 2.4.7 app-wide.
+- **Contrast — P0, new in v2.** See §9. 228 text sites and three roles' primary buttons fail 4.5:1 in the current dark theme.
+- **Labels.** 42 `<input>` vs 26 `htmlFor`: up to 16 unlabelled, verify each (some may use `aria-label` or a wrapping `<label>`).
+- **Table semantics.** 5 `<table>` vs 116 `grid-cols-`; the data grids have no row/column semantics. Scope per D2 (§22).
+- **Motion.** CSS keyframes (`.fade-in`, `spin`, shimmer) are not gated by `prefers-reduced-motion`; `button { transition: all }`.
+- **Clean:** `onClick` on `div`/`span` ×0; 353 `aria-*`.
 
-| Signal | Count |
-|---|---:|
-| `focus-visible` anywhere in `src/` | **0** |
-| `outline-none` in JSX | 38 |
-| `focus:` utility classes | 35 |
+## 6. Performance (UI layer)
+`transition: all` on every button · 250ms resize debounce in `useResponsive` · `useResponsiveValue` subscribes to full resize state to pick one value · a resize listener per element in `useTouchTargetValidation` · 1,562 inline style objects defeat `React.memo` · **only 1 of the 10 dialogs locks body scroll** (`useBodyScrollLock`, SuperAdminManagement only), so the page scrolls behind every other open dialog; three mobile menus lock with their own independent `overflow` toggles, which clobber each other.
 
-Plus the global rule at `index.css:99`:
+## 7. Test harness — what exists and what blocks Phase 2
+- `npm run audit:responsive` / `audit:modals` / `audit:judge-walk` / `audit:shots`: 38 routes, 5 areas; checks overflow, touch targets and console errors.
+- **Widths:** `MOBILE_WIDTHS [320,360,375,390,414,430]`, `DESKTOP_WIDTHS [1366,1440,1920]`. **No tablet widths; no 1280 or 1536.**
+- **Browsers:** one Playwright project, Desktop Chrome. **No WebKit**, so nothing exercises iPhone/iPad Safari, which the standing rule says must work.
+- **Accounts:** `CREDENTIALS` pick seed-roster people (Ravi / Rajesh / Atharva). Per project memory those accounts **do not exist in the current dev database** (SGAM-TRIALS-1). Recreating them means `setup --drop`, which would **destroy the TRIALS data**. Phase 2 therefore needs a separate audit database (§19).
+- **The in-app preview browser cannot measure mobile layout.** It sizes `body` to 375 while `innerWidth` reports the pane's real width, so every fixed overlay looks broken. Playwright only.
+- **Tailwind config edits do not hot-reload.** Restart the dev server; pass `E2E_BASE_URL` deliberately.
 
-```css
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-```
+---
 
-Every text input, select and textarea in the application has its focus outline removed and replaced with a blue glow at **10% opacity** — on a `#0a0a0a` background this is very close to invisible. 38 further sites strip outlines individually. Nothing anywhere restores a `:focus-visible` ring.
+# PART II — APPEARANCE (LIGHT/DARK) AUDIT
 
-This alone fails WCAG 2.1 AA and makes the app keyboard-hostile. It is the highest-value single fix in the project.
+## 8. How colour is authored today
 
-### 5.2 Other accessibility signals
-
-| Signal | Count | Read |
+| Form | Count | Notes |
 |---|---:|---|
-| `aria-*` attributes | 353 | Healthy baseline |
-| `aria-label` | 75 | |
-| `role="…"` | 46 | |
-| `onClick` on `div`/`span` | **0** | Excellent — no fake buttons |
-| `<label htmlFor>` | 26 | vs 40 `<input>` — **up to 14 potentially unlabelled inputs, must be verified individually** |
-| Headings `<h1>`–`<h6>` | 120 | Hierarchy correctness unverified |
-| `alt=` | 21 | vs 17 `<img>` — plausibly complete |
-| `role="table"` / `"grid"` | 1 | See below |
+| `text-white` (bare) | ~352 | "foreground ink" |
+| `text-white/NN` | 477 | text hierarchy expressed as opacity |
+| `bg-white/NN` | 82 | glass surfaces |
+| `border-white/NN` | 52 | hairlines |
+| `bg-white` solid | 5 | review each |
+| `ring/fill/stroke/placeholder/…-white` | 16 | |
+| `bg-black(/NN)` | 4 | dialog scrims |
+| `text-gray-*` / `bg-gray-*` | 22 / 6 | |
+| Hex literals in JSX/JS | 375 | top: `#ef4444` ×74, `#22c55e` ×36, `#fff` ×34, `#3b82f6` ×25, `#a855f7` ×22 |
+| `rgba(255,255,255,α)` | 464 | α mostly 0.02–0.08 (surfaces/borders) and 0.30–0.50 (text) |
+| `rgba(0,0,0,α)` | 35 | shadows, scrims |
+| **Hex + 2-digit alpha concatenation** `` `${COLORS.saffron}0A` `` | **428 in 48 files** | see §10.1 |
+| framer-motion colour animations | 19 | see §10.2 |
+| `dark:` prefixes | **3** | |
 
-### 5.3 Data presented without table semantics
-Only **5 `<table>` elements in 4 files**, against **108 `grid-cols-` usages**. Most tabular data in this app is CSS grid with no table semantics and no `role="table"`. A screen reader user gets an undifferentiated list of cells with no row/column relationships.
+`text-white/NN` by bucket: 80–100 and bare → **380** · 60–75 → **111** · 40–55 → **220** · 15–35 → **118**.
 
-This is a genuine finding but must be handled carefully — converting grids to tables is a structural change. Scope it to *adding semantics*, not re-authoring layout.
+## 9. Contrast analysis (computed, WCAG relative luminance)
 
-### 5.4 Motion
-`useReducedMotion` exists and `FadeIn` honours it. But CSS animations in `index.css` (`.fade-in`, `spin`, `.image-loading` shimmer) are **not** gated by a `@media (prefers-reduced-motion: reduce)` block. `button { transition: all 0.2s }` is ungated and uses `all`.
+### 9.1 Opacity text on its own page background
+| α | Dark: white on `#0a0a0a` | Light: `#0b0d12` on `#f6f7f9` |
+|---|---:|---:|
+| 0.30 | 2.61 ✗ | 2.00 ✗ |
+| 0.40 | 3.77 ✗ text | 2.66 ✗ |
+| 0.45 | **4.48 ✗** (tokens.js calls this "improved contrast") | 3.06 ✗ text |
+| 0.50 | 5.37 ✓ | 3.58 ✗ text |
+| 0.60 | 7.30 ✓ | 4.99 ✓ |
+| 0.70 | 9.76 ✓ | 7.17 ✓ |
 
-## 6. Performance observations (UI-layer only)
+Two conclusions:
+1. **Dark already fails** at `text-white/40` and below: 228 sites under 4.5:1, and 94 under 3:1 at /30 and below.
+2. **Opacity doesn't transfer.** AA needs α ≥ 0.50 on dark but α ≥ 0.60 on light. A light theme that only flips white to black would break 110 sites that pass today (/45–/55). Text therefore needs a semantic scale with separate values per theme (§14.4).
 
-- `button { transition: all 0.2s ease-in-out }` — `transition: all` animates every property including layout-affecting ones.
-- `useResponsive()` uses a **250ms** resize debounce; noticeably laggy on device rotation. It also returns a fresh object each render, and `useResponsiveValue()` calls the full hook (subscribing to resize) merely to pick a value.
-- `useTouchTargetValidation` attaches a `resize` listener **per element**.
-- 1,505 inline style objects defeat memoization (see §4.8).
-- Six SVG background components; `AmbientOrbs` correctly moved sizing to CSS to avoid re-render, but the others were not audited for the same issue.
-- No route-level data caching since TanStack Query was removed — repeat navigations refetch.
+### 9.2 Role accents
+| Accent | As text on `#0a0a0a` | As text on `#fff` | White label on it |
+|---|---:|---:|---:|
+| player saffron `#FF6B00` | 6.93 | 2.86 ✗ | **2.86 ✗** |
+| superadmin gold `#F5A623` | 9.77 | 2.03 ✗ | **2.03 ✗** |
+| coach green `#22C55E` | 8.69 | 2.28 ✗ | **2.28 ✗** |
+| admin/judge purple `#8B5CF6` | 4.68 | 4.23 ✗ | 4.23 (large only) |
+| public blue `#3B82F6` | 5.38 | 3.68 ✗ | 3.68 (large only) |
+| error `#EF4444` | 5.26 | 3.76 ✗ | 3.76 (large only) |
+| warning `#F59E0B` | 9.22 | 2.15 ✗ | 2.15 ✗ |
 
-## 7. What the existing audit harness already covers
+`ThemedButton`'s solid variant is `text-white` on the role colour, so **the primary action button for players, coaches and superadmins is 2.0–2.9:1 today.**
 
-`npm run audit:responsive` (plus `audit:modals`, `audit:judge-walk`, `audit:shots`) drives real Playwright viewports across **38 routes in 5 areas** (public 14, judge 8, admin 9, superadmin 4, coach 5, player 4), asserting:
-- horizontal overflow, with a `data-allow-overflow` opt-out
-- undersized touch targets
-- console errors and page errors
+## 10. Hazards a naive theme switch would hit
 
-**Operational constraint, learned the hard way and recorded in project memory:** the in-app preview browser **cannot** measure this app's mobile layout. Its emulation sets `body` to 375px while `window.innerWidth` still reports the pane's real width (~656px), so every `position: fixed` overlay — i.e. all modals and drawers — lays out against the wrong number and reads as broken when it is fine. **All responsive verification goes through Playwright.** Chasing one phantom modal overflow this way previously cost an hour.
+1. **428 hex+alpha concatenations (48 files).** `` `${COLORS.saffron}0A` `` works only while the token is a 6-digit hex. Make it `var(--accent)` and it becomes `var(--accent)0A`, which is invalid, so the browser silently drops the declaration. No error, no warning, the background just disappears. Worst files: UnifiedRegister 23, Home 23, UnifiedLogin 20, AdminRegister 17, SuperAdminManagement 15, CompetitionSelectionScreen 15. The Tailwind plugin does the same thing in `.stacked-table`: `` `1px solid ${theme('colors.white')}14` ``.
+2. **19 framer-motion colour animations** (e.g. `whileHover={{ background: 'rgba(239,68,68,0.12)' }}` in Navbar, CoachDashboard, Dropdown, CompetitionSelector, AdminScoring, AdminTeams). framer interpolates numeric colours and cannot interpolate `var(...)`.
+3. **`ThemeProvider.hexToRgb`** parses the role hex to derive `primaryLight`/`primaryDark`, and returns `null` for a `var()` string.
+4. **`theme('colors.white')` in 4 plugin rules** (one concatenation, three `backgroundColor`).
+5. **Hard-coded roots:** `App.jsx` wraps everything in `style={{ background: '#0a0a0a' }}`; `index.css` `:root` sets `color-scheme: dark`, colour and background; the Toaster is `#363636` / `#fff`.
+6. **No `<meta name="theme-color">`**, so the mobile browser chrome can't follow the theme.
+7. **Name collision.** `ThemeProvider`/`useTheme` already mean *role accent* (13 files). Calling light/dark "theme" as well would make every future conversation ambiguous.
+8. **Seven separate shells render account controls** (Navbar, UnifiedDashboard, CoachDashboard, JudgeDashboard, JudgeTeamPlayers, JudgeScoring, JudgePanelReview), and the Navbar is hidden on most routes. There's no single place to put a toggle.
 
-**Second constraint:** editing `tailwind.config.js` does **not** hot-reload. The utility silently does not exist and computed styles show the unstyled default. Restart the dev server after every config edit, and pass `E2E_BASE_URL` deliberately when more than one dev server is running.
+**Good news:** no raster logos or images assume a dark background (only `vite.svg`); no chart library; only `sessionStorage` is cleared on logout (`AuthProvider` ×2, `obfuscatedStorage` ×1), so a `localStorage` preference survives sign-out; the CSP already allows same-origin scripts.
 
 ---
 
-# PART II — STRATEGY
+# PART III — STRATEGY
 
-## 8. Agent model
+## 11. Agents
+Three device agents own the outcome (your §7). Appearance is a cross-cutting concern, so it gets a **shared** auditor rather than a fourth primary agent:
 
-Per your §7/§11, three device agents own the outcome, with shared auditors. Mapping to this codebase:
-
-| Agent | Band | Primary mandate here |
+| Agent | Band | Mandate here |
 |---|---|---|
-| **Desktop Agent** | ≥1024px | Viewport efficiency (§8/§29): kill excess vertical height on 1280×720 and 1366×768. Density, multi-column, sticky toolbars. *Layout semantics stay as-is.* |
-| **Tablet Agent** | 768–1023px | **Build the missing band.** Highest-value agent on this project. |
-| **Mobile Agent** | <768px | Verify the 2026-09-03 work holds; close gaps (4 un-migrated modals, 3 overflow-x tables). |
-| **Shared auditors** | all | Design System · Accessibility (AccessLint) · Component Architecture · Performance · Regression |
+| **Desktop** | ≥1024 | Viewport efficiency at 1280×720 / 1366×768; density; multi-column; sticky toolbars. |
+| **Tablet** | 768–1023 | **Build the missing band** — the core of the project. |
+| **Mobile** | <768 | Verify the 09-03 work; close gaps (4 hand-rolled dialogs, 2 overflow tables, body scroll lock, iOS zoom). |
+| Shared: **Appearance & Contrast Auditor** *(new)* | all | Both schemes on every screen; ratios against §14.4 targets; no concatenated colours left behind. |
+| Shared: Design System · Accessibility (AccessLint) · Component Architecture · Performance · Regression | all | as v1 |
 
-**Constraint for all agents (your §12):** one product, three presentations. Same IA, terminology, data, flows, component semantics. Only presentation adapts.
+One product, three presentations, **two appearances**. Only presentation adapts.
 
-## 9. Target breakpoint system
+## 12. Breakpoints — decided (D3)
+Collapse to five: **`sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536`**. Remove `xs`, `mobile`, `mobile-lg`, `tablet`, `desktop`, `desktop-lg`.
+- The only `desktop:` uses are 3 classes in `ResponsiveContainer.jsx` (lines 50, 71, 77). `desktop:px-8` follows `lg:px-8` and does nothing, so it's deleted. `desktop:max-w-desktop-wide` becomes **`min-[1440px]:max-w-desktop-wide`**, which is pixel-identical. Whether 1440 should stay a step at all is a Desktop-agent question for Phase 7, not a Phase 3 edit.
+- One source of truth: `tokens.js` `breakpoints` and `responsive.js` `BREAKPOINTS` are both **derived from** `tailwind.config.js`. "desktop" gets one meaning: ≥1024. The 768/767 overlap is fixed.
+- `md` is then **re-read as tablet portrait**, one site at a time (D1).
 
-Collapse 11 screens to **5 real ones**, keeping the names already used in 340 JSX prefixes so no page churns:
+## 13. Z-index — one scale
+`base 0 · sticky 20 · dropdown 30 · overlay-nav 40 · scrim 50 · modal 60 · popover 70 · toast 80 · tooltip 90`, emitted as CSS vars and Tailwind `z-*`. `.mobile-dropdown`'s literal `'100'` and both old scales retire.
 
-| Token | Width | Band | Current usage |
-|---|---:|---|---:|
-| `sm` | 640 | Large phone | 114 |
-| `md` | 768 | **Tablet portrait** | 166 |
-| `lg` | 1024 | Laptop | 60 |
-| `xl` | 1280 | Desktop | 1 |
-| `2xl` | 1536 | Wide desktop | 0 |
+## 14. Appearance architecture — the specification
 
-**Remove:** `xs`, `mobile`, `mobile-lg`, `tablet`, `desktop`, `desktop-lg` — but `desktop:` has **3 live usages** that must be rewritten to `xl:` first, and `2xl` is retained despite 0 usage because wide-desktop max-width capping needs it.
+### 14.1 Two orthogonal axes, two names
+- **Role accent** (exists): `ThemeProvider`/`useTheme` — purple, saffron, green, gold, blue by URL role. Keeps its name.
+- **Appearance** (new): `AppearanceProvider` / `useAppearance` — `dark | light`. "Theme" is never used for this in code, copy or commits.
 
-Critically, `md` must be **reinterpreted**: today it means "not a phone, therefore desktop." It must come to mean "tablet portrait", with `lg` as the first genuinely desktop band. This reinterpretation is the core of the tablet work and the main regression risk — see §16.
+The two combine in CSS: `html[data-appearance][data-role]` resolves 6 roles × 2 appearances.
 
-## 10. Token strategy
+### 14.2 Preference model
+- Values: `'dark' | 'light' | 'system'`. UI labels: **Dark · Light · Match device**. ("System" is jargon; "Match device" says what it does.)
+- **Default: `dark`** (D5). Existing users see nothing change until they choose.
+- Stored in plain `localStorage` under `mk-appearance`, not `obfuscatedStorage`: it isn't sensitive, it has to be readable before the bundle loads, and obfuscated storage keys depend on bundle code. Per device, not per account (D8), because an account field would need a server change.
+- Every read and write goes through `try/catch`; storage can throw in some private-browsing modes. On failure it falls back to `dark` in memory.
+- `system` follows `matchMedia('(prefers-color-scheme: light)')` live via a `change` listener.
+- Cross-tab sync through the `storage` event, the same pattern `AuthProvider` already uses.
+- Logout never touches it; verified that only `sessionStorage` is cleared.
 
-`styles/tokens.js` `DESIGN_TOKENS` already holds per-role colour. Extend, don't replace:
-- Promote spacing / radii / shadow / z-index / motion-duration scales into tokens.
-- Emit as CSS custom properties on `:root` so they work in both Tailwind classes and the remaining inline styles.
-- Retire Tailwind's unused `primary`(blue) / `secondary`(green) palettes once confirmed unreferenced.
-- Z-index: replace the 3-value scale and the hardcoded `zIndex: '100'` in `.mobile-dropdown` (which collides with `modal`) with one ordered scale.
+### 14.3 No-flash bootstrap
+- A `<1 KB` **classic** (non-module) script at `public/appearance-init.js`, loaded in `<head>` **before** any stylesheet. Module scripts are deferred and would paint once in the wrong appearance first.
+- It reads the preference, resolves `system`, and sets `document.documentElement.dataset.appearance`, `style.colorScheme`, and the `theme-color` meta.
+- **External, not inline, on purpose.** The CSP allows `'unsafe-inline'` today, but `index.html` itself notes the move to nonces. A same-origin file stays valid under `script-src 'self'` whatever happens to inline scripts, so no CSP change is needed now or later.
+- Two `<meta name="theme-color">` tags with `media="(prefers-color-scheme: …)"`, plus an explicit override from the script when the preference isn't `system`.
+
+### 14.4 Token layer — values (verified)
+CSS custom properties in `index.css`, as RGB triplets so alpha still works: `rgb(var(--surface) / 0.8)`.
+
+**Surfaces**
+| Token | Dark (unchanged) | Light |
+|---|---|---|
+| `--bg` | `#0a0a0a` | `#f6f7f9` |
+| `--surface` | `#111111` | `#ffffff` |
+| `--surface-raised` | `#161616` | `#ffffff` + soft shadow |
+| `--surface-sunken` | `#0a0a0a` | `#eef0f3` |
+| `--surface-overlay` (dialogs) | `#1a1a1a` | `#ffffff` |
+| `--scrim` | `rgb(0 0 0 / .6)` | `rgb(11 13 18 / .45)` |
+| `--ink` (tints, hairlines) | `255 255 255` | `11 13 18` |
+
+Light cards sit **above** the page (white on off-white), which keeps elevation consistent between appearances. That's why surfaces can't just follow `ink`: ink at 3% on a light page would make cards darker than the page and invert elevation. A cool neutral off-white is used, not the brand cream `#FFF8F0`: warm cream plus a saffron accent is one of the recognisable templated looks the frontend-design guidance warns against.
+
+**Text and lines**: per-appearance alpha of `--ink`. Worst case across all surfaces:
+
+| Token | Target | Dark α → worst ratio | Light α → worst ratio |
+|---|---|---|---|
+| `--fg` | ≥15 | 1.00 → 17.40 | 1.00 → 17.02 |
+| `--fg-secondary` | ≥7 | 0.70 → 8.97 | 0.78 → 9.23 |
+| `--fg-muted` | ≥4.5 | **0.55** → 6.03 | **0.64** → 5.60 |
+| `--fg-subtle` *(decorative/disabled only)* | ≥3 | 0.38 → 3.50 | 0.45 → 3.03 |
+| `--line` | decorative | 0.10 → 1.26 | 0.12 → 1.29 |
+| `--line-strong` *(input borders, 1.4.11)* | ≥3 | 0.38 → 3.50 | 0.45 → 3.03 |
+
+**Role accent**, set per `[data-role]`, one pair of values per appearance:
+| Role | Dark fill = accent-fg | on-accent (dark) | Light fill | on-accent (light) | Light accent-fg (text) |
+|---|---|---:|---|---:|---|
+| player | `#FF6B00` | `#0a0a0a` 6.93 | `#C2410C` | `#fff` 5.18 | `#C2410C` |
+| superadmin | `#F5A623` | `#0a0a0a` 9.77 | `#B45309` | `#fff` 5.02 | **`#92400E`** |
+| coach | `#22C55E` | `#0a0a0a` 8.69 | `#15803D` | `#fff` 5.02 | **`#166534`** |
+| admin / judge | `#8B5CF6` | `#0a0a0a` 4.68 | `#6D28D9` | `#fff` 7.10 | `#6D28D9` |
+| public | `#3B82F6` | `#0a0a0a` 5.38 | `#1D4ED8` | `#fff` 6.70 | `#1D4ED8` |
+
+Gold and green accent **text** uses the -800 shade in light mode because the -700 shade measures 4.39–4.40 on `--surface-sunken`. Buttons keep -700.
+
+**Focus ring** = `--accent-fg`, 2px, 2px offset. Minimum against any surface: 4.11 dark (purple), 4.39 light. All ≥3:1.
+
+**Status** (`success | warning | danger | info`), each with `-fg`, `-fill`, `-on`, `-tint`. Light: success `#15803D`, warning `#B45309`, danger `#B91C1C` (6.47 on white), info `#1D4ED8`. Dark: current hues with `#0a0a0a` labels on fills.
+
+### 14.5 Tailwind integration
+- `darkMode: ['selector', '[data-appearance="dark"]']` (supported by the installed 3.4.18), kept for the rare case that genuinely needs a different class, not as the main mechanism.
+- Semantic colours: `bg`, `surface`, `surface-raised`, `surface-sunken`, `surface-overlay`, `fg`, `fg-secondary`, `fg-muted`, `fg-subtle`, `line`, `line-strong`, `accent`, `accent-fg`, `on-accent`, `success-*`, `warning-*`, `danger-*`, `info-*`.
+- **Transitional alias (Layer A):** Tailwind `white` is redefined as `rgb(var(--ink) / <alpha-value>)`. With `--ink: 255 255 255` in dark, **all ~1,440 `text/bg/border-white` sites render pixel-identically**; in light they flip to ink straight away. That makes light mode usable for testing across untouched files while the semantic migration proceeds file by file. A literal `snow: '#ffffff'` is added for text that genuinely must stay white (labels on photos or fills; 7 known `text-white`-on-saturated-background sites plus inline `#fff`).
+  - Prerequisites, in order: fix the 4 `theme('colors.white')` plugin uses; review the 5 solid `bg-white` and 16 `ring/fill/stroke/placeholder-white` sites.
+  - The alias is **removed at the end** (Phase 9 exit). A check fails CI if new `text-white`/`bg-white/` appear after migration.
+
+### 14.6 JS token layer
+- New `alpha(color, a)` in `styles/tokens.js`. It accepts a legacy hex or a token name. For a hex it returns exactly what the concatenation produced: `a` is passed as the **byte** (`0x0A`), not a rounded decimal, so dark stays pixel-identical.
+- **Order is mandatory:** codemod all 428 `${X}NN` → `alpha(X, 0xNN)` first → verify zero diff → only then point role and status tokens at CSS variables (`rgb(var(--accent-rgb) / a)`). Swapping the tokens first breaks 48 files silently (R8).
+- `DESIGN_TOKENS.colors.surfaces/borders/text` values become `rgb(var(--…))` strings once the codemod is in, so the 13 files that read `DESIGN_TOKENS` and the 13 that read `useTheme()` follow the appearance **without re-rendering**.
+- `ThemeProvider`: drop `hexToRgb`; `primary` → `rgb(var(--accent))`, `primaryLight` → `rgb(var(--accent-rgb) / .15)`; it sets `data-role` on `<html>`.
+- The 19 framer colour animations move to CSS `hover:`/`transition-colors`. This is the same lesson as the stopwatch, where framer lagged and was replaced with plain CSS.
+
+### 14.7 Special surfaces
+| Surface | Treatment |
+|---|---|
+| **`StopwatchFace`** (26 hex) | Stays a **dark instrument in both appearances** (D7): rendered inside a `data-appearance="dark"` island so its tokens resolve dark. It's modelled on the iOS Clock stopwatch, which is dark in both appearances, and its amber 60–90 s / red 90+ band **is the COP time window** (judge-slip rules), so its colours carry rule meaning. |
+| `AmbientOrbs` / `HexGrid` | Colour props from accent tokens; light uses a lower `--orb-opacity` and smaller blur (bright blurred orbs read as smudges); `HexGrid` stroke = `--line`. |
+| Toaster | `--surface-overlay`, `--fg`, `--line`; status icons from status tokens. |
+| Razorpay (`CoachPayment`, `SuperAdminAddPlayerPayment`) | Their checkout can't read CSS variables. Pass the resolved accent hex via `getComputedStyle(documentElement).getPropertyValue('--accent-hex')`. |
+| `index.css` | `color-scheme` per appearance (native pickers and scrollbars follow); scrollbars per appearance (fixes today's light scrollbar on the dark app); `::selection`; `:-webkit-autofill` background per appearance (login forms otherwise get Chrome's pale fill in dark or the wrong fill in light); `.image-loading`/`.image-error`. |
+| `App.jsx` root | Inline `#0a0a0a` → `bg-bg`. |
+| Dialog scrims (`bg-black/NN`, ×4) | → `--scrim`. |
+
+### 14.8 The control
+- **`AppearanceMenu`**: an icon button (lucide `Moon`/`Sun`/`Monitor`, already a dependency) showing the *resolved* appearance, with accessible name **"Appearance: Dark"**. It opens a menu of three `menuitemradio` entries, **Dark · Light · Match device (currently Light)**, with the active one checked.
+- Keyboard: Enter/Space opens; arrows move; Esc closes and returns focus to the button. It reaches 44px at every touch width (mobile *and* tablet).
+- **Not a cycling button.** Cycling makes people remember the order (recognition over recall, your §5).
+- On change: the `LiveRegion` announces "Appearance: Light"; transitions are suppressed for one frame so 200 elements don't cross-fade. That's a single scoped rule, the one justified `!important` in the project.
+- **Switching is an attribute flip, never a reload or remount.** Only the control consumes `useAppearance()`; everything else follows through CSS variables. A judge mid-slip keeps every mark, the autosave and the socket (§15.4).
+
+### 14.9 Placement
+One shared `AccountControls` cluster, so every shell shows the same thing in the same order: **[Appearance] [Account/Profile] [Log out]**.
+
+| Shell | Where |
+|---|---|
+| `Navbar` | right cluster, before logout |
+| `UnifiedDashboard` (admin + superadmin, 13 tabs) | header account cluster |
+| `CoachDashboard` | header account cluster |
+| `JudgeDashboard`, `JudgeTeamPlayers`, `JudgePanelReview` | header account cluster |
+| `JudgeScoring`, `ScorerScoring`, `TimeKeeperScoring` | header only, **never inside the sticky Submit bar** |
+| Public (`Home`, `/scores`, login, register, forgot/reset, NotFound) | top-right of the page header |
+| Level/competition selection screens | top-right, same position as public |
+
+### 14.10 Rollout gate
+The light appearance is **not exposed** until every route passes the light matrix (Phase 9). Until then it is reachable only through `localStorage` or a `?appearance=light` query param honoured by the bootstrap script, for testing. No user ever sees a half-migrated light theme.
+
+## 15. Protected behaviours (from project memory)
+
+Several of these are easy to break with exactly the work this plan does. Treat them as spec.
+
+1. **Score sheet never scrolls sideways.** `ResponsiveScoringTable` divides the width it has: `table-layout: fixed`, participant column 16%, equal shares elsewhere, inputs `width: 100%`, headers **wrap**. Don't restore `whiteSpace: nowrap`, don't rely on the wrapper's `overflow-x`, don't drop a column. The tablet pass must re-measure it at 768 and 1024 with a 5-column panel.
+2. **The Chief's copy is a display seat.** A 4-judge panel is drawn with 5 columns on the Scorer sheet. Column count ≠ panel size; `ResponsiveScoringTable` takes an explicit `panelSize`. Layout refactors must not derive columns from `judges.length`.
+3. **Mark fields are number-only text inputs** (`type="text"`, `inputMode="decimal"`, `DecimalInput`), never `type="number"`. E2E selectors target `inputmode="decimal"`. The iOS ≥16px font rule (§4.4) applies to them too.
+4. **Judge slip.** The phone slip is **three tabs** plus a **pinned Live Final Score**, and nothing may sit under the fixed Submit footer. Refresh keeps the slip (autosave waits for `useJudgeInfo`), and `beforeunload` guards unsubmitted marks, so **nothing in this project may trigger a reload.** An edit never shows the old score ("Loading your submitted score…").
+5. **COP wording is verbatim, including capitalisation** ("At Least once…"). **No `uppercase`/`capitalize` utilities on COP text.** Same for stored values: render levels with `levelLabel()`, since CSS-capitalising prints "Dso".
+6. **Stopwatch:** rAF writes SVG transforms and the buttons are plain CSS. Don't reintroduce framer-motion. Whole seconds; amber/red band = rule window. Dark island (§14.7).
+7. **Pass-through:** with one competition at a level, `CompetitionSelectionScreen` renders only "Opening <name>…", never a frame of the list. Level cards say "Counting…" until the role's own list loads. New skeletons must not replace either state.
+8. **Public breakdown** shows the panel-rule average, with no per-judge J1–J4 pills. Don't re-add them in the name of "preserving information".
+9. **Every device includes iPhone and Safari.** WebKit joins the test matrix (§19).
 
 ---
 
-# PART III — PHASED IMPLEMENTATION
+# PART IV — PHASES
 
-Ordering follows your §53, resequenced so the highest-severity defects land first.
+Sequenced by severity (your §52) rather than the literal §53 order, and stated as such.
 
 ### Phase 2 — Safety net *(no visual change)*
-- **2.1** Add tablet widths to the harness: `TABLET_WIDTHS = [768, 820, 834, 1024]`; add `1280`, `1536` to desktop. Add `audit:tablet` script.
-- **2.2** Capture baseline screenshots at all 13 widths × 38 routes via `audit:shots`.
-- **2.3** Record a green baseline: `npm test`, `npm run lint`, `npm run audit:responsive`.
-- **2.4** Add `AccessLint` scan of key routes as a recorded baseline.
-- *Exit:* every subsequent phase is diffable against this.
+- 2.1 **Audit database.** Point the Server at a separate database (override its Mongo connection string for the run) and seed it with the roster chain. **Never run `--drop` against the everyday dev database**, which holds SGAM-TRIALS-1.
+- 2.2 Harness widths: add `TABLET_WIDTHS = [768, 820, 834, 1024]`, and add 1280 and 1536 to desktop. New script `audit:tablet`.
+- 2.3 WebKit: `playwright install webkit`; projects `iPhone 13` (390), `iPad Mini` (768), `iPad Pro 11` (834, + landscape). Chromium stays the default.
+- 2.4 `APPEARANCE=dark|light|both` env in the harness, set through `addInitScript` writing `mk-appearance` before navigation. It does nothing until Phase 3 ships the bootstrap, which is fine.
+- 2.5 Baselines: screenshots of 38 routes × 13 widths (dark); `npm test`, `npm run lint`, `audit:responsive`, `audit:modals`, `audit:judge-walk` all green; AccessLint scan per route saved.
+- *Exit:* every later phase can be diffed against this.
 
-### Phase 3 — Design system normalization
-- **3.1** Build the CSS and diff it to prove whether `.responsive-container` / `-grid` / `-flex` / `-text` emit anything (§4.6). Delete only if confirmed empty.
-- **3.2** Collapse breakpoints to 5. Rewrite the 3 `desktop:` usages → `xl:`. **Restart dev server.**
-- **3.3** Single breakpoint source of truth: `responsive.js` derives from the Tailwind config; fix the two conflicting meanings of "desktop"; fix the 768/767 overlap.
-- **3.4** Fix light-theme utilities (§4.3) to dark tokens, or delete if unreferenced.
-- **3.5** Remove `.no-horizontal-scroll` and `.mobile-full-width`; fix the real overflow sources the harness reports.
-- **3.6** `100vh` → `100dvh`/`100svh` (3 sites).
-- **3.7** De-duplicate: delete `.table-mobile-cards`; unify `useReducedMotion` to one module; remove shadowed `.aspect-*`.
-- **3.8** Delete 2,161 lines of dead code (5 responsive components + `DesignTokenAudit`) **after** confirming zero references including dynamic imports.
-- **3.9** Z-index and motion-duration scales into tokens.
+### Phase 3 — Foundation *(dark stays pixel-identical; screenshot diff must be 0)*
+- 3.1 Build the CSS and prove whether the four `@apply` components emit anything; delete only if they're empty.
+- 3.2 Breakpoints → 5 (D3); `ResponsiveContainer` lines 50/71/77 as §12. **Restart the dev server.**
+- 3.3 One breakpoint source (Tailwind → `responsive.js` → `tokens.js`); fix 768/767.
+- 3.4 One z-index scale (§13).
+- 3.5 Delete the dead set (§3.2, 2,349 L), after checking the built bundle, not grep alone.
+- 3.6 De-duplicate `.table-mobile-cards`, `useReducedMotion`, `.aspect-*`.
+- 3.7 Remove `.no-horizontal-scroll` / `.mobile-full-width`; fix what the harness then reports. `100vh` → `100dvh` (with `100vh` fallback first for old WebKit).
+- 3.8 **Appearance plumbing:** CSS variables for both appearances (§14.4, light values dormant); `appearance-init.js` + `theme-color` metas; `AppearanceProvider`/`useAppearance`; `App.jsx` root and `index.css` `:root` on tokens.
+- 3.9 **Codemod** 428 concatenations → `alpha(X, 0xNN)`; fix the 4 `theme('colors.white')` plugin sites. Diff 0.
+- 3.10 Tailwind `white` → ink alias + `snow`; review the 5 solid `bg-white` and 16 other white utilities. Diff 0 in dark.
+- 3.11 Light-only utilities from §4.3 moved onto tokens, or deleted if unreferenced.
+- *Exit:* dark screenshot diff = 0 across the matrix; light is reachable via the query param and legible, but not yet correct.
 
-### Phase 4 — Accessibility foundation **(P0 — do not defer)**
-- **4.1** Replace the global `input:focus` outline-strip with a token-driven `:focus-visible` ring meeting 3:1 contrast against `#0a0a0a`.
-- **4.2** Audit all 38 `outline-none` sites; pair each with a visible `focus-visible` ring.
-- **4.3** Verify the 40 `<input>` against 26 `htmlFor` — label every unlabelled control.
-- **4.4** Gate CSS animations behind `prefers-reduced-motion`; replace `transition: all`.
-- **4.5** Verify heading hierarchy across 120 headings.
-- **4.6** Add `role="table"`/`rowgroup`/`row`/`cell` semantics to grid-based data views **without** changing layout.
-- *Exit:* AccessLint clean on all 38 routes; full keyboard walkthrough of login → score submission.
+### Phase 4 — Accessibility foundation *(visible changes, all justified by WCAG)*
+- 4.1 Global `:focus-visible` ring (§14.4) replaces the `input:focus` strip; pair each of the 38 `outline-none` sites with it.
+- 4.2 **Primary buttons:** `ThemedButton` solid → `bg-accent text-on-accent`. In dark, labels on saffron/gold/green/blue/purple become near-black (D6).
+- 4.3 **Muted text:** the 220 `text-white/40–55` sites → `text-fg-muted` (dark α .55). /40 and /45 get visibly brighter.
+- 4.4 The 118 `text-white/15–35` sites are reviewed **one by one**: decorative/disabled → `text-fg-subtle`; carries information → `text-fg-muted`.
+- 4.5 Labels for the up-to-16 unlabelled inputs; heading hierarchy; motion gated by `prefers-reduced-motion`; `transition: all` → explicit properties.
+- 4.6 Table semantics on data-dense grids only (D2).
+- *Exit:* AccessLint clean (dark) on all 38 routes; keyboard walk from login to score submission.
 
-### Phase 5 — Tablet band **(the main build)**
-- **5.1** Restore the 44px touch floor for 768–1023: extend `.tap-safe`, remove the `minHeight: auto` inversion at `@screen md` (§4.4).
-- **5.2** Re-point layout switches: audit all 166 `md:` prefixes and decide per site whether the breakpoint means "tablet" or "desktop"; move the latter to `lg:`.
-- **5.3** Navigation: sidebar/`UnifiedDashboard` tab rail behaviour for tablet portrait vs landscape.
-- **5.4** Tables at tablet: currently either stacked (<768) or full desktop. Needs a middle density.
-- **5.5** Forms: column counts for 768–1023.
-- **5.6** Dialogs: sizing between phone-full-width and desktop-centred.
-- *Exit:* `audit:tablet` clean at 768/820/834/1024, portrait and landscape.
+### Phase 5 — Per-file pass: tablet band + semantic colour *(the main body)*
+Each file below is opened **once**. For each file:
+- **(a)** classify every `md:` site as tablet, desktop or ambiguous, and write it down (D1);
+- **(b)** add the tablet layout: 44px targets at 768–1023, ≥16px inputs on coarse pointers, column counts, dialog sizes;
+- **(c)** migrate colour to semantic tokens: text by bucket, `bg-white/NN` → surfaces, `border-white/NN` → `line`, inline `rgba(255,255,255,α)` → `rgb(var(--ink) / α)` or semantic, hex → accent/status tokens, framer colour animations → CSS;
+- **(d)** screenshot diff at 768 / 820 / 1024 in **both** appearances, plus 375 and 1366 to prove mobile and desktop didn't move;
+- **(e)** re-run the file's tests.
+
+Order is **public → player → coach → admin → superadmin → judge**, with judge last because it's socket-driven and used mid-meet.
+
+| # | File | Lines | `md:` | white cls | rgba-W | hex+α | style | framer colour |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | `public/Home.jsx` | 839 | **36** | 44 | 1 | 25 | 69 | 1 |
+| 2 | `public/PublicScores.jsx` | 487 | 4 | 9 | 22 | 11 | 30 | 0 |
+| 3 | `scores/PlayerRankingBoard.jsx` | 253 | 0 | 1 | 21 | 3 | 22 | 0 |
+| 4 | `scores/TeamChampionshipBoard.jsx` | 111 | 0 | 3 | 12 | 2 | 11 | 0 |
+| 5 | `responsive/ResponsiveRankings.jsx` | 418 | 0 | 0 | 5 | 8 | 79 | 0 |
+| 6 | `unified/UnifiedLogin.jsx` | 724 | 0 | 11 | 1 | 22 | 35 | 0 |
+| 7 | `unified/UnifiedRegister.jsx` | 934 | 0 | 14 | 1 | 24 | 35 | 0 |
+| 8 | `admin/AdminRegister.jsx` | 516 | 0 | 19 | 1 | 18 | 31 | 0 |
+| 9 | `shared/ForgotPassword.jsx` | 237 | 0 | 12 | 2 | 6 | 17 | 0 |
+| 10 | `shared/ResetPassword.jsx` | 548 | 0 | 20 | 8 | 6 | 32 | 0 |
+| 11 | `competition/LevelSelectionScreen.jsx` | 322 | 3 | 6 | 11 | 13 | 15 | 0 |
+| 12 | `competition/CompetitionSelectionScreen.jsx` | 932 | 3 | 20 | 14 | 19 | 30 | 0 |
+| 13 | `competition/CompetitionSelector.jsx` | 317 | 0 | 6 | 10 | 11 | 24 | 2 |
+| 14 | `competition/CompetitionDisplay.jsx` | 119 | 0 | 1 | 5 | 7 | 13 | 0 |
+| 15 | `layout/Navbar.jsx` | 228 | 1 | 14 | 2 | 4 | 18 | 1 |
+| 16 | `auth/ConfirmDialog.jsx` | 197 | 0 | 9 | 2 | 5 | 13 | 0 |
+| 17 | `auth/Dropdown.jsx` | 201 | 0 | 5 | 7 | 6 | 9 | 1 |
+| 18 | `player/PlayerTeamSelection.jsx` | 270 | 5 | 15 | 2 | 8 | 14 | 0 |
+| 19 | `player/PlayerDashboard.jsx` | 550 | 4 | 23 | 4 | 12 | 25 | 1 |
+| 20 | `coach/CoachCreateTeam.jsx` | 219 | 0 | 7 | 6 | 5 | 17 | 0 |
+| 21 | `coach/CoachDashboard.jsx` | 1,141 | 16 | 65 | 18 | 20 | 82 | 2 |
+| 22 | `coach/CoachPayment.jsx` | 716 | 1 | 48 | 4 | 9 | 44 | 0 |
+| 23 | `unified/UnifiedDashboard.jsx` | 876 | 12 | 17 | 6 | 14 | 36 | 2 |
+| 24 | `admin/AdminTeams.jsx` | 317 | 3 | 40 | 5 | 8 | 23 | 1 |
+| 25 | `admin/AdminLots.jsx` | 405 | 2 | 19 | 2 | 4 | 14 | 0 |
+| 26 | `admin/AdminScores.jsx` | 541 | 1 | 26 | 6 | 6 | 15 | 0 |
+| 27 | `admin/AdminJudges.jsx` | 1,070 | 1 | 40 | 9 | 22 | 54 | 0 |
+| 28 | `admin/AdminTransactions.jsx` | 456 | 2 | 29 | 7 | 11 | 25 | 0 |
+| 29 | `performance/PerformancePanel.jsx` | 440 | 0 | 5 | 33 | 9 | 33 | 0 |
+| 30 | `superadmin/AddPlayerForm.jsx` | 824 | 1 | 19 | 15 | 8 | 36 | 0 |
+| 31 | `superadmin/SuperAdminAddPlayerPayment.jsx` | 488 | 1 | 30 | 1 | 3 | 25 | 0 |
+| 32 | `superadmin/SuperAdminManagement.jsx` | **1,721** | 8 | **84** | 28 | 23 | **97** | 1 |
+| 33 | `admin/AdminScoring.jsx` | 796 | 5 | 31 | 4 | 18 | 30 | 1 |
+| 34 | `judge/JudgeDashboard.jsx` | 1,248 | 2 | 55 | 9 | 2 | 19 | 0 |
+| 35 | `judge/JudgeTeamPlayers.jsx` | 562 | 1 | 25 | 3 | 0 | 17 | 0 |
+| 36 | `judge/JudgeSequence.jsx` | 372 | 0 | 23 | 4 | 2 | 13 | 0 |
+| 37 | `judge/judgeShared.jsx` | 871 | 0 | 21 | **59** | 1 | 69 | 0 |
+| 38 | `judge/JudgeScoring.jsx` | 1,221 | 0 | 48 | 45 | 1 | 77 | 1 |
+| 39 | `judge/ScorerScoring.jsx` + `responsive/ResponsiveTable.jsx` | 910 + 553 | 4 | 24 | 4 | 11 | 26 | 2 |
+| 40 | `judge/JudgePanelReview.jsx` | 705 | 0 | 18 | 17 | 0 | 39 | 3 |
+| 41 | `judge/TimeKeeperScoring.jsx` (+ `StopwatchFace` island) | 274 | 2 | 7 | 2 | 2 | 15 | 0 |
+
+*(Files under 25 combined signals and the `design-system/` internals are handled with their first consumer. Judge files 37–41 are re-verified with a real `node Server/scripts/resetScores.js --commit` against the audit DB, not the `WALK_UNLOCK` response rewrite.)*
+
+- *Exit:* `audit:tablet` clean at 768/820/834/1024, portrait and landscape, Chromium + WebKit; no `${X}NN` left anywhere; `text-white` only where `snow` was meant.
 
 ### Phase 6 — Mobile gap closure
-- **6.1** Migrate the 4 remaining hand-rolled `fixed inset-0` modals to `.modal-overlay`.
-- **6.2** Resolve the 3 `overflow-x-auto` tables → `.stacked-table` or justified opt-out.
-- **6.3** Re-run `audit:judge-walk`. **Remember the judge slip is three tabs** (Difficulty / Combination / Exec & Orig) — scrolling shows only the first; the other two must be clicked to render. Anything measuring that screen must switch tabs, and nothing may hide under the fixed 77px Submit footer.
+- 6.1 Move the 4 hand-rolled `fixed inset-0` dialogs onto `.modal-overlay`.
+- 6.2 Adopt `useBodyScrollLock` in every `.modal-overlay` user (currently 1 of 10), and move the three hand-rolled menu locks onto it too (`Navbar.jsx:28`, `Home.jsx:252`, `UnifiedDashboard.jsx:295`). Each writes `body.style.overflow` independently, so a menu closing while a dialog is open unlocks the page underneath. The hook's own header comment describes exactly this clobbering.
+- 6.3 The 2 remaining `overflow-x-auto` tables → `.stacked-table` or a justified `data-allow-overflow`.
+- 6.4 `audit:judge-walk` with tab switching and the Submit-footer `elementFromPoint` check, in both appearances.
 
-### Phase 7 — Desktop viewport efficiency (your §8/§29)
-- **7.1** Measure real content height at 1280×720 and 1366×768 across all 38 routes.
-- **7.2** Reduce excess vertical space via grouping and multi-column — **not** by shrinking type (GUARDRAIL 5).
-- **7.3** Content max-widths and sticky contextual toolbars where they earn their place.
+### Phase 7 — Desktop viewport efficiency
+Measure content height at 1280×720 and 1366×768 for all routes; reduce by grouping, multi-column and sticky toolbars, **never by shrinking type**; decide the fate of the 1440 container step (§12).
 
-### Phase 8 — Shared component consolidation
-Extract, from observed duplication only (§39): PageHeader · FilterToolbar · DataTable wrapper · Pagination · StatusBadge · EmptyState · ErrorState · LoadingSkeleton · FormField · ButtonGroup · MetricCard.
-**Constraint:** extract a component only where duplication is already proven — no speculative abstraction (§38). The 5 dead components are the cautionary precedent.
+### Phase 8 — Shared components
+Extract only where duplication is proven: `PageHeader` · `AccountControls` (§14.9) · `FilterToolbar` · `DataTable` wrapper · `Pagination` · `StatusBadge` (status tokens) · `EmptyState` · `ErrorState` · `LoadingSkeleton` (must not replace the §15.7 states) · `FormField` · `MetricCard`. The 9 deleted dead components are the precedent to avoid.
 
-### Phase 9 — Inline style reduction
-1,505 sites is too many to convert safely in one pass. Convert **only** where a site is (a) in a file being touched for another reason, and (b) expressible as a token. Target the top 9 files (629 occurrences, 42%). Explicitly **not** a goal to reach zero.
+### Phase 9 — Light appearance completion and exposure
+- 9.1 Full matrix in light: 38 routes × 13 widths, Chromium + WebKit; AccessLint contrast per route.
+- 9.2 Tune the orbs, scrims, shadows and toaster by eye against the checklist in your §57.
+- 9.3 Ship `AppearanceMenu` in every shell (§14.9) and lift the rollout gate.
+- 9.4 Remove the `white` → ink alias; turn on the CI check forbidding new `text-white`/`bg-white/`.
 
 ### Phase 10 — Performance
-Resize debounce 250ms → ~100ms with `requestAnimationFrame`; stop `useResponsiveValue` subscribing to full resize state; consolidate per-element resize listeners; re-check memoization once inline styles drop.
+Resize handling on `requestAnimationFrame` at ~100ms; stop `useResponsiveValue` subscribing to everything; one shared resize observer; re-check memoisation now that the colour inline styles are gone; confirm an appearance switch triggers **no React commit** outside the menu (React Profiler).
 
-### Phase 11 — Regression & final audit
-Full matrix, all roles, all 38 routes, 13 widths, plus the §47 edge cases (long names, empty datasets, many items, multiple validation errors, slow network). Produce the §62 report.
+### Phase 11 — Regression and final report
+All roles, all routes, 13 widths, 2 appearances, 2 engines, plus your §47 edge cases (long names, empty and single-item sets, many items, long errors, slow network, failed requests). Deliver the §62 report, including a section per protected behaviour in §15.
 
 ---
 
-## 11. Priority classification
+## 16. Priorities
+**P0:** focus visible · dark-theme contrast (primary buttons, muted text) · tablet touch-target inversion + iPad input zoom · overflow patches · the 768/767 overlap.
+**P1:** tablet band · WebKit and tablet coverage · 4 hand-rolled dialogs + scroll lock · 2 overflow tables · table semantics on data grids · desktop vertical efficiency · appearance foundation (because it gates light).
+**P2:** light appearance completion · breakpoint and z-index consolidation · dead code · shared components.
+**P3:** motion polish, micro-interactions. Not started while P0/P1 are open.
 
-**P0 (fix first):** focus-visible failure (§5.1) · tablet touch-target inversion (§4.4) · `.no-horizontal-scroll` overflow patches (§4.7) · light-theme controls in dark app (§4.3) · 768/767 overlap (§4.2)
+## 17. Why one pass per file
+The tablet review and the colour migration touch the same lines of the same ~40 files and are checked by the same screenshots. Two separate passes would double the review cost, and doubling it on `SuperAdminManagement` (1,721 lines, 97 inline styles) alone would be expensive. The foundation phases (3, 4) are deliberately cross-cutting and mechanical, so Phase 5 is purely judgement work.
 
-**P1:** tablet layout band (§0) · missing tablet test coverage · 4 un-migrated modals · 3 overflow-x tables · grid data without table semantics · desktop vertical efficiency
-
-**P2:** breakpoint collapse · duplicate primitives · dead code · inline-style reduction · shared component extraction
-
-**P3:** motion polish · micro-interactions · decorative refinement — **not to be started while any P0/P1 remains open** (your §52).
-
-## 12. Verification protocol
-
+## 18. Verification protocol
 | Check | Command | Gate |
 |---|---|---|
-| Unit | `npm test` | Must stay green |
-| Lint | `npm run lint` | Must stay green |
-| Overflow + touch targets | `npm run audit:responsive` | No new findings |
-| Tablet | `audit:tablet` *(to be added, 2.1)* | Clean |
-| Modals | `npm run audit:modals` | Clean |
-| Judge flow | `npm run audit:judge-walk` | Clean |
-| Visual diff | `npm run audit:shots` | Reviewed vs Phase-2 baseline |
-| Accessibility | `accesslint:accessibility-scan` per route | No new violations |
+| Unit | `npm test` | green |
+| Lint | `npm run lint` | green |
+| Overflow + targets | `npm run audit:responsive` (`ROLE=`, `WIDTHS=`, `AUDIT_HEIGHT=`, `APPEARANCE=`) | no new findings |
+| Tablet | `audit:tablet` (new) | clean |
+| Dialogs | `audit:modals` | clean |
+| Judge flow | `audit:judge-walk` | clean, both appearances |
+| Visual | `audit:shots` | diff reviewed vs Phase-2 baseline; **0 in dark for Phase 3** |
+| A11y | `accesslint:accessibility-scan` per route per appearance | no new violations |
+| Colour hygiene | grep `\$\{[A-Za-z_.]+\}[0-9A-Fa-f]{2}` | 0 after 3.9 |
 
-`ROLE=`, `WIDTHS=` and `AUDIT_HEIGHT=` env vars scope any run; `AUDIT_HEIGHT` covers landscape.
+Screenshot volume: full matrix is 38 × 13 × 2 = 988 per engine. Per-commit smoke uses 3 widths (375, 820, 1366) × 2 appearances; the full matrix runs at each phase exit.
 
-**A fully judged meet has no openable score sheet** — that is the normal end state. To exercise judge scoring, prefer a real `node Server/scripts/resetScores.js --commit` over the `WALK_UNLOCK=1` response-rewriting path, because the faked path never exercises anything downstream of a real slip. Clearing `isFinalized` alone is insufficient: the roster derives "locked" from all five of `isFinalized` / `hasScore` / `isLocked` / `judgeSlips` / `judgeScores`.
+## 19. Environments
+- **Audit DB:** separate database, seeded by the roster chain; its accounts match `CREDENTIALS`. The everyday dev DB (SGAM-TRIALS-1, hand-seated panels) is never dropped or reseeded by this project.
+- **Dev servers:** the owner usually already has 5000/5173 running; reuse them and pass `E2E_BASE_URL` explicitly.
+- **Preview pane:** fine for reading pages; **never** for judging mobile layout.
 
-## 13. Risk register
-
+## 20. Risk register
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | **Reinterpreting `md` (§9) silently changes 166 layout sites** — the single largest regression risk | Per-site review, never global find/replace. Screenshot diff each one against the Phase-2 baseline. |
-| R2 | Deleting "dead" code that is dynamically imported | Confirm via built bundle, not grep alone |
-| R3 | Tailwind config edits not hot-reloading → false results | Mandatory dev-server restart; explicit `E2E_BASE_URL` |
-| R4 | Preview browser misreporting mobile layout | Playwright only, never the preview pane |
-| R5 | Touching role-conditional rendering could expose another role's controls | Per-role regression walk in Phase 11 (§43) |
-| R6 | Judge scoring is socket-driven and mid-competition stateful | Treat as highest-risk area; change last, verify with a real reset |
-| R7 | Inline-style conversion changing computed values | Convert only token-expressible sites; visual diff each file |
+| R1 | Re-reading `md` silently moves 167 sites | Per-site classification, per-file diff (D1) |
+| R2 | Deleting code that's dynamically imported | Check the built bundle (Phase 3.5) — v1 already miscounted once |
+| R3 | Tailwind config not hot-reloading | Mandatory restart; explicit `E2E_BASE_URL` |
+| R4 | Preview pane misreporting mobile | Playwright only |
+| R5 | Exposing one role's controls to another | Per-role walk in Phase 11 |
+| R6 | Judge screens are live and stateful | Last in order; real reset; §15 checklist |
+| R7 | Inline-style conversion shifting values | Byte-exact `alpha()`; diff 0 |
+| **R8** | **Concatenated colours becoming invalid CSS silently** (428 / 48 files) | Codemod before any token swap; grep gate = 0 |
+| **R9** | framer can't animate `var()` (19 sites) | Move to CSS before swap |
+| **R10** | `white`-means-ink alias confusing future code | Time-boxed to Phase 9; CI check afterwards |
+| **R11** | Visible dark changes from a11y fixes (button labels, 220 muted texts, 118 reviewed) | The only part existing users will notice; screenshot review; release note |
+| **R12** | `setup --drop` against the dev DB | Separate audit DB (§19) |
+| **R13** | Flash of the wrong appearance on load | Blocking classic bootstrap before CSS (§14.3) |
+| **R14** | WebKit-only defects (`dvh`, autofill, safe-area, input zoom) | WebKit projects from Phase 2 |
+| **R15** | A reload from the toggle losing a judge's slip | Attribute flip only; judge-walk asserts marks survive a toggle |
 
-## 14. Explicitly out of scope
+## 21. Out of scope
+Business logic · API contracts/endpoints · anything in `Server/` · data values and calculations · permissions and auth · workflows and journeys · navigation meaning · role capabilities · form/field meaning · filter/sort/search behaviour · validation rules · table contents · metrics · status meanings · **COP text** · **storing the appearance on the account** (needs a server field).
 
-Per your §2 and §60 — and stated here so no agent drifts into them: business logic, API contracts and endpoints, database structure, any `Server/` file, data calculations and values, permissions, auth/authorization behaviour, workflows and user journeys, navigation meaning, role capabilities, form/field meaning, filter/sort/search behaviour, validation rules, table information content, dashboard metrics, entity relationships, status meanings.
+Also noted but not scheduled: the app still uses Vite's default `vite.svg` favicon.
 
-Presentation adapts. Meaning does not.
+## 22. Decisions
 
-## 15. Definition of done
+**Settled by the owner (2026-09-20)**
+- **D1** — `md` re-read per site with screenshot diffs, never a global replace; each site recorded as tablet, desktop or ambiguous.
+- **D2** — Table semantics on data-dense grids only (stable column meaning repeating across rows, plus a header row).
 
-All 38 routes pass overflow, touch-target and console checks at 13 widths across mobile, tablet and desktop, portrait and landscape · AccessLint clean, keyboard walkthrough complete, focus visible everywhere · zero data points, columns, metrics or controls removed · all roles verified against their own route sets · `npm test` and `npm run lint` green · visual diff reviewed against the Phase-2 baseline with every change justified · §62 report delivered.
+**Decided under the standing rule** (recommended option, no change to any user flow):
+- **D3** — Breakpoints → `sm md lg xl 2xl`. `desktop:` → `min-[1440px]:`, pixel-identical.
+- **D4** — Inline styles: **every colour-bearing inline style is tokenised**, because light mode is impossible otherwise. Geometry-only inline styles stay unless their file is already open and a token fits.
+- **D5** — Default appearance **Dark**; options Dark / Light / Match device. Nothing changes for anyone until they choose.
+- **D6** — In dark, primary-button labels become near-black on the bright role fills (2.0–2.9:1 → 4.7–9.8:1). Visible, but the flow is unchanged and it's required by WCAG.
+- **D7** — The stopwatch stays a dark instrument in both appearances.
+- **D8** — Appearance is saved per device, not per account.
 
----
+**Open:** none blocking. If you want the preference to follow the account across devices (D8), that needs a server field and would be a separate, backend-scoped change.
 
-## 16. Decisions
-
-### 16.1 Settled (owner-approved 2026-09-20)
-
-**D1 — `md` reinterpretation: per-site review, screenshot-diffed.**
-No global find/replace under any circumstances. Each of the 166 `md:` sites is reviewed individually, its intent classified as *tablet* or *desktop*, and only desktop-intent sites move to `lg:`. Every changed site is visual-diffed against the Phase-2 baseline before it is accepted. This is the slowest available route and is chosen deliberately: R1 is the largest regression risk in the project.
-
-*Implementation note:* record the classification per site (file:line → tablet | desktop | ambiguous) as the work proceeds, so the decision is auditable afterwards and ambiguous sites can be escalated rather than guessed.
-
-**D2 — Grid table semantics: data-dense views only.**
-Add `role="table"` / `rowgroup` / `row` / `cell` to genuine data grids only — scores, teams, transactions, judges, superadmin management. Decorative grids and card-layout grids are left alone; marking those up as tables would be actively wrong for screen-reader users. Layout is not re-authored in either case (§4 of Phase 4.6).
-
-*Boundary test for inclusion:* the grid has a stable column meaning that repeats across rows, and a header row (visual or otherwise). If it does not, it is layout, not a table.
-
-### 16.2 Still open
-
-1. **Breakpoint collapse (§9)** — proceed with the 11→5 reduction, or keep the unused aliases and simply stop adding to them? The reduction is cleaner but touches the config that every page compiles against. *Not blocking until Phase 3.2.*
-2. **Inline styles (Phase 9)** — confirm that "reduce meaningfully in the top 9 files" (629 of 1,505 occurrences) is the target, rather than eliminating all of them. *Not blocking until Phase 9.*
+## 23. Definition of done
+All ~50 screens pass overflow, targets and console at 13 widths, portrait and landscape, in **both appearances**, on **Chromium and WebKit** · AccessLint clean in both appearances · focus visible everywhere · every §9 contrast failure fixed · no concatenated colours, no `white`-as-ink alias · appearance menu in every shell, keyboard-operable, surviving logout and reload with no flash · all §15 behaviours re-verified · no data point, column, metric or control removed · every role's routes verified · `npm test` + lint green · the §62 report delivered.
