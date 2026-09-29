@@ -10,7 +10,7 @@ import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
@@ -54,7 +54,7 @@ const DarkSearch = ({ value, onChange, placeholder }) => (
     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
       className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
@@ -82,7 +82,7 @@ const LoadingState = ({ label }) => (
 );
 
 const InfoBanner = ({ color, children }) => (
-  <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${color}10`, borderColor: `${color}30` }}>
+  <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(color, 0x10)}`, borderColor: `${alpha(color, 0x30)}` }}>
     {children}
   </div>
 );
@@ -121,8 +121,8 @@ const ScoreTypeTabs = ({ value, onChange }) => (
           onClick={() => onChange(type.value)}
           className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe md:min-h-[38px] border"
           style={{
-            background: active ? `${ADMIN_COLORS.saffron}18` : 'rgba(255,255,255,0.03)',
-            borderColor: active ? `${ADMIN_COLORS.saffron}45` : ADMIN_COLORS.darkBorderSubtle,
+            background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgba(255,255,255,0.03)',
+            borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x45)}` : ADMIN_COLORS.darkBorderSubtle,
             color: active ? ADMIN_COLORS.saffronLight : 'rgba(255,255,255,0.5)',
           }}>
           {type.label}

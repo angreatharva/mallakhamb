@@ -22,7 +22,7 @@ import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -752,18 +752,18 @@ const ScorerScoring = () => {
               onClick={() => navigate('/judge/sequence')}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold min-h-[36px] transition-colors"
               style={{
-                borderColor: `${ADMIN_COLORS.purple}40`,
+                borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
                 color: ADMIN_COLORS.purpleLight,
-                background: `${ADMIN_COLORS.purple}12`,
+                background: `${alpha(ADMIN_COLORS.purple, 0x12)}`,
               }}
-              whileHover={{ background: `${ADMIN_COLORS.purple}25` }}
+              whileHover={{ background: `${alpha(ADMIN_COLORS.purple, 0x25)}` }}
               whileTap={{ scale: 0.97 }}
             >
               <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Set Sequence</span>
             </motion.button>
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+              style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: ADMIN_COLORS.red } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>
               {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
             </span>
           </div>
@@ -775,7 +775,7 @@ const ScorerScoring = () => {
 
         {isLocked && (
           <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
-            style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
+            style={{ background: `${alpha(ADMIN_COLORS.red, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.red, 0x30)}` }}
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: ADMIN_COLORS.red }} />
@@ -826,7 +826,7 @@ const ScorerScoring = () => {
           </p>
         </div>
 
-        {/* <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
+        {/* <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
             <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
@@ -870,7 +870,7 @@ const ScorerScoring = () => {
                   {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
-                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; } }}
                   onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
               </div>
               );

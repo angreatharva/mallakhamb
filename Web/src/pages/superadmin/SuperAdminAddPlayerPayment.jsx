@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
@@ -239,7 +239,7 @@ const SuperAdminAddPlayerPayment = () => {
         <div className="text-center">
           <div
             className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
           />
           <p className="text-white/45 text-sm">Loading checkout…</p>
         </div>
@@ -327,7 +327,7 @@ const SuperAdminAddPlayerPayment = () => {
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div
             className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full"
-            style={{ background: `${COLORS.saffron}06`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }}
+            style={{ background: `${alpha(COLORS.saffron, 0x06)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }}
           />
         </div>
       )}
@@ -358,7 +358,7 @@ const SuperAdminAddPlayerPayment = () => {
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
             >
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${COLORS.saffron}18` }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
                   <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
                 </div>
                 <div>

@@ -5,7 +5,7 @@ import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } f
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
@@ -119,9 +119,9 @@ const CompetitionSelector = ({ userType }) => {
         disabled={isLoadingOrSwitching}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
         style={{
-          background: isOpen ? `${COLORS.saffron}10` : 'rgba(255,255,255,0.05)',
-          borderColor: isOpen ? `${COLORS.saffron}40` : COLORS.darkBorderSubtle,
-          boxShadow: isOpen ? `0 0 0 3px ${COLORS.saffron}12` : 'none',
+          background: isOpen ? `${alpha(COLORS.saffron, 0x10)}` : 'rgba(255,255,255,0.05)',
+          borderColor: isOpen ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
+          boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
         }}
         whileTap={{ scale: 0.97 }}
         aria-haspopup="listbox"
@@ -150,8 +150,8 @@ const CompetitionSelector = ({ userType }) => {
             className="absolute right-0 mt-2 w-80 rounded-2xl border overflow-hidden z-50"
             style={{
               background: '#111111',
-              borderColor: `${COLORS.saffron}25`,
-              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${COLORS.saffron}10`,
+              borderColor: `${alpha(COLORS.saffron, 0x25)}`,
+              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
               maxHeight: 380,
             }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
@@ -216,10 +216,10 @@ const CompetitionSelector = ({ userType }) => {
                       disabled={isSwitching}
                       className="w-full text-left px-4 py-3 transition-colors duration-150 disabled:opacity-50 border-b last:border-b-0"
                       style={{
-                        background: isActive ? `${COLORS.saffron}10` : 'transparent',
+                        background: isActive ? `${alpha(COLORS.saffron, 0x10)}` : 'transparent',
                         borderColor: COLORS.darkBorderSubtle,
                       }}
-                      whileHover={{ background: `${COLORS.saffron}08` }}
+                      whileHover={{ background: `${alpha(COLORS.saffron, 0x08)}` }}
                       role="option"
                       aria-selected={isActive}
                     >
@@ -251,7 +251,7 @@ const CompetitionSelector = ({ userType }) => {
                           )}
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
-                          style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}>
+                          style={{ background: `${alpha(sc, 0x15)}`, color: sc, border: `1px solid ${alpha(sc, 0x30)}` }}>
                           {competition.status}
                         </span>
                       </div>
@@ -296,12 +296,12 @@ const CompetitionSelector = ({ userType }) => {
           >
             <motion.div
               className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
-              style={{ background: '#111111', borderColor: `${COLORS.saffron}30` }}
+              style={{ background: '#111111', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
             >
               <motion.div
                 className="w-5 h-5 rounded-full border-2 border-t-transparent"
-                style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+                style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
               />

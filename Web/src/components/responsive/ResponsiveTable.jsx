@@ -1,6 +1,6 @@
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/copRules';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
@@ -41,9 +41,9 @@ const inputStyle = (locked, fluid = false) => ({
 // ─── Pill badge ───────────────────────────────────────────────────────────────
 const Pill = ({ children, color }) => (
   <span style={{
-    background: `${color}22`,
+    background: `${alpha(color, 0x22)}`,
     color,
-    border: `1px solid ${color}44`,
+    border: `1px solid ${alpha(color, 0x44)}`,
     borderRadius: 20,
     padding: '2px 10px',
     fontSize: 11,
@@ -86,7 +86,7 @@ export const ResponsiveTable = ({
         cursor: onRowClick ? 'pointer' : 'default',
         transition: 'border-color 0.15s, box-shadow 0.15s',
       }}
-      onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.borderColor = `${C.saffron}44`; e.currentTarget.style.boxShadow = `0 4px 20px rgba(0,0,0,0.4)`; }}}
+      onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.borderColor = `${alpha(C.saffron, 0x44)}`; e.currentTarget.style.boxShadow = `0 4px 20px rgba(0,0,0,0.4)`; }}}
       onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
       {columns.map((col, ci) => {
@@ -148,7 +148,7 @@ export const ResponsiveTable = ({
                     transition: 'background 0.12s',
                     borderBottom: `1px solid ${border}`,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${C.saffron}0A`; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha(C.saffron, 0x0A)}`; }}
                   onMouseLeave={e => { e.currentTarget.style.background = ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)'; }}
                 >
                   {columns.map((col, ci) => (
@@ -194,7 +194,7 @@ const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'n
     disabled={isLocked}
     placeholder={placeholder}
     style={inputStyle(isLocked, fluid)}
-    onFocus={e => { if (!isLocked) e.target.style.borderColor = `${C.saffron}80`; }}
+    onFocus={e => { if (!isLocked) e.target.style.borderColor = `${alpha(C.saffron, 0x80)}`; }}
     onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
   />
 );
@@ -301,7 +301,7 @@ export const ResponsiveScoringTable = ({
                       return (
                         <>
                           {result.baseScoreApplied && (
-                            <span style={{ fontSize: 10, background: `${C.amber}22`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                            <span style={{ fontSize: 10, background: `${alpha(C.amber, 0x22)}`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
                               Base Score Applied (±{result.tolerance.toFixed(2)})
                             </span>
                           )}
@@ -436,7 +436,7 @@ export const ResponsiveScoringTable = ({
                 })}
                 <td style={{ padding: '12px 8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                    <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: C.blue, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
                       {(() => {
                         const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                         return result.average.toFixed(2);
@@ -448,7 +448,7 @@ export const ResponsiveScoringTable = ({
                         return (
                           // Wraps: this badge is ~110px on one line and the
                           // column it sits in is narrower than that.
-                          <span style={{ fontSize: 9, background: `${C.amber}22`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600, lineHeight: 1.3 }}>
+                          <span style={{ fontSize: 9, background: `${alpha(C.amber, 0x22)}`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600, lineHeight: 1.3 }}>
                             Base Score (±{result.tolerance.toFixed(2)})
                           </span>
                         );
@@ -478,7 +478,7 @@ export const ResponsiveScoringTable = ({
                   />
                 </td>
                 <td style={{ padding: '12px 8px' }}>
-                  <span style={{ background: `${C.green}18`, color: C.green, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
+                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: C.green, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
                     {calculateFinalScore(scores[player.id] || {}, panelSize)}
                   </span>
                 </td>
@@ -512,7 +512,7 @@ export const ResponsiveTeamTable = ({
         cursor: 'pointer',
         transition: 'border-color 0.15s, box-shadow 0.15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = `${C.purple}55`; e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.5)`; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = `${alpha(C.purple, 0x55)}`; e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.5)`; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
@@ -528,7 +528,7 @@ export const ResponsiveTeamTable = ({
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
-          <div style={{ background: `${C.purple}18`, border: `1px solid ${C.purple}30`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
+          <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
             <p style={{ fontSize: 11, color: C.purpleLight, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
             <p style={{ fontSize: 22, fontWeight: 800, color: C.purple }}>{team.players?.length || 0}</p>
           </div>

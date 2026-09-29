@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 
 /**
  * "This meet has closed."
@@ -67,7 +67,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
 
       <div
         className="h-px w-full"
-        style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}30, transparent)` }}
+        style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x30)}, transparent)` }}
       />
     </motion.div>
   );

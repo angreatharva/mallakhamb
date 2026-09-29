@@ -2,8 +2,39 @@
 
 **Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
 **Audited against:** `master` @ `5a9cae8`, 2026-09-28
-**Status:** Discovery complete for both scopes. **No application code modified.**
+**Status:** Implementation started on branch `feat/responsive-appearance` (2026-09-29). Phase 2 and Phase 3 done except where noted in the log below.
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
+
+---
+
+## Implementation log
+
+### Phase 2 — safety net (done, with two gaps)
+- Harness: `TABLET_WIDTHS [768, 820, 834, 1024]` with portrait heights; 1280 and 1536 added to desktop; tap targets measured below 1024 or on a coarse pointer; `audit:tablet`; `APPEARANCE=dark|light|both` via an init script writing `mk-appearance`; the sweep factored into `e2e/support/audit-suite.js`.
+- WebKit: `iphone-13`, `ipad-mini`, `ipad-pro-11`, `ipad-pro-11-landscape`, **opt-in** (`E2E_WEBKIT=1`) and restricted to `responsive-*`/`visual-*` specs, so the seeding specs can never replay. `npm run test:e2e:install:webkit` has not been run on this machine yet.
+- **Audit DB (2.1) — not done; replaced for now.** Instead of a second database, `AUDIT_<ROLE>_EMAIL/PASSWORD` + `AUDIT_MEET` overrides let the read-only audits sign in with accounts that exist in the TRIALS dev DB (kept in gitignored `Web/.env.audit.local`). Nothing was dropped or reseeded. A real audit DB is still needed for the judge walk with a real `resetScores`.
+- **Visual baseline (2.5): `e2e/visual-baseline.spec.js` / `npm run audit:visual`.** 44 routes × 375/820/1366, dark — **132 screenshots, re-verified at 0 differing pixels on unchanged code** before any Phase 3 edit. Three fixes were needed before a baseline meant anything: `reducedMotion` must go through `contextOptions` (as a bare test option it is silently ignored); full-page shots must scroll first or every `whileInView` section photographs as black; and the capture waits for toasts and in-flight text to clear (the judge screens differed between two runs of the same build otherwise).
+- Not yet run: the AccessLint baseline (the AccessLint server failed to connect this session) and the full 13-width matrix.
+
+### Phase 3 — foundation (done; exit gate = dark diff 0 across the 132)
+- 3.1 The four `@apply` components **do** emit CSS when used — they are unused, not broken. Kept, per the rule.
+- 3.2/3.3 Screens are `sm md lg xl 2xl` from one module, `src/styles/breakpoints.js`, which `tailwind.config.js`, `utils/ui/responsive.js` and `styles/tokens.js` all read. "desktop" = ≥1024 everywhere; the 1440 step survives as `WIDE_CONTAINER_MIN` (`isDesktopBaseline`, `container-centered`, and `min-[1440px]:` in `ResponsiveContainer`). The 768/767 overlap lived in an unused `.responsive-bg` rule, now deleted.
+- 3.4 One z-index scale (`Z_INDEX`) as `--z-*` properties and `z-sticky … z-tooltip` utilities. The old named utilities had no users. **The ~70 numeric `z-10…z-[9999]` sites are not migrated** — they move file by file in Phase 5.
+- 3.5 Dead set deleted. The bundle confirmed it: the four lazy backgrounds were shipping as real chunks; DesignTokenAudit and the four Responsive* files were already tree-shaken. `ResponsiveFullWidthContainer` and `ResponsiveFormContainer` went with them.
+- 3.6 `useReducedMotion` has one implementation (hooks/useResponsive; the design-system path re-exports it; Home's re-export removed). `.table-mobile-cards`, the index.css `.aspect-*` copies and the unused `.touch-target` are gone.
+- 3.7 `.no-horizontal-scroll` / `.mobile-full-width` removed; `body`/`#root` use `100dvh` after a `100vh` fallback.
+- 3.8 Appearance plumbing: tokens for both appearances in `index.css` (role palettes on `[data-role]`, each `[data-appearance]` block picks its half, derived tokens redeclared per block so a dark island inside a light page resolves dark); `public/appearance-init.js` + two `theme-color` metas; `AppearanceProvider`/`useAppearance` (`src/contexts/`), helpers in `src/utils/ui/appearance.js`; `App.jsx` root is `bg-bg`. `?appearance=light|dark|system` works (and persists) — the only way in until Phase 9.
+- 3.9 **428 concatenations in 48 files → `alpha(X, 0xNN)`**; `src/styles/colourHygiene.test.js` keeps it at 0 in CI.
+- 3.10 Tailwind `white` = ink, plus `snow`. Of the 5 solid `bg-white`: the light-styled ErrorBoundary card and the SuperAdminManagement toggle knob are `snow`; the other 3 were in deleted ResponsiveForm. The 16 `placeholder-white/NN` correctly follow ink.
+- 3.11 Every light-only plugin/index.css utility was unreferenced and is deleted, except the scrollbars, which now follow the appearance.
+- Also from §14.6, because light cannot be legible without it: `DESIGN_TOKENS` surfaces, neutral borders and text, and `COMMON_STYLES`, are `rgb(var(--…))` strings (dark-identical). Role and status colours stay hex until the framer colour animations are gone (R9) and `ThemeProvider` sets `data-role` — the accent tokens are defined but dormant.
+
+**The one intentional dark change in Phase 3:** scrollbars were a light-grey track and thumb on the near-black app; they now follow the appearance (headless screenshots don't show scrollbars, so the diff can't see it).
+
+**Found, not fixed (belongs to Phase 5 per-file work):**
+- `alpha()` deliberately reproduces the old concatenation for non-token input, because several callers pass an `rgba()` and so have **always rendered invalid CSS**: the "Completed" status badge in `CompetitionSelector`, `CompetitionDisplay` and `CompetitionSelectionScreen` has no tint or border, and `CoachOrnament`'s gradient is dropped entirely when a ThemeProvider supplies `primaryDark`. Fixing them is a visible change.
+- The same class of bug in the Tailwind plugin: `.stacked-table` rows were meant to have a hairline border (`${theme('colors.white')}14`), but `colors.white` is `#fff`, so it produced the five-digit `#fff14` and the declaration was dropped — **phone stacked tables have never had that border**. The visual diff caught it (a valid border shifted every card by 1px on SuperAdminManagement and the add-player payment page); the rule now states no border, which is what has always rendered.
+- Light is legible on ordinary pages (checked: coach login). Text over photos is not yet `snow` — Home's hero nav and role-card labels turn dark on the photo. That is Home's Phase 5 pass (§14.5, the 7 known sites).
 
 ---
 

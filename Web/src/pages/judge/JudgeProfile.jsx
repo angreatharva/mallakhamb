@@ -13,6 +13,7 @@ import { logger } from '@/infrastructure/logger';
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
 import { GlassCard } from '../../components/design-system/cards';
+import { alpha } from '@/styles/tokens';
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -61,7 +62,7 @@ const SectionHeading = ({ children, hint }) => {
       {hint && <p className="text-white/35 text-xs mt-1">{hint}</p>}
       <div
         className="h-px mt-3"
-        style={{ background: `linear-gradient(90deg, ${theme.colors.primary}40, transparent)` }}
+        style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }}
       />
     </div>
   );
@@ -74,7 +75,7 @@ const Field = ({ id, label, icon, error, children }) => {
       <label
         htmlFor={id}
         className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: `${theme.colors.primary}90` }}
+        style={{ color: `${alpha(theme.colors.primary, 0x90)}` }}
       >
         {label}
       </label>
@@ -234,7 +235,7 @@ const JudgeProfileInner = () => {
             <div className="relative">
               <div
                 className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center"
-                style={{ background: `${theme.colors.primary}15`, border: `1px solid ${theme.colors.primary}35` }}
+                style={{ background: `${alpha(theme.colors.primary, 0x15)}`, border: `1px solid ${alpha(theme.colors.primary, 0x35)}` }}
               >
                 {photo
                   ? <img src={photo} alt="" className="w-full h-full object-cover" />

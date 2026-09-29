@@ -4,6 +4,8 @@
  * Replaces scattered color definitions in Home.jsx and adminTheme.js
  */
 
+import { SCREENS, Z_INDEX } from './breakpoints';
+
 export const DESIGN_TOKENS = {
   // ─── Brand Colors ───────────────────────────────────────────────────────────
   colors: {
@@ -41,28 +43,40 @@ export const DESIGN_TOKENS = {
       started: '#3B82F6',
     },
     
+    /*
+     * Surfaces, neutral borders and text follow the APPEARANCE (dark | light):
+     * they read the custom properties in index.css, so every inline style
+     * built from them changes with one attribute flip and no re-render. In
+     * dark they resolve to exactly the old values (#0A0A0A, #111111, white at
+     * the same alphas). Keep them in `rgb(var(--x))` / `rgb(var(--x) / a)`
+     * form — `alpha()` understands it; string-gluing hex digits does not.
+     *
+     * The "WCAG AA" note these text values used to carry was wrong: muted at
+     * 0.45 measures 4.48:1 on #0a0a0a. Correcting the ALPHAS is a visible
+     * change and belongs to the accessibility phase, not this one.
+     */
     // ─── Surface Colors ─────────────────────────────────────────────────────────
     surfaces: {
-      dark: '#0A0A0A',
-      darkCard: '#111111',
-      darkElevated: '#161616',
-      darkPanel: '#1A1A1A',
+      dark: 'rgb(var(--bg))',
+      darkCard: 'rgb(var(--surface))',
+      darkElevated: 'rgb(var(--surface-raised))',
+      darkPanel: 'rgb(var(--surface-overlay))',
     },
-    
+
     // ─── Border Colors ──────────────────────────────────────────────────────────
     borders: {
       saffron: 'rgba(255,107,0,0.15)',
-      subtle: 'rgba(255,255,255,0.06)',
-      mid: 'rgba(255,255,255,0.10)',
+      subtle: 'rgb(var(--ink) / 0.06)',
+      mid: 'rgb(var(--ink) / 0.1)',
       bright: 'rgba(255,107,0,0.38)',
     },
-    
-    // ─── Text Colors (WCAG AA Compliant) ────────────────────────────────────────
+
+    // ─── Text Colors ────────────────────────────────────────────────────────────
     text: {
-      primary: '#FFFFFF',
-      secondary: 'rgba(255,255,255,0.65)',  // Improved contrast
-      muted: 'rgba(255,255,255,0.45)',      // Improved contrast
-      disabled: 'rgba(255,255,255,0.30)',
+      primary: 'rgb(var(--ink))',
+      secondary: 'rgb(var(--ink) / 0.65)',
+      muted: 'rgb(var(--ink) / 0.45)',
+      disabled: 'rgb(var(--ink) / 0.3)',
     },
     
     // ─── Extended Palette ───────────────────────────────────────────────────────
@@ -146,24 +160,54 @@ export const DESIGN_TOKENS = {
   },
   
   // ─── Breakpoints ────────────────────────────────────────────────────────────
+  // From src/styles/breakpoints.js, the same numbers tailwind.config.js uses.
+  // `tablet` and `desktop` name where those bands START.
   breakpoints: {
-    mobile: '320px',
-    tablet: '768px',
-    desktop: '1024px',
-    wide: '1280px',
+    ...Object.fromEntries(Object.entries(SCREENS).map(([name, width]) => [name, `${width}px`])),
+    tablet: `${SCREENS.md}px`,
+    desktop: `${SCREENS.lg}px`,
   },
-  
+
   // ─── Z-Index Scale ──────────────────────────────────────────────────────────
-  zIndex: {
-    base: 0,
-    dropdown: 10,
-    sticky: 20,
-    fixed: 30,
-    modalBackdrop: 40,
-    modal: 50,
-    popover: 60,
-    tooltip: 70,
-  },
+  // One scale, shared with the `z-*` utilities and the `--z-*` properties.
+  zIndex: { ...Z_INDEX },
+};
+
+// ─── Colour With Alpha ──────────────────────────────────────────────────────
+
+const hexByte = (byte) => byte.toString(16).toUpperCase().padStart(2, '0');
+const RGB_VAR = /^rgb\((var\(--[\w-]+\))\)$/;
+const BARE_VAR = /^var\(--[\w-]+\)$/;
+
+/**
+ * A colour at an alpha given as a BYTE: `alpha(COLORS.saffron, 0x0A)`.
+ *
+ * Replaces gluing two hex digits onto a token (COLORS.saffron + "0A"), which
+ * only works while the token is a six-digit hex. Once a token becomes a CSS
+ * variable that concatenation yields `var(--accent)0A`: invalid, silently
+ * dropped by the browser, and the background just disappears. This keeps the
+ * old result exactly for a hex, so the dark design does not move by a pixel,
+ * and produces valid CSS for the token forms:
+ *
+ *   '#FF6B00'            → '#FF6B000A'                (byte-identical)
+ *   'rgb(var(--accent))' → 'rgb(var(--accent) / 0.039…)'
+ *   'var(--x)'           → 'color-mix(in srgb, var(--x) 3.9…%, transparent)'
+ *
+ * Anything else is concatenated exactly as before, INCLUDING the callers that
+ * pass an rgba() and so have always produced invalid CSS (see alpha.test.js).
+ * Changing what those render belongs to their own per-file pass.
+ *
+ * @param {string} color
+ * @param {number} byte 0x00–0xFF
+ * @returns {string}
+ */
+export const alpha = (color, byte) => {
+  if (typeof color === 'string') {
+    const rgbVar = RGB_VAR.exec(color);
+    if (rgbVar) return `rgb(${rgbVar[1]} / ${byte / 255})`;
+    if (BARE_VAR.test(color)) return `color-mix(in srgb, ${color} ${(byte / 255) * 100}%, transparent)`;
+  }
+  return `${color}${hexByte(byte)}`;
 };
 
 // ─── Helper Functions ───────────────────────────────────────────────────────
@@ -333,37 +377,37 @@ export const MIN_TOUCH_TARGET = 44; // pixels
 // **Validates: Requirements 10.5**
 
 export const COMMON_STYLES = {
-  // Card base styles
+  // Card base styles (surfaces and hairlines follow the appearance)
   cardBase: {
-    background: 'rgba(17, 17, 17, 0.8)',
+    background: 'rgb(var(--surface) / 0.8)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.06)',
+    border: '1px solid rgb(var(--ink) / 0.06)',
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
-  
+
   // Glass card styles
   glassCard: {
-    background: 'rgba(255, 255, 255, 0.03)',
+    background: 'rgb(var(--ink) / 0.03)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.06)',
+    border: '1px solid rgb(var(--ink) / 0.06)',
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
-  
+
   // Text styles
   textPrimary: {
-    color: '#FFFFFF',
+    color: 'rgb(var(--ink))',
   },
-  
+
   textSecondary: {
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: 'rgb(var(--ink) / 0.65)',
   },
-  
+
   textMuted: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: 'rgb(var(--ink) / 0.45)',
   },
   
   // Transition styles

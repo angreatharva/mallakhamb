@@ -8,7 +8,7 @@ import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
-import { COLORS, EASE_OUT } from '../../styles/tokens';
+import { COLORS, EASE_OUT, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 const useReducedMotion = () => {
@@ -33,7 +33,7 @@ const StyledInput = ({ error, ...props }) => (
       border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
       caretColor: COLORS.saffron,
     }}
-    onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`; }}
+    onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`; }}
     onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
     {...props}
   />
@@ -90,7 +90,7 @@ const ForgotPassword = () => {
       {!reduced && (
         <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
           style={{
-            backgroundImage: `linear-gradient(${COLORS.saffron}80 1px, transparent 1px), linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
             transform: 'perspective(400px) rotateX(60deg)',
             transformOrigin: 'bottom center',
@@ -125,7 +125,7 @@ const ForgotPassword = () => {
           <div className="text-center mb-8">
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.darkBorder}` }}
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
               <Mail className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
@@ -187,7 +187,7 @@ const ForgotPassword = () => {
 
             {loading && (
               <motion.div className="mt-4 p-3 rounded-xl border text-xs text-white/50 flex items-center gap-2"
-                style={{ background: `${COLORS.saffron}0A`, borderColor: `${COLORS.saffron}20` }}
+                style={{ background: `${alpha(COLORS.saffron, 0x0A)}`, borderColor: `${alpha(COLORS.saffron, 0x20)}` }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
                 <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
                 This may take a moment if the server is starting up.

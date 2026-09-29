@@ -242,13 +242,13 @@ export const useTouchTargetValidation = (ref) => {
  */
 export const useReducedMotion = () => {
   const [reduced, setReduced] = useState(() =>
-    typeof window !== 'undefined'
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handler = (e) => setReduced(e.matches);
     mq.addEventListener('change', handler);

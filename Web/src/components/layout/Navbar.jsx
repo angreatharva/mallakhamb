@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
@@ -91,7 +91,7 @@ const Navbar = ({ user, userType, onLogout }) => {
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
                 style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: `${COLORS.saffron}20` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                   <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
                 </div>
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
@@ -131,7 +131,7 @@ const Navbar = ({ user, userType, onLogout }) => {
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="lg:hidden p-2 rounded-xl text-white min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
-          style={{ background: isMobileMenuOpen ? `${COLORS.saffron}18` : 'transparent' }}
+          style={{ background: isMobileMenuOpen ? `${alpha(COLORS.saffron, 0x18)}` : 'transparent' }}
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"
@@ -171,9 +171,9 @@ const Navbar = ({ user, userType, onLogout }) => {
                 {user ? (
                   <>
                     <div className="flex items-center gap-3 p-4 rounded-2xl border mb-3"
-                      style={{ borderColor: COLORS.darkBorder, background: `${COLORS.saffron}08` }}>
+                      style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x08)}` }}>
                       <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ background: `${COLORS.saffron}20` }}>
+                        style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                         <User className="w-5 h-5" style={{ color: COLORS.saffronLight }} />
                       </div>
                       <div>

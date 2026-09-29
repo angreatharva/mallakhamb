@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
@@ -26,7 +26,7 @@ const COMPETITION_TYPE_LABELS = {
 const EmptyState = ({ icon: Icon, title, children }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-      style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}20` }}>
+      style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
       <Icon className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
     </div>
     <p className="text-white font-bold text-lg mb-2">{title}</p>
@@ -63,7 +63,7 @@ const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, st
   return (
     <div className="space-y-4">
       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-        style={{ background: `${COLORS.saffron}10`, borderColor: `${COLORS.saffron}30`, color: COLORS.saffronLight }}>
+        style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: COLORS.saffronLight }}>
         <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
         {caption} · {COMPETITION_TYPE_LABELS.competition_1}
       </div>
@@ -323,9 +323,9 @@ const PublicScores = () => {
                 onClick={() => setView(id)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-colors min-h-[44px]"
                 style={{
-                  background: active ? `${COLORS.saffron}20` : 'transparent',
+                  background: active ? `${alpha(COLORS.saffron, 0x20)}` : 'transparent',
                   color: active ? COLORS.saffronLight : 'rgba(255,255,255,0.5)',
-                  border: `1px solid ${active ? `${COLORS.saffron}40` : 'transparent'}`,
+                  border: `1px solid ${active ? `${alpha(COLORS.saffron, 0x40)}` : 'transparent'}`,
                 }}>
                 <Icon className="w-4 h-4" aria-hidden="true" />
                 {label}
@@ -377,7 +377,7 @@ const PublicScores = () => {
               transition={{ duration: 0.4 }}
               className="text-center py-20">
               <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-                style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}20` }}>
+                style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
                 <Filter className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
               </div>
               <p className="text-white font-bold text-lg mb-2">Select Filters to View Scores</p>
@@ -399,7 +399,7 @@ const PublicScores = () => {
               {/* Active filter badge */}
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-                  style={{ background: `${COLORS.saffron}10`, borderColor: `${COLORS.saffron}30`, color: COLORS.saffronLight }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: COLORS.saffronLight }}>
                   <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
                   {selectedCompetition.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
                 </div>
@@ -415,7 +415,7 @@ const PublicScores = () => {
                     className="pl-9 pr-8 py-2 rounded-xl border text-sm outline-none transition-all duration-200 min-h-[44px] sm:min-h-[40px] w-full sm:w-[220px]"
                     style={{
                       background: 'rgba(255,255,255,0.04)',
-                      borderColor: searchTerm ? `${COLORS.saffron}50` : 'rgba(255,255,255,0.08)',
+                      borderColor: searchTerm ? `${alpha(COLORS.saffron, 0x50)}` : 'rgba(255,255,255,0.08)',
                       color: '#fff',
                       /*
                        * Width moved to classes: the flat 220px could not shrink,

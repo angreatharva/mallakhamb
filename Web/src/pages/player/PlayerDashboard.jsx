@@ -9,7 +9,7 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
@@ -22,13 +22,13 @@ const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => 
     <motion.div
       className="p-5 rounded-2xl border relative overflow-hidden"
       style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
-      whileHover={{ borderColor: `${accent}35`, boxShadow: `0 0 30px ${accent}10` }}
+      whileHover={{ borderColor: `${alpha(accent, 0x35)}`, boxShadow: `0 0 30px ${alpha(accent, 0x10)}` }}
       transition={{ duration: 0.25 }}>
       <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-        style={{ background: `${accent}06`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
+        style={{ background: `${alpha(accent, 0x06)}`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
       <div className="flex items-start gap-4 relative z-10">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${accent}15` }}>
+          style={{ background: `${alpha(accent, 0x15)}` }}>
           <Icon className="w-5 h-5" style={{ color: accent }} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -55,7 +55,7 @@ const InfoRow = ({ label, value, last = false }) => (
 const StatusBadge = ({ status }) => {
   const map = {
     Submitted: { bg: '#22C55E18', border: '#22C55E40', text: '#4ADE80' },
-    Active: { bg: `${COLORS.saffron}18`, border: `${COLORS.saffron}40`, text: COLORS.saffronLight },
+    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: COLORS.saffronLight },
   };
   const style = map[status] || { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.5)' };
   return (
@@ -271,7 +271,7 @@ const PlayerDashboard = () => {
         style={{ background: COLORS.dark }}>
         <div className="text-center">
           <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
             animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
           <p className="text-white/45 text-sm">Loading your profile...</p>
         </div>
@@ -301,7 +301,7 @@ const PlayerDashboard = () => {
           <div className="rounded-3xl border p-6 md:p-8 relative overflow-hidden"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}>
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: `radial-gradient(ellipse at 0% 50%, ${COLORS.saffron}08, transparent 60%)` }} />
+              style={{ background: `radial-gradient(ellipse at 0% 50%, ${alpha(COLORS.saffron, 0x08)}, transparent 60%)` }} />
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
@@ -471,7 +471,7 @@ const PlayerDashboard = () => {
             >
               <div className="text-center mb-6">
                 <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                  style={{ background: `${COLORS.saffron}15` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
                   <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
                 </div>
                 <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
@@ -505,14 +505,14 @@ const PlayerDashboard = () => {
                       borderColor: COLORS.darkBorderSubtle 
                     }}
                     whileHover={{ 
-                      borderColor: `${COLORS.saffron}40`,
-                      boxShadow: `0 0 20px ${COLORS.saffron}10` 
+                      borderColor: `${alpha(COLORS.saffron, 0x40)}`,
+                      boxShadow: `0 0 20px ${alpha(COLORS.saffron, 0x10)}` 
                     }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${COLORS.saffron}15` }}>
+                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
                         <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} />
                       </div>
                       <div className="flex-1 min-w-0">

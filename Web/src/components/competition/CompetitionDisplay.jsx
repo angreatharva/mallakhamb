@@ -3,7 +3,7 @@ import { Calendar, MapPin, Trophy, Clock, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 
 
@@ -39,21 +39,21 @@ const CompetitionDisplay = ({ className = '' }) => {
       key={currentCompetition._id}
       className={`relative rounded-2xl border overflow-hidden ${className}`}
       style={{
-        background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.02))`,
-        borderColor: `${COLORS.saffron}20`,
+        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgba(255,255,255,0.02))`,
+        borderColor: `${alpha(COLORS.saffron, 0x20)}`,
       }}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       {/* Top shimmer line */}
-      <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}50, transparent)` }} />
+      <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x50)}, transparent)` }} />
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-              style={{ background: `${COLORS.saffron}18` }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
               <Trophy className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
@@ -70,7 +70,7 @@ const CompetitionDisplay = ({ className = '' }) => {
                 )}
                 {currentCompetition.level && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: `${COLORS.saffron}15`, color: COLORS.saffronLight }}>
+                    style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: COLORS.saffronLight }}>
                     {levelLabel(currentCompetition.level)}
                   </span>
                 )}
@@ -87,7 +87,7 @@ const CompetitionDisplay = ({ className = '' }) => {
 
           {/* Status badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full flex-shrink-0"
-            style={{ background: `${status.color}15`, border: `1px solid ${status.color}30` }}>
+            style={{ background: `${alpha(status.color, 0x15)}`, border: `1px solid ${alpha(status.color, 0x30)}` }}>
             {status.pulse ? (
               <span className="relative flex w-2 h-2">
                 <motion.span

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '@/hooks/useResponsive';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
@@ -64,7 +64,7 @@ const Dropdown = ({
   const borderColor = error
     ? 'rgba(239,68,68,0.5)'
     : isOpen
-    ? `${COLORS.saffron}60`
+    ? `${alpha(COLORS.saffron, 0x60)}`
     : COLORS.darkBorderSubtle;
 
   return (
@@ -86,7 +86,7 @@ const Dropdown = ({
           border: `1px solid ${borderColor}`,
           color: value ? '#fff' : 'rgba(255,255,255,0.45)',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          boxShadow: isOpen ? `0 0 0 3px ${COLORS.saffron}18` : 'none',
+          boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x18)}` : 'none',
           outlineColor: COLORS.saffron,
         }}
         aria-haspopup="listbox"
@@ -110,8 +110,8 @@ const Dropdown = ({
             className={`absolute left-0 right-0 mt-2 rounded-xl border overflow-hidden z-50 ${dropdownClassName}`}
             style={{
               background: '#111111',
-              borderColor: `${COLORS.saffron}25`,
-              boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${COLORS.saffron}10`,
+              borderColor: `${alpha(COLORS.saffron, 0x25)}`,
+              boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
               maxHeight: 280,
               overflowY: 'auto',
             }}
@@ -175,9 +175,9 @@ const Dropdown = ({
                       className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px]"
                       style={{
                         color: isSelected ? COLORS.saffronLight : 'rgba(255,255,255,0.75)',
-                        background: isSelected ? `${COLORS.saffron}12` : 'transparent',
+                        background: isSelected ? `${alpha(COLORS.saffron, 0x12)}` : 'transparent',
                       }}
-                      whileHover={{ background: `${COLORS.saffron}0A`, color: '#fff' }}
+                      whileHover={{ background: `${alpha(COLORS.saffron, 0x0A)}`, color: '#fff' }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
                         else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }

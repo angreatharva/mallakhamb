@@ -10,7 +10,7 @@ import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -55,7 +55,7 @@ const DarkInput = ({ label, required, error, hint, rightElement, ...props }) => 
       <input
         className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
         style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
-        onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+        onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
         onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
         {...props}
       />
@@ -193,7 +193,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
   if (value) {
     return (
       <div className="rounded-xl border p-3 flex items-center justify-between gap-3"
-        style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+        style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
         <div className="min-w-0">
           <p className="text-sm font-bold text-white truncate">{value.name}</p>
           <p className="text-xs text-white/40 truncate">{value.email}</p>
@@ -253,7 +253,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
 
       {touched && !searching && term.trim().length >= 2 && results.length === 0 && (
         <div className="mt-2 p-3 rounded-xl border text-xs"
-          style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30`, color: ADMIN_COLORS.gold }}>
+          style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}`, color: ADMIN_COLORS.gold }}>
           <p className="font-bold mb-1">No registered judge matches that.</p>
           <p className="text-white/50">
             Judges create their own accounts. Send them the registration link and search again
@@ -770,9 +770,9 @@ const Judges = () => {
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
   const judgeTypeBadge = (jt) => {
-    if (jt === 'Senior Judge') return { bg: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight };
-    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold };
-    return { bg: `${ADMIN_COLORS.blue}20`, color: '#93C5FD' };
+    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: ADMIN_COLORS.purpleLight };
+    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold };
+    return { bg: `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: '#93C5FD' };
   };
 
   return (
@@ -809,13 +809,13 @@ const Judges = () => {
           </p>
 
           {isSuperAdmin && (
-            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
+            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
               <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
                 Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${ADMIN_COLORS.saffron}80` }}>Select a competition to enable filters.</p>}
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${alpha(ADMIN_COLORS.saffron, 0x80)}` }}>Select a competition to enable filters.</p>}
             </div>
           )}
 
@@ -866,7 +866,7 @@ const Judges = () => {
                     Competition Type <span style={{ color: ADMIN_COLORS.red }}>*</span>
                   </label>
                   {!availableCompetitionTypes || availableCompetitionTypes.length === 0 ? (
-                    <div className="p-3 rounded-xl border min-h-[44px] flex items-center" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
+                    <div className="p-3 rounded-xl border min-h-[44px] flex items-center" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}` }}>
                       <p className="text-xs" style={{ color: ADMIN_COLORS.gold }}>No competition types configured.</p>
                     </div>
                   ) : (
@@ -907,7 +907,7 @@ const Judges = () => {
                     <EmptyState icon={UserPlus} title="Complete all filters first" desc="Select judge action, gender, age group, competition type, and apparatus to staff a panel." />
                   ) : judgesExistForSelection ? (
                     <div className="text-center py-8">
-                      <div className="p-6 rounded-2xl border" style={{ background: `${ADMIN_COLORS.gold}10`, borderColor: `${ADMIN_COLORS.gold}30` }}>
+                      <div className="p-6 rounded-2xl border" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}` }}>
                         <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
                         <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label} · {selectedApparatus.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
@@ -916,7 +916,7 @@ const Judges = () => {
                     </div>
                   ) : (
                     <div>
-                      <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.blue}10`, borderColor: `${ADMIN_COLORS.blue}30` }}>
+                      <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x30)}` }}>
                         <p className="text-white/70">Staffing: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
                           {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
                           {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
@@ -1007,7 +1007,7 @@ const Judges = () => {
                     />
                   ) : judges.some(j => j.judgeAccount) ? (
                     <div>
-                      <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+                      <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
                         <span className="text-white/70">Judge panel for: </span>
                         <span className="font-bold text-white">{selectedGender?.label} — {selectedAgeGroup?.label}</span>
                         {selectedCompetitionType && <span className="text-white/50 ml-2">· {selectedCompetitionType.label}</span>}
@@ -1029,8 +1029,8 @@ const Judges = () => {
                                     <span className="text-sm font-bold text-white">{judge.name || <span className="text-white/30 italic">Empty Slot</span>}</span>
                                     <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                     {judge.judgeAccount
-                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>Assigned</span>
-                                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold }}>Available</span>}
+                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>Assigned</span>
+                                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold }}>Available</span>}
                                   </div>
                                   {judge.email && <p className="text-xs text-white/40 mt-0.5">{judge.email}</p>}
                                 </div>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import Dropdown from '@/components/auth/Dropdown';
 import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
@@ -26,7 +26,7 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
       id={id}
       className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
@@ -576,7 +576,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             const fee = getCompetitionPlayerFeeRupees(doc);
             if (fee === null) {
               return (
-                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: ADMIN_COLORS.red, background: 'rgba(239,68,68,0.08)', border: `1px solid ${ADMIN_COLORS.red}40` }}>
+                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: ADMIN_COLORS.red, background: 'rgba(239,68,68,0.08)', border: `1px solid ${alpha(ADMIN_COLORS.red, 0x40)}` }}>
                   This competition has no valid per-player fee. Open Competitions, edit this competition, and set the fee.
                 </p>
               );
@@ -639,7 +639,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                           onClick={() => toggleApparatus(compType, app)}
                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200"
                           style={{
-                            background: isSelected ? `${ADMIN_COLORS.saffron}15` : 'rgba(255,255,255,0.04)',
+                            background: isSelected ? `${alpha(ADMIN_COLORS.saffron, 0x15)}` : 'rgba(255,255,255,0.04)',
                             border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : ADMIN_COLORS.darkBorderMid}`,
                           }}
                         >
@@ -689,7 +689,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
             onBlur={(e) => { e.target.style.borderColor = errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
             {...register('password', {
               required: 'Password is required',
@@ -748,7 +748,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
             onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
             {...register('confirmPassword', {
               required: 'Please confirm your password',

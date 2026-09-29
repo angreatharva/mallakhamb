@@ -1,26 +1,77 @@
+import { SCREENS, WIDE_CONTAINER_MIN, Z_INDEX } from './src/styles/breakpoints.js';
+
+const px = (n) => `${n}px`;
+
+/** Below `md`: the phone band. One definition, so 767 cannot drift again. */
+const PHONE = `@media (max-width: ${SCREENS.md - 1}px)`;
+
+/** `rgb(var(--x) / <alpha-value>)` — a token that still takes `/50` modifiers. */
+const channel = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  /*
+   * Appearance (dark | light) is carried by `html[data-appearance]` and almost
+   * everything follows it through the colour tokens below, not through
+   * variants. `dark:` exists for the rare case that genuinely needs a different
+   * class; it matches the attribute, never the OS setting.
+   */
+  darkMode: ['selector', '[data-appearance="dark"]'],
   theme: {
-    // Enhanced responsive breakpoints for the project
-    screens: {
-      'xs': '320px',        // Extra small mobile devices
-      'mobile': '320px',    // Mobile baseline
-      'mobile-lg': '480px', // Large mobile devices
-      'sm': '640px',        // Small tablets and large phones
-      'md': '768px',        // Tablets
-      'tablet': '768px',    // Tablet baseline
-      'lg': '1024px',       // Small desktops and laptops
-      'xl': '1280px',       // Desktops
-      'desktop': '1440px',  // Desktop baseline (preservation point)
-      '2xl': '1536px',      // Large desktops
-      'desktop-lg': '1920px', // Large desktop displays
-    },
+    // Tailwind's own five, from the single source in src/styles/breakpoints.js.
+    screens: Object.fromEntries(Object.entries(SCREENS).map(([name, width]) => [name, px(width)])),
     extend: {
       colors: {
+        /*
+         * TRANSITIONAL (plan §14.5, removed in Phase 9): `white` means INK —
+         * white in dark, near-black in light. With `--ink: 255 255 255` every
+         * existing `text-white/NN`, `bg-white/NN` and `border-white/NN` renders
+         * exactly as before in dark, and light is legible before each file has
+         * been migrated to the semantic names. Text that must stay white on
+         * any background (a label on a photo or a saturated fill) is `snow`.
+         */
+        white: channel('ink'),
+        snow: '#ffffff',
+
+        // Semantic surfaces and ink (index.css defines both appearances).
+        bg: channel('bg'),
+        surface: {
+          DEFAULT: channel('surface'),
+          raised: channel('surface-raised'),
+          sunken: channel('surface-sunken'),
+          overlay: channel('surface-overlay'),
+        },
+        fg: {
+          DEFAULT: 'var(--fg)',
+          secondary: 'var(--fg-secondary)',
+          muted: 'var(--fg-muted)',
+          subtle: 'var(--fg-subtle)',
+        },
+        line: {
+          DEFAULT: 'var(--line)',
+          strong: 'var(--line-strong)',
+        },
+        scrim: 'var(--scrim)',
+
+        // Role accent (per `html[data-role]`, per appearance).
+        accent: {
+          DEFAULT: channel('accent'),
+          fg: channel('accent-fg'),
+        },
+        'on-accent': channel('on-accent'),
+
+        // Status, each with text, fill, label-on-fill and tint.
+        ...Object.fromEntries(['success', 'warning', 'danger', 'info'].map((status) => [status, {
+          fg: channel(`${status}-fg`),
+          fill: channel(`${status}-fill`),
+          on: channel(`${status}-on`),
+          tint: `var(--${status}-tint)`,
+        }])),
+
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -115,47 +166,36 @@ export default {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
-      // Z-index scale for layering
-      zIndex: {
-        'mobile-menu': '50',
-        'modal': '100',
-        'tooltip': '200',
-      },
+      /*
+       * One stacking scale (src/styles/breakpoints.js), as `z-sticky`,
+       * `z-modal`, … reading the `--z-*` custom properties index.css defines.
+       * Tailwind's numeric `z-10`…`z-50` remain until each file is migrated.
+       */
+      zIndex: Object.fromEntries(Object.keys(Z_INDEX).map((name) => [name, `var(--z-${name})`])),
     },
   },
   plugins: [
     // Enhanced plugin for responsive utilities
-    function({ addUtilities, addComponents, theme }) {
-      const newUtilities = {
-        // Enhanced touch target utilities
-        '.touch-target': {
-          minHeight: theme('spacing.touch-target'),
-          minWidth: theme('spacing.touch-target'),
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        '.touch-target-lg': {
-          minHeight: theme('spacing.touch-target-lg'),
-          minWidth: theme('spacing.touch-target-lg'),
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
+    function({ addBase, addUtilities, addComponents, theme }) {
+      // The stacking scale as custom properties, from the same table as the
+      // `z-*` utilities, so CSS and JS read one set of numbers.
+      addBase({
+        ':root': Object.fromEntries(Object.entries(Z_INDEX).map(([name, value]) => [`--z-${name}`, String(value)])),
+      });
 
+      const newUtilities = {
         /*
          * 44px, but ONLY where a finger is the pointer.
          *
-         * `.touch-target` above enforces the minimum at every width, which is
-         * why the dense screens could not adopt it — it would inflate the
-         * compact desktop toolbars the brief protects. The recurring defect is
-         * narrower than that: a control that shows an icon AND a label on
-         * desktop collapses to the icon alone on mobile (`hidden sm:inline`)
-         * and lands at ~36px. This sizes exactly that case, and stops at the
-         * `md` breakpoint so desktop keeps its own metrics.
+         * A control that shows an icon AND a label on desktop collapses to the
+         * icon alone on mobile (`hidden sm:inline`) and lands at ~36px. This
+         * sizes exactly that case, and stops at the `md` breakpoint so desktop
+         * keeps its own metrics. (It replaced an always-on `.touch-target`,
+         * which no screen could adopt because it inflated the compact desktop
+         * toolbars; that utility had no users left and is gone.)
          */
         '.tap-safe': {
-          '@media (max-width: 767px)': {
+          [PHONE]: {
             minHeight: theme('spacing.touch-target'),
             minWidth: theme('spacing.touch-target'),
           },
@@ -209,9 +249,19 @@ export default {
          *
          * Rows carry the card border, so the internal borders come off. Above
          * `md` none of this applies and the table is untouched.
+         *
+         * Colours are ink at the alphas the dark design used, so the cards
+         * follow the appearance.
+         *
+         * NO BORDER, and that is what has always rendered: the rule used to be
+         * `1px solid ${theme('colors.white')}14`, and `colors.white` is `#fff`,
+         * so it produced `#fff14` — five hex digits, invalid, and the whole
+         * declaration was dropped. Making it valid adds a 1px border and moves
+         * every card's content by a pixel, which the foundation phase must not
+         * do. Whether the cards should have the hairline is a Phase 5 call.
          */
         '.stacked-table': {
-          '@media (max-width: 767px)': {
+          [PHONE]: {
             display: 'block',
             '& thead': {
               // Headers move into each cell via `data-label`, so the row of
@@ -228,8 +278,7 @@ export default {
             '& tr': {
               display: 'block',
               borderRadius: theme('borderRadius.2xl'),
-              border: `1px solid ${theme('colors.white')}14`,
-              background: 'rgba(255,255,255,0.03)',
+              background: 'rgb(var(--ink) / 0.03)',
               padding: theme('spacing.3'),
               marginBottom: theme('spacing.3'),
             },
@@ -250,7 +299,7 @@ export default {
               fontWeight: theme('fontWeight.bold'),
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.35)',
+              color: 'rgb(var(--ink) / 0.35)',
             },
             // A cell with no header (the actions column is often unlabelled)
             // gets the full width rather than an empty gutter.
@@ -274,7 +323,7 @@ export default {
             paddingRight: theme('spacing.desktop-padding'),
           },
         },
-        
+
         '.container-centered': {
           width: '100%',
           marginLeft: 'auto',
@@ -291,11 +340,11 @@ export default {
             paddingLeft: theme('spacing.desktop-padding'),
             paddingRight: theme('spacing.desktop-padding'),
           },
-          '@screen desktop': {
+          [`@media (min-width: ${WIDE_CONTAINER_MIN}px)`]: {
             maxWidth: theme('maxWidth.desktop-wide'),
           },
         },
-        
+
         // Enhanced responsive text utilities
         '.text-responsive-hero': {
           fontSize: theme('fontSize.hero-mobile[0]'),
@@ -312,7 +361,7 @@ export default {
             letterSpacing: theme('fontSize.hero-desktop[1].letterSpacing'),
           },
         },
-        
+
         '.text-responsive-h1': {
           fontSize: theme('fontSize.h1-mobile[0]'),
           lineHeight: theme('fontSize.h1-mobile[1].lineHeight'),
@@ -328,7 +377,7 @@ export default {
             letterSpacing: theme('fontSize.h1-desktop[1].letterSpacing'),
           },
         },
-        
+
         '.text-responsive-body': {
           fontSize: theme('fontSize.body-mobile[0]'),
           lineHeight: theme('fontSize.body-mobile[1].lineHeight'),
@@ -341,7 +390,7 @@ export default {
             lineHeight: theme('fontSize.body-desktop[1].lineHeight'),
           },
         },
-        
+
         // Enhanced layout utilities
         '.grid-responsive-auto': {
           display: 'grid',
@@ -356,7 +405,7 @@ export default {
             gap: theme('spacing.desktop-gap'),
           },
         },
-        
+
         '.grid-responsive-cards': {
           display: 'grid',
           gridTemplateColumns: '1fr',
@@ -372,7 +421,7 @@ export default {
             gridTemplateColumns: 'repeat(4, 1fr)',
           },
         },
-        
+
         '.flex-responsive-stack': {
           display: 'flex',
           flexDirection: 'column',
@@ -385,293 +434,8 @@ export default {
             gap: theme('spacing.desktop-gap'),
           },
         },
-        
-        // Enhanced responsive image utilities
-        '.responsive-img': {
-          maxWidth: '100%',
-          height: 'auto',
-          display: 'block',
-        },
-        
-        '.responsive-img-cover': {
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-        },
-        
-        '.responsive-img-contain': {
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          objectPosition: 'center',
-        },
-        
-        '.responsive-img-hero': {
-          width: '100%',
-          height: '100vh',
-          objectFit: 'cover',
-          objectPosition: 'center',
-          '@screen md': {
-            height: '80vh',
-          },
-          '@screen lg': {
-            height: '100vh',
-          },
-        },
-        
-        '.responsive-img-card': {
-          width: '100%',
-          aspectRatio: '16 / 9',
-          objectFit: 'cover',
-          borderRadius: theme('borderRadius.lg'),
-          '@screen md': {
-            aspectRatio: '4 / 3',
-          },
-        },
-        
-        '.responsive-img-avatar': {
-          width: theme('spacing.12'),
-          height: theme('spacing.12'),
-          borderRadius: '50%',
-          objectFit: 'cover',
-          '@screen md': {
-            width: theme('spacing.16'),
-            height: theme('spacing.16'),
-          },
-        },
-        
-        '.responsive-img-logo': {
-          height: theme('spacing.8'),
-          width: 'auto',
-          objectFit: 'contain',
-          '@screen md': {
-            height: theme('spacing.12'),
-          },
-          '@screen lg': {
-            height: theme('spacing.16'),
-          },
-        },
-        
-        // Responsive background image utilities
-        '.responsive-bg-cover': {
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        },
-        
-        '.responsive-bg-contain': {
-          backgroundSize: 'contain',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        },
-        
-        // Image container utilities
-        '.responsive-img-container': {
-          position: 'relative',
-          overflow: 'hidden',
-          width: '100%',
-        },
-        
-        '.responsive-img-container-square': {
-          aspectRatio: '1 / 1',
-        },
-        
-        '.responsive-img-container-video': {
-          aspectRatio: '16 / 9',
-        },
-        
-        '.responsive-img-container-portrait': {
-          aspectRatio: '3 / 4',
-        },
-        
-        '.responsive-img-container-landscape': {
-          aspectRatio: '4 / 3',
-        },
-        
-        // Enhanced mobile utilities
-        '.no-horizontal-scroll': {
-          overflowX: 'hidden',
-          maxWidth: '100vw',
-        },
-        
-        '.mobile-full-width': {
-          width: '100vw',
-          marginLeft: 'calc(-50vw + 50%)',
-          '@screen md': {
-            width: 'auto',
-            marginLeft: 'auto',
-          },
-        },
-        
-        // Enhanced mobile menu utilities
-        '.mobile-menu-overlay': {
-          position: 'fixed',
-          top: '0',
-          left: '0',
-          right: '0',
-          bottom: '0',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: theme('zIndex.mobile-menu'),
-          opacity: '0',
-          visibility: 'hidden',
-          transition: 'opacity 0.3s ease-in-out, visibility 0.3s ease-in-out',
-        },
-        
-        '.mobile-menu-overlay.open': {
-          opacity: '1',
-          visibility: 'visible',
-        },
-        
-        '.mobile-menu-panel': {
-          position: 'fixed',
-          top: '0',
-          left: '0',
-          height: '100vh',
-          width: '280px',
-          backgroundColor: theme('colors.white'),
-          zIndex: theme('zIndex.mobile-menu'),
-          transform: 'translateX(-100%)',
-          transition: 'transform 0.3s ease-in-out',
-          boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)',
-        },
-        
-        '.mobile-menu-panel.open': {
-          transform: 'translateX(0)',
-        },
-        
-        // Enhanced responsive form utilities
-        '.responsive-form-field': {
-          marginBottom: theme('spacing.4'),
-          '@screen md': {
-            marginBottom: theme('spacing.6'),
-          },
-        },
-        
-        '.responsive-input': {
-          display: 'block',
-          width: '100%',
-          padding: `${theme('spacing.3')} ${theme('spacing.3')}`,
-          border: `1px solid ${theme('colors.gray.300')}`,
-          borderRadius: theme('borderRadius.md'),
-          boxShadow: theme('boxShadow.sm'),
-          backgroundColor: theme('colors.white'),
-          color: theme('colors.gray.900'),
-          fontSize: theme('fontSize.base'),
-          lineHeight: theme('lineHeight.6'),
-          minHeight: theme('spacing.touch-target'),
-          '&:focus': {
-            outline: 'none',
-            borderColor: 'transparent',
-            boxShadow: `0 0 0 2px ${theme('colors.blue.500')}`,
-          },
-          '@screen md': {
-            padding: `${theme('spacing.2')} ${theme('spacing.3')}`,
-            fontSize: theme('fontSize.sm'),
-            minHeight: 'auto',
-          },
-        },
-        
-        '.responsive-button': {
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: `${theme('spacing.3')} ${theme('spacing.4')}`,
-          border: '1px solid transparent',
-          borderRadius: theme('borderRadius.md'),
-          fontSize: theme('fontSize.base'),
-          fontWeight: theme('fontWeight.medium'),
-          minHeight: theme('spacing.touch-target'),
-          transition: 'colors 0.2s ease-in-out',
-          '&:focus': {
-            outline: 'none',
-            boxShadow: `0 0 0 2px ${theme('colors.blue.500')}`,
-          },
-          '&:disabled': {
-            opacity: '0.5',
-            cursor: 'not-allowed',
-          },
-          '@screen md': {
-            padding: `${theme('spacing.2')} ${theme('spacing.4')}`,
-            fontSize: theme('fontSize.sm'),
-            minHeight: 'auto',
-          },
-        },
-        
-        '.responsive-select': {
-          display: 'block',
-          width: '100%',
-          padding: `${theme('spacing.3')} ${theme('spacing.3')}`,
-          border: `1px solid ${theme('colors.gray.300')}`,
-          borderRadius: theme('borderRadius.md'),
-          boxShadow: theme('boxShadow.sm'),
-          backgroundColor: theme('colors.white'),
-          color: theme('colors.gray.900'),
-          fontSize: theme('fontSize.base'),
-          lineHeight: theme('lineHeight.6'),
-          minHeight: theme('spacing.touch-target'),
-          '&:focus': {
-            outline: 'none',
-            borderColor: 'transparent',
-            boxShadow: `0 0 0 2px ${theme('colors.blue.500')}`,
-          },
-          '@screen md': {
-            padding: `${theme('spacing.2')} ${theme('spacing.3')}`,
-            fontSize: theme('fontSize.sm'),
-            minHeight: 'auto',
-          },
-        },
-        
-        // Enhanced dropdown utilities
-        '.mobile-dropdown': {
-          '@media (max-width: 767px)': {
-            position: 'fixed',
-            left: '1rem',
-            right: '1rem',
-            width: 'auto',
-            maxHeight: '50vh',
-            zIndex: '100',
-          },
-        },
-        
-        // Responsive table utilities
-        '.table-responsive': {
-          overflowX: 'auto',
-          '@screen md': {
-            overflowX: 'visible',
-          },
-        },
-        
-        '.table-mobile-cards': {
-          '@media (max-width: 767px)': {
-            '& thead': {
-              display: 'none',
-            },
-            '& tbody tr': {
-              display: 'block',
-              marginBottom: '1rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-              padding: '1rem',
-            },
-            '& tbody td': {
-              display: 'block',
-              textAlign: 'right',
-              paddingLeft: '50%',
-              position: 'relative',
-            },
-            '& tbody td:before': {
-              content: 'attr(data-label)',
-              position: 'absolute',
-              left: '1rem',
-              width: '45%',
-              textAlign: 'left',
-              fontWeight: 'bold',
-            },
-          },
-        },
       };
-      
+
       // Add responsive component classes
       const responsiveComponents = {
         '.responsive-container': {
@@ -687,7 +451,7 @@ export default {
           '@apply text-responsive-body': {},
         },
       };
-      
+
       addUtilities(newUtilities);
       addComponents(responsiveComponents);
     },

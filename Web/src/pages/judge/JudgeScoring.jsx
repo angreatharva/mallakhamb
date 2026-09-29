@@ -10,7 +10,7 @@ import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -99,7 +99,7 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
         className="relative rounded-xl border overflow-hidden"
         animate={{
           borderColor: focused ? J.purple : 'rgba(255,255,255,0.08)',
-          boxShadow: focused ? `0 0 0 3px ${J.purple}20` : 'none',
+          boxShadow: focused ? `0 0 0 3px ${alpha(J.purple, 0x20)}` : 'none',
         }}
         transition={{ duration: 0.2 }}>
         <style>{`

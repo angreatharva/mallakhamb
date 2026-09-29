@@ -9,7 +9,7 @@ import {
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Dropdown from '@/components/auth/Dropdown';
@@ -66,7 +66,7 @@ const DarkInput = ({ label, required, error, hint, ...props }) => (
     <input
       className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
@@ -101,7 +101,7 @@ const DarkTextarea = ({ label, required, ...props }) => (
     <textarea
       className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200 resize-none"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
@@ -264,7 +264,7 @@ const validateFeeWindow = ({ registrationOpenDate, feeDueDate, startDate, endDat
 
 const StatusBadge = ({ active }) => (
   <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-    style={{ background: active ? `${ADMIN_COLORS.green}20` : `${ADMIN_COLORS.red}20`, color: active ? ADMIN_COLORS.green : ADMIN_COLORS.red }}>
+    style={{ background: active ? `${alpha(ADMIN_COLORS.green, 0x20)}` : `${alpha(ADMIN_COLORS.red, 0x20)}`, color: active ? ADMIN_COLORS.green : ADMIN_COLORS.red }}>
     {active ? 'Active' : 'Inactive'}
   </span>
 );
@@ -872,7 +872,7 @@ const SuperAdminManagement = () => {
                 <motion.button key={s.id} onClick={() => setActiveSection(s.id)}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200"
                   style={{
-                    background: isActive ? `${ADMIN_COLORS.saffron}18` : 'transparent',
+                    background: isActive ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'transparent',
                     color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
                     border: `1px solid ${isActive ? ADMIN_COLORS.saffron + '30' : 'transparent'}`,
                   }}
@@ -910,7 +910,7 @@ const SuperAdminManagement = () => {
                       <div className="flex flex-wrap gap-1">
                         {(comp.competitionTypes || []).map(t => (
                           <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold"
-                            style={{ background: `${ADMIN_COLORS.purple}20`, color: ADMIN_COLORS.purpleLight }}>
+                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: ADMIN_COLORS.purpleLight }}>
                             {compTypeLabel(t)}
                           </span>
                         ))}
@@ -942,7 +942,7 @@ const SuperAdminManagement = () => {
                         return (
                           <div className="space-y-0.5">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                              style={{ background: `${phaseColor}20`, color: phaseColor }}>
+                              style={{ background: `${alpha(phaseColor, 0x20)}`, color: phaseColor }}>
                               {{
                                 [FEE_PHASE.NOT_OPEN]: 'Not open yet',
                                 [FEE_PHASE.REGULAR]: 'Base fee',
@@ -1032,7 +1032,7 @@ const SuperAdminManagement = () => {
                     <Td>{admin.email}</Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{ background: admin.role === 'superadmin' ? `${ADMIN_COLORS.saffron}20` : `${ADMIN_COLORS.blue}20`, color: admin.role === 'superadmin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
+                        style={{ background: admin.role === 'superadmin' ? `${alpha(ADMIN_COLORS.saffron, 0x20)}` : `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: admin.role === 'superadmin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
                         {admin.role === 'superadmin' ? 'Super Admin' : 'Admin'}
                       </span>
                     </Td>
@@ -1149,7 +1149,7 @@ const SuperAdminManagement = () => {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
                 <div className="w-10 h-6 rounded-full transition-colors duration-200"
                   style={{ background: formData.isActive ? ADMIN_COLORS.green : 'rgba(255,255,255,0.15)' }}>
-                  <div className="w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-200"
+                  <div className="w-4 h-4 bg-snow rounded-full absolute top-1 transition-transform duration-200"
                     style={{ left: formData.isActive ? '22px' : '4px' }} />
                 </div>
               </div>
@@ -1311,7 +1311,7 @@ const SuperAdminManagement = () => {
                 <label key={option.value}
                   className="flex flex-col gap-0.5 p-3 rounded-xl border cursor-pointer transition-all duration-200 min-h-[44px]"
                   style={{
-                    background: checked ? `${ADMIN_COLORS.purple}14` : 'rgba(255,255,255,0.02)',
+                    background: checked ? `${alpha(ADMIN_COLORS.purple, 0x14)}` : 'rgba(255,255,255,0.02)',
                     borderColor: checked ? ADMIN_COLORS.purple : ADMIN_COLORS.darkBorderSubtle,
                   }}>
                   <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
@@ -1341,7 +1341,7 @@ const SuperAdminManagement = () => {
               const checked = competitionFormData.competitionTypes.includes(ct.id);
               return (
                 <div key={ct.id} className="p-3 rounded-xl border transition-all duration-200"
-                  style={{ background: checked ? `${ADMIN_COLORS.purple}08` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${ADMIN_COLORS.purple}40` : ADMIN_COLORS.darkBorderSubtle }}>
+                  style={{ background: checked ? `${alpha(ADMIN_COLORS.purple, 0x08)}` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${alpha(ADMIN_COLORS.purple, 0x40)}` : ADMIN_COLORS.darkBorderSubtle }}>
                   <label className="flex items-start gap-3 cursor-pointer mb-2">
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
@@ -1359,7 +1359,7 @@ const SuperAdminManagement = () => {
                        its own apparatus in each competition type. */
                     <div className="ml-7 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {GENDER_COLUMNS.map(({ gender, label, accent }) => (
-                        <div key={gender} className="pl-3 border-l-2 space-y-2" style={{ borderColor: `${accent}50` }}>
+                        <div key={gender} className="pl-3 border-l-2 space-y-2" style={{ borderColor: `${alpha(accent, 0x50)}` }}>
                           <p className="text-[10px] font-bold tracking-wider uppercase mb-1" style={{ color: accent }}>{label}</p>
                           {APPARATUS.map(app => {
                             const allowed = isApparatusAllowedForGender(app, gender);
@@ -1424,7 +1424,7 @@ const SuperAdminManagement = () => {
                     const checked = isAgeGroupSelected(ag, gender);
                     return (
                       <label key={gender} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${!valid ? 'opacity-30 cursor-not-allowed' : ''}`}
-                        style={{ background: checked && valid ? `${ADMIN_COLORS.saffron}12` : 'transparent' }}>
+                        style={{ background: checked && valid ? `${alpha(ADMIN_COLORS.saffron, 0x12)}` : 'transparent' }}>
                         <input type="checkbox" className="sr-only" checked={checked} disabled={!valid} onChange={() => valid && toggleAgeGroup(ag, gender)} />
                         <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                           style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
@@ -1458,7 +1458,7 @@ const SuperAdminManagement = () => {
                 const checked = competitionFormData.admins.includes(admin._id);
                 return (
                   <label key={admin._id} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all"
-                    style={{ background: checked ? `${ADMIN_COLORS.saffron}10` : 'transparent' }}>
+                    style={{ background: checked ? `${alpha(ADMIN_COLORS.saffron, 0x10)}` : 'transparent' }}>
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAdminSelection(admin._id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                       style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
@@ -1537,7 +1537,7 @@ const SuperAdminManagement = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Delete Competition?</h3>
@@ -1601,7 +1601,7 @@ const SuperAdminManagement = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <UserX className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Remove Admin?</h3>
@@ -1665,7 +1665,7 @@ const SuperAdminManagement = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${ADMIN_COLORS.red}18`, border: `1px solid ${ADMIN_COLORS.red}28` }}>
+                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Delete Admin Account?</h3>

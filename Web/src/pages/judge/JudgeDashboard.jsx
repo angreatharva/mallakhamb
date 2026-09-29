@@ -14,7 +14,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -63,8 +63,8 @@ const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
       onClick={onClick}
       className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3"
       style={{
-        background: selected ? `${accent}14` : 'rgba(255,255,255,0.03)',
-        borderColor: selected ? `${accent}50` : 'rgba(255,255,255,0.07)',
+        background: selected ? `${alpha(accent, 0x14)}` : 'rgba(255,255,255,0.03)',
+        borderColor: selected ? `${alpha(accent, 0x50)}` : 'rgba(255,255,255,0.07)',
         color: selected ? '#fff' : 'rgba(255,255,255,0.6)',
       }}
       whileHover={reduced ? {} : { scale: 1.005 }}

@@ -10,7 +10,7 @@ import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { logger } from '@/infrastructure/logger';
 import { ResponsiveTeamFilters } from '../../components/responsive/ResponsiveFilters';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -50,7 +50,7 @@ const DarkSearch = ({ value, onChange, placeholder }) => (
     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
       className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
@@ -129,7 +129,7 @@ const TeamModal = ({ team, onClose }) => (
                           </span></p>
                         )}
                       </div>
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>
                         {player.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
@@ -267,13 +267,13 @@ const Teams = () => {
           <h2 className="text-2xl font-black text-white mb-6">All Teams</h2>
 
           {isSuperAdmin && (
-            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
+            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
               <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
                 Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading competitions…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${ADMIN_COLORS.saffron}80` }}>Select a competition to enable filters.</p>}
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${alpha(ADMIN_COLORS.saffron, 0x80)}` }}>Select a competition to enable filters.</p>}
             </div>
           )}
 
@@ -292,7 +292,7 @@ const Teams = () => {
             <LoadingState label="Loading teams…" />
           ) : teams.length > 0 ? (
             <div>
-              <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${ADMIN_COLORS.green}10`, borderColor: `${ADMIN_COLORS.green}30` }}>
+              <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
                 <span className="text-white/70">Showing </span>
                 <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
                 <span className="text-white/50 ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>

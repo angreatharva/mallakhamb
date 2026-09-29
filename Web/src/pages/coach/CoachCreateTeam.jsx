@@ -5,7 +5,7 @@ import { ArrowRight, Trophy, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 const CoachCreateTeam = () => {
@@ -73,7 +73,7 @@ const CoachCreateTeam = () => {
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }} />
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
           <p className="text-white/45 text-sm">Checking your status...</p>
         </div>
       </div>
@@ -86,7 +86,7 @@ const CoachCreateTeam = () => {
       {!reduced && (
         <>
           <div className="absolute top-1/3 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-            style={{ background: `${COLORS.saffron}08`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }} />
+            style={{ background: `${alpha(COLORS.saffron, 0x08)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }} />
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full pointer-events-none"
             style={{ background: `#22C55E08`, filter: 'blur(80px)', transform: 'translate(50%,50%)' }} />
         </>
@@ -103,7 +103,7 @@ const CoachCreateTeam = () => {
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                   style={{
-                    background: i === 1 ? '#22C55E' : i < 1 ? `${COLORS.saffron}30` : 'rgba(255,255,255,0.08)',
+                    background: i === 1 ? '#22C55E' : i < 1 ? `${alpha(COLORS.saffron, 0x30)}` : 'rgba(255,255,255,0.08)',
                     color: i === 1 ? '#fff' : i < 1 ? COLORS.saffron : 'rgba(255,255,255,0.3)',
                   }}>
                   {i + 1}
@@ -127,7 +127,7 @@ const CoachCreateTeam = () => {
 
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
               <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
             </div>
           </div>

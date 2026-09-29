@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Reorder, useDragControls } from 'framer-motion';
 import { GripVertical } from 'lucide-react';
+import { alpha } from '@/styles/tokens';
 
 /**
  * Drag-to-reorder list, built on framer-motion's `Reorder` (already a
@@ -79,8 +80,8 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
       onDragEnd={onDragEnd}
       className="rounded-xl border flex items-stretch gap-2 overflow-hidden"
       style={{
-        background: isDragging ? `${accent}18` : 'rgba(255,255,255,0.03)',
-        borderColor: isDragging ? `${accent}60` : 'rgba(255,255,255,0.08)',
+        background: isDragging ? `${alpha(accent, 0x18)}` : 'rgba(255,255,255,0.03)',
+        borderColor: isDragging ? `${alpha(accent, 0x60)}` : 'rgba(255,255,255,0.08)',
         cursor: disabled ? 'default' : 'grab',
         position: 'relative',
         // Lift the row being dragged above its neighbours, otherwise it slides

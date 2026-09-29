@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { AlertTriangle, CheckCircle, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { AmbientOrbs } from '@/components/design-system/backgrounds';
 import {
   panelScoresShape,
@@ -131,7 +131,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
                   background: selected ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgba(255,255,255,0.03)',
                   borderColor: selected ? J.purple : 'rgba(255,255,255,0.12)',
                   color: selected ? '#fff' : 'rgba(255,255,255,0.75)',
-                  boxShadow: selected ? `0 0 0 3px ${J.purple}25` : 'none',
+                  boxShadow: selected ? `0 0 0 3px ${alpha(J.purple, 0x25)}` : 'none',
                   touchAction: 'manipulation',
                 }}
               >

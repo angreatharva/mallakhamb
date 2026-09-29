@@ -7,6 +7,7 @@ import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
+import { alpha } from '@/styles/tokens';
 
 const COLORS = {
   dark: '#0A0A0A',
@@ -108,7 +109,7 @@ const PlayerTeamSelection = () => {
         style={{ background: COLORS.dark }}>
         <div className="text-center">
           <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
             animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
           <p className="text-white/45 text-sm">Loading teams...</p>
         </div>
@@ -181,7 +182,7 @@ const PlayerTeamSelection = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}>
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                style={{ background: `${COLORS.saffron}15`, border: `1px solid ${COLORS.saffron}35` }}>
+                style={{ background: `${alpha(COLORS.saffron, 0x15)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
                 <Users className="w-8 h-8" style={{ color: COLORS.saffron }} />
               </div>
               <h3 className="text-white font-bold text-lg mb-2">
@@ -203,22 +204,22 @@ const PlayerTeamSelection = () => {
                     disabled={joining}
                     className="text-left p-6 rounded-2xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ 
-                      background: selectedTeam?._id === team._id ? `${COLORS.saffron}10` : COLORS.darkCard,
-                      borderColor: selectedTeam?._id === team._id ? `${COLORS.saffron}40` : COLORS.darkBorderSubtle,
+                      background: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x10)}` : COLORS.darkCard,
+                      borderColor: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
                     }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4, delay: index * 0.05, ease: EASE }}
                     whileHover={!joining ? { 
-                      borderColor: `${COLORS.saffron}35`,
-                      boxShadow: `0 0 30px ${COLORS.saffron}10` 
+                      borderColor: `${alpha(COLORS.saffron, 0x35)}`,
+                      boxShadow: `0 0 30px ${alpha(COLORS.saffron, 0x10)}` 
                     } : {}}
                     whileTap={!joining ? { scale: 0.98 } : {}}>
                     
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${COLORS.saffron}15` }}>
+                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
                         <Users className="w-6 h-6" style={{ color: COLORS.saffron }} />
                       </div>
                       

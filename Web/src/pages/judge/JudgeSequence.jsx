@@ -10,7 +10,7 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 
 const J = {
   purple: '#A855F7',
@@ -34,7 +34,7 @@ const OrderBadge = ({ lotNo, position, accent }) => (
   <span
     className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-black flex-shrink-0"
     style={{
-      background: lotNo ? `${accent}25` : 'rgba(255,255,255,0.06)',
+      background: lotNo ? `${alpha(accent, 0x25)}` : 'rgba(255,255,255,0.06)',
       color: lotNo ? accent : 'rgba(255,255,255,0.45)',
     }}
     title={lotNo ? `Lot ${lotNo} · runs ${position + 1}` : `Runs ${position + 1} · no lot drawn`}
@@ -319,7 +319,7 @@ const JudgeSequence = () => {
                     </div>
 
                     {isExpanded && (
-                      <div className="mt-3 border-l-2" style={{ borderColor: `${J.purple}30` }}>
+                      <div className="mt-3 border-l-2" style={{ borderColor: `${alpha(J.purple, 0x30)}` }}>
                         <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: J.purpleLight }}>
                           Athlete order
                         </p>

@@ -13,7 +13,7 @@ import { calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -640,7 +640,7 @@ const AdminScoring = () => {
                         </div>
                     </div>
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                        style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+                        style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: ADMIN_COLORS.red } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>
                         {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
                     </span>
                 </div>
@@ -651,7 +651,7 @@ const AdminScoring = () => {
 
                 {isLocked && routePrefix === '/superadmin' && (
                     <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
-                        style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
+                        style={{ background: `${alpha(ADMIN_COLORS.red, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.red, 0x30)}` }}
                         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                         <div className="flex items-center gap-3">
                             <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: ADMIN_COLORS.red }} />
@@ -663,7 +663,7 @@ const AdminScoring = () => {
                         {!ageGroupStarted && (
                             <motion.button onClick={handleUnlockScores}
                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white min-h-[40px] flex-shrink-0"
-                                style={{ background: `${ADMIN_COLORS.red}40`, border: `1px solid ${ADMIN_COLORS.red}50` }}
+                                style={{ background: `${alpha(ADMIN_COLORS.red, 0x40)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x50)}` }}
                                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                                 <Lock className="w-3.5 h-3.5" /> Unlock
                             </motion.button>
@@ -688,7 +688,7 @@ const AdminScoring = () => {
                             <p className="text-4xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</p>
                         </div>
                     </div>
-                    <div className="mb-6 p-4 rounded-xl border" style={{ background: `${ADMIN_COLORS.purple}10`, borderColor: `${ADMIN_COLORS.purple}30` }}>
+                    <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.purple, 0x30)}` }}>
                         <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.purpleLight }}>Competition Type</p>
                         <p className="font-bold text-white">{competitionType}</p>
                         <p className="text-xs text-white/40 mt-0.5">
@@ -705,9 +705,9 @@ const AdminScoring = () => {
                                     const isSenior = judge.judgeType === 'Senior Judge';
                                     return (
                                         <div key={judge._id} className="rounded-xl border p-3 text-center"
-                                            style={{ background: isSenior ? `${ADMIN_COLORS.purple}12` : `${ADMIN_COLORS.blue}10`, borderColor: isSenior ? `${ADMIN_COLORS.purple}30` : `${ADMIN_COLORS.blue}25` }}>
+                                            style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x12)}` : `${alpha(ADMIN_COLORS.blue, 0x10)}`, borderColor: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x30)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
                                             <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold mb-2"
-                                                style={{ background: isSenior ? `${ADMIN_COLORS.purple}25` : `${ADMIN_COLORS.blue}25`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
+                                                style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x25)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}`, color: isSenior ? ADMIN_COLORS.purpleLight : '#93C5FD' }}>
                                                 {judge.judgeType}
                                             </span>
                                             <p className="font-bold text-white text-sm">{judge.name}</p>
@@ -722,7 +722,7 @@ const AdminScoring = () => {
                     </div>
                 </div>
 
-                <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
+                <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
                     <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
                         <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
@@ -755,7 +755,7 @@ const AdminScoring = () => {
                                     {required && <span className="text-red-500 ml-1">*</span>}
                                 </label>
                                 <input type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
-                                    onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                                    onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; } }}
                                     onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
                             </div>
                         ))}

@@ -2,7 +2,7 @@ import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -92,8 +92,8 @@ const ConfirmDialog = ({
                * what centres a dialog short enough to fit.
                */
               background: '#111111',
-              borderColor: `${accentColor}25`,
-              boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}15`,
+              borderColor: `${alpha(accentColor, 0x25)}`,
+              boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(accentColor, 0x15)}`,
             }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -101,13 +101,13 @@ const ConfirmDialog = ({
             transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             {/* Top accent line */}
-            <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)` }} />
+            <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${alpha(accentColor, 0x60)}, transparent)` }} />
 
             {/* Header */}
             <div className="flex items-start justify-between p-6 pb-4" style={{ padding: isMobile ? '1rem' : '1.5rem', paddingBottom: isMobile ? '0.75rem' : '1rem' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${accentColor}18` }}>
+                  style={{ background: `${alpha(accentColor, 0x18)}` }}>
                   <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
                 </div>
                 <h3 id="confirm-dialog-title" className="text-white font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
@@ -168,7 +168,7 @@ const ConfirmDialog = ({
                 disabled={loading}
                 className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
                 style={{ 
-                  background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                  background: `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0xCC)})`,
                   width: isMobile ? '100%' : 'auto',
                   justifyContent: 'center',
                 }}

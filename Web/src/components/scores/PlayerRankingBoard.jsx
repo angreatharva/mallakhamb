@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Users } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { sortByRank } from './scoreRows';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -57,7 +57,7 @@ export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
 
 const ScorePill = ({ label, value, accent = COLORS.saffron }) => (
   <div className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl"
-    style={{ background: `${accent}0E`, border: `1px solid ${accent}20` }}>
+    style={{ background: `${alpha(accent, 0x0E)}`, border: `1px solid ${alpha(accent, 0x20)}` }}>
     <span className="text-xs font-bold" style={{ color: accent }}>{value}</span>
     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
   </div>
@@ -114,7 +114,7 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
           ? `linear-gradient(135deg, ${rank === 1 ? 'rgba(245,166,35,0.1)' : rank === 2 ? 'rgba(192,192,192,0.08)' : 'rgba(205,127,50,0.08)'}, rgba(255,255,255,0.02))`
           : 'rgba(255,255,255,0.02)',
         borderColor: rank === 1 ? 'rgba(245,166,35,0.35)' : rank === 2 ? 'rgba(192,192,192,0.25)' : rank === 3 ? 'rgba(205,127,50,0.25)' : 'rgba(255,255,255,0.06)',
-        boxShadow: podium ? `0 8px 28px ${rankAccent}22` : 'none',
+        boxShadow: podium ? `0 8px 28px ${alpha(rankAccent, 0x22)}` : 'none',
       }}
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}

@@ -11,7 +11,7 @@ import Dropdown from '@/components/auth/Dropdown';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import SortableList from '@/components/ordering/SortableList';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 
 const GENDER_OPTIONS = [
   { value: 'Male', label: 'Male' },
@@ -43,7 +43,7 @@ const LotBadge = ({ lotNo, position }) => (
   <span
     className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-black flex-shrink-0"
     style={{
-      background: lotNo ? `${ADMIN_COLORS.saffron}20` : 'rgba(255,255,255,0.06)',
+      background: lotNo ? `${alpha(ADMIN_COLORS.saffron, 0x20)}` : 'rgba(255,255,255,0.06)',
       color: lotNo ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.4)',
     }}
     // The drawn lot and the running position diverge as soon as anyone drags a
@@ -291,7 +291,7 @@ const AdminLots = () => {
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border"
-              style={{ background: `${ADMIN_COLORS.saffron}08`, borderColor: `${ADMIN_COLORS.saffron}25` }}>
+              style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
               <div className="text-sm">
                 <p className="text-white font-bold">
                   {teams.length} team{teams.length !== 1 ? 's' : ''} in running order
@@ -354,7 +354,7 @@ const AdminLots = () => {
                     </div>
 
                     {isExpanded && (
-                      <div className="mt-3 pl-1 border-l-2" style={{ borderColor: `${ADMIN_COLORS.saffron}30` }}>
+                      <div className="mt-3 pl-1 border-l-2" style={{ borderColor: `${alpha(ADMIN_COLORS.saffron, 0x30)}` }}>
                         <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: ADMIN_COLORS.saffronLight }}>
                           Athlete order
                         </p>

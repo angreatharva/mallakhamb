@@ -3,7 +3,7 @@ import { Users, UserCheck, Trophy, Calendar, Camera, Menu, X, MapPin, Phone, Mai
 import { useState, useEffect, useRef } from 'react';
 import { FadeIn, GradientText, SaffronButton } from '@/components/design-system';
 
-import { useReducedMotion as _useReducedMotion, useMediaQuery } from '../../hooks/useResponsive';
+import { useReducedMotion, useMediaQuery } from '../../hooks/useResponsive';
 import { motion, useScroll, useTransform, useInView, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import MainHomeImg from '../../assets/main-home.jpg';
 import TextRevealBg from '../../assets/Mallakhamb.png';
@@ -11,16 +11,13 @@ import BHALogo from '../../assets/BHA.png';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 // Import from unified design system
-import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING } from '../../styles/tokens';
+import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;
 const EASE_OUT = DESIGN_EASE_OUT;
 const EASE_SPRING = DESIGN_EASE_SPRING;
-
-// ─── Reduced-motion hook (re-exported from hooks/useResponsive for back-compat) ─
-export const useReducedMotion = _useReducedMotion;
 
 // ─── Animated counter hook ───────────────────────────────────────────────────
 const useCounter = (target, duration = 1800, inView = true) => {
@@ -93,8 +90,8 @@ const GridLines = () => {
         className="absolute bottom-0 left-0 right-0 h-72 opacity-[0.07]"
         style={{
           backgroundImage: `
-            linear-gradient(${COLORS.saffron}80 1px, transparent 1px),
-            linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)
+            linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px),
+            linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)
           `,
           backgroundSize: '60px 60px',
           transform: 'perspective(400px) rotateX(60deg)',
@@ -190,7 +187,7 @@ const MagneticCursor = () => {
         width: 480, height: 480,
         x: trailSpringX, y: trailSpringY,
         translateX: '-50%', translateY: '-50%',
-        background: `radial-gradient(circle, ${COLORS.saffron}0E 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${alpha(COLORS.saffron, 0x0E)} 0%, transparent 70%)`,
       }}
     />
   );
@@ -401,7 +398,7 @@ const HeroSection = () => {
         {/* Badge */}
         <motion.div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border"
-          style={{ background: `${COLORS.saffron}18`, borderColor: `${COLORS.saffron}45`, color: COLORS.saffronLight }}
+          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: COLORS.saffronLight }}
           initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}>
           <Star className="w-3 h-3" fill="currentColor" aria-hidden="true" />
@@ -422,8 +419,8 @@ const HeroSection = () => {
               style={gradient ? {
                 background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                filter: `drop-shadow(0 0 50px ${COLORS.saffron}60)`,
-              } : { color: '#fff', textShadow: `0 0 100px ${COLORS.saffron}35` }}
+                filter: `drop-shadow(0 0 50px ${alpha(COLORS.saffron, 0x60)})`,
+              } : { color: '#fff', textShadow: `0 0 100px ${alpha(COLORS.saffron, 0x35)}` }}
               initial={{ opacity: 0, y: 80, rotateX: -25 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay, ease: EASE_OUT }}
@@ -458,13 +455,13 @@ const HeroSection = () => {
                   <TiltCard>
                     <div className="p-4 rounded-2xl border flex flex-col gap-3 text-left h-full"
                       style={{
-                        background: `${role.color}10`,
-                        borderColor: `${role.color}28`,
+                        background: `${alpha(role.color, 0x10)}`,
+                        borderColor: `${alpha(role.color, 0x28)}`,
                         backdropFilter: 'blur(12px)',
-                        boxShadow: `0 8px 32px ${role.color}10`,
+                        boxShadow: `0 8px 32px ${alpha(role.color, 0x10)}`,
                       }}>
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                        style={{ background: `${role.color}18` }}>
+                        style={{ background: `${alpha(role.color, 0x18)}` }}>
                         <Icon className="w-4 h-4" style={{ color: role.color }} aria-hidden="true" />
                       </div>
                       <p className="text-white font-bold text-sm leading-tight">{role.title}</p>
@@ -477,7 +474,7 @@ const HeroSection = () => {
                         {role.registerTo && (
                           <Link to={role.registerTo}
                             className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe md:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
-                            style={{ borderColor: `${role.color}45`, color: role.color }}>
+                            style={{ borderColor: `${alpha(role.color, 0x45)}`, color: role.color }}>
                             Register
                           </Link>
                         )}
@@ -553,7 +550,7 @@ const AboutSection = () => {
     <section ref={ref} className="relative overflow-hidden py-24 md:py-32"
       style={{ background: COLORS.dark }} aria-label="About Mallakhamb">
       <div className="absolute top-1/2 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-        style={{ background: `${COLORS.saffron}07`, filter: 'blur(80px)', transform: 'translate(-50%,-50%)' }} />
+        style={{ background: `${alpha(COLORS.saffron, 0x07)}`, filter: 'blur(80px)', transform: 'translate(-50%,-50%)' }} />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <FadeIn direction="right" className="relative order-2 lg:order-1">
@@ -565,7 +562,7 @@ const AboutSection = () => {
             <img src={TextRevealBg} alt="Mallakhamb athlete performing on pole"
               className="w-full aspect-[3/4] object-cover object-center" loading="lazy" />
             <div className="absolute inset-0"
-              style={{ background: `linear-gradient(to top, ${COLORS.dark}80, transparent 60%)` }} />
+              style={{ background: `linear-gradient(to top, ${alpha(COLORS.dark, 0x80)}, transparent 60%)` }} />
             <motion.div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl border"
               style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -597,7 +594,7 @@ const AboutSection = () => {
           <div className="flex flex-wrap gap-3">
             {['Pole Mallakhamb', 'Rope Mallakhamb', 'Hanging Mallakhamb'].map((tag) => (
               <span key={tag} className="px-4 py-2 rounded-full text-xs font-semibold border"
-                style={{ borderColor: COLORS.darkBorder, color: COLORS.saffronLight, background: `${COLORS.saffron}0E` }}>
+                style={{ borderColor: COLORS.darkBorder, color: COLORS.saffronLight, background: `${alpha(COLORS.saffron, 0x0E)}` }}>
                 {tag}
               </span>
             ))}
@@ -620,7 +617,7 @@ const LegacyTimeline = () => (
   <section className="py-24 md:py-32 relative overflow-hidden" style={{ background: COLORS.darkElevated }}
     aria-label="Competition history timeline">
     <div className="absolute inset-0 pointer-events-none"
-      style={{ background: `radial-gradient(ellipse at 80% 50%, ${COLORS.saffron}06, transparent 60%)` }} />
+      style={{ background: `radial-gradient(ellipse at 80% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 60%)` }} />
     <div className="max-w-5xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
         <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>40+ Years</p>
@@ -628,7 +625,7 @@ const LegacyTimeline = () => (
       </FadeIn>
       <div className="relative">
         <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px -translate-x-1/2 pointer-events-none"
-          style={{ background: `linear-gradient(to bottom, transparent, ${COLORS.saffron}50, transparent)` }} />
+          style={{ background: `linear-gradient(to bottom, transparent, ${alpha(COLORS.saffron, 0x50)}, transparent)` }} />
         <div className="space-y-12">
           {timelineEvents.map((ev, i) => (
             <FadeIn key={ev.year} delay={i * 0.1} direction={i % 2 === 0 ? 'right' : 'left'}>
@@ -659,7 +656,7 @@ const QuoteStrip = () => (
     style={{ background: COLORS.dark, borderColor: COLORS.darkBorder }}
     aria-label="Inspirational quote">
     <div className="absolute inset-0 pointer-events-none"
-      style={{ background: `radial-gradient(ellipse at 50% 50%, ${COLORS.saffron}06, transparent 70%)` }} />
+      style={{ background: `radial-gradient(ellipse at 50% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 70%)` }} />
     <FadeIn className="max-w-4xl mx-auto px-4 text-center relative z-10">
       <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: COLORS.saffron }} aria-hidden="true" />
       <blockquote>
@@ -689,16 +686,16 @@ const FeatureCard = ({ feature, index }) => {
         <motion.div
           className="h-full min-h-[160px] p-6 rounded-2xl border relative overflow-hidden flex flex-col gap-4"
           style={{
-            background: feature.hero ? `linear-gradient(135deg, ${feature.accent}12, ${COLORS.darkCard})` : COLORS.darkCard,
-            borderColor: feature.hero ? `${feature.accent}30` : COLORS.darkBorderSubtle,
+            background: feature.hero ? `linear-gradient(135deg, ${alpha(feature.accent, 0x12)}, ${COLORS.darkCard})` : COLORS.darkCard,
+            borderColor: feature.hero ? `${alpha(feature.accent, 0x30)}` : COLORS.darkBorderSubtle,
             minHeight: feature.hero ? 280 : 160,
           }}
-          whileHover={{ borderColor: `${feature.accent}50`, boxShadow: `0 0 50px ${feature.accent}15`, y: -4 }}
+          whileHover={{ borderColor: `${alpha(feature.accent, 0x50)}`, boxShadow: `0 0 50px ${alpha(feature.accent, 0x15)}`, y: -4 }}
           transition={{ duration: 0.25 }}>
           <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(ellipse at 20% 20%, ${feature.accent}10, transparent 60%)` }} />
+            style={{ background: `radial-gradient(ellipse at 20% 20%, ${alpha(feature.accent, 0x10)}, transparent 60%)` }} />
           <div className={`rounded-xl flex items-center justify-center relative z-10 ${feature.hero ? 'w-14 h-14' : 'w-10 h-10'}`}
-            style={{ background: `${feature.accent}18` }}>
+            style={{ background: `${alpha(feature.accent, 0x18)}` }}>
             <Icon className={feature.hero ? 'w-7 h-7' : 'w-5 h-5'} style={{ color: feature.accent }} aria-hidden="true" />
           </div>
           <div className="relative z-10 flex-1">
@@ -762,7 +759,7 @@ const Footer = () => {
           <div className="flex gap-3 pt-2">
             <a href="https://www.facebook.com/bhausahebranade/" target="_blank" rel="noopener noreferrer"
               className="w-10 h-10 tap-safe rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
-              style={{ borderColor: COLORS.darkBorder, background: `${COLORS.saffron}0E` }}
+              style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x0E)}` }}
               aria-label="Facebook">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: COLORS.saffronLight }} aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />

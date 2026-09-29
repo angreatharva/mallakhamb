@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { apparatusFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { countedScoresFor } from '@/utils/scoring/teamSize';
 import { useReducedMotion } from '@/hooks/useResponsive';
@@ -445,7 +445,7 @@ const CoachDashboard = () => {
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }} />
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
           <p className="text-white/45 text-sm">Loading team dashboard...</p>
         </div>
       </div>
@@ -491,7 +491,7 @@ const CoachDashboard = () => {
                 <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
                   style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                   <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: `${COLORS.saffron}20` }}>
+                    style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                     <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
                   </div>
                   <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
@@ -545,7 +545,7 @@ const CoachDashboard = () => {
           isDragOver ? 'ring-2 ring-saffron scale-[1.01]' : ''
         }`}
         style={{
-          background: isDragOver ? `${accentColor}12` : 'rgba(255,255,255,0.02)',
+          background: isDragOver ? `${alpha(accentColor, 0x12)}` : 'rgba(255,255,255,0.02)',
           borderColor: isDragOver ? accentColor : COLORS.darkBorderSubtle,
         }}
         onDragOver={(e) => {
@@ -567,7 +567,7 @@ const CoachDashboard = () => {
           </span>
           <span
             className="text-xs px-2 py-0.5 rounded-full"
-            style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}
+            style={{ background: `${alpha(accentColor, 0x18)}`, color: accentColor, border: `1px solid ${alpha(accentColor, 0x30)}` }}
           >
             {team?.maxTeamSize ? `${groupPlayers.length} / ${team.maxTeamSize}` : groupPlayers.length}
           </span>
@@ -652,7 +652,7 @@ const CoachDashboard = () => {
               <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
                 style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: `${COLORS.saffron}20` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                   <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
                 </div>
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
@@ -684,7 +684,7 @@ const CoachDashboard = () => {
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
                   <Trophy className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
                 </div>
                 <div>
@@ -759,7 +759,7 @@ const CoachDashboard = () => {
             {team.description && <p className="mt-4 text-white/40 text-sm">{team.description}</p>}
             {team?.isSubmitted && (
               <div className="mt-4 p-3 rounded-xl flex items-center gap-2"
-                style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x25)}` }}>
                 <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
                 <p className="text-sm" style={{ color: COLORS.saffronLight }}>
                   Team has been submitted. Contact Admin to make changes.
@@ -779,7 +779,7 @@ const CoachDashboard = () => {
               <div className="rounded-2xl border p-5 flex items-center gap-4"
                 style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${color}18` }}>
+                  style={{ background: `${alpha(color, 0x18)}` }}>
                   <Icon className="w-5 h-5" style={{ color }} aria-hidden="true" />
                 </div>
                 <div>
@@ -864,7 +864,7 @@ const CoachDashboard = () => {
                   <p className="text-white/70 text-sm mt-1"><span className="text-white font-semibold">Total Players:</span> {team.players?.length || 0}</p>
                   {team?.isSubmitted && (
                     <div className="mt-3 flex items-center gap-2 p-2 rounded-lg"
-                      style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                      style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x25)}` }}>
                       <CheckCircle className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
                       <p className="text-sm" style={{ color: COLORS.saffronLight }}>Team Submitted</p>
                     </div>
@@ -908,7 +908,7 @@ const CoachDashboard = () => {
                   </button>
                   {team?.isSubmitted ? (
                     <div className="px-6 py-3 rounded-xl text-center min-h-[44px] flex items-center justify-center"
-                      style={{ background: `${COLORS.saffron}15`, color: COLORS.saffronLight, border: `1px solid ${COLORS.saffron}30` }}>
+                      style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: COLORS.saffronLight, border: `1px solid ${alpha(COLORS.saffron, 0x30)}` }}>
                       Team Already Submitted
                     </div>
                   ) : (
@@ -942,7 +942,7 @@ const CoachDashboard = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
                   <Trophy className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Submit Team for Competition?</h3>
@@ -957,7 +957,7 @@ const CoachDashboard = () => {
                       You will <strong>not be able to add or remove players</strong> after submission. To make any changes, you&apos;ll need to contact the admin.
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl" style={{ background: `${COLORS.saffron}10`, border: `1px solid ${COLORS.saffron}25` }}>
+                  <div className="p-3 rounded-xl" style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x25)}` }}>
                     <p className="text-xs text-center" style={{ color: COLORS.saffronLight }}>
                       Please review your team carefully before proceeding
                     </p>
@@ -1090,7 +1090,7 @@ const CoachDashboard = () => {
                             <label key={option.value}
                               className="flex items-center gap-2 px-3 py-3 rounded-xl border cursor-pointer transition-colors min-h-[44px]"
                               style={{
-                                background: checked ? `${COLORS.saffron}1A` : 'rgba(255,255,255,0.03)',
+                                background: checked ? `${alpha(COLORS.saffron, 0x1A)}` : 'rgba(255,255,255,0.03)',
                                 borderColor: checked ? COLORS.saffron : COLORS.darkBorderSubtle,
                               }}>
                               <input type="checkbox" className="sr-only"

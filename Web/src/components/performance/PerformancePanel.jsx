@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { publicAPI } from '@/services/index.js';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -48,7 +48,7 @@ const RankBadge = ({ rank }) => {
 // ─── Score Pill ───────────────────────────────────────────────────────────────
 const ScorePill = ({ label, value, accent }) => (
   <div className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl"
-    style={{ background: `${accent}12`, border: `1px solid ${accent}25` }}>
+    style={{ background: `${alpha(accent, 0x12)}`, border: `1px solid ${alpha(accent, 0x25)}` }}>
     <span className="text-xs font-bold tabular-nums" style={{ color: accent }}>
       {typeof value === 'number' ? value.toFixed(2) : (value ?? '—')}
     </span>
@@ -100,12 +100,12 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
       className="rounded-2xl border overflow-hidden"
       style={{
         background: isHighlighted
-          ? `linear-gradient(135deg, ${COLORS.saffron}12, rgba(255,255,255,0.02))`
+          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.02))`
           : rc
           ? `linear-gradient(135deg, ${rc.bg}, rgba(255,255,255,0.01))`
           : 'rgba(255,255,255,0.02)',
         borderColor: isHighlighted
-          ? `${COLORS.saffron}40`
+          ? `${alpha(COLORS.saffron, 0x40)}`
           : rc
           ? rc.border
           : 'rgba(255,255,255,0.07)',
@@ -124,7 +124,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
             <p className="text-white font-bold text-sm truncate">{player.playerName}</p>
             {isHighlighted && (
               <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{ background: `${COLORS.saffron}20`, color: COLORS.saffronLight }}>You</span>
+                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: COLORS.saffronLight }}>You</span>
             )}
             {!player.isFinalized && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -342,7 +342,7 @@ const PerformancePanel = ({
         <div className="px-6 pt-6 pb-4 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}28` }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
               <TrendingUp className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
             </div>
             <div>
@@ -364,8 +364,8 @@ const PerformancePanel = ({
                   onClick={() => setActiveTab(ct)}
                   className="flex flex-col items-start px-4 py-2.5 rounded-xl border transition-all duration-200 min-h-[44px]"
                   style={{
-                    background: isActive ? `${COLORS.saffron}15` : 'rgba(255,255,255,0.03)',
-                    borderColor: isActive ? `${COLORS.saffron}50` : 'rgba(255,255,255,0.08)',
+                    background: isActive ? `${alpha(COLORS.saffron, 0x15)}` : 'rgba(255,255,255,0.03)',
+                    borderColor: isActive ? `${alpha(COLORS.saffron, 0x50)}` : 'rgba(255,255,255,0.08)',
                     color: isActive ? COLORS.saffronLight : 'rgba(255,255,255,0.5)',
                   }}
                 >

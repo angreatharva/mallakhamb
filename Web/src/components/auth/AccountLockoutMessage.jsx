@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { alpha } from '@/styles/tokens';
 
 /**
  * AccountLockoutMessage - Display account lockout countdown timer
@@ -48,8 +49,8 @@ const AccountLockoutMessage = ({ lockoutEndTime, primaryColor = '#FF6B6B' }) => 
     <motion.div
       className="lockout-message rounded-lg p-4 mb-4"
       style={{
-        background: `${primaryColor}15`,
-        border: `1px solid ${primaryColor}40`,
+        background: `${alpha(primaryColor, 0x15)}`,
+        border: `1px solid ${alpha(primaryColor, 0x40)}`,
       }}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}

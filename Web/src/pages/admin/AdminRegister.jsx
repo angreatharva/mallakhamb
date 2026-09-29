@@ -23,6 +23,7 @@ import { useReducedMotion } from '../../components/design-system/animations';
 import { adminAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
+import { alpha } from '@/styles/tokens';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -226,7 +227,7 @@ const AdminRegisterInner = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: `${theme.colors.primary}80` }}>
+              style={{ color: `${alpha(theme.colors.primary, 0x80)}` }}>
               Bhausaheb Ranade Mallakhamb
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
@@ -248,25 +249,25 @@ const AdminRegisterInner = () => {
             ].map(({ icon: FeatureIcon, label }) => (
               <div key={label} className="flex flex-col items-center gap-1.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: `${theme.colors.primary}12`, border: `1px solid ${theme.colors.primary}25` }}>
+                  style={{ background: `${alpha(theme.colors.primary, 0x12)}`, border: `1px solid ${alpha(theme.colors.primary, 0x25)}` }}>
                   <FeatureIcon className="w-4 h-4" style={{ color: theme.colors.primary }} aria-hidden="true" />
                 </div>
                 <span className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: `${theme.colors.primary}60` }}>{label}</span>
+                  style={{ color: `${alpha(theme.colors.primary, 0x60)}` }}>{label}</span>
               </div>
             ))}
           </motion.div>
         </div>
         
         <div className="absolute bottom-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${theme.colors.primary}40, transparent)` }} />
+          style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)}, transparent)` }} />
       </div>
       
       {/* Right form panel */}
       <div className="flex-1 flex flex-col items-center justify-center relative px-6 py-12">
         <div className="lg:hidden absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute inset-0"
-            style={{ background: `radial-gradient(ellipse at 50% 30%, ${theme.colors.primary}10, transparent 65%)` }} />
+            style={{ background: `radial-gradient(ellipse at 50% 30%, ${alpha(theme.colors.primary, 0x10)}, transparent 65%)` }} />
         </div>
         
         <motion.div className="lg:hidden flex items-center gap-3 mb-8"
@@ -290,8 +291,8 @@ const AdminRegisterInner = () => {
             <div className="lg:hidden mb-5 flex justify-center">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ 
-                  background: `${theme.colors.primary}15`, 
-                  border: `1px solid ${theme.colors.primary}35` 
+                  background: `${alpha(theme.colors.primary, 0x15)}`, 
+                  border: `1px solid ${alpha(theme.colors.primary, 0x35)}` 
                 }}>
                 <Shield className="w-8 h-8" style={{ color: theme.colors.primary }} aria-hidden="true" />
               </div>
@@ -299,11 +300,11 @@ const AdminRegisterInner = () => {
             
             <div className="flex items-center gap-2 mb-2">
               <div className="h-px flex-1" 
-                style={{ background: `linear-gradient(90deg, ${theme.colors.primary}40, transparent)` }} />
+                style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }} />
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: `${theme.colors.primary}70` }}>Create Account</span>
+                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>Create Account</span>
               <div className="h-px flex-1" 
-                style={{ background: `linear-gradient(90deg, transparent, ${theme.colors.primary}40)` }} />
+                style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
             <h2 className="text-3xl font-black text-white mt-3">Register</h2>
             <p className="text-white/35 text-sm mt-1">Create your admin account</p>
@@ -316,7 +317,7 @@ const AdminRegisterInner = () => {
               {/* Name field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }} 
+                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
                   htmlFor="admin-name">
                   Full Name <span style={{ color: '#EF4444' }}>*</span>
                 </label>
@@ -346,7 +347,7 @@ const AdminRegisterInner = () => {
               {/* Email field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }} 
+                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
                   htmlFor="admin-email">
                   Email <span style={{ color: '#EF4444' }}>*</span>
                 </label>
@@ -379,7 +380,7 @@ const AdminRegisterInner = () => {
               {/* Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }} 
+                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
                   htmlFor="admin-password">
                   Password <span style={{ color: '#EF4444' }}>*</span>
                 </label>
@@ -420,7 +421,7 @@ const AdminRegisterInner = () => {
               {/* Confirm Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }} 
+                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
                   htmlFor="admin-confirm-password">
                   Confirm Password <span style={{ color: '#EF4444' }}>*</span>
                 </label>
@@ -476,7 +477,7 @@ const AdminRegisterInner = () => {
           </form>
           
           <motion.div className="mt-7 pt-5 border-t flex items-center justify-center"
-            style={{ borderColor: `${theme.colors.primary}12` }}
+            style={{ borderColor: `${alpha(theme.colors.primary, 0x12)}` }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
             <div className="flex items-center gap-3">
               <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center">
@@ -486,7 +487,7 @@ const AdminRegisterInner = () => {
               <span className="text-xs text-white/40">Already have an account?</span>
               <Link to="/admin/login"
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: `${theme.colors.primary}70` }}>
+                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>
                 Sign In
               </Link>
             </div>
@@ -495,7 +496,7 @@ const AdminRegisterInner = () => {
       </div>
       
       <motion.div className="absolute right-0 top-0 bottom-0 w-[2px] hidden lg:block"
-        style={{ background: `linear-gradient(to bottom, transparent, ${theme.colors.primary}30, transparent)` }}
+        style={{ background: `linear-gradient(to bottom, transparent, ${alpha(theme.colors.primary, 0x30)}, transparent)` }}
         initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
         transition={{ duration: 1.2, delay: 0.4, ease: EASE }} />
     </div>

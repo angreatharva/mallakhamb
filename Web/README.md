@@ -81,7 +81,7 @@ Web/
     │   ├── superadmin/            # Dashboard, Management, SystemStats, AddPlayerPayment
     │   ├── judge/                 # see "Judge scoring module" below
     │   ├── unified/               # UnifiedLogin (used by every role), UnifiedRegister
-    │   └── shared/                # ForgotPassword, ResetPassword, DesignTokenAuditPage
+    │   └── shared/                # ForgotPassword, ResetPassword, NotFound
     ├── components/
     │   ├── design-system/         # theme/, forms/, cards/, backgrounds/, ornaments/,
     │   │                          # animations/, accessibility/, audit/
@@ -252,10 +252,11 @@ Client-only additions:
 ## Design system & styling
 
 - `src/styles/tokens.js` exports `DESIGN_TOKENS` — brand colours, surfaces, borders, text, status and per-role accents (admin/judge purple `#8B5CF6`, superadmin gold `#F5A623`, coach green `#22C55E`, player saffron `#FF6B00`). The legacy `COLORS` / `ADMIN_COLORS` exports are deprecated Proxy shims that warn in development.
-- `src/components/design-system/` is the in-house kit: `ThemeProvider`/`useTheme`, `Themed{Button,Input,Select,Textarea}`, `GlassCard`/`DarkCard`/`StatCard`/`TiltCard`, animated SVG backgrounds (Constellation, HexGrid, HexMesh, RadialBurst, DiagonalBurst), ornaments, and `FadeIn` which respects `useReducedMotion`.
-- `src/components/responsive/` provides layout primitives; `hooks/useResponsive.js` exposes the breakpoint state.
+- `src/components/design-system/` is the in-house kit: `ThemeProvider`/`useTheme`, `Themed{Button,Input,Select,Textarea}`, `GlassCard`/`DarkCard`/`StatCard`/`TiltCard`, the `AmbientOrbs` and `HexGrid` backgrounds, ornaments, and `FadeIn` which respects `useReducedMotion`.
+- `src/components/responsive/` provides layout primitives; `hooks/useResponsive.js` exposes the breakpoint state. Breakpoints and the z-index scale have ONE definition, `src/styles/breakpoints.js`, which `tailwind.config.js` reads too.
+- **Appearance (dark | light)** is separate from the role accent above: `html[data-appearance]`, set before first paint by `public/appearance-init.js`, and colour tokens in `src/index.css`. `AppearanceProvider`/`useAppearance` hold the preference (localStorage `mk-appearance`, default dark). Build colours with alpha as `alpha(token, 0xNN)` from `styles/tokens.js`, never by gluing hex digits onto a token — a CI test enforces it. See `docs/RESPONSIVE_UIUX_PLAN.md`.
 - `utils/ui/cn.js` is `clsx` + `tailwind-merge`.
-- Two custom ESLint rules (`eslint-rules/`) warn on hardcoded colours and spacing to push usage toward the tokens. `pages/shared/DesignTokenAuditPage.jsx` renders a live audit of token usage, but it is not currently attached to a route — mount it temporarily if you need it.
+- Two custom ESLint rules (`eslint-rules/`) warn on hardcoded colours and spacing to push usage toward the tokens.
 
 ---
 

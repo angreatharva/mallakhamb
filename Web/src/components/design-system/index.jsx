@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { useReducedMotion } from '../../hooks/useResponsive';
-import { DESIGN_TOKENS, EASE_OUT } from '../../styles/tokens';
+import { DESIGN_TOKENS, EASE_OUT, alpha } from '../../styles/tokens';
 
 const COLORS = DESIGN_TOKENS.colors.brand;
 
@@ -75,7 +75,7 @@ export const SaffronButton = ({ children, to, className = '', variant = 'solid',
         className={`${base} ${variant === 'solid' ? solid : outline} ${className}`}
         style={variant === 'solid'
           ? { background: `linear-gradient(135deg, ${COLORS.saffron}, ${DESIGN_TOKENS.colors.brand.saffronDark})` }
-          : { borderColor: `${COLORS.saffron}60`, color: COLORS.saffronLight }}
+          : { borderColor: `${alpha(COLORS.saffron, 0x60)}`, color: COLORS.saffronLight }}
         {...props}
       >
         {children}
@@ -87,7 +87,7 @@ export const SaffronButton = ({ children, to, className = '', variant = 'solid',
       className={`${base} ${variant === 'solid' ? solid : outline} ${className}`}
       style={variant === 'solid'
         ? { background: `linear-gradient(135deg, ${COLORS.saffron}, ${DESIGN_TOKENS.colors.brand.saffronDark})` }
-        : { borderColor: `${COLORS.saffron}60`, color: COLORS.saffronLight }}
+        : { borderColor: `${alpha(COLORS.saffron, 0x60)}`, color: COLORS.saffronLight }}
       {...props}
     >
       {children}

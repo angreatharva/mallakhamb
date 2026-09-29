@@ -8,7 +8,7 @@ import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
@@ -43,10 +43,10 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
       className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 focus:outline-none"
       style={{
         background: isSelected
-          ? `linear-gradient(135deg, ${COLORS.saffron}12, rgba(255,255,255,0.03))`
+          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.03))`
           : 'rgba(255,255,255,0.03)',
-        borderColor: isSelected ? `${COLORS.saffron}45` : COLORS.darkBorderSubtle,
-        boxShadow: isSelected ? `0 0 0 1px ${COLORS.saffron}20, 0 8px 32px ${COLORS.saffron}10` : 'none',
+        borderColor: isSelected ? `${alpha(COLORS.saffron, 0x45)}` : COLORS.darkBorderSubtle,
+        boxShadow: isSelected ? `0 0 0 1px ${alpha(COLORS.saffron, 0x20)}, 0 8px 32px ${alpha(COLORS.saffron, 0x10)}` : 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         // Empty levels stay selectable on purpose — see the note on the counts
         // below — but they are visibly quieter than levels with meets behind them.
@@ -56,8 +56,8 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
       whileHover={disabled ? {} : {
-        borderColor: `${COLORS.saffron}35`,
-        background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.03))`,
+        borderColor: `${alpha(COLORS.saffron, 0x35)}`,
+        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgba(255,255,255,0.03))`,
         y: -2,
       }}
       whileTap={disabled ? {} : { scale: 0.99 }}
@@ -65,12 +65,12 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
     >
       {isSelected && (
         <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}60, transparent)` }} />
+          style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x60)}, transparent)` }} />
       )}
 
       <div className="p-5 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: isSelected ? `${COLORS.saffron}20` : 'rgba(255,255,255,0.06)' }}>
+          style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgba(255,255,255,0.06)' }}>
           <Layers className="w-5 h-5"
             style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
         </div>
@@ -92,7 +92,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
           ) : (
             <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
               style={{
-                background: isEmpty ? 'rgba(255,255,255,0.05)' : `${COLORS.saffron}12`,
+                background: isEmpty ? 'rgba(255,255,255,0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
                 color: isEmpty ? 'rgba(255,255,255,0.35)' : COLORS.saffronLight,
               }}>
               {count === 1 ? '1 competition' : `${count} competitions`}
@@ -229,7 +229,7 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="text-center">
           <motion.div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}30` }}
+            style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x30)}` }}
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -263,7 +263,7 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
           <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${COLORS.saffron}12`, borderColor: `${COLORS.saffron}35`, color: COLORS.saffronLight }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: COLORS.saffronLight }}>
               <Layers className="w-3 h-3" aria-hidden="true" />
               Level Selection
             </div>

@@ -7,6 +7,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import BHALogo from '../../assets/BHA.png';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
+import { alpha } from '@/styles/tokens';
 
 const COLORS = {
   saffron: '#FF6B00',
@@ -45,7 +46,7 @@ const StyledInput = ({ error, verified, ...props }) => (
     onFocus={e => {
       if (!verified) {
         e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron;
-        e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`;
+        e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`;
       }
     }}
     onBlur={e => {
@@ -68,7 +69,7 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
         border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
         caretColor: COLORS.saffron,
       }}
-      onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`; }}
+      onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`; }}
       onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
@@ -203,7 +204,7 @@ const ResetPassword = () => {
       {!reduced && (
         <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
           style={{
-            backgroundImage: `linear-gradient(${COLORS.saffron}80 1px, transparent 1px), linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
             transform: 'perspective(400px) rotateX(60deg)',
             transformOrigin: 'bottom center',
@@ -238,7 +239,7 @@ const ResetPassword = () => {
           <div className="text-center mb-6">
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.darkBorder}` }}
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
               <Lock className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
@@ -378,7 +379,7 @@ const ResetPassword = () => {
                       disabled={loading || verifying || isLockedOut || otpVerified}
                       className="px-4 rounded-xl text-sm font-bold min-h-[48px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       style={{
-                        background: otpVerified ? 'rgba(34,197,94,0.15)' : `${COLORS.saffron}18`,
+                        background: otpVerified ? 'rgba(34,197,94,0.15)' : `${alpha(COLORS.saffron, 0x18)}`,
                         border: `1px solid ${otpVerified ? 'rgba(34,197,94,0.3)' : COLORS.darkBorder}`,
                         color: otpVerified ? '#4ade80' : COLORS.saffronLight,
                       }}

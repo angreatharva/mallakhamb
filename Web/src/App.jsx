@@ -6,6 +6,7 @@ import { CompetitionProvider } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import AuthProvider from '@/contexts/AuthProvider';
+import AppearanceProvider from '@/contexts/AppearanceProvider';
 import AppRoutes, { PageLoader } from '@/routes';
 import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
@@ -56,7 +57,7 @@ function AppContent() {
 
   return (
     <CompetitionProvider userType={userType}>
-      <div className="min-h-screen" style={{ background: '#0a0a0a' }}>
+      <div className="min-h-screen bg-bg">
         {!shouldHideNavbar && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
 
         <div className={!shouldHideNavbar ? 'pt-16' : ''}>
@@ -121,11 +122,18 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </Router>
+      {/*
+        * Outermost after the boundary: the appearance is per device, not per
+        * route or session, and a switch must never remount what is inside it
+        * (a judge mid-slip keeps every mark). See AppearanceProvider.
+        */}
+      <AppearanceProvider>
+        <Router>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </Router>
+      </AppearanceProvider>
     </ErrorBoundary>
   );
 }

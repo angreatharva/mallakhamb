@@ -19,7 +19,7 @@ import { ArrowLeft, Timer, Send, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { buildScorerRows } from './scorerRows';
@@ -247,8 +247,8 @@ const TimeKeeperScoring = () => {
                         aria-pressed={active}
                         className="w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left min-h-[52px] transition-colors disabled:opacity-40"
                         style={{
-                          background: active ? `${ADMIN_COLORS.saffron}14` : 'rgba(255,255,255,0.02)',
-                          borderColor: active ? `${ADMIN_COLORS.saffron}55` : ADMIN_COLORS.darkBorderSubtle,
+                          background: active ? `${alpha(ADMIN_COLORS.saffron, 0x14)}` : 'rgba(255,255,255,0.02)',
+                          borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x55)}` : ADMIN_COLORS.darkBorderSubtle,
                         }}>
                         <span className="text-sm font-bold text-white truncate">{row.name}</span>
                         {rec && (

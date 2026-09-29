@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 
@@ -42,9 +42,9 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 
 const statusStyle = (status) => {
   const map = {
-    completed: { bg: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green },
-    pending: { bg: `${ADMIN_COLORS.gold}20`, color: ADMIN_COLORS.gold },
-    failed: { bg: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red },
+    completed: { bg: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green },
+    pending: { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold },
+    failed: { bg: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: ADMIN_COLORS.red },
   };
   return map[status] || { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' };
 };
@@ -160,7 +160,7 @@ const AdminTransactions = () => {
         <DarkCard className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${ADMIN_COLORS.purple}18` }}>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
                 <ReceiptIndianRupee className="w-5 h-5" style={{ color: ADMIN_COLORS.purple }} />
               </div>
               <div>
@@ -267,9 +267,9 @@ const AdminTransactions = () => {
                         onClick={() => openPlayersModal(row.players)}
                         className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg min-h-[44px] transition-colors"
                         style={{
-                          background: `${ADMIN_COLORS.purple}18`,
+                          background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
                           color: ADMIN_COLORS.purple,
-                          border: `1px solid ${ADMIN_COLORS.purple}30`,
+                          border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`,
                         }}
                       >
                         <Users className="w-4 h-4" aria-hidden="true" />
@@ -318,9 +318,9 @@ const AdminTransactions = () => {
                               onClick={() => openPlayersModal(players)}
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105"
                               style={{ 
-                                background: `${ADMIN_COLORS.purple}18`,
+                                background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
                                 color: ADMIN_COLORS.purple,
-                                border: `1px solid ${ADMIN_COLORS.purple}30`
+                                border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`
                               }}
                             >
                               <Users className="w-4 h-4" />
@@ -373,7 +373,7 @@ const AdminTransactions = () => {
               <div className="p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${ADMIN_COLORS.purple}18` }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
                       <Users className="w-5 h-5" style={{ color: ADMIN_COLORS.purple }} />
                     </div>
                     <div>
@@ -417,7 +417,7 @@ const AdminTransactions = () => {
                             <p className="text-white font-bold">{player.name}</p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
-                                background: `${ADMIN_COLORS.saffron}20`, 
+                                background: `${alpha(ADMIN_COLORS.saffron, 0x20)}`, 
                                 color: ADMIN_COLORS.saffron 
                               }}>
                                 {player.ageGroup}
@@ -425,7 +425,7 @@ const AdminTransactions = () => {
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: player.gender === 'Male' 
                                   ? `${ADMIN_COLORS.blue || '#3B82F6'}20` 
-                                  : `${ADMIN_COLORS.purple}20`,
+                                  : `${alpha(ADMIN_COLORS.purple, 0x20)}`,
                                 color: player.gender === 'Male' 
                                   ? ADMIN_COLORS.blue || '#3B82F6'
                                   : ADMIN_COLORS.purple

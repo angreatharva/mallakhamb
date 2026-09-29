@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, CalendarClock, AlertTriangle, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
@@ -329,7 +329,7 @@ const CoachPayment = () => {
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }} />
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
           <p className="text-white/45 text-sm">Loading payment details...</p>
         </div>
       </div>
@@ -347,7 +347,7 @@ const CoachPayment = () => {
           <div className="rounded-3xl border p-10"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <motion.div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ background: isAlreadySubmitted ? `${COLORS.saffron}18` : '#22C55E18', border: `2px solid ${isAlreadySubmitted ? `${COLORS.saffron}40` : '#22C55E40'}` }}
+              style={{ background: isAlreadySubmitted ? `${alpha(COLORS.saffron, 0x18)}` : '#22C55E18', border: `2px solid ${isAlreadySubmitted ? `${alpha(COLORS.saffron, 0x40)}` : '#22C55E40'}` }}
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}>
               {isAlreadySubmitted ? (
@@ -415,7 +415,7 @@ const CoachPayment = () => {
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
         <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
-            style={{ background: `${COLORS.saffron}18`, border: `2px solid ${COLORS.saffron}40` }}>
+            style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `2px solid ${alpha(COLORS.saffron, 0x40)}` }}>
             <CalendarClock className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
           </div>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
@@ -444,7 +444,7 @@ const CoachPayment = () => {
       {!reduced && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full"
-            style={{ background: `${COLORS.saffron}06`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }} />
+            style={{ background: `${alpha(COLORS.saffron, 0x06)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }} />
         </div>
       )}
 
@@ -475,7 +475,7 @@ const CoachPayment = () => {
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-                  style={{ background: `${COLORS.saffron}18` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
                   <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
                 </div>
                 <div>
@@ -527,7 +527,7 @@ const CoachPayment = () => {
                   to, and the coach is owed the reason before they pay it. */}
               {feeWindow.isLate && (
                 <div className="flex gap-3 mb-5 p-4 rounded-2xl"
-                  style={{ background: `${COLORS.saffron}12`, border: `1px solid ${COLORS.saffron}35` }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x12)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: COLORS.saffron }} aria-hidden="true" />
                   <div>
                     <p className="text-sm font-bold text-white">Late fee applies</p>

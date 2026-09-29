@@ -3,7 +3,7 @@ import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '@/components/auth/Dropdown';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, alpha } from '../../styles/tokens';
 import { getAgeGroupsForGender, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 
 /**
@@ -61,7 +61,7 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
         boxSizing: 'border-box',
         transition: 'border-color 0.15s',
       }}
-      onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
+      onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
       onBlur={e => { e.target.style.borderColor = borderMid; }}
     />
     {value && (
@@ -114,9 +114,9 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
 // ─── Active filter count badge ────────────────────────────────────────────────
 const ActiveBadge = ({ count }) => count > 0 ? (
   <span style={{
-    background: `${C.saffron}22`,
+    background: `${alpha(C.saffron, 0x22)}`,
     color: C.saffronLight,
-    border: `1px solid ${C.saffron}44`,
+    border: `1px solid ${alpha(C.saffron, 0x44)}`,
     borderRadius: 20,
     padding: '1px 8px',
     fontSize: 11,

@@ -36,6 +36,7 @@ import { DarkCard } from '../../components/design-system/cards/DarkCard';
 import { StatCard } from '../../components/design-system/cards/StatCard';
 import { FadeIn } from '../../components/design-system/animations/FadeIn';
 import { useReducedMotion } from '../../components/design-system/animations/useReducedMotion';
+import { alpha } from '@/styles/tokens';
 
 // ─── Age group label helper ───────────────────────────────────────────────────
 const ageLabel = (ag) => ({
@@ -63,14 +64,14 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
           return (
             <div key={compType} className="rounded-xl p-3 border"
               style={{
-                background: `${statusColor}10`,
-                borderColor: `${statusColor}30`,
+                background: `${alpha(statusColor, 0x10)}`,
+                borderColor: `${alpha(statusColor, 0x30)}`,
               }}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-white">{compLabel(compType)}</span>
                   {data.isStarted
-                    ? <span className="px-2 py-0.5 text-xs font-bold rounded-full" style={{ background: `${statusColor}30`, color: statusColor }}>Started</span>
+                    ? <span className="px-2 py-0.5 text-xs font-bold rounded-full" style={{ background: `${alpha(statusColor, 0x30)}`, color: statusColor }}>Started</span>
                     : data.hasMinimumJudges
                       ? <CheckCircle className="w-3.5 h-3.5" style={{ color: statusColor }} />
                       : <XCircle className="w-3.5 h-3.5" style={{ color: statusColor }} />}
@@ -103,8 +104,8 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
 const CompStatCard = ({ label, value, color, delay = 0 }) => (
   <FadeIn delay={delay}>
     <div className="p-5 rounded-2xl border flex flex-col gap-1"
-      style={{ background: `${color}08`, borderColor: `${color}25` }}>
-      <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: `${color}CC` }}>{label}</p>
+      style={{ background: `${alpha(color, 0x08)}`, borderColor: `${alpha(color, 0x25)}` }}>
+      <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: `${alpha(color, 0xCC)}` }}>{label}</p>
       <p className="text-3xl font-black" style={{ color }}>{value ?? 0}</p>
     </div>
   </FadeIn>
@@ -574,7 +575,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         <DarkCard className="p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${theme.colors.primary}18` }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${alpha(theme.colors.primary, 0x18)}` }}>
                 <TrendingUp className="w-5 h-5" style={{ color: theme.colors.primary }} />
               </div>
               <div>
@@ -683,7 +684,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         style={{ background: theme.colors.background }}>
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ background: `${theme.colors.primary}18`, border: `2px solid ${theme.colors.primary}30` }}>
+            style={{ background: `${alpha(theme.colors.primary, 0x18)}`, border: `2px solid ${alpha(theme.colors.primary, 0x30)}` }}>
             <Trophy className="w-8 h-8" style={{ color: theme.colors.primary }} />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">No Competition Selected</h2>
@@ -753,7 +754,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                     {isActive && (
                       <motion.div
                         className="absolute inset-0 rounded-lg"
-                        style={{ background: `${theme.colors.primary}20`, border: `1px solid ${theme.colors.primary}30` }}
+                        style={{ background: `${alpha(theme.colors.primary, 0x20)}`, border: `1px solid ${alpha(theme.colors.primary, 0x30)}` }}
                         layoutId={`activeTab-${isSuperAdmin ? 'superadmin' : 'admin'}`}
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
@@ -774,7 +775,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             {isSuperAdmin && (
               <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
-                style={{ background: `${theme.colors.primary}18`, color: theme.colors.primary, border: `1px solid ${theme.colors.primary}30` }}>
+                style={{ background: `${alpha(theme.colors.primary, 0x18)}`, color: theme.colors.primary, border: `1px solid ${alpha(theme.colors.primary, 0x30)}` }}>
                 <Shield className="w-3 h-3" aria-hidden="true" />
                 Super Admin
               </span>
@@ -830,7 +831,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       onClick={() => handleTabNav(t.id)}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] transition-all duration-200"
                       style={{
-                        background: isActive ? `${theme.colors.primary}18` : 'transparent',
+                        background: isActive ? `${alpha(theme.colors.primary, 0x18)}` : 'transparent',
                         color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
                         border: `1px solid ${isActive ? theme.colors.primary + '30' : 'transparent'}`,
                       }}

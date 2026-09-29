@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { RankBadge } from './PlayerRankingBoard';
 
@@ -35,8 +35,8 @@ const TeamCard = ({ team }) => {
   return (
     <div className="rounded-2xl border overflow-hidden"
       style={{
-        background: rankAccent ? `${rankAccent}0A` : 'rgba(255,255,255,0.02)',
-        borderColor: rankAccent ? `${rankAccent}40` : 'rgba(255,255,255,0.07)',
+        background: rankAccent ? `${alpha(rankAccent, 0x0A)}` : 'rgba(255,255,255,0.02)',
+        borderColor: rankAccent ? `${alpha(rankAccent, 0x40)}` : 'rgba(255,255,255,0.07)',
       }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
         aria-expanded={open} aria-controls={panelId}
