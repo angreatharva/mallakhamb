@@ -46,13 +46,49 @@ const pick = (roster, firstName, label) => {
  * Both are accessed lazily through getters, so that refusal happens when a spec
  * signs in rather than when this module is imported.
  */
-export const CREDENTIALS = {
+const ROSTER_CREDENTIALS = {
   judge: pick(JUDGE_ROSTER, 'Ravi', 'judge'),
   coach: pick(COACH_ROSTER, 'Rajesh', 'coach'),
   player: pick(PLAYER_ROSTER, 'Atharva', 'player'),
   admin: ADMIN,
   superadmin: SUPERADMIN,
 };
+
+/**
+ * `AUDIT_<ROLE>_EMAIL` + `AUDIT_<ROLE>_PASSWORD` replace one role's account.
+ *
+ * The roster people above only exist in a database the roster chain built, and
+ * rebuilding one means `setup --drop`. Against any other database — a
+ * hand-seeded trials meet, say — pass the accounts that DO exist there instead
+ * of wiping it to create these. Both halves or neither: half an override would
+ * sign in as one person with another's password and read as an app bug.
+ */
+const overrideFor = (role) => {
+  const email = process.env[`AUDIT_${role.toUpperCase()}_EMAIL`];
+  const password = process.env[`AUDIT_${role.toUpperCase()}_PASSWORD`];
+  if (!email && !password) return null;
+  if (!email || !password) {
+    throw new Error(`Set both AUDIT_${role.toUpperCase()}_EMAIL and AUDIT_${role.toUpperCase()}_PASSWORD, or neither.`);
+  }
+  return { email, password };
+};
+
+export const CREDENTIALS = Object.fromEntries(
+  Object.entries(ROSTER_CREDENTIALS).map(([role, fallback]) => [
+    role,
+    {
+      get email() { return (overrideFor(role) || fallback).email; },
+      get password() { return (overrideFor(role) || fallback).password; },
+    },
+  ])
+);
+
+/**
+ * The meet the choosers pick. Defaults to Mumbai (the district meet on the
+ * roster chain, and also where the trials meet is held); `AUDIT_MEET` takes a
+ * regular expression for anything else.
+ */
+const MEET = new RegExp(process.env.AUDIT_MEET || 'Mumbai', 'i');
 
 /**
  * Sign in at a role portal.
@@ -91,7 +127,7 @@ export const signInAs = async (page, role) => {
 
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
   if (await arena.count().catch(() => 0)) {
-    await page.getByRole('button', { name: /Mumbai/i }).first().click({ timeout: 10_000 }).catch(() => {});
+    await page.getByRole('button', { name: MEET }).first().click({ timeout: 10_000 }).catch(() => {});
     await page.getByRole('button', { name: /Continue to Dashboard/i }).click({ timeout: 10_000 }).catch(() => {});
     await page.waitForTimeout(1500);
   }
@@ -117,7 +153,7 @@ export const dismissContextChooser = async (page) => {
 
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
   if (await arena.count().catch(() => 0)) {
-    await page.getByRole('button', { name: /Mumbai/i }).first().click({ timeout: 5000 }).catch(() => {});
+    await page.getByRole('button', { name: MEET }).first().click({ timeout: 5000 }).catch(() => {});
     await page.getByRole('button', { name: /Continue to Dashboard/i }).click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(900);
   }

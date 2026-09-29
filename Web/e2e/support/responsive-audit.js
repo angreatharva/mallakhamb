@@ -13,7 +13,20 @@
 
 /** The phone widths named in the brief, plus the desktop baselines to protect. */
 export const MOBILE_WIDTHS = [320, 360, 375, 390, 414, 430];
-export const DESKTOP_WIDTHS = [1366, 1440, 1920];
+
+/**
+ * The band nobody built: iPad Mini, iPad Air, iPad Pro 11 and the 1024 edge
+ * where an iPad Pro 12.9 in portrait (or any iPad in landscape) meets the
+ * desktop layout. Every mobile primitive stops at 767, so these four widths are
+ * where the desktop layout and desktop touch metrics land on a finger.
+ */
+export const TABLET_WIDTHS = [768, 820, 834, 1024];
+
+/** 1280 and 1536 are the `xl`/`2xl` edges; the other three are real laptops. */
+export const DESKTOP_WIDTHS = [1280, 1366, 1440, 1536, 1920];
+
+/** Portrait heights of the devices behind TABLET_WIDTHS. */
+const TABLET_PORTRAIT_HEIGHTS = { 768: 1024, 820: 1180, 834: 1194, 1024: 1366 };
 
 /**
  * Heights are incidental to overflow, but a realistic one keeps sticky bars
@@ -22,10 +35,57 @@ export const DESKTOP_WIDTHS = [1366, 1440, 1920];
  * `AUDIT_HEIGHT` forces one, which is how the landscape pass is run: a phone
  * turned sideways is ~812x375, and at that height a sticky header plus a
  * sticky action bar can leave almost nothing between them. Passing the width
- * alone would be measured as a small desktop and miss it entirely.
+ * alone would be measured as a small desktop and miss it entirely. The same
+ * goes for a tablet: `AUDIT_HEIGHT=768 WIDTHS=1024` is an iPad in landscape.
  */
-export const heightFor = (width) =>
-  (process.env.AUDIT_HEIGHT ? Number(process.env.AUDIT_HEIGHT) : (width < 768 ? 812 : 900));
+export const heightFor = (width) => {
+  if (process.env.AUDIT_HEIGHT) return Number(process.env.AUDIT_HEIGHT);
+  if (width < 768) return 812;
+  return TABLET_PORTRAIT_HEIGHTS[width] || 900;
+};
+
+/**
+ * Touch targets are a finger's problem, and a finger is on every phone and
+ * every tablet. Measuring them only below 768 is how the tablet band inherited
+ * desktop metrics without anything noticing. Widths in the tablet band are
+ * always measured; wider ones only when the engine reports a coarse pointer
+ * (the WebKit iPad projects in landscape).
+ */
+export const wantsTouchTargets = async (page, width) =>
+  width < 1024 || page.evaluate(() => matchMedia('(pointer: coarse)').matches).catch(() => false);
+
+/**
+ * Which appearance(s) to render: `APPEARANCE=dark|light|both`, default dark.
+ *
+ * The app reads its preference from `localStorage['mk-appearance']` in a
+ * blocking script before any stylesheet, so the value has to be in storage
+ * before the first byte of the page runs — hence an init script rather than a
+ * write after navigation (which would measure one frame of the wrong scheme
+ * and then a repaint).
+ */
+export const APPEARANCES = (() => {
+  const raw = (process.env.APPEARANCE || 'dark').toLowerCase();
+  if (raw === 'both') return ['dark', 'light'];
+  if (raw === 'dark' || raw === 'light') return [raw];
+  throw new Error(`APPEARANCE must be dark, light or both (got "${process.env.APPEARANCE}").`);
+})();
+
+/**
+ * Pin the page to one appearance for every later navigation.
+ *
+ * Init scripts accumulate and run in registration order, so calling this again
+ * with another value simply wins over the earlier one — which is how a `both`
+ * run switches halfway through without a fresh page. `clearSession` wiping
+ * localStorage does not undo it either: the script runs again on the next load.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {'dark'|'light'} appearance
+ */
+export const applyAppearance = async (page, appearance) => {
+  await page.addInitScript((value) => {
+    try { localStorage.setItem('mk-appearance', value); } catch { /* storage refused: app falls back to dark */ }
+  }, appearance);
+};
 
 /**
  * Elements the audit should not scold.
@@ -199,12 +259,16 @@ export const settle = async (page) => {
 /**
  * Render one page at every requested width and report what broke.
  *
+ * The caller owns the appearance (see `applyAppearance`); `appearance` here is
+ * only a label so a `both` run can say which scheme a finding came from.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {{name: string, url: string, prepare?: (page) => Promise<void>}} route
  * @param {number[]} widths
+ * @param {string} [appearance]
  * @returns {Promise<Array<object>>}
  */
-export const auditRoute = async (page, route, widths) => {
+export const auditRoute = async (page, route, widths, appearance = 'dark') => {
   const findings = [];
   for (const width of widths) {
     await page.setViewportSize({ width, height: heightFor(width) });
@@ -213,9 +277,9 @@ export const auditRoute = async (page, route, widths) => {
     if (route.prepare) await route.prepare(page).catch(() => {});
     await page.waitForTimeout(250);
 
-    const result = await measurePage(page, { checkTouchTargets: width < 768 });
+    const result = await measurePage(page, { checkTouchTargets: await wantsTouchTargets(page, width) });
     if (result.horizontalScroll || result.overflowing.length || result.tinyTargets.length) {
-      findings.push({ route: route.name, url: route.url, width, ...result });
+      findings.push({ route: route.name, url: route.url, width, appearance, ...result });
     }
   }
   return findings;

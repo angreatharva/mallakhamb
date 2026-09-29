@@ -1022,3 +1022,48 @@ where they enter the score at all.
 The last assertion in the spec pins the stored value against what the screen
 showed, because those were once different: the screen showed 8.13, the database
 kept 8.633, and the published ranking used the second one.
+
+## The responsive and visual audits
+
+Read-only: they sign in, navigate and measure, and never write. They share one
+route list and one sign-in (`support/audit-routes.js`).
+
+| Script | What it answers |
+|---|---|
+| `npm run audit:responsive` | Does any page scroll sideways, overflow, or have <44px tap targets? Phone + desktop widths. |
+| `npm run audit:tablet` | The same at 768 / 820 / 834 / 1024 (portrait), with tap targets measured — tablets are finger devices. |
+| `npm run audit:visual` | Did anything move? Pixel diff against a recorded baseline. |
+| `audit:modals`, `audit:judge-walk`, `audit:shots` | Dialogs, the judge slip end to end, and screenshots to look at. |
+
+Environment, for all of them: `ROLE=judge|public|coach|player|admin|superadmin|all`,
+`WIDTHS=375,820,1366`, `AUDIT_HEIGHT=768` (landscape), `APPEARANCE=dark|light|both`.
+
+**Which accounts.** By default the roster people (Ravi, Rajesh, Atharva), who only
+exist in a database the roster chain built. Against any other database, override
+per role instead of wiping it — `AUDIT_<ROLE>_EMAIL` + `AUDIT_<ROLE>_PASSWORD`, and
+`AUDIT_MEET=<regex>` for the meet the choosers pick. Keep them in
+`Web/.env.audit.local` (gitignored via `*.local`) and load it for the run:
+
+```bash
+set -a && . ./.env.audit.local && set +a && ROLE=coach npm run audit:visual
+```
+
+**The visual baseline.** Record on the commit BEFORE a change, compare after:
+
+```bash
+npm run audit:visual -- --update-snapshots
+npm run audit:visual
+```
+
+Baselines go to `Web/.visual-baseline/` (gitignored — one machine's rendering of
+one database). The spec asks for reduced motion (through `contextOptions`; a bare
+`reducedMotion` test option is silently ignored), scrolls each page once so
+`whileInView` sections render instead of photographing as black, and waits for
+toasts and in-flight "Checking…" lines to clear. Re-run the compare on an
+UNCHANGED build first: anything that differs there is nondeterminism to fix in the
+spec, not a regression.
+
+**iPhone and iPad Safari.** `npm run test:e2e:install:webkit` once, then
+`E2E_WEBKIT=1 npx playwright test e2e/responsive-tablet.spec.js --project=ipad-mini`.
+The WebKit projects exist only when `E2E_WEBKIT` is set and only match the
+`responsive-*`/`visual-*` specs, so the seeding specs can never run twice.

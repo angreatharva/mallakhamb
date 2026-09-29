@@ -1,6 +1,30 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
+ * iPhone and iPad Safari, for the read-only audit specs only.
+ *
+ * Every device includes iPhone and Safari, and WebKit is where `dvh`, autofill
+ * colours, safe-area insets and the under-16px input zoom actually behave the
+ * way they do on the hardware. Chromium emulating an iPhone does none of that.
+ *
+ * OPT-IN (`E2E_WEBKIT=1`) and RESTRICTED to the responsive/visual specs, for
+ * two reasons: WebKit is a separate download (`npm run test:e2e:install:webkit`)
+ * that a plain `npx playwright test` must not demand; and Playwright runs every
+ * spec in every project, so an unrestricted project would replay the seeding
+ * specs a second time and fail on "email already exists".
+ */
+function webkitProjects() {
+  if (!process.env.E2E_WEBKIT) return [];
+  const auditOnly = /(responsive-|visual-).*\.spec\.js$/;
+  return [
+    { name: 'iphone-13', testMatch: auditOnly, use: { ...devices['iPhone 13'] } },
+    { name: 'ipad-mini', testMatch: auditOnly, use: { ...devices['iPad Mini'] } },
+    { name: 'ipad-pro-11', testMatch: auditOnly, use: { ...devices['iPad Pro 11'] } },
+    { name: 'ipad-pro-11-landscape', testMatch: auditOnly, use: { ...devices['iPad Pro 11 landscape'] } },
+  ];
+}
+
+/**
  * Playwright config for the browser-driven workflows in `e2e/`.
  *
  * These specs are NOT pure tests — they drive the real UI against a real API
@@ -25,6 +49,14 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
 
+  /*
+   * Where `toHaveScreenshot` baselines live (only visual-baseline.spec.js uses
+   * it). Outside `test-results/` on purpose: Playwright empties that directory
+   * at the start of every run, which would delete the baseline a run is
+   * supposed to compare against. Gitignored — see .gitignore.
+   */
+  snapshotPathTemplate: '{testDir}/../.visual-baseline/{projectName}/{arg}{ext}',
+
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
 
   use: {
@@ -44,6 +76,7 @@ export default defineConfig({
 
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    ...webkitProjects(),
   ],
 
   /**
