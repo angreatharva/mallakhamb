@@ -606,7 +606,10 @@ export function analyzePanelMismatches(panelScores, panelSize) {
     //                          (difficulty mix / combination checklist)
     //   hasToleranceBreach  — judges agree on the routine but their execution
     //                          marks are further apart than §3.4 allows
-    // Final Submit waits on both (hasBlockingIssue).
+    // A slip mismatch locks Final Submit outright. A tolerance breach does not:
+    // once the Senior Judge taps Understood on the tolerance dialog, Panel
+    // Review's button becomes "Final Submit with Base Score" (§3.4).
+    // hasBlockingIssue = either one.
     hasBlockingMismatch: difficultyMismatch || combinationMismatch,
     hasToleranceBreach,
     hasBlockingIssue: difficultyMismatch || combinationMismatch || hasToleranceBreach,

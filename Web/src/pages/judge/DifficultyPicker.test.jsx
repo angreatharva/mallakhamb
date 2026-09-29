@@ -32,10 +32,12 @@ describe('DifficultyPicker', () => {
     expect(screen.getByText('6 × 0.40 = 2.40')).toBeInTheDocument();
   });
 
-  it('tapping the chosen number again clears it', () => {
+  it('tapping the chosen number again keeps it — only − clears', () => {
     render(<Harness initial={3} />);
     fireEvent.click(num(3));
-    expect(shownCount()).toBe('0');
+    expect(shownCount()).toBe('3');
+    expect(num(3)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('3 × 0.40 = 1.20')).toBeInTheDocument();
   });
 
   it('the stepper goes past 10 and back down to 0, not below', () => {

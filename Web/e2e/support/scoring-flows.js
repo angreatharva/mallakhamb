@@ -315,9 +315,12 @@ export const openPlayerSlip = async (page, { teamName, playerName }) => {
 export const MISMATCH_ALERT = 'Score Mismatch Detected';
 export const TOLERANCE_ALERT = 'Tolerance Limit Exceeded';
 
-/** Dismiss whichever alert dialog is open. Both use the same footer button. */
+/**
+ * Dismiss whichever alert dialog is open. The Senior Judge's mismatch dialog
+ * reads "Call Judges", every other one "Dismiss".
+ */
 export const dismissAlert = async (page) => {
-  await page.getByRole('button', { name: /Understood — Dismiss/ }).click();
+  await page.getByRole('button', { name: /Understood — (Dismiss|Call Judges)/ }).click();
 };
 
 /**
@@ -333,7 +336,7 @@ export const dismissAnyAlerts = async (page) => {
   // pass checks for it before it exists and then gets its clicks eaten by it.
   for (let guard = 0; guard < 8; guard += 1) {
     await page.waitForTimeout(400);
-    const dismiss = page.getByRole('button', { name: /Understood — Dismiss/ });
+    const dismiss = page.getByRole('button', { name: /Understood — (Dismiss|Call Judges)/ });
     if ((await dismiss.count()) === 0) {
       /*
        * "None open right now" is not "none coming". The queued alert mounts
@@ -447,7 +450,7 @@ const setDifficultyClass = async (page, cls, target) => {
 
   if (target >= 1 && target <= 10) {
     const number = shown(page.getByRole('button', { name: `${label}: ${target}`, exact: true }));
-    // A second tap on the chosen number clears it, so only tap when it isn't.
+    // Tapping the chosen number again is a no-op, so only tap when it isn't.
     if (Number((await value.innerText()).trim()) !== target) await number.click();
     if (Number((await value.innerText()).trim()) === target) return;
   }
@@ -1018,7 +1021,11 @@ export const scorerRows = async (page) => {
   return settled;
 };
 
-/** The Senior Judge's lock button — nobody else is offered it. */
+/**
+ * The Senior Judge's lock button — nobody else is offered it. On a tolerance
+ * breach it reads "Final Submit with Base Score 8.95" (COP §3.4) once the
+ * tolerance dialog has been acknowledged.
+ */
 export const finalSubmitButton = (page) =>
-  page.getByRole('button', { name: /^Final Submit$/ });
+  page.getByRole('button', { name: /^Final Submit( with Base Score \d+\.\d{2})?$/ });
 

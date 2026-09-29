@@ -243,7 +243,7 @@ test.describe.serial('five-judge panel — mismatch and tolerance, resolved in s
 
     await expect(page.getByText(/Combination mismatch detected/)).toBeVisible();
     await expect(page.getByText(/Tolerance exceeded — gap 1\.00 over ±0\.20/)).toBeVisible();
-    await expectLocked(page, /resolve the slip mismatch and the tolerance breach/);
+    await expectLocked(page, /resolve the Difficulty \/ Combination mismatch/);
   });
 
   test('the judge whose slip differs is alerted, and gets no submit control', async ({ page }) => {
@@ -323,10 +323,12 @@ test.describe.serial('four-judge panel — the chief fills the vacant fourth slo
     await expect(page.getByText(/exceeds the ±0\.20 allowed/)).toBeVisible();
     await dismissAlert(page);
 
-    // Every slip describes the same routine, so tolerance is the only block.
+    // Every slip describes the same routine, so nothing locks Final Submit —
+    // after Understood it offers the COP §3.4 base score, (8.50 + 9.40) ÷ 2.
     await expect(page.getByText(MISMATCH_ALERT, { exact: true })).toBeHidden();
     await expect(page.getByText(/mismatch detected/)).toBeHidden();
-    await expectLocked(page, /resolve the tolerance breach/);
+    await expect(page.getByRole('button', { name: 'Final Submit with Base Score 8.95' })).toBeEnabled();
+    await expect(page.getByText(/final submit on the COP §3\.4 base score/)).toBeVisible();
   });
 
   test('bringing two evaluators up to the chief clears it', async ({ page }) => {
@@ -339,7 +341,7 @@ test.describe.serial('four-judge panel — the chief fills the vacant fourth slo
     await overrideJudge(page, 'Judge 1', { execution: 4.0 });
     await dismissAnyAlerts(page);
     await expect(page.getByText(/Tolerance exceeded — gap 0\.40 over ±0\.10/)).toBeVisible();
-    await expect(finalSubmit(page)).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Final Submit with Base Score 9.20' })).toBeEnabled();
 
     // Two is: [8.60, 9.40, 9.40, 9.40] → drop 8.60 and one 9.40 → 9.40.
     await overrideJudge(page, 'Judge 2', { execution: 4.0 });
