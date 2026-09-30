@@ -467,13 +467,13 @@ const HeroSection = () => {
                       <p className="text-white font-bold text-sm leading-tight">{role.title}</p>
                       <div className="flex gap-2 mt-auto">
                         <Link to={role.loginTo}
-                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe md:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
+                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe mouse:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
                           style={{ background: role.color, color: '#fff' }}>
                           Login
                         </Link>
                         {role.registerTo && (
                           <Link to={role.registerTo}
-                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe md:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe mouse:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
                             style={{ borderColor: `${alpha(role.color, 0x45)}`, color: role.color }}>
                             Register
                           </Link>

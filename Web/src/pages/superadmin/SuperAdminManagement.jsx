@@ -1005,19 +1005,19 @@ const SuperAdminManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <motion.button onClick={() => openAdminManagementModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.green }} title="Manage Admins" aria-label="Manage Admins"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <UserPlus className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openCompetitionModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.blue }} title="Edit" aria-label="Edit"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteConfirmation(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe md:min-h-[32px] md:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: ADMIN_COLORS.red }} title="Delete" aria-label="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />

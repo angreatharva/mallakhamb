@@ -119,7 +119,7 @@ const ScoreTypeTabs = ({ value, onChange }) => (
           role="tab"
           aria-selected={active}
           onClick={() => onChange(type.value)}
-          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe md:min-h-[38px] border"
+          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[38px] border"
           style={{
             background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgba(255,255,255,0.03)',
             borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x45)}` : ADMIN_COLORS.darkBorderSubtle,

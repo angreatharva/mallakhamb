@@ -595,7 +595,7 @@ const CoachDashboard = () => {
               <button
                 onClick={() => handleRemovePlayer(player.player._id)}
                 disabled={team?.isSubmitted}
-                className="ml-2 p-1.5 rounded-lg transition-colors tap-safe md:min-h-[36px] md:min-w-[36px] flex items-center justify-center flex-shrink-0"
+                className="ml-2 p-1.5 rounded-lg transition-colors tap-safe mouse:min-h-[36px] mouse:min-w-[36px] flex items-center justify-center flex-shrink-0"
                 style={{ color: team?.isSubmitted ? 'rgba(255,255,255,0.2)' : '#EF4444' }}
                 title={team?.isSubmitted ? 'Cannot remove after submission' : 'Remove player'}
                 aria-label={`Remove ${player.player.firstName} ${player.player.lastName}`}

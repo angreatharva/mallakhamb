@@ -783,7 +783,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             <motion.button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe md:min-h-[36px] justify-center transition-colors duration-200"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200"
               style={{ color: 'var(--fg-muted)', border: `1px solid ${theme.colors.border}` }}
               whileHover={{ color: '#EF4444', borderColor: '#EF444440' }}
               aria-label="Logout"

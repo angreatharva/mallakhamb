@@ -786,14 +786,14 @@ const JudgeDashboard = () => {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-purple-500/10"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
               style={{ borderColor: 'rgba(168,85,247,0.3)', color: J.purpleLight }}
               aria-label="Your profile">
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
             </button>
             <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-red-500/10"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
               style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
               aria-label="Logout">
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />

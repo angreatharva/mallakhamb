@@ -5,6 +5,17 @@ const px = (n) => `${n}px`;
 /** Below `md`: the phone band. One definition, so 767 cannot drift again. */
 const PHONE = `@media (max-width: ${SCREENS.md - 1}px)`;
 
+/*
+ * Where a finger is the pointer: anything below `lg` (phones AND tablets in
+ * portrait), plus any coarse pointer at all — an iPad Pro in landscape is
+ * 1194px wide and still operated by touch. The two conditions below are exact
+ * complements, so a control is either touch-sized or mouse-compact, never both.
+ */
+const TOUCH = `@media (max-width: ${SCREENS.lg - 1}px), (pointer: coarse)`;
+
+/** A mouse on a desktop-width screen — the only place compact metrics belong. */
+const MOUSE = `@media (min-width: ${SCREENS.lg}px) and (pointer: fine)`;
+
 /** `rgb(var(--x) / <alpha-value>)` — a token that still takes `/50` modifiers. */
 const channel = (name) => `rgb(var(--${name}) / <alpha-value>)`;
 
@@ -146,7 +157,14 @@ export default {
   },
   plugins: [
     // Enhanced plugin for responsive utilities
-    function({ addBase, addUtilities, addComponents, theme }) {
+    function({ addBase, addUtilities, addComponents, addVariant, theme }) {
+      /*
+       * `mouse:` — compact metrics for a mouse on a desktop-width screen
+       * (`mouse:min-h-[36px]`, `mouse:text-sm`). The exact complement of the
+       * TOUCH band `.tap-safe` covers, so the two never fight over a property.
+       */
+      addVariant('mouse', MOUSE);
+
       // The stacking scale as custom properties, from the same table as the
       // `z-*` utilities, so CSS and JS read one set of numbers.
       addBase({
@@ -159,13 +177,17 @@ export default {
          *
          * A control that shows an icon AND a label on desktop collapses to the
          * icon alone on mobile (`hidden sm:inline`) and lands at ~36px. This
-         * sizes exactly that case, and stops at the `md` breakpoint so desktop
-         * keeps its own metrics. (It replaced an always-on `.touch-target`,
+         * sizes exactly that case. (It replaced an always-on `.touch-target`,
          * which no screen could adopt because it inflated the compact desktop
          * toolbars; that utility had no users left and is gone.)
+         *
+         * It used to stop at `md`, so tablets — touch devices — got no floor at
+         * all, and a dozen controls then SHRANK from 768 up (`md:min-h-[36px]`).
+         * It now covers TOUCH; a control that should be compact for a mouse
+         * says so with the `mouse:` variant below, which never overlaps it.
          */
         '.tap-safe': {
-          [PHONE]: {
+          [TOUCH]: {
             minHeight: theme('spacing.touch-target'),
             minWidth: theme('spacing.touch-target'),
           },
