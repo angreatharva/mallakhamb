@@ -1,27 +1,41 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * iPhone and iPad Safari, for the read-only audit specs only.
+ * Real device profiles, for the read-only audit specs only.
  *
  * Every device includes iPhone and Safari, and WebKit is where `dvh`, autofill
  * colours, safe-area insets and the under-16px input zoom actually behave the
  * way they do on the hardware. Chromium emulating an iPhone does none of that.
+ * Android runs Chromium, so its profiles need no extra download; they bring the
+ * touch, the coarse pointer and the device viewports (an Android tablet in
+ * portrait is 712px wide — below `md` — which a width list never exercises).
  *
- * OPT-IN (`E2E_WEBKIT=1`) and RESTRICTED to the responsive/visual specs, for
- * two reasons: WebKit is a separate download (`npm run test:e2e:install:webkit`)
- * that a plain `npx playwright test` must not demand; and Playwright runs every
- * spec in every project, so an unrestricted project would replay the seeding
- * specs a second time and fail on "email already exists".
+ * Each device keeps its OWN viewport: the specs do not resize a device project
+ * (see `widthsFor` in e2e/support/responsive-audit.js).
+ *
+ * OPT-IN (`E2E_DEVICES=1`, or `E2E_WEBKIT=1` for iOS only) and RESTRICTED to
+ * the responsive/visual specs, for two reasons: WebKit is a separate download
+ * (`npm run test:e2e:install:webkit`) that a plain `npx playwright test` must
+ * not demand; and Playwright runs every spec in every project, so an
+ * unrestricted project would replay the seeding specs a second time and fail
+ * on "email already exists".
  */
-function webkitProjects() {
-  if (!process.env.E2E_WEBKIT) return [];
+function deviceProjects() {
+  const all = Boolean(process.env.E2E_DEVICES);
   const auditOnly = /(responsive-|visual-).*\.spec\.js$/;
-  return [
+  const ios = all || process.env.E2E_WEBKIT ? [
     { name: 'iphone-13', testMatch: auditOnly, use: { ...devices['iPhone 13'] } },
     { name: 'ipad-mini', testMatch: auditOnly, use: { ...devices['iPad Mini'] } },
     { name: 'ipad-pro-11', testMatch: auditOnly, use: { ...devices['iPad Pro 11'] } },
     { name: 'ipad-pro-11-landscape', testMatch: auditOnly, use: { ...devices['iPad Pro 11 landscape'] } },
-  ];
+  ] : [];
+  const android = all ? [
+    { name: 'android-phone', testMatch: auditOnly, use: { ...devices['Galaxy S24'] } },            // 360x780
+    { name: 'android-tablet', testMatch: auditOnly, use: { ...devices['Galaxy Tab S4'] } },         // 712x1138, below md
+    { name: 'android-fold', testMatch: auditOnly, use: { ...devices['Galaxy Z Fold 7'] } },          // 984x1016, tablet band
+    { name: 'android-tablet-landscape', testMatch: auditOnly, use: { ...devices['Galaxy Tab S9 landscape'] } }, // 1024x640, coarse at lg
+  ] : [];
+  return [...ios, ...android];
 }
 
 /**
@@ -51,11 +65,14 @@ export default defineConfig({
 
   /*
    * Where `toHaveScreenshot` baselines live (only visual-baseline.spec.js uses
-   * it). Outside `test-results/` on purpose: Playwright empties that directory
-   * at the start of every run, which would delete the baseline a run is
-   * supposed to compare against. Gitignored — see .gitignore.
+   * it). Outside `test-results/`, which Playwright empties at the start of
+   * every run, and now OUTSIDE THE REPOSITORY: a sibling of the checkout
+   * (`../.mallakhamb-visual-baseline/`). Baselines are one machine's rendering
+   * of one database, not source — and while any branch tracks them, a checkout
+   * between branches overwrites and then deletes an in-repo copy, which broke a
+   * run on 2026-09-30. VISUAL_BASELINE_DIR overrides the location.
    */
-  snapshotPathTemplate: '{testDir}/../.visual-baseline/{projectName}/{arg}{ext}',
+  snapshotPathTemplate: `${process.env.VISUAL_BASELINE_DIR || '{testDir}/../../../.mallakhamb-visual-baseline'}/{projectName}/{arg}{ext}`,
 
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
 
@@ -76,7 +93,7 @@ export default defineConfig({
 
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    ...webkitProjects(),
+    ...deviceProjects(),
   ],
 
   /**

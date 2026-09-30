@@ -28,7 +28,7 @@
 
 import { test, expect } from '@playwright/test';
 import { signInAs, ROUTES_BY_AREA } from './support/audit-routes.js';
-import { APPEARANCES, applyAppearance, heightFor, settle } from './support/responsive-audit.js';
+import { APPEARANCES, applyAppearance, heightFor, settle, widthsFor } from './support/responsive-audit.js';
 
 const ROLE = process.env.ROLE || 'public';
 const WIDTHS = process.env.WIDTHS
@@ -99,7 +99,7 @@ test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
 for (const [area, config] of Object.entries(ROUTES_BY_AREA)) {
   const shouldRun = ROLE === 'all' || ROLE === area;
-  test(`visual: ${area}`, async ({ page }) => {
+  test(`visual: ${area}`, async ({ page }, testInfo) => {
     test.skip(!shouldRun, `ROLE=${ROLE}`);
     test.setTimeout(30 * 60_000);
 
@@ -109,8 +109,10 @@ for (const [area, config] of Object.entries(ROUTES_BY_AREA)) {
 
       for (const route of config.routes) {
         if (ONLY && !ONLY.test(route.name)) continue;
-        for (const width of WIDTHS) {
-          await page.setViewportSize({ width, height: heightFor(width) });
+        // Device projects keep their own viewport (see widthsFor).
+        for (const requested of widthsFor(testInfo, WIDTHS)) {
+          if (requested != null) await page.setViewportSize({ width: requested, height: heightFor(requested) });
+          const width = requested ?? page.viewportSize()?.width;
           await page.goto(route.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
           await settle(page);
           if (route.prepare) await route.prepare(page).catch(() => {});

@@ -257,6 +257,21 @@ export const settle = async (page) => {
 };
 
 /**
+ * The widths a spec should sweep in the current project.
+ *
+ * The desktop `chromium` project resizes one browser through the width list.
+ * A DEVICE project (an iPhone, an iPad, an Android phone or tablet) must not be
+ * resized: its viewport, pixel ratio, touch and pointer ARE the thing under
+ * test, and forcing it to 1366px would measure a desktop wearing a phone's
+ * user agent. There the list is `[null]` — "keep the device's viewport".
+ *
+ * @param {import('@playwright/test').TestInfo} testInfo
+ * @param {number[]} widths
+ * @returns {Array<number|null>}
+ */
+export const widthsFor = (testInfo, widths) => (testInfo.project.name === 'chromium' ? widths : [null]);
+
+/**
  * Render one page at every requested width and report what broke.
  *
  * The caller owns the appearance (see `applyAppearance`); `appearance` here is
@@ -264,14 +279,15 @@ export const settle = async (page) => {
  *
  * @param {import('@playwright/test').Page} page
  * @param {{name: string, url: string, prepare?: (page) => Promise<void>}} route
- * @param {number[]} widths
+ * @param {Array<number|null>} widths  `null` = keep the device's own viewport (see `widthsFor`)
  * @param {string} [appearance]
  * @returns {Promise<Array<object>>}
  */
 export const auditRoute = async (page, route, widths, appearance = 'dark') => {
   const findings = [];
-  for (const width of widths) {
-    await page.setViewportSize({ width, height: heightFor(width) });
+  for (const requested of widths) {
+    if (requested != null) await page.setViewportSize({ width: requested, height: heightFor(requested) });
+    const width = requested ?? page.viewportSize()?.width;
     await page.goto(route.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
     await settle(page);
     if (route.prepare) await route.prepare(page).catch(() => {});

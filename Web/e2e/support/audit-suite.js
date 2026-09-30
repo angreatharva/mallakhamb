@@ -11,7 +11,7 @@
 
 import { test } from '@playwright/test';
 import { signInAs, ROUTES_BY_AREA } from './audit-routes.js';
-import { APPEARANCES, applyAppearance, auditRoute, watchConsole } from './responsive-audit.js';
+import { APPEARANCES, applyAppearance, auditRoute, watchConsole, widthsFor } from './responsive-audit.js';
 
 const ROLE = process.env.ROLE || 'all';
 
@@ -70,10 +70,11 @@ export const defineAuditSuite = ({ label, widths: defaultWidths }) => {
 
   for (const [area, config] of Object.entries(ROUTES_BY_AREA)) {
     const shouldRun = ROLE === 'all' || ROLE === area;
-    test(`${label}: ${area}`, async ({ page }) => {
+    test(`${label}: ${area}`, async ({ page }, testInfo) => {
       test.skip(!shouldRun, `ROLE=${ROLE}`);
       test.setTimeout(25 * 60_000 * APPEARANCES.length);
 
+      const runWidths = widthsFor(testInfo, widths);
       const errors = watchConsole(page);
       const findings = [];
       for (const appearance of APPEARANCES) {
@@ -82,10 +83,11 @@ export const defineAuditSuite = ({ label, widths: defaultWidths }) => {
         // each appearance's run independent of the other's session state.
         if (config.login) await signInAs(page, area);
         for (const route of config.routes) {
-          findings.push(...(await auditRoute(page, route, widths, appearance)));
+          findings.push(...(await auditRoute(page, route, runWidths, appearance)));
         }
       }
-      report(area, widths, findings, errors());
+      report(`${area} [${testInfo.project.name}]`,
+        runWidths.map((w) => w ?? page.viewportSize()?.width), findings, errors());
     });
   }
 };
