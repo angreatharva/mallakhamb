@@ -124,6 +124,15 @@ for (const [area, config] of Object.entries(ROUTES_BY_AREA)) {
             caret: 'hide',
             mask: MASKS.map((selector) => page.locator(selector)),
             maxDiffPixels: 0,
+            /*
+             * `maxDiffPixels: 0` alone was not a zero-change gate. Playwright
+             * still applies its per-pixel colour `threshold` (0.2 by default),
+             * and at 0.2 a grey moving 94 → 140 — muted text going from 35% to
+             * 55% ink — counts as "the same pixel". The gate proved only that
+             * nothing moved by more than ~35 grey levels. 0 means any change.
+             * VISUAL_THRESHOLD loosens it on purpose, never silently.
+             */
+            threshold: Number(process.env.VISUAL_THRESHOLD ?? 0),
             timeout: 15_000,
           });
         }
