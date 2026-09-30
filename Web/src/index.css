@@ -80,6 +80,16 @@
   --danger-fg: 239 68 68;
   --info-fg: 59 130 246;
   --status-on: 10 10 10;
+
+  /*
+   * Brand saffron and gold as TEXT (eyebrows, gradient headings, pills) — not
+   * the role accent. Dark = the brand hexes exactly (#FF6B00, #FF8C38,
+   * #F5A623), so nothing moves. A bright fill with a label keeps a near-black
+   * label in both appearances (plan D6), so fills need no token.
+   */
+  --brand-fg: 255 107 0;
+  --brand-fg-soft: 255 140 56;
+  --brand-gold-fg: 245 166 35;
 }
 
 [data-appearance="light"] {
@@ -110,6 +120,12 @@
   --danger-fg: 185 28 28;
   --info-fg: 29 78 216;
   --status-on: 255 255 255;
+
+  /* Saffron and gold as text fail on white (2.86 and 2.03:1); the -700 shades
+     read 5.2 / 5.0 on white and 4.8 / 4.7 on the page. */
+  --brand-fg: 194 65 12;
+  --brand-fg-soft: 194 65 12;
+  --brand-gold-fg: 180 83 9;
 }
 
 /* Derived — recomputed wherever an appearance is declared (see above). */

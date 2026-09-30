@@ -2,7 +2,7 @@
 
 **Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
 **Audited against:** `master` @ `5a9cae8`, 2026-09-28
-**Status:** Implementation on branch `feat/responsive-appearance`. Phases 2 and 3 committed (2026-09-29); Phase 4 done but not committed (2026-09-30). Gaps are noted in the log below.
+**Status:** Implementation on branch `feat/responsive-appearance`. Phases 2–4 committed; Phase 5 in progress (foundation committed 2026-09-30). Gaps are noted in the log below.
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
 
 ---
@@ -36,7 +36,7 @@
 - The same class of bug in the Tailwind plugin: `.stacked-table` rows were meant to have a hairline border (`${theme('colors.white')}14`), but `colors.white` is `#fff`, so it produced the five-digit `#fff14` and the declaration was dropped — **phone stacked tables have never had that border**. The visual diff caught it (a valid border shifted every card by 1px on SuperAdminManagement and the add-player payment page); the rule now states no border, which is what has always rendered.
 - Light is legible on ordinary pages (checked: coach login). Text over photos is not yet `snow` — Home's hero nav and role-card labels turn dark on the photo. That is Home's Phase 5 pass (§14.5, the 7 known sites).
 
-### Phase 4 — accessibility foundation (done 2026-09-30, uncommitted; every dark change here is intentional)
+### Phase 4 — accessibility foundation (done 2026-09-30, committed `8887d18`; every dark change here is intentional)
 - **4.1 Focus.** A global `:focus-visible` ring (2px `--focus-ring` = the role accent, 2px offset, placed after `@tailwind utilities`) replaces the `input:focus` rule that swapped every field's outline for a 10% glow. All 35 `outline-none` / `focus:outline-none` are gone (31 page sites, 4 in the Themed* inputs). ThemedButton's `focus:ring-3` is not a class in this config and drew nothing. Checked with the keyboard: Tab onto the show-password toggle on `/coach/login` gives a solid coach-green outline (it had none).
 - **4.2 Primary buttons.** `html[data-role]` now comes from the URL (`applyRoleAccent`, a layout effect in `AppContent`), so the accent tokens are live. It matches the JS theme on every screen because each `ThemeProvider` mount passes its own route's role. ThemedButton solid = `bg-accent text-on-accent`: the fill is unchanged in dark and the label is near-black — coach 2.28→8.69, player 2.86→6.93, superadmin 2.03→9.77, admin/judge 4.23→4.68, public 3.68→5.38. Outline/ghost read `accent-fg`, identical in dark.
 - **4.3 / 4.4 Text contrast.** Per-site decisions, kept in the codemod rather than a blanket replace: 214 `text-white/40–55` → `text-fg-muted`. Of the 118 at `/15–35`, 87 → muted (73 texts, 10 show/hide-password toggles, 4 links), 3 `·` separators → `fg-subtle`, and 24 decorative icons and 4 placeholders are left as they were. 20 hovers that would no longer brighten against a muted base → `hover:text-fg`. 107 inline `color:` at α .12–.55 → `var(--fg-muted)`; 20 are left (aria-hidden glyphs, chevrons inside labelled buttons, empty-state art, the 404 watermark, and the two "Completed" configs that feed the known-invalid `alpha()` badge, which is Phase 5). `DESIGN_TOKENS.colors.text.muted` → `var(--fg-muted)`. 49 files, 411 lines, every one a 1-for-1 line replacement.
@@ -69,6 +69,41 @@
 - Placeholders at 25–30% ink (4 `placeholder:text-white/…` + 16 `placeholder-white/30`) are under 4.5:1. Raising them risks a placeholder being read as an entered value — decide with each field in Phase 5.
 - `.stacked-table` sets rows and cells to `display: block` on phones, which drops their table semantics; only the `<table>` carries `role="table"`. Rows and cells need `role="row"` / `"cell"` — Phase 6.
 - A field inside an `overflow-hidden` wrapper can clip the 2px-offset ring. The judge slip's mark field is covered (its wrapper draws a solid purple focus border); the rest need the keyboard walk.
+
+### Phase 5 — per-file pass (in progress)
+
+**Foundation — committed `e89cddf`.** Tablets are touch devices that were getting desktop metrics.
+- `.tap-safe` covers `TOUCH`: below `lg`, **or** any coarse pointer (an iPad Pro in landscape is 1194px wide and still touch).
+- A new `mouse:` variant — `(min-width: 1024px) and (pointer: fine)`, the exact complement — carries compact desktop sizes. The 12 `tap-safe md:min-h-[…]` shrink sites moved to `mouse:` (D1: desktop intent).
+- Proof, against a Phase 4 baseline at threshold 0: 28 shots changed, **all at 820; zero at 375 and 1366**.
+- Tablet audit (768/820/834 portrait, Chromium): undersized targets **213 → 21**, and no overflow on any route, before or after. Most flagged controls already carried `tap-safe` — the report truncates selectors, so the class was not visible in it.
+- Left for their files: a 32×32 dialog close ✕ with **no accessible name** (12 hits), the "60 Players" chip, the judge profile's Change-photo button, and Home's inline nav links (36px at tablet).
+
+**Scope of (c), refined.** Text at 60%+ ink already works in both appearances through the ink alias (dark ink at 60% on the light page is ≥ 5.0:1), and Phase 4 fixed everything below that. Renaming it now would move the dark hierarchy for no accessibility gain. So per file, (c) means what actually breaks in light:
+- hard-coded dark backgrounds (`rgba(10,10,10,…)`, `#050505`, `#111`);
+- accent and status hex used as **text** (saffron on white is 2.86:1);
+- text over photos or saturated fills → `snow`;
+- glass surfaces (`bg-white/NN`) that would turn darker than the page in light.
+
+Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
+
+**Operational — shared checkout.** On 2026-09-30 the checkout was stashed and switched to `master` mid-run. The owner switched back; nothing was lost, but two things follow:
+- `master` commit `e24793c` **tracks the baseline PNGs** (force-added past `.gitignore`), so every checkout between `master` and this branch overwrites, then deletes, the local `Web/.visual-baseline/`. Whether baselines belong in git is the owner's call. Until then, a copy lives outside the repo.
+- Every long run now records branch, HEAD and a hash of the diff before and after, and is void if they differ.
+
+**Per-file log**
+
+*1. `public/Home.jsx`* (plus shared: brand text tokens in `index.css`; `GradientText`, `SaffronButton` and the index's `GlassCard` in `design-system/index.jsx`)
+- (a) 36 `md:` sites: 34 tablet-correct as written (gutters, header height, inline nav from 768, type sizes, 4-up stats, two-sided timeline, 2-column footer); 2 desktop intent → `mouse:` (in the foundation commit).
+- (b) The inline nav links were 36px at tablet width → `tap-safe`.
+- (c) New brand text tokens `--brand-fg`, `--brand-fg-soft`, `--brand-gold-fg` — the brand hexes in dark, the -700 shades in light (~5:1) — for saffron eyebrows, years, pills, the brand name and the index's `GradientText`. Dark islands: the hero (photo under a dark scrim), the navbar while it is over the hero, the About photo card, and the `#050505` footer. The navbar and mobile-menu backdrops follow `--bg` once scrolled. The role-card Login labels were white on the role fills (saffron 2.86, green 2.28, admin red 3.76) → `on-accent`, near-black in the island. `SaffronButton` solid label → near-black (D6); outline text → `--brand-fg-soft`.
+- (d) Dark, 5 widths: the changed pixels are only the role-card labels (every width), the Live Scores label (768+) and the nav links (768/820) — everything below the hero is identical. Light: hero text, stats, headings, the About caption and the footer were unreadable and now read. Public Scores changed in light only (shared `GradientText` / `GlassCard`); every other public page is identical in both appearances.
+- Why the whole hero is the island, not just its text: the scrim fades to the page colour from 40% to 100% of the hero's height, which is where the role cards sit (on a phone the hero is taller than the screen). A light-bottomed fade would put white text on a whitened photo.
+
+**Found, not ours to change**
+- Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
+- `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.
+- The tablet audit logged `Failed to auto-select competition: Competition switch already in progress` (`CompetitionContext.jsx`) — two automatic selections colliding. App logic, not presentation.
 
 ---
 

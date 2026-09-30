@@ -260,8 +260,9 @@ const Navbar = () => {
   return (
     <motion.header
       className="fixed top-0 left-0 right-0 z-50"
+      data-appearance={scrolled ? undefined : 'dark'}
       style={{
-        background: scrolled ? 'rgba(10,10,10,0.92)' : 'transparent',
+        background: scrolled ? 'rgb(var(--bg) / 0.92)' : 'transparent',
         backdropFilter: scrolled ? 'blur(20px)' : 'none',
         borderBottom: scrolled ? `1px solid ${COLORS.darkBorder}` : 'none',
         transition: 'background 0.3s, backdrop-filter 0.3s, border-bottom 0.3s',
@@ -275,7 +276,7 @@ const Navbar = () => {
           <motion.img src={BHALogo} alt="BHA Logo" className="h-10 md:h-14 w-auto object-contain"
             whileHover={{ scale: 1.05 }} transition={EASE_SPRING} />
           <div className="hidden sm:block">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: COLORS.saffron }}>Bhausaheb Ranade</p>
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>Bhausaheb Ranade</p>
             <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
           </div>
         </Link>
@@ -283,7 +284,7 @@ const Navbar = () => {
         <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
           {navLinks.map((link) => (
             <Link key={link.to} to={link.to}
-              className="relative text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2">
+              className="relative text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2 tap-safe">
               {link.label}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 rounded-full"
                 style={{ background: COLORS.saffron }} />
@@ -308,7 +309,7 @@ const Navbar = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div className="md:hidden absolute top-full left-0 right-0 border-t"
-            style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
+            style={{ background: 'rgb(var(--bg) / 0.97)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
             <div className="px-4 py-6 flex flex-col gap-2">
@@ -323,8 +324,8 @@ const Navbar = () => {
               ))}
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                 <Link to="/scores" onClick={() => setIsMenuOpen(false)}
-                  className="block mt-2 px-4 py-3 rounded-xl text-white font-bold text-center min-h-[44px] flex items-center justify-center"
-                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+                  className="block mt-2 px-4 py-3 rounded-xl font-bold text-center min-h-[44px] flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}>
                   Live Scores
                 </Link>
               </motion.div>
@@ -348,7 +349,7 @@ const HeroSection = () => {
   const opacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
 
   return (
-    <section ref={ref} className="relative min-h-dvh overflow-hidden flex items-center justify-center" aria-label="Hero">
+    <section ref={ref} className="relative min-h-dvh overflow-hidden flex items-center justify-center" aria-label="Hero" data-appearance="dark">
       {/* Parallax BG */}
       <motion.div className="absolute inset-0 z-0" style={{ y: bgY, scale: bgScale }}>
         <img src={MainHomeImg} alt="" aria-hidden="true"
@@ -398,7 +399,7 @@ const HeroSection = () => {
         {/* Badge */}
         <motion.div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border"
-          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: COLORS.saffronLight }}
+          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: 'rgb(var(--brand-fg-soft))' }}
           initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}>
           <Star className="w-3 h-3" fill="currentColor" aria-hidden="true" />
@@ -468,7 +469,7 @@ const HeroSection = () => {
                       <div className="flex gap-2 mt-auto">
                         <Link to={role.loginTo}
                           className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe mouse:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
-                          style={{ background: role.color, color: '#fff' }}>
+                          style={{ background: role.color, color: 'rgb(var(--on-accent))' }}>
                           Login
                         </Link>
                         {role.registerTo && (
@@ -554,7 +555,7 @@ const AboutSection = () => {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <FadeIn direction="right" className="relative order-2 lg:order-1">
-          <motion.div className="relative rounded-3xl overflow-hidden"
+          <motion.div className="relative rounded-3xl overflow-hidden" data-appearance="dark"
             style={{
               x: reduced ? 0 : imageX,
               boxShadow: `0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px ${COLORS.darkBorder}`,
@@ -579,7 +580,7 @@ const AboutSection = () => {
 
         <FadeIn direction="left" delay={0.2} className="order-1 lg:order-2 space-y-8">
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>The Ancient Art</p>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>The Ancient Art</p>
             <h2 className="text-4xl md:text-5xl font-black text-white leading-tight">
               Where Strength<br />
               <GradientText>Meets Grace</GradientText>
@@ -594,7 +595,7 @@ const AboutSection = () => {
           <div className="flex flex-wrap gap-3">
             {['Pole Mallakhamb', 'Rope Mallakhamb', 'Hanging Mallakhamb'].map((tag) => (
               <span key={tag} className="px-4 py-2 rounded-full text-xs font-semibold border"
-                style={{ borderColor: COLORS.darkBorder, color: COLORS.saffronLight, background: `${alpha(COLORS.saffron, 0x0E)}` }}>
+                style={{ borderColor: COLORS.darkBorder, color: 'rgb(var(--brand-fg-soft))', background: `${alpha(COLORS.saffron, 0x0E)}` }}>
                 {tag}
               </span>
             ))}
@@ -620,7 +621,7 @@ const LegacyTimeline = () => (
       style={{ background: `radial-gradient(ellipse at 80% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 60%)` }} />
     <div className="max-w-5xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>40+ Years</p>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>40+ Years</p>
         <h2 className="text-4xl md:text-5xl font-black text-white">A Living <GradientText>Legacy</GradientText></h2>
       </FadeIn>
       <div className="relative">
@@ -633,7 +634,7 @@ const LegacyTimeline = () => (
                 <div className={`flex-1 pl-12 md:pl-0 ${i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
                   <div className="inline-block p-5 rounded-2xl border"
                     style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
-                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.saffron }}>{ev.year}</p>
+                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: 'rgb(var(--brand-fg))' }}>{ev.year}</p>
                     <p className="text-white font-bold text-lg mb-1">{ev.title}</p>
                     <p className="text-fg-muted text-sm leading-relaxed">{ev.desc}</p>
                   </div>
@@ -658,7 +659,7 @@ const QuoteStrip = () => (
     <div className="absolute inset-0 pointer-events-none"
       style={{ background: `radial-gradient(ellipse at 50% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 70%)` }} />
     <FadeIn className="max-w-4xl mx-auto px-4 text-center relative z-10">
-      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: COLORS.saffron }} aria-hidden="true" />
+      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
       <blockquote>
         <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
           &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
@@ -716,7 +717,7 @@ const FeaturesSection = () => (
   <section className="py-24 md:py-32" style={{ background: COLORS.dark }} aria-label="Platform features">
     <div className="max-w-6xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>Platform</p>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>Platform</p>
         <h2 className="text-4xl md:text-5xl font-black text-white">Everything You <GradientText>Need</GradientText></h2>
       </FadeIn>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
@@ -742,7 +743,7 @@ const Footer = () => {
   };
 
   return (
-    <footer style={{ background: '#050505' }} aria-label="Site footer">
+    <footer style={{ background: '#050505' }} aria-label="Site footer" data-appearance="dark">
       <div className="h-px" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}, transparent)` }} />
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         <div className="lg:col-span-2 space-y-4">
@@ -761,7 +762,7 @@ const Footer = () => {
               className="w-10 h-10 tap-safe rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
               style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x0E)}` }}
               aria-label="Facebook">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: COLORS.saffronLight }} aria-hidden="true">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: 'rgb(var(--brand-fg-soft))' }} aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </a>
@@ -790,17 +791,17 @@ const Footer = () => {
           <p className="text-white font-bold text-sm mb-4 tracking-wide">Contact</p>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
               <p className="text-fg-muted text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
             </div>
             <a href="tel:+919820688420"
               className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 tap-safe">
-              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
               +91 982 068 8420
             </a>
             <a href="mailto:mallakhambindia@gmail.com"
               className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 break-all tap-safe">
-              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
               mallakhambindia@gmail.com
             </a>
           </div>
