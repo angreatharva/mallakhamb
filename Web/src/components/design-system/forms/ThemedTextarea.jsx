@@ -90,7 +90,7 @@ export const ThemedTextarea = forwardRef(({
         )}
         style={{
           // Role-specific focus color
-          color: theme.colors.primary,
+          color: 'rgb(var(--accent-fg))',
         }}
         whileFocus={{
           boxShadow: hasError 

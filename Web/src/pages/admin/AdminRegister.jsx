@@ -42,12 +42,12 @@ const PasswordStrengthIndicator = ({ password }) => {
     if (/[^a-zA-Z0-9]/.test(pwd)) strength++;
     
     const levels = [
-      { level: 0, label: '', color: '' },
-      { level: 1, label: 'Weak', color: '#EF4444' },
-      { level: 2, label: 'Fair', color: '#F59E0B' },
-      { level: 3, label: 'Good', color: '#10B981' },
-      { level: 4, label: 'Strong', color: '#10B981' },
-      { level: 5, label: 'Very Strong', color: '#059669' },
+      { level: 0, label: '', color: '', fg: '' },
+      { level: 1, label: 'Weak', color: '#EF4444', fg: 'rgb(var(--danger-fg))' },
+      { level: 2, label: 'Fair', color: '#F59E0B', fg: 'rgb(var(--warning-fg))' },
+      { level: 3, label: 'Good', color: '#10B981', fg: 'rgb(var(--success-fg))' },
+      { level: 4, label: 'Strong', color: '#10B981', fg: 'rgb(var(--success-fg))' },
+      { level: 5, label: 'Very Strong', color: '#059669', fg: 'rgb(var(--success-fg))' },
     ];
     
     return levels[strength];
@@ -65,13 +65,13 @@ const PasswordStrengthIndicator = ({ password }) => {
             key={level}
             className="h-1 flex-1 rounded-full transition-all duration-300"
             style={{
-              background: level <= strength.level ? strength.color : 'rgba(255,255,255,0.1)',
+              background: level <= strength.level ? strength.color : 'rgb(var(--ink) / 0.1)',
             }}
           />
         ))}
       </div>
       {strength.label && (
-        <p className="text-xs mt-1" style={{ color: strength.color }}>
+        <p className="text-xs mt-1" style={{ color: strength.fg }}>
           Password strength: {strength.label}
         </p>
       )}
@@ -227,7 +227,7 @@ const AdminRegisterInner = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: `${alpha(theme.colors.primary, 0x80)}` }}>
+              style={{ color: 'rgb(var(--accent-fg))' }}>
               Bhausaheb Ranade Mallakhamb
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
@@ -250,10 +250,10 @@ const AdminRegisterInner = () => {
               <div key={label} className="flex flex-col items-center gap-1.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ background: `${alpha(theme.colors.primary, 0x12)}`, border: `1px solid ${alpha(theme.colors.primary, 0x25)}` }}>
-                  <FeatureIcon className="w-4 h-4" style={{ color: theme.colors.primary }} aria-hidden="true" />
+                  <FeatureIcon className="w-4 h-4" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
                 </div>
                 <span className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: `${alpha(theme.colors.primary, 0x60)}` }}>{label}</span>
+                  style={{ color: 'rgb(var(--accent-fg))' }}>{label}</span>
               </div>
             ))}
           </motion.div>
@@ -277,7 +277,7 @@ const AdminRegisterInner = () => {
           <div className="w-px h-8 bg-white/10" />
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
-              style={{ color: theme.colors.primary }}>Mallakhamb</p>
+              style={{ color: 'rgb(var(--accent-fg))' }}>Mallakhamb</p>
             <p className="text-fg-muted text-[10px]">Admin Portal</p>
           </div>
         </motion.div>
@@ -294,7 +294,7 @@ const AdminRegisterInner = () => {
                   background: `${alpha(theme.colors.primary, 0x15)}`, 
                   border: `1px solid ${alpha(theme.colors.primary, 0x35)}` 
                 }}>
-                <Shield className="w-8 h-8" style={{ color: theme.colors.primary }} aria-hidden="true" />
+                <Shield className="w-8 h-8" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
               </div>
             </div>
             
@@ -302,7 +302,7 @@ const AdminRegisterInner = () => {
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }} />
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>Create Account</span>
+                style={{ color: 'rgb(var(--accent-fg))' }}>Create Account</span>
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
@@ -317,9 +317,9 @@ const AdminRegisterInner = () => {
               {/* Name field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
+                  style={{ color: 'rgb(var(--accent-fg))' }} 
                   htmlFor="admin-name">
-                  Full Name <span style={{ color: '#EF4444' }}>*</span>
+                  Full Name <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput 
                   id="admin-name"
@@ -335,7 +335,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.name && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.name.message}
@@ -347,9 +347,9 @@ const AdminRegisterInner = () => {
               {/* Email field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
+                  style={{ color: 'rgb(var(--accent-fg))' }} 
                   htmlFor="admin-email">
-                  Email <span style={{ color: '#EF4444' }}>*</span>
+                  Email <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput 
                   id="admin-email"
@@ -368,7 +368,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.email && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.email.message}
@@ -380,9 +380,9 @@ const AdminRegisterInner = () => {
               {/* Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
+                  style={{ color: 'rgb(var(--accent-fg))' }} 
                   htmlFor="admin-password">
-                  Password <span style={{ color: '#EF4444' }}>*</span>
+                  Password <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput
                   id="admin-password"
@@ -407,7 +407,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.password && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.password.message}
@@ -421,9 +421,9 @@ const AdminRegisterInner = () => {
               {/* Confirm Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
+                  style={{ color: 'rgb(var(--accent-fg))' }} 
                   htmlFor="admin-confirm-password">
-                  Confirm Password <span style={{ color: '#EF4444' }}>*</span>
+                  Confirm Password <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput
                   id="admin-confirm-password"
@@ -448,7 +448,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.confirmPassword && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.confirmPassword.message}
@@ -487,7 +487,7 @@ const AdminRegisterInner = () => {
               <span className="text-xs text-fg-muted">Already have an account?</span>
               <Link to="/admin/login"
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>
+                style={{ color: 'rgb(var(--accent-fg))' }}>
                 Sign In
               </Link>
             </div>

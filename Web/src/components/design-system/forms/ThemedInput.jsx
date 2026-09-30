@@ -168,7 +168,7 @@ export const ThemedInput = forwardRef(({
           )}
           style={{
             // Role-specific focus color with 3:1 contrast ratio
-            color: theme.colors.primary,
+            color: 'rgb(var(--accent-fg))',
           }}
           whileFocus={whileFocusAnimation}
           {...props}

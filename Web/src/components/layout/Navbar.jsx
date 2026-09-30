@@ -53,7 +53,7 @@ const Navbar = ({ user, userType, onLogout }) => {
     <motion.nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
-        background: scrolled ? 'rgba(10,10,10,0.94)' : 'rgba(10,10,10,0.75)',
+        background: scrolled ? 'rgb(var(--bg) / 0.94)' : 'rgb(var(--bg) / 0.75)',
         backdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${scrolled ? COLORS.darkBorder : 'transparent'}`,
         transition: 'background 0.3s, border-color 0.3s',
@@ -79,7 +79,7 @@ const Navbar = ({ user, userType, onLogout }) => {
             <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
           </motion.div>
           <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
-            Mallakhamb<span style={{ color: COLORS.saffron }}>India</span>
+            Mallakhamb<span style={{ color: 'rgb(var(--brand-fg))' }}>India</span>
           </span>
         </Link>
 
@@ -89,17 +89,17 @@ const Navbar = ({ user, userType, onLogout }) => {
             <>
               {showCompetitionSelector && <CompetitionSelector userType={userType} />}
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-                style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgba(255,255,255,0.04)' }}>
+                style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgb(var(--ink) / 0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
                   style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
-                  <User className="w-3.5 h-3.5" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
+                  <User className="w-3.5 h-3.5" style={{ color: 'rgb(var(--brand-fg-soft))' }} aria-hidden="true" />
                 </div>
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
               <motion.button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
-                style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
+                style={{ borderColor: 'rgba(239,68,68,0.3)', color: 'rgb(var(--danger-fg))', background: 'rgba(239,68,68,0.06)' }}
                 whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
                 whileTap={{ scale: 0.96 }}
                 aria-label="Logout"
@@ -152,7 +152,7 @@ const Navbar = ({ user, userType, onLogout }) => {
           <>
             <motion.div
               className="lg:hidden fixed inset-0 z-40"
-              style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', top: 64 }}
+              style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)', top: 64 }}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
             />
@@ -160,7 +160,7 @@ const Navbar = ({ user, userType, onLogout }) => {
               id="mobile-menu"
               className="lg:hidden fixed left-0 right-0 z-50 border-t"
               style={{
-                top: 64, background: 'rgba(10,10,10,0.98)', backdropFilter: 'blur(24px)',
+                top: 64, background: 'rgb(var(--bg) / 0.98)', backdropFilter: 'blur(24px)',
                 borderColor: COLORS.darkBorder,
               }}
               initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
@@ -174,7 +174,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                       style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x08)}` }}>
                       <div className="w-10 h-10 rounded-full flex items-center justify-center"
                         style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
-                        <User className="w-5 h-5" style={{ color: COLORS.saffronLight }} />
+                        <User className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg-soft))' }} />
                       </div>
                       <div>
                         <p className="text-white font-semibold text-sm">{user.firstName || user.name}</p>
@@ -189,7 +189,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                     <button
                       onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] transition-colors"
-                      style={{ color: '#EF4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      style={{ color: 'rgb(var(--danger-fg))', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                       <LogOut className="w-4 h-4" />
                       Logout
                     </button>
@@ -202,7 +202,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                         transition={{ delay: i * 0.05 }}>
                         <Link to={link.to} onClick={() => setIsMobileMenuOpen(false)}
                           className="block px-4 py-3 rounded-xl text-white/80 hover:text-white font-medium transition-all min-h-[44px] flex items-center"
-                          style={{ background: 'rgba(255,255,255,0.04)' }}>
+                          style={{ background: 'rgb(var(--ink) / 0.04)' }}>
                           {link.label} Login
                         </Link>
                       </motion.div>

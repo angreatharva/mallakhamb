@@ -75,7 +75,7 @@ const getRoleConfig = (role) => {
         style={{
           background: `linear-gradient(135deg, ${alpha(color, 0x20)}, ${alpha(color, 0x15)})`,
           border: `1px solid ${alpha(color, 0x40)}`,
-          boxShadow: `0 0 40px ${alpha(color, 0x20)}, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          boxShadow: `0 0 40px ${alpha(color, 0x20)}, inset 0 1px 0 rgb(var(--ink) / 0.08)`,
         }}>
         {/* Role-specific icon but same size and positioning */}
         {role === 'admin' && <Shield className="w-10 h-10" style={{ color }} aria-hidden="true" />}
@@ -462,7 +462,7 @@ const UnifiedLoginInner = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: `${alpha(theme.colors.primary, 0x80)}` }}>
+              style={{ color: 'rgb(var(--accent-fg))' }}>
               Bhausaheb Ranade Mallakhamb
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
@@ -481,10 +481,10 @@ const UnifiedLoginInner = () => {
               <div key={label} className="flex flex-col items-center gap-1.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ background: `${alpha(theme.colors.primary, 0x12)}`, border: `1px solid ${alpha(theme.colors.primary, 0x25)}` }}>
-                  <FeatureIcon className="w-4 h-4" style={{ color: theme.colors.primary }} aria-hidden="true" />
+                  <FeatureIcon className="w-4 h-4" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
                 </div>
                 <span className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: `${alpha(theme.colors.primary, 0x60)}` }}>{label}</span>
+                  style={{ color: 'rgb(var(--accent-fg))' }}>{label}</span>
               </div>
             ))}
           </motion.div>
@@ -508,7 +508,7 @@ const UnifiedLoginInner = () => {
           <div className="w-px h-8 bg-white/10" />
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
-              style={{ color: theme.colors.primary }}>Mallakhamb</p>
+              style={{ color: 'rgb(var(--accent-fg))' }}>Mallakhamb</p>
             <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
           </div>
         </motion.div>
@@ -525,7 +525,7 @@ const UnifiedLoginInner = () => {
                   background: `${alpha(theme.colors.primary, 0x15)}`, 
                   border: `1px solid ${alpha(theme.colors.primary, 0x35)}` 
                 }}>
-                <IconComponent className="w-8 h-8" style={{ color: theme.colors.primary }} aria-hidden="true" />
+                <IconComponent className="w-8 h-8" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
               </div>
             </div>
             
@@ -533,7 +533,7 @@ const UnifiedLoginInner = () => {
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }} />
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>{config.accessLabel}</span>
+                style={{ color: 'rgb(var(--accent-fg))' }}>{config.accessLabel}</span>
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
@@ -561,15 +561,15 @@ const UnifiedLoginInner = () => {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-0.5">
-                        <svg className="w-5 h-5" style={{ color: '#EF4444' }} fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5" style={{ color: 'rgb(var(--danger-fg))' }} fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>
+                        <h3 className="text-sm font-semibold mb-1" style={{ color: 'rgb(var(--danger-fg))' }}>
                           Login Failed
                         </h3>
-                        <p className="text-sm" style={{ color: 'rgba(239, 68, 68, 0.9)' }}>
+                        <p className="text-sm" style={{ color: 'rgb(var(--danger-fg) / 0.9)' }}>
                           {loginError}
                         </p>
                       </div>
@@ -596,9 +596,9 @@ const UnifiedLoginInner = () => {
               
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} 
+                  style={{ color: 'rgb(var(--accent-fg))' }} 
                   htmlFor={`${role}-${config.usesEmail ? 'email' : 'username'}`}>
-                  {config.usesEmail ? 'Email' : 'Username'} <span style={{ color: '#EF4444' }}>*</span>
+                  {config.usesEmail ? 'Email' : 'Username'} <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput 
                   id={`${role}-${config.usesEmail ? 'email' : 'username'}`}
@@ -616,7 +616,7 @@ const UnifiedLoginInner = () => {
                 />
                 <AnimatePresence>
                   {errors[config.usesEmail ? 'email' : 'username'] && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors[config.usesEmail ? 'email' : 'username'].message}
@@ -627,8 +627,8 @@ const UnifiedLoginInner = () => {
               
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${alpha(theme.colors.primary, 0x90)}` }} htmlFor={`${role}-password`}>
-                  Password <span style={{ color: '#EF4444' }}>*</span>
+                  style={{ color: 'rgb(var(--accent-fg))' }} htmlFor={`${role}-password`}>
+                  Password <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
                 </label>
                 <ThemedInput
                   id={`${role}-password`}
@@ -650,7 +650,7 @@ const UnifiedLoginInner = () => {
                 />
                 <AnimatePresence>
                   {errors.password && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: '#EF4444' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.password.message}
@@ -677,7 +677,7 @@ const UnifiedLoginInner = () => {
             {config.forgotPasswordLink && (
               <Link to={config.forgotPasswordLink}
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>
+                style={{ color: 'rgb(var(--accent-fg))' }}>
                 Forgot password?
               </Link>
             )}
@@ -690,7 +690,7 @@ const UnifiedLoginInner = () => {
                   <span className="text-fg-subtle text-xs">·</span>
                   <Link to={config.registerLink}
                     className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                    style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>
+                    style={{ color: 'rgb(var(--accent-fg))' }}>
                     Register
                   </Link>
                 </>

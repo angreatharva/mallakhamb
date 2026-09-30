@@ -71,7 +71,7 @@ const Dropdown = ({
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
         <label className="block text-xs font-semibold tracking-wide mb-1.5"
-          style={{ color: COLORS.saffronLight }}>
+          style={{ color: 'rgb(var(--brand-fg-soft))' }}>
           {label}
         </label>
       )}
@@ -82,12 +82,14 @@ const Dropdown = ({
         disabled={disabled}
         className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] flex items-center justify-between gap-2 focus:ring-2"
         style={{
-          background: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
+          background: disabled ? 'rgb(var(--ink) / 0.03)' : 'rgb(var(--ink) / 0.05)',
           border: `1px solid ${borderColor}`,
-          color: value ? '#fff' : 'rgba(255,255,255,0.45)',
+          // The placeholder here is the button's visible NAME ("Select
+          // competition first"), not a field hint, so it has to read at 4.5:1.
+          color: value ? 'rgb(var(--ink))' : 'var(--fg-muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x18)}` : 'none',
-          outlineColor: COLORS.saffron,
+          outlineColor: 'rgb(var(--brand-fg))',
         }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -100,7 +102,7 @@ const Dropdown = ({
           transition={{ duration: 0.2 }}
           className="flex-shrink-0"
         >
-          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? COLORS.saffron : 'rgba(255,255,255,0.45)' }} aria-hidden="true" />
+          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? 'rgb(var(--brand-fg))' : 'rgb(var(--ink) / 0.45)' }} aria-hidden="true" />
         </motion.div>
       </button>
 
@@ -109,7 +111,7 @@ const Dropdown = ({
           <motion.div
             className={`absolute left-0 right-0 mt-2 rounded-xl border overflow-hidden z-50 ${dropdownClassName}`}
             style={{
-              background: '#111111',
+              background: 'rgb(var(--surface))',
               borderColor: `${alpha(COLORS.saffron, 0x25)}`,
               boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
               maxHeight: 280,
@@ -125,17 +127,17 @@ const Dropdown = ({
               <div className="p-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search..." aria-label="Search options"
-                    className="w-full pl-8 pr-8 py-2 text-sm rounded-lg"
+                    className="w-full pl-8 pr-8 py-2 text-base mouse:text-sm rounded-lg"
                     style={{
-                      background: 'rgba(255,255,255,0.06)',
+                      background: 'rgb(var(--ink) / 0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: '#fff',
+                      color: 'rgb(var(--ink))',
                     }}
                     autoFocus={!isMobile}
                     onClick={(e) => e.stopPropagation()}
@@ -165,18 +167,22 @@ const Dropdown = ({
                 filteredOptions.map((option, i) => {
                   const isSelected = value?.value === option.value;
                   return (
-                    <motion.button
+                    /*
+                     * Hover is CSS, not framer `whileHover`: framer cannot
+                     * animate a CSS variable, and the hard-coded '#fff' it
+                     * animated to would be white text on the light menu.
+                     */
+                    <button
                       key={i}
                       type="button"
                       role="option"
                       aria-selected={isSelected}
                       onClick={() => handleSelect(option)}
-                      className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px]"
-                      style={{
-                        color: isSelected ? COLORS.saffronLight : 'rgba(255,255,255,0.75)',
-                        background: isSelected ? `${alpha(COLORS.saffron, 0x12)}` : 'transparent',
-                      }}
-                      whileHover={{ background: `${alpha(COLORS.saffron, 0x0A)}`, color: '#fff' }}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px] ${
+                        isSelected ? '' : 'text-white/75 hover:text-fg hover:bg-[rgb(255_107_0_/_0.04)]'}`}
+                      style={isSelected
+                        ? { color: 'rgb(var(--brand-fg-soft))', background: `${alpha(COLORS.saffron, 0x12)}` }
+                        : undefined}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
                         else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }
@@ -184,8 +190,8 @@ const Dropdown = ({
                       }}
                     >
                       <span className="flex-1 break-words">{option.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
-                    </motion.button>
+                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />}
+                    </button>
                   );
                 })
               )}

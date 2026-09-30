@@ -21,14 +21,16 @@ export default function NotFound() {
   const hasRoleContext = loginPath !== '/';
 
   return (
-    <div
+    // <main>: the page's one landmark (the audit found content outside any).
+    // Colours from the appearance tokens — identical in dark, legible in light.
+    <main
       className="min-h-dvh flex items-center justify-center px-4"
-      style={{ background: '#0a0a0a' }}
+      style={{ background: 'rgb(var(--bg))' }}
     >
       <div className="text-center max-w-md">
         <p
           className="text-7xl font-black tracking-tight mb-2"
-          style={{ color: 'rgba(255,255,255,0.12)' }}
+          style={{ color: 'rgb(var(--ink) / 0.12)' }}
         >
           404
         </p>
@@ -43,8 +45,8 @@ export default function NotFound() {
             to="/"
             className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px] flex items-center justify-center transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.14)',
+              background: 'rgb(var(--ink) / 0.08)',
+              border: '1px solid rgb(var(--ink) / 0.14)',
             }}
           >
             Go to home
@@ -54,13 +56,13 @@ export default function NotFound() {
             <Link
               to={loginPath}
               className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-white/70 hover:text-white transition-colors"
-              style={{ border: '1px solid rgba(255,255,255,0.10)' }}
+              style={{ border: '1px solid rgb(var(--ink) / 0.10)' }}
             >
               Sign in
             </Link>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

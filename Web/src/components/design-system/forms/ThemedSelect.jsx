@@ -85,7 +85,7 @@ export const ThemedSelect = forwardRef(({
         )}
         style={{
           // Role-specific focus color
-          color: theme.colors.primary,
+          color: 'rgb(var(--accent-fg))',
         }}
         whileFocus={{
           boxShadow: `0 0 0 3px ${theme.colors.primaryLight}`,

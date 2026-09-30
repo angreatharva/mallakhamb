@@ -100,9 +100,22 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 - (d) Dark, 5 widths: the changed pixels are only the role-card labels (every width), the Live Scores label (768+) and the nav links (768/820) — everything below the hero is identical. Light: hero text, stats, headings, the About caption and the footer were unreadable and now read. Public Scores changed in light only (shared `GradientText` / `GlassCard`); every other public page is identical in both appearances.
 - Why the whole hero is the island, not just its text: the scrim fades to the page colour from 40% to 100% of the hero's height, which is where the role cards sit (on a phone the hero is taller than the screen). A light-bottomed fade would put white text on a whitened photo.
 
+*2–9. The rest of the public group* — `PublicScores`, `UnifiedLogin` (5 portals), `UnifiedRegister` (3), `AdminRegister`, `ForgotPassword`, `ResetPassword`, `NotFound`, and the shared `layout/Navbar`, `auth/Dropdown` and Themed* inputs.
+- (a) 5 `md:` sites (gutters, a heading size, a card's padding) — all tablet-correct.
+- (b) 16px text in fields below `lg`/on touch (`text-base mouse:text-sm`) so iOS does not zoom on focus; the scores search box's `sm:min-h-[40px]` (a touch target shrinking from 640px) → `mouse:`.
+- (c) A mechanical, dark-identical codemod (`rgba(255,255,255,A)` → `rgb(var(--ink) / A)`, `rgba(10,10,10,A)` → `rgb(var(--bg) / A)`) that refuses framer animation props and SVG presentation attributes, where a CSS variable cannot work. Then by hand:
+  - **Role colour as text at 38–56% opacity** — the auth field labels, the portal eyebrow, the feature labels, the Forgot/Register links — failed in DARK too (saffron ~3.1, purple ~2.9:1), and purple has no passing opacity. → full-strength `--accent-fg`. Visible in dark: these labels are brighter.
+  - `#EF4444` required markers and errors → `--danger-fg` (identical in dark). Status text `text-green-400` / `text-red-400` (≈2:1 on light) → `text-*-700 dark:text-*-400`, the one place `dark:` earns its keep: identical in dark.
+  - `ResetPassword` had its own `COLORS` with `dark: '#0A0A0A'`, so its page stayed black in light with invisible text. `NotFound` hard-coded `#0a0a0a` (same failure) and became a `<main>`.
+  - `Dropdown`: the option hover was framer animating to `'#fff'` — white text on a light menu → CSS hover. Its trigger's placeholder is the button's visible NAME ("Select competition first") at 45% → muted.
+  - White labels on saffron fills (Send OTP, the reset step dots) → near-black (D6). `AdminRegister`'s strength label now takes a status token; the meter's fills keep their hex.
+- (d) Dark: every edited screen changed only where intended — the Send OTP label is the only change on Forgot Password at 1366; on Public Scores, the inactive tab and the dropdown placeholders. `NotFound` is pixel-identical in dark, which proves its tokens and the shared `Navbar` zero-diff. Home is untouched by this batch. Light: Reset Password, NotFound and the Public Scores header/filters were unreadable and now read; the auth labels read in the deep role shade.
+- The Public Scores filter labels stay faint in both appearances while their dropdown is disabled (until a competition is chosen) — WCAG exempts inactive controls.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.
+- More local copies for Phase 8: `ResetPassword` defines its own (non-reactive) `useReducedMotion`, `COLORS` and `GradientText`; `ForgotPassword` its own `GradientText` — now four local `useReducedMotion`s (with `AdminJudges` and `SuperAdminManagement`).
 - The tablet audit logged `Failed to auto-select competition: Competition switch already in progress` (`CompetitionContext.jsx`) — two automatic selections colliding. App logic, not presentation.
 
 ---
