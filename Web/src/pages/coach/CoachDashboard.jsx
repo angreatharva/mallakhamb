@@ -446,7 +446,7 @@ const CoachDashboard = () => {
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
             style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-white/45 text-sm">Loading team dashboard...</p>
+          <p className="text-fg-muted text-sm">Loading team dashboard...</p>
         </div>
       </div>
     );
@@ -519,7 +519,7 @@ const CoachDashboard = () => {
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
             <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
             <h2 className="text-2xl font-black text-white mb-2">No Team Registered</h2>
-            <p className="text-white/45 mb-6">You don&apos;t have a team registered for this competition yet.</p>
+            <p className="text-fg-muted mb-6">You don&apos;t have a team registered for this competition yet.</p>
             <button onClick={() => window.location.href = '/coach/select-competition'}
               className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px] inline-flex items-center gap-2"
               style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
@@ -605,7 +605,7 @@ const CoachDashboard = () => {
             </div>
           ))}
           {groupPlayers.length === 0 && (
-            <p className="text-white/20 text-xs italic px-1">
+            <p className="text-fg-muted text-xs italic px-1">
               {team?.isSubmitted ? 'No players assigned' : 'No players assigned · Drag player here'}
             </p>
           )}
@@ -689,7 +689,7 @@ const CoachDashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl font-black text-white">{team.name}</h1>
-                  <p className="text-white/40 text-sm">
+                  <p className="text-fg-muted text-sm">
                     Team Dashboard
                     {team.maxTeamSize && (
                       <> · max {team.maxTeamSize} players per age group (best {countedScoresFor(team.maxTeamSize)} count)</>
@@ -756,7 +756,7 @@ const CoachDashboard = () => {
                 </motion.button>
               </div>
             </div>
-            {team.description && <p className="mt-4 text-white/40 text-sm">{team.description}</p>}
+            {team.description && <p className="mt-4 text-fg-muted text-sm">{team.description}</p>}
             {team?.isSubmitted && (
               <div className="mt-4 p-3 rounded-xl flex items-center gap-2"
                 style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x25)}` }}>
@@ -783,7 +783,7 @@ const CoachDashboard = () => {
                   <Icon className="w-5 h-5" style={{ color }} aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wide">{label}</p>
+                  <p className="text-fg-muted text-xs uppercase tracking-wide">{label}</p>
                   <p className="text-2xl font-black text-white">{value}</p>
                 </div>
               </div>
@@ -853,7 +853,7 @@ const CoachDashboard = () => {
                 style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
                 <h3 className="text-xl font-black text-white">Team Summary — {team.name}</h3>
                 <button onClick={() => setShowTeamSummary(false)}
-                  className="p-2 rounded-xl text-white/40 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 rounded-xl text-fg-muted hover:text-fg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                   style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>
@@ -883,16 +883,16 @@ const CoachDashboard = () => {
                               style={{ background: 'rgba(255,255,255,0.02)', borderColor: COLORS.darkBorderSubtle }}>
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-white text-sm font-semibold">{getAgeGroupDisplay(ag)}</span>
-                                <span className="text-white/40 text-xs">{gPlayers.length} players</span>
+                                <span className="text-fg-muted text-xs">{gPlayers.length} players</span>
                               </div>
                               {gPlayers.length > 0
                                 ? gPlayers.map((p, i) => (
-                                    <p key={i} className="text-white/55 text-xs">
+                                    <p key={i} className="text-fg-muted text-xs">
                                       {p.player.firstName} {p.player.lastName}
                                       {apparatusLabel(p.apparatus) ? <span className="opacity-60 ml-1">({apparatusLabel(p.apparatus)})</span> : null}
                                     </p>
                                   ))
-                                : <p className="text-white/20 text-xs italic">No players</p>}
+                                : <p className="text-fg-muted text-xs italic">No players</p>}
                             </div>
                           );
                         })}
@@ -1001,7 +1001,7 @@ const CoachDashboard = () => {
                 style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
                 <h3 className="text-lg font-black text-white">Add Player to Age Group</h3>
                 <button onClick={handleCloseModal}
-                  className="p-2 rounded-xl text-white/40 hover:text-white/70 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 rounded-xl text-fg-muted hover:text-fg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                   style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>
@@ -1014,14 +1014,14 @@ const CoachDashboard = () => {
                   <div className="relative">
                     <input id="player-search" type="text" value={searchQuery}
                       onChange={(e) => { setSearchQuery(e.target.value); handleSearchPlayers(e.target.value); }}
-                      className="w-full px-4 py-3 pr-10 rounded-xl text-white placeholder-white/25 outline-none min-h-[44px]"
+                      className="w-full px-4 py-3 pr-10 rounded-xl text-white placeholder-white/25 min-h-[44px]"
                       style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
                       onFocus={e => e.target.style.borderColor = COLORS.saffron}
                       onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle}
                       placeholder="Search by name" />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" aria-hidden="true" />
                   </div>
-                  {searchLoading && <p className="text-white/30 text-xs mt-1">Searching...</p>}
+                  {searchLoading && <p className="text-fg-muted text-xs mt-1">Searching...</p>}
                   {players.length > 0 && (
                     <div className="mt-2 rounded-xl border overflow-hidden max-h-40 overflow-y-auto"
                       style={{ borderColor: COLORS.darkBorderSubtle }}>
@@ -1030,7 +1030,7 @@ const CoachDashboard = () => {
                           className="w-full text-left px-4 py-3 hover:bg-white/5 border-b last:border-b-0 transition-colors min-h-[44px]"
                           style={{ borderColor: COLORS.darkBorderSubtle }}>
                           <p className="text-white font-medium text-sm">{player.firstName} {player.lastName}</p>
-                          <p className="text-white/40 text-xs">{player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</p>
+                          <p className="text-fg-muted text-xs">{player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</p>
                         </button>
                       ))}
                     </div>
@@ -1041,18 +1041,18 @@ const CoachDashboard = () => {
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                       <p className="text-white font-semibold text-sm">{selectedPlayer.label}</p>
-                      <p className="text-white/45 text-xs mt-1">
+                      <p className="text-fg-muted text-xs mt-1">
                         Gender: {selectedPlayerData.gender} · Age: {selectedPlayerData.age} yrs · DOB: {new Date(selectedPlayerData.dateOfBirth).toLocaleDateString()}
                       </p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold tracking-wide uppercase mb-2"
                         style={{ color: COLORS.saffronLight }}>Gender (Auto-selected)</label>
-                      <div className="px-4 py-3 rounded-xl text-white/50 min-h-[44px] flex items-center"
+                      <div className="px-4 py-3 rounded-xl text-fg-muted min-h-[44px] flex items-center"
                         style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                         {selectedGender?.label || 'Loading...'}
                       </div>
-                      <p className="text-white/25 text-xs mt-1">Automatically set from player&apos;s registration</p>
+                      <p className="text-fg-muted text-xs mt-1">Automatically set from player&apos;s registration</p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold tracking-wide uppercase mb-2"
@@ -1065,7 +1065,7 @@ const CoachDashboard = () => {
                         onChange={setSelectedAgeGroup}
                         placeholder="Select age group"
                       />
-                      <p className="text-white/25 text-xs mt-1">
+                      <p className="text-fg-muted text-xs mt-1">
                         Player age: {selectedPlayerData.age} yrs. Showing eligible categories.
                       </p>
                     </div>
@@ -1110,7 +1110,7 @@ const CoachDashboard = () => {
                           );
                         })}
                       </div>
-                      <p className="text-white/25 text-xs mt-1">
+                      <p className="text-fg-muted text-xs mt-1">
                         Pick every apparatus this athlete competes on — each one is judged and ranked separately.
                       </p>
                     </div>

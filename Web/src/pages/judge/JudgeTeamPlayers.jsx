@@ -4,7 +4,6 @@ import { io } from 'socket.io-client';
 import {
   Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { apparatusFor, apparatusKey, apparatusToJudge, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
@@ -428,11 +427,11 @@ const JudgeTeamPlayers = () => {
               Team
             </p>
             <h1 className="text-2xl font-black text-white">{team?.name || 'Loading…'}</h1>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
               Coach: {team?.coach?.name || 'N/A'}
             </p>
             {!loading && team && (
-              <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p className="text-xs mt-3" style={{ color: 'var(--fg-muted)' }}>
                 {players.length} {players.length === 1 ? 'player' : 'players'}
                 {finalizedCount > 0 ? ` · ${finalizedCount} finalized` : scoredCount > 0 ? ` · ${scoredCount} submitted` : ''}
               </p>
@@ -447,10 +446,9 @@ const JudgeTeamPlayers = () => {
 
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3 flex-1">
-              <motion.div className="w-6 h-6 rounded-full border-2 border-t-transparent"
-                style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-              <span className="text-sm text-white/50">Loading players…</span>
+              <div className="animate-spin w-6 h-6 rounded-full border-2 border-t-transparent"
+                style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
+              <span className="text-sm text-fg-muted">Loading players…</span>
             </div>
           ) : players.length > 0 ? (
             <div className="space-y-2 pb-12">
@@ -480,7 +478,7 @@ const JudgeTeamPlayers = () => {
                           {orderIdx + 1}
                         </span>
                         {player.lotNo != null && (
-                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'var(--fg-muted)' }}>
                             Lot {player.lotNo}
                           </span>
                         )}
@@ -515,7 +513,7 @@ const JudgeTeamPlayers = () => {
                             </span>
                           ) : null}
                         </p>
-                        <p className="text-xs text-white/40 mt-0.5">
+                        <p className="text-xs text-fg-muted mt-0.5">
                           {player.gender} - {player.ageGroup}
                           {isLocked && player.finalScore != null
                             ? ` · Final ${Number(player.finalScore).toFixed(2)}`
@@ -536,7 +534,7 @@ const JudgeTeamPlayers = () => {
                         </div>
                       ) : (
                         <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400" aria-hidden="true" />
+                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-400" aria-hidden="true" />
                         </div>
                       )}
                     </div>
@@ -548,7 +546,7 @@ const JudgeTeamPlayers = () => {
             <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
               <Users className="w-12 h-12 mb-4 text-white/20" />
               <p className="text-lg font-bold text-white/70">No eligible players</p>
-              <p className="text-sm text-white/40 mt-2 max-w-sm text-center">
+              <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                 None of the players match your assigned category and apparatus.
               </p>
             </div>

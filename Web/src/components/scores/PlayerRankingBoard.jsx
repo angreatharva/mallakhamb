@@ -49,7 +49,7 @@ export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   }
   return (
     <div className={`${size} rounded-full flex items-center justify-center ${textSize} font-bold flex-shrink-0`}
-      style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+      style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--fg-muted)' }}>
       {rank}
     </div>
   );
@@ -59,7 +59,7 @@ const ScorePill = ({ label, value, accent = COLORS.saffron }) => (
   <div className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl"
     style={{ background: `${alpha(accent, 0x0E)}`, border: `1px solid ${alpha(accent, 0x20)}` }}>
     <span className="text-xs font-bold" style={{ color: accent }}>{value}</span>
-    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+    <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>{label}</span>
   </div>
 );
 
@@ -143,11 +143,11 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
               </span>
             )}
             {player.coach && (
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Coach: {player.coach}</span>
+              <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>Coach: {player.coach}</span>
             )}
           </div>
           {player.time && (
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Time: {player.time}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>Time: {player.time}</p>
           )}
           {/* Why this athlete placed where they did, when a tie decided it */}
           {tieLabel && (
@@ -156,14 +156,14 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-2xl font-black" style={{ color: COLORS.saffron }}>{toFixed(player.finalScore)}</p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Final</p>
+          <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>Final</p>
         </div>
       </div>
 
       {/* Score breakdown — inside the SAME card */}
       <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <p className="text-[10px] font-bold tracking-widest uppercase mb-2"
-          style={{ color: 'rgba(255,255,255,0.35)' }}>Score Breakdown (Average)</p>
+          style={{ color: 'var(--fg-muted)' }}>Score Breakdown (Average)</p>
         <div className="flex flex-wrap gap-2">
           <ScorePill label="Difficulty" value={toFixed(avgBreakdown.difficulty)} accent="#3B82F6" />
           <ScorePill label="Combination" value={toFixed(avgBreakdown.combination)} accent="#A855F7" />
@@ -179,7 +179,7 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
           )}
         </div>
         {fromSlips && (
-          <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <p className="text-[10px] mt-2" style={{ color: 'var(--fg-muted)' }}>
             {describeSlipAverage(fromSlips)}
           </p>
         )}

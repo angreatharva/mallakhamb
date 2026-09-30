@@ -90,7 +90,7 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
                   </motion.button>
                 )}
               </div>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                 Judges ({data.judges?.length || 0}): <span className="text-white/60">{judgeNames}</span>
               </p>
             </div>
@@ -493,7 +493,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 Competition Control
               </p>
               <h3 className="text-xl font-black text-white">Judges Assignment Status</h3>
-              <p className="text-white/40 text-sm mt-1">
+              <p className="text-fg-muted text-sm mt-1">
                 Each competition type needs at least 3 judges to start. Once started, judges cannot be modified.
               </p>
             </div>
@@ -502,7 +502,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               <div className="flex items-center justify-center py-12 gap-3">
                 <div className="w-5 h-5 border-2 border-white/20 border-t-saffron rounded-full animate-spin"
                   style={{ borderTopColor: theme.colors.primary }} />
-                <span className="text-white/40 text-sm">Loading judges summary…</span>
+                <span className="text-fg-muted text-sm">Loading judges summary…</span>
               </div>
             ) : (
               <div className="space-y-8">
@@ -671,7 +671,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4"
             style={{ borderTopColor: theme.colors.primary, animation: 'spin 0.8s linear infinite' }} />
-          <p className="text-white/40 text-sm">Loading dashboard…</p>
+          <p className="text-fg-muted text-sm">Loading dashboard…</p>
         </div>
       </div>
     );
@@ -784,7 +784,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             <motion.button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe md:min-h-[36px] justify-center transition-colors duration-200"
-              style={{ color: 'rgba(255,255,255,0.5)', border: `1px solid ${theme.colors.border}` }}
+              style={{ color: 'var(--fg-muted)', border: `1px solid ${theme.colors.border}` }}
               whileHover={{ color: '#EF4444', borderColor: '#EF444440' }}
               aria-label="Logout"
             >

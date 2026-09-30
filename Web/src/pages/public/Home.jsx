@@ -436,7 +436,7 @@ const HeroSection = () => {
           Mallakhamb Competition
         </motion.p>
 
-        <motion.p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed"
+        <motion.p className="text-fg-muted text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.8 }}>
           The ultimate platform for traditional Indian gymnastics  where strength meets grace on the pole.
         </motion.p>
@@ -444,7 +444,7 @@ const HeroSection = () => {
         {/* Role cards with 3D tilt */}
         <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 1.0 }}>
-          <p className="text-white/35 text-xs tracking-widest uppercase mb-4">Choose your role to get started</p>
+          <p className="text-fg-muted text-xs tracking-widest uppercase mb-4">Choose your role to get started</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-3xl mx-auto">
             {roles.map((role, i) => {
               const Icon = role.icon;
@@ -487,7 +487,7 @@ const HeroSection = () => {
           </div>
           <div className="mt-5">
             <Link to="/superadmin/login"
-              className="text-white/20 hover:text-white/45 text-xs transition-colors duration-200 underline underline-offset-4 inline-flex items-center justify-center tap-safe">
+              className="text-fg-muted hover:text-fg text-xs transition-colors duration-200 underline underline-offset-4 inline-flex items-center justify-center tap-safe">
               Super Admin Access
             </Link>
           </div>
@@ -519,7 +519,7 @@ const AnimatedStat = ({ num, suffix, label, delay }) => {
         <p className="text-3xl md:text-4xl font-black">
           <GradientText>{count}{suffix}</GradientText>
         </p>
-        <p className="text-white/45 text-xs tracking-widest uppercase mt-1">{label}</p>
+        <p className="text-fg-muted text-xs tracking-widest uppercase mt-1">{label}</p>
       </div>
     </FadeIn>
   );
@@ -568,7 +568,7 @@ const AboutSection = () => {
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: 0.4 }}>
               <p className="text-white font-bold text-sm">Traditional Indian Sport</p>
-              <p className="text-white/45 text-xs mt-1">Originating from the Indian subcontinent</p>
+              <p className="text-fg-muted text-xs mt-1">Originating from the Indian subcontinent</p>
             </motion.div>
           </motion.div>
           <div className="absolute -top-4 -left-4 w-24 h-24 rounded-2xl border-t-2 border-l-2 pointer-events-none"
@@ -585,10 +585,10 @@ const AboutSection = () => {
               <GradientText>Meets Grace</GradientText>
             </h2>
           </div>
-          <p className="text-white/55 text-lg leading-relaxed">
+          <p className="text-fg-muted text-lg leading-relaxed">
             Mallakhamb is a traditional sport originating from the Indian subcontinent, in which a gymnast performs aerial yoga or gymnastic postures and wrestling grips in concert with a vertical stationary or hanging wooden pole, cane, or rope.
           </p>
-          <p className="text-white/40 leading-relaxed">
+          <p className="text-fg-muted leading-relaxed">
             The Bhausaheb Ranade Navodit Mallakhamb Competition has been a cornerstone of this tradition since 1984, producing national champions and preserving this ancient art form for future generations.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -635,7 +635,7 @@ const LegacyTimeline = () => (
                     style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
                     <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.saffron }}>{ev.year}</p>
                     <p className="text-white font-bold text-lg mb-1">{ev.title}</p>
-                    <p className="text-white/45 text-sm leading-relaxed">{ev.desc}</p>
+                    <p className="text-fg-muted text-sm leading-relaxed">{ev.desc}</p>
                   </div>
                 </div>
                 <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 mt-6"
@@ -663,7 +663,7 @@ const QuoteStrip = () => (
         <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
           &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
         </p>
-        <footer className="text-white/35 text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
+        <footer className="text-fg-muted text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
       </blockquote>
     </FadeIn>
   </section>
@@ -700,7 +700,7 @@ const FeatureCard = ({ feature, index }) => {
           </div>
           <div className="relative z-10 flex-1">
             <h3 className={`text-white font-bold ${feature.hero ? 'text-2xl' : 'text-lg'}`}>{feature.title}</h3>
-            <p className={`text-white/45 mt-1 leading-relaxed ${feature.hero ? 'text-base' : 'text-sm'}`}>{feature.description}</p>
+            <p className={`text-fg-muted mt-1 leading-relaxed ${feature.hero ? 'text-base' : 'text-sm'}`}>{feature.description}</p>
           </div>
           <div className="mt-auto flex items-center gap-2 text-xs font-semibold relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
             style={{ color: feature.accent }}>
@@ -753,7 +753,7 @@ const Footer = () => {
               <p className="text-white font-bold text-sm leading-tight">Mallakhamb Competition</p>
             </div>
           </div>
-          <p className="text-white/35 text-sm leading-relaxed max-w-sm">
+          <p className="text-fg-muted text-sm leading-relaxed max-w-sm">
             A Sports Event started in 1984, producing award-winning national players and preserving the tradition of Mallakhamb.
           </p>
           <div className="flex gap-3 pt-2">
@@ -775,7 +775,7 @@ const Footer = () => {
               {links.map((link) => (
                 <li key={link.to}>
                   <Link to={link.to}
-                    className="text-white/35 hover:text-white/70 text-sm transition-colors duration-200 flex items-center gap-2 group tap-safe">
+                    className="text-fg-muted hover:text-fg text-sm transition-colors duration-200 flex items-center gap-2 group tap-safe">
                     <span className="w-1 h-1 rounded-full group-hover:w-3 transition-all duration-200"
                       style={{ background: COLORS.saffron }} />
                     {link.label}
@@ -791,15 +791,15 @@ const Footer = () => {
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
-              <p className="text-white/35 text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
+              <p className="text-fg-muted text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
             </div>
             <a href="tel:+919820688420"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 tap-safe">
+              className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 tap-safe">
               <Phone className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
               +91 982 068 8420
             </a>
             <a href="mailto:mallakhambindia@gmail.com"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 break-all tap-safe">
+              className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 break-all tap-safe">
               <Mail className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
               mallakhambindia@gmail.com
             </a>
@@ -808,7 +808,7 @@ const Footer = () => {
       </div>
 
       <div className="border-t py-6 text-center" style={{ borderColor: COLORS.darkBorder }}>
-        <p className="text-white/20 text-xs">
+        <p className="text-fg-muted text-xs">
            2025 Bhausaheb Ranade Mallakhamb & Gymnastics Competition. All rights reserved.
         </p>
       </div>

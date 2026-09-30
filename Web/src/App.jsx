@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { MotionConfig } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { CompetitionProvider } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +11,8 @@ import AppearanceProvider from '@/contexts/AppearanceProvider';
 import AppRoutes, { PageLoader } from '@/routes';
 import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
+import { getRoleFromPath } from '@/utils/auth/roleFromPath';
+import { applyRoleAccent } from '@/utils/ui/appearance';
 
 function AppContent() {
   const { user, userType, loading, logout: handleLogout } = useAuth();
@@ -28,6 +31,12 @@ function AppContent() {
   useEffect(() => {
     verifyCopRulesAgainstServer();
   }, []);
+
+  // Role accent for the CSS tokens, from the URL like everything else here.
+  // A layout effect, so a route change never paints one frame in the old role.
+  useLayoutEffect(() => {
+    applyRoleAccent(getRoleFromPath(location.pathname));
+  }, [location.pathname]);
 
   if (loading) {
     return <PageLoader />;
@@ -128,11 +137,21 @@ function App() {
         * (a judge mid-slip keeps every mark). See AppearanceProvider.
         */}
       <AppearanceProvider>
-        <Router>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </Router>
+        {/*
+          * Honour the device's reduced-motion setting for every framer element
+          * (323 of them): movement — scale, x/y, rotate — stops; opacity fades
+          * still run. Many screens gate their own animations with
+          * useReducedMotion; this covers the looping ones that never did (the
+          * floating orbs, pulsing ornaments). Loading spinners are CSS
+          * `animate-spin`, which this does not touch, so they keep turning.
+          */}
+        <MotionConfig reducedMotion="user">
+          <Router>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </Router>
+        </MotionConfig>
       </AppearanceProvider>
     </ErrorBoundary>
   );

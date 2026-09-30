@@ -27,7 +27,7 @@ const GradientText = ({ children, className = '' }) => (
 
 const StyledInput = ({ error, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-white text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
     style={{
       background: 'rgba(255,255,255,0.05)',
       border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
@@ -133,7 +133,7 @@ const ForgotPassword = () => {
             <h1 className="text-2xl font-black text-white mb-2">
               Forgot <GradientText>Password?</GradientText>
             </h1>
-            <p className="text-white/45 text-sm leading-relaxed">
+            <p className="text-fg-muted text-sm leading-relaxed">
               Enter your email and we&apos;ll send you a one-time code to reset your password.
             </p>
           </div>
@@ -174,8 +174,7 @@ const ForgotPassword = () => {
               whileTap={!loading && !sent ? { scale: 0.97 } : {}}>
               {loading ? (
                 <>
-                  <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white" />
                   Sending OTP…
                 </>
               ) : sent ? (
@@ -186,7 +185,7 @@ const ForgotPassword = () => {
             </motion.button>
 
             {loading && (
-              <motion.div className="mt-4 p-3 rounded-xl border text-xs text-white/50 flex items-center gap-2"
+              <motion.div className="mt-4 p-3 rounded-xl border text-xs text-fg-muted flex items-center gap-2"
                 style={{ background: `${alpha(COLORS.saffron, 0x0A)}`, borderColor: `${alpha(COLORS.saffron, 0x20)}` }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
                 <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
@@ -216,14 +215,14 @@ const ForgotPassword = () => {
 
           {/* Footer links */}
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
-            <p className="text-sm text-white/35">
+            <p className="text-sm text-fg-muted">
               Remember your password?{' '}
-              <Link to="/player/login" className="font-semibold transition-colors duration-200 hover:opacity-80"
+              <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
                 style={{ color: COLORS.saffronLight }}>
                 Back to Login
               </Link>
             </p>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home
             </Link>

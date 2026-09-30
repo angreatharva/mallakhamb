@@ -51,15 +51,15 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 const DarkSearch = ({ value, onChange, placeholder }) => (
   <div className="relative">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
       <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
-        <X className="w-3.5 h-3.5 text-white/40" />
+        <X className="w-3.5 h-3.5 text-fg-muted" />
       </button>
     )}
   </div>
@@ -69,7 +69,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
     <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
@@ -77,7 +77,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
 const LoadingState = ({ label }) => (
   <div className="flex items-center justify-center py-12 gap-3">
     <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-white/40 text-sm">{label}</span>
+    <span className="text-fg-muted text-sm">{label}</span>
   </div>
 );
 
@@ -430,7 +430,7 @@ const Scores = () => {
                         <InfoBanner color={ADMIN_COLORS.green}>
                           <span className="text-white/70">Showing teams for: </span>
                           <span className="font-bold text-white">{categoryLabel}</span>
-                          <span className="text-white/50 ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
+                          <span className="text-fg-muted ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
                       </>
@@ -451,10 +451,10 @@ const Scores = () => {
                             renderMobileCard={(team) => (
                               <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                                 <h4 className="font-bold text-white">Team: {team.name}</h4>
-                                <p className="text-sm text-white/50 mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
-                                <p className="text-xs text-white/30 mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
+                                <p className="text-sm text-fg-muted mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
+                                <p className="text-xs text-fg-muted mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
                                 <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                  <span className="text-sm text-white/50">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
+                                  <span className="text-sm text-fg-muted">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
                                   <motion.button
                                     onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
                                     className="px-3 py-1.5 rounded-lg text-xs font-bold text-white min-h-[36px]"
@@ -487,7 +487,7 @@ const Scores = () => {
 
                         <div className="flex items-center gap-2 px-1 mb-4">
                           <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
-                          <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
                             {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
                             {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
                           </span>
@@ -514,7 +514,7 @@ const Scores = () => {
                         <InfoBanner color={ADMIN_COLORS.purple}>
                           <span className="text-white/70">Team rankings for: </span>
                           <span className="font-bold text-white">{categoryLabel}</span>
-                          <span className="text-white/50 ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
+                          <span className="text-fg-muted ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
                         {filteredTeamRankings.length === 0 && searchTerm ? (

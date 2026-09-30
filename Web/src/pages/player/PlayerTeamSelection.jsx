@@ -108,10 +108,9 @@ const PlayerTeamSelection = () => {
       <div className="min-h-dvh flex items-center justify-center"
         style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
-            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
-          <p className="text-white/45 text-sm">Loading teams...</p>
+          <div className="animate-spin w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
+          <p className="text-fg-muted text-sm">Loading teams...</p>
         </div>
       </div>
     );
@@ -128,7 +127,7 @@ const PlayerTeamSelection = () => {
             <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-80" />
             <div className="w-px h-8 bg-white/10" />
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-white/40">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted">
                 Bhausaheb Ranade Mallakhamb
               </p>
               <p className="text-white/60 text-xs">Player Portal</p>
@@ -142,7 +141,7 @@ const PlayerTeamSelection = () => {
             <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
               Select Your Team
             </h1>
-            <p className="text-white/45 text-sm md:text-base">
+            <p className="text-fg-muted text-sm md:text-base">
               Choose the team you want to join to start competing
             </p>
           </motion.div>
@@ -162,10 +161,10 @@ const PlayerTeamSelection = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
               <input
                 type="text"
-                placeholder="Search teams by name, description, or coach..."
+                placeholder="Search teams by name, description, or coach..." aria-label="Search teams"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-white placeholder:text-white/30 focus:outline-none focus:border-opacity-100 transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-white placeholder:text-white/30 focus:border-opacity-100 transition-colors"
                 style={{ 
                   borderColor: COLORS.darkBorder,
                   background: COLORS.darkCard 
@@ -188,7 +187,7 @@ const PlayerTeamSelection = () => {
               <h3 className="text-white font-bold text-lg mb-2">
                 {searchQuery ? 'No teams found' : 'No teams available'}
               </h3>
-              <p className="text-white/45 text-sm">
+              <p className="text-fg-muted text-sm">
                 {searchQuery 
                   ? 'Try adjusting your search query' 
                   : 'There are no teams available at the moment'}
@@ -238,13 +237,13 @@ const PlayerTeamSelection = () => {
                     </h3>
                     
                     {team.description && (
-                      <p className="text-white/45 text-sm mb-3 line-clamp-2">
+                      <p className="text-fg-muted text-sm mb-3 line-clamp-2">
                         {team.description}
                       </p>
                     )}
 
                     {team.coach?.name && (
-                      <div className="flex items-center gap-2 text-xs text-white/40">
+                      <div className="flex items-center gap-2 text-xs text-fg-muted">
                         <span>Coach:</span>
                         <span className="font-semibold text-white/60">{team.coach.name}</span>
                       </div>

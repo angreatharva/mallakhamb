@@ -815,7 +815,7 @@ const JudgeDashboard = () => {
         <FadeIn delay={0}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
+              <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
               <h1 className="text-2xl font-black text-white">{judgeInfo.name}</h1>
             </div>
             
@@ -874,7 +874,7 @@ const JudgeDashboard = () => {
                   ...(needsRoleChoice && roleChosen ? [{ label: 'Role', value: chosenRole }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</span>
+                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--fg-muted)' }}>{label}</span>
                     <span className="text-sm font-bold text-white">{value}</span>
                   </div>
                 ))}
@@ -891,7 +891,7 @@ const JudgeDashboard = () => {
             <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-white/5 bg-white/5">
               <Scale className="w-12 h-12 mb-4 text-white/20" />
               <p className="text-lg font-bold text-white/70">No panel assignments yet</p>
-              <p className="text-sm text-white/40 mt-2 max-w-sm">
+              <p className="text-sm text-fg-muted mt-2 max-w-sm">
                 Your account is ready. An organiser adds you to a competition panel — the
                 categories you are judging will appear here once they do. Sign in again after
                 that to start scoring.
@@ -910,22 +910,21 @@ const JudgeDashboard = () => {
         {!showModal && selectedCompetitionType && !awaitingRole && (
           <FadeIn delay={0.1} className="flex-1 flex flex-col">
             <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-muted" />
               <input 
                 type="text" 
-                placeholder="Search teams by name..." 
+                placeholder="Search teams by name..." aria-label="Search teams" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-base text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors shadow-lg"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-base text-white placeholder-white/40 focus:border-purple-500/50 transition-colors shadow-lg"
               />
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12 gap-3 flex-1">
-                <motion.div className="w-6 h-6 rounded-full border-2 border-t-transparent"
-                  style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-                  animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                <span className="text-sm text-white/50">Loading teams...</span>
+                <div className="animate-spin w-6 h-6 rounded-full border-2 border-t-transparent"
+                  style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
+                <span className="text-sm text-fg-muted">Loading teams...</span>
               </div>
             ) : filteredTeams.length > 0 ? (
               <div className="space-y-4 pb-12">
@@ -957,14 +956,14 @@ const JudgeDashboard = () => {
                             </span>
                             {team.lotNo != null && (
                               <span className="text-[9px] mt-0.5 font-bold tracking-wider uppercase"
-                                style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                style={{ color: 'var(--fg-muted)' }}>
                                 Lot {team.lotNo}
                               </span>
                             )}
                           </span>
                           <div className="min-w-0">
                           <p className="font-bold text-lg text-white truncate">{team.name}</p>
-                          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
                             Coach: {team.coach?.name || 'N/A'}
                           </p>
                           {scoredCount > 0 && (
@@ -978,7 +977,7 @@ const JudgeDashboard = () => {
                           <span className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/70 font-semibold">
                             {teamPlayers.length} {teamPlayers.length === 1 ? 'Player' : 'Players'}
                           </span>
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/40">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-fg-muted">
                             <ChevronRight className="w-5 h-5" aria-hidden="true" />
                           </div>
                         </div>
@@ -991,7 +990,7 @@ const JudgeDashboard = () => {
               <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
                 <Users className="w-12 h-12 mb-4 text-white/20" />
                 <p className="text-lg font-bold text-white/70">No teams found</p>
-                <p className="text-sm text-white/40 mt-2 max-w-sm text-center">
+                <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                   {searchQuery 
                     ? "No teams match your search query." 
                     : "There are no teams submitted for this competition category yet."}
@@ -1018,7 +1017,7 @@ const JudgeDashboard = () => {
               {selectedCompetitionType && isSelectionComplete && (
                 <button 
                   onClick={() => setShowModal(false)}
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -1029,7 +1028,7 @@ const JudgeDashboard = () => {
                     <Filter className="w-6 h-6 text-purple-400" />
                   </div>
                   <h2 className="text-2xl font-black text-white">Select Judging Category</h2>
-                  <p className="text-white/50 text-sm mt-2">Choose the competition context you are judging for right now.</p>
+                  <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
                 {/* Competition — the meet, not the competition type. Only asked
@@ -1044,11 +1043,11 @@ const JudgeDashboard = () => {
                           selected={String(selectedCompetitionId) === String(comp._id)}
                           onClick={() => selectCompetition(comp._id)}>
                           <div className="flex items-center gap-2">
-                            <CalendarDays className="w-4 h-4 flex-shrink-0 text-white/40" aria-hidden="true" />
+                            <CalendarDays className="w-4 h-4 flex-shrink-0 text-fg-muted" aria-hidden="true" />
                             <div>
                               <p>{comp.name || 'Untitled competition'}</p>
                               {(comp.place || comp.level) && (
-                                <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">
+                                <p className="text-[10px] font-normal text-fg-muted uppercase tracking-widest mt-0.5">
                                   {[comp.place, comp.level && levelLabel(comp.level)].filter(Boolean).join(' · ')}
                                 </p>
                               )}
@@ -1058,7 +1057,7 @@ const JudgeDashboard = () => {
                       ))}
                     </div>
                     {switchingCompetition && (
-                      <p className="flex items-center gap-2 text-xs text-white/50 mt-3 ml-1">
+                      <p className="flex items-center gap-2 text-xs text-fg-muted mt-3 ml-1">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                         Switching competition…
                       </p>
@@ -1082,7 +1081,7 @@ const JudgeDashboard = () => {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Gender</p>
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Gender</p>
                       <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender || '—'}</p>
                     </div>
                   )}
@@ -1106,7 +1105,7 @@ const JudgeDashboard = () => {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Age Group</p>
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Age Group</p>
                       <p className="font-bold text-white">
                         {availableAgeGroups[0]
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
@@ -1130,7 +1129,7 @@ const JudgeDashboard = () => {
                           }}>
                           <div>
                             <p>{ct.label}</p>
-                            <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">{ct.sub}</p>
+                            <p className="text-[10px] font-normal text-fg-muted uppercase tracking-widest mt-0.5">{ct.sub}</p>
                           </div>
                         </SelectBtn>
                       ))}
@@ -1155,7 +1154,7 @@ const JudgeDashboard = () => {
                           ))}
                         </div>
                         {loading && (
-                          <p className="flex items-center gap-2 text-xs text-white/40 mt-3 ml-1">
+                          <p className="flex items-center gap-2 text-xs text-fg-muted mt-3 ml-1">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                             Checking what the entered athletes are registered for…
                           </p>
@@ -1203,7 +1202,7 @@ const JudgeDashboard = () => {
                 <button
                   onClick={() => setShowRoleModal(false)}
                   aria-label="Close"
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -1214,7 +1213,7 @@ const JudgeDashboard = () => {
                     <ClipboardList className="w-6 h-6 text-purple-400" />
                   </div>
                   <h2 id="role-modal-title" className="text-2xl font-black text-white">Select Your Role</h2>
-                  <p className="text-white/50 text-sm mt-2">
+                  <p className="text-fg-muted text-sm mt-2">
                     You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {selectedAgeGroup || judgeInfo.ageGroup} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
                   </p>
                 </div>
@@ -1229,7 +1228,7 @@ const JudgeDashboard = () => {
                         <Icon className="w-5 h-5 flex-shrink-0 text-purple-300" aria-hidden="true" />
                         <div>
                           <p className="font-bold text-white">{role}</p>
-                          <p className="text-xs text-white/50 mt-0.5">{desc}</p>
+                          <p className="text-xs text-fg-muted mt-0.5">{desc}</p>
                         </div>
                       </div>
                     </SelectBtn>

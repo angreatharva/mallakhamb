@@ -33,7 +33,7 @@ export default function NotFound() {
           404
         </p>
         <h1 className="text-xl font-bold text-white mb-2">Page not found</h1>
-        <p className="text-sm text-white/50 mb-8">
+        <p className="text-sm text-fg-muted mb-8">
           We couldn&apos;t find <span className="text-white/70">{location.pathname}</span>.
           The link may be out of date, or the page may have moved.
         </p>

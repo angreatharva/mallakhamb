@@ -546,7 +546,7 @@ const UnifiedRegisterInner = () => {
                 {config.subtitle}
               </GradientText>
             </h1>
-            <p className="text-white/30 text-sm leading-relaxed max-w-xs mx-auto">
+            <p className="text-fg-muted text-sm leading-relaxed max-w-xs mx-auto">
               {config.description}
             </p>
           </motion.div>
@@ -619,7 +619,7 @@ const UnifiedRegisterInner = () => {
             >
               Mallakhamb
             </p>
-            <p className="text-white/30 text-[10px]">{config.title} Portal</p>
+            <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
           </div>
         </motion.div>
 
@@ -673,7 +673,7 @@ const UnifiedRegisterInner = () => {
               />
             </div>
             <h2 className="text-3xl font-black text-white mt-3">{config.formTitle}</h2>
-            <p className="text-white/35 text-sm mt-1">{config.formSubtitle}</p>
+            <p className="text-fg-muted text-sm mt-1">{config.formSubtitle}</p>
           </motion.div>
 
           {/* Registration form */}
@@ -777,8 +777,8 @@ const UnifiedRegisterInner = () => {
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('password', PASSWORD_RULES)}
@@ -827,8 +827,8 @@ const UnifiedRegisterInner = () => {
                       aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
                     >
                       {showConfirm
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('confirmPassword', {
@@ -878,12 +878,12 @@ const UnifiedRegisterInner = () => {
           >
             <Link
               to="/"
-              className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center"
+              className="text-xs text-fg-muted hover:text-fg transition-colors inline-flex items-center tap-safe justify-center"
             >
               ← Home
             </Link>
             <div className="flex items-center gap-3">
-              <span className="text-white/15 text-xs">·</span>
+              <span className="text-fg-subtle text-xs">·</span>
               <Link
                 to={config.loginLink}
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"

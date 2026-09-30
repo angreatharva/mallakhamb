@@ -120,7 +120,7 @@ export const ResponsiveTable = ({
           <thead>
             <tr style={{ background: elevated }}>
               {columns.map((col, i) => (
-                <th key={i} style={{
+                <th key={i} scope="col" style={{
                   padding: '12px 16px',
                   textAlign: 'left',
                   fontSize: 11,
@@ -180,8 +180,9 @@ const toMarkText = (raw) => {
   return text.replace(/^0+(?=\d)/, '');
 };
 
-const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'number', fluid = false }) => (
+const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'number', fluid = false, label }) => (
   <input
+    aria-label={label}
     type="text"
     inputMode={type === 'number' ? 'decimal' : undefined}
     autoComplete="off"
@@ -260,6 +261,7 @@ export const ResponsiveScoringTable = ({
                 <ScoreInputCell
                   value={scores[player.id]?.time}
                   onChange={val => onScoreChange(player.id, 'time', val)}
+                  label={`${player.name}, Time`}
                   isLocked={isLocked}
                   placeholder="00:00"
                   type="text"
@@ -282,6 +284,7 @@ export const ResponsiveScoringTable = ({
                     <ScoreInputCell
                       value={scores[player.id]?.[field]}
                       onChange={val => onScoreChange(player.id, field, val)}
+                      label={`${player.name}, ${judge.judgeType}`}
                       // The copy is typed once, in the Sr. Judge's own cell.
                       isLocked={isLocked || !!judge.isChiefCopy}
                       placeholder="0.0"
@@ -316,6 +319,7 @@ export const ResponsiveScoringTable = ({
                   <ScoreInputCell
                     value={scores[player.id]?.deduction}
                     onChange={val => onScoreChange(player.id, 'deduction', val)}
+                    label={`${player.name}, Time deduction`}
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
@@ -326,6 +330,7 @@ export const ResponsiveScoringTable = ({
                   <ScoreInputCell
                     value={scores[player.id]?.otherDeduction}
                     onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
+                    label={`${player.name}, Other deduction`}
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
@@ -372,7 +377,7 @@ export const ResponsiveScoringTable = ({
           * `overflowX: auto` above stays as a backstop for a panel nobody has
           * seated yet; it should never have anything to scroll.
           */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <table aria-label="Score sheet" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <colgroup>
             {/* Named athletes and squads, so it is given room; every other
                 column holds a number and takes an equal share of the rest. */}
@@ -388,7 +393,7 @@ export const ResponsiveScoringTable = ({
                 const judgeObj = judges[i - 2]; // offset by 2 (Participant, Time)
                 const isJudgeCol = i >= 2 && i < 2 + judges.length;
                 return (
-                  <th key={i} style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
+                  <th key={i} scope="col" style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
                     {h === 'Time' ? <>{h} <span style={{ color: '#EF4444' }}>*</span></> : h}
                     {isJudgeCol && judgeObj?.name && (
                       <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: C.purpleLight, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
@@ -412,6 +417,7 @@ export const ResponsiveScoringTable = ({
                   <ScoreInputCell
                     value={scores[player.id]?.time}
                     onChange={val => onScoreChange(player.id, 'time', val)}
+                    label={`${player.name}, Time`}
                     isLocked={isLocked}
                     placeholder="00:00"
                     type="text"
@@ -425,6 +431,7 @@ export const ResponsiveScoringTable = ({
                       <ScoreInputCell
                         value={scores[player.id]?.[field]}
                         onChange={val => onScoreChange(player.id, field, val)}
+                        label={`${player.name}, ${judge.judgeType}`}
                         // The copy is typed once, in the Sr. Judge's own cell.
                         isLocked={isLocked || !!judge.isChiefCopy}
                         placeholder="0.0"
@@ -461,6 +468,7 @@ export const ResponsiveScoringTable = ({
                   <ScoreInputCell
                     value={scores[player.id]?.deduction}
                     onChange={val => onScoreChange(player.id, 'deduction', val)}
+                    label={`${player.name}, Time deduction`}
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"
@@ -471,6 +479,7 @@ export const ResponsiveScoringTable = ({
                   <ScoreInputCell
                     value={scores[player.id]?.otherDeduction}
                     onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
+                    label={`${player.name}, Other deduction`}
                     isLocked={isLocked}
                     placeholder="0.0"
                     type="number"

@@ -330,7 +330,7 @@ const CoachPayment = () => {
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
             style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-white/45 text-sm">Loading payment details...</p>
+          <p className="text-fg-muted text-sm">Loading payment details...</p>
         </div>
       </div>
     );
@@ -359,7 +359,7 @@ const CoachPayment = () => {
             <h2 className="text-2xl font-black text-white mb-3">
               {isAlreadySubmitted ? 'Team Already Submitted' : 'Payment Successful!'}
             </h2>
-            <p className="text-white/45 mb-4 leading-relaxed">
+            <p className="text-fg-muted mb-4 leading-relaxed">
               {isAlreadySubmitted 
                 ? `Your team "${team?.name}" has already been submitted for the competition.`
                 : `Your team "${team?.name}" has been successfully submitted for the competition.`
@@ -389,7 +389,7 @@ const CoachPayment = () => {
         <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
           <h1 className="text-xl font-black text-white mb-3">Per-player fee not set</h1>
-          <p className="text-white/50 text-sm mb-6 leading-relaxed">
+          <p className="text-fg-muted text-sm mb-6 leading-relaxed">
             This competition does not have a valid per-player registration fee. Ask a super admin to edit the competition and set the fee, then try again.
           </p>
           <button type="button" onClick={() => navigate('/coach/dashboard')}
@@ -422,7 +422,7 @@ const CoachPayment = () => {
           <h1 className="text-xl font-black text-white mb-3">
             {notOpen ? 'Registration has not opened yet' : 'Registration is closed'}
           </h1>
-          <p className="text-white/50 text-sm mb-6 leading-relaxed">
+          <p className="text-fg-muted text-sm mb-6 leading-relaxed">
             {notOpen
               ? `Fees for ${team?.competition?.name || 'this competition'} can be paid from `
                 + `${formatFeeWindowDate(feeWindow.opensAt)}. Come back on or after that date.`
@@ -452,7 +452,7 @@ const CoachPayment = () => {
         {/* Back */}
         <FadeIn>
           <button onClick={() => navigate('/coach/dashboard')}
-            className="flex items-center gap-2 text-white/40 hover:text-white/70 mb-8 transition-colors min-h-[44px] -ml-2 px-2">
+            className="flex items-center gap-2 text-fg-muted hover:text-fg mb-8 transition-colors min-h-[44px] -ml-2 px-2">
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Back to Dashboard
           </button>
@@ -461,9 +461,9 @@ const CoachPayment = () => {
               Registration
             </p>
             <h1 className="text-3xl font-black text-white">Team Payment</h1>
-            <p className="text-white/40 text-sm mt-1">Complete your team registration for the competition</p>
+            <p className="text-fg-muted text-sm mt-1">Complete your team registration for the competition</p>
             {team?.competition?.name && (
-              <p className="text-white/55 text-sm mt-2 font-medium">{team.competition.name}</p>
+              <p className="text-fg-muted text-sm mt-2 font-medium">{team.competition.name}</p>
             )}
           </div>
         </FadeIn>
@@ -480,16 +480,16 @@ const CoachPayment = () => {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">{team?.name}</h2>
-                  <p className="text-white/40 text-xs">Team Summary</p>
+                  <p className="text-fg-muted text-xs">Team Summary</p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-                  <span className="text-white/50 text-sm">Total Players</span>
+                  <span className="text-fg-muted text-sm">Total Players</span>
                   <span className="text-white font-semibold text-sm">{team?.players?.length || 0}</span>
                 </div>
                 <div>
-                  <p className="text-white/50 text-xs uppercase tracking-wide mb-2">Age Group Distribution</p>
+                  <p className="text-fg-muted text-xs uppercase tracking-wide mb-2">Age Group Distribution</p>
                   {team?.players && (() => {
                     const grouped = {};
                     team.players.forEach(p => {
@@ -498,7 +498,7 @@ const CoachPayment = () => {
                     });
                     return Object.entries(grouped).map(([group, count]) => (
                       <div key={group} className="flex justify-between py-1.5">
-                        <span className="text-white/40 text-sm">{group}</span>
+                        <span className="text-fg-muted text-sm">{group}</span>
                         <span className="text-white/60 text-sm">{count} players</span>
                       </div>
                     ));
@@ -519,7 +519,7 @@ const CoachPayment = () => {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment Details</h2>
-                  <p className="text-white/40 text-xs">Per-player fee for this competition (no base fee)</p>
+                  <p className="text-fg-muted text-xs">Per-player fee for this competition (no base fee)</p>
                 </div>
               </div>
 
@@ -531,7 +531,7 @@ const CoachPayment = () => {
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: COLORS.saffron }} aria-hidden="true" />
                   <div>
                     <p className="text-sm font-bold text-white">Late fee applies</p>
-                    <p className="text-white/50 text-xs mt-1 leading-relaxed">
+                    <p className="text-fg-muted text-xs mt-1 leading-relaxed">
                       The last date to pay without a penalty was {formatFeeWindowDate(feeWindow.dueBy)}.
                       A late fee of ₹{feeWindow.lateFeePerPlayer.toLocaleString()} per athlete is added
                       to the fees below. Registration closes at the end of {formatFeeWindowDate(feeWindow.closesAt)}.
@@ -541,7 +541,7 @@ const CoachPayment = () => {
               )}
 
               {!feeWindow.isLate && feeWindow.dueBy && feeWindow.lateFeePerPlayer === 0 && Number(team?.competition?.lateFee) > 0 && (
-                <p className="text-white/40 text-xs mb-5 leading-relaxed">
+                <p className="text-fg-muted text-xs mb-5 leading-relaxed">
                   Pay by {formatFeeWindowDate(feeWindow.dueBy)} to avoid a late fee of
                   {' '}₹{Number(team.competition.lateFee).toLocaleString()} per athlete.
                 </p>
@@ -555,7 +555,7 @@ const CoachPayment = () => {
                       <div key={p.player?._id || i} className="flex justify-between items-center text-sm py-1 border-b border-white/5 last:border-0">
                         <div>
                           <span className="text-white/80">{p.player?.firstName} {p.player?.lastName}</span>
-                          <span className="text-white/30 text-xs ml-2">
+                          <span className="text-fg-muted text-xs ml-2">
                             ({typeof p.apparatus === 'string' ? p.apparatus : (Object.keys(p.apparatus||{}).length > 0 ? 'Multiple' : 'Base')})
                           </span>
                         </div>
@@ -565,7 +565,7 @@ const CoachPayment = () => {
                   </div>
                 ) : (
                   <div className="flex justify-between text-sm mb-3">
-                    <span className="text-white/50">No players</span>
+                    <span className="text-fg-muted">No players</span>
                     <span className="text-white">₹0</span>
                   </div>
                 )}
@@ -575,7 +575,7 @@ const CoachPayment = () => {
                     style={{ borderColor: COLORS.darkBorderSubtle }}>
                     <span className="text-white/70">
                       Late fee
-                      <span className="text-white/30 text-xs ml-2">
+                      <span className="text-fg-muted text-xs ml-2">
                         (₹{feeWindow.lateFeePerPlayer.toLocaleString()} × {playerCount})
                       </span>
                     </span>
@@ -588,7 +588,7 @@ const CoachPayment = () => {
                     style={{ borderColor: COLORS.darkBorderSubtle }}>
                     <span className="text-white/70">
                       Discount code
-                      <span className="text-white/30 text-xs ml-2">({appliedDiscount.percent}% off)</span>
+                      <span className="text-fg-muted text-xs ml-2">({appliedDiscount.percent}% off)</span>
                     </span>
                     <span style={{ color: '#22C55E' }}>
                       −₹{(appliedDiscount.discountAmount ?? 0).toLocaleString()}
@@ -600,7 +600,7 @@ const CoachPayment = () => {
                   <span className="text-white font-bold">Total Amount</span>
                   <span className="flex items-baseline gap-2">
                     {discountApplied && (
-                      <span className="text-white/30 text-sm line-through">
+                      <span className="text-fg-muted text-sm line-through">
                         ₹{calculateTotal().toLocaleString()}
                       </span>
                     )}
@@ -623,11 +623,11 @@ const CoachPayment = () => {
                           <p className="text-sm font-bold text-white truncate">
                             {appliedDiscount.percent}% off applied
                           </p>
-                          <p className="text-white/40 text-xs">Nothing to pay for this entry</p>
+                          <p className="text-fg-muted text-xs">Nothing to pay for this entry</p>
                         </div>
                       </div>
                       <button type="button" onClick={handleRemoveDiscount} disabled={processing}
-                        className="text-xs font-bold text-white/50 hover:text-white/80 transition-colors tap-safe px-2 disabled:opacity-40">
+                        className="text-xs font-bold text-fg-muted hover:text-white/80 transition-colors tap-safe px-2 disabled:opacity-40">
                         Remove
                       </button>
                     </div>
@@ -649,7 +649,7 @@ const CoachPayment = () => {
                           disabled={checkingCode || processing}
                           onChange={(e) => setDiscountCode(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyDiscount(); } }}
-                          className="flex-1 min-w-0 rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] px-3.5 transition-all disabled:opacity-50"
+                          className="flex-1 min-w-0 rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] px-3.5 transition-all disabled:opacity-50"
                           style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
                         />
                         <button type="button" onClick={handleApplyDiscount}
@@ -700,7 +700,7 @@ const CoachPayment = () => {
                   )}
                 </motion.button>
 
-                <div className="flex items-center justify-center gap-2 text-white/20 text-xs">
+                <div className="flex items-center justify-center gap-2 text-fg-muted text-xs">
                   <Lock className="w-3 h-3" aria-hidden="true" />
                   {discountApplied ? 'Discount verified on the server' : 'Secure Razorpay checkout'}
                 </div>

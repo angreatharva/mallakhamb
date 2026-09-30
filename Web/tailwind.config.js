@@ -136,36 +136,6 @@ export default {
         'desktop-wide': '1440px',
         'desktop-max': '1920px',
       },
-      // Animation improvements for responsive design
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'bounce-gentle': 'bounceGentle 2s infinite',
-        'slide-in-mobile': 'slideInMobile 0.3s ease-out',
-        'fade-in-up': 'fadeInUp 0.4s ease-out',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        bounceGentle: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-5px)' },
-        },
-        slideInMobile: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(0)' },
-        },
-        fadeInUp: {
-          '0%': { opacity: '0', transform: 'translateY(30px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-      },
       /*
        * One stacking scale (src/styles/breakpoints.js), as `z-sticky`,
        * `z-modal`, … reading the `--z-*` custom properties index.css defines.

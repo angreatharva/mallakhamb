@@ -34,7 +34,7 @@ const SortableList = ({
 
   if (!items || items.length === 0) {
     return (
-      <p className="text-sm text-white/40 py-6 text-center">{emptyMessage}</p>
+      <p className="text-sm text-fg-muted py-6 text-center">{emptyMessage}</p>
     );
   }
 
@@ -102,7 +102,7 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
           className="flex-shrink-0 flex items-center justify-center px-2 min-w-[44px] min-h-[44px] transition-colors hover:bg-white/5"
           // Only the handle blocks native touch scrolling — see the note at
           // the top of this file.
-          style={{ touchAction: 'none', cursor: 'grab', color: 'rgba(255,255,255,0.35)' }}
+          style={{ touchAction: 'none', cursor: 'grab', color: 'var(--fg-muted)' }}
         >
           <GripVertical className="w-5 h-5" aria-hidden="true" />
         </button>

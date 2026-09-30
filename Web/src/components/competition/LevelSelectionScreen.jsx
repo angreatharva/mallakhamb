@@ -40,7 +40,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
     <motion.button
       onClick={() => onSelect(level)}
       disabled={disabled}
-      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 focus:outline-none"
+      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200"
       style={{
         background: isSelected
           ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.03))`
@@ -77,14 +77,14 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
 
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-bold text-sm leading-tight">{meta.label}</h3>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             {meta.blurb}
           </p>
           {counting ? (
             // The meets are still being fetched: say so, rather than showing a
             // "0 competitions" that turns into a real number a moment later.
             <span className="inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)' }}
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--fg-muted)' }}
               role="status" aria-label={`Counting ${meta.label} competitions`}>
               <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
               Counting…
@@ -235,7 +235,7 @@ const LevelSelectionScreen = ({ userType }) => {
           >
             <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
           </motion.div>
-          <p className="text-white/50 text-sm">Loading levels...</p>
+          <p className="text-fg-muted text-sm">Loading levels...</p>
         </div>
       </div>
     );
@@ -270,7 +270,7 @@ const LevelSelectionScreen = ({ userType }) => {
             <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Level</GradientText>
             </h1>
-            <p className="text-white/40 text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
+            <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
               Competitions are organised by level. Pick one to see its meets.
             </p>
           </FadeIn>

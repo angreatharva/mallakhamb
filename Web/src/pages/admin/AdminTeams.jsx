@@ -47,15 +47,15 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 const DarkSearch = ({ value, onChange, placeholder }) => (
   <div className="relative">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
       <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
-        <X className="w-3.5 h-3.5 text-white/40" />
+        <X className="w-3.5 h-3.5 text-fg-muted" />
       </button>
     )}
   </div>
@@ -65,7 +65,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
     <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
@@ -73,7 +73,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
 const LoadingState = ({ label }) => (
   <div className="flex items-center justify-center py-12 gap-3">
     <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-white/40 text-sm">{label}</span>
+    <span className="text-fg-muted text-sm">{label}</span>
   </div>
 );
 
@@ -101,14 +101,14 @@ const TeamModal = ({ team, onClose }) => (
             <div className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Team Information</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-white/40">Coach: </span><span className="text-white">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
-                {team.coach?.email && <div><span className="text-white/40">Email: </span><span className="text-white">{team.coach.email}</span></div>}
-                {team.coach?.phone && <div><span className="text-white/40">Phone: </span><span className="text-white">{team.coach.phone}</span></div>}
-                <div><span className="text-white/40">Players: </span><span className="text-white font-bold">{team.players?.length || 0}</span></div>
-                {team.createdAt && <div><span className="text-white/40">Registered: </span><span className="text-white">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
-                {team.description && <div className="md:col-span-2"><span className="text-white/40">Description: </span><span className="text-white">{team.description}</span></div>}
-                <div><span className="text-white/40">Status: </span><span className="text-white">{team.isActive ? 'Active' : 'Inactive'}</span></div>
-                <div><span className="text-white/40">Player Count: </span><span className="text-white font-bold">{team.playerCount || team.players?.length || 0}</span></div>
+                <div><span className="text-fg-muted">Coach: </span><span className="text-white">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
+                {team.coach?.email && <div><span className="text-fg-muted">Email: </span><span className="text-white">{team.coach.email}</span></div>}
+                {team.coach?.phone && <div><span className="text-fg-muted">Phone: </span><span className="text-white">{team.coach.phone}</span></div>}
+                <div><span className="text-fg-muted">Players: </span><span className="text-white font-bold">{team.players?.length || 0}</span></div>
+                {team.createdAt && <div><span className="text-fg-muted">Registered: </span><span className="text-white">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
+                {team.description && <div className="md:col-span-2"><span className="text-fg-muted">Description: </span><span className="text-white">{team.description}</span></div>}
+                <div><span className="text-fg-muted">Status: </span><span className="text-white">{team.isActive ? 'Active' : 'Inactive'}</span></div>
+                <div><span className="text-fg-muted">Player Count: </span><span className="text-white font-bold">{team.playerCount || team.players?.length || 0}</span></div>
               </div>
             </div>
             <div>
@@ -118,7 +118,7 @@ const TeamModal = ({ team, onClose }) => (
                   {team.players.map((player, i) => (
                     <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                       <p className="font-bold text-white text-sm">{player.firstName} {player.lastName}</p>
-                      <div className="mt-2 space-y-1 text-xs text-white/50">
+                      <div className="mt-2 space-y-1 text-xs text-fg-muted">
                         <p>Gender: <span className="text-white/70">{player.gender}</span></p>
                         <p>Age Group: <span className="text-white/70">{player.ageGroup || 'Not assigned'}</span></p>
                         {player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(player.dateOfBirth).toLocaleDateString()}</span></p>}
@@ -138,7 +138,7 @@ const TeamModal = ({ team, onClose }) => (
               ) : (
                 <div className="text-center py-8 rounded-xl border" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                   <Users className="w-10 h-10 mx-auto mb-2 text-white/20" />
-                  <p className="text-white/40 text-sm">No players registered</p>
+                  <p className="text-fg-muted text-sm">No players registered</p>
                 </div>
               )}
             </div>
@@ -295,7 +295,7 @@ const Teams = () => {
               <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
                 <span className="text-white/70">Showing </span>
                 <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
-                <span className="text-white/50 ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
+                <span className="text-fg-muted ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
               </div>
               <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
               {filteredTeams.length === 0 && searchTerm ? (

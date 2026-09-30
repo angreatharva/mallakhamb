@@ -388,7 +388,7 @@ const JudgePanelReview = () => {
             <User className="w-4 h-4 flex-shrink-0" style={{ color: J.green }} aria-hidden="true" />
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
-              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{selectedTeam?.name}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--fg-muted)' }}>{selectedTeam?.name}</p>
             </div>
           </div>
 
@@ -415,7 +415,7 @@ const JudgePanelReview = () => {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black text-white">Panel Review</h2>
-              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
                 {panelScoresCount}
                 {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
                 {effectivePanelSize ? ` · ${effectivePanelSize}-judge panel` : ''}
@@ -491,7 +491,7 @@ const JudgePanelReview = () => {
           {/* Detailed per-judge slips — SR judge sees all cards, others only their own */}
           {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 0 && (
             <div className="rounded-xl border p-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
+              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
             </div>
           )}
           {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 1 && (
@@ -529,7 +529,7 @@ const JudgePanelReview = () => {
                         )}
                       </div>
                       {judgeName && (
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{judgeName}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>{judgeName}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -575,7 +575,7 @@ const JudgePanelReview = () => {
                     ) : (
                       <ul className="space-y-0.5">
                         {failedItems.map((item) => (
-                          <li key={item.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                          <li key={item.id} className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                             −{item.penalty.toFixed(2)} {item.rule}
                           </li>
                         ))}
@@ -593,7 +593,7 @@ const JudgePanelReview = () => {
           </div>
 
           {panelScoresCount === 0 && (
-            <p className="text-center text-sm py-8" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <p className="text-center text-sm py-8" style={{ color: 'var(--fg-muted)' }}>
               Waiting for judges to submit…
             </p>
           )}
@@ -632,7 +632,7 @@ const JudgePanelReview = () => {
               </motion.button>
             )}
             {isSeniorJudge && !allPanelSubmitted && !finalized && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p className="flex-1 text-center text-xs self-center" style={{ color: 'var(--fg-muted)' }}>
                 Final Submit unlocks when all {effectivePanelSize || 'panel'} judges have submitted
                 {panelMismatch.hasBlockingIssue ? ' and the alerts above are resolved' : ''}
               </p>
@@ -650,7 +650,7 @@ const JudgePanelReview = () => {
               </p>
             )}
             {!isSeniorJudge && !finalized && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p className="flex-1 text-center text-xs self-center" style={{ color: 'var(--fg-muted)' }}>
                 Waiting for Senior Judge to Final Submit and lock scores
               </p>
             )}

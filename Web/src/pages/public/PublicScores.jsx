@@ -30,7 +30,7 @@ const EmptyState = ({ icon: Icon, title, children }) => (
       <Icon className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
     </div>
     <p className="text-white font-bold text-lg mb-2">{title}</p>
-    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>{children}</p>
+    <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>{children}</p>
   </motion.div>
 );
 
@@ -285,7 +285,7 @@ const PublicScores = () => {
           {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
             <button onClick={handleClearFilters}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--fg-muted)' }}>
               <X className="w-3.5 h-3.5" aria-hidden="true" />
               Clear
             </button>
@@ -301,7 +301,7 @@ const PublicScores = () => {
             <h2 className="text-3xl md:text-4xl font-black text-white">
               View <GradientText>Scores</GradientText>
             </h2>
-            <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <p className="text-sm mt-2" style={{ color: 'var(--fg-muted)' }}>
               {view === 'team'
                 ? 'Teams ranked on their best scores per apparatus'
                 : 'Select a category to see players from all teams ranked together'}
@@ -381,7 +381,7 @@ const PublicScores = () => {
                 <Filter className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
               </div>
               <p className="text-white font-bold text-lg mb-2">Select Filters to View Scores</p>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                 Pick a competition, gender, age group, competition type and apparatus —
                 players from all teams are ranked together
               </p>
@@ -412,7 +412,7 @@ const PublicScores = () => {
                     placeholder="Search players, team, coach..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-8 py-2 rounded-xl border text-sm outline-none transition-all duration-200 min-h-[44px] sm:min-h-[40px] w-full sm:w-[220px]"
+                    className="pl-9 pr-8 py-2 rounded-xl border text-sm transition-all duration-200 min-h-[44px] sm:min-h-[40px] w-full sm:w-[220px]"
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       borderColor: searchTerm ? `${alpha(COLORS.saffron, 0x50)}` : 'rgba(255,255,255,0.08)',
@@ -439,7 +439,7 @@ const PublicScores = () => {
               {/* Player + team count badge */}
               <div className="flex items-center gap-2 px-1">
                 <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
-                <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
                   {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
                   {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
                 </span>
@@ -452,7 +452,7 @@ const PublicScores = () => {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
                   <Search className="w-10 h-10 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
                   <p className="text-white font-bold mb-1">No players found</p>
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                     No results for &quot;{searchTerm}&quot;
                   </p>
                   <button onClick={() => setSearchTerm('')}
@@ -472,7 +472,7 @@ const PublicScores = () => {
                 <Medal className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden="true" />
               </div>
               <p className="text-white font-bold text-lg mb-2">No Scores Available</p>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                 Scores will appear here after judges complete their scoring.
               </p>
             </motion.div>

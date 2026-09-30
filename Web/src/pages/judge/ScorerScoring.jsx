@@ -681,7 +681,7 @@ const ScorerScoring = () => {
     }
   };
 
-  const darkInput = `w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
+  const darkInput = `w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
   const darkInputStyle = (disabled) => ({
     background: disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
     border: `1px solid ${ADMIN_COLORS.darkBorderMid}`
@@ -693,7 +693,7 @@ const ScorerScoring = () => {
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4 animate-spin"
             style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-          <p className="text-white/40 text-sm">Loading scoring page…</p>
+          <p className="text-fg-muted text-sm">Loading scoring page…</p>
         </div>
       </div>
     );
@@ -703,7 +703,7 @@ const ScorerScoring = () => {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
         <div className="text-center">
-          <p className="text-white/50 mb-4">Invalid scoring session. Please go back and select a team.</p>
+          <p className="text-fg-muted mb-4">Invalid scoring session. Please go back and select a team.</p>
           <motion.button onClick={() => navigate('/judge/dashboard')}
             className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px]"
             style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
@@ -781,7 +781,7 @@ const ScorerScoring = () => {
               <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: ADMIN_COLORS.red }} />
               <div>
                 <p className="font-bold text-white text-sm">Scoring session is locked</p>
-                <p className="text-xs mt-0.5 text-white/50">Scores saved and locked. Cannot be modified.</p>
+                <p className="text-xs mt-0.5 text-fg-muted">Scores saved and locked. Cannot be modified.</p>
               </div>
             </div>
           </motion.div>
@@ -799,7 +799,7 @@ const ScorerScoring = () => {
             {/* Count on the right of the title on a phone… */}
             <p className="sm:hidden flex items-baseline gap-1.5">
               <span className="text-2xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
-              <span className="text-[10px] uppercase tracking-widest text-white/40">Players</span>
+              <span className="text-[10px] uppercase tracking-widest text-fg-muted">Players</span>
             </p>
           </div>
 
@@ -813,7 +813,7 @@ const ScorerScoring = () => {
               ['Apparatus', seatApparatus],
             ].filter(([, value]) => value).map(([label, value]) => (
               <div key={label} className="min-w-0">
-                <dt className="text-[10px] uppercase tracking-widest text-white/40">{label}</dt>
+                <dt className="text-[10px] uppercase tracking-widest text-fg-muted">{label}</dt>
                 <dd className="text-sm font-semibold text-white truncate">{value}</dd>
               </div>
             ))}
@@ -822,13 +822,13 @@ const ScorerScoring = () => {
           {/* …and at the far end on a wide screen. */}
           <p className="hidden sm:flex flex-col items-end flex-shrink-0 leading-none">
             <span className="text-3xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
-            <span className="text-[10px] uppercase tracking-widest text-white/40 mt-1">Players</span>
+            <span className="text-[10px] uppercase tracking-widest text-fg-muted mt-1">Players</span>
           </p>
         </div>
 
         {/* <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-fg-muted">
             <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
             <p><span className="text-white/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
             <p><span className="text-white/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
@@ -848,7 +848,7 @@ const ScorerScoring = () => {
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-white/40">No players found for this category.</p>
+            <p className="text-fg-muted">No players found for this category.</p>
           </div>
         )}
 
@@ -885,7 +885,7 @@ const ScorerScoring = () => {
                 <Save className="w-4 h-4" /> Save & Lock Scores
               </motion.button>
             ) : (
-              <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--fg-muted)' }}>
                 <Lock className="w-4 h-4" />
                 {isLocked ? 'Scores are saved and locked' : 'This competition has closed'}
               </div>

@@ -59,7 +59,7 @@ const SectionHeading = ({ children, hint }) => {
   return (
     <div className="mb-5">
       <h2 className="text-lg font-black text-white">{children}</h2>
-      {hint && <p className="text-white/35 text-xs mt-1">{hint}</p>}
+      {hint && <p className="text-fg-muted text-xs mt-1">{hint}</p>}
       <div
         className="h-px mt-3"
         style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }}
@@ -209,7 +209,7 @@ const JudgeProfileInner = () => {
             className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin"
             style={{ borderTopColor: theme.colors.primary }}
           />
-          <span className="text-white/40 text-sm">Loading your profile…</span>
+          <span className="text-fg-muted text-sm">Loading your profile…</span>
         </div>
       </div>
     );
@@ -222,7 +222,7 @@ const JudgeProfileInner = () => {
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => navigate('/judge/dashboard')}
-            className="flex items-center gap-2 text-white/50 hover:text-white/80 transition-colors text-sm min-h-[44px]"
+            className="flex items-center gap-2 text-fg-muted hover:text-white/80 transition-colors text-sm min-h-[44px]"
           >
             <ArrowLeft className="w-4 h-4" />
             Dashboard
@@ -264,7 +264,7 @@ const JudgeProfileInner = () => {
                 Judge
               </p>
               <h1 className="text-2xl font-black text-white mt-0.5 truncate">{profile?.name}</h1>
-              <p className="text-white/40 text-sm truncate">{profile?.email}</p>
+              <p className="text-fg-muted text-sm truncate">{profile?.email}</p>
             </div>
           </div>
         </GlassCard>

@@ -194,7 +194,7 @@ const TimeKeeperScoring = () => {
         <div className="rounded-2xl border p-5" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Timing Session</p>
           <h1 className="text-xl sm:text-2xl font-black text-white">{gender} — {ageGroup}</h1>
-          <p className="mt-1 text-sm text-white/50">
+          <p className="mt-1 text-sm text-fg-muted">
             {selectedTeam.name}
             {selectedCompetitionType?.label ? ` · ${selectedCompetitionType.label}` : ''}
             {apparatus ? ` · ${apparatus}` : ''}
@@ -235,7 +235,7 @@ const TimeKeeperScoring = () => {
           <div className="lg:col-span-2 rounded-2xl border p-4" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Athletes</p>
             {rows.length === 0 ? (
-              <p className="text-white/40 text-sm py-6 text-center">No athletes for this category.</p>
+              <p className="text-fg-muted text-sm py-6 text-center">No athletes for this category.</p>
             ) : (
               <ul className="space-y-2">
                 {rows.map((row) => {

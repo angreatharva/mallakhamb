@@ -56,7 +56,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
             {competitionName ? <SafeText as="span">{competitionName}</SafeText> : 'This competition'}
             {' has closed'}
           </h3>
-          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             {closedOn
               ? `Entries, scores and running orders were locked at the end of ${closedOn}. `
               : 'Entries, scores and running orders are locked. '}

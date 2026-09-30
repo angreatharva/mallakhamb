@@ -74,7 +74,7 @@ const CoachCreateTeam = () => {
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
             style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-white/45 text-sm">Checking your status...</p>
+          <p className="text-fg-muted text-sm">Checking your status...</p>
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ const CoachCreateTeam = () => {
 
           <div className="text-center mb-8">
             <h1 className="text-2xl font-black text-white mb-2">Create Your Team</h1>
-            <p className="text-white/45 text-sm">Set up your team to start managing players</p>
+            <p className="text-fg-muted text-sm">Set up your team to start managing players</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -151,7 +151,7 @@ const CoachCreateTeam = () => {
                 id="team-name"
                 type="text"
                 placeholder="Enter team name"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 outline-none transition-all duration-200 min-h-[44px]"
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 min-h-[44px]"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: `1px solid ${errors.name ? '#EF4444' : COLORS.darkBorderSubtle}`,
@@ -170,13 +170,13 @@ const CoachCreateTeam = () => {
                   <Users className="w-3 h-3" aria-hidden="true" />
                   Team Description
                 </span>
-                <span className="ml-1 text-white/25 normal-case font-normal">(Optional)</span>
+                <span className="ml-1 text-fg-muted normal-case font-normal">(Optional)</span>
               </label>
               <textarea
                 id="team-desc"
                 rows={3}
                 placeholder="Enter team description"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 outline-none transition-all duration-200 resize-none"
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 resize-none"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: `1px solid ${COLORS.darkBorderSubtle}`,

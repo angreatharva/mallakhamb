@@ -119,7 +119,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                 </Link>
               ))}
               <Link to="/superadmin/login"
-                className="ml-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/30 hover:text-white/60 border transition-all duration-200 min-h-[44px] flex items-center"
+                className="ml-2 px-4 py-2 rounded-xl text-xs font-semibold text-fg-muted hover:text-fg border transition-all duration-200 min-h-[44px] flex items-center"
                 style={{ borderColor: COLORS.darkBorderSubtle }}>
                 Super Admin
               </Link>
@@ -178,7 +178,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                       </div>
                       <div>
                         <p className="text-white font-semibold text-sm">{user.firstName || user.name}</p>
-                        <p className="text-white/40 text-xs capitalize">{userType || 'User'}</p>
+                        <p className="text-fg-muted text-xs capitalize">{userType || 'User'}</p>
                       </div>
                     </div>
                     {showCompetitionSelector && (
@@ -209,7 +209,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                     ))}
                     <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
                       <Link to="/superadmin/login" onClick={() => setIsMobileMenuOpen(false)}
-                        className="block px-4 py-3 rounded-xl text-white/35 hover:text-white/60 text-sm font-medium transition-all min-h-[44px] flex items-center border"
+                        className="block px-4 py-3 rounded-xl text-fg-muted hover:text-fg text-sm font-medium transition-all min-h-[44px] flex items-center border"
                         style={{ borderColor: COLORS.darkBorderSubtle }}>
                         Super Admin Login
                       </Link>

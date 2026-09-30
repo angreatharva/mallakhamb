@@ -27,6 +27,26 @@ const LIGHT_QUERY = '(prefers-color-scheme: light)';
 export const isAppearancePreference = (value) => APPEARANCE_PREFERENCES.includes(value);
 
 /**
+ * Put the role accent on the document — which of the five palettes in
+ * index.css `--accent`, `--accent-fg`, `--on-accent` and the focus ring use.
+ *
+ * Taken from the URL, the same source ThemeProvider and the API client read,
+ * so the CSS accent matches the JS theme on every screen (each ThemeProvider
+ * mount passes its own route's role). No role — home, public scores, the
+ * password pages — removes the attribute, and `:root`'s public palette applies,
+ * exactly as useTheme's default does.
+ *
+ * On <html> and nowhere else: `--accent` is derived where `data-appearance` is
+ * declared, so a `data-role` on an inner element would never reach it.
+ */
+export const applyRoleAccent = (role) => {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (role) root.setAttribute('data-role', role);
+  else root.removeAttribute('data-role');
+};
+
+/**
  * The stored preference, or the default.
  *
  * Plain localStorage, not obfuscatedStorage: it is not sensitive, the bootstrap

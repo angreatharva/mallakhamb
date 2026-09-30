@@ -234,7 +234,7 @@ const StopwatchFace = ({ watch, title, subtitle, canStart = true, onStop, onNext
       style={{ background: '#000', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}>
       <div className="w-full flex items-baseline justify-between gap-3 px-1 mb-2">
         <span className="text-[17px] font-medium truncate" style={{ color: ORANGE }}>{title || 'Choose an athlete'}</span>
-        {subtitle && <span className="text-[15px] text-white/50 truncate">{subtitle}</span>}
+        {subtitle && <span className="text-[15px] text-fg-muted truncate">{subtitle}</span>}
       </div>
 
       <div className="w-full max-w-[380px] aspect-square">
@@ -275,7 +275,7 @@ const StopwatchFace = ({ watch, title, subtitle, canStart = true, onStop, onNext
 
       <div className="w-full flex items-center justify-between mt-1 px-1">
         <RoundButton {...left} />
-        <div className="flex-1 text-center px-2 text-xs text-white/45 min-h-[32px] flex items-center justify-center">
+        <div className="flex-1 text-center px-2 text-xs text-fg-muted min-h-[32px] flex items-center justify-center">
           {footer}
         </div>
         <RoundButton {...right} />

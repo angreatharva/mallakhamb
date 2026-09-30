@@ -41,7 +41,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
     <motion.button
       onClick={() => onSelect(competition._id || competition.id)}
       disabled={disabled}
-      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 focus:outline-none group"
+      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 group"
       style={{
         background: isSelected
           ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.03))`
@@ -81,7 +81,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
               
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                 {competition.place && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                     <MapPin className="w-3 h-3" aria-hidden="true" />
                     {competition.place}
                   </span>
@@ -124,7 +124,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
         </div>
 
         {competition.startDate && competition.endDate && (
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--fg-muted)' }}>
             <Calendar className="w-3 h-3" aria-hidden="true" />
             {new Date(competition.startDate).toLocaleDateString()} –{' '}
             {new Date(competition.endDate).toLocaleDateString()}
@@ -133,7 +133,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
 
         {/* Description */}
         {competition.description && (
-          <p className="mt-2 text-xs leading-relaxed line-clamp-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="mt-2 text-xs leading-relaxed line-clamp-2" style={{ color: 'var(--fg-muted)' }}>
             {competition.description}
           </p>
         )}
@@ -645,7 +645,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           >
             <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
           </motion.div>
-          <p className="text-white/50 text-sm">
+          <p className="text-fg-muted text-sm">
             {passingThrough
               ? `Opening ${autoTarget.name || 'your competition'}…`
               : isSelecting ? 'Loading your dashboard...' : 'Loading competitions...'}
@@ -719,7 +719,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           <h2 className="text-2xl font-black text-white mb-3">
             Nothing at {levelLabel(selectedLevel)} Level
           </h2>
-          <p className="text-white/40 text-sm leading-relaxed mb-8">
+          <p className="text-fg-muted text-sm leading-relaxed mb-8">
             {emptyReason} Try another level, or check back later.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -788,7 +788,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Arena</GradientText>
             </h1>
-            <p className="text-white/40 text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
+            <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
               Select a competition to continue to your dashboard
             </p>
 
@@ -809,7 +809,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               >
                 <Layers className="w-3 h-3" aria-hidden="true" />
                 {levelLabel(selectedLevel)} level
-                <span className="text-white/35 font-normal">· change</span>
+                <span className="text-fg-muted font-normal">· change</span>
               </button>
             )}
           </FadeIn>
@@ -822,10 +822,10 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
                 <input
                   type="text"
-                  placeholder="Search by name, place, level, or status..."
+                  placeholder="Search by name, place, level, or status..." aria-label="Search competitions"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-10 py-3.5 rounded-xl text-sm focus:outline-none transition-all min-h-[44px]"
+                  className="w-full pl-11 pr-10 py-3.5 rounded-xl text-sm transition-all min-h-[44px]"
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     border: `1px solid ${searchQuery ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle}`,
@@ -837,7 +837,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   {searchQuery && (
                     <motion.button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-fg-muted hover:text-fg transition-colors"
                       initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                       aria-label="Clear search"
                     >
@@ -859,7 +859,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   className="text-center py-16"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 >
-                  <p className="text-white/30 text-sm">
+                  <p className="text-fg-muted text-sm">
                     No competitions found for &quot;{searchQuery}&quot;
                   </p>
                   <button onClick={() => setSearchQuery('')}
@@ -907,10 +907,8 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               <>
                 {isSelecting ? (
                   <>
-                    <motion.div
-                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    <div
+                      className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                     />
                     {userType === 'coach' ? 'Registering...' : 'Loading...'}
                   </>

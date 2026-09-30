@@ -37,7 +37,7 @@ const GradientText = ({ children, className = '' }) => (
 
 const StyledInput = ({ error, verified, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-white text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
     style={{
       background: verified ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.05)',
       border: `1px solid ${error ? '#EF4444' : verified ? 'rgba(34,197,94,0.4)' : COLORS.darkBorderSubtle}`,
@@ -63,7 +63,7 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
   <div className="relative flex items-center">
     <input
       type={showPassword ? 'text' : 'password'}
-      className="w-full px-4 py-3 pr-12 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+      className="w-full px-4 py-3 pr-12 rounded-xl text-white text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
       style={{
         background: 'rgba(255,255,255,0.05)',
         border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
@@ -76,7 +76,7 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
     <button
       type="button"
       onClick={onToggle}
-      className="absolute right-3 top-0 bottom-0 my-auto h-9 w-9 rounded-lg text-white/35 hover:text-white/70 transition-colors duration-200 flex items-center justify-center"
+      className="absolute right-3 top-0 bottom-0 my-auto h-9 w-9 rounded-lg text-fg-muted hover:text-fg transition-colors duration-200 flex items-center justify-center"
       aria-label={showPassword ? 'Hide password' : 'Show password'}
     >
       {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
@@ -247,7 +247,7 @@ const ResetPassword = () => {
             <h1 className="text-2xl font-black text-white mb-2">
               Reset <GradientText>Password</GradientText>
             </h1>
-            <p className="text-white/45 text-sm">
+            <p className="text-fg-muted text-sm">
               {isOTPMethod ? 'Verify your OTP then set a new password' : 'Enter your new password below'}
             </p>
           </div>
@@ -386,8 +386,7 @@ const ResetPassword = () => {
                       whileHover={!otpVerified && !verifying ? { scale: 1.03 } : {}}
                       whileTap={!otpVerified && !verifying ? { scale: 0.97 } : {}}>
                       {verifying ? (
-                        <motion.div className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto"
-                          animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                        <div className="animate-spin w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto" />
                       ) : otpVerified ? '✓ Verified' : 'Verify'}
                     </motion.button>
                   </div>
@@ -398,7 +397,7 @@ const ResetPassword = () => {
                     </motion.p>
                   )}
                   {!otpVerified && !errors.otp && (
-                    <p className="mt-1.5 text-xs text-white/30">Check your email for the 6-digit code</p>
+                    <p className="mt-1.5 text-xs text-fg-muted">Check your email for the 6-digit code</p>
                   )}
                 </div>
               </>
@@ -474,8 +473,7 @@ const ResetPassword = () => {
                 whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}>
                 {loading ? (
                   <>
-                    <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                    <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white" />
                     Resetting Password…
                   </>
                 ) : success ? (
@@ -519,23 +517,23 @@ const ResetPassword = () => {
           {/* Footer links */}
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
             {isOTPMethod ? (
-              <p className="text-sm text-white/35">
+              <p className="text-sm text-fg-muted">
                 Didn&apos;t receive OTP?{' '}
-                <Link to="/forgot-password" className="font-semibold transition-colors duration-200 hover:opacity-80"
+                <Link to="/forgot-password" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
                   style={{ color: COLORS.saffronLight }}>
                   Request New OTP
                 </Link>
               </p>
             ) : (
-              <p className="text-sm text-white/35">
+              <p className="text-sm text-fg-muted">
                 Remember your password?{' '}
-                <Link to="/player/login" className="font-semibold transition-colors duration-200 hover:opacity-80"
+                <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
                   style={{ color: COLORS.saffronLight }}>
                   Back to Login
                 </Link>
               </p>
             )}
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home
             </Link>

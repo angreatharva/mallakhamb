@@ -39,7 +39,7 @@ const RankBadge = ({ rank }) => {
   }
   return (
     <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-      style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+      style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--fg-muted)' }}>
       {rank}
     </div>
   );
@@ -52,7 +52,7 @@ const ScorePill = ({ label, value, accent }) => (
     <span className="text-xs font-bold tabular-nums" style={{ color: accent }}>
       {typeof value === 'number' ? value.toFixed(2) : (value ?? '—')}
     </span>
-    <span className="text-[10px] leading-tight" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+    <span className="text-[10px] leading-tight" style={{ color: 'var(--fg-muted)' }}>{label}</span>
   </div>
 );
 
@@ -128,10 +128,10 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
             )}
             {!player.isFinalized && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)' }}>Pending</span>
+                style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--fg-muted)' }}>Pending</span>
             )}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
             {player.teamName || ''}
             {apparatus ? ` · ${apparatus}` : ''}
           </p>
@@ -142,7 +142,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
               style={{ color: isHighlighted ? COLORS.saffron : rc ? rc.text : '#fff' }}>
               {player.isFinalized ? Number(player.finalScore || 0).toFixed(2) : '—'}
             </p>
-            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>score</p>
+            <p className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>score</p>
           </div>
           {expanded
             ? <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
@@ -162,7 +162,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
           >
             <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
               <p className="text-[10px] font-bold tracking-widest uppercase mt-3 mb-2"
-                style={{ color: 'rgba(255,255,255,0.35)' }}>Score Breakdown (Average)</p>
+                style={{ color: 'var(--fg-muted)' }}>Score Breakdown (Average)</p>
               <div className="flex flex-wrap gap-2">
                 <ScorePill label="Difficulty" value={breakdown.difficulty} accent="#3B82F6" />
                 <ScorePill label="Combination" value={breakdown.combination} accent="#A855F7" />
@@ -170,7 +170,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
                 <ScorePill label="Originality" value={breakdown.bonus} accent="#22C55E" />
               </div>
               {breakdown.used > 0 && (
-                <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                <p className="text-[10px] mt-2" style={{ color: 'var(--fg-muted)' }}>
                   {describeSlipAverage(breakdown)}
                 </p>
               )}
@@ -198,10 +198,10 @@ const ApparatusSection = ({ apparatus, players, highlightPlayerId, selfOnly = fa
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--fg-muted)', border: '1px solid rgba(255,255,255,0.1)' }}>
           {apparatus}
         </span>
-        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
           {selfOnly
             ? `Rank #${displayPlayers[0]?.rank} out of ${sorted.length} competitors`
             : `${sorted.filter(p => p.isFinalized).length} / ${sorted.length} finalized`}
@@ -347,7 +347,7 @@ const PerformancePanel = ({
             </div>
             <div>
               <h2 className="text-lg font-black text-white">{title}</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                 Live scores · updates as judges submit
               </p>
             </div>
@@ -398,7 +398,7 @@ const PerformancePanel = ({
                 style={{ background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)' }}>
                 <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>{error}</p>
                 <button type="button" onClick={() => fetchScoresForTab(activeTab)}
-                  className="mt-3 text-xs underline" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  className="mt-3 text-xs underline" style={{ color: 'var(--fg-muted)' }}>
                   Try again
                 </button>
               </motion.div>
@@ -408,8 +408,8 @@ const PerformancePanel = ({
                 className="rounded-2xl border p-10 text-center"
                 style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
                 <Trophy className="w-12 h-12 mx-auto mb-3 text-white/15" aria-hidden="true" />
-                <p className="text-white/50 font-semibold text-sm">{emptyLabel}</p>
-                <p className="text-white/25 text-xs mt-1">
+                <p className="text-fg-muted font-semibold text-sm">{emptyLabel}</p>
+                <p className="text-fg-muted text-xs mt-1">
                   Scores appear here once judges finalize results.
                 </p>
               </motion.div>

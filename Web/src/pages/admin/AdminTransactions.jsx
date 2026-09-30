@@ -46,7 +46,7 @@ const statusStyle = (status) => {
     pending: { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold },
     failed: { bg: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: ADMIN_COLORS.red },
   };
-  return map[status] || { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' };
+  return map[status] || { bg: 'rgba(255,255,255,0.08)', color: 'var(--fg-muted)' };
 };
 
 /**
@@ -191,19 +191,19 @@ const AdminTransactions = () => {
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3">
               <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-              <span className="text-white/40 text-sm">Loading transactions…</span>
+              <span className="text-fg-muted text-sm">Loading transactions…</span>
             </div>
           ) : transactions.length === 0 ? (
             <div className="text-center py-12">
               {isSuperAdmin && !selectedCompetition ? (
                 <>
                   <Filter className="w-12 h-12 mx-auto mb-3 text-white/15" />
-                  <p className="text-white/50 font-semibold">Select a competition to view transactions.</p>
+                  <p className="text-fg-muted font-semibold">Select a competition to view transactions.</p>
                 </>
               ) : (
                 <>
                   <AlertCircle className="w-12 h-12 mx-auto mb-3 text-white/15" />
-                  <p className="text-white/50 font-semibold">No transactions found.</p>
+                  <p className="text-fg-muted font-semibold">No transactions found.</p>
                 </>
               )}
             </div>
@@ -231,7 +231,7 @@ const AdminTransactions = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-white font-bold text-lg leading-tight">{formatAmount(tx.amount)}</p>
-                        <p className="text-white/45 text-xs mt-0.5">{formatDateTime(tx.createdAt)}</p>
+                        <p className="text-fg-muted text-xs mt-0.5">{formatDateTime(tx.createdAt)}</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                         style={{ background: bg, color }}>
@@ -248,7 +248,7 @@ const AdminTransactions = () => {
                         ['Competition', row.competitionLabel],
                       ].map(([label, value]) => (
                         <div key={label} className="flex justify-between gap-3">
-                          <dt className="text-white/35 flex-shrink-0">{label}</dt>
+                          <dt className="text-fg-muted flex-shrink-0">{label}</dt>
                           <dd className="text-white/75 text-right break-words min-w-0">{value}</dd>
                         </div>
                       ))}
@@ -256,7 +256,7 @@ const AdminTransactions = () => {
                           stretch the card. */}
                       {[['Order ID', row.razorpayOrderId], ['Payment ID', row.razorpayPaymentId]].map(([label, value]) => (
                         <div key={label} className="flex justify-between gap-3">
-                          <dt className="text-white/35 flex-shrink-0">{label}</dt>
+                          <dt className="text-fg-muted flex-shrink-0">{label}</dt>
                           <dd className="text-white/60 font-mono text-right break-all min-w-0">{value}</dd>
                         </div>
                       ))}
@@ -288,8 +288,8 @@ const AdminTransactions = () => {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     {['Date / Time', 'Type', 'Source', 'Competition', 'Team', 'Coach', 'Razorpay Order ID', 'Razorpay Payment ID', 'Players', 'Amount', 'Status'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                        style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+                      <th key={h} scope="col" className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
+                        style={{ color: 'var(--fg-muted)' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -327,7 +327,7 @@ const AdminTransactions = () => {
                               <span className="font-semibold">{playerCount} Player{playerCount !== 1 ? 's' : ''}</span>
                             </button>
                           ) : (
-                            <span className="text-white/40">-</span>
+                            <span className="text-fg-muted">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap font-bold text-white">{formatAmount(tx.amount)}</td>
@@ -378,7 +378,7 @@ const AdminTransactions = () => {
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-white">Team Players</h3>
-                      <p className="text-xs text-white/50">{selectedPlayers.length} player{selectedPlayers.length !== 1 ? 's' : ''}</p>
+                      <p className="text-xs text-fg-muted">{selectedPlayers.length} player{selectedPlayers.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   <button
@@ -396,7 +396,7 @@ const AdminTransactions = () => {
                 {selectedPlayers.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="w-12 h-12 mx-auto mb-3 text-white/15" />
-                    <p className="text-white/50">No players found</p>
+                    <p className="text-fg-muted">No players found</p>
                   </div>
                 ) : (
                   <div className="space-y-3">

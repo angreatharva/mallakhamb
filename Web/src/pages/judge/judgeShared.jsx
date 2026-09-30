@@ -111,7 +111,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
           {cls} - {value.toFixed(2)}
         </span>
-        <span className="text-xs tabular-nums" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        <span className="text-xs tabular-nums" style={{ color: 'var(--fg-muted)' }}>
           {n} × {value.toFixed(2)} = {(n * value).toFixed(2)}
         </span>
       </div>
@@ -305,7 +305,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                 </div>
                 <div>
                   <p className="text-white font-black text-base">Score Mismatch Detected</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your score may need correction'}
                   </p>
                 </div>
@@ -313,7 +313,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
               <button
                 onClick={onClose}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
-                style={{ color: 'rgba(255,255,255,0.4)' }}
+                style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -327,7 +327,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
                   <p className="text-sm font-bold text-white mb-1">⛔ Combination Mismatch</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                     {panelMismatch.combinationSelectionMismatch
                       ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
                       : `Totals: ${panelMismatch.combinationValues.map(v => Number(v).toFixed(2)).join(', ')}`}
@@ -364,7 +364,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
                   <p className="text-sm font-bold text-white mb-1">⛔ Difficulty Mismatch</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                     {`Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
                   {!isSeniorJudge && seniorEntry && myEntry && (
@@ -399,7 +399,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
               {!isSeniorJudge && (
                 <div
                   className="rounded-xl border p-3 text-xs"
-                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-muted)' }}
                 >
                   The Senior Judge&apos;s slip is the reference. Re-check your marks against it, or contact the Senior Judge to resolve this before final submission.
                 </div>
@@ -482,7 +482,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 </div>
                 <div>
                   <p className="text-white font-black text-base">Tolerance Limit Exceeded</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
                   </p>
                 </div>
@@ -490,7 +490,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
               <button
                 onClick={onClose}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
-                style={{ color: 'rgba(255,255,255,0.4)' }}
+                style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -503,7 +503,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.3)' }}
               >
                 <p className="text-sm font-bold mb-1" style={{ color: amber }}>⚠️ Execution average is outside tolerance</p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                   |Exec avg {num(info.executionAvg)} − Senior {num(info.seniorScore)}| = {num(info.difference)},
                   {' '}which exceeds the ±{num(info.tolerance)} allowed at this score (COP §3.4).
                 </p>
@@ -530,7 +530,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   className="rounded-xl border p-4"
                   style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}
                 >
-                  <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'var(--fg-muted)' }}>
                     Panel totals
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -555,7 +555,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   className="rounded-xl border p-4"
                   style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }}
                 >
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                     Your total ({Number(myScore).toFixed(2)}) may be contributing to this gap.
                     Re-check your execution mark against the routine you saw.
                   </p>
@@ -564,7 +564,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
 
               <div
                 className="rounded-xl border p-3 text-xs"
-                style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-muted)' }}
               >
                 {isSeniorJudge
                   ? `Final Submit stays locked until the gap is within tolerance. Adjust a judge's slip with the pencil on their card, or have them resubmit. Left unresolved, COP §3.4 would score this on the base score ${num(info.baseScore)} — (execution average + Senior) ÷ 2.`
@@ -670,13 +670,13 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Total</p>
+                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>Total</p>
                   <p className="text-2xl font-black" style={{ color: '#A855F7' }}>{calcTotal()}</p>
                 </div>
                 <button
                   onClick={onClose}
                   className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5"
-                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                  style={{ color: 'var(--fg-muted)' }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -717,7 +717,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                         </div>
                         <input type="checkbox" checked={checked} onChange={() => handleComb(item.id)} className="sr-only" />
                         <span className="text-xs" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{item.rule}</span>
-                        {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.penalty.toFixed(2)}</span>}
+                        {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{item.penalty.toFixed(2)}</span>}
                       </label>
                     );
                   })}
@@ -733,7 +733,8 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 <DecimalInput
                   value={editScores.execution}
                   onValueChange={raw => setEditScores({ ...editScores, execution: roundExecution(raw) })}
-                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white outline-none"
+                  aria-label="Execution"
+                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white"
                   style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
                 />
               </div>
@@ -750,6 +751,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                     return (
                       <button key={label} type="button"
                         onClick={() => setEditScores({ ...editScores, bonus: val })}
+                        aria-pressed={active}
                         className="py-3 rounded-xl border font-bold text-sm transition-all duration-200"
                         style={{ background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)', borderColor: active ? '#A855F7' : 'rgba(255,255,255,0.08)', color: active ? '#fff' : 'rgba(255,255,255,0.5)' }}
                       >{label}</button>
@@ -763,7 +765,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
             <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
               <button onClick={onClose}
                 className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-white/5"
-                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--fg-muted)' }}
               >Cancel</button>
               <motion.button
                 onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())}

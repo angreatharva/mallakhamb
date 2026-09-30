@@ -35,7 +35,7 @@ const EmptyState = ({ icon: Icon, title, desc }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
     <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
   </div>
 );
 
@@ -283,7 +283,7 @@ const AdminLots = () => {
         ) : loading ? (
           <div className="flex items-center justify-center py-12 gap-3">
             <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-            <span className="text-white/40 text-sm">Loading running order…</span>
+            <span className="text-fg-muted text-sm">Loading running order…</span>
           </div>
         ) : teams.length === 0 ? (
           <EmptyState icon={Trophy} title="No submitted teams"
@@ -296,7 +296,7 @@ const AdminLots = () => {
                 <p className="text-white font-bold">
                   {teams.length} team{teams.length !== 1 ? 's' : ''} in running order
                 </p>
-                <p className="text-white/40 text-xs mt-0.5">
+                <p className="text-fg-muted text-xs mt-0.5">
                   {roster?.lotsDrawnAt
                     ? `Lots drawn ${new Date(roster.lotsDrawnAt).toLocaleString()}${roster.lotsDrawnByName ? ` by ${roster.lotsDrawnByName}` : ''}`
                     : 'No lots drawn yet'}
@@ -316,7 +316,7 @@ const AdminLots = () => {
               </motion.button>
             </div>
 
-            <div className="flex items-start gap-2 text-xs text-white/40 px-1">
+            <div className="flex items-start gap-2 text-xs text-fg-muted px-1">
               <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               <p>
                 Drag by the grip to change who performs when. Lot numbers stay with the team they were drawn for.
@@ -338,7 +338,7 @@ const AdminLots = () => {
                       <LotBadge lotNo={team.lotNo} position={index} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-white text-sm truncate">{team.name}</p>
-                        <p className="text-xs text-white/40 truncate">
+                        <p className="text-xs text-fg-muted truncate">
                           {team.coachName ? `Coach: ${team.coachName} · ` : ''}
                           {team.playerCount} athlete{team.playerCount !== 1 ? 's' : ''}
                         </p>
@@ -346,7 +346,7 @@ const AdminLots = () => {
                       <button
                         type="button"
                         onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
-                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-white hover:bg-white/5 transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -371,7 +371,7 @@ const AdminLots = () => {
                                 <LotBadge lotNo={player.lotNo} position={playerIndex} />
                                 <div className="min-w-0">
                                   <p className="text-sm text-white truncate">{player.name}</p>
-                                  <p className="text-xs text-white/35">{player.gender} · {player.ageGroup}</p>
+                                  <p className="text-xs text-fg-muted">{player.gender} · {player.ageGroup}</p>
                                 </div>
                               </div>
                             )}
@@ -385,7 +385,7 @@ const AdminLots = () => {
             />
 
             <div className="flex items-center justify-end gap-3 pt-2">
-              {saving && <span className="text-xs text-white/40">Saving…</span>}
+              {saving && <span className="text-xs text-fg-muted">Saving…</span>}
               <motion.button
                 onClick={() => persistTeamOrder(teamsRef.current)}
                 disabled={saving}

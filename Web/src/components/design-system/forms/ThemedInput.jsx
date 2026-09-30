@@ -124,9 +124,8 @@ export const ThemedInput = forwardRef(({
             // Base styles
             'w-full rounded-lg',
             'bg-white/5',
-            'text-white placeholder:text-white/45',
+            'text-white placeholder:text-fg-muted',
             'border transition-all duration-200',
-            'outline-none',
             
             // Responsive padding and font size
             paddingClass,

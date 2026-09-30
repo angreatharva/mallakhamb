@@ -2,7 +2,7 @@
 
 **Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
 **Audited against:** `master` @ `5a9cae8`, 2026-09-28
-**Status:** Implementation started on branch `feat/responsive-appearance` (2026-09-29). Phase 2 and Phase 3 done except where noted in the log below.
+**Status:** Implementation on branch `feat/responsive-appearance`. Phases 2 and 3 committed (2026-09-29); Phase 4 done but not committed (2026-09-30). Gaps are noted in the log below.
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
 
 ---
@@ -35,6 +35,40 @@
 - `alpha()` deliberately reproduces the old concatenation for non-token input, because several callers pass an `rgba()` and so have **always rendered invalid CSS**: the "Completed" status badge in `CompetitionSelector`, `CompetitionDisplay` and `CompetitionSelectionScreen` has no tint or border, and `CoachOrnament`'s gradient is dropped entirely when a ThemeProvider supplies `primaryDark`. Fixing them is a visible change.
 - The same class of bug in the Tailwind plugin: `.stacked-table` rows were meant to have a hairline border (`${theme('colors.white')}14`), but `colors.white` is `#fff`, so it produced the five-digit `#fff14` and the declaration was dropped — **phone stacked tables have never had that border**. The visual diff caught it (a valid border shifted every card by 1px on SuperAdminManagement and the add-player payment page); the rule now states no border, which is what has always rendered.
 - Light is legible on ordinary pages (checked: coach login). Text over photos is not yet `snow` — Home's hero nav and role-card labels turn dark on the photo. That is Home's Phase 5 pass (§14.5, the 7 known sites).
+
+### Phase 4 — accessibility foundation (done 2026-09-30, uncommitted; every dark change here is intentional)
+- **4.1 Focus.** A global `:focus-visible` ring (2px `--focus-ring` = the role accent, 2px offset, placed after `@tailwind utilities`) replaces the `input:focus` rule that swapped every field's outline for a 10% glow. All 35 `outline-none` / `focus:outline-none` are gone (31 page sites, 4 in the Themed* inputs). ThemedButton's `focus:ring-3` is not a class in this config and drew nothing. Checked with the keyboard: Tab onto the show-password toggle on `/coach/login` gives a solid coach-green outline (it had none).
+- **4.2 Primary buttons.** `html[data-role]` now comes from the URL (`applyRoleAccent`, a layout effect in `AppContent`), so the accent tokens are live. It matches the JS theme on every screen because each `ThemeProvider` mount passes its own route's role. ThemedButton solid = `bg-accent text-on-accent`: the fill is unchanged in dark and the label is near-black — coach 2.28→8.69, player 2.86→6.93, superadmin 2.03→9.77, admin/judge 4.23→4.68, public 3.68→5.38. Outline/ghost read `accent-fg`, identical in dark.
+- **4.3 / 4.4 Text contrast.** Per-site decisions, kept in the codemod rather than a blanket replace: 214 `text-white/40–55` → `text-fg-muted`. Of the 118 at `/15–35`, 87 → muted (73 texts, 10 show/hide-password toggles, 4 links), 3 `·` separators → `fg-subtle`, and 24 decorative icons and 4 placeholders are left as they were. 20 hovers that would no longer brighten against a muted base → `hover:text-fg`. 107 inline `color:` at α .12–.55 → `var(--fg-muted)`; 20 are left (aria-hidden glyphs, chevrons inside labelled buttons, empty-state art, the 404 watermark, and the two "Completed" configs that feed the known-invalid `alpha()` badge, which is Phase 5). `DESIGN_TOKENS.colors.text.muted` → `var(--fg-muted)`. 49 files, 411 lines, every one a 1-for-1 line replacement.
+- **4.5 Motion.** `<MotionConfig reducedMotion="user">` at the root: movement stops for people who ask for it; opacity fades continue. The 13 framer rotate spinners are CSS `animate-spin`, so loading feedback keeps turning (every spinner is now 1 s). The unused `.fade-in` and five unused Tailwind animations are deleted. `button { transition: all }` → explicit properties.
+- **4.5 Labels.** 15 fields had no programmatic name (placeholder-only search boxes, the rankings selects, the Time Keeper / Scorer name fields in AdminScoring). Four wrappers drew a visible `<label>` that was never linked — `DarkInput` in AdminJudges; `DarkInput`, `DarkSelect` and `DarkTextarea` in SuperAdminManagement — plus the judge slip's `ScoreInput`; all now linked with `useId`. Score-sheet mark cells are named "<athlete>, <column>". In the Sr-Judge edit dialog, Execution is named, and the Originality None / +0.20 buttons carry `aria-pressed` (the choice was shown by colour alone). The 6 remaining scanner hits are verified false positives (wrapped checkboxes, a `display:none` file input, `<input>` written inside comments).
+- **4.6 Table semantics.** No grid qualified under D2: none of the 116 `grid-cols-` has a header row over repeating columns, and the tabular data was already `<table>`. Instead, `scope="col"` on all 5 header templates, and names for the score sheet, the rankings, and the three management tables.
+- **Links inside sentences** on the password pages ("Back to Login", "Request New OTP") were told apart by colour only (WCAG 1.4.1, and already under 3:1 against the text before this phase) → underlined.
+
+**Verification**
+- `npm test` 379/379, lint clean — same as before the phase.
+- AccessLint on the 8 public routes its logged-out Chrome can reach: **no contrast, label or focus violations**. What remains is `landmark-main` / `region` on every screen except the 9 that already render `<main>`, and NotFound has no `<h1>` — Phase 5, per screen (a global `<main>` would nest inside those 9).
+- `/scores` reported its muted empty-state text at 2.7:1. That is a measurement artifact: the text is inside a framer fade, and a background tab runs no animation frames (checked: `document.hidden`, 0 rAF ticks, parent stuck at `opacity: 0`). The computed colour on `#0a0a0a` is 6.28:1. The same stall means AccessLint contrast numbers on animated screens need checking against computed colours.
+- **Visual, against the Phase 3 baseline.** At the old 0.2 colour tolerance, 23 of 44 routes changed. At `threshold: 0`, all 44 do, at every width. Sampled 7 routes — the extremes and the odd cases, not every shot — and every difference traced to an intended change:
+  - muted text brightening, e.g. every card blurb on Choose Your Level, and one paragraph measured at grey 94 → 140, which is 0.35 → 0.55 ink exactly;
+  - `ThemedButton` labels going dark (judge profile: those two labels are the only changed pixels on the page);
+  - the superadmin Logout label (0.50 → 0.55; the only changed pixels on that dashboard);
+  - the "Super Admin" header link on NotFound, which only 1366 shows;
+  - on `/scores` at 375, an in-flight "Loading…" in the competition dropdown — timing noise, not a colour change.
+- **The one layout-looking diff is a 1px settle.** Forgot Password showed a moved button, a new line and ghosted card edges. Measured: the whole card sits exactly 1px higher (edge y 759 → 758; button fill off by one level). The harness captures with reduced motion on. Before Phase 4, framer ignored that and photographed the slide-up entrance about a pixel short of its end; with `MotionConfig reducedMotion="user"` the slide is skipped and the card is at its true resting position. Every screen with a framer entrance shows the same 1px shift, which is why all 44 differ at threshold 0. People without reduced motion still get the slide, ending in the same place.
+- **Still owed:** the keyboard walk from login to score submission (only the login page's focus was walked), and AccessLint on the logged-in screens.
+
+**Harness**
+- **The pixel gate had a colour tolerance.** `maxDiffPixels: 0` was set, but Playwright's per-pixel `threshold` stayed at its 0.2 default, under which a grey moving 94 → 140 is "the same pixel". So Phase 3's "dark diff 0" proved no change larger than roughly 35 grey levels, not zero change. The spec now uses `threshold: 0` (override with `VISUAL_THRESHOLD`). Phase 3's claim was not re-verified at 0 — it would need the Phase 2 commit's rendering as a baseline.
+- **The strict gate is deterministic.** Baseline re-recorded on the Phase 4 state at `threshold: 0`, then compared against an unchanged build: 132 of 132 shots, **0 changed pixels**. It is the baseline Phase 5 diffs against.
+- The "compare an unchanged build first" rule caught one bad baseline shot (judge sequence, 1366): it was recorded minutes before the API lost its Atlas connection, with an in-flight "Checking…" line in it. Re-recorded, then matched twice.
+- That same connection loss made every later sign-in fail as "Invalid credentials", because the auth service turns any lookup error into that message. Server-side and out of scope; raised as a separate task.
+
+**Found, not fixed**
+- `AdminJudges.jsx` and `SuperAdminManagement.jsx` still define their own local `useReducedMotion` (3.6 missed them).
+- Placeholders at 25–30% ink (4 `placeholder:text-white/…` + 16 `placeholder-white/30`) are under 4.5:1. Raising them risks a placeholder being read as an entered value — decide with each field in Phase 5.
+- `.stacked-table` sets rows and cells to `display: block` on phones, which drops their table semantics; only the `<table>` carries `role="table"`. Rows and cells need `role="row"` / `"cell"` — Phase 6.
+- A field inside an `overflow-hidden` wrapper can clip the 2px-offset ring. The judge slip's mark field is covered (its wrapper draws a solid purple focus border); the rest need the keyboard walk.
 
 ---
 

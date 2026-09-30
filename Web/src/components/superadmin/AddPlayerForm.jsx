@@ -24,13 +24,13 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
     )}
     <input
       id={id}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
-    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
   </div>
 );
 
@@ -113,7 +113,7 @@ const PasswordRequirements = ({ password }) => {
   
   return (
     <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-semibold text-white/40 mb-2">Password requirements:</p>
+      <p className="text-xs font-semibold text-fg-muted mb-2">Password requirements:</p>
       {requirements.map((req, index) => {
         const met = password && req.test(password);
         return (
@@ -123,7 +123,7 @@ const PasswordRequirements = ({ password }) => {
             ) : (
               <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
             )}
-            <span className={`text-xs ${met ? 'text-white/60' : 'text-white/30'}`}>
+            <span className={`text-xs ${met ? 'text-white/60' : 'text-fg-muted'}`}>
               {req.label}
             </span>
           </div>
@@ -542,17 +542,17 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedAgeGroup && errors.ageGroup}
           />
           {!selectedGender && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Select gender first
             </p>
           )}
           {selectedGender && !dateOfBirth && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Enter date of birth first
             </p>
           )}
           {selectedGender && dateOfBirth && playerAge !== null && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Player age: {playerAge} years. Showing eligible categories.
             </p>
           )}
@@ -582,7 +582,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
               );
             }
             return (
-              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'var(--fg-muted)', background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                 Fee for this competition: <span className="font-bold text-white">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
               </p>
             );
@@ -601,7 +601,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedTeam && errors.team}
           />
           {!selectedCompetition && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Select a competition first
             </p>
           )}
@@ -611,7 +611,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             </p>
           )}
           {selectedCompetition && !loadingTeams && teamOptions.length === 0 && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               No teams found for this competition
             </p>
           )}
@@ -681,7 +681,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
+            className="w-full rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200"
             style={{ 
               background: 'rgba(255,255,255,0.04)', 
               border: `1px solid ${errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
@@ -711,9 +711,9 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff className="w-4 h-4 text-white/40" />
+              <EyeOff className="w-4 h-4 text-fg-muted" />
             ) : (
-              <Eye className="w-4 h-4 text-white/40" />
+              <Eye className="w-4 h-4 text-fg-muted" />
             )}
           </button>
         </div>
@@ -740,7 +740,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
+            className="w-full rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200"
             style={{ 
               background: 'rgba(255,255,255,0.04)', 
               border: `1px solid ${errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
@@ -770,9 +770,9 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
             {showConfirmPassword ? (
-              <EyeOff className="w-4 h-4 text-white/40" />
+              <EyeOff className="w-4 h-4 text-fg-muted" />
             ) : (
-              <Eye className="w-4 h-4 text-white/40" />
+              <Eye className="w-4 h-4 text-fg-muted" />
             )}
           </button>
         </div>
@@ -802,10 +802,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         <DarkBtn type="submit" variant="primary" disabled={loading}>
           {loading ? (
             <>
-              <motion.div
-                className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+              <div
+                className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
               />
               Opening payment…
             </>

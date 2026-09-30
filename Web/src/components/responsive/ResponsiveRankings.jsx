@@ -186,11 +186,11 @@ export const ResponsiveIndividualRankings = ({
   return (
     <ResponsiveContainer className={className} {...props}>
       <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table aria-label="Rankings" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: elevated }}>
               {['Rank', 'Player', 'Team', 'Time', 'Average', 'Senior Judge', 'Final Score'].map((h, i) => (
-                <th key={i} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
+                <th key={i} scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
                   {h}
                 </th>
               ))}
@@ -378,7 +378,7 @@ export const ResponsiveRankingsFilters = ({
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Search..." aria-label="Search athletes"
           value={searchTerm}
           onChange={e => onSearchChange(e.target.value)}
           style={inputStyle}
@@ -386,7 +386,7 @@ export const ResponsiveRankingsFilters = ({
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         />
         <select
-          value={selectedGender?.value || ''}
+          value={selectedGender?.value || ''} aria-label="Gender"
           onChange={e => onGenderChange(genders.find(g => g.value === e.target.value))}
           style={selectStyle()}
           onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
@@ -396,7 +396,7 @@ export const ResponsiveRankingsFilters = ({
           {genders.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
         </select>
         <select
-          value={selectedAgeGroup?.value || ''}
+          value={selectedAgeGroup?.value || ''} aria-label="Age group"
           onChange={e => onAgeGroupChange(ageGroups.find(ag => ag.value === e.target.value))}
           style={selectStyle(!selectedGender)}
           disabled={!selectedGender}

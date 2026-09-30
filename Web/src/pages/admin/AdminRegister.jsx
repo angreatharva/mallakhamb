@@ -92,7 +92,7 @@ const PasswordRequirements = ({ password }) => {
   
   return (
     <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-semibold text-white/40 mb-2">Password requirements:</p>
+      <p className="text-xs font-semibold text-fg-muted mb-2">Password requirements:</p>
       {requirements.map((req, index) => {
         const met = password && req.test(password);
         return (
@@ -102,7 +102,7 @@ const PasswordRequirements = ({ password }) => {
             ) : (
               <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
             )}
-            <span className={`text-xs ${met ? 'text-white/60' : 'text-white/30'}`}>
+            <span className={`text-xs ${met ? 'text-white/60' : 'text-fg-muted'}`}>
               {req.label}
             </span>
           </div>
@@ -235,7 +235,7 @@ const AdminRegisterInner = () => {
                 Admin<br />Registration
               </GradientText>
             </h1>
-            <p className="text-white/30 text-sm leading-relaxed max-w-xs mx-auto">
+            <p className="text-fg-muted text-sm leading-relaxed max-w-xs mx-auto">
               Create your admin account to manage competitions, teams, judges, and scoring operations.
             </p>
           </motion.div>
@@ -278,7 +278,7 @@ const AdminRegisterInner = () => {
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
               style={{ color: theme.colors.primary }}>Mallakhamb</p>
-            <p className="text-white/30 text-[10px]">Admin Portal</p>
+            <p className="text-fg-muted text-[10px]">Admin Portal</p>
           </div>
         </motion.div>
         
@@ -307,7 +307,7 @@ const AdminRegisterInner = () => {
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
             <h2 className="text-3xl font-black text-white mt-3">Register</h2>
-            <p className="text-white/35 text-sm mt-1">Create your admin account</p>
+            <p className="text-fg-muted text-sm mt-1">Create your admin account</p>
           </motion.div>
           
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -396,8 +396,8 @@ const AdminRegisterInner = () => {
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('password', { 
@@ -437,8 +437,8 @@ const AdminRegisterInner = () => {
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                       {showConfirmPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('confirmPassword', { 
@@ -480,11 +480,11 @@ const AdminRegisterInner = () => {
             style={{ borderColor: `${alpha(theme.colors.primary, 0x12)}` }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
             <div className="flex items-center gap-3">
-              <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center">
+              <Link to="/" className="text-xs text-fg-muted hover:text-fg transition-colors inline-flex items-center tap-safe justify-center">
                 ← Home
               </Link>
-              <span className="text-white/15 text-xs">·</span>
-              <span className="text-xs text-white/40">Already have an account?</span>
+              <span className="text-fg-subtle text-xs">·</span>
+              <span className="text-xs text-fg-muted">Already have an account?</span>
               <Link to="/admin/login"
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
                 style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>

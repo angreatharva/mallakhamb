@@ -241,7 +241,7 @@ const JudgeSequence = () => {
             <p className="text-white font-bold text-sm leading-tight truncate">Running Order</p>
             <p className="text-xs truncate" style={{ color: J.purpleLight }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
           </div>
-          {saving && <span className="ml-auto text-xs text-white/40">Saving…</span>}
+          {saving && <span className="ml-auto text-xs text-fg-muted">Saving…</span>}
         </div>
       </header>
 
@@ -252,18 +252,18 @@ const JudgeSequence = () => {
           <h1 className="text-xl font-black text-white">
             {categoryParams?.gender} — {categoryParams?.ageGroup}
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
             {COMP_LABEL[category.competitionType] || category.competitionType}
           </p>
           {roster?.lotsDrawnAt && (
-            <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <p className="text-xs mt-3" style={{ color: 'var(--fg-muted)' }}>
               Lots drawn {new Date(roster.lotsDrawnAt).toLocaleString()}
               {roster.lotsDrawnByName ? ` by ${roster.lotsDrawnByName}` : ''}
             </p>
           )}
         </div>
 
-        <div className="flex items-start gap-2 text-xs text-white/40 mb-4 px-1">
+        <div className="flex items-start gap-2 text-xs text-fg-muted mb-4 px-1">
           <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <p>
             Drag by the grip to change the order. The number shown is the running position;
@@ -273,16 +273,15 @@ const JudgeSequence = () => {
 
         {loading ? (
           <div className="flex items-center justify-center py-12 gap-3 flex-1">
-            <motion.div className="w-6 h-6 rounded-full border-2 border-t-transparent"
-              style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-              animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-            <span className="text-sm text-white/50">Loading running order…</span>
+            <div className="animate-spin w-6 h-6 rounded-full border-2 border-t-transparent"
+              style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
+            <span className="text-sm text-fg-muted">Loading running order…</span>
           </div>
         ) : teams.length === 0 ? (
           <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
             <Users className="w-12 h-12 mb-4 text-white/20" />
             <p className="text-lg font-bold text-white/70">No teams to order</p>
-            <p className="text-sm text-white/40 mt-2 max-w-sm text-center">
+            <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
               No coach has submitted a team for this category yet.
             </p>
           </div>
@@ -302,7 +301,7 @@ const JudgeSequence = () => {
                       <OrderBadge lotNo={team.lotNo} position={index} accent={J.purpleLight} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-white text-sm truncate">{team.name}</p>
-                        <p className="text-xs text-white/40 truncate">
+                        <p className="text-xs text-fg-muted truncate">
                           {team.coachName ? `Coach: ${team.coachName} · ` : ''}
                           {team.playerCount} athlete{team.playerCount !== 1 ? 's' : ''}
                           {team.lotNo ? ` · Lot ${team.lotNo}` : ''}
@@ -311,7 +310,7 @@ const JudgeSequence = () => {
                       <button
                         type="button"
                         onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
-                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-white hover:bg-white/5 transition-colors"
                         aria-label={isExpanded ? 'Hide athletes' : 'Show athletes'}>
                         <Users className="w-3.5 h-3.5" />
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -336,7 +335,7 @@ const JudgeSequence = () => {
                                 <OrderBadge lotNo={player.lotNo} position={playerIndex} accent={J.green} />
                                 <div className="min-w-0">
                                   <p className="text-sm text-white truncate">{player.name}</p>
-                                  <p className="text-xs text-white/35">
+                                  <p className="text-xs text-fg-muted">
                                     {player.gender} · {player.ageGroup}
                                     {player.isFinalized ? ' · finalized' : ''}
                                   </p>

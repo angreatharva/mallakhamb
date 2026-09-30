@@ -44,7 +44,7 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
     }} />
     <input
       type="text"
-      placeholder={placeholder}
+      placeholder={placeholder} aria-label={placeholder || 'Search'}
       value={value}
       onChange={e => onChange(e.target.value)}
       style={{

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { Users, Filter, UserPlus, Save, Edit, X, Trash2, Search, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
@@ -44,16 +44,23 @@ const DarkCard = ({ children, className = '', style = {} }) => (
   </div>
 );
 
-const DarkInput = ({ label, required, error, hint, rightElement, ...props }) => (
+// The visible <label> was never tied to its <input>, so a screen reader read
+// every field on this screen as an unnamed "edit text". useId links the pair
+// without making callers invent ids; an explicit `id` still wins.
+const DarkInput = ({ label, required, error, hint, rightElement, id, ...props }) => {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  return (
   <div>
     {label && (
-      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
         {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
       </label>
     )}
     <div className="relative">
       <input
-        className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+        id={inputId}
+        className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
         style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
         onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
         onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -61,12 +68,13 @@ const DarkInput = ({ label, required, error, hint, rightElement, ...props }) => 
       />
       {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
     </div>
-    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
     {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
   </div>
-);
+  );
+};
 
-const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', className = '' }) => {
+const DarkBtn =({ children, onClick, disabled, variant = 'primary', size = 'md', className = '' }) => {
   const bg = {
     primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
     purple: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})`,
@@ -90,7 +98,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
     <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
@@ -98,7 +106,7 @@ const EmptyState = ({ icon: Icon, title, desc, action }) => (
 const LoadingState = ({ label }) => (
   <div className="flex items-center justify-center py-12 gap-3">
     <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-white/40 text-sm">{label}</span>
+    <span className="text-fg-muted text-sm">{label}</span>
   </div>
 );
 
@@ -196,7 +204,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
         style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
         <div className="min-w-0">
           <p className="text-sm font-bold text-white truncate">{value.name}</p>
-          <p className="text-xs text-white/40 truncate">{value.email}</p>
+          <p className="text-xs text-fg-muted truncate">{value.email}</p>
         </div>
         <DarkBtn size="sm" variant="ghost" onClick={onClear}>
           <X className="w-3.5 h-3.5" />
@@ -240,7 +248,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
                   </span>
                 )}
               </p>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-fg-muted">
                 {account.email}
                 {account.stateUnit && <span> · {account.stateUnit}</span>}
                 {account.certificationLevel && <span> · {account.certificationLevel}</span>}
@@ -255,7 +263,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
         <div className="mt-2 p-3 rounded-xl border text-xs"
           style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}`, color: ADMIN_COLORS.gold }}>
           <p className="font-bold mb-1">No registered judge matches that.</p>
-          <p className="text-white/50">
+          <p className="text-fg-muted">
             Judges create their own accounts. Send them the registration link and search again
             once they have signed up.
           </p>
@@ -301,7 +309,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
             </button>
           </div>
           <div className="p-6 space-y-4">
-            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'rgba(255,255,255,0.5)' }}>
+            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'var(--fg-muted)' }}>
               <span className="font-bold" style={{ color: ADMIN_COLORS.saffronLight }}>{seatLabel(judge.judgeType)}</span>
               {judge.gender && <> · {judge.gender}</>}
               {judge.ageGroup && <> · {judge.ageGroup}</>}
@@ -309,7 +317,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
             </div>
 
             {judge.name && (
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-fg-muted">
                 Currently <span className="text-white/70 font-semibold">{judge.name}</span>. Choosing
                 someone else replaces them in this slot.
               </p>
@@ -802,7 +810,7 @@ const Judges = () => {
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
           <h2 className="text-2xl font-black text-white mb-2">Manage Judges</h2>
-          <p className="text-white/35 text-sm mb-6">
+          <p className="text-fg-muted text-sm mb-6">
             Judges create their own accounts at{' '}
             <span className="text-white/60">{REGISTER_PATH}</span> — here you choose which of them
             sits on each panel.
@@ -892,7 +900,7 @@ const Judges = () => {
                   />
                   {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
                   {hasCompetitionType && !checkingExistingJudges && (
-                    <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
                       One panel per apparatus — staff each separately.
                     </p>
                   )}
@@ -910,7 +918,7 @@ const Judges = () => {
                       <div className="p-6 rounded-2xl border" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}` }}>
                         <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
-                        <p className="text-white/50 text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label} · {selectedApparatus.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
+                        <p className="text-fg-muted text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label} · {selectedApparatus.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
                       </div>
                     </div>
@@ -918,10 +926,10 @@ const Judges = () => {
                     <div>
                       <div className="mb-4 p-4 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x30)}` }}>
                         <p className="text-white/70">Staffing: <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
-                          {selectedCompetitionType && <span className="text-white/50"> · {selectedCompetitionType.label}</span>}
-                          {selectedApparatus && <span className="text-white/50"> · {selectedApparatus.label}</span>}
+                          {selectedCompetitionType && <span className="text-fg-muted"> · {selectedCompetitionType.label}</span>}
+                          {selectedApparatus && <span className="text-fg-muted"> · {selectedApparatus.label}</span>}
                         </p>
-                        <p className="text-white/50 text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 &amp; Scorer · Judge 3 &amp; Judge 4 optional</p>
+                        <p className="text-fg-muted text-xs mt-1">Required: Senior Judge, Judge 1, Judge 2 &amp; Scorer · Judge 3 &amp; Judge 4 optional</p>
                       </div>
                       <div className="space-y-4">
                         {judgeFormData.map((judge, index) => {
@@ -1010,8 +1018,8 @@ const Judges = () => {
                       <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
                         <span className="text-white/70">Judge panel for: </span>
                         <span className="font-bold text-white">{selectedGender?.label} — {selectedAgeGroup?.label}</span>
-                        {selectedCompetitionType && <span className="text-white/50 ml-2">· {selectedCompetitionType.label}</span>}
-                        {selectedApparatus && <span className="text-white/50 ml-2">· {selectedApparatus.label}</span>}
+                        {selectedCompetitionType && <span className="text-fg-muted ml-2">· {selectedCompetitionType.label}</span>}
+                        {selectedApparatus && <span className="text-fg-muted ml-2">· {selectedApparatus.label}</span>}
                       </div>
                       <div className="space-y-3">
                         {judges.map((judge) => {
@@ -1026,13 +1034,13 @@ const Judges = () => {
                                 </div>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-bold text-white">{judge.name || <span className="text-white/30 italic">Empty Slot</span>}</span>
+                                    <span className="text-sm font-bold text-white">{judge.name || <span className="text-fg-muted italic">Empty Slot</span>}</span>
                                     <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                     {judge.judgeAccount
                                       ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>Assigned</span>
                                       : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold }}>Available</span>}
                                   </div>
-                                  {judge.email && <p className="text-xs text-white/40 mt-0.5">{judge.email}</p>}
+                                  {judge.email && <p className="text-xs text-fg-muted mt-0.5">{judge.email}</p>}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">

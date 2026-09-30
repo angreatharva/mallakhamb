@@ -70,36 +70,35 @@ export const ThemedButton = forwardRef(({
     lg: 'px-6 py-4 text-lg min-h-[44px]',
   };
   
-  // Variant styles
+  /*
+   * Variant styles — colour from the role-accent tokens (index.css, set by
+   * `html[data-role]`), not from `theme.colors.primary` inline.
+   *
+   * The solid label was white on the role colour, which measured 2.86:1 on
+   * player saffron, 2.28 on coach green and 2.03 on superadmin gold — the main
+   * button of those portals failed WCAG 1.4.3. `on-accent` is near-black on the
+   * bright dark-appearance fills (4.7–9.8:1) and white on the deeper light ones
+   * (5.0–7.1:1). The fill itself is unchanged in dark.
+   */
   const getVariantStyles = () => {
     const baseStyles = {
       solid: {
         className: clsx(
-          'text-white font-medium',
+          'bg-accent text-on-accent font-medium',
           !isDisabled && 'hover:opacity-90',
         ),
-        style: {
-          backgroundColor: theme.colors.primary,
-        },
       },
       outline: {
         className: clsx(
-          'bg-transparent font-medium border-2',
+          'bg-transparent font-medium border-2 border-accent-fg text-accent-fg',
           !isDisabled && 'hover:bg-white/5',
         ),
-        style: {
-          color: theme.colors.primary,
-          borderColor: theme.colors.primary,
-        },
       },
       ghost: {
         className: clsx(
-          'bg-transparent font-medium',
+          'bg-transparent font-medium text-accent-fg',
           !isDisabled && 'hover:bg-white/5',
         ),
-        style: {
-          color: theme.colors.primary,
-        },
       },
     };
     
@@ -116,7 +115,6 @@ export const ThemedButton = forwardRef(({
         // Base styles
         'inline-flex items-center justify-center gap-2',
         'rounded-lg transition-all duration-200',
-        'outline-none focus:ring-3',
         
         // Size
         sizeClasses[responsiveSize],
@@ -133,7 +131,6 @@ export const ThemedButton = forwardRef(({
         
         className
       )}
-      style={variantStyles.style}
       whileHover={!isDisabled ? { scale: 1.02 } : {}}
       whileTap={!isDisabled ? { scale: 0.98 } : {}}
       whileFocus={{

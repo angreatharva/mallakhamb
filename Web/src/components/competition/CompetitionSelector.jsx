@@ -130,7 +130,7 @@ const CompetitionSelector = ({ userType }) => {
       >
         <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
         <div className="flex flex-col items-start max-w-[160px]">
-          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
             Competition
           </span>
           <span className="text-xs font-semibold text-white truncate w-full" key={currentCompetition?._id}>
@@ -177,10 +177,10 @@ const CompetitionSelector = ({ userType }) => {
                     style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
-                    placeholder="Search competitions..."
+                    placeholder="Search competitions..." aria-label="Search competitions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 text-xs rounded-lg focus:outline-none"
+                    className="w-full pl-8 pr-8 py-2 text-xs rounded-lg"
                     style={{
                       background: 'rgba(255,255,255,0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
@@ -190,7 +190,7 @@ const CompetitionSelector = ({ userType }) => {
                   />
                   {searchQuery && (
                     <button onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg"
                       aria-label="Clear search">
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -202,7 +202,7 @@ const CompetitionSelector = ({ userType }) => {
             {/* List */}
             <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
               {filteredCompetitions && filteredCompetitions.length === 0 ? (
-                <div className="py-8 text-center text-white/30 text-xs">
+                <div className="py-8 text-center text-fg-muted text-xs">
                   No competitions found for &quot;{searchQuery}&quot;
                 </div>
               ) : (
@@ -233,17 +233,17 @@ const CompetitionSelector = ({ userType }) => {
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {competition.place && (
-                              <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                                 <MapPin className="w-2.5 h-2.5" aria-hidden="true" />
                                 {competition.place}
                               </span>
                             )}
-                            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                               {levelLabel(competition.level)}
                             </span>
                           </div>
                           {competition.startDate && competition.endDate && (
-                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                               <Calendar className="w-2.5 h-2.5" aria-hidden="true" />
                               {new Date(competition.startDate).toLocaleDateString()} –{' '}
                               {new Date(competition.endDate).toLocaleDateString()}
@@ -275,7 +275,7 @@ const CompetitionSelector = ({ userType }) => {
                     <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
                       Sign up for new competition
                     </p>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                       Register your team
                     </p>
                   </div>
@@ -299,11 +299,9 @@ const CompetitionSelector = ({ userType }) => {
               style={{ background: '#111111', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
             >
-              <motion.div
-                className="w-5 h-5 rounded-full border-2 border-t-transparent"
+              <div
+                className="animate-spin w-5 h-5 rounded-full border-2 border-t-transparent"
                 style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
               />
               <span className="text-white/70 text-sm font-medium">Switching competition...</span>
             </motion.div>

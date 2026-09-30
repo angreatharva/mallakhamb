@@ -63,7 +63,7 @@ const CompetitionDisplay = ({ className = '' }) => {
               </h3>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                 {currentCompetition.place && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                     <MapPin className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
                     <SafeText as="span">{currentCompetition.place}</SafeText>
                   </span>
@@ -75,7 +75,7 @@ const CompetitionDisplay = ({ className = '' }) => {
                   </span>
                 )}
                 {currentCompetition.startDate && currentCompetition.endDate && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                     <Calendar className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
                     {new Date(currentCompetition.startDate).toLocaleDateString()} –{' '}
                     {new Date(currentCompetition.endDate).toLocaleDateString()}
@@ -107,7 +107,7 @@ const CompetitionDisplay = ({ className = '' }) => {
 
         {currentCompetition.description && (
           <SafeText as="p" className="mt-3 text-xs leading-relaxed line-clamp-2"
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
+            style={{ color: 'var(--fg-muted)' }}>
             {currentCompetition.description}
           </SafeText>
         )}

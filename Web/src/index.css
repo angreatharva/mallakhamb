@@ -227,17 +227,39 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Form focus styles */
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+/*
+ * Focus: one visible ring for every control (WCAG 2.4.7).
+ *
+ * This replaced a rule that took the outline off every input, select and
+ * textarea and put back a 3px glow at 10% opacity — close to invisible on
+ * #0a0a0a — and 35 `outline-none` classes that did the same to buttons and
+ * fields. Keyboard users had no way to see where they were.
+ *
+ * `:focus-visible`, not `:focus`: a mouse click on a button shows no ring; a
+ * text field shows one however it was focused, which is what browsers decide
+ * for fields and what people expect. The colour is the role accent, measured at
+ * 4.1:1 or better against every surface in both appearances (plan §14.4), and
+ * an outline — not a box-shadow — survives Windows High Contrast.
+ *
+ * It sits after `@tailwind utilities`, so a stray `outline-none` loses to it on
+ * equal specificity; a component that genuinely needs a different ring says so
+ * with a `focus-visible:` utility, which is more specific and wins.
+ */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-/* Button hover effects */
+/*
+ * Buttons animate the properties that actually change on hover and press.
+ * `transition: all` also animated layout properties, so a button whose padding
+ * or width changed (a label swap, a spinner appearing) was tweened through
+ * every intermediate layout.
+ */
 button {
-  transition: all 0.2s ease-in-out;
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
 }
 
 /*
@@ -268,22 +290,6 @@ button:active {
 
 .animate-spin {
   animation: spin 1s linear infinite;
-}
-
-/* Custom animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.5s ease-out;
 }
 
 /* Responsive design helpers */

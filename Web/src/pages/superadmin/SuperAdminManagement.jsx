@@ -1,5 +1,5 @@
 import {
-  useState, useEffect, useRef, useCallback,
+  useState, useEffect, useRef, useCallback, useId,
   createContext, useContext, Children, isValidElement, cloneElement,
 } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -56,57 +56,80 @@ const DarkCard = ({ children, className = '', style = {} }) => (
   </div>
 );
 
-const DarkInput = ({ label, required, error, hint, ...props }) => (
+/*
+ * The three field wrappers below each drew a visible <label> that was never
+ * tied to its control, so a screen reader announced every field on this screen
+ * as an unnamed "edit text" / "combo box". One generated id links each pair;
+ * an explicit `id` from the caller still wins.
+ */
+const useFieldId = (id) => {
+  const autoId = useId();
+  return id ?? autoId;
+};
+
+const DarkInput = ({ label, required, error, hint, id, ...props }) => {
+  const inputId = useFieldId(id);
+  return (
   <div>
     {label && (
-      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
         {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
       </label>
     )}
     <input
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
+      id={inputId}
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
-    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
     {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
   </div>
-);
+  );
+};
 
-const DarkSelect = ({ label, required, children, ...props }) => (
+const DarkSelect = ({ label, required, children, id, ...props }) => {
+  const selectId = useFieldId(id);
+  return (
   <div>
     {label && (
-      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+      <label htmlFor={selectId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
         {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
       </label>
     )}
     <select
-      className="w-full rounded-xl text-sm text-white outline-none min-h-[44px] px-3 transition-all duration-200"
+      id={selectId}
+      className="w-full rounded-xl text-sm text-white min-h-[44px] px-3 transition-all duration-200"
       style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
       {...props}>
       {children}
     </select>
   </div>
-);
+  );
+};
 
-const DarkTextarea = ({ label, required, ...props }) => (
+const DarkTextarea = ({ label, required, id, ...props }) => {
+  const textareaId = useFieldId(id);
+  return (
   <div>
     {label && (
-      <label className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
+      <label htmlFor={textareaId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
         {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
       </label>
     )}
     <textarea
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200 resize-none"
+      id={textareaId}
+      className="w-full rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200 resize-none"
       style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
   </div>
-);
+  );
+};
 
 const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
   const bg = {
@@ -131,7 +154,7 @@ const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md'
 const LoadingState = () => (
   <div className="flex items-center justify-center py-12 gap-3">
     <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-white/40 text-sm">Loading…</span>
+    <span className="text-fg-muted text-sm">Loading…</span>
   </div>
 );
 
@@ -139,7 +162,7 @@ const EmptyState = ({ icon: Icon, title, desc }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
     <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
+    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
   </div>
 );
 
@@ -360,15 +383,15 @@ const TableHeadersContext = createContext([]);
  * header, so nothing is dropped on mobile. Above `md` it is inert and the
  * table renders exactly as before.
  */
-const DarkTable = ({ headers, children, empty }) => (
+const DarkTable = ({ headers, children, empty, label }) => (
   <TableHeadersContext.Provider value={headers}>
     <div className="overflow-x-auto">
-      <table className="min-w-full text-sm stacked-table" role="table">
+      <table className="min-w-full text-sm stacked-table" role="table" aria-label={label}>
         <thead>
           <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
             {headers.map(h => (
-              <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                style={{ color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+              <th key={h} scope="col" className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
+                style={{ color: 'var(--fg-muted)' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -902,7 +925,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : competitions.length === 0 ? (
               <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
             ) : (
-              <DarkTable headers={['Name','Types','Level','Place','Per player','Fee window','Dates','Status','Admins','Actions']}>
+              <DarkTable label="Competitions" headers={['Name','Types','Level','Place','Per player','Fee window','Dates','Status','Admins','Actions']}>
                 {competitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
                     <Td className="font-bold text-white">{comp.name}</Td>
@@ -933,7 +956,7 @@ const SuperAdminManagement = () => {
                       {(() => {
                         const lateFee = Number(comp.lateFee) || 0;
                         if (!comp.registrationOpenDate && !comp.feeDueDate && !lateFee) {
-                          return <span className="text-white/30">Always open</span>;
+                          return <span className="text-fg-muted">Always open</span>;
                         }
                         const window = resolveFeeWindow(comp);
                         const phaseColor = window.phase === FEE_PHASE.LATE ? ADMIN_COLORS.red
@@ -951,13 +974,13 @@ const SuperAdminManagement = () => {
                               }[window.phase]}
                             </span>
                             {comp.registrationOpenDate && (
-                              <p className="text-white/45">Opens {formatFeeWindowDate(comp.registrationOpenDate)}</p>
+                              <p className="text-fg-muted">Opens {formatFeeWindowDate(comp.registrationOpenDate)}</p>
                             )}
                             {comp.feeDueDate && (
-                              <p className="text-white/45">Base until {formatFeeWindowDate(comp.feeDueDate)}</p>
+                              <p className="text-fg-muted">Base until {formatFeeWindowDate(comp.feeDueDate)}</p>
                             )}
                             {lateFee > 0 && (
-                              <p className="text-white/45">then +₹{lateFee.toLocaleString()}/athlete</p>
+                              <p className="text-fg-muted">then +₹{lateFee.toLocaleString()}/athlete</p>
                             )}
                           </div>
                         );
@@ -976,7 +999,7 @@ const SuperAdminManagement = () => {
                       <div className="space-y-0.5">
                         {comp.admins?.length ? comp.admins.map(a => (
                           <p key={a._id} className="text-xs text-white/60">{a.name}</p>
-                        )) : <span className="text-xs text-white/30">None</span>}
+                        )) : <span className="text-xs text-fg-muted">None</span>}
                       </div>
                     </Td>
                     <td className="px-4 py-3">
@@ -1025,7 +1048,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : admins.length === 0 ? (
               <EmptyState icon={Shield} title="No admins yet" desc="Create your first admin to get started." />
             ) : (
-              <DarkTable headers={['Name','Email','Role','Status','Actions']}>
+              <DarkTable label="Admins" headers={['Name','Email','Role','Status','Actions']}>
                 {admins.map((admin, i) => (
                   <DarkTr key={admin._id} delay={i * 0.03}>
                     <Td className="font-semibold text-white">{admin.name}</Td>
@@ -1070,7 +1093,7 @@ const SuperAdminManagement = () => {
             {loading ? <LoadingState /> : coaches.length === 0 ? (
               <EmptyState icon={UserCheck} title="No coaches yet" desc="Coaches will appear here once registered." />
             ) : (
-              <DarkTable headers={['Name','Email','Phone','Status','Actions']}>
+              <DarkTable label="Coaches" headers={['Name','Email','Phone','Status','Actions']}>
                 {coaches.map((coach, i) => (
                   <DarkTr key={coach._id} delay={i * 0.03}>
                     <Td className="font-semibold text-white">{coach.name}</Td>
@@ -1269,7 +1292,7 @@ const SuperAdminManagement = () => {
             APPARATUS-WISE FEES (Optional)
           </p>
           <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs text-white/50 mb-4 leading-relaxed">
+            <p className="text-xs text-fg-muted mb-4 leading-relaxed">
               Enter any additional fees for specific apparatuses here. These will be <strong>added on top</strong> of the base per-player fee. Leave blank for no additional charge.
             </p>
             {['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'].map(app => (
@@ -1317,12 +1340,12 @@ const SuperAdminManagement = () => {
                   <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
                     onChange={() => setCompetitionFormData(prev => ({ ...prev, maxTeamSize: option.value }))} />
                   <span className="text-sm font-bold text-white">{option.value} Players</span>
-                  <span className="text-xs text-white/40">Best {option.counted} scores count per apparatus</span>
+                  <span className="text-xs text-fg-muted">Best {option.counted} scores count per apparatus</span>
                 </label>
               );
             })}
           </div>
-          <p className="text-xs text-white/30 mt-2">
+          <p className="text-xs text-fg-muted mt-2">
             A coach can enter at most this many athletes per age group, and the Team Championship counts the best {TEAM_SIZE_OPTIONS.map(o => o.counted).join(' / ')}.
           </p>
         </div>
@@ -1350,7 +1373,7 @@ const SuperAdminManagement = () => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">{ct.label}</p>
-                      <p className="text-xs text-white/40">{ct.desc}</p>
+                      <p className="text-xs text-fg-muted">{ct.desc}</p>
                     </div>
                   </label>
                   
@@ -1448,9 +1471,9 @@ const SuperAdminManagement = () => {
             </p>
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
-              <input type="text" placeholder="Search admins…" value={adminSearchQuery}
+              <input type="text" placeholder="Search admins…" aria-label="Search admins" value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
-                className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all"
+                className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all"
                 style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
             </div>
             <div className="relative space-y-1 max-h-40 overflow-y-auto">
@@ -1464,11 +1487,11 @@ const SuperAdminManagement = () => {
                       style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
                       {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
-                    <span className="text-sm text-white/70">{admin.name} <span className="text-white/35">({admin.email})</span></span>
+                    <span className="text-sm text-white/70">{admin.name} <span className="text-fg-muted">({admin.email})</span></span>
                   </label>
                 );
               })}
-              {filteredAdmins.length === 0 && <p className="text-sm text-white/30 p-2">No admins found.</p>}
+              {filteredAdmins.length === 0 && <p className="text-sm text-fg-muted p-2">No admins found.</p>}
             </div>
           </div>
         )}
@@ -1492,7 +1515,7 @@ const SuperAdminManagement = () => {
                       style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                       <div>
                         <p className="text-sm font-bold text-white">{admin.name}</p>
-                        <p className="text-xs text-white/40">{admin.email}</p>
+                        <p className="text-xs text-fg-muted">{admin.email}</p>
                       </div>
                       <DarkBtn size="sm" variant="danger" onClick={() => openRemoveAdminConfirmation(admin)}>
                         <Trash2 className="w-3.5 h-3.5" /> Remove
@@ -1500,7 +1523,7 @@ const SuperAdminManagement = () => {
                     </div>
                   ))}
                 </div>
-              ) : <p className="text-sm text-white/30">No admins assigned.</p>}
+              ) : <p className="text-sm text-fg-muted">No admins assigned.</p>}
             </div>
             <div>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
@@ -1510,7 +1533,7 @@ const SuperAdminManagement = () => {
                     style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>
                       <p className="text-sm font-bold text-white">{admin.name}</p>
-                      <p className="text-xs text-white/40">{admin.email}</p>
+                      <p className="text-xs text-fg-muted">{admin.email}</p>
                     </div>
                     <DarkBtn size="sm" variant="success" onClick={() => handleAssignAdmin(admin._id)}>
                       <UserPlus className="w-3.5 h-3.5" /> Assign
@@ -1554,7 +1577,7 @@ const SuperAdminManagement = () => {
                     <p className="text-base font-bold text-white">
                       {competitionToDelete.name}
                     </p>
-                    <p className="text-xs text-white/50 mt-1">
+                    <p className="text-xs text-fg-muted mt-1">
                       {competitionToDelete.place} • {new Date(competitionToDelete.startDate).toLocaleDateString()}
                     </p>
                   </div>
@@ -1618,7 +1641,7 @@ const SuperAdminManagement = () => {
                     <p className="text-base font-bold text-white">
                       {adminToRemove.name}
                     </p>
-                    <p className="text-xs text-white/50 mt-1">
+                    <p className="text-xs text-fg-muted mt-1">
                       {adminToRemove.email}
                     </p>
                   </div>
@@ -1682,7 +1705,7 @@ const SuperAdminManagement = () => {
                     <p className="text-base font-bold text-white">
                       {adminToDelete.name}
                     </p>
-                    <p className="text-xs text-white/50 mt-1">
+                    <p className="text-xs text-fg-muted mt-1">
                       {adminToDelete.email}
                     </p>
                   </div>

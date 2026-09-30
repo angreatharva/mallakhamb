@@ -80,7 +80,7 @@ const Dropdown = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] flex items-center justify-between gap-2 focus:outline-none focus:ring-2"
+        className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] flex items-center justify-between gap-2 focus:ring-2"
         style={{
           background: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
           border: `1px solid ${borderColor}`,
@@ -130,8 +130,8 @@ const Dropdown = ({
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search..."
-                    className="w-full pl-8 pr-8 py-2 text-sm rounded-lg focus:outline-none"
+                    placeholder="Search..." aria-label="Search options"
+                    className="w-full pl-8 pr-8 py-2 text-sm rounded-lg"
                     style={{
                       background: 'rgba(255,255,255,0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
@@ -143,7 +143,7 @@ const Dropdown = ({
                   {searchTerm && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setSearchTerm(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
                       aria-label="Clear search"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -155,13 +155,12 @@ const Dropdown = ({
 
             <div className="py-1">
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-white/40 text-sm">
-                  <motion.div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60"
-                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                <div className="flex items-center justify-center gap-2 py-6 text-fg-muted text-sm">
+                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60" />
                   Loading...
                 </div>
               ) : filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-white/35 text-sm">No options found</div>
+                <div className="py-6 text-center text-fg-muted text-sm">No options found</div>
               ) : (
                 filteredOptions.map((option, i) => {
                   const isSelected = value?.value === option.value;

@@ -52,8 +52,10 @@ export const DESIGN_TOKENS = {
      * form — `alpha()` understands it; string-gluing hex digits does not.
      *
      * The "WCAG AA" note these text values used to carry was wrong: muted at
-     * 0.45 measures 4.48:1 on #0a0a0a. Correcting the ALPHAS is a visible
-     * change and belongs to the accessibility phase, not this one.
+     * 0.45 measured 4.48:1 on #0a0a0a. Phase 4 points `muted` at the semantic
+     * `--fg-muted` (0.55 → 6.0:1 or better on every dark surface, 5.6:1 in
+     * light). `secondary` already passes (8.4:1) and moves with the rest of the
+     * 60–75% text in Phase 5; `disabled` is exempt from 1.4.3.
      */
     // ─── Surface Colors ─────────────────────────────────────────────────────────
     surfaces: {
@@ -75,7 +77,7 @@ export const DESIGN_TOKENS = {
     text: {
       primary: 'rgb(var(--ink))',
       secondary: 'rgb(var(--ink) / 0.65)',
-      muted: 'rgb(var(--ink) / 0.45)',
+      muted: 'var(--fg-muted)',
       disabled: 'rgb(var(--ink) / 0.3)',
     },
     
@@ -407,7 +409,7 @@ export const COMMON_STYLES = {
   },
 
   textMuted: {
-    color: 'rgb(var(--ink) / 0.45)',
+    color: 'var(--fg-muted)',
   },
   
   // Transition styles

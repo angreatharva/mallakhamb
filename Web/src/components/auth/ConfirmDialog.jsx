@@ -115,7 +115,7 @@ const ConfirmDialog = ({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/08 transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:outline-none focus:ring-2"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-white hover:bg-white/08 transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
                 style={{ outlineColor: accentColor }}
                 aria-label="Close dialog"
               >
@@ -177,10 +177,8 @@ const ConfirmDialog = ({
               >
                 {loading ? (
                   <>
-                    <motion.div
-                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    <div
+                      className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                     />
                     Processing...
                   </>

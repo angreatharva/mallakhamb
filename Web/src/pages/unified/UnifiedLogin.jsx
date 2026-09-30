@@ -470,7 +470,7 @@ const UnifiedLoginInner = () => {
                 {config.title}<br />{config.subtitle}
               </GradientText>
             </h1>
-            <p className="text-white/30 text-sm leading-relaxed max-w-xs mx-auto">
+            <p className="text-fg-muted text-sm leading-relaxed max-w-xs mx-auto">
               {config.description}
             </p>
           </motion.div>
@@ -509,7 +509,7 @@ const UnifiedLoginInner = () => {
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
               style={{ color: theme.colors.primary }}>Mallakhamb</p>
-            <p className="text-white/30 text-[10px]">{config.title} Portal</p>
+            <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
           </div>
         </motion.div>
         
@@ -538,7 +538,7 @@ const UnifiedLoginInner = () => {
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
             <h2 className="text-3xl font-black text-white mt-3">{config.formTitle}</h2>
-            <p className="text-white/35 text-sm mt-1">{config.formSubtitle}</p>
+            <p className="text-fg-muted text-sm mt-1">{config.formSubtitle}</p>
           </motion.div>
           
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -642,8 +642,8 @@ const UnifiedLoginInner = () => {
                       className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('password', { required: 'Password is required' })}
@@ -682,12 +682,12 @@ const UnifiedLoginInner = () => {
               </Link>
             )}
             <div className="flex items-center gap-3 ml-auto">
-              <Link to="/" className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center">
+              <Link to="/" className="text-xs text-fg-muted hover:text-fg transition-colors inline-flex items-center tap-safe justify-center">
                 ← Home
               </Link>
               {config.registerLink && (
                 <>
-                  <span className="text-white/15 text-xs">·</span>
+                  <span className="text-fg-subtle text-xs">·</span>
                   <Link to={config.registerLink}
                     className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
                     style={{ color: `${alpha(theme.colors.primary, 0x70)}` }}>

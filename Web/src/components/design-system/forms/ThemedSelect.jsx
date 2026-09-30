@@ -55,7 +55,7 @@ export const ThemedSelect = forwardRef(({
           'bg-white/5 backdrop-blur-sm',
           'text-white',
           'border transition-all duration-200',
-          'outline-none appearance-none',
+          'appearance-none',
           'cursor-pointer',
           
           // Minimum touch target (44px)

@@ -54,9 +54,9 @@ export const ThemedTextarea = forwardRef(({
           // Base styles
           'w-full px-4 py-3 rounded-lg',
           'bg-white/5 backdrop-blur-sm',
-          'text-white placeholder:text-white/45',
+          'text-white placeholder:text-fg-muted',
           'border transition-all duration-200',
-          'outline-none resize-y',
+          'resize-y',
           
           // Normal state
           !hasError && !disabled && !readOnly && [
