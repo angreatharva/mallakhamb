@@ -5,7 +5,7 @@ import { ArrowRight, Trophy, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, SAFFRON_CTA, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 const CoachCreateTeam = () => {
@@ -103,17 +103,17 @@ const CoachCreateTeam = () => {
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                   style={{
-                    background: i === 1 ? '#22C55E' : i < 1 ? `${alpha(COLORS.saffron, 0x30)}` : 'rgba(255,255,255,0.08)',
-                    color: i === 1 ? '#fff' : i < 1 ? COLORS.saffron : 'rgba(255,255,255,0.3)',
+                    background: i === 1 ? '#22C55E' : i < 1 ? `${alpha(COLORS.saffron, 0x30)}` : 'rgb(var(--ink) / 0.08)',
+                    color: i === 1 ? '#0A0A0A' : i < 1 ? FG.brand : 'var(--fg-muted)',
                   }}>
                   {i + 1}
                 </div>
                 <span className="text-xs hidden sm:block"
-                  style={{ color: i === 1 ? '#22C55E' : 'rgba(255,255,255,0.3)' }}>
+                  style={{ color: i === 1 ? FG.success : 'var(--fg-muted)' }}>
                   {step}
                 </span>
               </div>
-              {i < 2 && <div className="w-6 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />}
+              {i < 2 && <div className="w-6 h-px" style={{ background: 'rgb(var(--ink) / 0.1)' }} />}
             </div>
           ))}
         </div>
@@ -128,7 +128,7 @@ const CoachCreateTeam = () => {
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
-              <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Trophy className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
             </div>
           </div>
 
@@ -140,12 +140,12 @@ const CoachCreateTeam = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
             <div>
               <label htmlFor="team-name" className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                style={{ color: COLORS.saffronLight }}>
+                style={{ color: FG.brandSoft }}>
                 <span className="inline-flex items-center gap-1.5">
                   <Trophy className="w-3 h-3" aria-hidden="true" />
                   Team Name
                 </span>
-                <span aria-hidden="true" style={{ color: COLORS.saffron }}> *</span>
+                <span aria-hidden="true" style={{ color: FG.brand }}> *</span>
               </label>
               <input
                 id="team-name"
@@ -153,19 +153,19 @@ const CoachCreateTeam = () => {
                 placeholder="Enter team name"
                 className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 min-h-[44px]"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${errors.name ? '#EF4444' : COLORS.darkBorderSubtle}`,
+                  background: 'rgb(var(--ink) / 0.05)',
+                  border: `1px solid ${errors.name ? FG.danger : COLORS.darkBorderSubtle}`,
                 }}
                 onFocus={e => e.target.style.borderColor = COLORS.saffron}
-                onBlur={e => e.target.style.borderColor = errors.name ? '#EF4444' : COLORS.darkBorderSubtle}
+                onBlur={e => e.target.style.borderColor = errors.name ? FG.danger : COLORS.darkBorderSubtle}
                 {...register('name', { required: 'Team name is required' })}
               />
-              {errors.name && <p className="mt-1.5 text-xs text-red-400" role="alert">{errors.name.message}</p>}
+              {errors.name && <p className="mt-1.5 text-xs text-red-700 dark:text-red-400" role="alert">{errors.name.message}</p>}
             </div>
 
             <div>
               <label htmlFor="team-desc" className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                style={{ color: COLORS.saffronLight }}>
+                style={{ color: FG.brandSoft }}>
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="w-3 h-3" aria-hidden="true" />
                   Team Description
@@ -178,7 +178,7 @@ const CoachCreateTeam = () => {
                 placeholder="Enter team description"
                 className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 resize-none"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'rgb(var(--ink) / 0.05)',
                   border: `1px solid ${COLORS.darkBorderSubtle}`,
                 }}
                 onFocus={e => e.target.style.borderColor = COLORS.saffron}
@@ -191,7 +191,7 @@ const CoachCreateTeam = () => {
               type="submit"
               disabled={loading}
               className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+              style={SAFFRON_CTA}
               whileHover={loading ? {} : { scale: 1.01 }}
               whileTap={loading ? {} : { scale: 0.98 }}>
               {loading ? (

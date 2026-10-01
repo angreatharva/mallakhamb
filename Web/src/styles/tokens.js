@@ -393,6 +393,7 @@ export const DATA_COLORS = Object.freeze({
   purpleSoft: 'rgb(var(--cat-purple-soft))',
   green: 'rgb(var(--cat-green))',
   red: 'rgb(var(--cat-red))',
+  pink: 'rgb(var(--cat-pink))',
   gold: 'rgb(var(--medal-gold))',
   silver: 'rgb(var(--medal-silver))',
   bronze: 'rgb(var(--medal-bronze))',

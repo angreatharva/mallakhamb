@@ -128,6 +128,12 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 
 **`FG`** in `tokens.js` — the semantic text colours (`FG.brand`, `FG.accent`, `FG.danger`, …) as one frozen object. Files 1–22 had written them as string literals (`'rgb(var(--brand-fg))'`), which the repo's `design-system/no-hardcoded-colors` lint rule flags (it exempts `tokens.js`): 165 literals in 23 files → `FG.*`, value-identical, from here on the only form. The ink codemod's partial strings (`1px solid rgb(var(--ink) / 0.1)`) still warn, exactly as the `rgba()` they replaced did.
 
+*20–22. Coach group* — `CoachCreateTeam`, `CoachDashboard`, `CoachPayment`.
+- (a) 15 `md:` sites (gutters, card padding, header height, heading sizes, 2-up grids) — tablet-correct.
+- (b) The discount-code field 16px on touch. Every other field already inherits 16px; every target is already 44px or `tap-safe`.
+- (c) Nine saffron buttons → `SAFFRON_CTA` (two had the gradient as a hex literal; the two logo squares that share it stay). The pay button's green "discount" fill gets the same near-black label (D6, white was 2.28:1). New `--cat-pink` for the girls' accent (`#EC4899`; pink-700 in light). The create-team step dots: the current step's number was white on green → near-black. Other steps' numbers and labels were 30% ink (2.6:1) → muted. The navbar's `rgba(10,10,10,…)` became `--bg`, so it is no longer a dark bar on the light page. The dashboard's one framer `whileHover` background (the Save button) is left — a hover tint, not text.
+- (d) Dark: three intended changes — CTA labels near-black (including the *disabled* Add Player button, whose label went from dim white to dim black), the green step dot's number, the muted step labels. The same run proved the `FG` refactor zero-diff: player, public and admin are pixel-identical in both appearances. Light: the navbar, the player rows, the age-group chips and both forms' fields were invisible and now read.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

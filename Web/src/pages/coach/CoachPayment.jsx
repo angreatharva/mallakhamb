@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, CalendarClock, AlertTriangle, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, SAFFRON_CTA, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
@@ -351,9 +351,9 @@ const CoachPayment = () => {
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}>
               {isAlreadySubmitted ? (
-                <Lock className="w-10 h-10" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                <Lock className="w-10 h-10" style={{ color: FG.brand }} aria-hidden="true" />
               ) : (
-                <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+                <CheckCircle className="w-10 h-10" style={{ color: FG.success }} aria-hidden="true" />
               )}
             </motion.div>
             <h2 className="text-2xl font-black text-white mb-3">
@@ -366,7 +366,7 @@ const CoachPayment = () => {
               }
             </p>
             {isAlreadySubmitted && (
-              <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+              <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                 <p className="text-white/60 text-sm">
                   To make any changes to your team, please contact the admin.
                 </p>
@@ -374,7 +374,7 @@ const CoachPayment = () => {
             )}
             <button onClick={() => navigate('/coach/dashboard')}
               className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
-              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+              style={SAFFRON_CTA}>
               Back to Dashboard
             </button>
           </div>
@@ -387,14 +387,14 @@ const CoachPayment = () => {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
         <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>Payment</p>
           <h1 className="text-xl font-black text-white mb-3">Per-player fee not set</h1>
           <p className="text-fg-muted text-sm mb-6 leading-relaxed">
             This competition does not have a valid per-player registration fee. Ask a super admin to edit the competition and set the fee, then try again.
           </p>
           <button type="button" onClick={() => navigate('/coach/dashboard')}
             className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
-            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            style={SAFFRON_CTA}>
             Back to Dashboard
           </button>
         </div>
@@ -416,9 +416,9 @@ const CoachPayment = () => {
         <div className="w-full max-w-md rounded-3xl border p-8 text-center" style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
             style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `2px solid ${alpha(COLORS.saffron, 0x40)}` }}>
-            <CalendarClock className="w-8 h-8" style={{ color: COLORS.saffron }} aria-hidden="true" />
+            <CalendarClock className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
           </div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>Payment</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>Payment</p>
           <h1 className="text-xl font-black text-white mb-3">
             {notOpen ? 'Registration has not opened yet' : 'Registration is closed'}
           </h1>
@@ -431,7 +431,7 @@ const CoachPayment = () => {
           </p>
           <button type="button" onClick={() => navigate('/coach/dashboard')}
             className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
-            style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+            style={SAFFRON_CTA}>
             Back to Dashboard
           </button>
         </div>
@@ -457,7 +457,7 @@ const CoachPayment = () => {
             Back to Dashboard
           </button>
           <div className="mb-8">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>
               Registration
             </p>
             <h1 className="text-3xl font-black text-white">Team Payment</h1>
@@ -476,7 +476,7 @@ const CoachPayment = () => {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center"
                   style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
-                  <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                  <Trophy className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-white font-bold">{team?.name}</h2>
@@ -515,7 +515,7 @@ const CoachPayment = () => {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center"
                   style={{ background: '#22C55E18' }}>
-                  <CreditCard className="w-5 h-5" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <CreditCard className="w-5 h-5" style={{ color: FG.success }} aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment Details</h2>
@@ -528,7 +528,7 @@ const CoachPayment = () => {
               {feeWindow.isLate && (
                 <div className="flex gap-3 mb-5 p-4 rounded-2xl"
                   style={{ background: `${alpha(COLORS.saffron, 0x12)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: FG.brand }} aria-hidden="true" />
                   <div>
                     <p className="text-sm font-bold text-white">Late fee applies</p>
                     <p className="text-fg-muted text-xs mt-1 leading-relaxed">
@@ -548,7 +548,7 @@ const CoachPayment = () => {
               )}
 
               {/* Fee breakdown */}
-              <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+              <div className="space-y-2 mb-6 p-4 rounded-2xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                 {team?.players?.length > 0 ? (
                   <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 mb-3">
                     {team.players.map((p, i) => (
@@ -579,7 +579,7 @@ const CoachPayment = () => {
                         (₹{feeWindow.lateFeePerPlayer.toLocaleString()} × {playerCount})
                       </span>
                     </span>
-                    <span style={{ color: COLORS.saffron }}>+₹{lateFeeTotal.toLocaleString()}</span>
+                    <span style={{ color: FG.brand }}>+₹{lateFeeTotal.toLocaleString()}</span>
                   </div>
                 )}
 
@@ -590,7 +590,7 @@ const CoachPayment = () => {
                       Discount code
                       <span className="text-fg-muted text-xs ml-2">({appliedDiscount.percent}% off)</span>
                     </span>
-                    <span style={{ color: '#22C55E' }}>
+                    <span style={{ color: FG.success }}>
                       −₹{(appliedDiscount.discountAmount ?? 0).toLocaleString()}
                     </span>
                   </div>
@@ -604,7 +604,7 @@ const CoachPayment = () => {
                         ₹{calculateTotal().toLocaleString()}
                       </span>
                     )}
-                    <span className="font-black text-lg" style={{ color: discountApplied ? '#22C55E' : COLORS.saffron }}>
+                    <span className="font-black text-lg" style={{ color: discountApplied ? FG.success : FG.brand }}>
                       ₹{payableTotal.toLocaleString()}
                     </span>
                   </span>
@@ -618,7 +618,7 @@ const CoachPayment = () => {
                     <div className="flex items-center justify-between gap-3 p-4 rounded-2xl"
                       style={{ background: '#22C55E10', border: '1px solid #22C55E35' }}>
                       <div className="flex items-center gap-2 min-w-0">
-                        <Tag className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                        <Tag className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-white truncate">
                             {appliedDiscount.percent}% off applied
@@ -634,7 +634,7 @@ const CoachPayment = () => {
                   ) : (
                     <div>
                       <label htmlFor="discount-code"
-                        className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: COLORS.saffron }}>
+                        className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brand }}>
                         Discount Code
                       </label>
                       <div className="flex gap-2">
@@ -649,13 +649,13 @@ const CoachPayment = () => {
                           disabled={checkingCode || processing}
                           onChange={(e) => setDiscountCode(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyDiscount(); } }}
-                          className="flex-1 min-w-0 rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] px-3.5 transition-all disabled:opacity-50"
-                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                          className="flex-1 min-w-0 rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] px-3.5 transition-all disabled:opacity-50"
+                          style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
                         />
                         <button type="button" onClick={handleApplyDiscount}
                           disabled={checkingCode || processing || !discountCode.trim()}
                           className="rounded-xl font-bold text-sm text-white px-4 min-h-[44px] flex-shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                          style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
+                          style={{ background: 'rgb(var(--ink) / 0.08)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
                           {checkingCode ? 'Checking…' : 'Apply'}
                         </button>
                       </div>
@@ -676,7 +676,7 @@ const CoachPayment = () => {
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: discountApplied
                     ? 'linear-gradient(135deg, #22C55E, #16A34A)'
-                    : `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                    : SAFFRON_CTA.background, color: SAFFRON_CTA.color }}
                   whileHover={processing ? {} : { scale: 1.01 }}
                   whileTap={processing ? {} : { scale: 0.98 }}>
                   {processing ? (
