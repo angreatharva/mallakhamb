@@ -7,7 +7,7 @@
  */
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { AlertTriangle, CheckCircle, Save, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, LogOut, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { AmbientOrbs } from '@/components/design-system/backgrounds';
@@ -875,3 +875,26 @@ LiveDot.propTypes = {
   connected: PropTypes.bool,
   compact: PropTypes.bool,
 };
+/**
+ * Log out, as every judge header draws it: icon-only for the phone header, labelled ("Logout" from sm up)
+ * elsewhere. Six hand copies before this; the labelled one in the slip and panel review was 36px on a touch
+ * screen from 640 to 1023 — tap-safe now, like the rest.
+ */
+export const JudgeLogoutButton = ({ onLogout, compact = false }) => (compact ? (
+  <button onClick={onLogout}
+    className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
+    style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
+    aria-label="Logout">
+    <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+  </button>
+) : (
+  <button onClick={onLogout}
+    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
+    style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
+    aria-label="Logout">
+    <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+    <span className="hidden sm:inline">Logout</span>
+  </button>
+));
+
+JudgeLogoutButton.propTypes = { onLogout: PropTypes.func.isRequired, compact: PropTypes.bool };

@@ -299,6 +299,11 @@ Only proven duplication is extracted, and each step must leave every screen pixe
   - their once-read `useReducedMotion` → the shared hook, which also follows a mid-session change.
 - **411 lines removed.** The guarded visual run is **pixel-identical**: public, admin, super-admin and judge, all widths, both appearances, 0 diffs. 388 tests pass.
 
+*8.2 — `JudgeLogoutButton`.*
+- The judge headers' six hand-copied Log out buttons → one component in `judgeShared`, in two variants: icon-only for the phone header, labelled elsewhere.
+- **Found:** the labelled copy in the slip's and panel review's desktop header had a bare `min-h-[36px]`, so it was 36px on a touch screen from 640 to 1023. The walk measures targets below 768 only, so it never saw it. It is `tap-safe` now, like the others.
+- **Verified:** the judge visual run is pixel-identical in dark. In light, 8 pixels moved (delta 4) at one width on the untouched profile page — antialiasing. The walk passes at 375 light and 768 dark with the steppers' tap areas answering.
+
 **Not extracted, on purpose:**
 - `design-system/index.jsx`'s own `GlassCard`/`FadeIn`/`GradientText` differ from the `cards/`, `animations/` and `ornaments/` versions, so merging them would change pixels.
 - An `AccountControls` cluster would restyle every shell's Log out. The shared piece the shells needed — `AppearanceMenu` — already exists.

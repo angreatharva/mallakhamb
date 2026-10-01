@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
+  Scale, User, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
@@ -20,7 +20,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
-import { J, JudgeAmbience } from './judgeShared';
+import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const JudgeTeamPlayers = () => {
@@ -405,13 +405,7 @@ const JudgeTeamPlayers = () => {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
           <AppearanceMenu />
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
-            style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
-            aria-label="Logout">
-            <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          <JudgeLogoutButton onLogout={handleLogout} />
           </div>
         </div>
       </header>

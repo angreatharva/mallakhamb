@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
+  Scale, Users, Trophy, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
   CalendarDays, Loader2, ClipboardList, Timer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +18,7 @@ import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { J, JudgeAmbience } from './judgeShared';
+import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -786,13 +786,7 @@ const JudgeDashboard = () => {
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
             </button>
-            <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
-              aria-label="Logout">
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+            <JudgeLogoutButton onLogout={handleLogout} />
           </div>
         </div>
       </header>

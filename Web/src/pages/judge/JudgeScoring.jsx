@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
+  Scale, User, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -28,6 +28,7 @@ import TimeKeeperScoring from './TimeKeeperScoring';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
   playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES,
+  JudgeLogoutButton,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -706,12 +707,7 @@ const JudgeSlip = () => {
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
               <AppearanceMenu />
-              <button onClick={handleLogout}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
-                style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
-                aria-label="Logout">
-                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
+              <JudgeLogoutButton onLogout={handleLogout} compact />
             </div>
           </div>
 
@@ -728,13 +724,7 @@ const JudgeSlip = () => {
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <LiveDot connected={isConnected} />
             <AppearanceMenu />
-            <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
-              aria-label="Logout">
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Logout</span>
-            </button>
+            <JudgeLogoutButton onLogout={handleLogout} />
           </div>
         </div>
       </header>
