@@ -178,6 +178,24 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 
 *6.2 — one counted scroll lock.* Only one dialog of 19 froze the page behind it, and the three menus (`Navbar`, `Home`, `UnifiedDashboard`) each wrote `body.style.overflow` themselves — so closing a menu under an open dialog handed scrolling back beneath it. The menus now call `useBodyScrollLock`. Every `.modal-overlay` mounts `<BodyScrollLock />` (the hook as an element) as its first child, 14 sites. The lock lives exactly as long as the overlay — through its exit animation — and no hook had to move above an early return. `SuperAdminManagement`'s dialogs already held it. `useBodyScrollLock.test.js` pins the count: a menu closing under an open dialog leaves the page frozen. Checked live: the Home menu locks and releases. `modal-scroll.spec.js` passes. The judge area is pixel-identical apart from the two Phase 5 exit targets.
 
+*6.1 — the last hand-rolled dialog.*
+- Three of v1's four have since moved onto `.modal-overlay`. The rest of the plan's list:
+  - `Navbar`'s full-screen layer is a menu backdrop;
+  - the two payment pages' `fixed inset-0` layers are `pointer-events-none` orb clips;
+  - the slip's "Loading your submitted score…" cover is a status, not a dialog.
+- That leaves the COP viewer. It is full-screen by design (a PDF wants every pixel), so it keeps its own frame. What it lacked was a dialog's contract → `role="dialog"`, `aria-modal`, the name "Code of Points", `<BodyScrollLock />`, and a `tap-safe` close.
+- It sits on a 92% black backdrop, so it is a dark island (`data-appearance="dark"`): its header text was ink on black in light.
+
+*6.3 — the one table that still scrolls sideways.*
+- `SuperAdminManagement`'s `DarkTable` already stacks below `md`, and the tablet audit finds nothing above it.
+- `AdminTransactions`' 11-column table is now mouse-only (Phase 5: touch gets cards). It is the data-dense case D2 keeps as a table, and it overflows on purpose → `data-allow-overflow`, plus `tabIndex=0`, `role="region"` and a name, so a keyboard can scroll it (WCAG 2.1.1).
+
+*6.4 — the slip walk, both appearances.*
+- `responsive-judge-walk.spec.js` gained `WALK_APPEARANCE`/`WALK_AGE` (Phase 5) and a COP step: it opens the viewer, shoots it, asserts the slip is frozen behind it, closes it, and asserts the slip scrolls again.
+- Fixed a race: the walk waited for "Loading players" to be *hidden*, which returns at once if the spinner has not appeared yet. On a slow database it read an empty roster as "all finalized" and never reached the slip. It now waits for the rows.
+- Results at 375 and 768, light and dark: the slip is reached, the three tabs open, nothing is trapped under the 77px Submit bar, and the COP viewer locks and releases.
+- **Open:** at 375 the Difficulty steppers' − buttons are 54×29. That passes WCAG 2.5.8 AA (24px) but not this plan's 44px touch floor. Raising them grows each class row of the slip by about 15px. The slip is a judge-trial-tuned screen, so that is the owner's call; a hit area expanded without moving the layout is the alternative.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

@@ -284,7 +284,7 @@ const AdminTransactions = () => {
               })}
             </div>
 
-            <div className="overflow-x-auto hidden mouse:block">
+            <div className="overflow-x-auto hidden mouse:block" data-allow-overflow tabIndex={0} role="region" aria-label="Transactions (scrolls sideways)">
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>

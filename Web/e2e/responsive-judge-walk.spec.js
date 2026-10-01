@@ -143,7 +143,13 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
     const team = page.getByRole('button', { name: /SGAM-/i }).first();
     if (!(await team.count())) continue;
     await team.click();
-    await page.getByText(/Loading players/i).waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    /*
+     * Wait for the ROWS, not for the spinner to go. Waiting for "Loading
+     * players" to be hidden returns at once when it has not appeared yet, so
+     * on a slow database the walk read an empty list as "all finalized".
+     */
+    await page.locator('button').filter({ hasText: /Male|Female/ }).first()
+      .waitFor({ timeout: 30_000 }).catch(() => {});
     await page.waitForTimeout(800);
     if (!reached) await shoot('3-athletes');
 
@@ -238,6 +244,25 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
       await button.click().catch(() => {});
       await page.waitForTimeout(600);
       await shoot(`5-${i + 1}-tab-${tab.replace(/\W/g, '')}`);
+    }
+
+    /*
+     * The COP viewer is the slip's one full-screen dialog. Opened, it must
+     * freeze the slip behind it (the counted body lock) and read in either
+     * appearance (it is a dark island); closed, the slip must scroll again.
+     */
+    const cop = page.getByRole('button', { name: /View COP Rules Reference/i }).first();
+    if (await cop.count()) {
+      await cop.click().catch(() => {});
+      const dialog = page.getByRole('dialog', { name: 'Code of Points' });
+      await dialog.waitFor({ timeout: 10_000 });
+      await shoot('7-cop-viewer');
+      expect(await page.evaluate(() => document.body.style.overflow), 'the slip scrolls behind the COP viewer').toBe('hidden');
+      await page.getByRole('button', { name: 'Close COP PDF' }).click();
+      await dialog.waitFor({ state: 'detached', timeout: 10_000 });
+      expect(await page.evaluate(() => document.body.style.overflow), 'the slip stays frozen after the COP viewer closed').not.toBe('hidden');
+    } else {
+      console.log('  COP reference button not found');
     }
   } else {
     /*

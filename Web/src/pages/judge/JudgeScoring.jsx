@@ -30,6 +30,7 @@ import {
   playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
 const CopPdfModal = ({ isOpen, onClose }) => {
@@ -39,12 +40,17 @@ const CopPdfModal = ({ isOpen, onClose }) => {
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[9999] flex flex-col"
+          data-appearance="dark"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Code of Points"
           style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
         >
+          <BodyScrollLock />
           {/* Modal header */}
           <div
             className="flex items-center justify-between px-4 sm:px-6 py-3 flex-shrink-0 border-b"
@@ -64,7 +70,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
             </div>
             <motion.button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10"
+              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10"
               style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
               whileTap={{ scale: 0.9 }}
               aria-label="Close COP PDF"
