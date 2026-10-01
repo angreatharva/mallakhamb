@@ -15,6 +15,7 @@ import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
 import PerformancePanel from '@/components/performance/PerformancePanel';
 import { levelLabel } from '@/utils/competition/levels';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
@@ -460,6 +461,7 @@ const PlayerDashboard = () => {
               e.stopPropagation();
             }}
           >
+              <BodyScrollLock />
             <motion.div
               className="w-full max-w-2xl rounded-3xl border p-6 md:p-8 modal-panel"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}

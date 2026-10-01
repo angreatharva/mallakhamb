@@ -165,6 +165,19 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
   Status classes `text-purple-200/300/400`, `text-green-400`, `text-red-500` gained deep light shades through `dark:`. `JudgeProfile`'s labels were the role colour at 56% → `FG.accent`. Hard-coded dark surfaces: the category and assignment modals (`bg-[#0f0f0f]`), the mismatch/tolerance/edit modals (`#0E0E0E`, `#0D0D0D`) → `surface`. The phone slip's tab track (`bg-black/40`, a grey band in light) → `bg-bg/40`. `ThemedSelect`'s native options (`bg-gray-900` with ink text: dark on dark in light) → `bg-surface`. The stopwatch face is a dark island (`data-appearance="dark"`): black in both appearances, as §14.7 specifies. The score filters' labels: saffron (2.86:1 in light) → `FG.brand`, 45% ink → muted.
 - (d) Dark, every judge route: two changes. The modal panels moved from `#0f0f0f` to `#111` (exactly 2 levels), and the profile labels were raised. Public and admin scores: the filter labels went from 45% to muted. Light: the category modal, which was a dark card with an invisible title, is a light card now. **The slip itself** is reached through `responsive-judge-walk.spec.js` (now `WALK_APPEARANCE` and `WALK_AGE`; the TRIALS judge sits on Male / Above 18 / Competition I, which neither default category covers). At 375 in light, the three tabs, the pinned live score and the Submit footer all read; the walk passes at 375 light and 768 dark.
 
+**Phase 5 exit.**
+- `audit:tablet` (Chromium, all six areas): portrait 768/820/834/1024 and landscape 1024×768. Its only findings were the judge category modals' unnamed 32px close ✕ and `JudgeProfile`'s 36px Change photo — both → `tap-safe`, the ✕ named, the photo icon `snow` on its role fill. Clean after that.
+- No `${X}NN` hex-plus-byte concatenation is left in `src`; `AmbientOrbs`, the last one, now tints through `alpha()`, byte-identical.
+- "`text-white` only where `snow` was meant" stays with the Phase 9 rename, as §14.5 planned.
+- WebKit device projects follow with Phase 6.
+- Two operational notes:
+  - a run is void if the API loses Atlas (here `getaddrinfo ENOTFOUND` mid-run), which shows as "Authentication failed" toasts and "0 competitions". Check the API's log before reading a surprising diff.
+  - `appearance.test.js`'s timed transition release failed once under full-suite load and passed alone and on re-run.
+
+### Phase 6 log
+
+*6.2 — one counted scroll lock.* Only one dialog of 19 froze the page behind it, and the three menus (`Navbar`, `Home`, `UnifiedDashboard`) each wrote `body.style.overflow` themselves — so closing a menu under an open dialog handed scrolling back beneath it. The menus now call `useBodyScrollLock`. Every `.modal-overlay` mounts `<BodyScrollLock />` (the hook as an element) as its first child, 14 sites. The lock lives exactly as long as the overlay — through its exit animation — and no hook had to move above an early return. `SuperAdminManagement`'s dialogs already held it. `useBodyScrollLock.test.js` pins the count: a menu closing under an open dialog leaves the page frozen. Checked live: the Home menu locks and releases. `modal-scroll.spec.js` passes. The judge area is pixel-identical apart from the two Phase 5 exit targets.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

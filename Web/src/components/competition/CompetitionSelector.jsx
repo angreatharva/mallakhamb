@@ -8,6 +8,7 @@ import { logger } from '@/infrastructure/logger';
 import { COLORS, FG, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 const statusColors = {
@@ -294,6 +295,7 @@ const CompetitionSelector = ({ userType }) => {
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
+              <BodyScrollLock />
             <motion.div
               className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
               style={{ background: 'rgb(var(--surface))', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}

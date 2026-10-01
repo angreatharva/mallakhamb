@@ -11,6 +11,7 @@ import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -294,6 +295,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
         style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onCancel()}>
+        <BodyScrollLock />
         <motion.div className="w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
           style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
           initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}

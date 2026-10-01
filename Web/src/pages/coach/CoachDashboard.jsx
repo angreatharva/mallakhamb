@@ -19,6 +19,7 @@ import { FadeIn } from '@/components/design-system';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const CoachDashboard = () => {
   const navigate = useNavigate();
@@ -844,6 +845,7 @@ const CoachDashboard = () => {
         {showTeamSummary && (
           <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <BodyScrollLock />
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowTeamSummary(false)} />
             <motion.div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border modal-panel"
@@ -935,6 +937,7 @@ const CoachDashboard = () => {
         {showSubmitWarning && (
           <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <BodyScrollLock />
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowSubmitWarning(false)} />
             <motion.div className="relative w-full max-w-md rounded-3xl border modal-panel"
@@ -992,6 +995,7 @@ const CoachDashboard = () => {
         {showAddPlayer && (
           <motion.div className="modal-overlay z-50"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <BodyScrollLock />
             <motion.div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={handleCloseModal} />
             <motion.div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border modal-panel"

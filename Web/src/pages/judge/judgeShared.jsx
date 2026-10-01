@@ -19,6 +19,7 @@ import {
 } from '@/utils/scoring/scoringPropTypes';
 import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
 import { roundExecution } from '@/utils/scoring/copRules';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export const SCORING_PATH = '/judge/scoring';
 export const PANEL_REVIEW_PATH = '/judge/scoring/panel-review';
@@ -282,6 +283,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
+            <BodyScrollLock />
           <motion.div
             className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
             style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(239,68,68,0.4)' }}
@@ -459,6 +461,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
+            <BodyScrollLock />
           <motion.div
             className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
             style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(245,158,11,0.45)' }}
@@ -650,6 +653,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
+            <BodyScrollLock />
           <motion.div
             className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel"
             style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}

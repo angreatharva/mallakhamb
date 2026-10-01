@@ -6,6 +6,7 @@ import { useCompetition } from '@/contexts/CompetitionContext';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
@@ -24,10 +25,7 @@ const Navbar = ({ user, userType, onLogout }) => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobileMenuOpen]);
+  useBodyScrollLock(isMobileMenuOpen);
 
   useEffect(() => {
     const handleResize = () => {

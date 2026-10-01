@@ -244,11 +244,11 @@ const JudgeProfileInner = () => {
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 w-9 h-9 max-md:w-11 max-md:h-11 rounded-xl flex items-center justify-center transition-transform hover:scale-105"
+                className="absolute -bottom-2 -right-2 w-9 h-9 max-md:w-11 max-md:h-11 tap-safe rounded-xl flex items-center justify-center transition-transform hover:scale-105"
                 style={{ background: theme.colors.primary }}
                 aria-label="Change photo"
               >
-                <Camera className="w-4 h-4 text-white" />
+                <Camera className="w-4 h-4 text-snow" aria-hidden="true" />
               </button>
               <input
                 ref={photoInputRef}

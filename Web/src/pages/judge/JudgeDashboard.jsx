@@ -21,6 +21,7 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import { JudgeAmbience } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -1007,6 +1008,7 @@ const JudgeDashboard = () => {
           <motion.div 
             className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BodyScrollLock />
             
             <motion.div 
               className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
@@ -1017,8 +1019,8 @@ const JudgeDashboard = () => {
               {selectedCompetitionType && isSelectionComplete && (
                 <button 
                   onClick={() => setShowModal(false)}
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
-                  <X className="w-4 h-4" />
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors" aria-label="Close">
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
 
@@ -1191,6 +1193,7 @@ const JudgeDashboard = () => {
           <motion.div
             className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BodyScrollLock />
             <motion.div
               className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
@@ -1202,8 +1205,8 @@ const JudgeDashboard = () => {
                 <button
                   onClick={() => setShowRoleModal(false)}
                   aria-label="Close"
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
-                  <X className="w-4 h-4" />
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
 

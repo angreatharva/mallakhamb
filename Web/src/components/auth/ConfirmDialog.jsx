@@ -5,6 +5,7 @@ import { logger } from '@/infrastructure/logger';
 import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useResponsive } from '@/hooks/useResponsive';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 const ConfirmDialog = ({
@@ -71,6 +72,7 @@ const ConfirmDialog = ({
           aria-labelledby="confirm-dialog-title"
           aria-describedby="confirm-dialog-message"
         >
+            <BodyScrollLock />
           {/* Backdrop */}
           <motion.div
             className="absolute inset-0"

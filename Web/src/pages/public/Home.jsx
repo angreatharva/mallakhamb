@@ -13,6 +13,7 @@ import BHALogo from '../../assets/BHA.png';
 // Import from unified design system
 import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, FG, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;
@@ -245,10 +246,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = isMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMenuOpen]);
+  useBodyScrollLock(isMenuOpen);
 
   const navLinks = [
     { to: '/', label: 'Home' },

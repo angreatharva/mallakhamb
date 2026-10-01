@@ -7,6 +7,7 @@ import { logger } from '@/infrastructure/logger';
 import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -358,6 +359,7 @@ const AdminTransactions = () => {
             exit={{ opacity: 0 }}
             onClick={closePlayersModal}
           >
+              <BodyScrollLock />
             <motion.div
               className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden modal-panel"
               style={{ 

@@ -37,6 +37,7 @@ import { StatCard } from '../../components/design-system/cards/StatCard';
 import { FadeIn } from '../../components/design-system/animations/FadeIn';
 import { useReducedMotion } from '../../components/design-system/animations/useReducedMotion';
 import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ─── Age group label helper ───────────────────────────────────────────────────
 const ageLabel = (ag) => ({
@@ -292,10 +293,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   }, []);
 
   // Mobile menu body scroll lock
-  useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [mobileMenuOpen]);
+  useBodyScrollLock(mobileMenuOpen);
 
   // Fetch data based on active tab
   useEffect(() => {
