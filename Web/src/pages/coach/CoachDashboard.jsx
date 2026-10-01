@@ -590,7 +590,7 @@ const CoachDashboard = () => {
                 )}
                 <span className="text-white/70 text-sm truncate">
                   {player.player.firstName} {player.player.lastName}
-                  {apparatusLabel(player.apparatus) ? <span className="ml-2 text-xs opacity-60">({apparatusLabel(player.apparatus)})</span> : null}
+                  {apparatusLabel(player.apparatus) ? <span className="ml-2 text-xs text-fg-muted">({apparatusLabel(player.apparatus)})</span> : null}
                 </span>
               </div>
               <button
@@ -892,7 +892,7 @@ const CoachDashboard = () => {
                                 ? gPlayers.map((p, i) => (
                                     <p key={i} className="text-fg-muted text-xs">
                                       {p.player.firstName} {p.player.lastName}
-                                      {apparatusLabel(p.apparatus) ? <span className="opacity-60 ml-1">({apparatusLabel(p.apparatus)})</span> : null}
+                                      {apparatusLabel(p.apparatus) ? <span className="ml-1">({apparatusLabel(p.apparatus)})</span> : null}
                                     </p>
                                   ))
                                 : <p className="text-fg-muted text-xs italic">No players</p>}

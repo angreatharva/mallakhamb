@@ -196,6 +196,47 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 - Results at 375 and 768, light and dark: the slip is reached, the three tabs open, nothing is trapped under the 77px Submit bar, and the COP viewer locks and releases.
 - **Open:** at 375 the Difficulty steppers' − buttons are 54×29. That passes WCAG 2.5.8 AA (24px) but not this plan's 44px touch floor. Raising them grows each class row of the slip by about 15px. The slip is a judge-trial-tuned screen, so that is the owner's call; a hit area expanded without moving the layout is the alternative.
 
+### Phase 7 log
+
+`e2e/desktop-fold.spec.js` measures every route at 1280×720 and 1366×768: page height in screens, and where the first primary control (a field, a select, a table, a picker) sits.
+- **No working screen puts its primary control below the fold** at either size. Every form, filter and table starts within the first screen.
+- Four pages run past two screens:
+  - Home — 6.9 screens, a marketing page, long by design;
+  - the judge profile — 1.95;
+  - the player dashboard — 1.77;
+  - the coach dashboard — 5.1.
+- The coach dashboard's length is its content: a 60-athlete roster in two gender columns, ten age groups of six. At 1366 the apparatus note already truncates, so more columns would truncate further. Shortening it means collapsing age groups, which changes how a coach reads their squad — a flow change, so it is not made here.
+- **Decision:** no Phase 7 layout change. The 1440 container step stays: it is pixel-identical today and gives wide monitors room for the data tables.
+
+### Phase 9 log
+
+*9.1 — the contrast gate.* `e2e/contrast-audit.spec.js` checks WCAG 1.4.3 on every visible text element of every route, in either appearance.
+- **Method:** it composites the text colour (with every ancestor's opacity) over its stack of backgrounds and checks 4.5:1, or 3:1 for large text.
+- **Exclusions:** disabled controls are skipped (WCAG exempts them). Text over gradients, photos or a dark island without its own background is counted as unmeasured, never guessed.
+- **Result:** at 1366 and 375 in Chromium, **88 of 88 route/width checks pass in light and 88 of 88 in dark** (44 routes × 2 widths).
+- **What the first sweep found, and the fixes** —
+  - *Light:*
+    - Brand text on its own saffron tint (active tabs, Verify, the Level Selection pill, "Closed" pills): 4.0–4.5 with `#C2410C` → light `--brand-fg`/`--brand-fg-soft` `#B43408` (4.7 on the deepest tint, 6.1 on white).
+    - Amber "upcoming" pills: 3.99 → light `--brand-gold-fg` amber-800, as the medal gold.
+    - The level cards' count chip: raw saffron-light 1.9:1, and 35% ink → tokens.
+    - `ResponsiveFilters`, never migrated: literal white text, **white on white** in light (Admin Teams' filter labels) → the `ResponsiveTable` treatment.
+    - The super-admin stat labels at 80% of their colour (3.4–4.3) → the full token.
+    - The performance tabs: raw saffron-light labels and sub-labels faded a further 30% → tokens.
+    - The coach roster's apparatus note: muted, then faded 40% more (2.8 light, ~2.5 dark) → muted.
+  - *Dark* (the original palette's near-misses):
+    - The admin/judge violet `#8B5CF6` as text: 4.45 on `#111`.
+    - The public/info/category blue `#3B82F6` on tints: 4.17–4.49.
+    - Fix: a per-role `--role-dark-fg` now feeds the dark `--accent-fg` — violet-400 for admin/judge, blue-400 for the public default, unchanged for player, coach and super admin. Dark `--info-fg`, `--cat-blue` and `--cat-violet` step up one shade. **Fills keep their colours**, since `--accent` still reads `--role-dark`.
+  - The 404 page's 12%-ink numeral is a watermark → `aria-hidden`; the heading says it in words.
+- **Visual run** (all six areas, both appearances, checkout stable):
+  - Dark moved only where those changes reach, deltas 23–105:
+    - violet text on the admin/judge portals and screens;
+    - blue chips;
+    - the empty level count;
+    - the stat labels, the filters, the performance tabs and the coach notes.
+  - Light moved wherever brand text appears (the deeper `--brand-fg`).
+  - Admin Teams' filter labels and hint read in light; they were invisible.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

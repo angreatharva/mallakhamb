@@ -93,7 +93,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
             <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
               style={{
                 background: isEmpty ? 'rgb(var(--ink) / 0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
-                color: isEmpty ? 'rgb(var(--ink) / 0.35)' : COLORS.saffronLight,
+                color: isEmpty ? 'var(--fg-muted)' : FG.brandSoft,
               }}>
               {count === 1 ? '1 competition' : `${count} competitions`}
             </span>

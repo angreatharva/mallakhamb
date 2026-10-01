@@ -28,9 +28,11 @@ export default function NotFound() {
       style={{ background: 'rgb(var(--bg))' }}
     >
       <div className="text-center max-w-md">
+        {/* A watermark at 12% ink, so decoration (WCAG 1.4.3 exempts it); the heading says it in words. */}
         <p
           className="text-7xl font-black tracking-tight mb-2"
           style={{ color: 'rgb(var(--ink) / 0.12)' }}
+          aria-hidden="true"
         >
           404
         </p>

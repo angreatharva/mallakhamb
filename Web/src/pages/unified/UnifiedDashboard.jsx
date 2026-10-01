@@ -106,7 +106,7 @@ const CompStatCard = ({ label, value, color, delay = 0 }) => (
   <FadeIn delay={delay}>
     <div className="p-5 rounded-2xl border flex flex-col gap-1"
       style={{ background: `${alpha(color, 0x08)}`, borderColor: `${alpha(color, 0x25)}` }}>
-      <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: `${alpha(color, 0xCC)}` }}>{label}</p>
+      <p className="text-xs font-semibold tracking-wide uppercase" style={{ color }}>{label}</p>
       <p className="text-3xl font-black" style={{ color }}>{value ?? 0}</p>
     </div>
   </FadeIn>

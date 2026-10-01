@@ -366,13 +366,13 @@ const PerformancePanel = ({
                   style={{
                     background: isActive ? `${alpha(COLORS.saffron, 0x15)}` : 'rgb(var(--ink) / 0.03)',
                     borderColor: isActive ? `${alpha(COLORS.saffron, 0x50)}` : 'rgb(var(--ink) / 0.08)',
-                    color: isActive ? COLORS.saffronLight : 'rgb(var(--ink) / 0.5)',
+                    color: isActive ? FG.brandSoft : 'var(--fg-muted)',
                   }}
                 >
                   <span className="text-sm font-bold leading-tight">
                     {COMP_TYPE_LABELS[ct] || ct}
                   </span>
-                  <span className="text-[10px] leading-tight opacity-70 hidden sm:block">
+                  <span className="text-[10px] leading-tight text-fg-muted hidden sm:block">
                     {COMP_TYPE_SUBLABELS[ct] || ''}
                   </span>
                 </button>
