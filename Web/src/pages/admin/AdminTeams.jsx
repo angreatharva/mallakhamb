@@ -10,7 +10,7 @@ import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { logger } from '@/infrastructure/logger';
 import { ResponsiveTeamFilters } from '../../components/responsive/ResponsiveFilters';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, FG, alpha } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -46,15 +46,15 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 
 const DarkSearch = ({ value, onChange, placeholder }) => (
   <div className="relative">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
-      <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
+      <button onClick={() => onChange('')} className="absolute right-1 mouse:right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors tap-safe mouse:min-h-[28px] mouse:min-w-[28px] flex items-center justify-center" aria-label="Clear search">
         <X className="w-3.5 h-3.5 text-fg-muted" />
       </button>
     )}
@@ -90,7 +90,7 @@ const TeamModal = ({ team, onClose }) => (
           exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
           <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Team Details</p>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Team Details</p>
               <h3 className="text-xl font-black text-white mt-0.5">{team.team?.name || team.name}</h3>
             </div>
             <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
@@ -98,8 +98,8 @@ const TeamModal = ({ team, onClose }) => (
             </button>
           </div>
           <div className="p-6 space-y-6">
-            <div className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Team Information</p>
+            <div className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Team Information</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div><span className="text-fg-muted">Coach: </span><span className="text-white">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
                 {team.coach?.email && <div><span className="text-fg-muted">Email: </span><span className="text-white">{team.coach.email}</span></div>}
@@ -112,11 +112,11 @@ const TeamModal = ({ team, onClose }) => (
               </div>
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Players ({team.players?.length || 0})</p>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Players ({team.players?.length || 0})</p>
               {team.players?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {team.players.map((player, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                       <p className="font-bold text-white text-sm">{player.firstName} {player.lastName}</p>
                       <div className="mt-2 space-y-1 text-xs text-fg-muted">
                         <p>Gender: <span className="text-white/70">{player.gender}</span></p>
@@ -129,7 +129,7 @@ const TeamModal = ({ team, onClose }) => (
                           </span></p>
                         )}
                       </div>
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
                         {player.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
@@ -145,9 +145,9 @@ const TeamModal = ({ team, onClose }) => (
           </div>
           <div className="flex justify-end p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <motion.button onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all"
-              style={{ background: ADMIN_COLORS.darkPanel, color: 'rgba(255,255,255,0.7)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
-              whileHover={{ color: '#fff' }} whileTap={{ scale: 0.97 }}>
+              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all text-white/70 hover:text-white"
+              style={{ background: ADMIN_COLORS.darkPanel, border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
+              whileTap={{ scale: 0.97 }}>
               Close
             </motion.button>
           </div>
@@ -263,17 +263,17 @@ const Teams = () => {
       <TeamModal team={selectedTeam} onClose={() => setSelectedTeam(null)} />
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Teams Management</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Teams Management</p>
           <h2 className="text-2xl font-black text-white mb-6">All Teams</h2>
 
           {isSuperAdmin && (
             <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
-              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
+              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                Competition <span style={{ color: FG.danger }}>*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading competitions…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${alpha(ADMIN_COLORS.saffron, 0x80)}` }}>Select a competition to enable filters.</p>}
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: FG.brandSoft }}>Select a competition to enable filters.</p>}
             </div>
           )}
 
@@ -300,7 +300,7 @@ const Teams = () => {
               <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
               {filteredTeams.length === 0 && searchTerm ? (
                 <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                  action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                  action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
               ) : (
                 <ResponsiveTeamTable teams={filteredTeams} onTeamClick={fetchTeamDetails} searchTerm={searchTerm} />
               )}

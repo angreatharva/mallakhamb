@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 
@@ -42,11 +42,11 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 
 const statusStyle = (status) => {
   const map = {
-    completed: { bg: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green },
-    pending: { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold },
-    failed: { bg: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: ADMIN_COLORS.red },
+    completed: { bg: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success },
+    pending: { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold },
+    failed: { bg: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger },
   };
-  return map[status] || { bg: 'rgba(255,255,255,0.08)', color: 'var(--fg-muted)' };
+  return map[status] || { bg: 'rgb(var(--ink) / 0.08)', color: 'var(--fg-muted)' };
 };
 
 /**
@@ -161,18 +161,18 @@ const AdminTransactions = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
-                <ReceiptIndianRupee className="w-5 h-5" style={{ color: ADMIN_COLORS.purple }} />
+                <ReceiptIndianRupee className="w-5 h-5" style={{ color: DATA_COLORS.violet }} />
               </div>
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Transactions</p>
+                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Transactions</p>
                 <h2 className="text-xl font-black text-white">Payment History</h2>
               </div>
             </div>
 
             {isSuperAdmin && (
               <div className="sm:w-64">
-                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                  Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                  Competition <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <Dropdown
                   options={competitions.map(c => ({
@@ -220,7 +220,7 @@ const AdminTransactions = () => {
               * everything else, so nothing is hidden on mobile; the table below
               * is untouched, so the desktop view is exactly as it was.
               */}
-            <div className="md:hidden flex flex-col gap-3">
+            <div className="flex flex-col gap-3 mouse:hidden">
               {transactions.map((tx) => {
                 const row = deriveTransactionRow(tx);
                 const { bg, color } = statusStyle(tx.paymentStatus);
@@ -268,7 +268,7 @@ const AdminTransactions = () => {
                         className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg min-h-[44px] transition-colors"
                         style={{
                           background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
-                          color: ADMIN_COLORS.purple,
+                          color: DATA_COLORS.violet,
                           border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`,
                         }}
                       >
@@ -283,7 +283,7 @@ const AdminTransactions = () => {
               })}
             </div>
 
-            <div className="overflow-x-auto hidden md:block">
+            <div className="overflow-x-auto hidden mouse:block">
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
@@ -319,7 +319,7 @@ const AdminTransactions = () => {
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105"
                               style={{ 
                                 background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
-                                color: ADMIN_COLORS.purple,
+                                color: DATA_COLORS.violet,
                                 border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`
                               }}
                             >
@@ -374,7 +374,7 @@ const AdminTransactions = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
-                      <Users className="w-5 h-5" style={{ color: ADMIN_COLORS.purple }} />
+                      <Users className="w-5 h-5" style={{ color: DATA_COLORS.violet }} />
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-white">Team Players</h3>
@@ -383,10 +383,11 @@ const AdminTransactions = () => {
                   </div>
                   <button
                     onClick={closePlayersModal}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors tap-safe"
+                    style={{ background: 'rgb(var(--ink) / 0.05)' }}
+                    aria-label="Close"
                   >
-                    <span className="text-white/60 text-xl">×</span>
+                    <span className="text-white/60 text-xl" aria-hidden="true">×</span>
                   </button>
                 </div>
               </div>
@@ -405,7 +406,7 @@ const AdminTransactions = () => {
                         key={idx}
                         className="p-4 rounded-xl border"
                         style={{ 
-                          background: 'rgba(255,255,255,0.02)', 
+                          background: 'rgb(var(--ink) / 0.02)', 
                           borderColor: ADMIN_COLORS.darkBorderSubtle 
                         }}
                         initial={{ opacity: 0, x: -20 }}
@@ -418,22 +419,22 @@ const AdminTransactions = () => {
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: `${alpha(ADMIN_COLORS.saffron, 0x20)}`, 
-                                color: ADMIN_COLORS.saffron 
+                                color: FG.brand 
                               }}>
                                 {player.ageGroup}
                               </span>
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: player.gender === 'Male' 
-                                  ? `${ADMIN_COLORS.blue || '#3B82F6'}20` 
+                                  ? `${alpha(ADMIN_COLORS.blue, 0x20)}` 
                                   : `${alpha(ADMIN_COLORS.purple, 0x20)}`,
                                 color: player.gender === 'Male' 
-                                  ? ADMIN_COLORS.blue || '#3B82F6'
-                                  : ADMIN_COLORS.purple
+                                  ? FG.info
+                                  : DATA_COLORS.violet
                               }}>
                                 {player.gender}
                               </span>
                               {player.apparatus && (Object.keys(player.apparatus).length > 0 || typeof player.apparatus === 'string') && (
-                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)' }}>
+                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--ink) / 0.05)', color: 'rgb(var(--ink) / 0.7)' }}>
                                   {typeof player.apparatus === 'object' ? Object.values(player.apparatus).flat().join(', ') : player.apparatus}
                                 </span>
                               )}

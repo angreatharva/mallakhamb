@@ -36,7 +36,7 @@ import { DarkCard } from '../../components/design-system/cards/DarkCard';
 import { StatCard } from '../../components/design-system/cards/StatCard';
 import { FadeIn } from '../../components/design-system/animations/FadeIn';
 import { useReducedMotion } from '../../components/design-system/animations/useReducedMotion';
-import { alpha } from '@/styles/tokens';
+import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
 
 // ─── Age group label helper ───────────────────────────────────────────────────
 const ageLabel = (ag) => ({
@@ -59,7 +59,7 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
           const key = `${item.gender}_${item.ageGroup}_${compType}`;
           const isStarting = startingCompTypes[key] || false;
           const judgeNames = data.judges?.map(j => j.name).join(', ') || 'No judges assigned';
-          const statusColor = data.isStarted ? '#3B82F6' : data.hasMinimumJudges ? '#22C55E' : '#EF4444';
+          const statusColor = data.isStarted ? FG.info : data.hasMinimumJudges ? FG.success : FG.danger;
           
           return (
             <div key={compType} className="rounded-xl p-3 border"
@@ -80,8 +80,8 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
                   <motion.button
                     onClick={() => onStart(item.gender, item.ageGroup, compType)}
                     disabled={isStarting || !data.hasMinimumJudges || loadingJudgesSummary}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 min-h-[32px] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                    style={{ background: data.hasMinimumJudges ? '#22C55E' : 'rgba(255,255,255,0.05)', color: '#fff' }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 tap-safe mouse:min-h-[32px] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    style={{ background: data.hasMinimumJudges ? '#22C55E' : 'rgb(var(--ink) / 0.05)', color: data.hasMinimumJudges ? '#0A0A0A' : FG.ink }}
                     whileHover={data.hasMinimumJudges ? { scale: 1.03 } : {}}
                     whileTap={data.hasMinimumJudges ? { scale: 0.97 } : {}}
                   >
@@ -468,17 +468,17 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       {/* Stats Grid */}
       <div>
         <FadeIn>
-          <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: theme.colors.primary }}>
+          <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: FG.accent }}>
             Overview
           </p>
         </FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <StatCard icon={ShieldHalf} label="Total Teams" value={stats?.totalTeams} color="#8B5CF6" delay={0} />
-          <StatCard icon={Users} label="Total Participants" value={stats?.totalParticipants} color={theme.colors.primary} delay={0.05} />
-          <StatCard icon={Mars} label="Boys Teams" value={stats?.boysTeams} color="#3B82F6" delay={0.1} />
-          <StatCard icon={Venus} label="Girls Teams" value={stats?.girlsTeams} color="#EC4899" delay={0.15} />
-          <StatCard icon={Target} label="Total Boys" value={stats?.totalBoys} color="#3B82F6" delay={0.2} />
-          <StatCard icon={Target} label="Total Girls" value={stats?.totalGirls} color="#EC4899" delay={0.25} />
+          <StatCard icon={ShieldHalf} label="Total Teams" value={stats?.totalTeams} color={DATA_COLORS.violet} delay={0} />
+          <StatCard icon={Users} label="Total Participants" value={stats?.totalParticipants} color={FG.accent} delay={0.05} />
+          <StatCard icon={Mars} label="Boys Teams" value={stats?.boysTeams} color={DATA_COLORS.blue} delay={0.1} />
+          <StatCard icon={Venus} label="Girls Teams" value={stats?.girlsTeams} color={DATA_COLORS.pink} delay={0.15} />
+          <StatCard icon={Target} label="Total Boys" value={stats?.totalBoys} color={DATA_COLORS.blue} delay={0.2} />
+          <StatCard icon={Target} label="Total Girls" value={stats?.totalGirls} color={DATA_COLORS.pink} delay={0.25} />
         </div>
       </div>
 
@@ -489,7 +489,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           <div className="rounded-2xl border p-6"
             style={{ background: theme.colors.card, borderColor: theme.colors.border }}>
             <div className="mb-6">
-              <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: theme.colors.primary }}>
+              <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.accent }}>
                 Competition Control
               </p>
               <h3 className="text-xl font-black text-white">Judges Assignment Status</h3>
@@ -509,7 +509,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 //Boys
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Mars className="w-4 h-4" style={{ color: '#3B82F6' }} />
+                    <Mars className="w-4 h-4" style={{ color: DATA_COLORS.blue }} />
                     <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Boys Age Groups</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -517,7 +517,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
                       .map(item => (
                         <JudgeGroupCard key={`male-${item.ageGroup}`} item={item}
-                          genderColor="#3B82F6" startingCompTypes={startingCompTypes}
+                          genderColor={DATA_COLORS.blue} startingCompTypes={startingCompTypes}
                           onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
                           theme={theme} />
                       ))}
@@ -526,7 +526,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 //Girls
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Venus className="w-4 h-4" style={{ color: '#EC4899' }} />
+                    <Venus className="w-4 h-4" style={{ color: DATA_COLORS.pink }} />
                     <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Girls Age Groups</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -534,7 +534,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
                       .map(item => (
                         <JudgeGroupCard key={`female-${item.ageGroup}`} item={item}
-                          genderColor="#EC4899" startingCompTypes={startingCompTypes}
+                          genderColor={DATA_COLORS.pink} startingCompTypes={startingCompTypes}
                           onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
                           theme={theme} />
                       ))}
@@ -557,16 +557,16 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         <FadeIn>
           <div className="flex items-center gap-3 mb-5">
             <div className="w-1 h-6 rounded-full" style={{ background: `linear-gradient(to bottom, ${theme.colors.primary}, ${theme.colors.primaryDark})` }} />
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: theme.colors.primary }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>
               System Overview — All Competitions
             </p>
           </div>
         </FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Shield} label="Total Admins" value={systemStats?.admins} color="#8B5CF6" delay={0} />
-          <StatCard icon={UserCheck} label="Total Coaches" value={systemStats?.coaches} color="#3B82F6" delay={0.05} />
-          <StatCard icon={ShieldHalf} label="Total Teams" value={systemStats?.teams} color={theme.colors.primary} delay={0.1} />
-          <StatCard icon={Target} label="Competitions" value={systemStats?.competitions} color="#EC4899" delay={0.15} />
+          <StatCard icon={Shield} label="Total Admins" value={systemStats?.admins} color={DATA_COLORS.violet} delay={0} />
+          <StatCard icon={UserCheck} label="Total Coaches" value={systemStats?.coaches} color={DATA_COLORS.blue} delay={0.05} />
+          <StatCard icon={ShieldHalf} label="Total Teams" value={systemStats?.teams} color={FG.accent} delay={0.1} />
+          <StatCard icon={Target} label="Competitions" value={systemStats?.competitions} color={DATA_COLORS.pink} delay={0.15} />
         </div>
       </div>
 
@@ -576,10 +576,10 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${alpha(theme.colors.primary, 0x18)}` }}>
-                <TrendingUp className="w-5 h-5" style={{ color: theme.colors.primary }} />
+                <TrendingUp className="w-5 h-5" style={{ color: FG.accent }} />
               </div>
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: theme.colors.primary }}>Competition Stats</p>
+                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>Competition Stats</p>
                 <h3 className="text-xl font-black text-white">Participation Breakdown</h3>
               </div>
             </div>
@@ -603,18 +603,18 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <CompStatCard label="Total Teams" value={competitionStats?.totalTeams} color="#8B5CF6" delay={0} />
-            <CompStatCard label="Total Participants" value={competitionStats?.totalParticipants} color={theme.colors.primary} delay={0.05} />
-            <CompStatCard label="Boys Teams" value={competitionStats?.boysTeams} color="#3B82F6" delay={0.1} />
-            <CompStatCard label="Girls Teams" value={competitionStats?.girlsTeams} color="#EC4899" delay={0.15} />
-            <CompStatCard label="Total Boys" value={competitionStats?.totalBoys} color="#3B82F6" delay={0.2} />
-            <CompStatCard label="Total Girls" value={competitionStats?.totalGirls} color="#EC4899" delay={0.25} />
+            <CompStatCard label="Total Teams" value={competitionStats?.totalTeams} color={DATA_COLORS.violet} delay={0} />
+            <CompStatCard label="Total Participants" value={competitionStats?.totalParticipants} color={FG.accent} delay={0.05} />
+            <CompStatCard label="Boys Teams" value={competitionStats?.boysTeams} color={DATA_COLORS.blue} delay={0.1} />
+            <CompStatCard label="Girls Teams" value={competitionStats?.girlsTeams} color={DATA_COLORS.pink} delay={0.15} />
+            <CompStatCard label="Total Boys" value={competitionStats?.totalBoys} color={DATA_COLORS.blue} delay={0.2} />
+            <CompStatCard label="Total Girls" value={competitionStats?.totalGirls} color={DATA_COLORS.pink} delay={0.25} />
           </div>
 
           {!selectedCompetition && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <CompStatCard label="Total Competitions" value={competitionStats?.totalCompetitions} color="#F5A623" delay={0.3} />
-              <CompStatCard label="Active Competitions" value={competitionStats?.activeCompetitions} color="#22C55E" delay={0.35} />
+              <CompStatCard label="Total Competitions" value={competitionStats?.totalCompetitions} color={DATA_COLORS.gold} delay={0.3} />
+              <CompStatCard label="Active Competitions" value={competitionStats?.activeCompetitions} color={FG.success} delay={0.35} />
             </div>
           )}
         </DarkCard>
@@ -685,7 +685,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
             style={{ background: `${alpha(theme.colors.primary, 0x18)}`, border: `2px solid ${alpha(theme.colors.primary, 0x30)}` }}>
-            <Trophy className="w-8 h-8" style={{ color: theme.colors.primary }} />
+            <Trophy className="w-8 h-8" style={{ color: FG.accent }} />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">No Competition Selected</h2>
           <p className="text-white/60 text-sm mb-6">
@@ -714,7 +714,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       <motion.header
         className="fixed top-0 left-0 right-0 z-50"
         style={{
-          background: scrolled ? 'rgba(10,10,10,0.94)' : 'rgba(10,10,10,0.80)',
+          background: scrolled ? 'rgb(var(--bg) / 0.94)' : 'rgb(var(--bg) / 0.80)',
           backdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${scrolled ? theme.colors.borderBright : theme.colors.border}`,
           transition: 'border-color 0.3s',
@@ -729,7 +729,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             <img src={BHALogo} alt="BHA" className="h-8 w-auto object-contain" />
             <div className="hidden sm:block">
               <p className="text-xs font-bold tracking-widest uppercase leading-none"
-                style={{ color: theme.colors.primary }}>
+                style={{ color: FG.accent }}>
                 {isSuperAdmin ? 'Super Admin' : 'Admin'}
               </p>
               <p className="text-white text-sm font-bold leading-tight">Dashboard</p>
@@ -746,9 +746,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                   <motion.button
                     key={t.id}
                     onClick={() => handleTabNav(t.id)}
-                    className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 min-h-[36px]"
-                    style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.5)' }}
-                    whileHover={{ color: '#fff' }}
+                    className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 tap-safe mouse:min-h-[36px] ${isActive ? 'text-white' : 'text-fg-muted hover:text-white'}`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {isActive && (
@@ -775,7 +773,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             {isSuperAdmin && (
               <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
-                style={{ background: `${alpha(theme.colors.primary, 0x18)}`, color: theme.colors.primary, border: `1px solid ${alpha(theme.colors.primary, 0x30)}` }}>
+                style={{ background: `${alpha(theme.colors.primary, 0x18)}`, color: FG.accent, border: `1px solid ${alpha(theme.colors.primary, 0x30)}` }}>
                 <Shield className="w-3 h-3" aria-hidden="true" />
                 Super Admin
               </span>
@@ -783,9 +781,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             <motion.button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200"
-              style={{ color: 'var(--fg-muted)', border: `1px solid ${theme.colors.border}` }}
-              whileHover={{ color: '#EF4444', borderColor: '#EF444440' }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200 text-fg-muted hover:text-danger-fg border border-white/[0.06] hover:border-danger-fg/25"
               aria-label="Logout"
             >
               <LogOut className="w-4 h-4" aria-hidden="true" />
@@ -796,7 +792,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
-                style={{ color: 'rgba(255,255,255,0.7)' }}
+                style={{ color: 'rgb(var(--ink) / 0.7)' }}
                 aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileMenuOpen}
               >
@@ -817,7 +813,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           {compactNav && mobileMenuOpen && (
             <motion.div
               className="border-t"
-              style={{ background: 'rgba(10,10,10,0.98)', backdropFilter: 'blur(20px)', borderColor: theme.colors.borderBright }}
+              style={{ background: 'rgb(var(--bg) / 0.98)', backdropFilter: 'blur(20px)', borderColor: theme.colors.borderBright }}
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
             >
@@ -832,8 +828,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] transition-all duration-200"
                       style={{
                         background: isActive ? `${alpha(theme.colors.primary, 0x18)}` : 'transparent',
-                        color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
-                        border: `1px solid ${isActive ? theme.colors.primary + '30' : 'transparent'}`,
+                        color: isActive ? FG.ink : 'var(--fg-muted)',
+                        border: `1px solid ${isActive ? alpha(theme.colors.primary, 0x30) : 'transparent'}`,
                       }}
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}

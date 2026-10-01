@@ -10,7 +10,7 @@ import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, FG, alpha } from '../../styles/tokens';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
@@ -50,15 +50,15 @@ const DarkCard = ({ children, className = '', style = {} }) => (
 
 const DarkSearch = ({ value, onChange, placeholder }) => (
   <div className="relative">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
-      <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
+      <button onClick={() => onChange('')} className="absolute right-1 mouse:right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors tap-safe mouse:min-h-[28px] mouse:min-w-[28px] flex items-center justify-center" aria-label="Clear search">
         <X className="w-3.5 h-3.5 text-fg-muted" />
       </button>
     )}
@@ -121,9 +121,9 @@ const ScoreTypeTabs = ({ value, onChange }) => (
           onClick={() => onChange(type.value)}
           className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[38px] border"
           style={{
-            background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgba(255,255,255,0.03)',
+            background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgb(var(--ink) / 0.03)',
             borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x45)}` : ADMIN_COLORS.darkBorderSubtle,
-            color: active ? ADMIN_COLORS.saffronLight : 'rgba(255,255,255,0.5)',
+            color: active ? FG.brandSoft : 'var(--fg-muted)',
           }}>
           {type.label}
         </button>
@@ -389,7 +389,7 @@ const Scores = () => {
     <div className="space-y-6">
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring System</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Scoring System</p>
           <h2 className="text-2xl font-black text-white mb-6">Scores &amp; Rankings</h2>
 
           <ScoreTypeTabs value={scoreType} onChange={setScoreType} />
@@ -439,7 +439,7 @@ const Scores = () => {
                       {submittedTeams.length > 0 ? (
                         filteredTeams.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <ResponsiveTeamTable
                             teams={filteredTeams}
@@ -457,7 +457,7 @@ const Scores = () => {
                                   <span className="text-sm text-fg-muted">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
                                   <motion.button
                                     onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white min-h-[36px]"
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-snow tap-safe mouse:min-h-[36px]"
                                     style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                                     View Details →
@@ -486,7 +486,7 @@ const Scores = () => {
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
 
                         <div className="flex items-center gap-2 px-1 mb-4">
-                          <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
+                          <Users className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.35)' }} aria-hidden="true" />
                           <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
                             {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
                             {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
@@ -495,7 +495,7 @@ const Scores = () => {
 
                         {filteredPlayers.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No players found" desc={`No players match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <PlayerRankingBoard players={filteredPlayers} />
                         )}
@@ -519,7 +519,7 @@ const Scores = () => {
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
                         {filteredTeamRankings.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <ResponsiveTeamRankings teams={filteredTeamRankings} searchTerm={searchTerm} />
                         )}

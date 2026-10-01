@@ -10,7 +10,7 @@ import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 
 const useReducedMotion = () => {
   const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -53,23 +53,23 @@ const DarkInput = ({ label, required, error, hint, rightElement, id, ...props })
   return (
   <div>
     {label && (
-      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+        {label}{required && <span style={{ color: FG.danger }}> *</span>}
       </label>
     )}
     <div className="relative">
       <input
         id={inputId}
-        className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
-        style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+        className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+        style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
         onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-        onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+        onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
         {...props}
       />
       {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
     </div>
     {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
-    {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
+    {error && <p className="text-xs mt-1" style={{ color: FG.danger }}>{error}</p>}
   </div>
   );
 };
@@ -82,11 +82,12 @@ const DarkBtn =({ children, onClick, disabled, variant = 'primary', size = 'md',
     danger: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`,
     ghost: 'transparent',
   }[variant];
-  const h = size === 'sm' ? '32px' : '44px';
+  const h = size === 'sm' ? 'tap-safe mouse:min-h-[32px]' : 'min-h-[44px]';
+  const label = variant === 'ghost' ? 'text-white' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
   return (
     <motion.button onClick={onClick} disabled={disabled}
-      className={`rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', minHeight: h, padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
+      className={`rounded-xl font-bold text-sm ${label} ${h} flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
       whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
       whileTap={!disabled ? { scale: 0.97 } : {}}>
       {children}
@@ -224,11 +225,11 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
         rightElement={<Search className="w-4 h-4 text-white/30" />}
       />
 
-      {searching && <p className="text-xs mt-1.5" style={{ color: ADMIN_COLORS.gold }}>Searching…</p>}
+      {searching && <p className="text-xs mt-1.5" style={{ color: FG.brandGold }}>Searching…</p>}
 
       {results.length > 0 && (
         <div className="mt-2 rounded-xl border overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
           {results.map((account) => {
             const heldSeat = taken[account._id];
             return (
@@ -243,7 +244,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
               <p className="text-sm font-semibold text-white">
                 {account.name}
                 {heldSeat && (
-                  <span className="ml-2 text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>
+                  <span className="ml-2 text-xs font-bold" style={{ color: FG.danger }}>
                     already {heldSeat}
                   </span>
                 )}
@@ -261,7 +262,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
 
       {touched && !searching && term.trim().length >= 2 && results.length === 0 && (
         <div className="mt-2 p-3 rounded-xl border text-xs"
-          style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}`, color: ADMIN_COLORS.gold }}>
+          style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}`, color: FG.brandGold }}>
           <p className="font-bold mb-1">No registered judge matches that.</p>
           <p className="text-fg-muted">
             Judges create their own accounts. Send them the registration link and search again
@@ -272,8 +273,8 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
               navigator.clipboard?.writeText(registerUrl());
               toast.success('Registration link copied');
             }}
-            className="mt-2 inline-flex items-center gap-1.5 font-bold min-h-[32px]"
-            style={{ color: ADMIN_COLORS.saffronLight }}
+            className="mt-2 inline-flex items-center gap-1.5 font-bold tap-safe mouse:min-h-[32px]"
+            style={{ color: FG.brandSoft }}
           >
             <Copy className="w-3.5 h-3.5" />
             {registerUrl()}
@@ -299,7 +300,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
           exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
           <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Judge Management</p>
               <h3 className="text-xl font-black text-white mt-0.5">
                 {judge.name ? 'Replace Judge' : 'Assign Judge'}
               </h3>
@@ -309,8 +310,8 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
             </button>
           </div>
           <div className="p-6 space-y-4">
-            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'var(--fg-muted)' }}>
-              <span className="font-bold" style={{ color: ADMIN_COLORS.saffronLight }}>{seatLabel(judge.judgeType)}</span>
+            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'var(--fg-muted)' }}>
+              <span className="font-bold" style={{ color: FG.brandSoft }}>{seatLabel(judge.judgeType)}</span>
               {judge.gender && <> · {judge.gender}</>}
               {judge.ageGroup && <> · {judge.ageGroup}</>}
               {judge.apparatus && <> · {judge.apparatus}</>}
@@ -778,9 +779,9 @@ const Judges = () => {
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
   const judgeTypeBadge = (jt) => {
-    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: ADMIN_COLORS.purpleLight };
-    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold };
-    return { bg: `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: '#93C5FD' };
+    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: DATA_COLORS.purpleSoft };
+    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold };
+    return { bg: `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: DATA_COLORS.blueSoft };
   };
 
   return (
@@ -808,7 +809,7 @@ const Judges = () => {
       />
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Judge Management</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Judge Management</p>
           <h2 className="text-2xl font-black text-white mb-2">Manage Judges</h2>
           <p className="text-fg-muted text-sm mb-6">
             Judges create their own accounts at{' '}
@@ -818,12 +819,12 @@ const Judges = () => {
 
           {isSuperAdmin && (
             <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
-              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                Competition <span style={{ color: ADMIN_COLORS.red }}>*</span>
+              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                Competition <span style={{ color: FG.danger }}>*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: `${alpha(ADMIN_COLORS.saffron, 0x80)}` }}>Select a competition to enable filters.</p>}
+              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: FG.brandSoft }}>Select a competition to enable filters.</p>}
             </div>
           )}
 
@@ -834,8 +835,8 @@ const Judges = () => {
               {/* Filters row — the ladder: action → gender → age group → competition type → apparatus */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    Judge Action <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                    Judge Action <span style={{ color: FG.danger }}>*</span>
                   </label>
                   <Dropdown
                     options={judgeTypes}
@@ -846,8 +847,8 @@ const Judges = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    Gender <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                    Gender <span style={{ color: FG.danger }}>*</span>
                   </label>
                   <Dropdown
                     options={genders}
@@ -858,8 +859,8 @@ const Judges = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    Age Group <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                    Age Group <span style={{ color: FG.danger }}>*</span>
                   </label>
                   <Dropdown
                     options={availableAgeGroups}
@@ -870,12 +871,12 @@ const Judges = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    Competition Type <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                    Competition Type <span style={{ color: FG.danger }}>*</span>
                   </label>
                   {!availableCompetitionTypes || availableCompetitionTypes.length === 0 ? (
                     <div className="p-3 rounded-xl border min-h-[44px] flex items-center" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}` }}>
-                      <p className="text-xs" style={{ color: ADMIN_COLORS.gold }}>No competition types configured.</p>
+                      <p className="text-xs" style={{ color: FG.brandGold }}>No competition types configured.</p>
                     </div>
                   ) : (
                     <Dropdown
@@ -888,8 +889,8 @@ const Judges = () => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
-                    Apparatus <span style={{ color: ADMIN_COLORS.red }}>*</span>
+                  <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                    Apparatus <span style={{ color: FG.danger }}>*</span>
                   </label>
                   <Dropdown
                     options={apparatusOptions}
@@ -898,7 +899,7 @@ const Judges = () => {
                     placeholder={hasCompetitionType ? 'Select apparatus' : 'Select competition type first'}
                     disabled={!hasCompetitionType}
                   />
-                  {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.gold }}>Checking existing judges…</p>}
+                  {checkingExistingJudges && <p className="text-xs mt-1" style={{ color: FG.brandGold }}>Checking existing judges…</p>}
                   {hasCompetitionType && !checkingExistingJudges && (
                     <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
                       One panel per apparatus — staff each separately.
@@ -916,7 +917,7 @@ const Judges = () => {
                   ) : judgesExistForSelection ? (
                     <div className="text-center py-8">
                       <div className="p-6 rounded-2xl border" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.gold, 0x30)}` }}>
-                        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: ADMIN_COLORS.gold }} />
+                        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: FG.brandGold }} />
                         <h3 className="text-lg font-bold text-white mb-2">Judges Already Exist</h3>
                         <p className="text-fg-muted text-sm mb-4">A judge panel already exists for <strong className="text-white">{selectedGender.label} — {selectedAgeGroup.label} · {selectedApparatus.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
@@ -957,12 +958,12 @@ const Judges = () => {
                             }
                           });
                           return (
-                            <div key={judge.judgeNo} className="rounded-xl border p-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                            <div key={judge.judgeNo} className="rounded-xl border p-4" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-2 mb-4">
                                 <span className="text-sm font-bold text-white">{judge.judgeNo}</span>
                                 <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                 {REQUIRED_JUDGE_TYPES.includes(judge.judgeType) && (
-                                  <span className="text-xs font-bold" style={{ color: ADMIN_COLORS.red }}>* Required</span>
+                                  <span className="text-xs font-bold" style={{ color: FG.danger }}>* Required</span>
                                 )}
                               </div>
                               <JudgeSearch
@@ -1027,7 +1028,7 @@ const Judges = () => {
                           const canDelete = !!judge.judgeAccount && !REQUIRED_JUDGE_TYPES.includes(judge.judgeType);
                           return (
                             <div key={judge.judgeNo} className="rounded-xl border p-4 flex items-center justify-between gap-4"
-                              style={{ background: judge.isEmpty ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                              style={{ background: judge.isEmpty ? 'rgb(var(--ink) / 0.01)' : 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badge.bg }}>
                                   <span className="text-xs font-black" style={{ color: badge.color }}>{judge.judgeNo}</span>
@@ -1037,8 +1038,8 @@ const Judges = () => {
                                     <span className="text-sm font-bold text-white">{judge.name || <span className="text-fg-muted italic">Empty Slot</span>}</span>
                                     <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: badge.bg, color: badge.color }}>{seatLabel(judge.judgeType)}</span>
                                     {judge.judgeAccount
-                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: ADMIN_COLORS.green }}>Assigned</span>
-                                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: ADMIN_COLORS.gold }}>Available</span>}
+                                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>Assigned</span>
+                                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold }}>Available</span>}
                                   </div>
                                   {judge.email && <p className="text-xs text-fg-muted mt-0.5">{judge.email}</p>}
                                 </div>
