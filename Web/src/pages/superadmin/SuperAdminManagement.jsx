@@ -9,7 +9,7 @@ import {
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Dropdown from '@/components/auth/Dropdown';
@@ -72,20 +72,20 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+        {label}{required && <span style={{ color: FG.danger }}> *</span>}
       </label>
     )}
     <input
       id={inputId}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
+      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
-    {error && <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.red }}>{error}</p>}
+    {error && <p className="text-xs mt-1" style={{ color: FG.danger }}>{error}</p>}
   </div>
   );
 };
@@ -95,14 +95,14 @@ const DarkSelect = ({ label, required, children, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={selectId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      <label htmlFor={selectId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+        {label}{required && <span style={{ color: FG.danger }}> *</span>}
       </label>
     )}
     <select
       id={selectId}
       className="w-full rounded-xl text-sm text-white min-h-[44px] px-3 transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
+      style={{ background: 'rgb(var(--ink) / 0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
       {...props}>
       {children}
     </select>
@@ -115,14 +115,14 @@ const DarkTextarea = ({ label, required, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={textareaId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      <label htmlFor={textareaId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+        {label}{required && <span style={{ color: FG.danger }}> *</span>}
       </label>
     )}
     <textarea
       id={textareaId}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200 resize-none"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
+      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 transition-all duration-200 resize-none"
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
@@ -139,11 +139,12 @@ const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md'
     danger: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`,
     ghost: 'transparent',
   }[variant];
-  const h = size === 'sm' ? '32px' : '44px';
+  const h = size === 'sm' ? 'tap-safe mouse:min-h-[32px]' : 'min-h-[44px]';
+  const label = variant === 'ghost' ? 'text-white' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
   return (
     <motion.button type={type} onClick={onClick} disabled={disabled}
-      className={`rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', minHeight: h, padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
+      className={`rounded-xl font-bold text-sm ${label} ${h} flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
       whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
       whileTap={!disabled ? { scale: 0.97 } : {}}>
       {children}
@@ -215,8 +216,8 @@ const previousDay = (value) => {
  */
 /** The two columns of the Competition Types & Apparatus picker. */
 const GENDER_COLUMNS = [
-  { gender: 'Male', label: 'Male', accent: '#3B82F6' },
-  { gender: 'Female', label: 'Female', accent: '#EC4899' },
+  { gender: 'Male', label: 'Male', accent: DATA_COLORS.blue },
+  { gender: 'Female', label: 'Female', accent: DATA_COLORS.pink },
 ];
 
 const TYPE_LABELS = { competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III' };
@@ -287,7 +288,7 @@ const validateFeeWindow = ({ registrationOpenDate, feeDueDate, startDate, endDat
 
 const StatusBadge = ({ active }) => (
   <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-    style={{ background: active ? `${alpha(ADMIN_COLORS.green, 0x20)}` : `${alpha(ADMIN_COLORS.red, 0x20)}`, color: active ? ADMIN_COLORS.green : ADMIN_COLORS.red }}>
+    style={{ background: active ? `${alpha(ADMIN_COLORS.green, 0x20)}` : `${alpha(ADMIN_COLORS.red, 0x20)}`, color: active ? FG.success : FG.danger }}>
     {active ? 'Active' : 'Inactive'}
   </span>
 );
@@ -318,7 +319,7 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
                 padding: isMobile ? '1rem' : '1.5rem',
               }}>
               <div>
-                {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>{subtitle}</p>}
+                {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>{subtitle}</p>}
                 <h3 className="font-black text-white" style={{ fontSize: isMobile ? '1.125rem' : '1.25rem' }}>{title}</h3>
               </div>
               <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close">
@@ -873,14 +874,14 @@ const SuperAdminManagement = () => {
 
   const compTypeLabel = (t) => ({ competition_1:'Competition I', competition_2:'Competition II', competition_3:'Competition III' }[t] || t);
   const levelColor = (l) => ({
-    district: ADMIN_COLORS.blue,
-    state: ADMIN_COLORS.purple,
-    national: ADMIN_COLORS.saffron,
-    international: ADMIN_COLORS.gold,
-    dso: ADMIN_COLORS.green,
-    university: ADMIN_COLORS.purpleLight,
-  }[l] || ADMIN_COLORS.saffron);
-  const statusColor = (s) => ({ ongoing: ADMIN_COLORS.green, upcoming: ADMIN_COLORS.gold, completed: 'rgba(255,255,255,0.4)' }[s] || 'rgba(255,255,255,0.4)');
+    district: FG.info,
+    state: DATA_COLORS.violet,
+    national: FG.brand,
+    international: FG.brandGold,
+    dso: FG.success,
+    university: DATA_COLORS.purpleSoft,
+  }[l] || FG.brand);
+  const statusColor = (s) => ({ ongoing: FG.success, upcoming: FG.brandGold, completed: 'var(--fg-muted)' }[s] || 'var(--fg-muted)');
 
   return (
     <div className="space-y-6">
@@ -893,13 +894,11 @@ const SuperAdminManagement = () => {
               const isActive = activeSection === s.id;
               return (
                 <motion.button key={s.id} onClick={() => setActiveSection(s.id)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-white' : 'text-fg-muted hover:text-white'}`}
                   style={{
                     background: isActive ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'transparent',
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
-                    border: `1px solid ${isActive ? ADMIN_COLORS.saffron + '30' : 'transparent'}`,
-                  }}
-                  whileHover={{ color: '#fff' }}>
+                    border: `1px solid ${isActive ? alpha(ADMIN_COLORS.saffron, 0x30) : 'transparent'}`,
+                  }}>
                   <Icon className="w-4 h-4" aria-hidden="true" />
                   {s.label}
                 </motion.button>
@@ -915,7 +914,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
                 <h2 className="text-2xl font-black text-white">Competitions</h2>
               </div>
               <DarkBtn onClick={() => openCompetitionModal()}>
@@ -933,7 +932,7 @@ const SuperAdminManagement = () => {
                       <div className="flex flex-wrap gap-1">
                         {(comp.competitionTypes || []).map(t => (
                           <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold"
-                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: ADMIN_COLORS.purpleLight }}>
+                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: DATA_COLORS.purpleSoft }}>
                             {compTypeLabel(t)}
                           </span>
                         ))}
@@ -941,7 +940,7 @@ const SuperAdminManagement = () => {
                     </Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{ background: `${levelColor(comp.level)}20`, color: levelColor(comp.level) }}>
+                        style={{ background: `${alpha(levelColor(comp.level), 0x20)}`, color: levelColor(comp.level) }}>
                         {levelLabel(comp.level)}
                       </span>
                     </Td>
@@ -959,9 +958,9 @@ const SuperAdminManagement = () => {
                           return <span className="text-fg-muted">Always open</span>;
                         }
                         const window = resolveFeeWindow(comp);
-                        const phaseColor = window.phase === FEE_PHASE.LATE ? ADMIN_COLORS.red
-                          : window.phase === FEE_PHASE.REGULAR ? ADMIN_COLORS.green
-                            : ADMIN_COLORS.saffron;
+                        const phaseColor = window.phase === FEE_PHASE.LATE ? FG.danger
+                          : window.phase === FEE_PHASE.REGULAR ? FG.success
+                            : FG.brand;
                         return (
                           <div className="space-y-0.5">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold"
@@ -991,7 +990,7 @@ const SuperAdminManagement = () => {
                     </Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold capitalize"
-                        style={{ background: `${statusColor(comp.status)}20`, color: statusColor(comp.status) }}>
+                        style={{ background: `${alpha(statusColor(comp.status), 0x20)}`, color: statusColor(comp.status) }}>
                         {comp.status}
                       </span>
                     </Td>
@@ -1006,19 +1005,19 @@ const SuperAdminManagement = () => {
                       <div className="flex gap-2">
                         <motion.button onClick={() => openAdminManagementModal(comp)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.green }} title="Manage Admins" aria-label="Manage Admins"
+                          style={{ color: FG.success }} title="Manage Admins" aria-label="Manage Admins"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <UserPlus className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openCompetitionModal(comp)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.blue }} title="Edit" aria-label="Edit"
+                          style={{ color: FG.info }} title="Edit" aria-label="Edit"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteConfirmation(comp)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.red }} title="Delete" aria-label="Delete"
+                          style={{ color: FG.danger }} title="Delete" aria-label="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
@@ -1038,7 +1037,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
                 <h2 className="text-2xl font-black text-white">Admins</h2>
               </div>
               <DarkBtn onClick={() => setShowAddAdminModal(true)}>
@@ -1055,7 +1054,7 @@ const SuperAdminManagement = () => {
                     <Td>{admin.email}</Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{ background: admin.role === 'superadmin' ? `${alpha(ADMIN_COLORS.saffron, 0x20)}` : `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: admin.role === 'superadmin' ? ADMIN_COLORS.saffron : ADMIN_COLORS.blue }}>
+                        style={{ background: admin.role === 'superadmin' ? `${alpha(ADMIN_COLORS.saffron, 0x20)}` : `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: admin.role === 'superadmin' ? FG.brand : FG.info }}>
                         {admin.role === 'superadmin' ? 'Super Admin' : 'Admin'}
                       </span>
                     </Td>
@@ -1063,13 +1062,13 @@ const SuperAdminManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <motion.button onClick={() => openEditModal(admin)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.blue }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          className="p-1.5 rounded-lg hover:bg-white/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          style={{ color: FG.info }} title="Edit" aria-label="Edit" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteAdminConfirmation(admin)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 min-h-[32px] min-w-[32px] flex items-center justify-center"
-                          style={{ color: ADMIN_COLORS.red }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          className="p-1.5 rounded-lg hover:bg-white/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          style={{ color: FG.danger }} title="Delete" aria-label="Delete" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
                       </div>
@@ -1087,7 +1086,7 @@ const SuperAdminManagement = () => {
         <FadeIn>
           <DarkCard className="p-6">
             <div className="mb-6">
-              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
               <h2 className="text-2xl font-black text-white">Coaches</h2>
             </div>
             {loading ? <LoadingState /> : coaches.length === 0 ? (
@@ -1120,7 +1119,7 @@ const SuperAdminManagement = () => {
         <FadeIn>
           <DarkCard className="p-6">
             <div className="mb-6">
-              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: ADMIN_COLORS.saffron }}>Management</p>
+              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
               <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
             </div>
             <AddPlayerForm 
@@ -1171,7 +1170,7 @@ const SuperAdminManagement = () => {
                 <input type="checkbox" className="sr-only" checked={formData.isActive || false}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
                 <div className="w-10 h-6 rounded-full transition-colors duration-200"
-                  style={{ background: formData.isActive ? ADMIN_COLORS.green : 'rgba(255,255,255,0.15)' }}>
+                  style={{ background: formData.isActive ? ADMIN_COLORS.green : 'rgb(var(--ink) / 0.15)' }}>
                   <div className="w-4 h-4 bg-snow rounded-full absolute top-1 transition-transform duration-200"
                     style={{ left: formData.isActive ? '22px' : '4px' }} />
                 </div>
@@ -1288,10 +1287,10 @@ const SuperAdminManagement = () => {
 
         {/* Apparatus Fees (Optional) */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
             APPARATUS-WISE FEES (Optional)
           </p>
-          <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <p className="text-xs text-fg-muted mb-4 leading-relaxed">
               Enter any additional fees for specific apparatuses here. These will be <strong>added on top</strong> of the base per-player fee. Leave blank for no additional charge.
             </p>
@@ -1324,8 +1323,8 @@ const SuperAdminManagement = () => {
 
         {/* Max Team Size — per team, per gender + age group */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-            Max Team Size (per age group) <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
+            Max Team Size (per age group) <span style={{ color: FG.danger }}>*</span>
           </p>
           <div role="radiogroup" aria-label="Max team size per age group" className="grid grid-cols-2 gap-3">
             {TEAM_SIZE_OPTIONS.map((option) => {
@@ -1334,7 +1333,7 @@ const SuperAdminManagement = () => {
                 <label key={option.value}
                   className="flex flex-col gap-0.5 p-3 rounded-xl border cursor-pointer transition-all duration-200 min-h-[44px]"
                   style={{
-                    background: checked ? `${alpha(ADMIN_COLORS.purple, 0x14)}` : 'rgba(255,255,255,0.02)',
+                    background: checked ? `${alpha(ADMIN_COLORS.purple, 0x14)}` : 'rgb(var(--ink) / 0.02)',
                     borderColor: checked ? ADMIN_COLORS.purple : ADMIN_COLORS.darkBorderSubtle,
                   }}>
                   <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
@@ -1352,8 +1351,8 @@ const SuperAdminManagement = () => {
 
         {/* Competition Types & Apparatus */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-            Competition Types & Apparatus <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
+            Competition Types & Apparatus <span style={{ color: FG.danger }}>*</span>
           </p>
           <div className="space-y-4">
             {[
@@ -1364,11 +1363,11 @@ const SuperAdminManagement = () => {
               const checked = competitionFormData.competitionTypes.includes(ct.id);
               return (
                 <div key={ct.id} className="p-3 rounded-xl border transition-all duration-200"
-                  style={{ background: checked ? `${alpha(ADMIN_COLORS.purple, 0x08)}` : 'rgba(255,255,255,0.02)', borderColor: checked ? `${alpha(ADMIN_COLORS.purple, 0x40)}` : ADMIN_COLORS.darkBorderSubtle }}>
+                  style={{ background: checked ? `${alpha(ADMIN_COLORS.purple, 0x08)}` : 'rgb(var(--ink) / 0.02)', borderColor: checked ? `${alpha(ADMIN_COLORS.purple, 0x40)}` : ADMIN_COLORS.darkBorderSubtle }}>
                   <label className="flex items-start gap-3 cursor-pointer mb-2">
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-                      style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                      style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
                       {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <div>
@@ -1393,7 +1392,7 @@ const SuperAdminManagement = () => {
                                 <input type="checkbox" className="sr-only" checked={appChecked} disabled={!allowed}
                                   onChange={() => toggleGenderApparatus(ct.id, gender, app)} />
                                 <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                                  style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgba(255,255,255,0.3)' }}>
+                                  style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
                                   {appChecked && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                 </div>
                                 <span className="text-xs font-semibold text-white/80">{app}</span>
@@ -1418,15 +1417,15 @@ const SuperAdminManagement = () => {
         {/* Age Groups */}
         <div>
           <div className="flex items-center justify-between gap-3 mb-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffronLight }}>
-              Age Groups <span style={{ color: ADMIN_COLORS.red }}>*</span>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brandSoft }}>
+              Age Groups <span style={{ color: FG.danger }}>*</span>
             </p>
             {/* Fourteen cells is a lot of clicking for the common case, which is
                 "run every category". Clicking it again clears the lot. */}
             <label className="flex items-center gap-2 p-2 -mr-2 rounded-lg cursor-pointer transition-all tap-safe">
               <input type="checkbox" className="sr-only" checked={allAgeGroupsSelected} onChange={toggleAllAgeGroups} />
               <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                style={{ background: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'transparent', borderColor: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                style={{ background: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'transparent', borderColor: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
                 {allAgeGroupsSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
               <span className="text-xs font-bold text-white/70 whitespace-nowrap">
@@ -1439,7 +1438,7 @@ const SuperAdminManagement = () => {
               containing block or they stay behind when it moves. */}
           <div className="relative space-y-2 max-h-56 overflow-y-auto pr-1">
             {defaultAgeGroups.map(ag => (
-              <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                 <p className="text-xs font-bold text-white/60 mb-2">{ageGroupLabels[ag]}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Male','Female'].map(gender => {
@@ -1450,7 +1449,7 @@ const SuperAdminManagement = () => {
                         style={{ background: checked && valid ? `${alpha(ADMIN_COLORS.saffron, 0x12)}` : 'transparent' }}>
                         <input type="checkbox" className="sr-only" checked={checked} disabled={!valid} onChange={() => valid && toggleAgeGroup(ag, gender)} />
                         <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                          style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                          style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
                           {checked && valid && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <span className="text-xs font-semibold text-white/70">{gender}</span>
@@ -1466,15 +1465,15 @@ const SuperAdminManagement = () => {
         {/* Assign Admins (create only) */}
         {!editingCompetition && (
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-              Assign Admins <span style={{ color: ADMIN_COLORS.red }}>*</span>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
+              Assign Admins <span style={{ color: FG.danger }}>*</span>
             </p>
             <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
               <input type="text" placeholder="Search admins…" aria-label="Search admins" value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
-                className="w-full rounded-xl text-sm text-white placeholder-white/30 min-h-[44px] transition-all"
-                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
+                className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all"
+                style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
             </div>
             <div className="relative space-y-1 max-h-40 overflow-y-auto">
               {filteredAdmins.map(admin => {
@@ -1484,7 +1483,7 @@ const SuperAdminManagement = () => {
                     style={{ background: checked ? `${alpha(ADMIN_COLORS.saffron, 0x10)}` : 'transparent' }}>
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAdminSelection(admin._id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                      style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.3)' }}>
+                      style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
                       {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <span className="text-sm text-white/70">{admin.name} <span className="text-fg-muted">({admin.email})</span></span>
@@ -1507,12 +1506,12 @@ const SuperAdminManagement = () => {
         {selectedCompetition && (
           <div className="space-y-4">
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Assigned Admins</p>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>Assigned Admins</p>
               {selectedCompetition.admins?.length ? (
                 <div className="space-y-2">
                   {selectedCompetition.admins.map(admin => (
                     <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
-                      style={{ background: 'rgba(255,255,255,0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                      style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                       <div>
                         <p className="text-sm font-bold text-white">{admin.name}</p>
                         <p className="text-xs text-fg-muted">{admin.email}</p>
@@ -1526,11 +1525,11 @@ const SuperAdminManagement = () => {
               ) : <p className="text-sm text-fg-muted">No admins assigned.</p>}
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>Available Admins</p>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>Available Admins</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {(admins || []).filter(a => a.role !== 'superadmin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
                   <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
-                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>
                       <p className="text-sm font-bold text-white">{admin.name}</p>
                       <p className="text-xs text-fg-muted">{admin.email}</p>
@@ -1561,7 +1560,7 @@ const SuperAdminManagement = () => {
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                  <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Delete Competition?</h3>
                 <div className="space-y-3 mb-6">
@@ -1570,7 +1569,7 @@ const SuperAdminManagement = () => {
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
@@ -1581,7 +1580,7 @@ const SuperAdminManagement = () => {
                       {competitionToDelete.place} • {new Date(competitionToDelete.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed">
                       All associated data including <strong>teams, players, scores, and registrations</strong> will be permanently deleted.
                     </p>
@@ -1591,7 +1590,7 @@ const SuperAdminManagement = () => {
                   <button 
                     onClick={() => handleDeleteCompetition(competitionToDelete._id)}
                     className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Delete Competition
                   </button>
                   <button 
@@ -1625,7 +1624,7 @@ const SuperAdminManagement = () => {
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <UserX className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                  <UserX className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Remove Admin?</h3>
                 <div className="space-y-3 mb-6">
@@ -1634,7 +1633,7 @@ const SuperAdminManagement = () => {
                       ⚠️ <strong>Warning:</strong> This admin will lose access to this competition.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed mb-2">
                       You are about to remove:
                     </p>
@@ -1645,7 +1644,7 @@ const SuperAdminManagement = () => {
                       {adminToRemove.email}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed">
                       From competition: <strong>{selectedCompetition?.name}</strong>
                     </p>
@@ -1655,7 +1654,7 @@ const SuperAdminManagement = () => {
                   <button 
                     onClick={() => handleRemoveAdmin(adminToRemove._id)}
                     className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Remove Admin
                   </button>
                   <button 
@@ -1689,7 +1688,7 @@ const SuperAdminManagement = () => {
               <div className="p-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <Trash2 className="w-7 h-7" style={{ color: ADMIN_COLORS.red }} aria-hidden="true" />
+                  <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-white text-center mb-3">Delete Admin Account?</h3>
                 <div className="space-y-3 mb-6">
@@ -1698,7 +1697,7 @@ const SuperAdminManagement = () => {
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
@@ -1709,7 +1708,7 @@ const SuperAdminManagement = () => {
                       {adminToDelete.email}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
                     <p className="text-sm text-white/70 leading-relaxed">
                       This admin will be <strong>permanently removed</strong> from the system and lose access to all competitions.
                     </p>
@@ -1719,7 +1718,7 @@ const SuperAdminManagement = () => {
                   <button 
                     onClick={() => handleDeleteAdmin(adminToDelete._id)}
                     className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)` }}>
+                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Delete Admin
                   </button>
                   <button 

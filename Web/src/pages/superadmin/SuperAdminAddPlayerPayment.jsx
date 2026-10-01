@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, SAFFRON_CTA, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import { logger } from '@/infrastructure/logger';
@@ -267,7 +267,7 @@ const SuperAdminAddPlayerPayment = () => {
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
             >
-              <CheckCircle className="w-10 h-10" style={{ color: '#22C55E' }} aria-hidden="true" />
+              <CheckCircle className="w-10 h-10" style={{ color: FG.success }} aria-hidden="true" />
             </motion.div>
             <h2 className="text-2xl font-black text-white mb-3">Payment Successful!</h2>
             <p className="text-fg-muted mb-6 leading-relaxed">
@@ -283,7 +283,7 @@ const SuperAdminAddPlayerPayment = () => {
                 })
               }
               className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
-              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+              style={SAFFRON_CTA}
             >
               Back to Management
             </button>
@@ -343,7 +343,7 @@ const SuperAdminAddPlayerPayment = () => {
             Back to Management
           </button>
           <div className="mb-8">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: COLORS.saffron }}>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>
               Add player
             </p>
             <h1 className="text-3xl font-black text-white">Player registration payment</h1>
@@ -359,7 +359,7 @@ const SuperAdminAddPlayerPayment = () => {
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
-                  <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                  <Trophy className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-white font-bold">{checkout?.teamLabel || 'Team'}</h2>
@@ -400,7 +400,7 @@ const SuperAdminAddPlayerPayment = () => {
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#22C55E18' }}>
-                  <CreditCard className="w-5 h-5" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <CreditCard className="w-5 h-5" style={{ color: FG.success }} aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-white font-bold">Payment details</h2>
@@ -410,7 +410,7 @@ const SuperAdminAddPlayerPayment = () => {
 
               <div
                 className="space-y-2 mb-6 p-4 rounded-2xl"
-                style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
               >
                 <div className="flex justify-between text-sm items-center">
                   <div>
@@ -431,12 +431,12 @@ const SuperAdminAddPlayerPayment = () => {
                         Fees were due by {formatFeeWindowDate(feeWindow.dueBy)}
                       </span>
                     </div>
-                    <span style={{ color: COLORS.saffron }}>+₹{lateFee.toLocaleString()}</span>
+                    <span style={{ color: FG.brand }}>+₹{lateFee.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-white font-bold">Total</span>
-                  <span className="font-black text-lg" style={{ color: COLORS.saffron }}>
+                  <span className="font-black text-lg" style={{ color: FG.brand }}>
                     ₹{playerFee.toLocaleString()}
                   </span>
                 </div>
@@ -448,7 +448,7 @@ const SuperAdminAddPlayerPayment = () => {
                   onClick={handlePayment}
                   disabled={processing || !pd}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                  style={SAFFRON_CTA}
                   whileHover={processing ? {} : { scale: 1.01 }}
                   whileTap={processing ? {} : { scale: 0.98 }}
                 >
