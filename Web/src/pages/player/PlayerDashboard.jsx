@@ -54,10 +54,10 @@ const InfoRow = ({ label, value, last = false }) => (
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
-    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: '#4ADE80' },
-    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: COLORS.saffronLight },
+    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: 'rgb(var(--success-fg-soft))' },
+    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: 'rgb(var(--brand-fg-soft))' },
   };
-  const style = map[status] || { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.5)' };
+  const style = map[status] || { bg: 'rgb(var(--ink) / 0.06)', border: 'rgb(var(--ink) / 0.12)', text: 'var(--fg-muted)' };
   return (
     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border"
       style={{ background: style.bg, borderColor: style.border, color: style.text }}>
@@ -369,7 +369,7 @@ const PlayerDashboard = () => {
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
               <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                <User className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
                 Profile Information
               </h2>
               <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
@@ -386,7 +386,7 @@ const PlayerDashboard = () => {
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
               <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <Trophy className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+                <Trophy className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
                 Team Information
               </h2>
 
@@ -403,7 +403,7 @@ const PlayerDashboard = () => {
               ) : (
                 <div className="py-6 text-center">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    style={{ background: 'rgb(var(--ink) / 0.04)' }}>
                     <Users className="w-6 h-6 text-white/20" />
                   </div>
                   <p className="text-fg-muted text-sm mb-1">Not assigned to any team yet.</p>
@@ -418,7 +418,7 @@ const PlayerDashboard = () => {
                       disabled={updatingTeam}
                     />
                     {updatingTeam && (
-                      <p className="text-xs mt-2 text-center" style={{ color: COLORS.saffronLight }}>
+                      <p className="text-xs mt-2 text-center" style={{ color: 'rgb(var(--brand-fg-soft))' }}>
                         Joining team...
                       </p>
                     )}
@@ -471,7 +471,7 @@ const PlayerDashboard = () => {
               <div className="text-center mb-6">
                 <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                   style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                  <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+                  <Trophy className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
                 </div>
                 <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
                 <p className="text-fg-muted text-sm">
@@ -512,7 +512,7 @@ const PlayerDashboard = () => {
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                         style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                        <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} />
+                        <Trophy className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg))' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-white font-bold text-base mb-1 truncate">

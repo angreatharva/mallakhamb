@@ -21,7 +21,7 @@ const GENDERS = [
 
 const FilterLabel = ({ children, primary = false }) => (
   <label className="block text-xs font-bold tracking-widest uppercase mb-2"
-    style={{ color: primary ? COLORS.saffron : 'rgba(255,255,255,0.45)' }}>
+    style={{ color: primary ? COLORS.saffron : 'rgb(var(--ink) / 0.45)' }}>
     {children}
   </label>
 );
@@ -131,7 +131,7 @@ const ScoreCategoryFilters = ({
           type="button"
           onClick={onClearFilters}
           className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-white/5"
-          style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'var(--fg-muted)' }}>
+          style={{ borderColor: 'rgb(var(--ink) / 0.12)', color: 'var(--fg-muted)' }}>
           Clear Filters
         </button>
       </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { publicAPI } from '@/services/index.js';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, alpha } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -21,9 +21,9 @@ const COMP_TYPE_SUBLABELS = {
 };
 
 const RANK_COLORS = {
-  1: { bg: 'rgba(245,166,35,0.15)', border: 'rgba(245,166,35,0.4)', text: '#F5A623', glow: 'rgba(245,166,35,0.2)' },
-  2: { bg: 'rgba(192,192,192,0.10)', border: 'rgba(192,192,192,0.35)', text: '#C0C0C0', glow: 'rgba(192,192,192,0.1)' },
-  3: { bg: 'rgba(205,127,50,0.12)', border: 'rgba(205,127,50,0.35)', text: '#CD7F32', glow: 'rgba(205,127,50,0.1)' },
+  1: { bg: 'rgba(245,166,35,0.15)', border: 'rgba(245,166,35,0.4)', text: DATA_COLORS.gold, glow: 'rgba(245,166,35,0.2)' },
+  2: { bg: 'rgba(192,192,192,0.10)', border: 'rgba(192,192,192,0.35)', text: DATA_COLORS.silver, glow: 'rgba(192,192,192,0.1)' },
+  3: { bg: 'rgba(205,127,50,0.12)', border: 'rgba(205,127,50,0.35)', text: DATA_COLORS.bronze, glow: 'rgba(205,127,50,0.1)' },
 };
 
 // ─── Rank Badge ───────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ const RankBadge = ({ rank }) => {
   }
   return (
     <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-      style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--fg-muted)' }}>
+      style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}>
       {rank}
     </div>
   );
@@ -74,13 +74,13 @@ const parseBreakdown = (player) => {
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
 const SkeletonRow = () => (
   <div className="flex items-center gap-4 p-4 rounded-2xl border animate-pulse"
-    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
-    <div className="w-9 h-9 rounded-full flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.05)' }}>
+    <div className="w-9 h-9 rounded-full flex-shrink-0" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
     <div className="flex-1 space-y-2">
-      <div className="h-3 rounded-full w-1/3" style={{ background: 'rgba(255,255,255,0.06)' }} />
-      <div className="h-2 rounded-full w-1/4" style={{ background: 'rgba(255,255,255,0.04)' }} />
+      <div className="h-3 rounded-full w-1/3" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
+      <div className="h-2 rounded-full w-1/4" style={{ background: 'rgb(var(--ink) / 0.04)' }} />
     </div>
-    <div className="h-8 w-16 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    <div className="h-8 w-16 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
   </div>
 );
 
@@ -100,15 +100,15 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
       className="rounded-2xl border overflow-hidden"
       style={{
         background: isHighlighted
-          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.02))`
+          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.02))`
           : rc
-          ? `linear-gradient(135deg, ${rc.bg}, rgba(255,255,255,0.01))`
-          : 'rgba(255,255,255,0.02)',
+          ? `linear-gradient(135deg, ${rc.bg}, rgb(var(--ink) / 0.01))`
+          : 'rgb(var(--ink) / 0.02)',
         borderColor: isHighlighted
           ? `${alpha(COLORS.saffron, 0x40)}`
           : rc
           ? rc.border
-          : 'rgba(255,255,255,0.07)',
+          : 'rgb(var(--ink) / 0.07)',
         boxShadow: rc ? `0 0 20px ${rc.glow}` : 'none',
       }}
     >
@@ -124,11 +124,11 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
             <p className="text-white font-bold text-sm truncate">{player.playerName}</p>
             {isHighlighted && (
               <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: COLORS.saffronLight }}>You</span>
+                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: 'rgb(var(--brand-fg-soft))' }}>You</span>
             )}
             {!player.isFinalized && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--fg-muted)' }}>Pending</span>
+                style={{ background: 'rgb(var(--ink) / 0.06)', color: 'var(--fg-muted)' }}>Pending</span>
             )}
           </div>
           <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
@@ -139,14 +139,14 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="text-right">
             <p className="text-lg font-black tabular-nums"
-              style={{ color: isHighlighted ? COLORS.saffron : rc ? rc.text : '#fff' }}>
+              style={{ color: isHighlighted ? 'rgb(var(--brand-fg))' : rc ? rc.text : 'rgb(var(--ink))' }}>
               {player.isFinalized ? Number(player.finalScore || 0).toFixed(2) : '—'}
             </p>
             <p className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>score</p>
           </div>
           {expanded
-            ? <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
-            : <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
+            ? <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
+            : <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
           }
         </div>
       </button>
@@ -160,14 +160,14 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <p className="text-[10px] font-bold tracking-widest uppercase mt-3 mb-2"
                 style={{ color: 'var(--fg-muted)' }}>Score Breakdown (Average)</p>
               <div className="flex flex-wrap gap-2">
-                <ScorePill label="Difficulty" value={breakdown.difficulty} accent="#3B82F6" />
-                <ScorePill label="Combination" value={breakdown.combination} accent="#A855F7" />
-                <ScorePill label="Execution" value={breakdown.execution} accent={COLORS.saffron} />
-                <ScorePill label="Originality" value={breakdown.bonus} accent="#22C55E" />
+                <ScorePill label="Difficulty" value={breakdown.difficulty} accent={DATA_COLORS.blue} />
+                <ScorePill label="Combination" value={breakdown.combination} accent={DATA_COLORS.purple} />
+                <ScorePill label="Execution" value={breakdown.execution} accent={'rgb(var(--brand-fg))'} />
+                <ScorePill label="Originality" value={breakdown.bonus} accent={DATA_COLORS.green} />
               </div>
               {breakdown.used > 0 && (
                 <p className="text-[10px] mt-2" style={{ color: 'var(--fg-muted)' }}>
@@ -198,7 +198,7 @@ const ApparatusSection = ({ apparatus, players, highlightPlayerId, selfOnly = fa
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--fg-muted)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          style={{ background: 'rgb(var(--ink) / 0.06)', color: 'var(--fg-muted)', border: '1px solid rgb(var(--ink) / 0.1)' }}>
           {apparatus}
         </span>
         <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
@@ -343,7 +343,7 @@ const PerformancePanel = ({
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
-              <TrendingUp className="w-5 h-5" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <TrendingUp className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
             </div>
             <div>
               <h2 className="text-lg font-black text-white">{title}</h2>
@@ -364,9 +364,9 @@ const PerformancePanel = ({
                   onClick={() => setActiveTab(ct)}
                   className="flex flex-col items-start px-4 py-2.5 rounded-xl border transition-all duration-200 min-h-[44px]"
                   style={{
-                    background: isActive ? `${alpha(COLORS.saffron, 0x15)}` : 'rgba(255,255,255,0.03)',
-                    borderColor: isActive ? `${alpha(COLORS.saffron, 0x50)}` : 'rgba(255,255,255,0.08)',
-                    color: isActive ? COLORS.saffronLight : 'rgba(255,255,255,0.5)',
+                    background: isActive ? `${alpha(COLORS.saffron, 0x15)}` : 'rgb(var(--ink) / 0.03)',
+                    borderColor: isActive ? `${alpha(COLORS.saffron, 0x50)}` : 'rgb(var(--ink) / 0.08)',
+                    color: isActive ? COLORS.saffronLight : 'rgb(var(--ink) / 0.5)',
                   }}
                 >
                   <span className="text-sm font-bold leading-tight">
@@ -396,7 +396,7 @@ const PerformancePanel = ({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="rounded-2xl border p-8 text-center"
                 style={{ background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>{error}</p>
+                <p className="text-sm font-semibold" style={{ color: 'rgb(var(--danger-fg))' }}>{error}</p>
                 <button type="button" onClick={() => fetchScoresForTab(activeTab)}
                   className="mt-3 text-xs underline" style={{ color: 'var(--fg-muted)' }}>
                   Try again
@@ -406,7 +406,7 @@ const PerformancePanel = ({
               <motion.div key="empty"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="rounded-2xl border p-10 text-center"
-                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <Trophy className="w-12 h-12 mx-auto mb-3 text-white/15" aria-hidden="true" />
                 <p className="text-fg-muted font-semibold text-sm">{emptyLabel}</p>
                 <p className="text-fg-muted text-xs mt-1">

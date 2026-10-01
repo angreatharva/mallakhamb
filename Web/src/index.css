@@ -93,6 +93,21 @@
 
   /* red-400 as status text ("Locked"): #F87171 exactly in dark. */
   --danger-fg-soft: 248 113 113;
+
+  /*
+   * Data palette — score-section colours and medals used as TEXT on the
+   * boards. Dark = the hexes those boards already used, exactly; light = shades
+   * at 5.7:1 or better on every light surface.
+   */
+  --success-fg-soft: 74 222 128;   /* #4ADE80 */
+  --cat-blue: 59 130 246;          /* Difficulty */
+  --cat-purple: 168 85 247;        /* Combination */
+  --cat-purple-soft: 192 132 252;
+  --cat-green: 34 197 94;          /* Originality */
+  --cat-red: 239 68 68;            /* deductions */
+  --medal-gold: 245 166 35;
+  --medal-silver: 192 192 192;
+  --medal-bronze: 205 127 50;
 }
 
 [data-appearance="light"] {
@@ -130,6 +145,15 @@
   --brand-fg-soft: 194 65 12;
   --brand-gold-fg: 180 83 9;
   --danger-fg-soft: 185 28 28; /* #F87171 is 2.8:1 on white */
+  --success-fg-soft: 22 101 52;
+  --cat-blue: 29 78 216;
+  --cat-purple: 126 34 206;
+  --cat-purple-soft: 126 34 206;
+  --cat-green: 22 101 52;
+  --cat-red: 185 28 28;
+  --medal-gold: 146 64 14;
+  --medal-silver: 71 85 105;
+  --medal-bronze: 154 52 18;
 }
 
 /* Derived — recomputed wherever an appearance is declared (see above). */

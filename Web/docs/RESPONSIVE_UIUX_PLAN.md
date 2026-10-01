@@ -120,6 +120,12 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 
 **Reading a dark diff from here on.** "Identical in dark" means *within one colour level*. Every dark diff is classified mechanically — max channel delta ≤ 1 is rounding; anything larger is a real change that must be explained.
 
+*16–22. Player group and the score boards* — `PlayerTeamSelection`, `PlayerDashboard`, `performance/PerformancePanel` (also on the coach dashboard), `scores/PlayerRankingBoard`, `scores/TeamChampionshipBoard`, `scores/ScoreCategoryFilters`, `responsive/ResponsiveRankings`.
+- (a) 9 `md:` sites (gutters, card padding, heading sizes, a 2-up team grid at 768) — tablet-correct.
+- (b) Nothing to add: no field below 16px, no target under 44px.
+- (c) **`DATA_COLORS`** in `tokens.js`: medal gold/silver/bronze and the score-category blue/purple/green/red as channel tokens — the old hexes in dark, -700/-800 shades in light. The boards wrote them as text (bronze `#CD7F32` on white is 3.3:1). `PlayerTeamSelection` had its own `COLORS` with `dark: '#0A0A0A'`, so its page stayed black in light — the `ResetPassword` failure again.
+- (d) Dark: two intended changes only. The "not assigned" badge was 50% ink → muted (3.58:1 in light). `PlayerTeamSelection`'s own `#FF9933` saffron → the one brand saffron (a hue shift on its icons and "Click to join"). `ResponsiveRankings`' rank-2 silver `#94A3B8` → the `#C0C0C0` every other board uses, but no audited route renders a rank 2 there. The coach dashboard (which hosts `PerformancePanel`) moved by rounding only. Light: Team Selection was a black page with invisible team names and now reads; the medal scores read in their deep shades; the score filters' labels on Public Scores and Admin Scores read (the codemod gave them ink).
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

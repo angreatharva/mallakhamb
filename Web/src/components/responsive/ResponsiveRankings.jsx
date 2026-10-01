@@ -1,22 +1,22 @@
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, DATA_COLORS, alpha } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
 const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;
-const textPrimary   = 'rgba(255,255,255,0.90)';
-const textSecondary = 'rgba(255,255,255,0.50)';
-const textMuted     = 'rgba(255,255,255,0.28)';
+const textPrimary   = 'rgb(var(--ink) / 0.90)';
+const textSecondary = 'rgb(var(--ink) / 0.50)';
+const textMuted     = 'rgb(var(--ink) / 0.28)';
 
 // ─── Medal config ─────────────────────────────────────────────────────────────
 const MEDALS = [
-  { emoji: '🥇', color: '#F5A623', bg: 'rgba(245,166,35,0.10)', border: 'rgba(245,166,35,0.25)' },
-  { emoji: '🥈', color: '#94A3B8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' },
-  { emoji: '🥉', color: '#CD7F32', bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.20)' },
+  { emoji: '🥇', color: DATA_COLORS.gold, bg: 'rgba(245,166,35,0.10)', border: 'rgba(245,166,35,0.25)' },
+  { emoji: '🥈', color: DATA_COLORS.silver, bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' },
+  { emoji: '🥉', color: DATA_COLORS.bronze, bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.20)' },
 ];
 
 const getMedalStyle = (index, searching) => {
@@ -35,7 +35,7 @@ const ScoreChip = ({ value, color, label }) => (
 // ─── Tied badge ───────────────────────────────────────────────────────────────
 const TiedBadge = () => (
   <span style={{
-    background: `${alpha(C.gold, 0x22)}`, color: C.gold,
+    background: `${alpha(C.gold, 0x22)}`, color: DATA_COLORS.gold,
     border: `1px solid ${alpha(C.gold, 0x44)}`,
     borderRadius: 20, padding: '1px 8px',
     fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
@@ -104,7 +104,7 @@ export const ResponsiveIndividualRankings = ({
                 {tied && <TiedBadge />}
               </div>
               <p style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{player.teamName}</p>
-              {tied && <p style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
+              {tied && <p style={{ fontSize: 11, color: DATA_COLORS.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
             </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -217,7 +217,7 @@ export const ResponsiveIndividualRankings = ({
                   </td>
                   <td style={{ padding: '13px 16px' }}>
                     <p style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>{player.playerName}</p>
-                    {tied && <p style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
+                    {tied && <p style={{ fontSize: 11, color: DATA_COLORS.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: textSecondary, whiteSpace: 'nowrap' }}>{player.teamName}</td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: textSecondary, whiteSpace: 'nowrap' }}>{player.time || 'N/A'}</td>
@@ -297,7 +297,7 @@ export const ResponsiveTeamRankings = ({
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
             {team.topPlayerScores?.map(player => (
               <div key={player.playerId} style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'rgb(var(--ink) / 0.04)',
                 border: `1px solid ${border}`,
                 borderRadius: 10,
                 padding: '10px 12px',
@@ -350,7 +350,7 @@ export const ResponsiveRankingsFilters = ({
   const selectStyle = (disabled = false) => ({
     width: '100%',
     padding: '9px 12px',
-    background: disabled ? 'rgba(255,255,255,0.03)' : elevated,
+    background: disabled ? 'rgb(var(--ink) / 0.03)' : elevated,
     border: `1px solid ${borderMid}`,
     borderRadius: 10,
     color: disabled ? textMuted : textPrimary,

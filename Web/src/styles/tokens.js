@@ -381,6 +381,23 @@ export const SAFFRON_CTA = Object.freeze({
   color: '#0A0A0A',
 });
 
+/**
+ * The data palette as CSS colour strings — for score pills, ranks and medals
+ * used as TEXT (index.css defines both appearances). In the `rgb(var(--x))`
+ * form, so `alpha()` can tint them. Do not hand these to a framer animation
+ * prop: framer cannot interpolate a CSS variable.
+ */
+export const DATA_COLORS = Object.freeze({
+  blue: 'rgb(var(--cat-blue))',
+  purple: 'rgb(var(--cat-purple))',
+  purpleSoft: 'rgb(var(--cat-purple-soft))',
+  green: 'rgb(var(--cat-green))',
+  red: 'rgb(var(--cat-red))',
+  gold: 'rgb(var(--medal-gold))',
+  silver: 'rgb(var(--medal-silver))',
+  bronze: 'rgb(var(--medal-bronze))',
+});
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 export const DEBOUNCE_DELAY = 300;
