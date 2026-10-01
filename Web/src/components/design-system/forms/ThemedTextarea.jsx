@@ -54,15 +54,15 @@ export const ThemedTextarea = forwardRef(({
         className={clsx(
           // Base styles
           'w-full px-4 py-3 rounded-lg',
-          'bg-white/5 backdrop-blur-sm',
-          'text-white placeholder:text-fg-muted',
+          'bg-ink/5 backdrop-blur-sm',
+          'text-ink placeholder:text-fg-muted',
           'border transition-all duration-200',
           'resize-y',
           
           // Normal state
           !hasError && !disabled && !readOnly && [
-            'border-white/10',
-            'hover:border-white/20',
+            'border-ink/10',
+            'hover:border-ink/20',
             'focus:border-current',
           ],
           
@@ -76,14 +76,14 @@ export const ThemedTextarea = forwardRef(({
           disabled && [
             'opacity-50',
             'cursor-not-allowed',
-            'border-white/5',
+            'border-ink/5',
             'resize-none',
           ],
           
           // Readonly state
           readOnly && [
             'cursor-default',
-            'border-white/5',
+            'border-ink/5',
             'resize-none',
           ],
           

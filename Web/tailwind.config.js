@@ -38,14 +38,13 @@ export default {
     extend: {
       colors: {
         /*
-         * TRANSITIONAL (plan §14.5, removed in Phase 9): `white` means INK —
-         * white in dark, near-black in light. With `--ink: 255 255 255` every
-         * existing `text-white/NN`, `bg-white/NN` and `border-white/NN` renders
-         * exactly as before in dark, and light is legible before each file has
-         * been migrated to the semantic names. Text that must stay white on
-         * any background (a label on a photo or a saturated fill) is `snow`.
+         * INK: what text and hairlines are made of — white in dark, near-black
+         * in light (`--ink`). Phases 3–9 spelled it `white` (a transitional
+         * alias); Phase 9.4 renamed every use, so `white` is white again and
+         * colourHygiene.test.js forbids the `*-white` utilities. Text that must
+         * stay white on any background (a photo, a saturated fill) is `snow`.
          */
-        white: channel('ink'),
+        ink: channel('ink'),
         snow: '#ffffff',
 
         // Semantic surfaces and ink (index.css defines both appearances).

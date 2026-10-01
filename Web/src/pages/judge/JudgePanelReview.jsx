@@ -360,16 +360,16 @@ const JudgePanelReview = () => {
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={() => { if (!finalized) goBackToScoring(); else goBackToTeam(); }}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
                 aria-label={finalized ? 'Back to team' : 'Back to scoring'}>
-                <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+                <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
               </button>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
                 <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
+                <p className="text-ink font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
                 <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
               </div>
             </div>
@@ -385,7 +385,7 @@ const JudgePanelReview = () => {
             style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
             <User className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
               <p className="text-xs truncate" style={{ color: 'var(--fg-muted)' }}>{selectedTeam?.name}</p>
             </div>
           </div>
@@ -407,7 +407,7 @@ const JudgePanelReview = () => {
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-white">Panel Review</h2>
+              <h2 className="text-xl font-black text-ink">Panel Review</h2>
               <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
                 {panelScoresCount}
                 {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
@@ -419,7 +419,7 @@ const JudgePanelReview = () => {
                 <button
                   type="button"
                   onClick={goBackToScoring}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-white/5"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5"
                   style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft }}
                 >
                   <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
@@ -449,7 +449,7 @@ const JudgePanelReview = () => {
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.danger }} />
-                <span className="text-sm font-bold text-white">
+                <span className="text-sm font-bold text-ink">
                   {[
                     (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.difficulty) && 'Difficulty',
                     (isSeniorJudge ? panelMismatch.combinationMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.combination) && 'Combination',
@@ -473,7 +473,7 @@ const JudgePanelReview = () => {
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.warning }} />
-                <span className="text-sm font-bold text-white">
+                <span className="text-sm font-bold text-ink">
                   Tolerance exceeded — gap {Number(panelMismatch.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(panelMismatch.toleranceInfo?.tolerance ?? 0).toFixed(2)}
                 </span>
               </div>
@@ -515,7 +515,7 @@ const JudgePanelReview = () => {
                   }}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <div className="text-sm font-bold text-ink flex items-center gap-2">
                         {judge}
                         {isYou && (
                           <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-700 dark:text-purple-300">You</span>
@@ -555,7 +555,7 @@ const JudgePanelReview = () => {
                           <span>C: {b.difficulty.cClass ?? 0}</span>
                         </>
                       )}
-                      <span className="font-bold text-white">{b.detailed ? '= ' : ''}{(b.difficulty.total ?? 0).toFixed(2)}</span>
+                      <span className="font-bold text-ink">{b.detailed ? '= ' : ''}{(b.difficulty.total ?? 0).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -577,8 +577,8 @@ const JudgePanelReview = () => {
                   </div>
 
                   <div className="flex gap-4 text-xs" style={{ color: 'rgb(var(--ink) / 0.7)' }}>
-                    <span>Execution: <strong className="text-white">{(b.execution || 0).toFixed(2)}</strong></span>
-                    <span>Originality: <strong className="text-white">{(b.bonus || 0).toFixed(2)}</strong></span>
+                    <span>Execution: <strong className="text-ink">{(b.execution || 0).toFixed(2)}</strong></span>
+                    <span>Originality: <strong className="text-ink">{(b.bonus || 0).toFixed(2)}</strong></span>
                   </div>
                 </div>
               );
@@ -600,7 +600,7 @@ const JudgePanelReview = () => {
                 type="button"
                 onClick={finalizePanelScore}
                 disabled={finalizing || panelMismatch.hasBlockingIssue}
-                className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold min-h-[52px]"
+                className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-ink font-bold min-h-[52px]"
                 style={{
                   background: panelMismatch.hasBlockingIssue
                     ? 'rgb(var(--ink) / 0.1)'
@@ -613,7 +613,7 @@ const JudgePanelReview = () => {
               >
                 {finalizing ? (
                   <>
-                    <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
+                    <motion.div className="w-5 h-5 rounded-full border-2 border-ink/30 border-t-ink"
                       animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
                     Finalizing…
                   </>
@@ -651,7 +651,7 @@ const JudgePanelReview = () => {
             <button
               type="button"
               onClick={goBackToTeam}
-              className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold transition-all duration-300 min-h-[52px]"
+              className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-ink font-bold transition-all duration-300 min-h-[52px]"
               style={{ background: 'rgb(var(--ink) / 0.1)', border: '1px solid rgb(var(--ink) / 0.2)' }}
             >
               Return to Team

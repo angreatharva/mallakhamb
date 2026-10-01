@@ -773,7 +773,7 @@ const JudgeDashboard = () => {
               <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
               <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
             </div>
           </div>
@@ -804,7 +804,7 @@ const JudgeDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
-              <h1 className="text-2xl font-black text-white">{judgeInfo.name}</h1>
+              <h1 className="text-2xl font-black text-ink">{judgeInfo.name}</h1>
             </div>
             
             {!showModal && selectedCompetitionType && (
@@ -863,7 +863,7 @@ const JudgeDashboard = () => {
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--fg-muted)' }}>{label}</span>
-                    <span className="text-sm font-bold text-white">{value}</span>
+                    <span className="text-sm font-bold text-ink">{value}</span>
                   </div>
                 ))}
               </div>
@@ -876,9 +876,9 @@ const JudgeDashboard = () => {
         {/* Registered, but on no panel yet */}
         {!hasSeats && (
           <FadeIn delay={0.1}>
-            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-white/5 bg-white/5">
-              <Scale className="w-12 h-12 mb-4 text-white/20" />
-              <p className="text-lg font-bold text-white/70">No panel assignments yet</p>
+            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-ink/5 bg-ink/5">
+              <Scale className="w-12 h-12 mb-4 text-ink/20" />
+              <p className="text-lg font-bold text-ink/70">No panel assignments yet</p>
               <p className="text-sm text-fg-muted mt-2 max-w-sm">
                 Your account is ready. An organiser adds you to a competition panel — the
                 categories you are judging will appear here once they do. Sign in again after
@@ -904,7 +904,7 @@ const JudgeDashboard = () => {
                 placeholder="Search teams by name..." aria-label="Search teams" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-base text-white placeholder-white/40 focus:border-purple-500/50 transition-colors shadow-lg"
+                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-purple-500/50 transition-colors shadow-lg"
               />
             </div>
 
@@ -925,7 +925,7 @@ const JudgeDashboard = () => {
                       key={team._id}
                       type="button"
                       onClick={() => handleTeamSelect(team)}
-                      className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-white/5"
+                      className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-ink/5"
                       style={{ 
                         background: 'rgb(var(--ink) / 0.02)',
                         borderColor: 'rgb(var(--ink) / 0.08)'
@@ -950,7 +950,7 @@ const JudgeDashboard = () => {
                             )}
                           </span>
                           <div className="min-w-0">
-                          <p className="font-bold text-lg text-white truncate">{team.name}</p>
+                          <p className="font-bold text-lg text-ink truncate">{team.name}</p>
                           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
                             Coach: {team.coach?.name || 'N/A'}
                           </p>
@@ -962,10 +962,10 @@ const JudgeDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
-                          <span className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/70 font-semibold">
+                          <span className="text-xs px-3 py-1.5 rounded-lg bg-ink/10 text-ink/70 font-semibold">
                             {teamPlayers.length} {teamPlayers.length === 1 ? 'Player' : 'Players'}
                           </span>
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-fg-muted">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 text-fg-muted">
                             <ChevronRight className="w-5 h-5" aria-hidden="true" />
                           </div>
                         </div>
@@ -975,9 +975,9 @@ const JudgeDashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
-                <Users className="w-12 h-12 mb-4 text-white/20" />
-                <p className="text-lg font-bold text-white/70">No teams found</p>
+              <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+                <Users className="w-12 h-12 mb-4 text-ink/20" />
+                <p className="text-lg font-bold text-ink/70">No teams found</p>
                 <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                   {searchQuery 
                     ? "No teams match your search query." 
@@ -1006,7 +1006,7 @@ const JudgeDashboard = () => {
               {selectedCompetitionType && isSelectionComplete && (
                 <button 
                   onClick={() => setShowModal(false)}
-                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors" aria-label="Close">
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-ink/5 hover:bg-ink/10 flex items-center justify-center text-fg-muted hover:text-ink transition-colors" aria-label="Close">
                   <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
@@ -1016,7 +1016,7 @@ const JudgeDashboard = () => {
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
                     <Filter className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
-                  <h2 className="text-2xl font-black text-white">Select Judging Category</h2>
+                  <h2 className="text-2xl font-black text-ink">Select Judging Category</h2>
                   <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
@@ -1069,9 +1069,9 @@ const JudgeDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                    <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
                       <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Gender</p>
-                      <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender || '—'}</p>
+                      <p className="font-bold text-ink">{availableGenders[0] || judgeInfo.gender || '—'}</p>
                     </div>
                   )}
 
@@ -1093,9 +1093,9 @@ const JudgeDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                    <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
                       <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Age Group</p>
-                      <p className="font-bold text-white">
+                      <p className="font-bold text-ink">
                         {availableAgeGroups[0]
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
                           || '—'}
@@ -1154,11 +1154,11 @@ const JudgeDashboard = () => {
                 </AnimatePresence>
 
                 {/* Confirm Button */}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-ink/10">
                   <button 
                     onClick={handleConfirmSelection}
                     disabled={!isSelectionComplete}
-                    className="w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-4 rounded-xl font-bold text-ink transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.1)', color: isSelectionComplete ? '#FFFFFF' : undefined }}>
                     {isSelectionComplete ? (
                       <>Continue to Dashboard <ChevronRight className="w-5 h-5" /></>
@@ -1192,7 +1192,7 @@ const JudgeDashboard = () => {
                 <button
                   onClick={() => setShowRoleModal(false)}
                   aria-label="Close"
-                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-fg-muted hover:text-white transition-colors">
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-ink/5 hover:bg-ink/10 flex items-center justify-center text-fg-muted hover:text-ink transition-colors">
                   <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
@@ -1202,7 +1202,7 @@ const JudgeDashboard = () => {
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
                     <ClipboardList className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
-                  <h2 id="role-modal-title" className="text-2xl font-black text-white">Select Your Role</h2>
+                  <h2 id="role-modal-title" className="text-2xl font-black text-ink">Select Your Role</h2>
                   <p className="text-fg-muted text-sm mt-2">
                     You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {selectedAgeGroup || judgeInfo.ageGroup} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
                   </p>
@@ -1217,7 +1217,7 @@ const JudgeDashboard = () => {
                       <div className="flex items-center gap-3">
                         <Icon className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-300" aria-hidden="true" />
                         <div>
-                          <p className="font-bold text-white">{role}</p>
+                          <p className="font-bold text-ink">{role}</p>
                           <p className="text-xs text-fg-muted mt-0.5">{desc}</p>
                         </div>
                       </div>

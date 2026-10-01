@@ -505,7 +505,7 @@ const UnifiedLoginInner = () => {
           initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, ease: EASE }}>
           <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
-          <div className="w-px h-8 bg-white/10" />
+          <div className="w-px h-8 bg-ink/10" />
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
               style={{ color: FG.accent }}>Mallakhamb</p>
@@ -537,7 +537,7 @@ const UnifiedLoginInner = () => {
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
-            <h2 className="text-3xl font-black text-white mt-3">{config.formTitle}</h2>
+            <h2 className="text-3xl font-black text-ink mt-3">{config.formTitle}</h2>
             <p className="text-fg-muted text-sm mt-1">{config.formSubtitle}</p>
           </motion.div>
           
@@ -639,7 +639,7 @@ const UnifiedLoginInner = () => {
                   autoComplete="current-password"
                   rightElement={
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
+                      className="p-1 rounded hover:bg-ink/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword
                         ? <EyeOff className="w-4 h-4 text-fg-muted" />

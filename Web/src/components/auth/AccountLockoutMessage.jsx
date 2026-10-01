@@ -67,7 +67,7 @@ const AccountLockoutMessage = ({ lockoutEndTime, primaryColor = '#FF6B6B' }) => 
           <p className="title font-bold text-sm mb-1" style={{ color: primaryColor }}>
             {isUnlocked ? 'Account Unlocked' : 'Account Temporarily Locked'}
           </p>
-          <p className="description text-xs text-white/60">
+          <p className="description text-xs text-ink/60">
             {isUnlocked ? (
               'You can now try logging in again.'
             ) : (

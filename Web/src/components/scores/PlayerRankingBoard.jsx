@@ -125,7 +125,7 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
         <RankBadge rank={rank} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-white font-bold text-sm leading-tight">{player.playerName}</p>
+            <p className="text-ink font-bold text-sm leading-tight">{player.playerName}</p>
             {tieBreak?.unresolved && (
               <span className="text-xs px-2 py-0.5 rounded-full font-bold"
                 style={{ background: 'rgba(245,166,35,0.15)', color: DATA_COLORS.gold, border: '1px solid rgba(245,166,35,0.3)' }}>

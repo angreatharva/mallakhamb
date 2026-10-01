@@ -72,9 +72,9 @@ export const PasswordRequirements = ({ password, minLength = 8 }) => {
             {met ? (
               <CheckCircle2 className="w-3.5 h-3.5 text-green-700 dark:text-green-500" />
             ) : (
-              <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
+              <div className="w-3.5 h-3.5 rounded-full border border-ink/20" />
             )}
-            <span className={`text-xs ${met ? 'text-white/60' : 'text-fg-muted'}`}>
+            <span className={`text-xs ${met ? 'text-ink/60' : 'text-fg-muted'}`}>
               {req.label}
             </span>
           </div>

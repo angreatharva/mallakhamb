@@ -682,7 +682,7 @@ const ScorerScoring = () => {
     }
   };
 
-  const darkInput = `w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
+  const darkInput = `w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
   const darkInputStyle = (disabled) => ({
     background: disabled ? 'rgb(var(--ink) / 0.02)' : 'rgb(var(--ink) / 0.04)',
     border: `1px solid ${ADMIN_COLORS.darkBorderMid}`
@@ -692,7 +692,7 @@ const ScorerScoring = () => {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4 animate-spin"
+          <div className="w-10 h-10 border-2 border-ink/10 rounded-full mx-auto mb-4 animate-spin"
             style={{ borderTopColor: ADMIN_COLORS.saffron }} />
           <p className="text-fg-muted text-sm">Loading scoring page…</p>
         </div>
@@ -724,15 +724,15 @@ const ScorerScoring = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <motion.button onClick={() => navigate('/judge/dashboard')}
-              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white">
+              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </motion.button>
-            <div className="w-px h-5 bg-white/10" />
+            <div className="w-px h-5 bg-ink/10" />
             <div className="flex items-center gap-2">
               <img src={BHALogo} alt="BHA" className="h-7 w-auto object-contain opacity-70" />
               <Trophy className="w-4 h-4" style={{ color: FG.brand }} />
-              <span className="text-white font-bold text-sm hidden sm:inline">Scorer Scoring</span>
+              <span className="text-ink font-bold text-sm hidden sm:inline">Scorer Scoring</span>
               {isLocked && <Lock className="w-4 h-4" style={{ color: FG.danger }} />}
             </div>
           </div>
@@ -781,7 +781,7 @@ const ScorerScoring = () => {
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: FG.danger }} />
               <div>
-                <p className="font-bold text-white text-sm">Scoring session is locked</p>
+                <p className="font-bold text-ink text-sm">Scoring session is locked</p>
                 <p className="text-xs mt-0.5 text-fg-muted">Scores saved and locked. Cannot be modified.</p>
               </div>
             </div>
@@ -795,7 +795,7 @@ const ScorerScoring = () => {
           <div className="flex items-center justify-between gap-4 sm:block sm:flex-shrink-0">
             <div>
               <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Scoring Session</p>
-              <h2 className="text-lg sm:text-xl font-black text-white leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
+              <h2 className="text-lg sm:text-xl font-black text-ink leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
             </div>
             {/* Count on the right of the title on a phone… */}
             <p className="sm:hidden flex items-baseline gap-1.5">
@@ -804,7 +804,7 @@ const ScorerScoring = () => {
             </p>
           </div>
 
-          <div className="hidden sm:block w-px self-stretch bg-white/10" aria-hidden="true" />
+          <div className="hidden sm:block w-px self-stretch bg-ink/10" aria-hidden="true" />
 
           <dl className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
             {[
@@ -815,7 +815,7 @@ const ScorerScoring = () => {
             ].filter(([, value]) => value).map(([label, value]) => (
               <div key={label} className="min-w-0">
                 <dt className="text-[10px] uppercase tracking-widest text-fg-muted">{label}</dt>
-                <dd className="text-sm font-semibold text-white truncate">{value}</dd>
+                <dd className="text-sm font-semibold text-ink truncate">{value}</dd>
               </div>
             ))}
           </dl>
@@ -830,17 +830,17 @@ const ScorerScoring = () => {
         {/* <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.blueSoft }}>Scoring System</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-fg-muted">
-            <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
-            <p><span className="text-white/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
-            <p><span className="text-white/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
-            <p><span className="text-white/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
+            <p><span className="text-ink/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
+            <p><span className="text-ink/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
+            <p><span className="text-ink/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
+            <p><span className="text-ink/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
           </div>
         </div> */}
 
         {players.length > 0 ? (
           <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: FG.brand }}>
-              <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
+              <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-ink/30" />}
             </p>
             {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
                 the Chief's copy on a 4-judge panel, and the size is what picks
@@ -880,7 +880,7 @@ const ScorerScoring = () => {
           <div className="flex justify-end">
             {!readOnly ? (
               <motion.button onClick={handleSaveScores}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white min-h-[48px]"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]"
                 style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`, color: '#0A0A0A' }}
                 whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }} whileTap={{ scale: 0.97 }}>
                 <Save className="w-4 h-4" /> Save & Lock Scores

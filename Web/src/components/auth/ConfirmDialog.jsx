@@ -112,12 +112,12 @@ const ConfirmDialog = ({
                   style={{ background: `${alpha(accentColor, 0x18)}` }}>
                   <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
                 </div>
-                <h3 id="confirm-dialog-title" className="text-white font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
+                <h3 id="confirm-dialog-title" className="text-ink font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
               </div>
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-white hover:bg-white/[0.08] transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-ink hover:bg-ink/[0.08] transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
                 style={{ outlineColor: accentColor }}
                 aria-label="Close dialog"
               >
@@ -127,7 +127,7 @@ const ConfirmDialog = ({
 
             {/* Body */}
             <div className="px-6 pb-4" style={{ padding: isMobile ? '0 1rem 0.75rem' : '0 1.5rem 1rem' }}>
-              <p id="confirm-dialog-message" className="text-white/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
+              <p id="confirm-dialog-message" className="text-ink/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
 
               <AnimatePresence>
                 {error && (
@@ -156,7 +156,7 @@ const ConfirmDialog = ({
                 ref={cancelRef}
                 onClick={onClose}
                 disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-white/70 hover:text-white transition-all duration-200 min-h-[44px] disabled:opacity-40"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-ink/70 hover:text-ink transition-all duration-200 min-h-[44px] disabled:opacity-40"
                 style={{ 
                   borderColor: COLORS.darkBorderSubtle, 
                   background: 'rgb(var(--ink) / 0.04)',
@@ -168,7 +168,7 @@ const ConfirmDialog = ({
               <motion.button
                 onClick={handleConfirm}
                 disabled={loading}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-ink transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
                 style={{ 
                   background: `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0xCC)})`,
                   color: '#0A0A0A',
@@ -181,7 +181,7 @@ const ConfirmDialog = ({
                 {loading ? (
                   <>
                     <div
-                      className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                      className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink"
                     />
                     Processing...
                   </>

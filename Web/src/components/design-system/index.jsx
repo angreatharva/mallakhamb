@@ -68,7 +68,7 @@ export const GradientText = ({ children, className = '' }) => (
 export const SaffronButton = ({ children, to, className = '', variant = 'solid', ...props }) => {
   const base = 'inline-flex items-center justify-center gap-2 rounded-full font-bold text-sm transition-all duration-200 min-h-[44px] px-6 cursor-pointer';
   const solid = `hover:brightness-110 active:scale-95`;
-  const outline = `border hover:bg-white/5 active:scale-95`;
+  const outline = `border hover:bg-ink/5 active:scale-95`;
   /*
    * A near-black label on the saffron fill: white on #FF6B00 is 2.86:1 (plan D6,
    * the same fix as ThemedButton). The fill is bright in both appearances, so

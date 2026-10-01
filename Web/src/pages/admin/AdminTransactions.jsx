@@ -135,7 +135,7 @@ const AdminTransactions = () => {
               </div>
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Transactions</p>
-                <h2 className="text-xl font-black text-white">Payment History</h2>
+                <h2 className="text-xl font-black text-ink">Payment History</h2>
               </div>
             </div>
 
@@ -160,19 +160,19 @@ const AdminTransactions = () => {
 
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+              <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
               <span className="text-fg-muted text-sm">Loading transactions…</span>
             </div>
           ) : transactions.length === 0 ? (
             <div className="text-center py-12">
               {isSuperAdmin && !selectedCompetition ? (
                 <>
-                  <Filter className="w-12 h-12 mx-auto mb-3 text-white/15" />
+                  <Filter className="w-12 h-12 mx-auto mb-3 text-ink/15" />
                   <p className="text-fg-muted font-semibold">Select a competition to view transactions.</p>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-white/15" />
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-ink/15" />
                   <p className="text-fg-muted font-semibold">No transactions found.</p>
                 </>
               )}
@@ -200,7 +200,7 @@ const AdminTransactions = () => {
                     {/* What the page is for: how much, and did it go through. */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-white font-bold text-lg leading-tight">{formatAmount(tx.amount)}</p>
+                        <p className="text-ink font-bold text-lg leading-tight">{formatAmount(tx.amount)}</p>
                         <p className="text-fg-muted text-xs mt-0.5">{formatDateTime(tx.createdAt)}</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
@@ -219,7 +219,7 @@ const AdminTransactions = () => {
                       ].map(([label, value]) => (
                         <div key={label} className="flex justify-between gap-3">
                           <dt className="text-fg-muted flex-shrink-0">{label}</dt>
-                          <dd className="text-white/75 text-right break-words min-w-0">{value}</dd>
+                          <dd className="text-ink/75 text-right break-words min-w-0">{value}</dd>
                         </div>
                       ))}
                       {/* Monospaced ids last, and allowed to wrap rather than
@@ -227,7 +227,7 @@ const AdminTransactions = () => {
                       {[['Order ID', row.razorpayOrderId], ['Payment ID', row.razorpayPaymentId]].map(([label, value]) => (
                         <div key={label} className="flex justify-between gap-3">
                           <dt className="text-fg-muted flex-shrink-0">{label}</dt>
-                          <dd className="text-white/60 font-mono text-right break-all min-w-0">{value}</dd>
+                          <dd className="text-ink/60 font-mono text-right break-all min-w-0">{value}</dd>
                         </div>
                       ))}
                     </dl>
@@ -274,14 +274,14 @@ const AdminTransactions = () => {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.02, duration: 0.3 }}>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/60">{formatDateTime(tx.createdAt)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{typeLabel(tx.type)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{sourceLabel(tx.source)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/60">{competitionLabel}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/80">{tx.team?.name || '-'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/70">{coachName}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/70 font-mono text-xs">{razorpayOrderId}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-white/70 font-mono text-xs">{razorpayPaymentId}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/60">{formatDateTime(tx.createdAt)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/80">{typeLabel(tx.type)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/80">{sourceLabel(tx.source)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/60">{competitionLabel}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/80">{tx.team?.name || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/70">{coachName}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/70 font-mono text-xs">{razorpayOrderId}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink/70 font-mono text-xs">{razorpayPaymentId}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {playerCount > 0 ? (
                             <button
@@ -300,7 +300,7 @@ const AdminTransactions = () => {
                             <span className="text-fg-muted">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap font-bold text-white">{formatAmount(tx.amount)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap font-bold text-ink">{formatAmount(tx.amount)}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: bg, color }}>
                             {tx.paymentStatus || 'unknown'}
@@ -348,7 +348,7 @@ const AdminTransactions = () => {
                       <Users className="w-5 h-5" style={{ color: DATA_COLORS.violet }} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-white">Team Players</h3>
+                      <h3 className="text-xl font-black text-ink">Team Players</h3>
                       <p className="text-xs text-fg-muted">{selectedPlayers.length} player{selectedPlayers.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
@@ -358,7 +358,7 @@ const AdminTransactions = () => {
                     style={{ background: 'rgb(var(--ink) / 0.05)' }}
                     aria-label="Close"
                   >
-                    <span className="text-white/60 text-xl" aria-hidden="true">×</span>
+                    <span className="text-ink/60 text-xl" aria-hidden="true">×</span>
                   </button>
                 </div>
               </div>
@@ -367,7 +367,7 @@ const AdminTransactions = () => {
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
                 {selectedPlayers.length === 0 ? (
                   <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-white/15" />
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-ink/15" />
                     <p className="text-fg-muted">No players found</p>
                   </div>
                 ) : (
@@ -386,7 +386,7 @@ const AdminTransactions = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-white font-bold">{player.name}</p>
+                            <p className="text-ink font-bold">{player.name}</p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: `${alpha(ADMIN_COLORS.saffron, 0x20)}`, 

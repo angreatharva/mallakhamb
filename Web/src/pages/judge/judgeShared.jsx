@@ -147,16 +147,16 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           style={{ borderColor: 'rgb(var(--ink) / 0.12)', background: 'rgb(var(--ink) / 0.04)' }}>
           <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
             onClick={() => onChange(Math.max(0, n - 1))}
-            className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-white/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[15px]"
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[15px]"
             style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : DATA_COLORS.purpleSoft, borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             −
           </button>
-          <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-white select-none">
+          <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-ink select-none">
             {n}
           </span>
           <button type="button" aria-label={`Increase ${name}`}
             onClick={() => onChange(n + 1)}
-            className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-white/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[15px]"
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[15px]"
             style={{ color: DATA_COLORS.purpleSoft, borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             +
           </button>
@@ -306,7 +306,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   <AlertTriangle className="w-5 h-5" style={{ color: FG.danger }} />
                 </div>
                 <div>
-                  <p className="text-white font-black text-base">Score Mismatch Detected</p>
+                  <p className="text-ink font-black text-base">Score Mismatch Detected</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your score may need correction'}
                   </p>
@@ -314,7 +314,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
                 style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
@@ -328,7 +328,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   className="rounded-xl border p-4"
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
-                  <p className="text-sm font-bold text-white mb-1">⛔ Combination Mismatch</p>
+                  <p className="text-sm font-bold text-ink mb-1">⛔ Combination Mismatch</p>
                   <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                     {panelMismatch.combinationSelectionMismatch
                       ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
@@ -365,7 +365,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   className="rounded-xl border p-4"
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
-                  <p className="text-sm font-bold text-white mb-1">⛔ Difficulty Mismatch</p>
+                  <p className="text-sm font-bold text-ink mb-1">⛔ Difficulty Mismatch</p>
                   <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                     {`Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
@@ -412,7 +412,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
             <div className="px-5 py-4 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <motion.button
                 onClick={onClose}
-                className="w-full py-3 rounded-xl font-bold text-sm text-white"
+                className="w-full py-3 rounded-xl font-bold text-sm text-ink"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
                 whileHover={{ filter: 'brightness(1.1)' }}
                 whileTap={{ scale: 0.97 }}
@@ -484,7 +484,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   <AlertTriangle className="w-5 h-5" style={{ color: FG.warning }} />
                 </div>
                 <div>
-                  <p className="text-white font-black text-base">Tolerance Limit Exceeded</p>
+                  <p className="text-ink font-black text-base">Tolerance Limit Exceeded</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
                   </p>
@@ -492,7 +492,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
                 style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
@@ -579,7 +579,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
             <div className="px-5 py-4 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <motion.button
                 onClick={onClose}
-                className="w-full py-3 rounded-xl font-bold text-sm text-white"
+                className="w-full py-3 rounded-xl font-bold text-sm text-ink"
                 style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}
                 whileHover={{ filter: 'brightness(1.1)' }}
                 whileTap={{ scale: 0.97 }}
@@ -669,7 +669,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               style={{ background: 'rgba(168,85,247,0.10)', borderColor: 'rgba(168,85,247,0.2)' }}
             >
               <div>
-                <p className="text-white font-black text-base">Edit Score — {editTarget.judgeType}</p>
+                <p className="text-ink font-black text-base">Edit Score — {editTarget.judgeType}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'rgba(192,132,252,0.7)' }}>Senior Judge override</p>
               </div>
               <div className="flex items-center gap-3">
@@ -679,7 +679,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5"
                   style={{ color: 'var(--fg-muted)' }}
                 >
                   <X className="w-4 h-4" />
@@ -692,7 +692,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               {/* Difficulty */}
               <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-white text-sm">Difficulty</h4>
+                  <h4 className="font-bold text-ink text-sm">Difficulty</h4>
                   <span className="text-lg font-black" style={{ color: FG.warning }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>
                 </div>
                 {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
@@ -704,7 +704,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               {/* Combination */}
               <div className="rounded-xl border p-4 space-y-2" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Combination</h4>
+                  <h4 className="font-bold text-ink text-sm">Combination</h4>
                   <span className="text-lg font-black" style={{ color: DATA_COLORS.purple }}>{editScores.combination.total.toFixed(2)} / 1.60</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -717,7 +717,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                       >
                         <div className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
                           style={{ borderColor: checked ? '#22C55E' : 'rgb(var(--ink) / 0.2)', background: checked ? '#22C55E' : 'transparent' }}>
-                          {checked && <CheckCircle className="w-3 h-3 text-white" />}
+                          {checked && <CheckCircle className="w-3 h-3 text-ink" />}
                         </div>
                         <input type="checkbox" checked={checked} onChange={() => handleComb(item.id)} className="sr-only" />
                         <span className="text-xs" style={{ color: checked ? FG.ink : 'rgb(var(--ink) / 0.5)' }}>{item.rule}</span>
@@ -731,14 +731,14 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               {/* Execution */}
               <div className="rounded-xl border p-4" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Execution</h4>
+                  <h4 className="font-bold text-ink text-sm">Execution</h4>
                   <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 4.40</span>
                 </div>
                 <DecimalInput
                   value={editScores.execution}
                   onValueChange={raw => setEditScores({ ...editScores, execution: roundExecution(raw) })}
                   aria-label="Execution"
-                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-white"
+                  className="w-full px-4 py-3 rounded-xl border text-2xl font-black text-center text-ink"
                   style={{ background: 'rgb(var(--ink) / 0.04)', borderColor: 'rgb(var(--ink) / 0.08)' }}
                 />
               </div>
@@ -746,7 +746,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               {/* Originality */}
               <div className="rounded-xl border p-4" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-white text-sm">Originality</h4>
+                  <h4 className="font-bold text-ink text-sm">Originality</h4>
                   <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>0.20</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -768,12 +768,12 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
             {/* Footer */}
             <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <button onClick={onClose}
-                className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-white/5"
+                className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-ink/5"
                 style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}
               >Cancel</button>
               <motion.button
                 onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())}
-                className="flex-1 py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
                 whileHover={{ filter: 'brightness(1.1)' }}
                 whileTap={{ scale: 0.97 }}

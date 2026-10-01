@@ -277,6 +277,16 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 - The judge walk at 375 light and 768 dark: the slip header carries the control, the three tabs open, and nothing is trapped under the Submit bar.
 - 388 unit tests pass.
 
+*9.4 — the `white` → ink alias is retired.*
+- Phases 3–9 spelled ink `white`: a transitional Tailwind alias that made `text-white` mean white in dark and near-black in light.
+- All 645 utilities (`text-`, `bg-`, `border-`, `border-t-` and `placeholder-white`, with their variants and opacities) are now `*-ink`, the same `--ink` channel. Two comment lines that record history keep their wording.
+- `tailwind.config.js` defines `ink` and no longer overrides `white`, which is plain white again. `snow` stays the name for "white on any background".
+- `colourHygiene.test.js` now **fails CI on any `*-white` utility**, since one would be invisible on the light page. Comment lines are exempt.
+- **Verified:**
+  - computed values `text-ink` = `#fff` in dark, `#0B0D12` in light; `text-white` = `#fff` in both;
+  - the full guarded visual run (dev server restarted for the config change) is **pixel-identical** in all six areas, every width, both appearances;
+  - 393 tests pass and the production build is clean.
+
 ### Phase 8 log
 
 Only proven duplication is extracted, and each step must leave every screen pixel-identical in both appearances. A local copy is removed only after its whitespace-normalised body is checked against the shared one, and anything unrecognised aborts.

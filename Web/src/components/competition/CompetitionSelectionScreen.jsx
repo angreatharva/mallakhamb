@@ -75,7 +75,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
               <CardIcon className="w-5 h-5" style={{ color: isSelected ? COLORS.saffron : 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-bold text-sm leading-tight">
+              <h3 className="text-ink font-bold text-sm leading-tight">
                 {competition.name} {competition.year || ''}
               </h3>
               
@@ -117,7 +117,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
                 initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               >
-                <Check className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+                <Check className="w-3.5 h-3.5 text-ink" aria-hidden="true" />
               </motion.div>
             )}
           </div>
@@ -664,14 +664,14 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
             <Trophy className="w-10 h-10 text-red-700 dark:text-red-400" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">Error</h2>
+          <h2 className="text-2xl font-black text-ink mb-3">Error</h2>
           <p className="text-red-700 dark:text-red-200 text-sm leading-relaxed mb-8">
             {error}
           </p>
           <div className="flex gap-2 justify-center">
             <button
               onClick={() => userType === 'coach' ? fetchCoachData() : window.location.reload()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
               style={SAFFRON_CTA}
             >
               Try Again
@@ -679,7 +679,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             {userType === 'coach' && error.includes('create a team') && (
               <button
                 onClick={() => navigate('/coach/create-team')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
                 style={SAFFRON_CTA}
               >
                 Create Team
@@ -714,9 +714,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
         <FadeIn className="text-center max-w-sm w-full">
           <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
             style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-            <Trophy className="w-10 h-10 text-white/20" />
+            <Trophy className="w-10 h-10 text-ink/20" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">
+          <h2 className="text-2xl font-black text-ink mb-3">
             Nothing at {levelLabel(selectedLevel)} Level
           </h2>
           <p className="text-fg-muted text-sm leading-relaxed mb-8">
@@ -725,14 +725,14 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <button
               onClick={() => navigate(`/${userType}/select-level`)}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
               style={SAFFRON_CTA}
             >
               <Layers className="w-4 h-4" aria-hidden="true" /> Choose Another Level
             </button>
             <button
               onClick={() => navigate('/')}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white/70 font-bold text-sm min-h-[44px] transition-all hover:text-white active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-ink/70 font-bold text-sm min-h-[44px] transition-all hover:text-ink active:scale-95"
               style={{ background: 'rgb(var(--ink) / 0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
             >
               Go to Home
@@ -785,7 +785,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               <Trophy className="w-3 h-3" aria-hidden="true" />
               Competition Selection
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
+            <h1 className="text-4xl md:text-5xl font-black text-ink mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Arena</GradientText>
             </h1>
             <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
@@ -894,7 +894,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             <motion.button
               onClick={handleCompetitionSelect}
               disabled={!selectedCompetition || isSelecting}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-ink font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 background: selectedCompetition
                   ? SAFFRON_CTA.background
@@ -908,7 +908,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                 {isSelecting ? (
                   <>
                     <div
-                      className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                      className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink"
                     />
                     {userType === 'coach' ? 'Registering...' : 'Loading...'}
                   </>

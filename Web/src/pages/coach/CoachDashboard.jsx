@@ -479,9 +479,9 @@ const CoachDashboard = () => {
                 whileHover={{ scale: 1.08, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               >
-                <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
+                <Trophy className="w-4 h-4 text-ink" aria-hidden="true" />
               </motion.div>
-              <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
+              <span className="text-ink font-bold text-sm tracking-wide hidden sm:block">
                 Mallakhamb<span style={{ color: FG.brand }}>India</span>
               </span>
             </div>
@@ -496,7 +496,7 @@ const CoachDashboard = () => {
                     style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                     <User className="w-3.5 h-3.5" style={{ color: FG.brandSoft }} aria-hidden="true" />
                   </div>
-                  <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
+                  <span className="text-ink/80 text-sm font-medium">{user.firstName || user.name}</span>
                 </div>
               )}
               <AppearanceMenu />
@@ -520,11 +520,11 @@ const CoachDashboard = () => {
           <CompetitionLockBanner className="mb-8" />
           <div className="rounded-3xl border p-12 text-center"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-white/20" aria-hidden="true" />
-            <h2 className="text-2xl font-black text-white mb-2">No Team Registered</h2>
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-ink/20" aria-hidden="true" />
+            <h2 className="text-2xl font-black text-ink mb-2">No Team Registered</h2>
             <p className="text-fg-muted mb-6">You don&apos;t have a team registered for this competition yet.</p>
             <button onClick={() => window.location.href = '/coach/select-competition'}
-              className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px] inline-flex items-center gap-2"
+              className="px-6 py-3 rounded-xl font-bold text-ink min-h-[44px] inline-flex items-center gap-2"
               style={SAFFRON_CTA}>
               <Trophy className="w-4 h-4" aria-hidden="true" />
               Select Team for Competition
@@ -565,7 +565,7 @@ const CoachDashboard = () => {
         }}
       >
         <div className="flex items-center justify-between mb-3">
-          <span className="text-white font-semibold text-sm">
+          <span className="text-ink font-semibold text-sm">
             {getAgeGroupDisplay(ageGroup)} {gender === 'Male' ? 'Boys' : 'Girls'}
           </span>
           <span
@@ -582,15 +582,15 @@ const CoachDashboard = () => {
               draggable={!team?.isSubmitted}
               onDragStart={(e) => handleDragStart(e, player, gender, ageGroup)}
               className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                !team?.isSubmitted ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : ''
+                !team?.isSubmitted ? 'cursor-grab active:cursor-grabbing hover:bg-ink/10' : ''
               }`}
               style={{ background: 'rgb(var(--ink) / 0.03)' }}
             >
               <div className="flex items-center min-w-0 flex-1">
                 {!team?.isSubmitted && (
-                  <GripVertical className="w-3.5 h-3.5 mr-1.5 text-white/30 flex-shrink-0" aria-hidden="true" />
+                  <GripVertical className="w-3.5 h-3.5 mr-1.5 text-ink/30 flex-shrink-0" aria-hidden="true" />
                 )}
-                <span className="text-white/70 text-sm truncate">
+                <span className="text-ink/70 text-sm truncate">
                   {player.player.firstName} {player.player.lastName}
                   {apparatusLabel(player.apparatus) ? <span className="ml-2 text-xs text-fg-muted">({apparatusLabel(player.apparatus)})</span> : null}
                 </span>
@@ -641,9 +641,9 @@ const CoachDashboard = () => {
               whileHover={{ scale: 1.08, rotate: 5 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
+              <Trophy className="w-4 h-4 text-ink" aria-hidden="true" />
             </motion.div>
-            <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
+            <span className="text-ink font-bold text-sm tracking-wide hidden sm:block">
               Mallakhamb<span style={{ color: FG.brand }}>India</span>
             </span>
           </div>
@@ -658,7 +658,7 @@ const CoachDashboard = () => {
                   style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                   <User className="w-3.5 h-3.5" style={{ color: FG.brandSoft }} aria-hidden="true" />
                 </div>
-                <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
+                <span className="text-ink/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
             )}
             <AppearanceMenu />
@@ -692,7 +692,7 @@ const CoachDashboard = () => {
                   <Trophy className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black text-white">{team.name}</h1>
+                  <h1 className="text-2xl font-black text-ink">{team.name}</h1>
                   <p className="text-fg-muted text-sm">
                     Team Dashboard
                     {team.maxTeamSize && (
@@ -705,7 +705,7 @@ const CoachDashboard = () => {
                 <motion.button
                   onClick={handleSaveDraft}
                   disabled={savingDraft || team?.isSubmitted}
-                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 border disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 border disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
                     borderColor: 'rgb(var(--ink) / 0.15)',
                     background: 'rgb(var(--ink) / 0.06)',
@@ -717,7 +717,7 @@ const CoachDashboard = () => {
                 </motion.button>
                 <motion.button onClick={() => setShowAddPlayer(true)}
                   disabled={team?.isSubmitted}
-                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                   style={SAFFRON_CTA}
                   whileHover={team?.isSubmitted ? {} : { scale: 1.02 }}
                   whileTap={team?.isSubmitted ? {} : { scale: 0.98 }}>
@@ -736,7 +736,7 @@ const CoachDashboard = () => {
                     }
                     setShowTeamSummary(true);
                   }}
-                  className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200"
+                  className="px-5 py-2.5 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200"
                   style={{ 
                     background: team?.isSubmitted 
                       ? 'rgb(var(--ink) / 0.1)' 
@@ -789,7 +789,7 @@ const CoachDashboard = () => {
                 </div>
                 <div>
                   <p className="text-fg-muted text-xs uppercase tracking-wide">{label}</p>
-                  <p className="text-2xl font-black text-white">{value}</p>
+                  <p className="text-2xl font-black text-ink">{value}</p>
                 </div>
               </div>
             </FadeIn>
@@ -801,7 +801,7 @@ const CoachDashboard = () => {
           <FadeIn delay={0.1}>
             <div className="rounded-3xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-lg font-black text-white mb-5 flex items-center gap-2">
+              <h2 className="text-lg font-black text-ink mb-5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" aria-hidden="true" />
                 Boys Age Groups
               </h2>
@@ -815,7 +815,7 @@ const CoachDashboard = () => {
           <FadeIn delay={0.15}>
             <div className="rounded-3xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-lg font-black text-white mb-5 flex items-center gap-2">
+              <h2 className="text-lg font-black text-ink mb-5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-pink-400 inline-block" aria-hidden="true" />
                 Girls Age Groups
               </h2>
@@ -857,7 +857,7 @@ const CoachDashboard = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
               <div className="sticky top-0 flex items-center justify-between p-6 border-b"
                 style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
-                <h3 className="text-xl font-black text-white">Team Summary — {team.name}</h3>
+                <h3 className="text-xl font-black text-ink">Team Summary — {team.name}</h3>
                 <button onClick={() => setShowTeamSummary(false)}
                   className="p-2 rounded-xl text-fg-muted hover:text-fg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                   style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
@@ -866,8 +866,8 @@ const CoachDashboard = () => {
               </div>
               <div className="p-6 space-y-6">
                 <div className="p-4 rounded-2xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-                  <p className="text-white/70 text-sm"><span className="text-white font-semibold">Team:</span> {team.name}</p>
-                  <p className="text-white/70 text-sm mt-1"><span className="text-white font-semibold">Total Players:</span> {team.players?.length || 0}</p>
+                  <p className="text-ink/70 text-sm"><span className="text-ink font-semibold">Team:</span> {team.name}</p>
+                  <p className="text-ink/70 text-sm mt-1"><span className="text-ink font-semibold">Total Players:</span> {team.players?.length || 0}</p>
                   {team?.isSubmitted && (
                     <div className="mt-3 flex items-center gap-2 p-2 rounded-lg"
                       style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x25)}` }}>
@@ -888,7 +888,7 @@ const CoachDashboard = () => {
                             <div key={ag} className="p-3 rounded-xl border"
                               style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: COLORS.darkBorderSubtle }}>
                               <div className="flex justify-between items-center mb-1">
-                                <span className="text-white text-sm font-semibold">{getAgeGroupDisplay(ag)}</span>
+                                <span className="text-ink text-sm font-semibold">{getAgeGroupDisplay(ag)}</span>
                                 <span className="text-fg-muted text-xs">{gPlayers.length} players</span>
                               </div>
                               {gPlayers.length > 0
@@ -908,7 +908,7 @@ const CoachDashboard = () => {
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end pt-4 border-t" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <button onClick={() => setShowTeamSummary(false)}
-                    className="px-6 py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    className="px-6 py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                     style={{ borderColor: COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>
@@ -923,7 +923,7 @@ const CoachDashboard = () => {
                         setShowTeamSummary(false);
                         setShowSubmitWarning(true);
                       }}
-                      className="px-6 py-3 rounded-xl font-bold text-white min-h-[44px]"
+                      className="px-6 py-3 rounded-xl font-bold text-ink min-h-[44px]"
                       style={SAFFRON_CTA}>
                       Proceed to Payment
                     </button>
@@ -952,15 +952,15 @@ const CoachDashboard = () => {
                   style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
                   <Trophy className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-black text-white text-center mb-3">Submit Team for Competition?</h3>
+                <h3 className="text-xl font-black text-ink text-center mb-3">Submit Team for Competition?</h3>
                 <div className="space-y-3 mb-6">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(255,153,0,0.1)', border: '1px solid rgba(255,153,0,0.3)' }}>
-                    <p className="text-sm text-white/80 leading-relaxed">
+                    <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Important:</strong> Once you complete the payment and submit your team, it will be <strong>locked</strong>.
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed">
+                    <p className="text-sm text-ink/70 leading-relaxed">
                       You will <strong>not be able to add or remove players</strong> after submission. To make any changes, you&apos;ll need to contact the admin.
                     </p>
                   </div>
@@ -976,13 +976,13 @@ const CoachDashboard = () => {
                       setShowSubmitWarning(false);
                       navigate('/coach/payment');
                     }}
-                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px]"
                     style={SAFFRON_CTA}>
                     I Understand, Proceed to Payment
                   </button>
                   <button 
                     onClick={() => setShowSubmitWarning(false)}
-                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                     style={{ borderColor: COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>
@@ -1007,7 +1007,7 @@ const CoachDashboard = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}>
               <div className="sticky top-0 flex items-center justify-between p-6 border-b"
                 style={{ background: COLORS.darkElevated, borderColor: COLORS.darkBorderSubtle }}>
-                <h3 className="text-lg font-black text-white">Add Player to Age Group</h3>
+                <h3 className="text-lg font-black text-ink">Add Player to Age Group</h3>
                 <button onClick={handleCloseModal}
                   className="p-2 rounded-xl text-fg-muted hover:text-fg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                   style={{ border: `1px solid ${COLORS.darkBorderSubtle}` }} aria-label="Close">
@@ -1022,12 +1022,12 @@ const CoachDashboard = () => {
                   <div className="relative">
                     <input id="player-search" type="text" value={searchQuery}
                       onChange={(e) => { setSearchQuery(e.target.value); handleSearchPlayers(e.target.value); }}
-                      className="w-full px-4 py-3 pr-10 rounded-xl text-white placeholder-white/25 min-h-[44px]"
+                      className="w-full px-4 py-3 pr-10 rounded-xl text-ink placeholder-ink/25 min-h-[44px]"
                       style={{ background: 'rgb(var(--ink) / 0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
                       onFocus={e => e.target.style.borderColor = COLORS.saffron}
                       onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle}
                       placeholder="Search by name" />
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" aria-hidden="true" />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/30" aria-hidden="true" />
                   </div>
                   {searchLoading && <p className="text-fg-muted text-xs mt-1">Searching...</p>}
                   {players.length > 0 && (
@@ -1035,9 +1035,9 @@ const CoachDashboard = () => {
                       style={{ borderColor: COLORS.darkBorderSubtle }}>
                       {players.map((player, i) => (
                         <button key={i} onClick={() => handlePlayerSelect(player)}
-                          className="w-full text-left px-4 py-3 hover:bg-white/5 border-b last:border-b-0 transition-colors min-h-[44px]"
+                          className="w-full text-left px-4 py-3 hover:bg-ink/5 border-b last:border-b-0 transition-colors min-h-[44px]"
                           style={{ borderColor: COLORS.darkBorderSubtle }}>
-                          <p className="text-white font-medium text-sm">{player.firstName} {player.lastName}</p>
+                          <p className="text-ink font-medium text-sm">{player.firstName} {player.lastName}</p>
                           <p className="text-fg-muted text-xs">{player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</p>
                         </button>
                       ))}
@@ -1048,7 +1048,7 @@ const CoachDashboard = () => {
                 {selectedPlayer && selectedPlayerData && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-                      <p className="text-white font-semibold text-sm">{selectedPlayer.label}</p>
+                      <p className="text-ink font-semibold text-sm">{selectedPlayer.label}</p>
                       <p className="text-fg-muted text-xs mt-1">
                         Gender: {selectedPlayerData.gender} · Age: {selectedPlayerData.age} yrs · DOB: {new Date(selectedPlayerData.dateOfBirth).toLocaleDateString()}
                       </p>
@@ -1109,7 +1109,7 @@ const CoachDashboard = () => {
                                   borderColor: checked ? COLORS.saffron : 'rgb(var(--ink) / 0.25)',
                                   background: checked ? COLORS.saffron : 'transparent',
                                 }}>
-                                {checked && <Check className="w-3 h-3 text-white" aria-hidden="true" />}
+                                {checked && <Check className="w-3 h-3 text-ink" aria-hidden="true" />}
                               </span>
                               <span className="text-sm" style={{ color: checked ? FG.ink : 'rgb(var(--ink) / 0.55)' }}>
                                 {option.label}
@@ -1124,13 +1124,13 @@ const CoachDashboard = () => {
                     </div>
                     <div className="flex gap-3 pt-2">
                       <button onClick={handleCloseModal}
-                        className="flex-1 py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                        className="flex-1 py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                         style={{ borderColor: COLORS.darkBorderSubtle }}>
                         Cancel
                       </button>
                       <button onClick={handleAddPlayer}
                         disabled={!selectedPlayer || !selectedAgeGroup || !selectedGender || selectedApparatus.length === 0}
-                        className="flex-1 py-3 rounded-xl font-bold text-white min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 py-3 rounded-xl font-bold text-ink min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
                         style={SAFFRON_CTA}>
                         Add Player
                       </button>

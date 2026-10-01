@@ -158,7 +158,7 @@ const Dropdown = ({
             <div className="py-1">
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-fg-muted text-sm">
-                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/20 border-t-white/60" />
+                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink/60" />
                   Loading...
                 </div>
               ) : filteredOptions.length === 0 ? (
@@ -179,7 +179,7 @@ const Dropdown = ({
                       aria-selected={isSelected}
                       onClick={() => handleSelect(option)}
                       className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px] ${
-                        isSelected ? '' : 'text-white/75 hover:text-fg hover:bg-[rgb(255_107_0_/_0.04)]'}`}
+                        isSelected ? '' : 'text-ink/75 hover:text-fg hover:bg-[rgb(255_107_0_/_0.04)]'}`}
                       style={isSelected
                         ? { color: FG.brandSoft, background: `${alpha(COLORS.saffron, 0x12)}` }
                         : undefined}

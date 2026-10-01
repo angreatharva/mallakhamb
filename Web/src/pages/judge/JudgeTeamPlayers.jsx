@@ -383,17 +383,17 @@ const JudgeTeamPlayers = () => {
             <button
               type="button"
               onClick={() => navigate('/judge/dashboard')}
-              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
               aria-label="Back to dashboard"
             >
-              <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+              <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
             </button>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
               <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
               <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>
                 {resolveJudgeSeat(judgeInfo, {
                   gender: selectedGender,
@@ -417,7 +417,7 @@ const JudgeTeamPlayers = () => {
             <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>
               Team
             </p>
-            <h1 className="text-2xl font-black text-white">{team?.name || 'Loading…'}</h1>
+            <h1 className="text-2xl font-black text-ink">{team?.name || 'Loading…'}</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
               Coach: {team?.coach?.name || 'N/A'}
             </p>
@@ -457,7 +457,7 @@ const JudgeTeamPlayers = () => {
                         ? 'bg-green-500/10 border-green-500/30 cursor-default'
                         : isSubmitted
                         ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 cursor-pointer'
-                        : 'hover:bg-purple-500/15 border-white/10 hover:border-purple-500/30 bg-white/[0.02] cursor-pointer'
+                        : 'hover:bg-purple-500/15 border-ink/10 hover:border-purple-500/30 bg-ink/[0.02] cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -479,18 +479,18 @@ const JudgeTeamPlayers = () => {
                           ? 'bg-green-500/20 border-green-500/40'
                           : isSubmitted
                           ? 'bg-purple-500/20 border-purple-500/40 group-hover:bg-purple-500/30'
-                          : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
+                          : 'bg-ink/5 border-ink/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
                       }`}>
                         {isLocked ? (
                           <Lock className="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                         ) : isSubmitted ? (
                           <CheckCircle className="w-5 h-5" style={{ color: DATA_COLORS.purpleSoft }} aria-hidden="true" />
                         ) : (
-                          <User className="w-5 h-5 text-white/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
+                          <User className="w-5 h-5 text-ink/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         )}
                       </div>
                       <div className="text-left">
-                        <p className="font-bold text-base text-white flex items-center gap-2">
+                        <p className="font-bold text-base text-ink flex items-center gap-2">
                           {player.name}
                           {isLocked ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
@@ -514,7 +514,7 @@ const JudgeTeamPlayers = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/10 text-white/80 border border-white/5">
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
                           {player.apparatus[selectedCompetitionType].join(', ')}
                         </span>
                       )}
@@ -524,7 +524,7 @@ const JudgeTeamPlayers = () => {
                           <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 group-hover:bg-purple-500/20 transition-colors">
                           <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         </div>
                       )}
@@ -534,9 +534,9 @@ const JudgeTeamPlayers = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
-              <Users className="w-12 h-12 mb-4 text-white/20" />
-              <p className="text-lg font-bold text-white/70">No eligible players</p>
+            <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+              <Users className="w-12 h-12 mb-4 text-ink/20" />
+              <p className="text-lg font-bold text-ink/70">No eligible players</p>
               <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                 None of the players match your assigned category and apparatus.
               </p>

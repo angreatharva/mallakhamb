@@ -35,7 +35,7 @@ const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => 
         <div className="min-w-0 flex-1">
           <p className="text-fg-muted text-xs font-medium tracking-wide uppercase mb-1">{label}</p>
           {children || (
-            <p className="text-white font-bold text-lg leading-tight truncate">{value || '—'}</p>
+            <p className="text-ink font-bold text-lg leading-tight truncate">{value || '—'}</p>
           )}
         </div>
       </div>
@@ -48,7 +48,7 @@ const InfoRow = ({ label, value, last = false }) => (
   <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b' : ''}`}
     style={{ borderColor: COLORS.darkBorderSubtle }}>
     <span className="text-fg-muted text-sm font-medium">{label}</span>
-    <span className="text-white text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
+    <span className="text-ink text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
   </div>
 );
 
@@ -305,7 +305,7 @@ const PlayerDashboard = () => {
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
-                <h1 className="text-2xl md:text-3xl font-black text-white">
+                <h1 className="text-2xl md:text-3xl font-black text-ink">
                   {player?.firstName} <GradientText>{player?.lastName}</GradientText>
                 </h1>
                 <p className="text-fg-muted text-sm mt-1">
@@ -315,7 +315,7 @@ const PlayerDashboard = () => {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => fetchPlayerProfile(true)}
-                  className="p-2 rounded-lg text-fg-muted hover:text-fg hover:bg-white/5 transition-colors tap-safe justify-center"
+                  className="p-2 rounded-lg text-fg-muted hover:text-fg hover:bg-ink/5 transition-colors tap-safe justify-center"
                   title="Refresh player data"
                   /*
                    * `title` is not an accessible name a screen reader announces
@@ -338,7 +338,7 @@ const PlayerDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Trophy} label="Team" accent={COLORS.saffron} delay={0}>
             {player?.team ? (
-              <p className="text-white font-bold text-base leading-tight truncate">{player.team.name}</p>
+              <p className="text-ink font-bold text-base leading-tight truncate">{player.team.name}</p>
             ) : (
               <div className="mt-1">
                 <Dropdown
@@ -369,7 +369,7 @@ const PlayerDashboard = () => {
           <FadeIn delay={0.1}>
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
+              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
                 <User className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Profile Information
               </h2>
@@ -386,7 +386,7 @@ const PlayerDashboard = () => {
           <FadeIn delay={0.15}>
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
+              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
                 <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Team Information
               </h2>
@@ -405,7 +405,7 @@ const PlayerDashboard = () => {
                 <div className="py-6 text-center">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
                     style={{ background: 'rgb(var(--ink) / 0.04)' }}>
-                    <Users className="w-6 h-6 text-white/20" />
+                    <Users className="w-6 h-6 text-ink/20" />
                   </div>
                   <p className="text-fg-muted text-sm mb-1">Not assigned to any team yet.</p>
                   <p className="text-fg-muted text-xs mb-5">Select a team from the card above to join.</p>
@@ -475,7 +475,7 @@ const PlayerDashboard = () => {
                   style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
                   <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
+                <h2 className="text-2xl font-black text-ink mb-2">Select Competition</h2>
                 <p className="text-fg-muted text-sm">
                   You&apos;re registered for multiple competitions. Please select one to continue.
                 </p>
@@ -517,7 +517,7 @@ const PlayerDashboard = () => {
                         <Trophy className="w-5 h-5" style={{ color: FG.brand }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-bold text-base mb-1 truncate">
+                        <h3 className="text-ink font-bold text-base mb-1 truncate">
                           {competition.name}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">

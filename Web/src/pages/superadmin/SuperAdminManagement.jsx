@@ -46,7 +46,7 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => {
     )}
     <input
       id={inputId}
-      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -69,7 +69,7 @@ const DarkSelect = ({ label, required, children, id, ...props }) => {
     )}
     <select
       id={selectId}
-      className="w-full rounded-xl text-sm text-white min-h-[44px] px-3 transition-all duration-200"
+      className="w-full rounded-xl text-sm text-ink min-h-[44px] px-3 transition-all duration-200"
       style={{ background: 'rgb(var(--ink) / 0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
       {...props}>
       {children}
@@ -89,7 +89,7 @@ const DarkTextarea = ({ label, required, id, ...props }) => {
     )}
     <textarea
       id={textareaId}
-      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 transition-all duration-200 resize-none"
+      className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200 resize-none"
       style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -252,10 +252,10 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
               }}>
               <div>
                 {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>{subtitle}</p>}
-                <h3 className="font-black text-white" style={{ fontSize: isMobile ? '1.125rem' : '1.25rem' }}>{title}</h3>
+                <h3 className="font-black text-ink" style={{ fontSize: isMobile ? '1.125rem' : '1.25rem' }}>{title}</h3>
               </div>
-              <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close">
-                <X className="w-5 h-5 text-white/60" />
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-ink/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close">
+                <X className="w-5 h-5 text-ink/60" />
               </button>
             </div>
             {/*
@@ -356,7 +356,7 @@ const DarkTr = ({ children, delay = 0 }) => {
 const Td = ({ children, className = '', ...props }) => (
   // `whitespace-nowrap` only from `md`: keeping it on mobile is what forced the
   // sideways scroll these cards exist to remove.
-  <td className={`px-4 py-3 md:whitespace-nowrap text-white/70 ${className}`} {...props}>{children}</td>
+  <td className={`px-4 py-3 md:whitespace-nowrap text-ink/70 ${className}`} {...props}>{children}</td>
 );
 
 // ─── Section Tab Bar ──────────────────────────────────────────────────────────
@@ -826,7 +826,7 @@ const SuperAdminManagement = () => {
               const isActive = activeSection === s.id;
               return (
                 <motion.button key={s.id} onClick={() => setActiveSection(s.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-white' : 'text-fg-muted hover:text-white'}`}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-ink' : 'text-fg-muted hover:text-ink'}`}
                   style={{
                     background: isActive ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'transparent',
                     border: `1px solid ${isActive ? alpha(ADMIN_COLORS.saffron, 0x30) : 'transparent'}`,
@@ -847,7 +847,7 @@ const SuperAdminManagement = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
-                <h2 className="text-2xl font-black text-white">Competitions</h2>
+                <h2 className="text-2xl font-black text-ink">Competitions</h2>
               </div>
               <DarkBtn onClick={() => openCompetitionModal()}>
                 <Plus className="w-4 h-4" /> Create
@@ -859,7 +859,7 @@ const SuperAdminManagement = () => {
               <DarkTable label="Competitions" headers={['Name','Types','Level','Place','Per player','Fee window','Dates','Status','Admins','Actions']}>
                 {competitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
-                    <Td className="font-bold text-white">{comp.name}</Td>
+                    <Td className="font-bold text-ink">{comp.name}</Td>
                     <Td>
                       <div className="flex flex-wrap gap-1">
                         {(comp.competitionTypes || []).map(t => (
@@ -877,7 +877,7 @@ const SuperAdminManagement = () => {
                       </span>
                     </Td>
                     <Td>{comp.place}</Td>
-                    <Td className="text-sm font-semibold text-white/80">
+                    <Td className="text-sm font-semibold text-ink/80">
                       {(() => {
                         const rupees = getCompetitionPlayerFeeRupees(comp);
                         return rupees !== null ? `₹${rupees.toLocaleString()}` : '—';
@@ -929,26 +929,26 @@ const SuperAdminManagement = () => {
                     <Td>
                       <div className="space-y-0.5">
                         {comp.admins?.length ? comp.admins.map(a => (
-                          <p key={a._id} className="text-xs text-white/60">{a.name}</p>
+                          <p key={a._id} className="text-xs text-ink/60">{a.name}</p>
                         )) : <span className="text-xs text-fg-muted">None</span>}
                       </div>
                     </Td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <motion.button onClick={() => openAdminManagementModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: FG.success }} title="Manage Admins" aria-label="Manage Admins"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <UserPlus className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openCompetitionModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: FG.info }} title="Edit" aria-label="Edit"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteConfirmation(comp)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: FG.danger }} title="Delete" aria-label="Delete"
                           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
@@ -970,7 +970,7 @@ const SuperAdminManagement = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
-                <h2 className="text-2xl font-black text-white">Admins</h2>
+                <h2 className="text-2xl font-black text-ink">Admins</h2>
               </div>
               <DarkBtn onClick={() => setShowAddAdminModal(true)}>
                 <UserPlus className="w-4 h-4" /> Add Admin
@@ -982,7 +982,7 @@ const SuperAdminManagement = () => {
               <DarkTable label="Admins" headers={['Name','Email','Role','Status','Actions']}>
                 {admins.map((admin, i) => (
                   <DarkTr key={admin._id} delay={i * 0.03}>
-                    <Td className="font-semibold text-white">{admin.name}</Td>
+                    <Td className="font-semibold text-ink">{admin.name}</Td>
                     <Td>{admin.email}</Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
@@ -994,12 +994,12 @@ const SuperAdminManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <motion.button onClick={() => openEditModal(admin)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: FG.info }} title="Edit" aria-label="Edit" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button onClick={() => openDeleteAdminConfirmation(admin)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
+                          className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
                           style={{ color: FG.danger }} title="Delete" aria-label="Delete" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
@@ -1019,7 +1019,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="mb-6">
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
-              <h2 className="text-2xl font-black text-white">Coaches</h2>
+              <h2 className="text-2xl font-black text-ink">Coaches</h2>
             </div>
             {loading ? <LoadingState /> : coaches.length === 0 ? (
               <EmptyState icon={UserCheck} title="No coaches yet" desc="Coaches will appear here once registered." />
@@ -1027,7 +1027,7 @@ const SuperAdminManagement = () => {
               <DarkTable label="Coaches" headers={['Name','Email','Phone','Status','Actions']}>
                 {coaches.map((coach, i) => (
                   <DarkTr key={coach._id} delay={i * 0.03}>
-                    <Td className="font-semibold text-white">{coach.name}</Td>
+                    <Td className="font-semibold text-ink">{coach.name}</Td>
                     <Td>{coach.email}</Td>
                     <Td>{coach.phone || '—'}</Td>
                     <Td><StatusBadge active={coach.isActive} /></Td>
@@ -1052,7 +1052,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="mb-6">
               <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
-              <h2 className="text-2xl font-black text-white">Add Player to Team</h2>
+              <h2 className="text-2xl font-black text-ink">Add Player to Team</h2>
             </div>
             <AddPlayerForm 
               key={addPlayerFormKey}
@@ -1107,7 +1107,7 @@ const SuperAdminManagement = () => {
                     style={{ left: formData.isActive ? '22px' : '4px' }} />
                 </div>
               </div>
-              <span className="text-sm font-semibold text-white/70">Active</span>
+              <span className="text-sm font-semibold text-ink/70">Active</span>
             </label>
           )}
         </form>
@@ -1270,7 +1270,7 @@ const SuperAdminManagement = () => {
                   }}>
                   <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
                     onChange={() => setCompetitionFormData(prev => ({ ...prev, maxTeamSize: option.value }))} />
-                  <span className="text-sm font-bold text-white">{option.value} Players</span>
+                  <span className="text-sm font-bold text-ink">{option.value} Players</span>
                   <span className="text-xs text-fg-muted">Best {option.counted} scores count per apparatus</span>
                 </label>
               );
@@ -1300,10 +1300,10 @@ const SuperAdminManagement = () => {
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
                       style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
-                      {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                      {checked && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white">{ct.label}</p>
+                      <p className="text-sm font-bold text-ink">{ct.label}</p>
                       <p className="text-xs text-fg-muted">{ct.desc}</p>
                     </div>
                   </label>
@@ -1325,9 +1325,9 @@ const SuperAdminManagement = () => {
                                   onChange={() => toggleGenderApparatus(ct.id, gender, app)} />
                                 <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                                   style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
-                                  {appChecked && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                  {appChecked && <svg className="w-2 h-2 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                 </div>
-                                <span className="text-xs font-semibold text-white/80">{app}</span>
+                                <span className="text-xs font-semibold text-ink/80">{app}</span>
                               </label>
                             );
                           })}
@@ -1358,9 +1358,9 @@ const SuperAdminManagement = () => {
               <input type="checkbox" className="sr-only" checked={allAgeGroupsSelected} onChange={toggleAllAgeGroups} />
               <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                 style={{ background: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'transparent', borderColor: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
-                {allAgeGroupsSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                {allAgeGroupsSelected && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <span className="text-xs font-bold text-white/70 whitespace-nowrap">
+              <span className="text-xs font-bold text-ink/70 whitespace-nowrap">
                 Select All ({competitionFormData.ageGroups.length}/{allValidAgeGroupPairs.length})
               </span>
             </label>
@@ -1371,7 +1371,7 @@ const SuperAdminManagement = () => {
           <div className="relative space-y-2 max-h-56 overflow-y-auto pr-1">
             {defaultAgeGroups.map(ag => (
               <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                <p className="text-xs font-bold text-white/60 mb-2">{ageGroupLabels[ag]}</p>
+                <p className="text-xs font-bold text-ink/60 mb-2">{ageGroupLabels[ag]}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Male','Female'].map(gender => {
                     const valid = isAgeGroupValidForGender(ag, gender);
@@ -1382,9 +1382,9 @@ const SuperAdminManagement = () => {
                         <input type="checkbox" className="sr-only" checked={checked} disabled={!valid} onChange={() => valid && toggleAgeGroup(ag, gender)} />
                         <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                           style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
-                          {checked && valid && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                          {checked && valid && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                        <span className="text-xs font-semibold text-white/70">{gender}</span>
+                        <span className="text-xs font-semibold text-ink/70">{gender}</span>
                       </label>
                     );
                   })}
@@ -1404,7 +1404,7 @@ const SuperAdminManagement = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
               <input type="text" placeholder="Search admins…" aria-label="Search admins" value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
-                className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all"
+                className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all"
                 style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
             </div>
             <div className="relative space-y-1 max-h-40 overflow-y-auto">
@@ -1416,9 +1416,9 @@ const SuperAdminManagement = () => {
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAdminSelection(admin._id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
                       style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
-                      {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                      {checked && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
-                    <span className="text-sm text-white/70">{admin.name} <span className="text-fg-muted">({admin.email})</span></span>
+                    <span className="text-sm text-ink/70">{admin.name} <span className="text-fg-muted">({admin.email})</span></span>
                   </label>
                 );
               })}
@@ -1445,7 +1445,7 @@ const SuperAdminManagement = () => {
                     <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
                       style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                       <div>
-                        <p className="text-sm font-bold text-white">{admin.name}</p>
+                        <p className="text-sm font-bold text-ink">{admin.name}</p>
                         <p className="text-xs text-fg-muted">{admin.email}</p>
                       </div>
                       <DarkBtn size="sm" variant="danger" onClick={() => openRemoveAdminConfirmation(admin)}>
@@ -1463,7 +1463,7 @@ const SuperAdminManagement = () => {
                   <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
                     style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     <div>
-                      <p className="text-sm font-bold text-white">{admin.name}</p>
+                      <p className="text-sm font-bold text-ink">{admin.name}</p>
                       <p className="text-xs text-fg-muted">{admin.email}</p>
                     </div>
                     <DarkBtn size="sm" variant="success" onClick={() => handleAssignAdmin(admin._id)}>
@@ -1494,18 +1494,18 @@ const SuperAdminManagement = () => {
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-black text-white text-center mb-3">Delete Competition?</h3>
+                <h3 className="text-xl font-black text-ink text-center mb-3">Delete Competition?</h3>
                 <div className="space-y-3 mb-6">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                    <p className="text-sm text-white/80 leading-relaxed">
+                    <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                    <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="text-base font-bold text-ink">
                       {competitionToDelete.name}
                     </p>
                     <p className="text-xs text-fg-muted mt-1">
@@ -1513,7 +1513,7 @@ const SuperAdminManagement = () => {
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed">
+                    <p className="text-sm text-ink/70 leading-relaxed">
                       All associated data including <strong>teams, players, scores, and registrations</strong> will be permanently deleted.
                     </p>
                   </div>
@@ -1521,7 +1521,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleDeleteCompetition(competitionToDelete._id)}
-                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
                     style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Delete Competition
                   </button>
@@ -1530,7 +1530,7 @@ const SuperAdminManagement = () => {
                       setShowDeleteConfirmation(false);
                       setCompetitionToDelete(null);
                     }}
-                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                     style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>
@@ -1558,18 +1558,18 @@ const SuperAdminManagement = () => {
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <UserX className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-black text-white text-center mb-3">Remove Admin?</h3>
+                <h3 className="text-xl font-black text-ink text-center mb-3">Remove Admin?</h3>
                 <div className="space-y-3 mb-6">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                    <p className="text-sm text-white/80 leading-relaxed">
+                    <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This admin will lose access to this competition.
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                    <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to remove:
                     </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="text-base font-bold text-ink">
                       {adminToRemove.name}
                     </p>
                     <p className="text-xs text-fg-muted mt-1">
@@ -1577,7 +1577,7 @@ const SuperAdminManagement = () => {
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed">
+                    <p className="text-sm text-ink/70 leading-relaxed">
                       From competition: <strong>{selectedCompetition?.name}</strong>
                     </p>
                   </div>
@@ -1585,7 +1585,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleRemoveAdmin(adminToRemove._id)}
-                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
                     style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Remove Admin
                   </button>
@@ -1594,7 +1594,7 @@ const SuperAdminManagement = () => {
                       setShowRemoveAdminConfirmation(false);
                       setAdminToRemove(null);
                     }}
-                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                     style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>
@@ -1622,18 +1622,18 @@ const SuperAdminManagement = () => {
                   style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
                   <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-black text-white text-center mb-3">Delete Admin Account?</h3>
+                <h3 className="text-xl font-black text-ink text-center mb-3">Delete Admin Account?</h3>
                 <div className="space-y-3 mb-6">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                    <p className="text-sm text-white/80 leading-relaxed">
+                    <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed mb-2">
+                    <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="text-base font-bold text-ink">
                       {adminToDelete.name}
                     </p>
                     <p className="text-xs text-fg-muted mt-1">
@@ -1641,7 +1641,7 @@ const SuperAdminManagement = () => {
                     </p>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                    <p className="text-sm text-white/70 leading-relaxed">
+                    <p className="text-sm text-ink/70 leading-relaxed">
                       This admin will be <strong>permanently removed</strong> from the system and lose access to all competitions.
                     </p>
                   </div>
@@ -1649,7 +1649,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleDeleteAdmin(adminToDelete._id)}
-                    className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] transition-all hover:brightness-110"
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
                     style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
                     Yes, Delete Admin
                   </button>
@@ -1658,7 +1658,7 @@ const SuperAdminManagement = () => {
                       setShowDeleteAdminConfirmation(false);
                       setAdminToDelete(null);
                     }}
-                    className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 border transition-colors min-h-[44px]"
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
                     style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
                     Cancel
                   </button>

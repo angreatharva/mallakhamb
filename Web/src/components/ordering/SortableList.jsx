@@ -99,7 +99,7 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
             event.preventDefault();
             controls.start(event);
           }}
-          className="flex-shrink-0 flex items-center justify-center px-2 min-w-[44px] min-h-[44px] transition-colors hover:bg-white/5"
+          className="flex-shrink-0 flex items-center justify-center px-2 min-w-[44px] min-h-[44px] transition-colors hover:bg-ink/5"
           // Only the handle blocks native touch scrolling — see the note at
           // the top of this file.
           style={{ touchAction: 'none', cursor: 'grab', color: 'var(--fg-muted)' }}

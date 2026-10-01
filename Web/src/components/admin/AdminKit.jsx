@@ -38,8 +38,8 @@ export const FadeIn = ({ children, delay = 0, className = '' }) => {
 
 export const EmptyState = ({ icon: Icon, title, desc, action }) => (
   <div className="text-center py-12">
-    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
-    <p className="text-white/60 font-semibold">{title}</p>
+    <Icon className="w-12 h-12 mx-auto mb-3 text-ink/15" />
+    <p className="text-ink/60 font-semibold">{title}</p>
     {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
     {action && <div className="mt-4">{action}</div>}
   </div>
@@ -47,7 +47,7 @@ export const EmptyState = ({ icon: Icon, title, desc, action }) => (
 
 export const LoadingState = ({ label = 'Loading…' }) => (
   <div className="flex items-center justify-center py-12 gap-3">
-    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+    <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
     <span className="text-fg-muted text-sm">{label}</span>
   </div>
 );
@@ -56,13 +56,13 @@ export const DarkSearch = ({ value, onChange, placeholder }) => (
   <div className="relative">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
-      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
     />
     {value && (
-      <button onClick={() => onChange('')} className="absolute right-1 mouse:right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors tap-safe mouse:min-h-[28px] mouse:min-w-[28px] flex items-center justify-center" aria-label="Clear search">
+      <button onClick={() => onChange('')} className="absolute right-1 mouse:right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[28px] mouse:min-w-[28px] flex items-center justify-center" aria-label="Clear search">
         <X className="w-3.5 h-3.5 text-fg-muted" />
       </button>
     )}
@@ -71,8 +71,8 @@ export const DarkSearch = ({ value, onChange, placeholder }) => (
 
 /*
  * Small buttons: 32px with a mouse, the 44px touch floor otherwise (tap-safe; an inline minHeight would
- * beat it). Labels: near-black on saffron/green/red (D6), snow on purple (text-white is the ink alias),
- * ink on ghost. None of the callers sits inside a <form>, so the `button` default changes nothing.
+ * beat it). Labels: near-black on saffron/green/red (D6), snow on purple (ink would be dark on purple in
+ * light), ink on ghost. None of the callers sits inside a <form>, so the `button` default changes nothing.
  */
 export const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
   const bg = {
@@ -83,7 +83,7 @@ export const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size
     ghost: 'transparent',
   }[variant];
   const h = size === 'sm' ? 'tap-safe mouse:min-h-[32px]' : 'min-h-[44px]';
-  const label = variant === 'ghost' ? 'text-white' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
+  const label = variant === 'ghost' ? 'text-ink' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
   return (
     <motion.button type={type} onClick={onClick} disabled={disabled}
       className={`rounded-xl font-bold text-sm ${label} ${h} flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}

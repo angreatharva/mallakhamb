@@ -36,16 +36,16 @@ export default function NotFound() {
         >
           404
         </p>
-        <h1 className="text-xl font-bold text-white mb-2">Page not found</h1>
+        <h1 className="text-xl font-bold text-ink mb-2">Page not found</h1>
         <p className="text-sm text-fg-muted mb-8">
-          We couldn&apos;t find <span className="text-white/70">{location.pathname}</span>.
+          We couldn&apos;t find <span className="text-ink/70">{location.pathname}</span>.
           The link may be out of date, or the page may have moved.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             to="/"
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px] flex items-center justify-center transition-colors"
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-ink min-h-[44px] flex items-center justify-center transition-colors"
             style={{
               background: 'rgb(var(--ink) / 0.08)',
               border: '1px solid rgb(var(--ink) / 0.14)',
@@ -57,7 +57,7 @@ export default function NotFound() {
           {hasRoleContext && (
             <Link
               to={loginPath}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-white/70 hover:text-white transition-colors"
+              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-ink/70 hover:text-ink transition-colors"
               style={{ border: '1px solid rgb(var(--ink) / 0.10)' }}
             >
               Sign in

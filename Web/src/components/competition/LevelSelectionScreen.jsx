@@ -76,7 +76,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-bold text-sm leading-tight">{meta.label}</h3>
+          <h3 className="text-ink font-bold text-sm leading-tight">{meta.label}</h3>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             {meta.blurb}
           </p>
@@ -107,7 +107,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
             initial={{ scale: 0 }} animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <Check className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+            <Check className="w-3.5 h-3.5 text-ink" aria-hidden="true" />
           </motion.div>
         )}
       </div>
@@ -267,7 +267,7 @@ const LevelSelectionScreen = ({ userType }) => {
               <Layers className="w-3 h-3" aria-hidden="true" />
               Level Selection
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
+            <h1 className="text-4xl md:text-5xl font-black text-ink mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Level</GradientText>
             </h1>
             <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
@@ -295,7 +295,7 @@ const LevelSelectionScreen = ({ userType }) => {
             <motion.button
               onClick={handleContinue}
               disabled={!pendingLevel}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-ink font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 background: pendingLevel
                   ? SAFFRON_CTA.background

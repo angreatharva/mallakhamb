@@ -15,7 +15,7 @@ import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgroun
 
 const StyledInput = ({ error, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
     style={{
       background: 'rgb(var(--ink) / 0.05)',
       border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
@@ -95,7 +95,7 @@ const ForgotPassword = () => {
         </Link>
         <div>
           <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
-          <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
 
@@ -118,7 +118,7 @@ const ForgotPassword = () => {
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
               <Mail className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
-            <h1 className="text-2xl font-black text-white mb-2">
+            <h1 className="text-2xl font-black text-ink mb-2">
               Forgot <GradientText>Password?</GradientText>
             </h1>
             <p className="text-fg-muted text-sm leading-relaxed">
@@ -129,7 +129,7 @@ const ForgotPassword = () => {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="mb-5">
-              <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-ink/70 mb-2">
                 Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
               </label>
               <StyledInput
@@ -162,7 +162,7 @@ const ForgotPassword = () => {
               whileTap={!loading && !sent ? { scale: 0.97 } : {}}>
               {loading ? (
                 <>
-                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white" />
+                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
                   Sending OTP…
                 </>
               ) : sent ? (

@@ -30,4 +30,21 @@ describe('colour hygiene', () => {
     });
     expect(offenders).toEqual([]);
   });
+
+  /*
+   * Phases 3–9 spelled ink `white` (a transitional Tailwind alias) and Phase 9.4
+   * renamed every use. `white` is white again, so a new `text-white` would be
+   * literal white — invisible on the light page. Ink is `*-ink`; text that must
+   * stay white on a photo or a saturated fill is `snow`. Comment lines may still
+   * name the old utilities when they record history.
+   */
+  it('uses ink or snow, never the retired white utilities', () => {
+    const WHITE = /(^|[\s"'`{(:])(?:[a-z0-9-]+:)*(?:text|bg|border(?:-[trblxy])?|placeholder|ring(?:-offset)?|divide|from|via|to|fill|stroke|outline|decoration|caret|accent|shadow)-white(?=[\s"'`/}\]):;,]|$)/;
+    const offenders = sourceFiles(SRC).flatMap((file) => {
+      const lines = readFileSync(file, 'utf8').split('\n');
+      return lines.flatMap((line, i) =>
+        (!/^\s*(\*|\/\/|\/\*)/.test(line) && WHITE.test(line) ? [`${relative(SRC, file)}:${i + 1}  ${line.trim().slice(0, 80)}`] : []));
+    });
+    expect(offenders).toEqual([]);
+  });
 });

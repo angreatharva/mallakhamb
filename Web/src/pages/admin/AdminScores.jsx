@@ -326,7 +326,7 @@ const Scores = () => {
       <FadeIn>
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Scoring System</p>
-          <h2 className="text-2xl font-black text-white mb-6">Scores &amp; Rankings</h2>
+          <h2 className="text-2xl font-black text-ink mb-6">Scores &amp; Rankings</h2>
 
           <ScoreTypeTabs value={scoreType} onChange={setScoreType} />
 
@@ -360,12 +360,12 @@ const Scores = () => {
               <div>
                 {scoreType === 'add' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Add New Score</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Add New Score</h3>
                     {submittedTeams.length > 0 && (
                       <>
                         <InfoBanner color={ADMIN_COLORS.green}>
-                          <span className="text-white/70">Showing teams for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-ink/70">Showing teams for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
                           <span className="text-fg-muted ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
@@ -386,11 +386,11 @@ const Scores = () => {
                             searchTerm={searchTerm}
                             renderMobileCard={(team) => (
                               <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                <h4 className="font-bold text-white">Team: {team.name}</h4>
+                                <h4 className="font-bold text-ink">Team: {team.name}</h4>
                                 <p className="text-sm text-fg-muted mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
                                 <p className="text-xs text-fg-muted mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
                                 <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                  <span className="text-sm text-fg-muted">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
+                                  <span className="text-sm text-fg-muted">Players: <span className="font-bold text-ink">{team.players?.length || 0}</span></span>
                                   <motion.button
                                     onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
                                     className="px-3 py-1.5 rounded-lg text-xs font-bold text-snow tap-safe mouse:min-h-[36px]"
@@ -412,12 +412,12 @@ const Scores = () => {
 
                 {scoreType === 'individual' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Individual Rankings</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Individual Rankings</h3>
                     {scores.length > 0 ? (
                       <>
                         <InfoBanner color={ADMIN_COLORS.blue}>
-                          <span className="text-white/70">Individual rankings for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-ink/70">Individual rankings for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
 
@@ -444,12 +444,12 @@ const Scores = () => {
 
                 {scoreType === 'rankings' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Team Rankings</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Team Rankings</h3>
                     {scores.length > 0 ? (
                       <>
                         <InfoBanner color={ADMIN_COLORS.purple}>
-                          <span className="text-white/70">Team rankings for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-ink/70">Team rankings for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
                           <span className="text-fg-muted ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>

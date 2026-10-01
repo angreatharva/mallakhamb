@@ -125,12 +125,12 @@ const PlayerTeamSelection = () => {
         <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
           <div className="flex items-center gap-3 mb-4">
             <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-80" />
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-ink/10" />
             <div>
               <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted">
                 Bhausaheb Ranade Mallakhamb
               </p>
-              <p className="text-white/60 text-xs">Player Portal</p>
+              <p className="text-ink/60 text-xs">Player Portal</p>
             </div>
           </div>
           
@@ -138,7 +138,7 @@ const PlayerTeamSelection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE }}>
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
+            <h1 className="text-3xl md:text-4xl font-black text-ink mb-2">
               Select Your Team
             </h1>
             <p className="text-fg-muted text-sm md:text-base">
@@ -158,13 +158,13 @@ const PlayerTeamSelection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: EASE }}>
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/30" />
               <input
                 type="text"
                 placeholder="Search teams by name, description, or coach..." aria-label="Search teams"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-white placeholder:text-white/30 focus:border-opacity-100 transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-ink placeholder:text-ink/30 focus:border-opacity-100 transition-colors"
                 style={{ 
                   borderColor: COLORS.darkBorder,
                   background: COLORS.darkCard 
@@ -184,7 +184,7 @@ const PlayerTeamSelection = () => {
                 style={{ background: `${alpha(COLORS.saffron, 0x15)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
                 <Users className="w-8 h-8" style={{ color: FG.brand }} />
               </div>
-              <h3 className="text-white font-bold text-lg mb-2">
+              <h3 className="text-ink font-bold text-lg mb-2">
                 {searchQuery ? 'No teams found' : 'No teams available'}
               </h3>
               <p className="text-fg-muted text-sm">
@@ -232,7 +232,7 @@ const PlayerTeamSelection = () => {
                       )}
                     </div>
 
-                    <h3 className="text-white font-bold text-lg mb-1 truncate">
+                    <h3 className="text-ink font-bold text-lg mb-1 truncate">
                       {team.name}
                     </h3>
                     
@@ -245,7 +245,7 @@ const PlayerTeamSelection = () => {
                     {team.coach?.name && (
                       <div className="flex items-center gap-2 text-xs text-fg-muted">
                         <span>Coach:</span>
-                        <span className="font-semibold text-white/60">{team.coach.name}</span>
+                        <span className="font-semibold text-ink/60">{team.coach.name}</span>
                       </div>
                     )}
 

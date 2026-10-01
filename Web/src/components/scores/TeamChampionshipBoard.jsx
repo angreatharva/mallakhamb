@@ -40,10 +40,10 @@ const TeamCard = ({ team }) => {
       }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
         aria-expanded={open} aria-controls={panelId}
-        className="w-full flex items-center gap-4 p-4 text-left min-h-[44px] hover:bg-white/[0.02] transition-colors">
+        className="w-full flex items-center gap-4 p-4 text-left min-h-[44px] hover:bg-ink/[0.02] transition-colors">
         <RankBadge rank={team.rank} />
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold truncate">{team.teamName || 'Unknown Team'}</p>
+          <p className="text-ink font-bold truncate">{team.teamName || 'Unknown Team'}</p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
             {team.teamSize}-player team · best {team.countedPerApparatus} per apparatus
           </p>
@@ -72,7 +72,7 @@ const TeamCard = ({ team }) => {
                     <span className="text-xs font-bold uppercase tracking-wide" style={{ color: FG.brandSoft }}>
                       {shortApparatus(app.apparatus)}
                     </span>
-                    <span className="text-xs font-bold font-mono text-white">{fmt(app.subtotal)}</span>
+                    <span className="text-xs font-bold font-mono text-ink">{fmt(app.subtotal)}</span>
                   </div>
                   <ul>
                     {app.counted.map((p, i) => <ScoreLine key={`c-${p.playerId || i}`} performance={p} />)}

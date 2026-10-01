@@ -134,7 +134,7 @@ const CompetitionSelector = ({ userType }) => {
           <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
             Competition
           </span>
-          <span className="text-xs font-semibold text-white truncate w-full" key={currentCompetition?._id}>
+          <span className="text-xs font-semibold text-ink truncate w-full" key={currentCompetition?._id}>
             {currentCompetition
               ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
               : (userType === 'coach' ? 'Select Competition' : 'Select')}
@@ -227,7 +227,7 @@ const CompetitionSelector = ({ userType }) => {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white truncate">
+                            <span className="text-sm font-semibold text-ink truncate">
                               {competition.name} {competition.year || ''}
                             </span>
                             {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
@@ -305,7 +305,7 @@ const CompetitionSelector = ({ userType }) => {
                 className="animate-spin w-5 h-5 rounded-full border-2 border-t-transparent"
                 style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
               />
-              <span className="text-white/70 text-sm font-medium">Switching competition...</span>
+              <span className="text-ink/70 text-sm font-medium">Switching competition...</span>
             </motion.div>
           </motion.div>
         )}

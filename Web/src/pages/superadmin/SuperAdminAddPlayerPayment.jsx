@@ -269,7 +269,7 @@ const SuperAdminAddPlayerPayment = () => {
             >
               <CheckCircle className="w-10 h-10" style={{ color: FG.success }} aria-hidden="true" />
             </motion.div>
-            <h2 className="text-2xl font-black text-white mb-3">Payment Successful!</h2>
+            <h2 className="text-2xl font-black text-ink mb-3">Payment Successful!</h2>
             <p className="text-fg-muted mb-6 leading-relaxed">
               {checkout?.playerData?.firstName} {checkout?.playerData?.lastName} has been registered and added to{' '}
               {checkout?.teamLabel || 'the team'}.
@@ -282,7 +282,7 @@ const SuperAdminAddPlayerPayment = () => {
                   state: { superadminPlayerAddedCompetitionId: checkout?.playerData?.competitionId },
                 })
               }
-              className="w-full py-3 rounded-xl font-bold text-white min-h-[44px]"
+              className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px]"
               style={SAFFRON_CTA}
             >
               Back to Management
@@ -346,7 +346,7 @@ const SuperAdminAddPlayerPayment = () => {
             <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>
               Add player
             </p>
-            <h1 className="text-3xl font-black text-white">Player registration payment</h1>
+            <h1 className="text-3xl font-black text-ink">Player registration payment</h1>
             <p className="text-fg-muted text-sm mt-1">Same secure Razorpay checkout as coach team registration</p>
           </div>
         </FadeIn>
@@ -362,7 +362,7 @@ const SuperAdminAddPlayerPayment = () => {
                   <Trophy className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-white font-bold">{checkout?.teamLabel || 'Team'}</h2>
+                  <h2 className="text-ink font-bold">{checkout?.teamLabel || 'Team'}</h2>
                   <p className="text-fg-muted text-xs">{checkout?.competitionLabel || 'Competition'}</p>
                 </div>
               </div>
@@ -373,21 +373,21 @@ const SuperAdminAddPlayerPayment = () => {
                 </div>
                 <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-fg-muted text-sm">Name</span>
-                  <span className="text-white font-semibold text-sm">
+                  <span className="text-ink font-semibold text-sm">
                     {pd?.firstName} {pd?.lastName}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-fg-muted text-sm">Email</span>
-                  <span className="text-white font-semibold text-sm truncate max-w-[55%]">{pd?.email}</span>
+                  <span className="text-ink font-semibold text-sm truncate max-w-[55%]">{pd?.email}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                   <span className="text-fg-muted text-sm">Age group</span>
-                  <span className="text-white font-semibold text-sm">{pd?.ageGroup}</span>
+                  <span className="text-ink font-semibold text-sm">{pd?.ageGroup}</span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-fg-muted text-sm">Gender</span>
-                  <span className="text-white font-semibold text-sm">{pd?.gender}</span>
+                  <span className="text-ink font-semibold text-sm">{pd?.gender}</span>
                 </div>
               </div>
             </div>
@@ -403,7 +403,7 @@ const SuperAdminAddPlayerPayment = () => {
                   <CreditCard className="w-5 h-5" style={{ color: FG.success }} aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-white font-bold">Payment details</h2>
+                  <h2 className="text-ink font-bold">Payment details</h2>
                   <p className="text-fg-muted text-xs">This competition&apos;s per-player fee (no base fee)</p>
                 </div>
               </div>
@@ -421,7 +421,7 @@ const SuperAdminAddPlayerPayment = () => {
                       </span>
                     )}
                   </div>
-                  <span className="text-white">₹{baseFee.toLocaleString()}</span>
+                  <span className="text-ink">₹{baseFee.toLocaleString()}</span>
                 </div>
                 {lateFee > 0 && (
                   <div className="flex justify-between text-sm items-center">
@@ -435,7 +435,7 @@ const SuperAdminAddPlayerPayment = () => {
                   </div>
                 )}
                 <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
-                  <span className="text-white font-bold">Total</span>
+                  <span className="text-ink font-bold">Total</span>
                   <span className="font-black text-lg" style={{ color: FG.brand }}>
                     ₹{playerFee.toLocaleString()}
                   </span>
@@ -447,7 +447,7 @@ const SuperAdminAddPlayerPayment = () => {
                   type="button"
                   onClick={handlePayment}
                   disabled={processing || !pd}
-                  className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={SAFFRON_CTA}
                   whileHover={processing ? {} : { scale: 1.01 }}
                   whileTap={processing ? {} : { scale: 0.98 }}

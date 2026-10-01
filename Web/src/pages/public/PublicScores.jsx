@@ -30,7 +30,7 @@ const EmptyState = ({ icon: Icon, title, children }) => (
       style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
       <Icon className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
     </div>
-    <p className="text-white font-bold text-lg mb-2">{title}</p>
+    <p className="text-ink font-bold text-lg mb-2">{title}</p>
     <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>{children}</p>
   </motion.div>
 );
@@ -271,7 +271,7 @@ const PublicScores = () => {
         <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/"
-              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] tap-safe justify-center px-2 rounded-xl hover:bg-white/5"
+              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] tap-safe justify-center px-2 rounded-xl hover:bg-ink/5"
               style={{ color: 'rgb(var(--ink) / 0.6)' }}
               aria-label="Back to Home">
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
@@ -280,13 +280,13 @@ const PublicScores = () => {
             <div className="w-px h-5" style={{ background: 'rgb(var(--ink) / 0.1)' }} />
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
-              <h1 className="text-white font-black text-sm sm:text-base">Competition Scores</h1>
+              <h1 className="text-ink font-black text-sm sm:text-base">Competition Scores</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
           {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
             <button onClick={handleClearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-ink/5"
               style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}>
               <X className="w-3.5 h-3.5" aria-hidden="true" />
               Clear
@@ -302,7 +302,7 @@ const PublicScores = () => {
         <FadeIn>
           <div className="text-center py-4">
             <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>Live Results</p>
-            <h2 className="text-3xl md:text-4xl font-black text-white">
+            <h2 className="text-3xl md:text-4xl font-black text-ink">
               View <GradientText>Scores</GradientText>
             </h2>
             <p className="text-sm mt-2" style={{ color: 'var(--fg-muted)' }}>
@@ -384,7 +384,7 @@ const PublicScores = () => {
                 style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
                 <Filter className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
               </div>
-              <p className="text-white font-bold text-lg mb-2">Select Filters to View Scores</p>
+              <p className="text-ink font-bold text-lg mb-2">Select Filters to View Scores</p>
               <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                 Pick a competition, gender, age group, competition type and apparatus —
                 players from all teams are ranked together
@@ -432,7 +432,7 @@ const PublicScores = () => {
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-white/10 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-ink/10 transition-colors"
                       aria-label="Clear search">
                       <X className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
                     </button>
@@ -455,7 +455,7 @@ const PublicScores = () => {
               ) : searchTerm ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
                   <Search className="w-10 h-10 mx-auto mb-4" style={{ color: 'rgb(var(--ink) / 0.2)' }} aria-hidden="true" />
-                  <p className="text-white font-bold mb-1">No players found</p>
+                  <p className="text-ink font-bold mb-1">No players found</p>
                   <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                     No results for &quot;{searchTerm}&quot;
                   </p>
@@ -475,7 +475,7 @@ const PublicScores = () => {
                 style={{ background: 'rgb(var(--ink) / 0.04)', border: '1px solid rgb(var(--ink) / 0.08)' }}>
                 <Medal className="w-8 h-8" style={{ color: 'rgb(var(--ink) / 0.2)' }} aria-hidden="true" />
               </div>
-              <p className="text-white font-bold text-lg mb-2">No Scores Available</p>
+              <p className="text-ink font-bold text-lg mb-2">No Scores Available</p>
               <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
                 Scores will appear here after judges complete their scoring.
               </p>

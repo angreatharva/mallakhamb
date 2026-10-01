@@ -29,24 +29,24 @@ const TeamModal = ({ team, onClose }) => (
           <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <div>
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Team Details</p>
-              <h3 className="text-xl font-black text-white mt-0.5">{team.team?.name || team.name}</h3>
+              <h3 className="text-xl font-black text-ink mt-0.5">{team.team?.name || team.name}</h3>
             </div>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
-              <X className="w-5 h-5 text-white/60" />
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-ink/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
+              <X className="w-5 h-5 text-ink/60" />
             </button>
           </div>
           <div className="p-6 space-y-6">
             <div className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Team Information</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-fg-muted">Coach: </span><span className="text-white">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
-                {team.coach?.email && <div><span className="text-fg-muted">Email: </span><span className="text-white">{team.coach.email}</span></div>}
-                {team.coach?.phone && <div><span className="text-fg-muted">Phone: </span><span className="text-white">{team.coach.phone}</span></div>}
-                <div><span className="text-fg-muted">Players: </span><span className="text-white font-bold">{team.players?.length || 0}</span></div>
-                {team.createdAt && <div><span className="text-fg-muted">Registered: </span><span className="text-white">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
-                {team.description && <div className="md:col-span-2"><span className="text-fg-muted">Description: </span><span className="text-white">{team.description}</span></div>}
-                <div><span className="text-fg-muted">Status: </span><span className="text-white">{team.isActive ? 'Active' : 'Inactive'}</span></div>
-                <div><span className="text-fg-muted">Player Count: </span><span className="text-white font-bold">{team.playerCount || team.players?.length || 0}</span></div>
+                <div><span className="text-fg-muted">Coach: </span><span className="text-ink">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
+                {team.coach?.email && <div><span className="text-fg-muted">Email: </span><span className="text-ink">{team.coach.email}</span></div>}
+                {team.coach?.phone && <div><span className="text-fg-muted">Phone: </span><span className="text-ink">{team.coach.phone}</span></div>}
+                <div><span className="text-fg-muted">Players: </span><span className="text-ink font-bold">{team.players?.length || 0}</span></div>
+                {team.createdAt && <div><span className="text-fg-muted">Registered: </span><span className="text-ink">{new Date(team.createdAt).toLocaleDateString()}</span></div>}
+                {team.description && <div className="md:col-span-2"><span className="text-fg-muted">Description: </span><span className="text-ink">{team.description}</span></div>}
+                <div><span className="text-fg-muted">Status: </span><span className="text-ink">{team.isActive ? 'Active' : 'Inactive'}</span></div>
+                <div><span className="text-fg-muted">Player Count: </span><span className="text-ink font-bold">{team.playerCount || team.players?.length || 0}</span></div>
               </div>
             </div>
             <div>
@@ -55,14 +55,14 @@ const TeamModal = ({ team, onClose }) => (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {team.players.map((player, i) => (
                     <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                      <p className="font-bold text-white text-sm">{player.firstName} {player.lastName}</p>
+                      <p className="font-bold text-ink text-sm">{player.firstName} {player.lastName}</p>
                       <div className="mt-2 space-y-1 text-xs text-fg-muted">
-                        <p>Gender: <span className="text-white/70">{player.gender}</span></p>
-                        <p>Age Group: <span className="text-white/70">{player.ageGroup || 'Not assigned'}</span></p>
-                        {player.dateOfBirth && <p>DOB: <span className="text-white/70">{new Date(player.dateOfBirth).toLocaleDateString()}</span></p>}
-                        {player.email && <p>Email: <span className="text-white/70">{player.email}</span></p>}
+                        <p>Gender: <span className="text-ink/70">{player.gender}</span></p>
+                        <p>Age Group: <span className="text-ink/70">{player.ageGroup || 'Not assigned'}</span></p>
+                        {player.dateOfBirth && <p>DOB: <span className="text-ink/70">{new Date(player.dateOfBirth).toLocaleDateString()}</span></p>}
+                        {player.email && <p>Email: <span className="text-ink/70">{player.email}</span></p>}
                         {player.apparatus && (Object.keys(player.apparatus).length > 0 || typeof player.apparatus === 'string') && (
-                          <p>Apparatus: <span className="text-white/70">
+                          <p>Apparatus: <span className="text-ink/70">
                             {typeof player.apparatus === 'object' ? Object.values(player.apparatus).flat().join(', ') : player.apparatus}
                           </span></p>
                         )}
@@ -75,7 +75,7 @@ const TeamModal = ({ team, onClose }) => (
                 </div>
               ) : (
                 <div className="text-center py-8 rounded-xl border" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                  <Users className="w-10 h-10 mx-auto mb-2 text-white/20" />
+                  <Users className="w-10 h-10 mx-auto mb-2 text-ink/20" />
                   <p className="text-fg-muted text-sm">No players registered</p>
                 </div>
               )}
@@ -83,7 +83,7 @@ const TeamModal = ({ team, onClose }) => (
           </div>
           <div className="flex justify-end p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
             <motion.button onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all text-white/70 hover:text-white"
+              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all text-ink/70 hover:text-ink"
               style={{ background: ADMIN_COLORS.darkPanel, border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
               whileTap={{ scale: 0.97 }}>
               Close
@@ -202,7 +202,7 @@ const Teams = () => {
       <FadeIn>
         <DarkCard className="p-6">
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Teams Management</p>
-          <h2 className="text-2xl font-black text-white mb-6">All Teams</h2>
+          <h2 className="text-2xl font-black text-ink mb-6">All Teams</h2>
 
           {isSuperAdmin && (
             <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
@@ -231,8 +231,8 @@ const Teams = () => {
           ) : teams.length > 0 ? (
             <div>
               <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
-                <span className="text-white/70">Showing </span>
-                <span className="font-bold text-white">{selectedGender.label} — {selectedAgeGroup.label}</span>
+                <span className="text-ink/70">Showing </span>
+                <span className="font-bold text-ink">{selectedGender.label} — {selectedAgeGroup.label}</span>
                 <span className="text-fg-muted ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
               </div>
               <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>

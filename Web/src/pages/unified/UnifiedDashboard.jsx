@@ -53,7 +53,7 @@ const compLabel = (ct) => ({
 // ─── Judges Summary Card ──────────────────────────────────────────────────────
 const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary }) => (
   <DarkCard className="p-4">
-    <p className="font-bold text-white text-sm mb-3">{ageLabel(item.ageGroup)}</p>
+    <p className="font-bold text-ink text-sm mb-3">{ageLabel(item.ageGroup)}</p>
     <div className="space-y-2">
       {item.competitionTypes && Object.entries(item.competitionTypes)
         .sort(([a], [b]) => ({ competition_1: 1, competition_2: 2, competition_3: 3 }[a] - { competition_1: 1, competition_2: 2, competition_3: 3 }[b]))
@@ -71,7 +71,7 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
               }}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white">{compLabel(compType)}</span>
+                  <span className="text-xs font-bold text-ink">{compLabel(compType)}</span>
                   {data.isStarted
                     ? <span className="px-2 py-0.5 text-xs font-bold rounded-full" style={{ background: `${alpha(statusColor, 0x30)}`, color: statusColor }}>Started</span>
                     : data.hasMinimumJudges
@@ -93,7 +93,7 @@ const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary
                 )}
               </div>
               <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
-                Judges ({data.judges?.length || 0}): <span className="text-white/60">{judgeNames}</span>
+                Judges ({data.judges?.length || 0}): <span className="text-ink/60">{judgeNames}</span>
               </p>
             </div>
           );
@@ -491,7 +491,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.accent }}>
                 Competition Control
               </p>
-              <h3 className="text-xl font-black text-white">Judges Assignment Status</h3>
+              <h3 className="text-xl font-black text-ink">Judges Assignment Status</h3>
               <p className="text-fg-muted text-sm mt-1">
                 Each competition type needs at least 3 judges to start. Once started, judges cannot be modified.
               </p>
@@ -499,7 +499,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
             {loadingJudgesSummary ? (
               <div className="flex items-center justify-center py-12 gap-3">
-                <div className="w-5 h-5 border-2 border-white/20 border-t-saffron rounded-full animate-spin"
+                <div className="w-5 h-5 border-2 border-ink/20 border-t-saffron rounded-full animate-spin"
                   style={{ borderTopColor: theme.colors.primary }} />
                 <span className="text-fg-muted text-sm">Loading judges summary…</span>
               </div>
@@ -509,7 +509,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Mars className="w-4 h-4" style={{ color: DATA_COLORS.blue }} />
-                    <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Boys Age Groups</span>
+                    <span className="text-sm font-bold text-ink/70 tracking-wide uppercase">Boys Age Groups</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {judgesSummary
@@ -526,7 +526,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Venus className="w-4 h-4" style={{ color: DATA_COLORS.pink }} />
-                    <span className="text-sm font-bold text-white/70 tracking-wide uppercase">Girls Age Groups</span>
+                    <span className="text-sm font-bold text-ink/70 tracking-wide uppercase">Girls Age Groups</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {judgesSummary
@@ -579,7 +579,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               </div>
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>Competition Stats</p>
-                <h3 className="text-xl font-black text-white">Participation Breakdown</h3>
+                <h3 className="text-xl font-black text-ink">Participation Breakdown</h3>
               </div>
             </div>
             <div className="md:w-64">
@@ -668,7 +668,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       <div className="min-h-dvh flex items-center justify-center"
         style={{ background: theme.colors.background }}>
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4"
+          <div className="w-10 h-10 border-2 border-ink/10 rounded-full mx-auto mb-4"
             style={{ borderTopColor: theme.colors.primary, animation: 'spin 0.8s linear infinite' }} />
           <p className="text-fg-muted text-sm">Loading dashboard…</p>
         </div>
@@ -686,8 +686,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             style={{ background: `${alpha(theme.colors.primary, 0x18)}`, border: `2px solid ${alpha(theme.colors.primary, 0x30)}` }}>
             <Trophy className="w-8 h-8" style={{ color: FG.accent }} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">No Competition Selected</h2>
-          <p className="text-white/60 text-sm mb-6">
+          <h2 className="text-xl font-bold text-ink mb-2">No Competition Selected</h2>
+          <p className="text-ink/60 text-sm mb-6">
             Please select a competition from the dropdown in the navigation bar to view the dashboard.
           </p>
         </div>
@@ -731,7 +731,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                 style={{ color: FG.accent }}>
                 {isSuperAdmin ? 'Super Admin' : 'Admin'}
               </p>
-              <p className="text-white text-sm font-bold leading-tight">Dashboard</p>
+              <p className="text-ink text-sm font-bold leading-tight">Dashboard</p>
             </div>
           </div>
 
@@ -745,7 +745,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                   <motion.button
                     key={t.id}
                     onClick={() => handleTabNav(t.id)}
-                    className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 tap-safe mouse:min-h-[36px] ${isActive ? 'text-white' : 'text-fg-muted hover:text-white'}`}
+                    className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 tap-safe mouse:min-h-[36px] ${isActive ? 'text-ink' : 'text-fg-muted hover:text-ink'}`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {isActive && (
@@ -781,7 +781,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             <AppearanceMenu />
             <motion.button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200 text-fg-muted hover:text-danger-fg border border-white/[0.06] hover:border-danger-fg/25"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200 text-fg-muted hover:text-danger-fg border border-ink/[0.06] hover:border-danger-fg/25"
               aria-label="Logout"
             >
               <LogOut className="w-4 h-4" aria-hidden="true" />
@@ -791,7 +791,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             {compactNav && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-ink/10 transition-colors"
                 style={{ color: 'rgb(var(--ink) / 0.7)' }}
                 aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileMenuOpen}
@@ -859,7 +859,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
           <Suspense fallback={
             <div className="flex justify-center items-center py-20">
-              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-ink/20 border-t-ink rounded-full animate-spin" />
             </div>
           }>
             {renderTabContent()}

@@ -233,7 +233,7 @@ const AdminLots = () => {
         <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>
           Lots &amp; Running Order
         </p>
-        <h2 className="text-2xl font-black text-white mb-6">Draw Lots</h2>
+        <h2 className="text-2xl font-black text-ink mb-6">Draw Lots</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {isSuperAdmin && (
@@ -268,7 +268,7 @@ const AdminLots = () => {
               : 'Choose gender, age group and competition type to draw or edit its running order.'} />
         ) : loading ? (
           <div className="flex items-center justify-center py-12 gap-3">
-            <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+            <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
             <span className="text-fg-muted text-sm">Loading running order…</span>
           </div>
         ) : teams.length === 0 ? (
@@ -279,7 +279,7 @@ const AdminLots = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border"
               style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
               <div className="text-sm">
-                <p className="text-white font-bold">
+                <p className="text-ink font-bold">
                   {teams.length} team{teams.length !== 1 ? 's' : ''} in running order
                 </p>
                 <p className="text-fg-muted text-xs mt-0.5">
@@ -294,7 +294,7 @@ const AdminLots = () => {
               <motion.button
                 onClick={() => setShowDrawConfirm(true)}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, #D97706)`, color: '#0A0A0A' }}
                 whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
                 <Shuffle className="w-4 h-4" />
@@ -323,7 +323,7 @@ const AdminLots = () => {
                     <div className="flex items-center gap-3">
                       <LotBadge lotNo={team.lotNo} position={index} />
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white text-sm truncate">{team.name}</p>
+                        <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">
                           {team.coachName ? `Coach: ${team.coachName} · ` : ''}
                           {team.playerCount} athlete{team.playerCount !== 1 ? 's' : ''}
@@ -332,7 +332,7 @@ const AdminLots = () => {
                       <button
                         type="button"
                         onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
-                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-white hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-ink hover:bg-ink/5 transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -356,7 +356,7 @@ const AdminLots = () => {
                               <div className="flex items-center gap-3">
                                 <LotBadge lotNo={player.lotNo} position={playerIndex} />
                                 <div className="min-w-0">
-                                  <p className="text-sm text-white truncate">{player.name}</p>
+                                  <p className="text-sm text-ink truncate">{player.name}</p>
                                   <p className="text-xs text-fg-muted">{player.gender} · {player.ageGroup}</p>
                                 </div>
                               </div>
@@ -375,7 +375,7 @@ const AdminLots = () => {
               <motion.button
                 onClick={() => persistTeamOrder(teamsRef.current)}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white min-h-[44px] disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`, color: '#0A0A0A' }}
                 whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
                 <Save className="w-4 h-4" /> Save Order

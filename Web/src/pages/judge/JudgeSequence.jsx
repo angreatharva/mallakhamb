@@ -223,16 +223,16 @@ const JudgeSequence = () => {
           <button
             type="button"
             onClick={() => navigate('/judge/dashboard')}
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
             aria-label="Back to dashboard">
-            <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+            <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
           </button>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
             <ListOrdered className="w-4 h-4 text-snow" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="text-white font-bold text-sm leading-tight truncate">Running Order</p>
+            <p className="text-ink font-bold text-sm leading-tight truncate">Running Order</p>
             <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
           </div>
           {saving && <span className="ml-auto text-xs text-fg-muted">Saving…</span>}
@@ -243,7 +243,7 @@ const JudgeSequence = () => {
         <div className="rounded-2xl border p-5 mb-6"
           style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>Category</p>
-          <h1 className="text-xl font-black text-white">
+          <h1 className="text-xl font-black text-ink">
             {categoryParams?.gender} — {categoryParams?.ageGroup}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
@@ -272,9 +272,9 @@ const JudgeSequence = () => {
             <span className="text-sm text-fg-muted">Loading running order…</span>
           </div>
         ) : teams.length === 0 ? (
-          <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
-            <Users className="w-12 h-12 mb-4 text-white/20" />
-            <p className="text-lg font-bold text-white/70">No teams to order</p>
+          <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+            <Users className="w-12 h-12 mb-4 text-ink/20" />
+            <p className="text-lg font-bold text-ink/70">No teams to order</p>
             <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
               No coach has submitted a team for this category yet.
             </p>
@@ -294,7 +294,7 @@ const JudgeSequence = () => {
                     <div className="flex items-center gap-3">
                       <OrderBadge lotNo={team.lotNo} position={index} accent={DATA_COLORS.purpleSoft} />
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white text-sm truncate">{team.name}</p>
+                        <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">
                           {team.coachName ? `Coach: ${team.coachName} · ` : ''}
                           {team.playerCount} athlete{team.playerCount !== 1 ? 's' : ''}
@@ -304,7 +304,7 @@ const JudgeSequence = () => {
                       <button
                         type="button"
                         onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
-                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-white hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-1 px-3 min-h-[44px] rounded-lg text-xs font-bold text-fg-muted hover:text-ink hover:bg-ink/5 transition-colors"
                         aria-label={isExpanded ? 'Hide athletes' : 'Show athletes'}>
                         <Users className="w-3.5 h-3.5" />
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -328,7 +328,7 @@ const JudgeSequence = () => {
                               <div className="flex items-center gap-3">
                                 <OrderBadge lotNo={player.lotNo} position={playerIndex} accent={FG.success} />
                                 <div className="min-w-0">
-                                  <p className="text-sm text-white truncate">{player.name}</p>
+                                  <p className="text-sm text-ink truncate">{player.name}</p>
                                   <p className="text-xs text-fg-muted">
                                     {player.gender} · {player.ageGroup}
                                     {player.isFinalized ? ' · finalized' : ''}

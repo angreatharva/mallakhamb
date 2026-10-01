@@ -169,15 +169,15 @@ const TimeKeeperScoring = () => {
         <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => navigate('/judge/dashboard')} disabled={busy}
-              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40"
+              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors disabled:opacity-40"
               style={{ color: 'rgb(var(--ink) / 0.6)' }}>
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </button>
-            <div className="w-px h-5 bg-white/10" />
+            <div className="w-px h-5 bg-ink/10" />
             <div className="flex items-center gap-2">
               <Timer className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
-              <span className="text-white font-bold text-sm">Time Keeper</span>
+              <span className="text-ink font-bold text-sm">Time Keeper</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ const TimeKeeperScoring = () => {
 
         <div className="rounded-2xl border p-5" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
           <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Timing Session</p>
-          <h1 className="text-xl sm:text-2xl font-black text-white">{gender} — {ageGroup}</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-ink">{gender} — {ageGroup}</h1>
           <p className="mt-1 text-sm text-fg-muted">
             {selectedTeam.name}
             {selectedCompetitionType?.label ? ` · ${selectedCompetitionType.label}` : ''}
@@ -254,7 +254,7 @@ const TimeKeeperScoring = () => {
                           background: active ? `${alpha(ADMIN_COLORS.saffron, 0x14)}` : 'rgb(var(--ink) / 0.02)',
                           borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x55)}` : ADMIN_COLORS.darkBorderSubtle,
                         }}>
-                        <span className="text-sm font-bold text-white truncate">{row.name}</span>
+                        <span className="text-sm font-bold text-ink truncate">{row.name}</span>
                         {rec && (
                           <span className="flex items-center gap-1 text-xs font-bold flex-shrink-0"
                             style={{ color: rec.sent ? FG.success : FG.brandGold }}>

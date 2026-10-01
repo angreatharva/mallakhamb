@@ -52,7 +52,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
         </div>
 
         <div className="min-w-0">
-          <h3 className="text-white font-bold text-sm leading-tight">
+          <h3 className="text-ink font-bold text-sm leading-tight">
             {competitionName ? <SafeText as="span">{competitionName}</SafeText> : 'This competition'}
             {' has closed'}
           </h3>

@@ -99,7 +99,7 @@ const AppearanceMenu = ({ className = '' }) => {
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' && !open) { event.preventDefault(); setOpen(true); }
         }}
-        className="tap-safe mouse:min-h-[36px] mouse:min-w-[36px] inline-flex items-center justify-center rounded-lg border border-line text-fg-muted hover:text-white hover:bg-white/[0.06] transition-colors"
+        className="tap-safe mouse:min-h-[36px] mouse:min-w-[36px] inline-flex items-center justify-center rounded-lg border border-line text-fg-muted hover:text-ink hover:bg-ink/[0.06] transition-colors"
       >
         <ButtonIcon className="w-4 h-4" aria-hidden="true" />
       </button>
@@ -123,7 +123,7 @@ const AppearanceMenu = ({ className = '' }) => {
                 aria-checked={checked}
                 tabIndex={-1}
                 onClick={() => choose(value)}
-                className="tap-safe mouse:min-h-[36px] w-full flex items-center gap-3 rounded-lg px-3 text-left text-sm text-white hover:bg-white/[0.06] focus-visible:bg-white/[0.06]"
+                className="tap-safe mouse:min-h-[36px] w-full flex items-center gap-3 rounded-lg px-3 text-left text-sm text-ink hover:bg-ink/[0.06] focus-visible:bg-ink/[0.06]"
               >
                 <Icon className="w-4 h-4 flex-shrink-0 text-fg-muted" aria-hidden="true" />
                 <span className="flex-1">{label}</span>

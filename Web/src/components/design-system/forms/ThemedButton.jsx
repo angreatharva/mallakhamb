@@ -91,13 +91,13 @@ export const ThemedButton = forwardRef(({
       outline: {
         className: clsx(
           'bg-transparent font-medium border-2 border-accent-fg text-accent-fg',
-          !isDisabled && 'hover:bg-white/5',
+          !isDisabled && 'hover:bg-ink/5',
         ),
       },
       ghost: {
         className: clsx(
           'bg-transparent font-medium text-accent-fg',
-          !isDisabled && 'hover:bg-white/5',
+          !isDisabled && 'hover:bg-ink/5',
         ),
       },
     };

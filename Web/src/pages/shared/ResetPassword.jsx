@@ -15,7 +15,7 @@ const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 const StyledInput = ({ error, verified, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
     style={{
       background: verified ? 'rgba(34,197,94,0.06)' : 'rgb(var(--ink) / 0.05)',
       border: `1px solid ${error ? '#EF4444' : verified ? 'rgba(34,197,94,0.4)' : COLORS.darkBorderSubtle}`,
@@ -41,7 +41,7 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
   <div className="relative flex items-center">
     <input
       type={showPassword ? 'text' : 'password'}
-      className="w-full px-4 py-3 pr-12 rounded-xl text-white text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+      className="w-full px-4 py-3 pr-12 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
       style={{
         background: 'rgb(var(--ink) / 0.05)',
         border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
@@ -199,7 +199,7 @@ const ResetPassword = () => {
         </Link>
         <div>
           <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
-          <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
 
@@ -222,7 +222,7 @@ const ResetPassword = () => {
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
               <Lock className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
-            <h1 className="text-2xl font-black text-white mb-2">
+            <h1 className="text-2xl font-black text-ink mb-2">
               Reset <GradientText>Password</GradientText>
             </h1>
             <p className="text-fg-muted text-sm">
@@ -305,7 +305,7 @@ const ResetPassword = () => {
               <>
                 {/* Email */}
                 <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
+                  <label htmlFor="email" className="block text-sm font-semibold text-ink/70 mb-2">
                     Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <StyledInput
@@ -329,7 +329,7 @@ const ResetPassword = () => {
 
                 {/* OTP */}
                 <div className="mb-4">
-                  <label htmlFor="otp" className="block text-sm font-semibold text-white/70 mb-2">
+                  <label htmlFor="otp" className="block text-sm font-semibold text-ink/70 mb-2">
                     OTP Code <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -388,7 +388,7 @@ const ResetPassword = () => {
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.3 }}>
                   <div className="mb-4">
-                    <label htmlFor="password" className="block text-sm font-semibold text-white/70 mb-2">
+                    <label htmlFor="password" className="block text-sm font-semibold text-ink/70 mb-2">
                       New Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
@@ -413,7 +413,7 @@ const ResetPassword = () => {
                   </div>
 
                   <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-white/70 mb-2">
+                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-ink/70 mb-2">
                       Confirm Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
@@ -451,7 +451,7 @@ const ResetPassword = () => {
                 whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}>
                 {loading ? (
                   <>
-                    <div className="animate-spin w-4 h-4 rounded-full border-2 border-white/30 border-t-white" />
+                    <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
                     Resetting Password…
                   </>
                 ) : success ? (

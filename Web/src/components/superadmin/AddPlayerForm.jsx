@@ -26,7 +26,7 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
     )}
     <input
       id={id}
-      className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 min-h-[44px] transition-all duration-200"
+      className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
       style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
       onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
       onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
@@ -486,7 +486,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             }
             return (
               <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'var(--fg-muted)', background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                Fee for this competition: <span className="font-bold text-white">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
+                Fee for this competition: <span className="font-bold text-ink">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
               </p>
             );
           })()}
@@ -532,7 +532,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
               const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
               return (
                 <div key={compType} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                  <p className="text-xs font-bold text-white/60 mb-2">{typeLabel}</p>
+                  <p className="text-xs font-bold text-ink/60 mb-2">{typeLabel}</p>
                   <div className="flex flex-wrap gap-3">
                     {apparatuses.map((app) => {
                       const isSelected = (selectedApparatus[compType] || []).includes(app);
@@ -555,7 +555,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                           >
                             {isSelected && <CheckCircle2 className="w-3 h-3 text-dark" />}
                           </div>
-                          <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-white/70'}`}>
+                          <span className={`text-sm ${isSelected ? 'text-ink font-medium' : 'text-ink/70'}`}>
                             {app}
                           </span>
                         </label>
@@ -584,7 +584,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 transition-all duration-200"
+            className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
               background: 'rgb(var(--ink) / 0.04)', 
               border: `1px solid ${errors.password ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
@@ -602,7 +602,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            className="absolute flex items-center justify-center rounded hover:bg-ink/10 transition-colors"
             style={{
               right: '0.5rem',
               top: '50%',
@@ -643,7 +643,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-base mouse:text-sm text-white placeholder-white/30 transition-all duration-200"
+            className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
               background: 'rgb(var(--ink) / 0.04)', 
               border: `1px solid ${errors.confirmPassword ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
@@ -661,7 +661,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            className="absolute flex items-center justify-center rounded hover:bg-ink/10 transition-colors"
             style={{
               right: '0.5rem',
               top: '50%',
@@ -706,7 +706,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           {loading ? (
             <>
               <div
-                className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
+                className="animate-spin w-4 h-4 border-2 border-ink/20 border-t-ink rounded-full"
               />
               Opening payment…
             </>

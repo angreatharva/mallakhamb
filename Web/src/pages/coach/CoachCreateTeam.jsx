@@ -133,7 +133,7 @@ const CoachCreateTeam = () => {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-white mb-2">Create Your Team</h1>
+            <h1 className="text-2xl font-black text-ink mb-2">Create Your Team</h1>
             <p className="text-fg-muted text-sm">Set up your team to start managing players</p>
           </div>
 
@@ -151,7 +151,7 @@ const CoachCreateTeam = () => {
                 id="team-name"
                 type="text"
                 placeholder="Enter team name"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 min-h-[44px]"
+                className="w-full px-4 py-3 rounded-xl text-ink placeholder-ink/25 transition-all duration-200 min-h-[44px]"
                 style={{
                   background: 'rgb(var(--ink) / 0.05)',
                   border: `1px solid ${errors.name ? FG.danger : COLORS.darkBorderSubtle}`,
@@ -176,7 +176,7 @@ const CoachCreateTeam = () => {
                 id="team-desc"
                 rows={3}
                 placeholder="Enter team description"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 transition-all duration-200 resize-none"
+                className="w-full px-4 py-3 rounded-xl text-ink placeholder-ink/25 transition-all duration-200 resize-none"
                 style={{
                   background: 'rgb(var(--ink) / 0.05)',
                   border: `1px solid ${COLORS.darkBorderSubtle}`,
@@ -190,7 +190,7 @@ const CoachCreateTeam = () => {
             <motion.button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl font-bold text-white min-h-[44px] flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               style={SAFFRON_CTA}
               whileHover={loading ? {} : { scale: 1.01 }}
               whileTap={loading ? {} : { scale: 0.98 }}>

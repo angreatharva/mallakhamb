@@ -276,14 +276,14 @@ const Navbar = () => {
             whileHover={{ scale: 1.05 }} transition={EASE_SPRING} />
           <div className="hidden sm:block">
             <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
-            <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+            <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
           </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-4 lg:gap-8" aria-label="Main navigation">
           {navLinks.map((link) => (
             <Link key={link.to} to={link.to}
-              className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2 tap-safe">
+              className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-ink/80 hover:text-ink transition-colors duration-200 group py-2 tap-safe">
               {link.label}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 rounded-full"
                 style={{ background: COLORS.saffron }} />
@@ -295,7 +295,7 @@ const Navbar = () => {
 
         <AppearanceMenu className="md:hidden ml-auto mr-1" />
         <button onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden p-2 rounded-lg text-white min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
+          className="md:hidden p-2 rounded-lg text-ink min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-ink/10 transition-colors"
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={isMenuOpen}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={isMenuOpen ? 'x' : 'menu'}
@@ -318,7 +318,7 @@ const Navbar = () => {
                 <motion.div key={link.to} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}>
                   <Link to={link.to} onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/5 font-medium transition-all min-h-[44px] flex items-center">
+                    className="block px-4 py-3 rounded-xl text-ink/80 hover:text-ink hover:bg-ink/5 font-medium transition-all min-h-[44px] flex items-center">
                     {link.label}
                   </Link>
                 </motion.div>
@@ -432,7 +432,7 @@ const HeroSection = () => {
           ))}
         </h1>
 
-        <motion.p className="text-white/70 text-lg sm:text-xl md:text-2xl font-light tracking-widest uppercase mb-3"
+        <motion.p className="text-ink/70 text-lg sm:text-xl md:text-2xl font-light tracking-widest uppercase mb-3"
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.6 }}>
           Mallakhamb Competition
@@ -466,7 +466,7 @@ const HeroSection = () => {
                         style={{ background: `${alpha(role.color, 0x18)}` }}>
                         <Icon className="w-4 h-4" style={{ color: role.color }} aria-hidden="true" />
                       </div>
-                      <p className="text-white font-bold text-sm leading-tight">{role.title}</p>
+                      <p className="text-ink font-bold text-sm leading-tight">{role.title}</p>
                       <div className="flex gap-2 mt-auto">
                         <Link to={role.loginTo}
                           className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe mouse:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
@@ -475,7 +475,7 @@ const HeroSection = () => {
                         </Link>
                         {role.registerTo && (
                           <Link to={role.registerTo}
-                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe mouse:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe mouse:min-h-[36px] flex items-center justify-center hover:bg-ink/10 transition-all duration-200 active:scale-95"
                             style={{ borderColor: `${alpha(role.color, 0x45)}`, color: role.color }}>
                             Register
                           </Link>
@@ -502,7 +502,7 @@ const HeroSection = () => {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}
           style={{ opacity }}>
           <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
-            <ChevronDown className="w-5 h-5 text-white/30" aria-hidden="true" />
+            <ChevronDown className="w-5 h-5 text-ink/30" aria-hidden="true" />
           </motion.div>
         </motion.div>
       )}
@@ -569,7 +569,7 @@ const AboutSection = () => {
               style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: 0.4 }}>
-              <p className="text-white font-bold text-sm">Traditional Indian Sport</p>
+              <p className="text-ink font-bold text-sm">Traditional Indian Sport</p>
               <p className="text-fg-muted text-xs mt-1">Originating from the Indian subcontinent</p>
             </motion.div>
           </motion.div>
@@ -582,7 +582,7 @@ const AboutSection = () => {
         <FadeIn direction="left" delay={0.2} className="order-1 lg:order-2 space-y-8">
           <div>
             <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>The Ancient Art</p>
-            <h2 className="text-4xl md:text-5xl font-black text-white leading-tight">
+            <h2 className="text-4xl md:text-5xl font-black text-ink leading-tight">
               Where Strength<br />
               <GradientText>Meets Grace</GradientText>
             </h2>
@@ -623,7 +623,7 @@ const LegacyTimeline = () => (
     <div className="max-w-5xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
         <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>40+ Years</p>
-        <h2 className="text-4xl md:text-5xl font-black text-white">A Living <GradientText>Legacy</GradientText></h2>
+        <h2 className="text-4xl md:text-5xl font-black text-ink">A Living <GradientText>Legacy</GradientText></h2>
       </FadeIn>
       <div className="relative">
         <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px -translate-x-1/2 pointer-events-none"
@@ -636,7 +636,7 @@ const LegacyTimeline = () => (
                   <div className="inline-block p-5 rounded-2xl border"
                     style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
                     <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>{ev.year}</p>
-                    <p className="text-white font-bold text-lg mb-1">{ev.title}</p>
+                    <p className="text-ink font-bold text-lg mb-1">{ev.title}</p>
                     <p className="text-fg-muted text-sm leading-relaxed">{ev.desc}</p>
                   </div>
                 </div>
@@ -662,7 +662,7 @@ const QuoteStrip = () => (
     <FadeIn className="max-w-4xl mx-auto px-4 text-center relative z-10">
       <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: FG.brand }} aria-hidden="true" />
       <blockquote>
-        <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
+        <p className="text-2xl md:text-3xl font-black text-ink leading-snug mb-6">
           &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
         </p>
         <footer className="text-fg-muted text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
@@ -701,7 +701,7 @@ const FeatureCard = ({ feature, index }) => {
             <Icon className={feature.hero ? 'w-7 h-7' : 'w-5 h-5'} style={{ color: feature.accent }} aria-hidden="true" />
           </div>
           <div className="relative z-10 flex-1">
-            <h3 className={`text-white font-bold ${feature.hero ? 'text-2xl' : 'text-lg'}`}>{feature.title}</h3>
+            <h3 className={`text-ink font-bold ${feature.hero ? 'text-2xl' : 'text-lg'}`}>{feature.title}</h3>
             <p className={`text-fg-muted mt-1 leading-relaxed ${feature.hero ? 'text-base' : 'text-sm'}`}>{feature.description}</p>
           </div>
           <div className="mt-auto flex items-center gap-2 text-xs font-semibold relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -719,7 +719,7 @@ const FeaturesSection = () => (
     <div className="max-w-6xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
         <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Platform</p>
-        <h2 className="text-4xl md:text-5xl font-black text-white">Everything You <GradientText>Need</GradientText></h2>
+        <h2 className="text-4xl md:text-5xl font-black text-ink">Everything You <GradientText>Need</GradientText></h2>
       </FadeIn>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
         {features.map((f, i) => <FeatureCard key={f.title} feature={f} index={i} />)}
@@ -751,8 +751,8 @@ const Footer = () => {
           <div className="flex items-center gap-3">
             <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" loading="lazy" />
             <div>
-              <p className="text-white font-bold text-sm leading-tight">Bhausaheb Ranade Navodit</p>
-              <p className="text-white font-bold text-sm leading-tight">Mallakhamb Competition</p>
+              <p className="text-ink font-bold text-sm leading-tight">Bhausaheb Ranade Navodit</p>
+              <p className="text-ink font-bold text-sm leading-tight">Mallakhamb Competition</p>
             </div>
           </div>
           <p className="text-fg-muted text-sm leading-relaxed max-w-sm">
@@ -772,7 +772,7 @@ const Footer = () => {
 
         {Object.entries(footerLinks).map(([section, links]) => (
           <div key={section}>
-            <p className="text-white font-bold text-sm mb-4 tracking-wide">{section}</p>
+            <p className="text-ink font-bold text-sm mb-4 tracking-wide">{section}</p>
             <ul className="space-y-3">
               {links.map((link) => (
                 <li key={link.to}>
@@ -789,7 +789,7 @@ const Footer = () => {
         ))}
 
         <div className="space-y-4">
-          <p className="text-white font-bold text-sm mb-4 tracking-wide">Contact</p>
+          <p className="text-ink font-bold text-sm mb-4 tracking-wide">Contact</p>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />

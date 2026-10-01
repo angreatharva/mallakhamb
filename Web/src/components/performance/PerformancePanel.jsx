@@ -121,7 +121,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
         <RankBadge rank={rank} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-white font-bold text-sm truncate">{player.playerName}</p>
+            <p className="text-ink font-bold text-sm truncate">{player.playerName}</p>
             {isHighlighted && (
               <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
                 style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: FG.brandSoft }}>You</span>
@@ -346,7 +346,7 @@ const PerformancePanel = ({
               <TrendingUp className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white">{title}</h2>
+              <h2 className="text-lg font-black text-ink">{title}</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
                 Live scores · updates as judges submit
               </p>
@@ -407,7 +407,7 @@ const PerformancePanel = ({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="rounded-2xl border p-10 text-center"
                 style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
-                <Trophy className="w-12 h-12 mx-auto mb-3 text-white/15" aria-hidden="true" />
+                <Trophy className="w-12 h-12 mx-auto mb-3 text-ink/15" aria-hidden="true" />
                 <p className="text-fg-muted font-semibold text-sm">{emptyLabel}</p>
                 <p className="text-fg-muted text-xs mt-1">
                   Scores appear here once judges finalize results.

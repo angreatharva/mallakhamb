@@ -57,7 +57,7 @@ const CompetitionDisplay = ({ className = '' }) => {
               <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-bold text-sm leading-tight truncate">
+              <h3 className="text-ink font-bold text-sm leading-tight truncate">
                 <SafeText>{currentCompetition.name}</SafeText>
                 {currentCompetition.year ? ` (${currentCompetition.year})` : ''}
               </h3>

@@ -75,9 +75,9 @@ const Navbar = ({ user, userType, onLogout }) => {
             whileHover={{ scale: 1.08, rotate: 5 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
+            <Trophy className="w-4 h-4 text-ink" aria-hidden="true" />
           </motion.div>
-          <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
+          <span className="text-ink font-bold text-sm tracking-wide hidden sm:block">
             Mallakhamb<span style={{ color: FG.brand }}>India</span>
           </span>
         </Link>
@@ -93,7 +93,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                   style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
                   <User className="w-3.5 h-3.5" style={{ color: FG.brandSoft }} aria-hidden="true" />
                 </div>
-                <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
+                <span className="text-ink/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
               <AppearanceMenu />
               <motion.button
@@ -112,7 +112,7 @@ const Navbar = ({ user, userType, onLogout }) => {
             <div className="flex items-center gap-1">
               {navLinks.map((link) => (
                 <Link key={link.to} to={link.to}
-                  className="relative px-4 py-2 rounded-xl text-sm font-semibold text-white/65 hover:text-white transition-colors duration-200 min-h-[44px] flex items-center group">
+                  className="relative px-4 py-2 rounded-xl text-sm font-semibold text-ink/65 hover:text-ink transition-colors duration-200 min-h-[44px] flex items-center group">
                   {link.label}
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 group-hover:w-4 transition-all duration-300 rounded-full"
                     style={{ background: COLORS.saffron }} />
@@ -132,7 +132,7 @@ const Navbar = ({ user, userType, onLogout }) => {
         {/* Mobile hamburger */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="lg:hidden p-2 rounded-xl text-white min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+          className="lg:hidden p-2 rounded-xl text-ink min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
           style={{ background: isMobileMenuOpen ? `${alpha(COLORS.saffron, 0x18)}` : 'transparent' }}
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
@@ -179,7 +179,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                         <User className="w-5 h-5" style={{ color: FG.brandSoft }} />
                       </div>
                       <div>
-                        <p className="text-white font-semibold text-sm">{user.firstName || user.name}</p>
+                        <p className="text-ink font-semibold text-sm">{user.firstName || user.name}</p>
                         <p className="text-fg-muted text-xs capitalize">{userType || 'User'}</p>
                       </div>
                     </div>
@@ -203,7 +203,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                         initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}>
                         <Link to={link.to} onClick={() => setIsMobileMenuOpen(false)}
-                          className="block px-4 py-3 rounded-xl text-white/80 hover:text-white font-medium transition-all min-h-[44px] flex items-center"
+                          className="block px-4 py-3 rounded-xl text-ink/80 hover:text-ink font-medium transition-all min-h-[44px] flex items-center"
                           style={{ background: 'rgb(var(--ink) / 0.04)' }}>
                           {link.label} Login
                         </Link>
