@@ -1,6 +1,6 @@
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/copRules';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
@@ -9,9 +9,9 @@ const surface  = C.darkCard;       // #111
 const elevated = C.darkElevated;   // #161616
 const border   = C.darkBorderSubtle;
 const borderMid = C.darkBorderMid;
-const textPrimary   = 'rgba(255,255,255,0.90)';
-const textSecondary = 'rgba(255,255,255,0.50)';
-const textMuted     = 'rgba(255,255,255,0.30)';
+const textPrimary   = 'rgb(var(--ink) / 0.90)';
+const textSecondary = 'var(--fg-muted)';
+const textMuted     = 'var(--fg-muted)';
 
 // ─── Shared input style ───────────────────────────────────────────────────────
 /*
@@ -22,14 +22,21 @@ const textMuted     = 'rgba(255,255,255,0.30)';
  * than 80px — and an input that insists on 80 would spill out of it. The
  * mobile cards are a label-and-field row with room to spare, and keep the
  * fixed width so the fields line up down the card.
+ *
+ * Font: the cards' fields are 16px on a touch screen (`CARD_FIELD_CLASS`), so
+ * iOS does not zoom on focus. The table's stay 13px — at 768 a 16px "0.00"
+ * does not fit the cell it is divided into and is clipped, and a mark you
+ * cannot read is worse than a zoom. iPadOS does not zoom on focus, and an
+ * iPhone gets the cards.
  */
+const CARD_FIELD_CLASS = 'text-base mouse:text-[13px]';
 const inputStyle = (locked, fluid = false) => ({
-  background: locked ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+  background: locked ? 'rgb(var(--ink) / 0.04)' : 'rgb(var(--ink) / 0.06)',
   border: `1px solid ${locked ? border : borderMid}`,
   borderRadius: 8,
   color: locked ? textSecondary : textPrimary,
   padding: fluid ? '6px 8px' : '6px 10px',
-  fontSize: 13,
+  fontSize: fluid ? 13 : undefined,
   outline: 'none',
   width: fluid ? '100%' : 80,
   minWidth: fluid ? 0 : undefined,
@@ -143,13 +150,13 @@ export const ResponsiveTable = ({
                 <tr key={ri}
                   onClick={() => onRowClick?.(item)}
                   style={{
-                    background: ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)',
+                    background: ri % 2 === 0 ? surface : 'rgb(var(--ink) / 0.015)',
                     cursor: onRowClick ? 'pointer' : 'default',
                     transition: 'background 0.12s',
                     borderBottom: `1px solid ${border}`,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = `${alpha(C.saffron, 0x0A)}`; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = ri % 2 === 0 ? surface : 'rgb(var(--ink) / 0.015)'; }}
                 >
                   {columns.map((col, ci) => (
                     <td key={ci} style={{ padding: '13px 16px', fontSize: 13, color: textPrimary, whiteSpace: 'nowrap' }} className={col.cellClassName || ''}>
@@ -194,6 +201,7 @@ const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'n
     }}
     disabled={isLocked}
     placeholder={placeholder}
+    className={fluid ? undefined : CARD_FIELD_CLASS}
     style={inputStyle(isLocked, fluid)}
     onFocus={e => { if (!isLocked) e.target.style.borderColor = `${alpha(C.saffron, 0x80)}`; }}
     onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
@@ -256,7 +264,7 @@ export const ResponsiveScoringTable = ({
               {/* Time */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <label style={{ fontSize: 12, color: textSecondary }}>
-                  Time <span style={{ color: '#EF4444' }}>*</span>
+                  Time <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <ScoreInputCell
                   value={scores[player.id]?.time}
@@ -276,7 +284,7 @@ export const ResponsiveScoringTable = ({
                   <div key={judge._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
                       <label style={{ fontSize: 12, color: textSecondary, display: 'block' }}>{judge.judgeType}</label>
-                      {judge.name && <span style={{ fontSize: 10, color: C.purpleLight, opacity: 0.85 }}>{judge.name}</span>}
+                      {judge.name && <span style={{ fontSize: 10, color: DATA_COLORS.purpleSoft, opacity: 0.85 }}>{judge.name}</span>}
                       {judge.isChiefCopy && (
                         <span style={{ fontSize: 10, color: textMuted, display: 'block' }}>Senior Judge&rsquo;s mark</span>
                       )}
@@ -304,11 +312,11 @@ export const ResponsiveScoringTable = ({
                       return (
                         <>
                           {result.baseScoreApplied && (
-                            <span style={{ fontSize: 10, background: `${alpha(C.amber, 0x22)}`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                            <span style={{ fontSize: 10, background: `${alpha(FG.warning, 0x22)}`, color: FG.warning, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
                               Base Score Applied (±{result.tolerance.toFixed(2)})
                             </span>
                           )}
-                          <span style={{ fontSize: 13, fontWeight: 600, color: C.blue }}>{result.average.toFixed(2)}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: FG.info }}>{result.average.toFixed(2)}</span>
                         </>
                       );
                     })()}
@@ -338,7 +346,7 @@ export const ResponsiveScoringTable = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>Final Score</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{calculateFinalScore(scores[player.id] || {}, panelSize)}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: FG.success }}>{calculateFinalScore(scores[player.id] || {}, panelSize)}</span>
                 </div>
               </div>
             </div>
@@ -394,9 +402,9 @@ export const ResponsiveScoringTable = ({
                 const isJudgeCol = i >= 2 && i < 2 + judges.length;
                 return (
                   <th key={i} scope="col" style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
-                    {h === 'Time' ? <>{h} <span style={{ color: '#EF4444' }}>*</span></> : h}
+                    {h === 'Time' ? <>{h} <span style={{ color: FG.danger }}>*</span></> : h}
                     {isJudgeCol && judgeObj?.name && (
-                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: C.purpleLight, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
+                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: DATA_COLORS.purpleSoft, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
                     )}
                     {isJudgeCol && judgeObj?.isChiefCopy && (
                       <div style={{ fontSize: 9, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: textMuted, marginTop: 1 }}>Senior Judge&rsquo;s mark</div>
@@ -408,7 +416,7 @@ export const ResponsiveScoringTable = ({
           </thead>
           <tbody>
             {players.map((player, ri) => (
-              <tr key={player.id} style={{ background: ri % 2 === 0 ? surface : 'rgba(255,255,255,0.015)', borderBottom: `1px solid ${border}` }}>
+              <tr key={player.id} style={{ background: ri % 2 === 0 ? surface : 'rgb(var(--ink) / 0.015)', borderBottom: `1px solid ${border}` }}>
                 <td style={{ padding: '12px 8px', overflowWrap: 'break-word' }}>
                   <p style={{ fontWeight: 600, color: textPrimary, fontSize: 13 }}>{player.name}</p>
                   {player.teamName && <p style={{ fontSize: 11, color: textSecondary }}>{player.teamName}</p>}
@@ -443,7 +451,7 @@ export const ResponsiveScoringTable = ({
                 })}
                 <td style={{ padding: '12px 8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: C.blue, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: FG.info, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
                       {(() => {
                         const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                         return result.average.toFixed(2);
@@ -455,7 +463,7 @@ export const ResponsiveScoringTable = ({
                         return (
                           // Wraps: this badge is ~110px on one line and the
                           // column it sits in is narrower than that.
-                          <span style={{ fontSize: 9, background: `${alpha(C.amber, 0x22)}`, color: C.amber, padding: '2px 6px', borderRadius: 4, fontWeight: 600, lineHeight: 1.3 }}>
+                          <span style={{ fontSize: 9, background: `${alpha(FG.warning, 0x22)}`, color: FG.warning, padding: '2px 6px', borderRadius: 4, fontWeight: 600, lineHeight: 1.3 }}>
                             Base Score (±{result.tolerance.toFixed(2)})
                           </span>
                         );
@@ -487,7 +495,7 @@ export const ResponsiveScoringTable = ({
                   />
                 </td>
                 <td style={{ padding: '12px 8px' }}>
-                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: C.green, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
+                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: FG.success, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
                     {calculateFinalScore(scores[player.id] || {}, panelSize)}
                   </span>
                 </td>
@@ -538,10 +546,10 @@ export const ResponsiveTeamTable = ({
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
           <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
-            <p style={{ fontSize: 11, color: C.purpleLight, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
-            <p style={{ fontSize: 22, fontWeight: 800, color: C.purple }}>{team.players?.length || 0}</p>
+            <p style={{ fontSize: 11, color: DATA_COLORS.purpleSoft, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: DATA_COLORS.violet }}>{team.players?.length || 0}</p>
           </div>
-          <span style={{ fontSize: 12, color: C.purpleLight, fontWeight: 500 }}>View Details →</span>
+          <span style={{ fontSize: 12, color: DATA_COLORS.purpleSoft, fontWeight: 500 }}>View Details →</span>
         </div>
       </div>
     </div>
