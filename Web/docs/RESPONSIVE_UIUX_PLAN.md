@@ -287,6 +287,31 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
   - the full guarded visual run (dev server restarted for the config change) is **pixel-identical** in all six areas, every width, both appearances;
   - 393 tests pass and the production build is clean.
 
+### Phase 10 log
+
+*One shared viewport store.* Every `useResponsive()` (20 call sites) used to:
+- add its own `resize` listener and debounce timer;
+- re-render once right after mount, through an "initial update" effect;
+- rewrite the document's responsive CSS custom properties on every resize — twenty identical writes.
+
+It is now a module-level store behind `useSyncExternalStore`:
+- **one listener**, attached while anyone is subscribed;
+- a ~100ms trailing debounce, measured on the next animation frame;
+- the CSS properties written only when the viewport *category* changes;
+- unchanged parts keep their object identity, so a consumer re-renders only when the measurement moved — and the first render already has the right value.
+
+The return shape is unchanged. The `debounceMs`/`updateCSSProperties` options went with the per-instance version; no caller passed either.
+
+- `useResponsive.test.jsx` pins it: one listener for five consumers, the right answer on the first render with no extra render, it follows a resize once settled, and it does not re-render when a resize changes nothing.
+- `responsive-score-sheet.spec.js` resizes a live sheet 1024 → 800 → 1024 (and from 1366): table → cards → table, no reload.
+- The full guarded visual run is **pixel-identical** in all six areas. 396 tests pass.
+
+*Appearance switches commit nothing outside the menu.* This is pinned by `AppearanceProvider.test` ("does not re-render children that do not read the appearance"); the switch is an attribute flip on `<html>`.
+
+*Left as is:*
+- `useReducedMotion` (44 callers) holds one `matchMedia` listener each. A media-query listener costs nothing until the setting changes, and the setting almost never does.
+- Re-checking memoisation found no hot path: the inline colour styles became stable token strings.
+
 ### Phase 8 log
 
 Only proven duplication is extracted, and each step must leave every screen pixel-identical in both appearances. A local copy is removed only after its whitespace-normalised body is checked against the shared one, and anything unrecognised aborts.

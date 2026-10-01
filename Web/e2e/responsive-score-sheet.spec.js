@@ -111,5 +111,15 @@ for (const width of WIDTHS) {
       expect(m.tableOverflows, 'the sheet overflows its wrapper').toBe(false);
       expect(m.numberInputs, 'a native number input is back').toBe(0);
     }
+
+    // Live resize (Phase 10's shared viewport store): no reload, the layout follows the window.
+    if (width >= 1024) {
+      await page.evaluate(() => { document.documentElement.dataset.appearance = 'dark'; });
+      await page.setViewportSize({ width: 800, height: 1000 });
+      await expect(page.locator('table')).toHaveCount(0, { timeout: 3_000 });
+      await page.setViewportSize({ width, height: 1000 });
+      await expect(page.locator('table')).toHaveCount(1, { timeout: 3_000 });
+      console.log(`sheet ${width}: follows a live resize to 800 (cards) and back (table)`);
+    }
   });
 }

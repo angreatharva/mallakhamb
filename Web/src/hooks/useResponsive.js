@@ -1,13 +1,25 @@
 /**
  * React Hook for Responsive State Management
- * 
+ *
  * Provides reactive responsive state that updates when viewport changes.
  * Includes breakpoint detection, viewport categorization, and performance optimization.
- * 
+ *
  * Requirements: 1.1, 1.2, 8.1
+ *
+ * ONE shared viewport store (plan Phase 10). Every `useResponsive()` used to add
+ * its own `resize` listener and debounce timer, re-render once right after mount
+ * (an "initial update" effect), and rewrite the document's responsive CSS custom
+ * properties on every resize — twenty components meant twenty listeners and
+ * twenty identical writes. Now:
+ *   - a single listener, attached while anyone is subscribed;
+ *   - a ~100ms trailing debounce, measured on the next animation frame;
+ *   - the CSS properties written once, and only when the category changes;
+ *   - `useSyncExternalStore`, so the first render already has the right value
+ *     and a consumer re-renders only when the measurement actually changed.
+ * The hook's return shape is unchanged.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   BREAKPOINTS,
   RESPONSIVE_RANGES,
@@ -21,99 +33,94 @@ import {
 } from '@/utils/ui/responsive.js';
 import { logger } from '@/infrastructure/logger.js';
 
+const RESIZE_SETTLE_MS = 100;
+const SERVER_SNAPSHOT = Object.freeze({
+  viewport: { width: 1440, height: 900, category: 'desktop' },
+  breakpoints: {
+    isMobile: false, isTablet: false, isDesktop: true, isDesktopBaseline: true,
+    sm: true, md: true, lg: true, xl: true, '2xl': true,
+  },
+});
+
+const measure = () => ({
+  viewport: { width: window.innerWidth, height: window.innerHeight, category: getViewportCategory() },
+  breakpoints: {
+    isMobile: isMobile(),
+    isTablet: isTablet(),
+    isDesktop: isDesktop(),
+    isDesktopBaseline: isDesktopBaseline(),
+    sm: isBreakpoint('sm'),
+    md: isBreakpoint('md'),
+    lg: isBreakpoint('lg'),
+    xl: isBreakpoint('xl'),
+    '2xl': isBreakpoint('2xl'),
+  },
+});
+
+const sameKeys = (a, b) => Object.keys(a).every((k) => a[k] === b[k]);
+
+const store = {
+  snapshot: null,
+  listeners: new Set(),
+  timer: 0,
+  frame: 0,
+};
+
+const read = () => {
+  if (typeof window === 'undefined') return SERVER_SNAPSHOT;
+  if (!store.snapshot) {
+    store.snapshot = measure();
+    setResponsiveCSSProperties();
+  }
+  return store.snapshot;
+};
+
+// Keep object identity for whatever did not change, so a consumer's memoised values stay stable.
+const refresh = () => {
+  const next = measure();
+  const prev = read();
+  const viewport = sameKeys(next.viewport, prev.viewport) ? prev.viewport : next.viewport;
+  const breakpoints = sameKeys(next.breakpoints, prev.breakpoints) ? prev.breakpoints : next.breakpoints;
+  if (viewport === prev.viewport && breakpoints === prev.breakpoints) return;
+  if (viewport.category !== prev.viewport.category) setResponsiveCSSProperties();
+  store.snapshot = { viewport, breakpoints };
+  store.listeners.forEach((listener) => listener());
+};
+
+const onResize = () => {
+  clearTimeout(store.timer);
+  store.timer = setTimeout(() => {
+    cancelAnimationFrame(store.frame);
+    store.frame = requestAnimationFrame(refresh);
+  }, RESIZE_SETTLE_MS);
+};
+
+const subscribe = (listener) => {
+  store.listeners.add(listener);
+  if (store.listeners.size === 1) window.addEventListener('resize', onResize);
+  return () => {
+    store.listeners.delete(listener);
+    if (store.listeners.size === 0) {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(store.timer);
+      cancelAnimationFrame(store.frame);
+    }
+  };
+};
+
 /**
- * Custom hook for responsive state management
- * @param {Object} options - Configuration options
- * @param {number} options.debounceMs - Debounce delay for resize events (default: 250ms)
- * @param {boolean} options.updateCSSProperties - Whether to update CSS custom properties (default: true)
+ * Custom hook for responsive state management.
+ * The `debounceMs` / `updateCSSProperties` options of the per-instance version are gone with it: the store is
+ * shared, settles in ~100ms, and keeps the CSS custom properties current. No caller ever passed either.
  * @returns {Object} Responsive state and utilities
  */
-export const useResponsive = (options = {}) => {
-  const { debounceMs = 250, updateCSSProperties = true } = options;
-  
-  // Initialize state
-  const [viewport, setViewport] = useState(() => ({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1440,
-    height: typeof window !== 'undefined' ? window.innerHeight : 900,
-    category: typeof window !== 'undefined' ? getViewportCategory() : 'desktop',
-  }));
+export const useResponsive = () => {
+  const { viewport, breakpoints } = useSyncExternalStore(subscribe, read, () => SERVER_SNAPSHOT);
 
-  // Breakpoint states
-  const [breakpoints, setBreakpoints] = useState(() => ({
-    isMobile: typeof window !== 'undefined' ? isMobile() : false,
-    isTablet: typeof window !== 'undefined' ? isTablet() : false,
-    isDesktop: typeof window !== 'undefined' ? isDesktop() : true,
-    isDesktopBaseline: typeof window !== 'undefined' ? isDesktopBaseline() : true,
-    sm: typeof window !== 'undefined' ? isBreakpoint('sm') : true,
-    md: typeof window !== 'undefined' ? isBreakpoint('md') : true,
-    lg: typeof window !== 'undefined' ? isBreakpoint('lg') : true,
-    xl: typeof window !== 'undefined' ? isBreakpoint('xl') : true,
-    '2xl': typeof window !== 'undefined' ? isBreakpoint('2xl') : true,
-  }));
-
-  // Update responsive state
-  const updateResponsiveState = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    const newViewport = {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      category: getViewportCategory(),
-    };
-
-    const newBreakpoints = {
-      isMobile: isMobile(),
-      isTablet: isTablet(),
-      isDesktop: isDesktop(),
-      isDesktopBaseline: isDesktopBaseline(),
-      sm: isBreakpoint('sm'),
-      md: isBreakpoint('md'),
-      lg: isBreakpoint('lg'),
-      xl: isBreakpoint('xl'),
-      '2xl': isBreakpoint('2xl'),
-    };
-
-    setViewport(newViewport);
-    setBreakpoints(newBreakpoints);
-
-    // Update CSS custom properties if enabled
-    if (updateCSSProperties) {
-      setResponsiveCSSProperties();
-    }
-  }, [updateCSSProperties]);
-
-  // Debounced resize handler with performance monitoring
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    let timeoutId;
-    
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(updateResponsiveState, debounceMs);
-    };
-
-    // Standard resize handler
-    window.addEventListener('resize', handleResize);
-
-    // Initial update
-    updateResponsiveState();
-
-    // Cleanup
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [updateResponsiveState, debounceMs]);
-
-  // Utility functions
-  const isBreakpointActive = useCallback((breakpoint) => {
-    return breakpoints[breakpoint] || false;
-  }, [breakpoints]);
+  const isBreakpointActive = useCallback((breakpoint) => breakpoints[breakpoint] || false, [breakpoints]);
 
   const getResponsiveValue = useCallback((values) => {
     if (typeof values === 'object' && values !== null) {
-      // Return value based on current viewport category
       return values[viewport.category] || values.desktop || values.default;
     }
     return values;
@@ -124,22 +131,22 @@ export const useResponsive = (options = {}) => {
     return window.matchMedia(query).matches;
   }, []);
 
-  return {
-    // Viewport information
+  return useMemo(() => ({
     viewport,
-    
-    // Breakpoint states
     ...breakpoints,
-    
-    // Utility functions
     isBreakpointActive,
     getResponsiveValue,
     matchesMediaQuery,
-    
-    // Constants for reference
     BREAKPOINTS,
     RESPONSIVE_RANGES,
-  };
+  }), [viewport, breakpoints, isBreakpointActive, getResponsiveValue, matchesMediaQuery]);
+};
+
+/** Test-only: forget the shared measurement so the next read measures afresh. */
+export const __resetResponsiveStoreForTests = () => {
+  store.snapshot = null;
+  clearTimeout(store.timer);
+  cancelAnimationFrame(store.frame);
 };
 
 /**
