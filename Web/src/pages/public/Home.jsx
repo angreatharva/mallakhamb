@@ -14,6 +14,7 @@ import BHALogo from '../../assets/BHA.png';
 import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, FG, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;
@@ -279,18 +280,20 @@ const Navbar = () => {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-8" aria-label="Main navigation">
           {navLinks.map((link) => (
             <Link key={link.to} to={link.to}
-              className="relative text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2 tap-safe">
+              className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2 tap-safe">
               {link.label}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 rounded-full"
                 style={{ background: COLORS.saffron }} />
             </Link>
           ))}
           <SaffronButton to="/scores">Live Scores</SaffronButton>
+          <AppearanceMenu />
         </nav>
 
+        <AppearanceMenu className="md:hidden ml-auto mr-1" />
         <button onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="md:hidden p-2 rounded-lg text-white min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={isMenuOpen}>

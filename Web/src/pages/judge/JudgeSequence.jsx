@@ -235,7 +235,7 @@ const JudgeSequence = () => {
           </button>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-            <ListOrdered className="w-4 h-4 text-white" aria-hidden="true" />
+            <ListOrdered className="w-4 h-4 text-snow" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">Running Order</p>

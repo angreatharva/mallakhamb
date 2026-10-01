@@ -36,6 +36,7 @@ import {
   SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, scoringCacheKey,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const JudgePanelReview = () => {
   const navigate = useNavigate();
@@ -364,7 +365,7 @@ const JudgePanelReview = () => {
               </button>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-                <Scale className="w-4 h-4 text-white" aria-hidden="true" />
+                <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
@@ -373,6 +374,7 @@ const JudgePanelReview = () => {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
+              <AppearanceMenu />
               <button onClick={handleLogout}
                 className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
                 style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
@@ -394,6 +396,7 @@ const JudgePanelReview = () => {
 
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <LiveDot connected={isConnected} />
+            <AppearanceMenu />
             <button onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
               style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Check, Monitor, Moon, Sun } from 'lucide-react';
-import { useAppearance } from '@/contexts/AppearanceProvider';
+import { useOptionalAppearance } from '@/contexts/AppearanceProvider';
 import { systemAppearance } from '@/utils/ui/appearance';
 
 const NAME = { dark: 'Dark', light: 'Light' };
@@ -23,7 +23,9 @@ const NAME = { dark: 'Dark', light: 'Light' };
  * closes and moves on. The change is announced through a polite live region.
  */
 const AppearanceMenu = ({ className = '' }) => {
-  const { preference, appearance, setPreference } = useAppearance();
+  // Outside a provider (an isolated page test) the control renders nothing — after every hook has run.
+  const context = useOptionalAppearance();
+  const { preference = 'dark', appearance = 'dark', setPreference = () => {} } = context || {};
   const [open, setOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const rootRef = useRef(null);
@@ -82,6 +84,8 @@ const AppearanceMenu = ({ className = '' }) => {
     }
   };
 
+  if (!context) return null;
+
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <button
@@ -138,5 +142,20 @@ const AppearanceMenu = ({ className = '' }) => {
 AppearanceMenu.propTypes = {
   className: PropTypes.string,
 };
+
+/**
+ * The same control for the screens with no header bar — sign-in, registration,
+ * password reset and the level/competition choosers (§14.9: "top-right").
+ * Fixed in the corner, clear of a notch, on a backing so page content scrolling
+ * beneath it never shows through the icon.
+ */
+export const CornerAppearanceMenu = () => (
+  <div
+    className="fixed z-popover rounded-lg bg-surface/80 backdrop-blur-sm"
+    style={{ top: 'max(0.75rem, env(safe-area-inset-top))', right: 'max(0.75rem, env(safe-area-inset-right))' }}
+  >
+    <AppearanceMenu />
+  </div>
+);
 
 export default AppearanceMenu;

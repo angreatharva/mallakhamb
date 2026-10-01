@@ -20,6 +20,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const CoachDashboard = () => {
   const navigate = useNavigate();
@@ -498,6 +499,7 @@ const CoachDashboard = () => {
                   <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
                 </div>
               )}
+              <AppearanceMenu />
               <motion.button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px] tap-safe justify-center"
@@ -659,6 +661,7 @@ const CoachDashboard = () => {
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
             )}
+            <AppearanceMenu />
             <motion.button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px] tap-safe justify-center"

@@ -13,6 +13,7 @@ import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
+import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
 
 function AppContent() {
   const { user, userType, loading, logout: handleLogout } = useAuth();
@@ -68,6 +69,8 @@ function AppContent() {
     <CompetitionProvider userType={userType}>
       <div className="min-h-screen bg-bg">
         {!shouldHideNavbar && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
+        {/* Screens with no header bar carry the appearance control in the corner (§14.9). */}
+        {(isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage) && <CornerAppearanceMenu />}
 
         <div className={!shouldHideNavbar ? 'pt-16' : ''}>
           <AppRoutes />

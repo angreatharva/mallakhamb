@@ -76,6 +76,13 @@ AppearanceProvider.propTypes = {
  * Only the appearance control should need this. Anything that merely has to
  * LOOK right in both appearances should use the colour tokens, not this hook.
  */
+/**
+ * The context or `null` — for the appearance control only, so a page rendered
+ * without the provider (an isolated page test) shows no control instead of
+ * throwing. Everything else should use `useAppearance()` and keep its guard.
+ */
+export const useOptionalAppearance = () => useContext(AppearanceContext);
+
 export const useAppearance = () => {
   const context = useContext(AppearanceContext);
   if (!context) throw new Error('useAppearance must be used inside <AppearanceProvider>.');

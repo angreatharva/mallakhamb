@@ -38,6 +38,7 @@ import { FadeIn } from '../../components/design-system/animations/FadeIn';
 import { useReducedMotion } from '../../components/design-system/animations/useReducedMotion';
 import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // ─── Age group label helper ───────────────────────────────────────────────────
 const ageLabel = (ag) => ({
@@ -777,6 +778,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
               </span>
             )}
 
+            <AppearanceMenu />
             <motion.button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold tap-safe mouse:min-h-[36px] justify-center transition-colors duration-200 text-fg-muted hover:text-danger-fg border border-white/[0.06] hover:border-danger-fg/25"

@@ -7,6 +7,7 @@ import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
@@ -94,6 +95,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                 </div>
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
+              <AppearanceMenu />
               <motion.button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
@@ -116,6 +118,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                     style={{ background: COLORS.saffron }} />
                 </Link>
               ))}
+              <AppearanceMenu />
               <Link to="/superadmin/login"
                 className="ml-2 px-4 py-2 rounded-xl text-xs font-semibold text-fg-muted hover:text-fg border transition-all duration-200 min-h-[44px] flex items-center"
                 style={{ borderColor: COLORS.darkBorderSubtle }}>
@@ -125,6 +128,7 @@ const Navbar = ({ user, userType, onLogout }) => {
           )}
         </div>
 
+        <AppearanceMenu className="lg:hidden ml-auto mr-2" />
         {/* Mobile hamburger */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

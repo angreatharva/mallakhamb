@@ -27,6 +27,7 @@ import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -749,7 +750,7 @@ const ScorerScoring = () => {
               */}
             <motion.button
               onClick={() => navigate('/judge/sequence')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold min-h-[36px] transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold tap-safe mouse:min-h-[36px] transition-colors"
               style={{
                 borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
                 color: DATA_COLORS.purpleSoft,
@@ -761,6 +762,7 @@ const ScorerScoring = () => {
               <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Set Sequence</span>
             </motion.button>
+            <AppearanceMenu />
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
               style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
               {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}

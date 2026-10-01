@@ -14,6 +14,7 @@ import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows'
 import TeamChampionshipBoard from '@/components/scores/TeamChampionshipBoard';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // ─── Ambient orb ─────────────────────────────────────────────────────────────
 const COMPETITION_TYPE_LABELS = {
@@ -282,6 +283,7 @@ const PublicScores = () => {
               <h1 className="text-white font-black text-sm sm:text-base">Competition Scores</h1>
             </div>
           </div>
+          <div className="flex items-center gap-2">
           {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
             <button onClick={handleClearFilters}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-white/5"
@@ -290,6 +292,8 @@ const PublicScores = () => {
               Clear
             </button>
           )}
+          <AppearanceMenu />
+          </div>
         </div>
       </header>
 

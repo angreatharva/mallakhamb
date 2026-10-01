@@ -237,6 +237,36 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
   - Light moved wherever brand text appears (the deeper `--brand-fg`).
   - Admin Teams' filter labels and hint read in light; they were invisible.
 
+*9.2 — by eye.*
+- The toasts stay an inverse surface: white on `#363636`, 11.6:1, the snackbar pattern. They read on either page.
+- Orbs, scrims and shadows were already per-appearance tokens.
+- Five icons on solid purple fills — the judge avatar in four screens, the sequence badge — were `text-white`, the ink alias, so dark on purple in light → `snow`.
+
+*9.3 — the switch is exposed; the rollout gate (§14.10) is lifted.* `AppearanceMenu` sits in every shell, before Log out and after the account control, in the order §14.9 fixes:
+
+| Shell | Placement |
+|---|---|
+| `Navbar` | the desktop cluster; signed-out, before Super Admin; below `lg`, beside the hamburger |
+| `Home` | the inline nav; below `md`, beside the hamburger |
+| `PublicScores` | the header's right end |
+| `UnifiedDashboard` | the admin and super-admin header |
+| `CoachDashboard` | both of its headers |
+| `JudgeDashboard` | before Profile |
+| `JudgeTeamPlayers` | a new right cluster with Log out |
+| `JudgeScoring`, `JudgePanelReview` | the phone and desktop header clusters — never the Submit bar |
+| `ScorerScoring`, `TimeKeeperScoring` | beside the Live pill |
+| sign-in, registration, password and chooser screens | one `CornerAppearanceMenu` from `App.jsx`, on exactly the routes where it hides the navbar; fixed top-right, clear of a notch, backed so content never shows through |
+
+`useOptionalAppearance()` lets the control render nothing outside a provider (isolated page tests) while `useAppearance()` keeps its guard.
+
+**Home's tablet nav.** With the extra button, "Gallery" and "Contact" wrapped mid-word at 768 → `gap-4 lg:gap-8` and `whitespace-nowrap`. The row now ends 40px inside the viewport with every item one 44px line.
+
+**Verified.**
+- Live in the browser: one trigger named "Appearance: Dark"; three choices with the current one checked and focused. Light flips `data-appearance` in the same document (no reload), persists, announces "Appearance: Light", and returns focus to the button.
+- Guarded run, all six areas, checkout stable: every shell gains the control and nothing else moves. The judge routes behind the category picker change only by rounding — their header sits under its 90% scrim.
+- The judge walk at 375 light and 768 dark: the slip header carries the control, the three tabs open, and nothing is trapped under the Submit bar.
+- 388 unit tests pass.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

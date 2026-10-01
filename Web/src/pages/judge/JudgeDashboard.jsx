@@ -22,6 +22,7 @@ import { JudgeAmbience } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -778,7 +779,7 @@ const JudgeDashboard = () => {
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-              <Scale className="w-4 h-4 text-white" aria-hidden="true" />
+              <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
@@ -786,6 +787,7 @@ const JudgeDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <AppearanceMenu />
             <button onClick={() => navigate('/judge/profile')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
               style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft }}
