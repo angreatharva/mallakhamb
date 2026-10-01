@@ -20,15 +20,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
-import { JudgeAmbience } from './judgeShared';
+import { J, JudgeAmbience } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
-
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-};
 
 const JudgeTeamPlayers = () => {
   const navigate = useNavigate();

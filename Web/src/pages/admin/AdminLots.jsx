@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import SortableList from '@/components/ordering/SortableList';
 import { logger } from '@/infrastructure/logger';
 import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
+import { DarkCard, EmptyState } from '@/components/admin/AdminKit';
 
 const GENDER_OPTIONS = [
   { value: 'Male', label: 'Male' },
@@ -23,21 +24,6 @@ const COMPETITION_TYPE_OPTIONS = [
   { value: 'competition_2', label: 'Competition II — Individual' },
   { value: 'competition_3', label: 'Competition III — Apparatus' },
 ];
-
-const DarkCard = ({ children, className = '', style = {} }) => (
-  <div className={`rounded-2xl border ${className}`}
-    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
-    {children}
-  </div>
-);
-
-const EmptyState = ({ icon: Icon, title, desc }) => (
-  <div className="text-center py-12">
-    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
-    <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
-  </div>
-);
 
 const LotBadge = ({ lotNo, position }) => (
   <span

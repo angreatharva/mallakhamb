@@ -11,13 +11,7 @@ import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
 import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
-
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-};
+import { J } from './judgeShared';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides

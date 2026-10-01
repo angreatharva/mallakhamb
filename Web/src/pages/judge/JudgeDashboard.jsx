@@ -18,7 +18,7 @@ import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { JudgeAmbience } from './judgeShared';
+import { J, JudgeAmbience } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -48,15 +48,6 @@ const SEQUENCE_JUDGE_TYPES = ['Senior Judge', 'Scorer'];
  */
 const RECORDER_ROLES = ['Scorer', 'Time Keeper'];
 const holdsBothRecorderSeats = (seatTypes) => RECORDER_ROLES.every((role) => seatTypes.includes(role));
-
-// Design tokens for judge theme
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-  amber: '#F59E0B',
-};
 
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   const reduced = useReducedMotion();

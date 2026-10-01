@@ -7,33 +7,11 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import BHALogo from '../../assets/BHA.png';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-import { FG, alpha } from '@/styles/tokens';
-
-const COLORS = {
-  saffron: '#FF6B00',
-  saffronLight: '#FF8C38',
-  saffronDark: '#CC5500',
-  gold: '#F5A623',
-  dark: 'rgb(var(--bg))',
-  darkBorder: 'rgba(255,107,0,0.15)',
-  darkBorderSubtle: 'rgb(var(--ink) / 0.06)',
-};
+import { COLORS, FG, alpha } from '@/styles/tokens';
+import { GradientText } from '@/components/design-system';
+import { useReducedMotion } from '@/hooks/useResponsive';
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
-
-const useReducedMotion = () => {
-  const [reduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-  return reduced;
-};
-
-const GradientText = ({ children, className = '' }) => (
-  <span className={className} style={{
-    background: 'linear-gradient(135deg, rgb(var(--brand-fg)), rgb(var(--brand-gold-fg)), rgb(var(--brand-fg-soft)))',
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  }}>{children}</span>
-);
 
 const StyledInput = ({ error, verified, ...props }) => (
   <input

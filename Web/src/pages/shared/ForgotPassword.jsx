@@ -9,21 +9,9 @@ import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 import { COLORS, EASE_OUT, FG, alpha } from '../../styles/tokens';
+import { GradientText } from '@/components/design-system';
+import { useReducedMotion } from '@/hooks/useResponsive';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-
-const useReducedMotion = () => {
-  const [reduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-  return reduced;
-};
-
-const GradientText = ({ children, className = '' }) => (
-  <span className={className} style={{
-    background: 'linear-gradient(135deg, rgb(var(--brand-fg)), rgb(var(--brand-gold-fg)), rgb(var(--brand-fg-soft)))',
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  }}>{children}</span>
-);
 
 const StyledInput = ({ error, ...props }) => (
   <input

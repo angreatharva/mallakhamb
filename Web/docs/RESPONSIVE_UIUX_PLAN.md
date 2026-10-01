@@ -277,6 +277,33 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 - The judge walk at 375 light and 768 dark: the slip header carries the control, the three tabs open, and nothing is trapped under the Submit bar.
 - 388 unit tests pass.
 
+### Phase 8 log
+
+Only proven duplication is extracted, and each step must leave every screen pixel-identical in both appearances. A local copy is removed only after its whitespace-normalised body is checked against the shared one, and anything unrecognised aborts.
+
+*8.1 — the admin kit.*
+- The six admin and super-admin pages each declared the same building blocks; they now come from **`components/admin/AdminKit.jsx`**. The copies, by number:
+  - `DarkCard` ×6;
+  - `FadeIn` ×5;
+  - a local `useReducedMotion` ×5;
+  - `EmptyState` ×5 in two variants;
+  - `LoadingState` ×4 in two variants;
+  - `DarkSearch` ×2;
+  - `DarkBtn` ×3 (with `AddPlayerForm`).
+- Every body is byte-identical apart from two additive differences, now explicit props: `EmptyState`'s optional `action`, and `LoadingState`'s default label.
+- `useReducedMotion` comes from `hooks/useResponsive`, the same logic plus a guard for a missing `matchMedia`. `DarkBtn`'s `type="button"` default changes nothing: none of its callers sits inside a `<form>`.
+- Elsewhere:
+  - the three judge pages' local `J` palettes (strict subsets of `judgeShared`'s, same values) → the import;
+  - the password screens' `GradientText` → the design-system one (the same style object);
+  - `ResetPassword`'s own `COLORS` → the tokens' (identical values);
+  - their once-read `useReducedMotion` → the shared hook, which also follows a mid-session change.
+- **411 lines removed.** The guarded visual run is **pixel-identical**: public, admin, super-admin and judge, all widths, both appearances, 0 diffs. 388 tests pass.
+
+**Not extracted, on purpose:**
+- `design-system/index.jsx`'s own `GlassCard`/`FadeIn`/`GradientText` differ from the `cards/`, `animations/` and `ornaments/` versions, so merging them would change pixels.
+- An `AccountControls` cluster would restyle every shell's Log out. The shared piece the shells needed — `AppearanceMenu` — already exists.
+- `StatusBadge` means two different things in `PlayerDashboard` and `SuperAdminManagement`.
+
 **Found, not ours to change**
 - Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
 - `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.

@@ -10,6 +10,7 @@ import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
+import { DarkBtn } from '@/components/admin/AdminKit';
 
 /** Keep in sync with SuperAdminAddPlayerPayment.jsx */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -33,25 +34,6 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
     {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
   </div>
 );
-
-// ─── Dark Button Component ────────────────────────────────────────────────────
-const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
-  const bg = {
-    primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
-    ghost: 'transparent',
-  }[variant];
-  const h = size === 'sm' ? 'tap-safe mouse:min-h-[32px]' : 'min-h-[44px]';
-  const label = variant === 'ghost' ? 'text-white' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
-  return (
-    <motion.button type={type} onClick={onClick} disabled={disabled}
-      className={`rounded-xl font-bold text-sm ${label} ${h} flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
-      whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
-      whileTap={!disabled ? { scale: 0.97 } : {}}>
-      {children}
-    </motion.button>
-  );
-};
 
 // ─── Password Strength Indicator ──────────────────────────────────────────────
 const PasswordStrengthIndicator = ({ password }) => {

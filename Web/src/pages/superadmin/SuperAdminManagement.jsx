@@ -1,12 +1,12 @@
 import {
-  useState, useEffect, useRef, useCallback, useId,
+  useState, useEffect, useCallback, useId,
   createContext, useContext, Children, isValidElement, cloneElement,
 } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search, Save
 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
 import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
@@ -22,39 +22,7 @@ import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
 import { COMPETITION_LEVELS, levelLabel } from '@/utils/competition/levels';
-
-// ─── Reduced-motion hook ──────────────────────────────────────────────────────
-const useReducedMotion = () => {
-  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const h = (e) => setR(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, []);
-  return r;
-};
-
-const FadeIn = ({ children, delay = 0, className = '' }) => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  const reduced = useReducedMotion();
-  return (
-    <motion.div ref={ref} className={className}
-      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
-      {children}
-    </motion.div>
-  );
-};
-
-const DarkCard = ({ children, className = '', style = {} }) => (
-  <div className={`rounded-2xl border ${className}`}
-    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
-    {children}
-  </div>
-);
+import { DarkCard, FadeIn, EmptyState, LoadingState, DarkBtn } from '@/components/admin/AdminKit';
 
 /*
  * The three field wrappers below each drew a visible <label> that was never
@@ -130,42 +98,6 @@ const DarkTextarea = ({ label, required, id, ...props }) => {
   </div>
   );
 };
-
-const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
-  const bg = {
-    primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
-    purple: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})`,
-    success: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`,
-    danger: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`,
-    ghost: 'transparent',
-  }[variant];
-  const h = size === 'sm' ? 'tap-safe mouse:min-h-[32px]' : 'min-h-[44px]';
-  const label = variant === 'ghost' ? 'text-white' : variant === 'purple' ? 'text-snow' : 'text-[#0A0A0A]';
-  return (
-    <motion.button type={type} onClick={onClick} disabled={disabled}
-      className={`rounded-xl font-bold text-sm ${label} ${h} flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
-      whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
-      whileTap={!disabled ? { scale: 0.97 } : {}}>
-      {children}
-    </motion.button>
-  );
-};
-
-const LoadingState = () => (
-  <div className="flex items-center justify-center py-12 gap-3">
-    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-fg-muted text-sm">Loading…</span>
-  </div>
-);
-
-const EmptyState = ({ icon: Icon, title, desc }) => (
-  <div className="text-center py-12">
-    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
-    <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-fg-muted text-sm mt-1">{desc}</p>}
-  </div>
-);
 
 // ─── Competition fee window ───────────────────────────────────────────────────
 /**

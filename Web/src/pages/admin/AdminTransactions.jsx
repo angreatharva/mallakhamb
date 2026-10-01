@@ -1,45 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ReceiptIndianRupee, Filter, AlertCircle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { motion, AnimatePresence } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-
-const useReducedMotion = () => {
-  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const h = (e) => setR(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, []);
-  return r;
-};
-
-const FadeIn = ({ children, delay = 0, className = '' }) => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  const reduced = useReducedMotion();
-  return (
-    <motion.div ref={ref} className={className}
-      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
-      {children}
-    </motion.div>
-  );
-};
-
-const DarkCard = ({ children, className = '', style = {} }) => (
-  <div className={`rounded-2xl border ${className}`}
-    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
-    {children}
-  </div>
-);
+import { DarkCard, FadeIn } from '@/components/admin/AdminKit';
 
 const statusStyle = (status) => {
   const map = {
