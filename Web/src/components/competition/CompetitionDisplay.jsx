@@ -8,9 +8,9 @@ import { levelLabel } from '@/utils/competition/levels';
 
 
 const statusConfig = {
-  ongoing: { color: '#22C55E', label: 'Live', pulse: true },
-  upcoming: { color: '#3B82F6', label: 'Upcoming', pulse: false },
-  completed: { color: 'rgba(255,255,255,0.3)', label: 'Completed', pulse: false },
+  ongoing: { color: 'rgb(var(--success-fg))', label: 'Live', pulse: true },
+  upcoming: { color: 'rgb(var(--info-fg))', label: 'Upcoming', pulse: false },
+  completed: { color: 'var(--fg-muted)', label: 'Completed', pulse: false },
 };
 
 /**
@@ -21,7 +21,7 @@ const statusConfig = {
  * record still reads `ongoing` is the normal case, because nothing updates that
  * field automatically. The badge shows the one the user cannot change.
  */
-const lockedStatus = { color: '#F87171', label: 'Locked', pulse: false, icon: Lock };
+const lockedStatus = { color: 'rgb(var(--danger-fg-soft))', label: 'Locked', pulse: false, icon: Lock };
 
 const CompetitionDisplay = ({ className = '' }) => {
   const { currentCompetition, isLoading } = useCompetition();
@@ -39,7 +39,7 @@ const CompetitionDisplay = ({ className = '' }) => {
       key={currentCompetition._id}
       className={`relative rounded-2xl border overflow-hidden ${className}`}
       style={{
-        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgba(255,255,255,0.02))`,
+        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgb(var(--ink) / 0.02))`,
         borderColor: `${alpha(COLORS.saffron, 0x20)}`,
       }}
       initial={{ opacity: 0, y: 12 }}
@@ -54,7 +54,7 @@ const CompetitionDisplay = ({ className = '' }) => {
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
               style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
-              <Trophy className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Trophy className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-white font-bold text-sm leading-tight truncate">
@@ -70,7 +70,7 @@ const CompetitionDisplay = ({ className = '' }) => {
                 )}
                 {currentCompetition.level && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: COLORS.saffronLight }}>
+                    style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: 'rgb(var(--brand-fg-soft))' }}>
                     {levelLabel(currentCompetition.level)}
                   </span>
                 )}

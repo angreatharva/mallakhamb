@@ -36,7 +36,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
       role="status"
       className={`rounded-2xl border overflow-hidden ${className}`}
       style={{
-        background: 'linear-gradient(135deg, rgba(248,113,113,0.10), rgba(255,255,255,0.02))',
+        background: 'linear-gradient(135deg, rgba(248,113,113,0.10), rgb(var(--ink) / 0.02))',
         borderColor: 'rgba(248,113,113,0.28)',
       }}
       initial={{ opacity: 0, y: -8 }}
@@ -48,7 +48,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(248,113,113,0.15)' }}
         >
-          <Lock className="w-4 h-4" style={{ color: '#F87171' }} aria-hidden="true" />
+          <Lock className="w-4 h-4" style={{ color: 'rgb(var(--danger-fg-soft))' }} aria-hidden="true" />
         </div>
 
         <div className="min-w-0">

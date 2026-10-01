@@ -11,9 +11,9 @@ import { useReducedMotion } from '@/hooks/useResponsive';
 
 
 const statusColors = {
-  ongoing: '#22C55E',
-  upcoming: '#3B82F6',
-  completed: 'rgba(255,255,255,0.3)',
+  ongoing: 'rgb(var(--success-fg))',
+  upcoming: 'rgb(var(--info-fg))',
+  completed: 'rgb(var(--ink) / 0.3)',
 };
 
 const CompetitionSelector = ({ userType }) => {
@@ -119,7 +119,7 @@ const CompetitionSelector = ({ userType }) => {
         disabled={isLoadingOrSwitching}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
         style={{
-          background: isOpen ? `${alpha(COLORS.saffron, 0x10)}` : 'rgba(255,255,255,0.05)',
+          background: isOpen ? `${alpha(COLORS.saffron, 0x10)}` : 'rgb(var(--ink) / 0.05)',
           borderColor: isOpen ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
           boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
         }}
@@ -128,7 +128,7 @@ const CompetitionSelector = ({ userType }) => {
         aria-expanded={isOpen}
         aria-label="Select competition"
       >
-        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
         <div className="flex flex-col items-start max-w-[160px]">
           <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
             Competition
@@ -140,7 +140,7 @@ const CompetitionSelector = ({ userType }) => {
           </span>
         </div>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.35)' }} />
         </motion.div>
       </motion.button>
 
@@ -149,7 +149,7 @@ const CompetitionSelector = ({ userType }) => {
           <motion.div
             className="absolute right-0 mt-2 w-80 rounded-2xl border overflow-hidden z-50"
             style={{
-              background: '#111111',
+              background: 'rgb(var(--surface))',
               borderColor: `${alpha(COLORS.saffron, 0x25)}`,
               boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
               maxHeight: 380,
@@ -162,7 +162,7 @@ const CompetitionSelector = ({ userType }) => {
           >
             {/* Header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>
                 {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0) 
                   ? 'Select Competition' 
                   : 'Switch Competition'}
@@ -174,17 +174,17 @@ const CompetitionSelector = ({ userType }) => {
               <div className="p-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
                     placeholder="Search competitions..." aria-label="Search competitions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 text-xs rounded-lg"
+                    className="w-full pl-8 pr-8 py-2 text-base mouse:text-xs rounded-lg"
                     style={{
-                      background: 'rgba(255,255,255,0.06)',
+                      background: 'rgb(var(--ink) / 0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: '#fff',
+                      color: 'rgb(var(--ink))',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -229,7 +229,7 @@ const CompetitionSelector = ({ userType }) => {
                             <span className="text-sm font-semibold text-white truncate">
                               {competition.name} {competition.year || ''}
                             </span>
-                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />}
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {competition.place && (
@@ -270,9 +270,9 @@ const CompetitionSelector = ({ userType }) => {
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
                   whileHover={{ background: 'rgba(34,197,94,0.08)' }}
                 >
-                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--success-fg))' }} aria-hidden="true" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
+                    <p className="text-sm font-semibold" style={{ color: 'rgb(var(--success-fg))' }}>
                       Sign up for new competition
                     </p>
                     <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
@@ -296,7 +296,7 @@ const CompetitionSelector = ({ userType }) => {
           >
             <motion.div
               className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
-              style={{ background: '#111111', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
+              style={{ background: 'rgb(var(--surface))', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
             >
               <div

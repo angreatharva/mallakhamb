@@ -367,6 +367,20 @@ export const EASE_SPRING = DESIGN_TOKENS.easings.spring;
 export const ADMIN_EASE_OUT = DESIGN_TOKENS.easings.easeOut;
 export const ADMIN_SPRING = DESIGN_TOKENS.easings.spring;
 
+/**
+ * The saffron call-to-action: the brand gradient and its label, in one place.
+ *
+ * Twenty-two buttons wrote this gradient by hand with `text-white`, and white
+ * on #FF6B00 is 2.86:1 — every primary action on those screens failed WCAG
+ * 1.4.3. The label is near-black (6.9:1 at the saffron end), as for every bright
+ * fill (plan D6). The fill is bright in both appearances, so the label is a
+ * fixed colour, not a token. Frozen: shared by reference, never mutated.
+ */
+export const SAFFRON_CTA = Object.freeze({
+  background: `linear-gradient(135deg, ${DESIGN_TOKENS.colors.brand.saffron}, ${DESIGN_TOKENS.colors.brand.saffronDark})`,
+  color: '#0A0A0A',
+});
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 export const DEBOUNCE_DELAY = 300;

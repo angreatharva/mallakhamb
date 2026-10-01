@@ -91,7 +91,7 @@ const ConfirmDialog = ({
                * set inline beats `modal-panel`'s auto block margins — which is
                * what centres a dialog short enough to fit.
                */
-              background: '#111111',
+              background: 'rgb(var(--surface))',
               borderColor: `${alpha(accentColor, 0x25)}`,
               boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(accentColor, 0x15)}`,
             }}
@@ -115,7 +115,7 @@ const ConfirmDialog = ({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-white hover:bg-white/08 transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-white hover:bg-white/[0.08] transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
                 style={{ outlineColor: accentColor }}
                 aria-label="Close dialog"
               >
@@ -135,8 +135,8 @@ const ConfirmDialog = ({
                     initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     role="alert"
                   >
-                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <AlertTriangle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -146,7 +146,7 @@ const ConfirmDialog = ({
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t"
               style={{ 
                 borderColor: COLORS.darkBorderSubtle, 
-                background: 'rgba(255,255,255,0.02)',
+                background: 'rgb(var(--ink) / 0.02)',
                 padding: isMobile ? '1rem' : '1.5rem',
                 flexDirection: isMobile ? 'column' : 'row',
               }}>
@@ -157,7 +157,7 @@ const ConfirmDialog = ({
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-white/70 hover:text-white transition-all duration-200 min-h-[44px] disabled:opacity-40"
                 style={{ 
                   borderColor: COLORS.darkBorderSubtle, 
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'rgb(var(--ink) / 0.04)',
                   width: isMobile ? '100%' : 'auto',
                 }}
               >
@@ -169,6 +169,7 @@ const ConfirmDialog = ({
                 className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
                 style={{ 
                   background: `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0xCC)})`,
+                  color: '#0A0A0A',
                   width: isMobile ? '100%' : 'auto',
                   justifyContent: 'center',
                 }}

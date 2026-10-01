@@ -8,7 +8,7 @@ import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, SAFFRON_CTA, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
@@ -43,8 +43,8 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
       className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200"
       style={{
         background: isSelected
-          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgba(255,255,255,0.03))`
-          : 'rgba(255,255,255,0.03)',
+          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.03))`
+          : 'rgb(var(--ink) / 0.03)',
         borderColor: isSelected ? `${alpha(COLORS.saffron, 0x45)}` : COLORS.darkBorderSubtle,
         boxShadow: isSelected ? `0 0 0 1px ${alpha(COLORS.saffron, 0x20)}, 0 8px 32px ${alpha(COLORS.saffron, 0x10)}` : 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -57,7 +57,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
       transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
       whileHover={disabled ? {} : {
         borderColor: `${alpha(COLORS.saffron, 0x35)}`,
-        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgba(255,255,255,0.03))`,
+        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgb(var(--ink) / 0.03))`,
         y: -2,
       }}
       whileTap={disabled ? {} : { scale: 0.99 }}
@@ -70,9 +70,9 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
 
       <div className="p-5 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgba(255,255,255,0.06)' }}>
+          style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgb(var(--ink) / 0.06)' }}>
           <Layers className="w-5 h-5"
-            style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+            style={{ color: isSelected ? COLORS.saffron : 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
             // The meets are still being fetched: say so, rather than showing a
             // "0 competitions" that turns into a real number a moment later.
             <span className="inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--fg-muted)' }}
+              style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}
               role="status" aria-label={`Counting ${meta.label} competitions`}>
               <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
               Counting…
@@ -92,8 +92,8 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
           ) : (
             <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
               style={{
-                background: isEmpty ? 'rgba(255,255,255,0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
-                color: isEmpty ? 'rgba(255,255,255,0.35)' : COLORS.saffronLight,
+                background: isEmpty ? 'rgb(var(--ink) / 0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
+                color: isEmpty ? 'rgb(var(--ink) / 0.35)' : COLORS.saffronLight,
               }}>
               {count === 1 ? '1 competition' : `${count} competitions`}
             </span>
@@ -233,7 +233,7 @@ const LevelSelectionScreen = ({ userType }) => {
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+            <Trophy className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
           </motion.div>
           <p className="text-fg-muted text-sm">Loading levels...</p>
         </div>
@@ -263,7 +263,7 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
           <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: COLORS.saffronLight }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: 'rgb(var(--brand-fg-soft))' }}>
               <Layers className="w-3 h-3" aria-hidden="true" />
               Level Selection
             </div>
@@ -298,9 +298,9 @@ const LevelSelectionScreen = ({ userType }) => {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 background: pendingLevel
-                  ? `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`
-                  : 'rgba(255,255,255,0.08)',
-                border: `1px solid ${pendingLevel ? 'transparent' : COLORS.darkBorderSubtle}`,
+                  ? SAFFRON_CTA.background
+                  : 'rgb(var(--ink) / 0.08)',
+                border: `1px solid ${pendingLevel ? 'transparent' : COLORS.darkBorderSubtle}`, color: pendingLevel ? SAFFRON_CTA.color : undefined,
               }}
               whileHover={pendingLevel ? { scale: 1.02 } : {}}
               whileTap={pendingLevel ? { scale: 0.97 } : {}}

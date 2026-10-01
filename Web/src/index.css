@@ -90,6 +90,9 @@
   --brand-fg: 255 107 0;
   --brand-fg-soft: 255 140 56;
   --brand-gold-fg: 245 166 35;
+
+  /* red-400 as status text ("Locked"): #F87171 exactly in dark. */
+  --danger-fg-soft: 248 113 113;
 }
 
 [data-appearance="light"] {
@@ -126,6 +129,7 @@
   --brand-fg: 194 65 12;
   --brand-fg-soft: 194 65 12;
   --brand-gold-fg: 180 83 9;
+  --danger-fg-soft: 185 28 28; /* #F87171 is 2.8:1 on white */
 }
 
 /* Derived — recomputed wherever an appearance is declared (see above). */
