@@ -6,8 +6,8 @@
  * than inline, so it stays valid under `script-src 'self'` whenever the CSP
  * drops 'unsafe-inline'. Mirrors src/utils/ui/appearance.js — keep them in step.
  *
- * `?appearance=dark|light|system` sets the preference (and keeps it), which is
- * the only way to reach light until the rollout gate lifts (plan §14.10).
+ * `?appearance=dark|light|system` sets the preference (and keeps it) — handy for
+ * tests and links; people choose it from the AppearanceMenu in every shell.
  */
 (function () {
   var KEY = 'mk-appearance';
