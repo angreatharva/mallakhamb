@@ -18,7 +18,7 @@ import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
@@ -353,7 +353,7 @@ const JudgePanelReview = () => {
 
       {/*  Header  */}
       <header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -368,14 +368,14 @@ const JudgePanelReview = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
+                <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
               <button onClick={handleLogout}
                 className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
-                style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+                style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
                 aria-label="Logout">
                 <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
@@ -385,7 +385,7 @@ const JudgePanelReview = () => {
           {/* Reviewing-for banner */}
           <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-xl border min-w-0 w-full sm:w-auto sm:max-w-xs"
             style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
-            <User className="w-4 h-4 flex-shrink-0" style={{ color: J.green }} aria-hidden="true" />
+            <User className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
               <p className="text-xs truncate" style={{ color: 'var(--fg-muted)' }}>{selectedTeam?.name}</p>
@@ -396,7 +396,7 @@ const JudgePanelReview = () => {
             <LiveDot connected={isConnected} />
             <button onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
               aria-label="Logout">
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Logout</span>
@@ -427,7 +427,7 @@ const JudgePanelReview = () => {
                   type="button"
                   onClick={goBackToScoring}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-white/5"
-                  style={{ borderColor: 'rgba(168,85,247,0.4)', color: J.purpleLight }}
+                  style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft }}
                 >
                   <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                   Edit My Score
@@ -435,7 +435,7 @@ const JudgePanelReview = () => {
               )}
               {finalized && (
                 <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
-                  style={{ background: 'rgba(34,197,94,0.15)', color: J.green }}>
+                  style={{ background: 'rgba(34,197,94,0.15)', color: FG.success }}>
                   <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Finalized
                 </span>
               )}
@@ -455,7 +455,7 @@ const JudgePanelReview = () => {
               whileTap={{ scale: 0.99 }}
             >
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#EF4444' }} />
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.danger }} />
                 <span className="text-sm font-bold text-white">
                   {[
                     (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.difficulty) && 'Difficulty',
@@ -463,7 +463,7 @@ const JudgePanelReview = () => {
                   ].filter(Boolean).join(' · ')} mismatch detected
                 </span>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>View Details</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: FG.danger }}>View Details</span>
             </motion.button>
           )}
 
@@ -479,18 +479,18 @@ const JudgePanelReview = () => {
               whileTap={{ scale: 0.99 }}
             >
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: J.amber }} />
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.warning }} />
                 <span className="text-sm font-bold text-white">
                   Tolerance exceeded — gap {Number(panelMismatch.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(panelMismatch.toleranceInfo?.tolerance ?? 0).toFixed(2)}
                 </span>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)', color: J.amber }}>View Details</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)', color: FG.warning }}>View Details</span>
             </motion.button>
           )}
 
           {/* Detailed per-judge slips — SR judge sees all cards, others only their own */}
           {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 0 && (
-            <div className="rounded-xl border p-4 text-center" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="rounded-xl border p-4 text-center" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
             </div>
           )}
@@ -517,15 +517,15 @@ const JudgePanelReview = () => {
               return (
                 <div key={judge} className="rounded-2xl border p-4 space-y-3"
                   style={{
-                    background: isYou ? 'rgba(168,85,247,0.12)' : 'rgba(255,255,255,0.03)',
-                    borderColor: isYou ? J.purple : 'rgba(255,255,255,0.1)',
+                    background: isYou ? 'rgba(168,85,247,0.12)' : 'rgb(var(--ink) / 0.03)',
+                    borderColor: isYou ? J.purple : 'rgb(var(--ink) / 0.1)',
                   }}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className="text-sm font-bold text-white flex items-center gap-2">
                         {judge}
                         {isYou && (
-                          <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300">You</span>
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-700 dark:text-purple-300">You</span>
                         )}
                       </div>
                       {judgeName && (
@@ -533,7 +533,7 @@ const JudgePanelReview = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-2xl font-black" style={{ color: isYou ? J.purpleLight : '#fff' }}>
+                      <div className="text-2xl font-black" style={{ color: isYou ? DATA_COLORS.purpleSoft : FG.ink }}>
                         {Number(data.score).toFixed(2)}
                       </div>
                       {isSeniorJudge && !isYou && !finalized && (
@@ -541,7 +541,7 @@ const JudgePanelReview = () => {
                           type="button"
                           onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }}
                           className="w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0"
-                          style={{ borderColor: 'rgba(168,85,247,0.4)', color: '#C084FC', background: 'rgba(168,85,247,0.08)' }}
+                          style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.08)' }}
                           whileHover={{ background: 'rgba(168,85,247,0.2)' }}
                           whileTap={{ scale: 0.9 }}
                           title={`Edit ${judge} score`}
@@ -553,8 +553,8 @@ const JudgePanelReview = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>Difficulty</p>
-                    <div className="flex flex-wrap gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Difficulty</p>
+                    <div className="flex flex-wrap gap-2 text-xs" style={{ color: 'rgb(var(--ink) / 0.7)' }}>
                       {b.detailed && (
                         <>
                           <span>A: {b.difficulty.aClass ?? 0}</span>
@@ -567,11 +567,11 @@ const JudgePanelReview = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>
                       Combination · {(b.combination.total ?? 0).toFixed(2)} / 1.60
                     </p>
                     {failedItems === null ? null : failedItems.length === 0 ? (
-                      <p className="text-xs" style={{ color: J.green }}>All requirements met</p>
+                      <p className="text-xs" style={{ color: FG.success }}>All requirements met</p>
                     ) : (
                       <ul className="space-y-0.5">
                         {failedItems.map((item) => (
@@ -583,7 +583,7 @@ const JudgePanelReview = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-4 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <div className="flex gap-4 text-xs" style={{ color: 'rgb(var(--ink) / 0.7)' }}>
                     <span>Execution: <strong className="text-white">{(b.execution || 0).toFixed(2)}</strong></span>
                     <span>Originality: <strong className="text-white">{(b.bonus || 0).toFixed(2)}</strong></span>
                   </div>
@@ -610,8 +610,9 @@ const JudgePanelReview = () => {
                 className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold min-h-[52px]"
                 style={{
                   background: panelMismatch.hasBlockingIssue
-                    ? 'rgba(255,255,255,0.1)'
+                    ? 'rgb(var(--ink) / 0.1)'
                     : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
+                  color: panelMismatch.hasBlockingIssue ? undefined : '#0A0A0A',
                   opacity: finalizing || panelMismatch.hasBlockingIssue ? 0.6 : 1,
                 }}
                 whileHover={reduced || finalizing ? {} : { scale: 1.01 }}
@@ -640,7 +641,7 @@ const JudgePanelReview = () => {
             {/* Why the button next to this is greyed out. Without it a Senior
                 Judge with a full panel sees a dead button and no reason. */}
             {canFinalSubmit && panelMismatch.hasBlockingIssue && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: J.amber }}>
+              <p className="flex-1 text-center text-xs self-center" style={{ color: FG.warning }}>
                 Final Submit is locked —{' '}
                 {panelMismatch.hasBlockingMismatch && panelMismatch.hasToleranceBreach
                   ? 'resolve the slip mismatch and the tolerance breach'
@@ -658,7 +659,7 @@ const JudgePanelReview = () => {
               type="button"
               onClick={goBackToTeam}
               className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-white font-bold transition-all duration-300 min-h-[52px]"
-              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+              style={{ background: 'rgb(var(--ink) / 0.1)', border: '1px solid rgb(var(--ink) / 0.2)' }}
             >
               Return to Team
             </button>

@@ -10,7 +10,7 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 
 const J = {
   purple: '#A855F7',
@@ -34,8 +34,8 @@ const OrderBadge = ({ lotNo, position, accent }) => (
   <span
     className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-black flex-shrink-0"
     style={{
-      background: lotNo ? `${alpha(accent, 0x25)}` : 'rgba(255,255,255,0.06)',
-      color: lotNo ? accent : 'rgba(255,255,255,0.45)',
+      background: lotNo ? `${alpha(accent, 0x25)}` : 'rgb(var(--ink) / 0.06)',
+      color: lotNo ? accent : 'var(--fg-muted)',
     }}
     title={lotNo ? `Lot ${lotNo} · runs ${position + 1}` : `Runs ${position + 1} · no lot drawn`}
   >
@@ -224,7 +224,7 @@ const JudgeSequence = () => {
     <div className="min-h-dvh relative flex flex-col"
       style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center gap-3">
           <button
             type="button"
@@ -239,7 +239,7 @@ const JudgeSequence = () => {
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">Running Order</p>
-            <p className="text-xs truncate" style={{ color: J.purpleLight }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
+            <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
           </div>
           {saving && <span className="ml-auto text-xs text-fg-muted">Saving…</span>}
         </div>
@@ -248,7 +248,7 @@ const JudgeSequence = () => {
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <div className="rounded-2xl border p-5 mb-6"
           style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: J.purpleLight }}>Category</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>Category</p>
           <h1 className="text-xl font-black text-white">
             {categoryParams?.gender} — {categoryParams?.ageGroup}
           </h1>
@@ -298,7 +298,7 @@ const JudgeSequence = () => {
                 return (
                   <div>
                     <div className="flex items-center gap-3">
-                      <OrderBadge lotNo={team.lotNo} position={index} accent={J.purpleLight} />
+                      <OrderBadge lotNo={team.lotNo} position={index} accent={DATA_COLORS.purpleSoft} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-white text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">
@@ -319,7 +319,7 @@ const JudgeSequence = () => {
 
                     {isExpanded && (
                       <div className="mt-3 border-l-2" style={{ borderColor: `${alpha(J.purple, 0x30)}` }}>
-                        <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: J.purpleLight }}>
+                        <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: DATA_COLORS.purpleSoft }}>
                           Athlete order
                         </p>
                         <div className="pl-3">
@@ -332,7 +332,7 @@ const JudgeSequence = () => {
                             emptyMessage="No athletes in this category for this team."
                             renderItem={(player, playerIndex) => (
                               <div className="flex items-center gap-3">
-                                <OrderBadge lotNo={player.lotNo} position={playerIndex} accent={J.green} />
+                                <OrderBadge lotNo={player.lotNo} position={playerIndex} accent={FG.success} />
                                 <div className="min-w-0">
                                   <p className="text-sm text-white truncate">{player.name}</p>
                                   <p className="text-xs text-fg-muted">
@@ -355,7 +355,7 @@ const JudgeSequence = () => {
               <motion.button
                 onClick={() => persistTeamOrder(teamsRef.current)}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-white min-h-[48px] disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-snow min-h-[48px] disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` }}
                 whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
                 <Save className="w-4 h-4" /> Save Order

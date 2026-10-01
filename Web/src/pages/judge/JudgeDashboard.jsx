@@ -14,7 +14,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -63,9 +63,9 @@ const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
       onClick={onClick}
       className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3"
       style={{
-        background: selected ? `${alpha(accent, 0x14)}` : 'rgba(255,255,255,0.03)',
-        borderColor: selected ? `${alpha(accent, 0x50)}` : 'rgba(255,255,255,0.07)',
-        color: selected ? '#fff' : 'rgba(255,255,255,0.6)',
+        background: selected ? `${alpha(accent, 0x14)}` : 'rgb(var(--ink) / 0.03)',
+        borderColor: selected ? `${alpha(accent, 0x50)}` : 'rgb(var(--ink) / 0.07)',
+        color: selected ? FG.ink : 'rgb(var(--ink) / 0.6)',
       }}
       whileHover={reduced ? {} : { scale: 1.005 }}
       whileTap={reduced ? {} : { scale: 0.995 }}
@@ -772,7 +772,7 @@ const JudgeDashboard = () => {
       <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -781,20 +781,20 @@ const JudgeDashboard = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
+              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => navigate('/judge/profile')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
-              style={{ borderColor: 'rgba(168,85,247,0.3)', color: J.purpleLight }}
+              style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft }}
               aria-label="Your profile">
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
             </button>
             <button onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
               aria-label="Logout">
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Logout</span>
@@ -826,7 +826,7 @@ const JudgeDashboard = () => {
                 {canSequence && (
                   <button
                     onClick={() => navigate('/judge/sequence')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-800 dark:text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
                     <ListOrdered className="w-4 h-4" />
                     Set Sequence
                   </button>
@@ -834,14 +834,14 @@ const JudgeDashboard = () => {
                 {needsRoleChoice && (
                   <button
                     onClick={() => setShowRoleModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
                     {chosenRole === 'Time Keeper' ? <Timer className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                     Change Role
                   </button>
                 )}
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
                   <Filter className="w-4 h-4" />
                   Change Category
                 </button>
@@ -853,8 +853,8 @@ const JudgeDashboard = () => {
             <div className="rounded-2xl border p-4 flex flex-col sm:flex-row gap-4 mb-6"
               style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
               <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: J.purple }} aria-hidden="true" />
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>Current Assignment</span>
+                <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: DATA_COLORS.purple }} aria-hidden="true" />
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Current Assignment</span>
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
@@ -898,7 +898,7 @@ const JudgeDashboard = () => {
               </p>
               <button
                 onClick={() => navigate('/judge/profile')}
-                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
+                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
                 <UserCircle className="w-4 h-4" />
                 View your profile
               </button>
@@ -939,8 +939,8 @@ const JudgeDashboard = () => {
                       onClick={() => handleTeamSelect(team)}
                       className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-white/5"
                       style={{ 
-                        background: 'rgba(255,255,255,0.02)',
-                        borderColor: 'rgba(255,255,255,0.08)'
+                        background: 'rgb(var(--ink) / 0.02)',
+                        borderColor: 'rgb(var(--ink) / 0.08)'
                       }}
                     >
                       <div className="flex items-center justify-between p-5 gap-3">
@@ -951,7 +951,7 @@ const JudgeDashboard = () => {
                               other. */}
                           <span className="flex flex-col items-center justify-center w-10 flex-shrink-0">
                             <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
-                              style={{ background: 'rgba(168,85,247,0.18)', color: J.purpleLight }}>
+                              style={{ background: 'rgba(168,85,247,0.18)', color: DATA_COLORS.purpleSoft }}>
                               {orderIdx + 1}
                             </span>
                             {team.lotNo != null && (
@@ -967,7 +967,7 @@ const JudgeDashboard = () => {
                             Coach: {team.coach?.name || 'N/A'}
                           </p>
                           {scoredCount > 0 && (
-                            <p className="text-xs mt-1.5" style={{ color: J.green }}>
+                            <p className="text-xs mt-1.5" style={{ color: FG.success }}>
                               {scoredCount} of {teamPlayers.length} scored
                             </p>
                           )}
@@ -1009,7 +1009,7 @@ const JudgeDashboard = () => {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             
             <motion.div 
-              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
+              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
               
@@ -1025,7 +1025,7 @@ const JudgeDashboard = () => {
               <div className="p-8 space-y-8">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <Filter className="w-6 h-6 text-purple-400" />
+                    <Filter className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
                   <h2 className="text-2xl font-black text-white">Select Judging Category</h2>
                   <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
@@ -1035,7 +1035,7 @@ const JudgeDashboard = () => {
                     when this judge is seated at more than one. */}
                 {availableCompetitions.length > 1 && (
                   <div>
-                    <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition</p>
+                    <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition</p>
                     <div className="grid grid-cols-1 gap-3">
                       {availableCompetitions.map(comp => (
                         <SelectBtn
@@ -1070,7 +1070,7 @@ const JudgeDashboard = () => {
                   {/* Gender Selection or Display */}
                   {availableGenders.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Gender</p>
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Gender</p>
                       <div className="grid grid-cols-2 gap-3">
                         {availableGenders.map(g => (
                           <SelectBtn key={g} selected={selectedGender === g} onClick={() => setSelectedGender(g)}>
@@ -1092,7 +1092,7 @@ const JudgeDashboard = () => {
                       category and Above 18 to a Female one. */}
                   {availableAgeGroups.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">
                         Age Group{selectedGender ? ` · ${selectedGender}` : ''}
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1117,7 +1117,7 @@ const JudgeDashboard = () => {
 
                 {/* Competition Type */}
                 <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition Type</p>
+                  <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
                       .filter(ct => availableCompetitionTypes.includes(ct.value))
@@ -1145,7 +1145,7 @@ const JudgeDashboard = () => {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden">
                       <div className="pt-2">
-                        <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Apparatus</p>
+                        <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {availableApparatus.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
@@ -1170,7 +1170,7 @@ const JudgeDashboard = () => {
                     onClick={handleConfirmSelection}
                     disabled={!isSelectionComplete}
                     className="w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgba(255,255,255,0.1)' }}>
+                    style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.1)', color: isSelectionComplete ? '#FFFFFF' : undefined }}>
                     {isSelectionComplete ? (
                       <>Continue to Dashboard <ChevronRight className="w-5 h-5" /></>
                     ) : (
@@ -1192,7 +1192,7 @@ const JudgeDashboard = () => {
             className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div
-              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
+              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
@@ -1210,7 +1210,7 @@ const JudgeDashboard = () => {
               <div className="p-8 space-y-8">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <ClipboardList className="w-6 h-6 text-purple-400" />
+                    <ClipboardList className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
                   <h2 id="role-modal-title" className="text-2xl font-black text-white">Select Your Role</h2>
                   <p className="text-fg-muted text-sm mt-2">
@@ -1225,7 +1225,7 @@ const JudgeDashboard = () => {
                   ].map(({ role, Icon, desc }) => (
                     <SelectBtn key={role} selected={chosenRole === role} onClick={() => chooseRole(role)}>
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-300" aria-hidden="true" />
+                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-300" aria-hidden="true" />
                         <div>
                           <p className="font-bold text-white">{role}</p>
                           <p className="text-xs text-fg-muted mt-0.5">{desc}</p>

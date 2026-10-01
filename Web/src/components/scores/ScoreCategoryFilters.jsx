@@ -1,5 +1,5 @@
 import Dropdown from '@/components/auth/Dropdown';
-import { COLORS } from '@/styles/tokens';
+import { FG } from '@/styles/tokens';
 
 /**
  * The category picker above the results board.
@@ -21,7 +21,7 @@ const GENDERS = [
 
 const FilterLabel = ({ children, primary = false }) => (
   <label className="block text-xs font-bold tracking-widest uppercase mb-2"
-    style={{ color: primary ? COLORS.saffron : 'rgb(var(--ink) / 0.45)' }}>
+    style={{ color: primary ? FG.brand : 'var(--fg-muted)' }}>
     {children}
   </label>
 );

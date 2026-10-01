@@ -19,7 +19,7 @@ import { ArrowLeft, Timer, Send, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { buildScorerRows } from './scorerRows';
@@ -164,23 +164,23 @@ const TimeKeeperScoring = () => {
   return (
     <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+        style={{ background: 'rgb(var(--bg) / 0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
         <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => navigate('/judge/dashboard')} disabled={busy}
               className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40"
-              style={{ color: 'rgba(255,255,255,0.6)' }}>
+              style={{ color: 'rgb(var(--ink) / 0.6)' }}>
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </button>
             <div className="w-px h-5 bg-white/10" />
             <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4" style={{ color: ADMIN_COLORS.saffron }} aria-hidden="true" />
+              <Timer className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
               <span className="text-white font-bold text-sm">Time Keeper</span>
             </div>
           </div>
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: `${isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red}20`, color: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }}>
+            style={{ background: `${alpha(isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red, 0x20)}`, color: isConnected ? FG.success : FG.danger }}>
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`}
               style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />
             {isConnected ? 'Live' : 'Offline'}
@@ -192,7 +192,7 @@ const TimeKeeperScoring = () => {
         <CompetitionLockBanner />
 
         <div className="rounded-2xl border p-5" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Timing Session</p>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Timing Session</p>
           <h1 className="text-xl sm:text-2xl font-black text-white">{gender} — {ageGroup}</h1>
           <p className="mt-1 text-sm text-fg-muted">
             {selectedTeam.name}
@@ -233,7 +233,7 @@ const TimeKeeperScoring = () => {
           </div>
           {/* Athletes — below the clock (beside it on a wide screen) */}
           <div className="lg:col-span-2 rounded-2xl border p-4" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ADMIN_COLORS.saffron }}>Athletes</p>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Athletes</p>
             {rows.length === 0 ? (
               <p className="text-fg-muted text-sm py-6 text-center">No athletes for this category.</p>
             ) : (
@@ -247,13 +247,13 @@ const TimeKeeperScoring = () => {
                         aria-pressed={active}
                         className="w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left min-h-[52px] transition-colors disabled:opacity-40"
                         style={{
-                          background: active ? `${alpha(ADMIN_COLORS.saffron, 0x14)}` : 'rgba(255,255,255,0.02)',
+                          background: active ? `${alpha(ADMIN_COLORS.saffron, 0x14)}` : 'rgb(var(--ink) / 0.02)',
                           borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x55)}` : ADMIN_COLORS.darkBorderSubtle,
                         }}>
                         <span className="text-sm font-bold text-white truncate">{row.name}</span>
                         {rec && (
                           <span className="flex items-center gap-1 text-xs font-bold flex-shrink-0"
-                            style={{ color: rec.sent ? ADMIN_COLORS.green : ADMIN_COLORS.gold }}>
+                            style={{ color: rec.sent ? FG.success : FG.brandGold }}>
                             {rec.seconds} s {rec.sent ? <Check className="w-3.5 h-3.5" aria-label="sent to the Scorer" /> : <AlertCircle className="w-3.5 h-3.5" aria-label="not yet sent" />}
                           </span>
                         )}

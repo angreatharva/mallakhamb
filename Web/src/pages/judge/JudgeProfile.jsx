@@ -13,7 +13,7 @@ import { logger } from '@/infrastructure/logger';
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
 import { GlassCard } from '../../components/design-system/cards';
-import { alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -75,12 +75,12 @@ const Field = ({ id, label, icon, error, children }) => {
       <label
         htmlFor={id}
         className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: `${alpha(theme.colors.primary, 0x90)}` }}
+        style={{ color: FG.accent }}
       >
         {label}
       </label>
       {children}
-      {error && <p className="text-xs mt-1.5" style={{ color: '#EF4444' }} role="alert">{error}</p>}
+      {error && <p className="text-xs mt-1.5" style={{ color: FG.danger }} role="alert">{error}</p>}
     </div>
   );
 };
@@ -239,7 +239,7 @@ const JudgeProfileInner = () => {
               >
                 {photo
                   ? <img src={photo} alt="" className="w-full h-full object-cover" />
-                  : <Scale className="w-9 h-9" style={{ color: theme.colors.primary }} aria-hidden="true" />}
+                  : <Scale className="w-9 h-9" style={{ color: FG.accent }} aria-hidden="true" />}
               </div>
               <button
                 type="button"
@@ -260,7 +260,7 @@ const JudgeProfileInner = () => {
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: theme.colors.primary }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>
                 Judge
               </p>
               <h1 className="text-2xl font-black text-white mt-0.5 truncate">{profile?.name}</h1>

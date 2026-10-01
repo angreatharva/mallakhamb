@@ -104,7 +104,7 @@ export const ThemedSelect = forwardRef(({
           <option 
             key={option.value} 
             value={option.value}
-            className="bg-gray-900 text-white"
+            className="bg-surface text-white"
           >
             {option.label}
           </option>

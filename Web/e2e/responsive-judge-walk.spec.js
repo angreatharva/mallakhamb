@@ -10,6 +10,8 @@
  * Read-only: it stops at the score sheet and never submits a slip.
  *
  *   WALK_WIDTH=375 npx playwright test e2e/responsive-judge-walk.spec.js
+ *
+ * WALK_APPEARANCE=light|dark pins the appearance (default: the app's own).
  */
 
 import { test, expect } from '@playwright/test';
@@ -18,11 +20,12 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { signInAs } from './support/audit-routes.js';
 import { chooseCategory } from './support/scoring-flows.js';
-import { measurePage, settle } from './support/responsive-audit.js';
+import { applyAppearance, measurePage, settle } from './support/responsive-audit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, '../test-results/shots');
 const WIDTH = Number(process.env.WALK_WIDTH || 375);
+const APPEARANCE = process.env.WALK_APPEARANCE;
 
 test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   test.setTimeout(10 * 60_000);
@@ -93,7 +96,7 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   const findings = [];
   const shoot = async (label) => {
     await settle(page);
-    const slug = `walk-${WIDTH}-${label}`;
+    const slug = `walk-${WIDTH}${APPEARANCE ? `-${APPEARANCE}` : ''}-${label}`;
     await page.screenshot({ path: resolve(OUT, `${slug}.png`), fullPage: true });
     const m = await measurePage(page, { checkTouchTargets: WIDTH < 768 });
     if (m.horizontalScroll || m.overflowing.length || m.tinyTargets.length) {
@@ -103,6 +106,7 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   };
 
   await page.setViewportSize({ width: WIDTH, height: WIDTH < 768 ? 812 : 900 });
+  if (APPEARANCE) await applyAppearance(page, APPEARANCE);
   await signInAs(page, 'judge');
   await shoot('1-dashboard-picker');
 
@@ -116,6 +120,13 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
    * finalized.
    */
   const CANDIDATES = [
+    // WALK_AGE (with WALK_GENDER / WALK_TYPE) tries the judge's own seat first — on the TRIALS
+    // meet the audit judge sits on Male / Above18 / Competition I, which neither default covers.
+    ...(process.env.WALK_AGE ? [{
+      gender: process.env.WALK_GENDER || 'Male',
+      ageGroup: process.env.WALK_AGE,
+      competitionType: process.env.WALK_TYPE || 'Competition I',
+    }] : []),
     { gender: 'Male', ageGroup: 'Under14', competitionType: 'Competition I' },
     { gender: 'Male', ageGroup: 'Under10', competitionType: 'Competition I' },
   ];

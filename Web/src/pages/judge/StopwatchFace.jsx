@@ -230,7 +230,7 @@ const StopwatchFace = ({ watch, title, subtitle, canStart = true, onStop, onNext
     || (stopped && seconds > 0 && seconds < BEEP_MARKS[0].at);
 
   return (
-    <div className="w-full rounded-[28px] p-4 sm:p-5 flex flex-col items-center"
+    <div data-appearance="dark" className="w-full rounded-[28px] p-4 sm:p-5 flex flex-col items-center"
       style={{ background: '#000', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}>
       <div className="w-full flex items-baseline justify-between gap-3 px-1 mb-2">
         <span className="text-[17px] font-medium truncate" style={{ color: ORANGE }}>{title || 'Choose an athlete'}</span>

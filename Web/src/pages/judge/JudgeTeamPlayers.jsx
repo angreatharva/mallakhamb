@@ -18,7 +18,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { JudgeAmbience } from './judgeShared';
 
@@ -383,7 +383,7 @@ const JudgeTeamPlayers = () => {
       <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -400,7 +400,7 @@ const JudgeTeamPlayers = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>
+              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>
                 {resolveJudgeSeat(judgeInfo, {
                   gender: selectedGender,
                   ageGroup: selectedAgeGroup,
@@ -411,7 +411,7 @@ const JudgeTeamPlayers = () => {
           </div>
           <button onClick={handleLogout}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
-            style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+            style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
             aria-label="Logout">
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Logout</span>
@@ -423,7 +423,7 @@ const JudgeTeamPlayers = () => {
         <FadeIn delay={0}>
           <div className="rounded-2xl border p-5 mb-6"
             style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: J.purpleLight }}>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>
               Team
             </p>
             <h1 className="text-2xl font-black text-white">{team?.name || 'Loading…'}</h1>
@@ -440,7 +440,7 @@ const JudgeTeamPlayers = () => {
         </FadeIn>
 
         <FadeIn delay={0.05} className="flex-1 flex flex-col">
-          <h2 className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: J.purpleLight }}>
+          <h2 className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: DATA_COLORS.purpleSoft }}>
             Players
           </h2>
 
@@ -474,7 +474,7 @@ const JudgeTeamPlayers = () => {
                           one was drawn, sits underneath — the two diverge as
                           soon as the panel re-sequences. */}
                       <span className="flex flex-col items-center justify-center w-8 flex-shrink-0">
-                        <span className="text-sm font-black" style={{ color: J.purpleLight }}>
+                        <span className="text-sm font-black" style={{ color: DATA_COLORS.purpleSoft }}>
                           {orderIdx + 1}
                         </span>
                         {player.lotNo != null && (
@@ -491,11 +491,11 @@ const JudgeTeamPlayers = () => {
                           : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
                       }`}>
                         {isLocked ? (
-                          <Lock className="w-5 h-5 text-green-400" aria-hidden="true" />
+                          <Lock className="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                         ) : isSubmitted ? (
-                          <CheckCircle className="w-5 h-5" style={{ color: J.purpleLight }} aria-hidden="true" />
+                          <CheckCircle className="w-5 h-5" style={{ color: DATA_COLORS.purpleSoft }} aria-hidden="true" />
                         ) : (
-                          <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" aria-hidden="true" />
+                          <User className="w-5 h-5 text-white/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         )}
                       </div>
                       <div className="text-left">
@@ -503,12 +503,12 @@ const JudgeTeamPlayers = () => {
                           {player.name}
                           {isLocked ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(34,197,94,0.2)', color: J.green }}>
+                              style={{ background: 'rgba(34,197,94,0.2)', color: FG.success }}>
                               Finalized
                             </span>
                           ) : isSubmitted ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
+                              style={{ background: 'rgba(168,85,247,0.2)', color: DATA_COLORS.purpleSoft }}>
                               Partial Score Submitted
                             </span>
                           ) : null}
@@ -530,11 +530,11 @@ const JudgeTeamPlayers = () => {
                       {isLocked ? (
                         <div className="w-8 h-8 rounded-full flex items-center justify-center"
                           style={{ background: 'rgba(34,197,94,0.2)' }}>
-                          <Lock className="w-4 h-4 text-green-400" aria-hidden="true" />
+                          <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       ) : (
                         <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-400" aria-hidden="true" />
+                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         </div>
                       )}
                     </div>
