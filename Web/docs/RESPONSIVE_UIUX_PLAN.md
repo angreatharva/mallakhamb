@@ -287,6 +287,27 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
   - the full guarded visual run (dev server restarted for the config change) is **pixel-identical** in all six areas, every width, both appearances;
   - 393 tests pass and the production build is clean.
 
+### Phase 11 log — regression and report
+
+The final report is **[RESPONSIVE_UIUX_REPORT.md](RESPONSIVE_UIUX_REPORT.md)**: what changed, the verification matrix, each §15 protected behaviour with its evidence, the decisions taken on the owner's behalf, and known limitations.
+
+- **Matrix** (guarded, checkout stable): `audit:responsive` checks overflow, touch targets and console on every route.
+  - Chromium portrait: 15 widths (320–1920), both appearances.
+  - Chromium phone landscape (667–932 × 375) and tablet landscape (1024/1180 × 768).
+  - WebKit: iPhone 13, iPad Mini, iPad Pro 11 portrait and landscape, both appearances.
+
+  One finding: the coach dashboard's header ran **5px past a 320px screen** once the Light/Dark control joined its cluster. Fix: `gap-1 min-[360px]:gap-2` on that cluster, both headers; the old gap from 360 up, so every baseline width is pixel-identical. Re-audited clean at 320/360/375 in both appearances. The only console output is the known `CompetitionContext` race ("Competition switch already in progress"), listed under "Found, not ours to change".
+- **Edge cases** — `edge-cases.spec.js` rewrites API responses in the browser, never the database:
+  - long names (a long unbroken word plus a long phrase);
+  - every list empty;
+  - 2.5 s latency;
+  - every data request answering 500.
+
+  24/24 area × scenario runs pass, at 375 and 1366, with no sideways scroll and no uncaught error. Long names were confirmed on screen for transactions, the coach dashboard and payment, the player dashboard and team selection, and — by walking the filters — Admin Scores' team list and score sheet.
+- **Appearance persistence** — `appearance-persistence.spec.js`: Light chosen from the shell's menu survives logout and reload. On reload `data-appearance` takes only `light` from the first script, so there is no dark first frame.
+- **Keyboard focus** — `focus-visible.spec.js` tabs through every route, both appearances, and compares each stop focused against unfocused. **Every stop shows focus, 6/6 areas.**
+- 396 unit tests, 0 lint errors, production build clean.
+
 ### Phase 10 log
 
 *One shared viewport store.* Every `useResponsive()` (20 call sites) used to:

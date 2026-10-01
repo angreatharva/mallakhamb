@@ -487,7 +487,7 @@ const CoachDashboard = () => {
             </div>
 
             {/* Right: Competition Selector + User info + Logout */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 min-[360px]:gap-2">
               <CompetitionSelector userType="coach" />
               {user && (
                 <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
@@ -649,7 +649,7 @@ const CoachDashboard = () => {
           </div>
 
           {/* Right: Competition Selector + User info + Logout */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 min-[360px]:gap-2">
             <CompetitionSelector userType="coach" />
             {user && (
               <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border"
