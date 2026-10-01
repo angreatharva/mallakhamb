@@ -398,6 +398,26 @@ export const DATA_COLORS = Object.freeze({
   bronze: 'rgb(var(--medal-bronze))',
 });
 
+/**
+ * Semantic TEXT colours as CSS colour strings, for inline `style` (index.css
+ * defines both appearances). Brand, role accent and status hexes fail as text
+ * on the light page; these are the hexes in dark and deep shades in light.
+ * `alpha()` can tint them. Same framer caveat as DATA_COLORS.
+ */
+export const FG = Object.freeze({
+  ink: 'rgb(var(--ink))',
+  accent: 'rgb(var(--accent-fg))',
+  brand: 'rgb(var(--brand-fg))',
+  brandSoft: 'rgb(var(--brand-fg-soft))',
+  brandGold: 'rgb(var(--brand-gold-fg))',
+  success: 'rgb(var(--success-fg))',
+  successSoft: 'rgb(var(--success-fg-soft))',
+  warning: 'rgb(var(--warning-fg))',
+  danger: 'rgb(var(--danger-fg))',
+  dangerSoft: 'rgb(var(--danger-fg-soft))',
+  info: 'rgb(var(--info-fg))',
+});
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 export const DEBOUNCE_DELAY = 300;

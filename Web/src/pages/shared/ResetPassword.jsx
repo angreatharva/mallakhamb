@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import BHALogo from '../../assets/BHA.png';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-import { alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 
 const COLORS = {
   saffron: '#FF6B00',
@@ -220,7 +220,7 @@ const ResetPassword = () => {
           <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>Bhausaheb Ranade</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
           <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
@@ -242,7 +242,7 @@ const ResetPassword = () => {
               style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
-              <Lock className="w-7 h-7" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Lock className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
             <h1 className="text-2xl font-black text-white mb-2">
               Reset <GradientText>Password</GradientText>
@@ -299,8 +299,8 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
                 role="status" aria-live="polite">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-gold-fg))' }} aria-hidden="true" />
-                <p className="text-xs font-medium" style={{ color: 'rgb(var(--brand-gold-fg))' }}>
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.brandGold }} aria-hidden="true" />
+                <p className="text-xs font-medium" style={{ color: FG.brandGold }}>
                   {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining
                 </p>
               </motion.div>
@@ -328,7 +328,7 @@ const ResetPassword = () => {
                 {/* Email */}
                 <div className="mb-4">
                   <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
-                    Email Address <span style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true">*</span>
+                    Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <StyledInput
                     {...register('email', {
@@ -342,7 +342,7 @@ const ResetPassword = () => {
                     aria-invalid={!!errors.email}
                   />
                   {errors.email && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                       {errors.email.message}
                     </motion.p>
@@ -352,7 +352,7 @@ const ResetPassword = () => {
                 {/* OTP */}
                 <div className="mb-4">
                   <label htmlFor="otp" className="block text-sm font-semibold text-white/70 mb-2">
-                    OTP Code <span style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true">*</span>
+                    OTP Code <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
@@ -381,7 +381,7 @@ const ResetPassword = () => {
                       style={{
                         background: otpVerified ? 'rgba(34,197,94,0.15)' : `${alpha(COLORS.saffron, 0x18)}`,
                         border: `1px solid ${otpVerified ? 'rgba(34,197,94,0.3)' : COLORS.darkBorder}`,
-                        color: otpVerified ? 'rgb(var(--success-fg))' : 'rgb(var(--brand-fg-soft))',
+                        color: otpVerified ? FG.success : FG.brandSoft,
                       }}
                       whileHover={!otpVerified && !verifying ? { scale: 1.03 } : {}}
                       whileTap={!otpVerified && !verifying ? { scale: 0.97 } : {}}>
@@ -391,7 +391,7 @@ const ResetPassword = () => {
                     </motion.button>
                   </div>
                   {errors.otp && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                       {errors.otp.message}
                     </motion.p>
@@ -411,7 +411,7 @@ const ResetPassword = () => {
                   exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.3 }}>
                   <div className="mb-4">
                     <label htmlFor="password" className="block text-sm font-semibold text-white/70 mb-2">
-                      New Password <span style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true">*</span>
+                      New Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
                       {...register('password', {
@@ -427,7 +427,7 @@ const ResetPassword = () => {
                       aria-invalid={!!errors.password}
                     />
                     {errors.password && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: 'rgb(var(--danger-fg))' }}
+                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                         {errors.password.message}
                       </motion.p>
@@ -436,7 +436,7 @@ const ResetPassword = () => {
 
                   <div className="mb-6">
                     <label htmlFor="confirmPassword" className="block text-sm font-semibold text-white/70 mb-2">
-                      Confirm Password <span style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true">*</span>
+                      Confirm Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
                       {...register('confirmPassword', {
@@ -452,7 +452,7 @@ const ResetPassword = () => {
                       aria-invalid={!!errors.confirmPassword}
                     />
                     {errors.confirmPassword && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: 'rgb(var(--danger-fg))' }}
+                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                         {errors.confirmPassword.message}
                       </motion.p>
@@ -520,7 +520,7 @@ const ResetPassword = () => {
               <p className="text-sm text-fg-muted">
                 Didn&apos;t receive OTP?{' '}
                 <Link to="/forgot-password" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                  style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                  style={{ color: FG.brandSoft }}>
                   Request New OTP
                 </Link>
               </p>
@@ -528,7 +528,7 @@ const ResetPassword = () => {
               <p className="text-sm text-fg-muted">
                 Remember your password?{' '}
                 <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                  style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                  style={{ color: FG.brandSoft }}>
                   Back to Login
                 </Link>
               </p>

@@ -23,7 +23,7 @@ import { useReducedMotion } from '../../components/design-system/animations';
 // API services
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
-import { alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -463,11 +463,11 @@ const UnifiedRegisterInner = () => {
       <label
         htmlFor={`${role}-reg-${field.name}`}
         className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: 'rgb(var(--accent-fg))' }}
+        style={{ color: FG.accent }}
       >
         {field.label}
         {field.rules?.required && (
-          <span style={{ color: 'rgb(var(--danger-fg))' }} aria-hidden="true"> *</span>
+          <span style={{ color: FG.danger }} aria-hidden="true"> *</span>
         )}
       </label>
       <ThemedInput
@@ -486,7 +486,7 @@ const UnifiedRegisterInner = () => {
           <motion.p
             id={`${role}-reg-${field.name}-error`}
             className="text-xs mt-1.5"
-            style={{ color: 'rgb(var(--danger-fg))' }}
+            style={{ color: FG.danger }}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
@@ -533,7 +533,7 @@ const UnifiedRegisterInner = () => {
           >
             <p
               className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: 'rgb(var(--accent-fg))' }}
+              style={{ color: FG.accent }}
             >
               Bhausaheb Ranade Mallakhamb
             </p>
@@ -568,13 +568,13 @@ const UnifiedRegisterInner = () => {
                 >
                   <FeatureIcon
                     className="w-4 h-4"
-                    style={{ color: 'rgb(var(--accent-fg))' }}
+                    style={{ color: FG.accent }}
                     aria-hidden="true"
                   />
                 </div>
                 <span
                   className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: 'rgb(var(--accent-fg))' }}
+                  style={{ color: FG.accent }}
                 >
                   {label}
                 </span>
@@ -615,7 +615,7 @@ const UnifiedRegisterInner = () => {
           <div>
             <p
               className="text-[10px] font-bold tracking-widest uppercase"
-              style={{ color: 'rgb(var(--accent-fg))' }}
+              style={{ color: FG.accent }}
             >
               Mallakhamb
             </p>
@@ -646,7 +646,7 @@ const UnifiedRegisterInner = () => {
               >
                 <IconComponent
                   className="w-8 h-8"
-                  style={{ color: 'rgb(var(--accent-fg))' }}
+                  style={{ color: FG.accent }}
                   aria-hidden="true"
                 />
               </div>
@@ -661,7 +661,7 @@ const UnifiedRegisterInner = () => {
               />
               <span
                 className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: 'rgb(var(--accent-fg))' }}
+                style={{ color: FG.accent }}
               >
                 {config.accessLabel}
               </span>
@@ -693,9 +693,9 @@ const UnifiedRegisterInner = () => {
                   <label
                     htmlFor="player-reg-gender"
                     className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: 'rgb(var(--accent-fg))' }}
+                    style={{ color: FG.accent }}
                   >
-                    Gender <span style={{ color: 'rgb(var(--danger-fg))' }} aria-hidden="true">*</span>
+                    Gender <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                   </label>
                   <ThemedSelect
                     id="player-reg-gender"
@@ -713,7 +713,7 @@ const UnifiedRegisterInner = () => {
                       <motion.p
                         id="player-reg-gender-error"
                         className="text-xs mt-1.5"
-                        style={{ color: 'rgb(var(--danger-fg))' }}
+                        style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
@@ -733,7 +733,7 @@ const UnifiedRegisterInner = () => {
                   <label
                     htmlFor="judge-reg-certificationLevel"
                     className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: 'rgb(var(--accent-fg))' }}
+                    style={{ color: FG.accent }}
                   >
                     Certification Level
                   </label>
@@ -756,9 +756,9 @@ const UnifiedRegisterInner = () => {
                 <label
                   htmlFor={`${role}-reg-password`}
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }}
+                  style={{ color: FG.accent }}
                 >
-                  Password <span style={{ color: 'rgb(var(--danger-fg))' }} aria-hidden="true">*</span>
+                  Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-password`}
@@ -788,7 +788,7 @@ const UnifiedRegisterInner = () => {
                     <motion.p
                       id={`${role}-reg-password-error`}
                       className="text-xs mt-1.5"
-                      style={{ color: 'rgb(var(--danger-fg))' }}
+                      style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
@@ -806,9 +806,9 @@ const UnifiedRegisterInner = () => {
                 <label
                   htmlFor={`${role}-reg-confirmPassword`}
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }}
+                  style={{ color: FG.accent }}
                 >
-                  Confirm Password <span style={{ color: 'rgb(var(--danger-fg))' }} aria-hidden="true">*</span>
+                  Confirm Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-confirmPassword`}
@@ -842,7 +842,7 @@ const UnifiedRegisterInner = () => {
                     <motion.p
                       id={`${role}-reg-confirmPassword-error`}
                       className="text-xs mt-1.5"
-                      style={{ color: 'rgb(var(--danger-fg))' }}
+                      style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
@@ -887,7 +887,7 @@ const UnifiedRegisterInner = () => {
               <Link
                 to={config.loginLink}
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: 'rgb(var(--accent-fg))' }}
+                style={{ color: FG.accent }}
               >
                 Sign in
               </Link>

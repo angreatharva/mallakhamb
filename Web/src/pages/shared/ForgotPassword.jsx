@@ -8,7 +8,7 @@ import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
-import { COLORS, EASE_OUT, alpha } from '../../styles/tokens';
+import { COLORS, EASE_OUT, FG, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 const useReducedMotion = () => {
@@ -106,7 +106,7 @@ const ForgotPassword = () => {
           <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>Bhausaheb Ranade</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
           <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
@@ -128,7 +128,7 @@ const ForgotPassword = () => {
               style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
-              <Mail className="w-7 h-7" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Mail className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
             <h1 className="text-2xl font-black text-white mb-2">
               Forgot <GradientText>Password?</GradientText>
@@ -142,7 +142,7 @@ const ForgotPassword = () => {
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="mb-5">
               <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
-                Email Address <span style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true">*</span>
+                Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
               </label>
               <StyledInput
                 {...register('email', {
@@ -158,7 +158,7 @@ const ForgotPassword = () => {
               />
               {errors.email && (
                 <motion.p id="email-error" role="alert" className="mt-2 text-xs font-medium"
-                  style={{ color: 'rgb(var(--danger-fg))' }}
+                  style={{ color: FG.danger }}
                   initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}>
                   {errors.email.message}
@@ -188,7 +188,7 @@ const ForgotPassword = () => {
               <motion.div className="mt-4 p-3 rounded-xl border text-xs text-fg-muted flex items-center gap-2"
                 style={{ background: `${alpha(COLORS.saffron, 0x0A)}`, borderColor: `${alpha(COLORS.saffron, 0x20)}` }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-                <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg-soft))' }} aria-hidden="true" />
+                <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brandSoft }} aria-hidden="true" />
                 This may take a moment if the server is starting up.
               </motion.div>
             )}
@@ -218,7 +218,7 @@ const ForgotPassword = () => {
             <p className="text-sm text-fg-muted">
               Remember your password?{' '}
               <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                style={{ color: FG.brandSoft }}>
                 Back to Login
               </Link>
             </p>

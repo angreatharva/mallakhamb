@@ -11,7 +11,7 @@ import BHALogo from '../../assets/BHA.png';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 // Import from unified design system
-import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, alpha } from '../../styles/tokens';
+import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, FG, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 
 // Re-export for backward compatibility
@@ -276,7 +276,7 @@ const Navbar = () => {
           <motion.img src={BHALogo} alt="BHA Logo" className="h-10 md:h-14 w-auto object-contain"
             whileHover={{ scale: 1.05 }} transition={EASE_SPRING} />
           <div className="hidden sm:block">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>Bhausaheb Ranade</p>
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
             <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
           </div>
         </Link>
@@ -399,7 +399,7 @@ const HeroSection = () => {
         {/* Badge */}
         <motion.div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border"
-          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: 'rgb(var(--brand-fg-soft))' }}
+          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: FG.brandSoft }}
           initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}>
           <Star className="w-3 h-3" fill="currentColor" aria-hidden="true" />
@@ -580,7 +580,7 @@ const AboutSection = () => {
 
         <FadeIn direction="left" delay={0.2} className="order-1 lg:order-2 space-y-8">
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>The Ancient Art</p>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>The Ancient Art</p>
             <h2 className="text-4xl md:text-5xl font-black text-white leading-tight">
               Where Strength<br />
               <GradientText>Meets Grace</GradientText>
@@ -595,7 +595,7 @@ const AboutSection = () => {
           <div className="flex flex-wrap gap-3">
             {['Pole Mallakhamb', 'Rope Mallakhamb', 'Hanging Mallakhamb'].map((tag) => (
               <span key={tag} className="px-4 py-2 rounded-full text-xs font-semibold border"
-                style={{ borderColor: COLORS.darkBorder, color: 'rgb(var(--brand-fg-soft))', background: `${alpha(COLORS.saffron, 0x0E)}` }}>
+                style={{ borderColor: COLORS.darkBorder, color: FG.brandSoft, background: `${alpha(COLORS.saffron, 0x0E)}` }}>
                 {tag}
               </span>
             ))}
@@ -621,7 +621,7 @@ const LegacyTimeline = () => (
       style={{ background: `radial-gradient(ellipse at 80% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 60%)` }} />
     <div className="max-w-5xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>40+ Years</p>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>40+ Years</p>
         <h2 className="text-4xl md:text-5xl font-black text-white">A Living <GradientText>Legacy</GradientText></h2>
       </FadeIn>
       <div className="relative">
@@ -634,7 +634,7 @@ const LegacyTimeline = () => (
                 <div className={`flex-1 pl-12 md:pl-0 ${i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
                   <div className="inline-block p-5 rounded-2xl border"
                     style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
-                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: 'rgb(var(--brand-fg))' }}>{ev.year}</p>
+                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>{ev.year}</p>
                     <p className="text-white font-bold text-lg mb-1">{ev.title}</p>
                     <p className="text-fg-muted text-sm leading-relaxed">{ev.desc}</p>
                   </div>
@@ -659,7 +659,7 @@ const QuoteStrip = () => (
     <div className="absolute inset-0 pointer-events-none"
       style={{ background: `radial-gradient(ellipse at 50% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 70%)` }} />
     <FadeIn className="max-w-4xl mx-auto px-4 text-center relative z-10">
-      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: FG.brand }} aria-hidden="true" />
       <blockquote>
         <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
           &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
@@ -717,7 +717,7 @@ const FeaturesSection = () => (
   <section className="py-24 md:py-32" style={{ background: COLORS.dark }} aria-label="Platform features">
     <div className="max-w-6xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'rgb(var(--brand-fg))' }}>Platform</p>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Platform</p>
         <h2 className="text-4xl md:text-5xl font-black text-white">Everything You <GradientText>Need</GradientText></h2>
       </FadeIn>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
@@ -762,7 +762,7 @@ const Footer = () => {
               className="w-10 h-10 tap-safe rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
               style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x0E)}` }}
               aria-label="Facebook">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: 'rgb(var(--brand-fg-soft))' }} aria-hidden="true">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: FG.brandSoft }} aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </a>
@@ -791,17 +791,17 @@ const Footer = () => {
           <p className="text-white font-bold text-sm mb-4 tracking-wide">Contact</p>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               <p className="text-fg-muted text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
             </div>
             <a href="tel:+919820688420"
               className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 tap-safe">
-              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               +91 982 068 8420
             </a>
             <a href="mailto:mallakhambindia@gmail.com"
               className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 break-all tap-safe">
-              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               mallakhambindia@gmail.com
             </a>
           </div>

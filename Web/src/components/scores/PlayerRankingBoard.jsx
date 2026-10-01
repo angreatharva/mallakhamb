@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Users } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
-import { COLORS, DATA_COLORS, alpha } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { sortByRank } from './scoreRows';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -55,7 +55,7 @@ export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   );
 };
 
-const ScorePill = ({ label, value, accent = 'rgb(var(--brand-fg))' }) => (
+const ScorePill = ({ label, value, accent = FG.brand }) => (
   <div className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl"
     style={{ background: `${alpha(accent, 0x0E)}`, border: `1px solid ${alpha(accent, 0x20)}` }}>
     <span className="text-xs font-bold" style={{ color: accent }}>{value}</span>
@@ -155,7 +155,7 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-2xl font-black" style={{ color: 'rgb(var(--brand-fg))' }}>{toFixed(player.finalScore)}</p>
+          <p className="text-2xl font-black" style={{ color: FG.brand }}>{toFixed(player.finalScore)}</p>
           <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>Final</p>
         </div>
       </div>

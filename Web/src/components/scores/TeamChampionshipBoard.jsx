@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DATA_COLORS, alpha } from '@/styles/tokens';
+import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { RankBadge } from './PlayerRankingBoard';
 
@@ -49,7 +49,7 @@ const TeamCard = ({ team }) => {
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-lg font-black" style={{ color: rankAccent || 'rgb(var(--brand-fg))' }}>{fmt(team.totalScore)}</p>
+          <p className="text-lg font-black" style={{ color: rankAccent || FG.brand }}>{fmt(team.totalScore)}</p>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--fg-muted)' }}>Team total</p>
         </div>
         <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -69,7 +69,7 @@ const TeamCard = ({ team }) => {
                 <div key={app.apparatus} className="rounded-xl border p-3"
                   style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: FG.brandSoft }}>
                       {shortApparatus(app.apparatus)}
                     </span>
                     <span className="text-xs font-bold font-mono text-white">{fmt(app.subtotal)}</span>

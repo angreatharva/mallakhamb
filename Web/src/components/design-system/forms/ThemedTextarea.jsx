@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../theme/useTheme';
+import { FG } from '../../../styles/tokens';
 
 /**
  * ThemedTextarea - A themed textarea component that adapts to the current role context
@@ -90,7 +91,7 @@ export const ThemedTextarea = forwardRef(({
         )}
         style={{
           // Role-specific focus color
-          color: 'rgb(var(--accent-fg))',
+          color: FG.accent,
         }}
         whileFocus={{
           boxShadow: hasError 

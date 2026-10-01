@@ -3,13 +3,13 @@ import { Calendar, MapPin, Trophy, Clock, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 
 
 const statusConfig = {
-  ongoing: { color: 'rgb(var(--success-fg))', label: 'Live', pulse: true },
-  upcoming: { color: 'rgb(var(--info-fg))', label: 'Upcoming', pulse: false },
+  ongoing: { color: FG.success, label: 'Live', pulse: true },
+  upcoming: { color: FG.info, label: 'Upcoming', pulse: false },
   completed: { color: 'var(--fg-muted)', label: 'Completed', pulse: false },
 };
 
@@ -21,7 +21,7 @@ const statusConfig = {
  * record still reads `ongoing` is the normal case, because nothing updates that
  * field automatically. The badge shows the one the user cannot change.
  */
-const lockedStatus = { color: 'rgb(var(--danger-fg-soft))', label: 'Locked', pulse: false, icon: Lock };
+const lockedStatus = { color: FG.dangerSoft, label: 'Locked', pulse: false, icon: Lock };
 
 const CompetitionDisplay = ({ className = '' }) => {
   const { currentCompetition, isLoading } = useCompetition();
@@ -54,7 +54,7 @@ const CompetitionDisplay = ({ className = '' }) => {
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
               style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
-              <Trophy className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-white font-bold text-sm leading-tight truncate">
@@ -70,7 +70,7 @@ const CompetitionDisplay = ({ className = '' }) => {
                 )}
                 {currentCompetition.level && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+                    style={{ background: `${alpha(COLORS.saffron, 0x15)}`, color: FG.brandSoft }}>
                     {levelLabel(currentCompetition.level)}
                   </span>
                 )}

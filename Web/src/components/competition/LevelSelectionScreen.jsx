@@ -8,7 +8,7 @@ import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, SAFFRON_CTA, alpha } from '@/styles/tokens';
+import { COLORS, SAFFRON_CTA, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
@@ -233,7 +233,7 @@ const LevelSelectionScreen = ({ userType }) => {
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Trophy className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
+            <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
           </motion.div>
           <p className="text-fg-muted text-sm">Loading levels...</p>
         </div>
@@ -263,7 +263,7 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
           <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: FG.brandSoft }}>
               <Layers className="w-3 h-3" aria-hidden="true" />
               Level Selection
             </div>

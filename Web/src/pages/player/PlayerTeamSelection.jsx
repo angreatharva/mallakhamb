@@ -7,7 +7,7 @@ import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
-import { alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 
 const COLORS = {
   dark: 'rgb(var(--bg))',
@@ -182,7 +182,7 @@ const PlayerTeamSelection = () => {
               transition={{ duration: 0.6, delay: 0.2 }}>
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                 style={{ background: `${alpha(COLORS.saffron, 0x15)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
-                <Users className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
+                <Users className="w-8 h-8" style={{ color: FG.brand }} />
               </div>
               <h3 className="text-white font-bold text-lg mb-2">
                 {searchQuery ? 'No teams found' : 'No teams available'}
@@ -219,7 +219,7 @@ const PlayerTeamSelection = () => {
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                        <Users className="w-6 h-6" style={{ color: 'rgb(var(--brand-fg))' }} />
+                        <Users className="w-6 h-6" style={{ color: FG.brand }} />
                       </div>
                       
                       {selectedTeam?._id === team._id && joining && (
@@ -227,7 +227,7 @@ const PlayerTeamSelection = () => {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'rgb(var(--brand-fg))' }} />
+                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: FG.brand }} />
                         </motion.div>
                       )}
                     </div>
@@ -251,10 +251,10 @@ const PlayerTeamSelection = () => {
 
                     <div className="mt-4 pt-4 border-t flex items-center justify-between"
                       style={{ borderColor: COLORS.darkBorderSubtle }}>
-                      <span className="text-xs font-semibold" style={{ color: 'rgb(var(--brand-fg))' }}>
+                      <span className="text-xs font-semibold" style={{ color: FG.brand }}>
                         {selectedTeam?._id === team._id && joining ? 'Joining...' : 'Click to join'}
                       </span>
-                      <ArrowRight className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} />
+                      <ArrowRight className="w-4 h-4" style={{ color: FG.brand }} />
                     </div>
                   </motion.button>
                 ))}

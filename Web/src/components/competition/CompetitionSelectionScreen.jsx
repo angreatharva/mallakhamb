@@ -14,7 +14,7 @@ import {
   Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, SAFFRON_CTA, alpha } from '@/styles/tokens';
+import { COLORS, SAFFRON_CTA, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
@@ -23,8 +23,8 @@ import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgroun
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 const statusConfig = {
-  ongoing: { color: 'rgb(var(--success-fg))', label: 'Live', Icon: Zap },
-  upcoming: { color: 'rgb(var(--info-fg))', label: 'Upcoming', Icon: Clock },
+  ongoing: { color: FG.success, label: 'Live', Icon: Zap },
+  upcoming: { color: FG.info, label: 'Upcoming', Icon: Clock },
   completed: { color: 'var(--fg-muted)', label: 'Completed', Icon: Check },
 };
 
@@ -88,7 +88,7 @@ const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index })
                 )}
                 {competition.level && (
                   <span className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: `${alpha(COLORS.saffron, 0x12)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+                    style={{ background: `${alpha(COLORS.saffron, 0x12)}`, color: FG.brandSoft }}>
                     {levelLabel(competition.level)}
                   </span>
                 )}
@@ -643,7 +643,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Trophy className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
+            <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
           </motion.div>
           <p className="text-fg-muted text-sm">
             {passingThrough
@@ -781,7 +781,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
             */}
           <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: FG.brandSoft }}>
               <Trophy className="w-3 h-3" aria-hidden="true" />
               Competition Selection
             </div>
@@ -804,7 +804,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                 style={{
                   background: `${alpha(COLORS.saffron, 0x12)}`,
                   border: `1px solid ${alpha(COLORS.saffron, 0x30)}`,
-                  color: 'rgb(var(--brand-fg-soft))',
+                  color: FG.brandSoft,
                 }}
               >
                 <Layers className="w-3 h-3" aria-hidden="true" />
@@ -829,7 +829,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   style={{
                     background: 'rgb(var(--ink) / 0.05)',
                     border: `1px solid ${searchQuery ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle}`,
-                    color: 'rgb(var(--ink))',
+                    color: FG.ink,
                     boxShadow: searchQuery ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
                   }}
                 />
@@ -864,7 +864,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
                   </p>
                   <button onClick={() => setSearchQuery('')}
                     className="mt-2 text-xs font-semibold transition-colors"
-                    style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                    style={{ color: FG.brandSoft }}>
                     Clear search
                   </button>
                 </motion.div>

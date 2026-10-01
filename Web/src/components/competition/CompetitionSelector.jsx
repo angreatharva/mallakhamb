@@ -5,14 +5,14 @@ import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } f
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
 const statusColors = {
-  ongoing: 'rgb(var(--success-fg))',
-  upcoming: 'rgb(var(--info-fg))',
+  ongoing: FG.success,
+  upcoming: FG.info,
   completed: 'rgb(var(--ink) / 0.3)',
 };
 
@@ -128,7 +128,7 @@ const CompetitionSelector = ({ userType }) => {
         aria-expanded={isOpen}
         aria-label="Select competition"
       >
-        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
         <div className="flex flex-col items-start max-w-[160px]">
           <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
             Competition
@@ -162,7 +162,7 @@ const CompetitionSelector = ({ userType }) => {
           >
             {/* Header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgb(var(--brand-fg))' }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>
                 {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0) 
                   ? 'Select Competition' 
                   : 'Switch Competition'}
@@ -184,7 +184,7 @@ const CompetitionSelector = ({ userType }) => {
                     style={{
                       background: 'rgb(var(--ink) / 0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: 'rgb(var(--ink))',
+                      color: FG.ink,
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -229,7 +229,7 @@ const CompetitionSelector = ({ userType }) => {
                             <span className="text-sm font-semibold text-white truncate">
                               {competition.name} {competition.year || ''}
                             </span>
-                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />}
+                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {competition.place && (
@@ -270,9 +270,9 @@ const CompetitionSelector = ({ userType }) => {
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
                   whileHover={{ background: 'rgba(34,197,94,0.08)' }}
                 >
-                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--success-fg))' }} aria-hidden="true" />
+                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: 'rgb(var(--success-fg))' }}>
+                    <p className="text-sm font-semibold" style={{ color: FG.success }}>
                       Sign up for new competition
                     </p>
                     <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>

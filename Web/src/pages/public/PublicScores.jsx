@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
@@ -27,7 +27,7 @@ const EmptyState = ({ icon: Icon, title, children }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
       style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
-      <Icon className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+      <Icon className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
     </div>
     <p className="text-white font-bold text-lg mb-2">{title}</p>
     <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>{children}</p>
@@ -63,7 +63,7 @@ const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, st
   return (
     <div className="space-y-4">
       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-        style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+        style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: FG.brandSoft }}>
         <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
         {caption} · {COMPETITION_TYPE_LABELS.competition_1}
       </div>
@@ -278,7 +278,7 @@ const PublicScores = () => {
             </Link>
             <div className="w-px h-5" style={{ background: 'rgb(var(--ink) / 0.1)' }} />
             <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               <h1 className="text-white font-black text-sm sm:text-base">Competition Scores</h1>
             </div>
           </div>
@@ -297,7 +297,7 @@ const PublicScores = () => {
         {/* Page title */}
         <FadeIn>
           <div className="text-center py-4">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'rgb(var(--brand-fg))' }}>Live Results</p>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>Live Results</p>
             <h2 className="text-3xl md:text-4xl font-black text-white">
               View <GradientText>Scores</GradientText>
             </h2>
@@ -324,7 +324,7 @@ const PublicScores = () => {
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-colors min-h-[44px]"
                 style={{
                   background: active ? `${alpha(COLORS.saffron, 0x20)}` : 'transparent',
-                  color: active ? 'rgb(var(--brand-fg-soft))' : 'var(--fg-muted)',
+                  color: active ? FG.brandSoft : 'var(--fg-muted)',
                   border: `1px solid ${active ? `${alpha(COLORS.saffron, 0x40)}` : 'transparent'}`,
                 }}>
                 <Icon className="w-4 h-4" aria-hidden="true" />
@@ -378,7 +378,7 @@ const PublicScores = () => {
               className="text-center py-20">
               <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
                 style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
-                <Filter className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+                <Filter className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
               </div>
               <p className="text-white font-bold text-lg mb-2">Select Filters to View Scores</p>
               <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
@@ -399,7 +399,7 @@ const PublicScores = () => {
               {/* Active filter badge */}
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-                  style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: 'rgb(var(--brand-fg-soft))' }}>
+                  style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: FG.brandSoft }}>
                   <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
                   {selectedCompetition.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
                 </div>
@@ -416,7 +416,7 @@ const PublicScores = () => {
                     style={{
                       background: 'rgb(var(--ink) / 0.04)',
                       borderColor: searchTerm ? `${alpha(COLORS.saffron, 0x50)}` : 'rgb(var(--ink) / 0.08)',
-                      color: 'rgb(var(--ink))',
+                      color: FG.ink,
                       /*
                        * Width moved to classes: the flat 220px could not shrink,
                        * so on a 320px screen the search box plus its gutters
@@ -457,7 +457,7 @@ const PublicScores = () => {
                   </p>
                   <button onClick={() => setSearchTerm('')}
                     className="mt-4 text-sm font-bold transition-colors duration-200"
-                    style={{ color: 'rgb(var(--brand-fg))' }}>
+                    style={{ color: FG.brand }}>
                     Clear search
                   </button>
                 </motion.div>

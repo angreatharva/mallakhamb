@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
+import { FG } from '../../../styles/tokens';
 
 /**
  * ThemedSelect - A themed select component that adapts to the current role context
@@ -85,7 +86,7 @@ export const ThemedSelect = forwardRef(({
         )}
         style={{
           // Role-specific focus color
-          color: 'rgb(var(--accent-fg))',
+          color: FG.accent,
         }}
         whileFocus={{
           boxShadow: `0 0 0 3px ${theme.colors.primaryLight}`,

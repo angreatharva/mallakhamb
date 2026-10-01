@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../theme/useTheme';
 import { useResponsive } from '../../../hooks/useResponsive';
+import { FG } from '../../../styles/tokens';
 
 /**
  * ThemedInput - A themed input component that adapts to the current role context
@@ -168,7 +169,7 @@ export const ThemedInput = forwardRef(({
           )}
           style={{
             // Role-specific focus color with 3:1 contrast ratio
-            color: 'rgb(var(--accent-fg))',
+            color: FG.accent,
           }}
           whileFocus={whileFocusAnimation}
           {...props}

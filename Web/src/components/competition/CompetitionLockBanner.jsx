@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 
 /**
  * "This meet has closed."
@@ -48,7 +48,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(248,113,113,0.15)' }}
         >
-          <Lock className="w-4 h-4" style={{ color: 'rgb(var(--danger-fg-soft))' }} aria-hidden="true" />
+          <Lock className="w-4 h-4" style={{ color: FG.dangerSoft }} aria-hidden="true" />
         </div>
 
         <div className="min-w-0">

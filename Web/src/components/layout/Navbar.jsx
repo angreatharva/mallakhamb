@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
@@ -79,7 +79,7 @@ const Navbar = ({ user, userType, onLogout }) => {
             <Trophy className="w-4 h-4 text-white" aria-hidden="true" />
           </motion.div>
           <span className="text-white font-bold text-sm tracking-wide hidden sm:block">
-            Mallakhamb<span style={{ color: 'rgb(var(--brand-fg))' }}>India</span>
+            Mallakhamb<span style={{ color: FG.brand }}>India</span>
           </span>
         </Link>
 
@@ -92,14 +92,14 @@ const Navbar = ({ user, userType, onLogout }) => {
                 style={{ borderColor: COLORS.darkBorderSubtle, background: 'rgb(var(--ink) / 0.04)' }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center"
                   style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
-                  <User className="w-3.5 h-3.5" style={{ color: 'rgb(var(--brand-fg-soft))' }} aria-hidden="true" />
+                  <User className="w-3.5 h-3.5" style={{ color: FG.brandSoft }} aria-hidden="true" />
                 </div>
                 <span className="text-white/80 text-sm font-medium">{user.firstName || user.name}</span>
               </div>
               <motion.button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-[44px]"
-                style={{ borderColor: 'rgba(239,68,68,0.3)', color: 'rgb(var(--danger-fg))', background: 'rgba(239,68,68,0.06)' }}
+                style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger, background: 'rgba(239,68,68,0.06)' }}
                 whileHover={{ background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.5)' }}
                 whileTap={{ scale: 0.96 }}
                 aria-label="Logout"
@@ -174,7 +174,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                       style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x08)}` }}>
                       <div className="w-10 h-10 rounded-full flex items-center justify-center"
                         style={{ background: `${alpha(COLORS.saffron, 0x20)}` }}>
-                        <User className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg-soft))' }} />
+                        <User className="w-5 h-5" style={{ color: FG.brandSoft }} />
                       </div>
                       <div>
                         <p className="text-white font-semibold text-sm">{user.firstName || user.name}</p>
@@ -189,7 +189,7 @@ const Navbar = ({ user, userType, onLogout }) => {
                     <button
                       onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] transition-colors"
-                      style={{ color: 'rgb(var(--danger-fg))', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      style={{ color: FG.danger, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                       <LogOut className="w-4 h-4" />
                       Logout
                     </button>

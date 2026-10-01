@@ -23,7 +23,7 @@ import { useReducedMotion } from '../../components/design-system/animations';
 import { adminAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
-import { alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -43,11 +43,11 @@ const PasswordStrengthIndicator = ({ password }) => {
     
     const levels = [
       { level: 0, label: '', color: '', fg: '' },
-      { level: 1, label: 'Weak', color: '#EF4444', fg: 'rgb(var(--danger-fg))' },
-      { level: 2, label: 'Fair', color: '#F59E0B', fg: 'rgb(var(--warning-fg))' },
-      { level: 3, label: 'Good', color: '#10B981', fg: 'rgb(var(--success-fg))' },
-      { level: 4, label: 'Strong', color: '#10B981', fg: 'rgb(var(--success-fg))' },
-      { level: 5, label: 'Very Strong', color: '#059669', fg: 'rgb(var(--success-fg))' },
+      { level: 1, label: 'Weak', color: '#EF4444', fg: FG.danger },
+      { level: 2, label: 'Fair', color: '#F59E0B', fg: FG.warning },
+      { level: 3, label: 'Good', color: '#10B981', fg: FG.success },
+      { level: 4, label: 'Strong', color: '#10B981', fg: FG.success },
+      { level: 5, label: 'Very Strong', color: '#059669', fg: FG.success },
     ];
     
     return levels[strength];
@@ -227,7 +227,7 @@ const AdminRegisterInner = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: 'rgb(var(--accent-fg))' }}>
+              style={{ color: FG.accent }}>
               Bhausaheb Ranade Mallakhamb
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
@@ -250,10 +250,10 @@ const AdminRegisterInner = () => {
               <div key={label} className="flex flex-col items-center gap-1.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ background: `${alpha(theme.colors.primary, 0x12)}`, border: `1px solid ${alpha(theme.colors.primary, 0x25)}` }}>
-                  <FeatureIcon className="w-4 h-4" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
+                  <FeatureIcon className="w-4 h-4" style={{ color: FG.accent }} aria-hidden="true" />
                 </div>
                 <span className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: 'rgb(var(--accent-fg))' }}>{label}</span>
+                  style={{ color: FG.accent }}>{label}</span>
               </div>
             ))}
           </motion.div>
@@ -277,7 +277,7 @@ const AdminRegisterInner = () => {
           <div className="w-px h-8 bg-white/10" />
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
-              style={{ color: 'rgb(var(--accent-fg))' }}>Mallakhamb</p>
+              style={{ color: FG.accent }}>Mallakhamb</p>
             <p className="text-fg-muted text-[10px]">Admin Portal</p>
           </div>
         </motion.div>
@@ -294,7 +294,7 @@ const AdminRegisterInner = () => {
                   background: `${alpha(theme.colors.primary, 0x15)}`, 
                   border: `1px solid ${alpha(theme.colors.primary, 0x35)}` 
                 }}>
-                <Shield className="w-8 h-8" style={{ color: 'rgb(var(--accent-fg))' }} aria-hidden="true" />
+                <Shield className="w-8 h-8" style={{ color: FG.accent }} aria-hidden="true" />
               </div>
             </div>
             
@@ -302,7 +302,7 @@ const AdminRegisterInner = () => {
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }} />
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: 'rgb(var(--accent-fg))' }}>Create Account</span>
+                style={{ color: FG.accent }}>Create Account</span>
               <div className="h-px flex-1" 
                 style={{ background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})` }} />
             </div>
@@ -317,9 +317,9 @@ const AdminRegisterInner = () => {
               {/* Name field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }} 
+                  style={{ color: FG.accent }} 
                   htmlFor="admin-name">
-                  Full Name <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
+                  Full Name <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <ThemedInput 
                   id="admin-name"
@@ -335,7 +335,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.name && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.name.message}
@@ -347,9 +347,9 @@ const AdminRegisterInner = () => {
               {/* Email field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }} 
+                  style={{ color: FG.accent }} 
                   htmlFor="admin-email">
-                  Email <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
+                  Email <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <ThemedInput 
                   id="admin-email"
@@ -368,7 +368,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.email && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.email.message}
@@ -380,9 +380,9 @@ const AdminRegisterInner = () => {
               {/* Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }} 
+                  style={{ color: FG.accent }} 
                   htmlFor="admin-password">
-                  Password <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
+                  Password <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <ThemedInput
                   id="admin-password"
@@ -407,7 +407,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.password && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.password.message}
@@ -421,9 +421,9 @@ const AdminRegisterInner = () => {
               {/* Confirm Password field */}
               <div>
                 <label className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: 'rgb(var(--accent-fg))' }} 
+                  style={{ color: FG.accent }} 
                   htmlFor="admin-confirm-password">
-                  Confirm Password <span style={{ color: 'rgb(var(--danger-fg))' }}>*</span>
+                  Confirm Password <span style={{ color: FG.danger }}>*</span>
                 </label>
                 <ThemedInput
                   id="admin-confirm-password"
@@ -448,7 +448,7 @@ const AdminRegisterInner = () => {
                 />
                 <AnimatePresence>
                   {errors.confirmPassword && (
-                    <motion.p className="text-xs mt-1.5" style={{ color: 'rgb(var(--danger-fg))' }}
+                    <motion.p className="text-xs mt-1.5" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       role="alert">
                       {errors.confirmPassword.message}
@@ -487,7 +487,7 @@ const AdminRegisterInner = () => {
               <span className="text-xs text-fg-muted">Already have an account?</span>
               <Link to="/admin/login"
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: 'rgb(var(--accent-fg))' }}>
+                style={{ color: FG.accent }}>
                 Sign In
               </Link>
             </div>

@@ -9,7 +9,7 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
@@ -54,8 +54,8 @@ const InfoRow = ({ label, value, last = false }) => (
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
-    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: 'rgb(var(--success-fg-soft))' },
-    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: 'rgb(var(--brand-fg-soft))' },
+    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: FG.successSoft },
+    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: FG.brandSoft },
   };
   const style = map[status] || { bg: 'rgb(var(--ink) / 0.06)', border: 'rgb(var(--ink) / 0.12)', text: 'var(--fg-muted)' };
   return (
@@ -369,7 +369,7 @@ const PlayerDashboard = () => {
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
               <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <User className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+                <User className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Profile Information
               </h2>
               <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
@@ -386,7 +386,7 @@ const PlayerDashboard = () => {
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
               <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <Trophy className="w-4 h-4" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+                <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Team Information
               </h2>
 
@@ -418,7 +418,7 @@ const PlayerDashboard = () => {
                       disabled={updatingTeam}
                     />
                     {updatingTeam && (
-                      <p className="text-xs mt-2 text-center" style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+                      <p className="text-xs mt-2 text-center" style={{ color: FG.brandSoft }}>
                         Joining team...
                       </p>
                     )}
@@ -471,7 +471,7 @@ const PlayerDashboard = () => {
               <div className="text-center mb-6">
                 <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                   style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                  <Trophy className="w-8 h-8" style={{ color: 'rgb(var(--brand-fg))' }} />
+                  <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
                 </div>
                 <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
                 <p className="text-fg-muted text-sm">
@@ -512,7 +512,7 @@ const PlayerDashboard = () => {
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                         style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                        <Trophy className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg))' }} />
+                        <Trophy className="w-5 h-5" style={{ color: FG.brand }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-white font-bold text-base mb-1 truncate">

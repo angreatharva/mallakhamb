@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '@/hooks/useResponsive';
-import { COLORS, alpha } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 
 
@@ -71,7 +71,7 @@ const Dropdown = ({
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
         <label className="block text-xs font-semibold tracking-wide mb-1.5"
-          style={{ color: 'rgb(var(--brand-fg-soft))' }}>
+          style={{ color: FG.brandSoft }}>
           {label}
         </label>
       )}
@@ -86,10 +86,10 @@ const Dropdown = ({
           border: `1px solid ${borderColor}`,
           // The placeholder here is the button's visible NAME ("Select
           // competition first"), not a field hint, so it has to read at 4.5:1.
-          color: value ? 'rgb(var(--ink))' : 'var(--fg-muted)',
+          color: value ? FG.ink : 'var(--fg-muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x18)}` : 'none',
-          outlineColor: 'rgb(var(--brand-fg))',
+          outlineColor: FG.brand,
         }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -102,7 +102,7 @@ const Dropdown = ({
           transition={{ duration: 0.2 }}
           className="flex-shrink-0"
         >
-          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? 'rgb(var(--brand-fg))' : 'rgb(var(--ink) / 0.45)' }} aria-hidden="true" />
+          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? FG.brand : 'rgb(var(--ink) / 0.45)' }} aria-hidden="true" />
         </motion.div>
       </button>
 
@@ -137,7 +137,7 @@ const Dropdown = ({
                     style={{
                       background: 'rgb(var(--ink) / 0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: 'rgb(var(--ink))',
+                      color: FG.ink,
                     }}
                     autoFocus={!isMobile}
                     onClick={(e) => e.stopPropagation()}
@@ -181,7 +181,7 @@ const Dropdown = ({
                       className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px] ${
                         isSelected ? '' : 'text-white/75 hover:text-fg hover:bg-[rgb(255_107_0_/_0.04)]'}`}
                       style={isSelected
-                        ? { color: 'rgb(var(--brand-fg-soft))', background: `${alpha(COLORS.saffron, 0x12)}` }
+                        ? { color: FG.brandSoft, background: `${alpha(COLORS.saffron, 0x12)}` }
                         : undefined}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
@@ -190,7 +190,7 @@ const Dropdown = ({
                       }}
                     >
                       <span className="flex-1 break-words">{option.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
                     </button>
                   );
                 })

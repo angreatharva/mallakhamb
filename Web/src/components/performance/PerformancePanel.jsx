@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { publicAPI } from '@/services/index.js';
-import { COLORS, DATA_COLORS, alpha } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -124,7 +124,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
             <p className="text-white font-bold text-sm truncate">{player.playerName}</p>
             {isHighlighted && (
               <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: 'rgb(var(--brand-fg-soft))' }}>You</span>
+                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: FG.brandSoft }}>You</span>
             )}
             {!player.isFinalized && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -139,7 +139,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="text-right">
             <p className="text-lg font-black tabular-nums"
-              style={{ color: isHighlighted ? 'rgb(var(--brand-fg))' : rc ? rc.text : 'rgb(var(--ink))' }}>
+              style={{ color: isHighlighted ? FG.brand : rc ? rc.text : FG.ink }}>
               {player.isFinalized ? Number(player.finalScore || 0).toFixed(2) : '—'}
             </p>
             <p className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>score</p>
@@ -166,7 +166,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) =
               <div className="flex flex-wrap gap-2">
                 <ScorePill label="Difficulty" value={breakdown.difficulty} accent={DATA_COLORS.blue} />
                 <ScorePill label="Combination" value={breakdown.combination} accent={DATA_COLORS.purple} />
-                <ScorePill label="Execution" value={breakdown.execution} accent={'rgb(var(--brand-fg))'} />
+                <ScorePill label="Execution" value={breakdown.execution} accent={FG.brand} />
                 <ScorePill label="Originality" value={breakdown.bonus} accent={DATA_COLORS.green} />
               </div>
               {breakdown.used > 0 && (
@@ -343,7 +343,7 @@ const PerformancePanel = ({
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
-              <TrendingUp className="w-5 h-5" style={{ color: 'rgb(var(--brand-fg))' }} aria-hidden="true" />
+              <TrendingUp className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
             </div>
             <div>
               <h2 className="text-lg font-black text-white">{title}</h2>
@@ -396,7 +396,7 @@ const PerformancePanel = ({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="rounded-2xl border p-8 text-center"
                 style={{ background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                <p className="text-sm font-semibold" style={{ color: 'rgb(var(--danger-fg))' }}>{error}</p>
+                <p className="text-sm font-semibold" style={{ color: FG.danger }}>{error}</p>
                 <button type="button" onClick={() => fetchScoresForTab(activeTab)}
                   className="mt-3 text-xs underline" style={{ color: 'var(--fg-muted)' }}>
                   Try again
