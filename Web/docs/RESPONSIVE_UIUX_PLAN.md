@@ -169,7 +169,7 @@ Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
 - `audit:tablet` (Chromium, all six areas): portrait 768/820/834/1024 and landscape 1024×768. Its only findings were the judge category modals' unnamed 32px close ✕ and `JudgeProfile`'s 36px Change photo — both → `tap-safe`, the ✕ named, the photo icon `snow` on its role fill. Clean after that.
 - No `${X}NN` hex-plus-byte concatenation is left in `src`; `AmbientOrbs`, the last one, now tints through `alpha()`, byte-identical.
 - "`text-white` only where `snow` was meant" stays with the Phase 9 rename, as §14.5 planned.
-- WebKit device projects follow with Phase 6.
+- **Real devices** (`E2E_DEVICES=1`, after Phase 6): `audit:responsive` is clean in all six areas on all eight profiles — iPhone 13, iPad Mini, iPad Pro 11 and iPad Pro 11 landscape (WebKit 26.5); Galaxy S24, Tab S4, Z Fold 7 and Tab S9 landscape (Chromium). That is 48 of 48 with no overflow and no undersized target. One iPad Mini sign-in timed out against a slow Atlas, and its re-run is clean.
 - Two operational notes:
   - a run is void if the API loses Atlas (here `getaddrinfo ENOTFOUND` mid-run), which shows as "Authentication failed" toasts and "0 competitions". Check the API's log before reading a surprising diff.
   - `appearance.test.js`'s timed transition release failed once under full-suite load and passed alone and on re-run.
