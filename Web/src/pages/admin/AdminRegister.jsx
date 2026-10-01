@@ -24,93 +24,17 @@ import { adminAPI } from '@/services/api';
 import { CompetitionProvider } from '../../contexts/CompetitionContext';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 import { FG, alpha } from '@/styles/tokens';
+import { PasswordRequirements, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength';
 
 const EASE = [0.22, 1, 0.36, 1];
 
 /**
  * Password strength indicator component
  */
-const PasswordStrengthIndicator = ({ password }) => {
-  const getStrength = (pwd) => {
-    if (!pwd) return { level: 0, label: '', color: '' };
-    
-    let strength = 0;
-    if (pwd.length >= 12) strength++;
-    if (pwd.length >= 16) strength++;
-    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++;
-    if (/\d/.test(pwd)) strength++;
-    if (/[^a-zA-Z0-9]/.test(pwd)) strength++;
-    
-    const levels = [
-      { level: 0, label: '', color: '', fg: '' },
-      { level: 1, label: 'Weak', color: '#EF4444', fg: FG.danger },
-      { level: 2, label: 'Fair', color: '#F59E0B', fg: FG.warning },
-      { level: 3, label: 'Good', color: '#10B981', fg: FG.success },
-      { level: 4, label: 'Strong', color: '#10B981', fg: FG.success },
-      { level: 5, label: 'Very Strong', color: '#059669', fg: FG.success },
-    ];
-    
-    return levels[strength];
-  };
-  
-  const strength = getStrength(password);
-  
-  if (!password) return null;
-  
-  return (
-    <div className="mt-2">
-      <div className="flex gap-1 mb-1">
-        {[1, 2, 3, 4, 5].map((level) => (
-          <div
-            key={level}
-            className="h-1 flex-1 rounded-full transition-all duration-300"
-            style={{
-              background: level <= strength.level ? strength.color : 'rgb(var(--ink) / 0.1)',
-            }}
-          />
-        ))}
-      </div>
-      {strength.label && (
-        <p className="text-xs mt-1" style={{ color: strength.fg }}>
-          Password strength: {strength.label}
-        </p>
-      )}
-    </div>
-  );
-};
 
 /**
  * Password requirements checklist component
  */
-const PasswordRequirements = ({ password }) => {
-  const requirements = [
-    { label: 'At least 12 characters', test: (pwd) => pwd.length >= 12 },
-    { label: 'Contains uppercase letter', test: (pwd) => /[A-Z]/.test(pwd) },
-    { label: 'Contains lowercase letter', test: (pwd) => /[a-z]/.test(pwd) },
-    { label: 'Contains number', test: (pwd) => /\d/.test(pwd) },
-  ];
-  
-  return (
-    <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-semibold text-fg-muted mb-2">Password requirements:</p>
-      {requirements.map((req, index) => {
-        const met = password && req.test(password);
-        return (
-          <div key={index} className="flex items-center gap-2">
-            {met ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-            ) : (
-              <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
-            )}
-            <span className={`text-xs ${met ? 'text-white/60' : 'text-fg-muted'}`}>
-              {req.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 /**
  * AdminRegisterInner - Inner component that uses theme context
@@ -414,8 +338,8 @@ const AdminRegisterInner = () => {
                     </motion.p>
                   )}
                 </AnimatePresence>
-                <PasswordStrengthIndicator password={password} />
-                <PasswordRequirements password={password} />
+                <PasswordStrengthIndicator password={password} minLength={12} strongLength={16} />
+                <PasswordRequirements password={password} minLength={12} />
               </div>
               
               {/* Confirm Password field */}

@@ -304,6 +304,13 @@ Only proven duplication is extracted, and each step must leave every screen pixe
 - **Found:** the labelled copy in the slip's and panel review's desktop header had a bare `min-h-[36px]`, so it was 36px on a touch screen from 640 to 1023. The walk measures targets below 768 only, so it never saw it. It is `tap-safe` now, like the others.
 - **Verified:** the judge visual run is pixel-identical in dark. In light, 8 pixels moved (delta 4) at one width on the untouched profile page — antialiasing. The walk passes at 375 light and 768 dark with the steppers' tap areas answering.
 
+*8.3 — the password meter.*
+- `AdminRegister` and `AddPlayerForm` each carried `PasswordStrengthIndicator` and `PasswordRequirements` → `components/auth/PasswordStrength.jsx`.
+- The copies differed only in **policy**: admin accounts need 12 characters and score length at 12/16; player accounts need 8 and score at 8/12. That is now explicit `minLength`/`strongLength`, the admin form passes 12/16, and the script checked each file's rule before handing it over.
+- `PasswordStrength.test.jsx` pins both policies.
+- `AdminRegister`'s requirement tick was still `text-green-500` (2.3:1 in light, under the 3:1 icon floor); the shared one has the light shade.
+- The public visual run is pixel-identical; the meters render only once a password is typed.
+
 **Not extracted, on purpose:**
 - `design-system/index.jsx`'s own `GlassCard`/`FadeIn`/`GradientText` differ from the `cards/`, `animations/` and `ornaments/` versions, so merging them would change pixels.
 - An `AccountControls` cluster would restyle every shell's Log out. The shared piece the shells needed — `AppearanceMenu` — already exists.
