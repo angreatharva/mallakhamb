@@ -188,6 +188,8 @@ export const measurePage = async (page, { checkTouchTargets = true } = {}) =>
            * reported as a 1x1 failure.
            */
           if (el.classList.contains('sr-only') || (cs.clip === 'rect(0px, 0px, 0px, 0px)')) continue;
+          // A disabled control takes no tap (and answers no hit test); it is measured once it is enabled.
+          if (el.disabled || el.getAttribute('aria-disabled') === 'true') continue;
           if (el.labels?.length && [...el.labels].some((l) => l.getBoundingClientRect().height >= 43.5)) continue;
           /*
            * 44px per WCAG 2.5.5 / the project's own TOUCH_TARGET.minimum,
@@ -196,6 +198,42 @@ export const measurePage = async (page, { checkTouchTargets = true } = {}) =>
            * report — the same sub-pixel slack the overflow check above allows.
            */
           if (r.height >= 43.5 && r.width >= 43.5) continue;
+          /*
+           * The tap area can be larger than the box: an absolutely-positioned
+           * ::before/::after extends it without moving the layout (the slip's
+           * Difficulty steppers). Count an extension only where a tap at its
+           * edge really resolves to this control — elementFromPoint, measured
+           * with the control scrolled into view and the scroll put back.
+           */
+          const hit = (() => {
+            let { top, bottom, left, right } = r;
+            for (const pseudo of ['::before', '::after']) {
+              const ps = getComputedStyle(el, pseudo);
+              if (ps.content === 'none' || ps.position !== 'absolute') continue;
+              const t = parseFloat(ps.top); const b = parseFloat(ps.bottom);
+              const l = parseFloat(ps.left); const rt = parseFloat(ps.right);
+              if (t < 0) top = Math.min(top, r.top + t);
+              if (b < 0) bottom = Math.max(bottom, r.bottom - b);
+              if (l < 0) left = Math.min(left, r.left + l);
+              if (rt < 0) right = Math.max(right, r.right - rt);
+            }
+            if (top === r.top && bottom === r.bottom && left === r.left && right === r.right) return null;
+            const [sx, sy] = [window.scrollX, window.scrollY];
+            el.scrollIntoView({ block: 'center', inline: 'center' });
+            const now = el.getBoundingClientRect();
+            const [dy, dx] = [now.top - r.top, now.left - r.left];
+            const lands = (x, y) => { const h = document.elementFromPoint(x, y); return !!h && (h === el || el.contains(h)); };
+            const cx = (now.left + now.right) / 2; const cy = (now.top + now.bottom) / 2;
+            // Under a dialog its own centre answers to the dialog: not a target at this moment.
+            if (!lands(cx, cy)) { window.scrollTo(sx, sy); return { w: Infinity, h: Infinity }; }
+            if (top < r.top && !lands(cx, top + dy + 1)) top = r.top;
+            if (bottom > r.bottom && !lands(cx, bottom + dy - 1)) bottom = r.bottom;
+            if (left < r.left && !lands(left + dx + 1, cy)) left = r.left;
+            if (right > r.right && !lands(right + dx - 1, cy)) right = r.right;
+            window.scrollTo(sx, sy);
+            return { w: right - left, h: bottom - top };
+          })();
+          if (hit && hit.h >= 43.5 && hit.w >= 43.5) continue;
           // Inline links inside a paragraph are text, not tap targets.
           if (el.tagName === 'A' && el.closest('p')) continue;
           const key = describe(el);

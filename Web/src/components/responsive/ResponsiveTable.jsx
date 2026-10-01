@@ -219,7 +219,15 @@ export const ResponsiveScoringTable = ({
   className = '',
   ...props
 }) => {
-  const { isMobile } = useResponsive();
+  /*
+   * Cards below 1024, the table from 1024 up. Measured (e2e/responsive-score-
+   * sheet.spec.js): at 768 the eleven divided columns leave every field too
+   * narrow for a "10.00" mark or a "00:00" time, so all 48 were clipped; at
+   * 1024 and wider, none are. The cards carry every field of every seat — no
+   * column is dropped (§15.1) — at 16px on a touch screen.
+   */
+  const { isMobile, isTablet } = useResponsive();
+  const useCards = isMobile || isTablet;
 
   const fieldMap = {
     'Senior Judge': 'seniorJudge',
@@ -249,10 +257,11 @@ export const ResponsiveScoringTable = ({
    */
   const panelSize = seatedPanelSize || judges.length || undefined;
 
-  if (isMobile) {
+  if (useCards) {
     return (
       <ResponsiveContainer className={className} {...props}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* One card per athlete on a phone; two side by side on a tablet. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {players.map(player => (
             <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 14, padding: 16 }}>
               {/* Header */}

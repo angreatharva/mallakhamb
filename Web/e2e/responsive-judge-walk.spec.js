@@ -247,6 +247,28 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
     }
 
     /*
+     * The Difficulty steppers are 29px boxes with 44px tap areas (an inward
+     * ::before over the count). Tap OUTSIDE each box, inside its extension,
+     * and the count must move: +1 above "+", then -1 below "−" — net zero, in
+     * this throwaway browser context.
+     */
+    await page.getByRole('button', { name: 'Difficulty', exact: true }).first().click().catch(() => {});
+    const plus = page.getByRole('button', { name: /^Increase /i }).first();
+    const minus = page.getByRole('button', { name: /^Decrease /i }).first();
+    if (await plus.count()) {
+      await plus.scrollIntoViewIfNeeded();
+      const countOf = () => plus.locator('xpath=preceding-sibling::span[1]').innerText();
+      const before = Number(await countOf());
+      const p = await plus.boundingBox();
+      await page.mouse.click(p.x + p.width / 2, p.y - 10);
+      expect(Number(await countOf()), 'a tap just above "+" (inside its tap area) did not count').toBe(before + 1);
+      const m = await minus.boundingBox();
+      await page.mouse.click(m.x + m.width / 2, m.y + m.height + 10);
+      expect(Number(await countOf()), 'a tap just below "−" (inside its tap area) did not count').toBe(before);
+      console.log('  stepper tap areas: +/− answer 10px outside their boxes');
+    }
+
+    /*
      * The COP viewer is the slip's one full-screen dialog. Opened, it must
      * freeze the slip behind it (the counted body lock) and read in either
      * appearance (it is a dark island); closed, the slip must scroll again.

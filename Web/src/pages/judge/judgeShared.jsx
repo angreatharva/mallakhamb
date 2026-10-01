@@ -147,8 +147,8 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           style={{ borderColor: 'rgb(var(--ink) / 0.12)', background: 'rgb(var(--ink) / 0.04)' }}>
           <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
             onClick={() => onChange(Math.max(0, n - 1))}
-            className="flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-white/10"
-            style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : J.purpleLight, borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-white/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[15px]"
+            style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : DATA_COLORS.purpleSoft, borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             −
           </button>
           <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-white select-none">
@@ -156,7 +156,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           </span>
           <button type="button" aria-label={`Increase ${name}`}
             onClick={() => onChange(n + 1)}
-            className="flex-1 flex items-center justify-center text-lg font-black select-none active:bg-white/10"
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-white/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[15px]"
             style={{ color: DATA_COLORS.purpleSoft, borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             +
           </button>

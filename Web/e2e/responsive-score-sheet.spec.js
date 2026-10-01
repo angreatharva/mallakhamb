@@ -63,6 +63,8 @@ for (const width of WIDTHS) {
 
     await expect(page).toHaveURL(/\/admin\/scoring/);
     await page.getByText('Loading scoring page…').waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    // The frame renders before the athletes do; measure the sheet, not its skeleton.
+    await page.locator('input[inputmode="decimal"]').first().waitFor({ timeout: 30_000 });
     await settle(page);
 
     const measure = () => page.evaluate(() => {
@@ -79,6 +81,23 @@ for (const width of WIDTHS) {
           const input = document.querySelector('input[inputmode="decimal"]');
           return input ? parseFloat(getComputedStyle(input).fontSize) : null;
         })(),
+        // A field too narrow for the widest thing it will hold — a mark of "10.00", a time of "00:00" —
+        // shows it clipped. Measured in the field's own font, against its inner width.
+        clippedFields: (() => {
+          const ctx = document.createElement('canvas').getContext('2d');
+          // The sheet's own fields: decimal marks, and the "00:00" time field beside them.
+          const fields = [...document.querySelectorAll('input[type="text"]')]
+            .filter((input) => input.inputMode === 'decimal' || input.placeholder === '00:00');
+          return fields.filter((input) => {
+            const cs = getComputedStyle(input);
+            const text = input.inputMode === 'decimal' ? '10.00' : '00:00';
+            if (!input.getClientRects().length) return false;
+            ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+            const need = ctx.measureText(text).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+            return need > input.clientWidth + 0.5;
+          }).length;
+        })(),
+        layout: document.querySelector('table') ? 'table' : 'cards',
       };
     });
 
