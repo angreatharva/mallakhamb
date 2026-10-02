@@ -456,7 +456,7 @@ const JudgePanelReview = () => {
                 <button
                   type="button"
                   onClick={goBackToScoring}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
                   style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft }}
                 >
                   <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
@@ -570,11 +570,12 @@ const JudgePanelReview = () => {
                         <motion.button
                           type="button"
                           onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0"
+                          className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0"
                           style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.08)' }}
                           whileHover={{ background: 'rgba(168,85,247,0.2)' }}
                           whileTap={{ scale: 0.9 }}
                           title={`Edit ${judge} score`}
+                          aria-label={`Edit ${judge} score`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </motion.button>

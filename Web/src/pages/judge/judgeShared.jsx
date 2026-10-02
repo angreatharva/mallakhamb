@@ -107,7 +107,10 @@ const PICKER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 export const DifficultyPicker = ({ cls, value, count, onChange, compact = false }) => {
   const name = `${cls} - Class - ${value.toFixed(2)}`;
   const n = Number(count) || 0;
-  const cell = compact ? 'h-9 text-sm' : 'h-11 text-base';
+  // Compact (the Senior Judge's edit dialog) only with a mouse. On touch it is the slip's own size: at h-9 the
+  // count between − and + shrank to ~20px, the two 15px tap extensions overlapped there, and a tap just below
+  // − landed on + (drawn later, so on top).
+  const cell = compact ? 'h-11 text-base mouse:h-9 mouse:text-sm' : 'h-11 text-base';
   return (
     <div>
       <div className="flex items-baseline justify-between mb-2">
@@ -145,11 +148,11 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
         </div>
 
         {/* − on top, the count, + below — as drawn */}
-        <div className={`${compact ? 'w-12' : 'w-14'} flex-shrink-0 flex flex-col rounded-xl border overflow-hidden`}
+        <div className={`${compact ? 'w-14 mouse:w-12' : 'w-14'} flex-shrink-0 flex flex-col rounded-xl border overflow-hidden`}
           style={{ borderColor: 'rgb(var(--ink) / 0.12)', background: 'rgb(var(--ink) / 0.04)' }}>
           <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
             onClick={() => onChange(Math.max(0, n - 1))}
-            className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[15px]"
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[16px]"
             style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : DATA_COLORS.purpleSoft, borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             −
           </button>
@@ -158,7 +161,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           </span>
           <button type="button" aria-label={`Increase ${name}`}
             onClick={() => onChange(n + 1)}
-            className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[15px]"
+            className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[16px]"
             style={{ color: DATA_COLORS.purpleSoft, borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             +
           </button>
@@ -318,7 +321,8 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
+                aria-label="Close"
+                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
                 style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
@@ -501,7 +505,8 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
+                aria-label="Close"
+                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
                 style={{ color: 'var(--fg-muted)' }}
               >
                 <X className="w-4 h-4" />
@@ -689,7 +694,8 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-ink/5"
+                  aria-label="Close"
+                  className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5"
                   style={{ color: 'var(--fg-muted)' }}
                 >
                   <X className="w-4 h-4" />
@@ -698,9 +704,9 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
             </div>
 
             {/* Scrollable body */}
-            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+            <div className="overflow-y-auto flex-1 p-3 sm:p-5 space-y-4">
               {/* Difficulty */}
-              <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+              <div className="rounded-xl border p-3 sm:p-4 space-y-3" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-ink text-sm">Difficulty</h4>
                   <span className="text-lg font-black" style={{ color: FG.warning }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>

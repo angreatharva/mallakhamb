@@ -12,6 +12,7 @@ import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
 import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { J } from './judgeShared';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides
@@ -223,7 +224,7 @@ const JudgeSequence = () => {
           <button
             type="button"
             onClick={() => navigate('/judge/dashboard')}
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
+            className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
             aria-label="Back to dashboard">
             <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
           </button>
@@ -235,7 +236,10 @@ const JudgeSequence = () => {
             <p className="text-ink font-bold text-sm leading-tight truncate">Running Order</p>
             <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
           </div>
-          {saving && <span className="ml-auto text-xs text-fg-muted">Saving…</span>}
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            {saving && <span className="text-xs text-fg-muted">Saving…</span>}
+            <AppearanceMenu />
+          </div>
         </div>
       </header>
 
