@@ -98,6 +98,11 @@ for (const [area, config] of Object.entries(ROUTES_BY_AREA)) {
         await settle(page);
         if (route.prepare) await route.prepare(page).catch(() => {});
         await page.waitForTimeout(600); // entrance fades settle before colours are read
+        // A fixed pause alone is a race: a toast raised late is still fading in when its colours are read (white
+        // text measured as #484848 on the toast's #363636). Wait out every finite animation; spinners never end.
+        await page.waitForFunction(() => document.getAnimations().every((a) => (
+          a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity
+        )), null, { timeout: 5_000 }).catch(() => {});
         const { checked, unmeasured, failures } = await audit(page);
         const seen = new Set();
         const unique = failures.filter((f) => { const k = `${f.el}|${f.fg}|${f.bg}`; if (seen.has(k)) return false; seen.add(k); return true; });
