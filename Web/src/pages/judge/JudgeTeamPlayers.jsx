@@ -452,7 +452,7 @@ const JudgeTeamPlayers = () => {
                     key={player.id}
                     type="button"
                     onClick={() => handlePlayerSelect(player)}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
+                    className={`w-full flex items-center justify-between gap-3 p-4 rounded-xl border transition-all group ${
                       isLocked
                         ? 'bg-green-500/10 border-green-500/30 cursor-default'
                         : isSubmitted
@@ -460,7 +460,7 @@ const JudgeTeamPlayers = () => {
                         : 'hover:bg-purple-500/15 border-ink/10 hover:border-purple-500/30 bg-ink/[0.02] cursor-pointer'
                     }`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                       {/* Running position within the team. The lot number, when
                           one was drawn, sits underneath — the two diverge as
                           soon as the panel re-sequences. */}
@@ -474,7 +474,7 @@ const JudgeTeamPlayers = () => {
                           </span>
                         )}
                       </span>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
+                      <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center border transition-colors ${
                         isLocked
                           ? 'bg-green-500/20 border-green-500/40'
                           : isSubmitted
@@ -489,8 +489,8 @@ const JudgeTeamPlayers = () => {
                           <User className="w-5 h-5 text-ink/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         )}
                       </div>
-                      <div className="text-left">
-                        <p className="font-bold text-base text-ink flex items-center gap-2">
+                      <div className="text-left min-w-0">
+                        <p className="font-bold text-base text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
                           {player.name}
                           {isLocked ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
@@ -510,16 +510,23 @@ const JudgeTeamPlayers = () => {
                             ? ` · Final ${Number(player.finalScore).toFixed(2)}`
                             : ''}
                         </p>
+                        {/* Below sm the apparatus sits under the name: beside it, a three-apparatus list
+                            squeezed the name and age group into a one-letter column on a phone. */}
+                        {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
+                          <span className="sm:hidden mt-1.5 inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
+                            {player.apparatus[selectedCompetitionType].join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
+                        <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5 text-right">
                           {player.apparatus[selectedCompetitionType].join(', ')}
                         </span>
                       )}
                       {isLocked ? (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                        <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center"
                           style={{ background: 'rgba(34,197,94,0.2)' }}>
                           <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
