@@ -3,7 +3,13 @@ services:
   - type: web
     name: mallakhamb-server
     env: node
-    region: oregon
+    # Singapore: Render's nearest region to India. Keep the MongoDB Atlas
+    # cluster in Singapore too (ap-southeast-1); every request crosses to it.
+    #
+    # Render cannot move an existing service between regions — a Blueprint sync
+    # does not relocate it. A service created in another region has to be
+    # replaced by a new one created from this file.
+    region: singapore
     plan: free
     rootDir: Server
     buildCommand: npm install

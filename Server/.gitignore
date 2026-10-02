@@ -14,6 +14,7 @@ coverage/
 # Environment and dependencies
 .env
 .env.production
+.env.mumbai
 node_modules/
 dist
 dist-ssr

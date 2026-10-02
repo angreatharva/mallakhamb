@@ -5,10 +5,17 @@
  *   node scripts/syncDatabase.js --from=prod --to=dev --commit
  *   node scripts/syncDatabase.js --from=dev  --to=prod --commit  # asks twice
  *   node scripts/syncDatabase.js --from=prod --to=dev --only=competitions,teams
+ *   node scripts/syncDatabase.js --from=mumbai-dev  --to=dev  --commit
+ *   node scripts/syncDatabase.js --from=mumbai-prod --to=prod --commit  # asks twice
  *
  * `prod` and `dev` are read from MONGODB_URI in `.env.production` and `.env`,
  * so the two ends are the ones already configured rather than pasted on a
  * command line where a typo points at the wrong cluster.
+ *
+ * `mumbai-dev` and `mumbai-prod` are the original Mumbai cluster, which the
+ * app left for Singapore. They come from DEV_MONGODB_URI and PROD_MONGODB_URI
+ * in `.env.mumbai` (gitignored), kept so the two clusters can be synced while
+ * both are alive.
  *
  * WHAT IT DOES
  *
@@ -41,26 +48,40 @@ const SERVER_DIR = path.join(__dirname, '..');
 const BATCH = 500;
 
 /**
- * Read MONGODB_URI out of an env file without loading it into the process —
+ * Read one variable out of an env file without loading it into the process —
  * `.env` is already loaded, and loading a second one would overwrite it.
  *
  * @param {string} file
+ * @param {string} key
  * @returns {string|null}
  */
-function uriFrom(file) {
+function uriFrom(file, key) {
   const full = path.join(SERVER_DIR, file);
   if (!fs.existsSync(full)) return null;
-  const match = /^MONGODB_URI=(.*)$/m.exec(fs.readFileSync(full, 'utf8'));
-  return match ? match[1].trim() : null;
+  const match = new RegExp(`^${key}=(.*)$`, 'm').exec(fs.readFileSync(full, 'utf8'));
+  return match ? match[1].trim().replace(/^"(.*)"$/, '$1') : null;
 }
 
+/** `prod: true` ends cost a second, typed confirmation to write to. */
 const ENDS = {
-  dev: { file: '.env', label: 'dev' },
-  prod: { file: '.env.production', label: 'prod' },
+  dev: { file: '.env', key: 'MONGODB_URI', prod: false },
+  prod: { file: '.env.production', key: 'MONGODB_URI', prod: true },
+  'mumbai-dev': { file: '.env.mumbai', key: 'DEV_MONGODB_URI', prod: false },
+  'mumbai-prod': { file: '.env.mumbai', key: 'PROD_MONGODB_URI', prod: true },
 };
 
 const maskUri = (uri) => String(uri).replace(/\/\/[^@]*@/, '//***@');
-const dbNameOf = (uri) => String(uri).split('/').pop().split('?')[0];
+/** Path segment after the host; '' when the URI names no database. */
+const dbNameOf = (uri) => {
+  const afterScheme = String(uri).replace(/^[a-z+]+:\/\//i, '');
+  const slash = afterScheme.indexOf('/');
+  return slash === -1 ? '' : afterScheme.slice(slash + 1).split('?')[0];
+};
+/** Cluster host(s) + database — what actually identifies a database. */
+const targetOf = (uri) => {
+  const afterScheme = String(uri).replace(/^[a-z+]+:\/\//i, '').replace(/^[^@]*@/, '');
+  return `${afterScheme.split(/[/?]/)[0].toLowerCase()}/${dbNameOf(uri)}`;
+};
 
 /** @param {string} question @returns {Promise<string>} */
 function ask(question) {
@@ -143,7 +164,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (!ENDS[args.from] || !ENDS[args.to]) {
-    console.error('Usage: --from=<dev|prod> --to=<dev|prod> [--only=a,b] [--commit]');
+    console.error(`Usage: --from=<${Object.keys(ENDS).join('|')}> --to=<same> [--only=a,b] [--commit]`);
     process.exit(1);
   }
   if (args.from === args.to) {
@@ -151,12 +172,21 @@ async function main() {
     process.exit(1);
   }
 
-  const sourceUri = uriFrom(ENDS[args.from].file);
-  const destinationUri = uriFrom(ENDS[args.to].file);
+  const sourceUri = uriFrom(ENDS[args.from].file, ENDS[args.from].key);
+  const destinationUri = uriFrom(ENDS[args.to].file, ENDS[args.to].key);
 
   for (const [end, uri] of [[args.from, sourceUri], [args.to, destinationUri]]) {
     if (!uri) {
-      console.error(`No MONGODB_URI in ${ENDS[end].file} — cannot resolve "${end}".`);
+      console.error(`No ${ENDS[end].key} in ${ENDS[end].file} — cannot resolve "${end}".`);
+      process.exit(1);
+    }
+    /*
+     * A URI with no database path connects to `test`. Copying from it reads
+     * nothing; copying to it fills a database the app never opens.
+     */
+    if (!dbNameOf(uri)) {
+      console.error(`${ENDS[end].key} in ${ENDS[end].file} names no database `
+        + `(${maskUri(uri)}). Add one, e.g. ".../BRMC_dev".`);
       process.exit(1);
     }
   }
@@ -166,8 +196,11 @@ async function main() {
    * database until recently, and with both ends resolving to one place this
    * would drop a collection and copy it onto itself — reading from a cursor
    * whose collection had just been dropped.
+   *
+   * Cluster AND name: BRMC_dev on Mumbai and BRMC_dev on Singapore are two
+   * databases, and copying between them is the point of the mumbai-* ends.
    */
-  if (sourceUri === destinationUri || dbNameOf(sourceUri) === dbNameOf(destinationUri)) {
+  if (sourceUri === destinationUri || targetOf(sourceUri) === targetOf(destinationUri)) {
     console.error('Both ends resolve to the same database:');
     console.error(`  ${ENDS[args.from].file}: ${maskUri(sourceUri)}`);
     console.error(`  ${ENDS[args.to].file}: ${maskUri(destinationUri)}`);
@@ -210,7 +243,7 @@ async function main() {
 
       // Writing toward prod is the direction that destroys other people's work,
       // so it costs a second, typed confirmation.
-      if (args.to === 'prod') {
+      if (ENDS[args.to].prod) {
         const name = dbNameOf(destinationUri);
         const typed = await ask(`  Destination is PROD. Type the database name ("${name}") to confirm: `);
         if (typed !== name) { console.log('  Cancelled.'); await source.close(); await destination.close(); return; }
