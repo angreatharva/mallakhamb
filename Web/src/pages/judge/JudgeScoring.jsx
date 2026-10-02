@@ -282,6 +282,16 @@ const JudgeSlip = () => {
   const touchStartX = useRef(null);
   const touchEndX = useRef(null);
 
+  // A new tab opens at its top. Without this the page kept the previous tab's
+  // scroll offset, so switching from the bottom of Combination landed the
+  // judge half-way down Exec & Orig. Skips the first render so a refresh or
+  // an edit does not jump the page.
+  const tabMountedRef = useRef(false);
+  useEffect(() => {
+    if (!tabMountedRef.current) { tabMountedRef.current = true; return; }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [activeMobileTab]);
+
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
   };

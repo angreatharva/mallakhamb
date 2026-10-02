@@ -474,8 +474,9 @@ for (const meet of MEETS) {
                   await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
                 }
 
-                // Anything blocking means Final Submit is not offered.
-                if (plan.expectMismatch || plan.expectTolerance) {
+                // A slip mismatch locks Final Submit. A tolerance breach alone
+                // does not — the chief may final submit on the base score.
+                if (plan.expectMismatch) {
                   await expect(finalSubmitButton(page)).toBeDisabled();
                 }
 

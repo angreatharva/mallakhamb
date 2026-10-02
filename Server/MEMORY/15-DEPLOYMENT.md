@@ -13,7 +13,7 @@ last_verified: 2026-09-23
 
 Two Render services from one `render.yaml` at the repo root:
 
-- **`mallakhamb-server`** — `type: web`, `env: node`, `region: oregon`,
+- **`mallakhamb-server`** — `type: web`, `env: node`, `region: singapore`,
   `plan: free`, `rootDir: Server`, `buildCommand: npm install`,
   `startCommand: npm start` (→ `scripts/startup.js`, see
   [01-ARCHITECTURE.md](01-ARCHITECTURE.md)).

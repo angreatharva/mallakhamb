@@ -33,7 +33,7 @@ import {
 } from '@/utils/scoring/copRules';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
-  SCORING_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, scoringCacheKey,
+  SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey,
   JudgeLogoutButton,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
@@ -117,9 +117,44 @@ const JudgePanelReview = () => {
   const isToleranceJudge = panelMismatch.toleranceOffJudges.includes(myJudgeType);
   const shouldSeeTolerance = panelMismatch.hasToleranceBreach && (isSeniorJudge || isToleranceJudge);
 
+  /*
+   * Fingerprints of what each alert is ABOUT, so the dialogs follow the live
+   * panel feed instead of only the first read:
+   *   - a slip that changes over the socket and still disagrees re-opens the
+   *     alert, even if an earlier version of it was dismissed;
+   *   - a disagreement resolved over the socket closes the dialog, rather than
+   *     leaving it open with nothing left to list.
+   * Section totals only: the 10 s re-read replaces detailed slips with
+   * total-only ones, and keying on checklist detail would re-pop every read.
+   */
+  const slipFingerprint = (seats, read) => seats
+    .map((jt) => (panelScores[jt] ? Number(read(panelScores[jt]) ?? 0).toFixed(2) : '-'))
+    .join('|');
+  // A non-Senior judge is only shown their own slip against the chief's, so
+  // another judge's edit must not re-open their dialog.
+  const alertSeats = isSeniorJudge ? PANEL_TYPES : ['Senior Judge', myJudgeType];
+  const mismatchKey = shouldSeeMismatch
+    ? [
+        slipFingerprint(alertSeats, (e) => e.breakdown?.difficulty?.total),
+        slipFingerprint(alertSeats, (e) => e.breakdown?.combination?.total),
+        panelMismatch.disagreeingJudges.join(','),
+      ].join('#')
+    : '';
+  const toleranceKey = shouldSeeTolerance ? slipFingerprint(alertSeats, (e) => e.score) : '';
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
+
+  useEffect(() => {
+    if (!mismatchKey) setShowMismatchModal(false);
+    else setMismatchDismissed(false);
+  }, [mismatchKey]);
+
+  useEffect(() => {
+    if (!toleranceKey) setShowToleranceModal(false);
+    else setToleranceDismissed(false);
+  }, [toleranceKey]);
 
   // Surface mismatches as soon as the panel data lands
   useEffect(() => {
@@ -258,11 +293,11 @@ const JudgePanelReview = () => {
       setShowMismatchModal(true);
       return;
     }
-    // COP §3.4 — the panel is not finished while the execution average and the
-    // chief's mark are further apart than the tolerance allows.
-    if (panelMismatch.hasToleranceBreach) {
-      toast.error('Resolve the tolerance breach before final submit');
-      setToleranceDismissed(false);
+    // COP §3.4 — a breach is scored on the base score, (execution average +
+    // Senior) ÷ 2. The Senior Judge must have acknowledged the tolerance
+    // dialog (tapped Understood) first, so the gap was on screen before they
+    // lock the panel on it; until then the button re-opens the dialog.
+    if (panelMismatch.hasToleranceBreach && !toleranceDismissed) {
       setShowToleranceModal(true);
       return;
     }
@@ -336,7 +371,9 @@ const JudgePanelReview = () => {
         });
       }
       setFinalized(true);
-      toast.success(`Final score ${calc.average.toFixed(2)} locked for ${selectedPlayer.name}`);
+      toast.success(calc.baseScoreApplied
+        ? `Base score ${calc.average.toFixed(2)} locked for ${selectedPlayer.name}`
+        : `Final score ${calc.average.toFixed(2)} locked for ${selectedPlayer.name}`);
       // Navigation back to the team page is handled by the `finalized` effect
       // above, so every judge (not just this one) redirects the same way.
     } catch (error) {
@@ -598,15 +635,20 @@ const JudgePanelReview = () => {
             {canFinalSubmit && (
               <motion.button
                 type="button"
-                onClick={finalizePanelScore}
-                disabled={finalizing || panelMismatch.hasBlockingIssue}
+                // Only a slip mismatch locks this button. On a tolerance breach
+                // it becomes "Final Submit with Base Score" (COP §3.4).
+                onClick={() => finalizePanelScore()}
+                disabled={finalizing || panelMismatch.hasBlockingMismatch}
                 className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-ink font-bold min-h-[52px]"
                 style={{
-                  background: panelMismatch.hasBlockingIssue
+                  background: panelMismatch.hasBlockingMismatch
                     ? 'rgb(var(--ink) / 0.1)'
-                    : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
-                  color: panelMismatch.hasBlockingIssue ? undefined : '#0A0A0A',
-                  opacity: finalizing || panelMismatch.hasBlockingIssue ? 0.6 : 1,
+                    : panelMismatch.hasToleranceBreach
+                      ? 'linear-gradient(135deg, #F59E0B, #D97706)'
+                      : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
+                  // Near-black on the bright amber and green fills (D6); ink on the locked tint.
+                  color: panelMismatch.hasBlockingMismatch ? undefined : '#0A0A0A',
+                  opacity: finalizing || panelMismatch.hasBlockingMismatch ? 0.6 : 1,
                 }}
                 whileHover={reduced || finalizing ? {} : { scale: 1.01 }}
                 whileTap={reduced || finalizing ? {} : { scale: 0.98 }}
@@ -620,7 +662,9 @@ const JudgePanelReview = () => {
                 ) : (
                   <>
                     <Lock className="w-4 h-4" aria-hidden="true" />
-                    Final Submit
+                    {panelMismatch.hasToleranceBreach && !panelMismatch.hasBlockingMismatch
+                      ? `Final Submit with Base Score ${Number(panelMismatch.toleranceInfo?.baseScore ?? 0).toFixed(2)}`
+                      : 'Final Submit'}
                   </>
                 )}
               </motion.button>
@@ -628,19 +672,19 @@ const JudgePanelReview = () => {
             {isSeniorJudge && !allPanelSubmitted && !finalized && (
               <p className="flex-1 text-center text-xs self-center" style={{ color: 'var(--fg-muted)' }}>
                 Final Submit unlocks when all {effectivePanelSize || 'panel'} judges have submitted
-                {panelMismatch.hasBlockingIssue ? ' and the alerts above are resolved' : ''}
+                {panelMismatch.hasBlockingMismatch ? ' and the mismatch above is resolved' : ''}
               </p>
             )}
             {/* Why the button next to this is greyed out. Without it a Senior
                 Judge with a full panel sees a dead button and no reason. */}
-            {canFinalSubmit && panelMismatch.hasBlockingIssue && (
+            {canFinalSubmit && panelMismatch.hasBlockingMismatch && (
               <p className="flex-1 text-center text-xs self-center" style={{ color: FG.warning }}>
-                Final Submit is locked —{' '}
-                {panelMismatch.hasBlockingMismatch && panelMismatch.hasToleranceBreach
-                  ? 'resolve the slip mismatch and the tolerance breach'
-                  : panelMismatch.hasBlockingMismatch
-                    ? 'resolve the Difficulty / Combination mismatch'
-                    : 'resolve the tolerance breach'}
+                Final Submit is locked — resolve the Difficulty / Combination mismatch
+              </p>
+            )}
+            {canFinalSubmit && !panelMismatch.hasBlockingMismatch && panelMismatch.hasToleranceBreach && (
+              <p className="flex-1 text-center text-xs self-center" style={{ color: FG.warning }}>
+                Outside tolerance — resolve the gap, or final submit on the COP §3.4 base score
               </p>
             )}
             {!isSeniorJudge && !finalized && (
@@ -661,8 +705,10 @@ const JudgePanelReview = () => {
       </main>
 
       {/* Modals */}
+      {/* Also gated on the live condition, so a mismatch resolved over the
+          socket never flashes an empty dialog before the effect closes it. */}
       <MismatchModal
-        isOpen={showMismatchModal}
+        isOpen={showMismatchModal && shouldSeeMismatch}
         onClose={() => { setShowMismatchModal(false); setMismatchDismissed(true); }}
         panelMismatch={panelMismatch}
         panelScores={panelScores}
@@ -671,7 +717,7 @@ const JudgePanelReview = () => {
         judgeNameMap={judgeNameMap}
       />
       <ToleranceModal
-        isOpen={showToleranceModal}
+        isOpen={showToleranceModal && shouldSeeTolerance}
         onClose={() => { setShowToleranceModal(false); setToleranceDismissed(true); }}
         panelMismatch={panelMismatch}
         panelScores={panelScores}

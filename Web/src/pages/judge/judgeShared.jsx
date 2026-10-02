@@ -94,7 +94,9 @@ export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 // One element class (A 0.20, B 0.40, C 0.60): a 1–10 grid to set the count in
 // a single tap, and a vertical − / count / + stepper beside it for anything
 // the grid does not cover (0, or more than 10). Tapping the number already
-// chosen clears it back to 0.
+// chosen keeps it — it used to clear back to 0, and a second tap (or a
+// double-tap on a phone) wiped the count the judge had just picked. Clearing
+// is the − stepper's job.
 //
 // Accessible names are kept stable for the e2e flows: the stepper buttons are
 // "Increase A - Class - 0.20" / "Decrease …" (Web/e2e/support/scoring-flows.js)
@@ -126,7 +128,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
                 type="button"
                 aria-label={`${name}: ${num}`}
                 aria-pressed={selected}
-                onClick={() => onChange(selected ? 0 : num)}
+                onClick={() => { if (!selected) onChange(num); }}
                 className={`${cell} rounded-xl border font-black tabular-nums select-none transition-[background-color,border-color,color,transform] duration-150 active:scale-95`}
                 style={{
                   background: selected ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.03)',
@@ -245,10 +247,12 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
   const orderedEntries = PANEL_TYPES
     .filter((jt) => panelScores?.[jt])
     .map((jt) => [jt, panelScores[jt]]);
-  // Highlighted as "off": the judges whose SLIP differs from the chief's. A
-  // judge who only sits outside tolerance recorded the same routine and does
+  // Highlighted as "off", per section: a judge is red under Difficulty only
+  // when THEIR difficulty differs from the chief's, and under Combination only
+  // when their combination does. SR 2.40 / J1 2.40 / J2 3.20 → only J2 is red.
+  // A judge who only sits outside tolerance recorded the same routine and does
   // not belong in this dialog — they are named in the tolerance one.
-  const offJudges = panelMismatch.disagreeingJudges || [];
+  const isOff = (jt, section) => !!panelMismatch.judgeMismatchDetails?.[jt]?.[section];
   const seniorEntry = panelScores?.['Senior Judge'];
   const myEntry = myJudgeType ? panelScores?.[myJudgeType] : null;
   const myMismatch = myJudgeType ? panelMismatch.judgeMismatchDetails?.[myJudgeType] : null;
@@ -347,7 +351,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                         <span
                           key={jt}
                           className="text-xs px-2 py-1 rounded-lg"
-                          style={offJudges.includes(jt)
+                          style={isOff(jt, 'combination')
                             ? { background: 'rgba(239,68,68,0.15)', color: FG.danger }
                             : { background: 'rgb(var(--ink) / 0.06)', color: 'rgb(var(--ink) / 0.7)' }}
                         >
@@ -382,7 +386,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                         <span
                           key={jt}
                           className="text-xs px-2 py-1 rounded-lg"
-                          style={offJudges.includes(jt)
+                          style={isOff(jt, 'difficulty')
                             ? { background: 'rgba(239,68,68,0.15)', color: FG.danger }
                             : { background: 'rgb(var(--ink) / 0.06)', color: 'rgb(var(--ink) / 0.7)' }}
                         >
@@ -417,7 +421,9 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                 whileHover={{ filter: 'brightness(1.1)' }}
                 whileTap={{ scale: 0.97 }}
               >
-                Understood — Dismiss
+                {/* The Senior Judge resolves a mismatch by calling the off judges
+                    over; everyone else just acknowledges it. */}
+                {isSeniorJudge ? 'Understood — Call Judges' : 'Understood — Dismiss'}
               </motion.button>
             </div>
           </motion.div>
@@ -430,13 +436,16 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
 // ─── Tolerance Modal ──────────────────────────────────────────────────────────
 //
 // COP §3.4: the execution average and the Senior Judge's mark must agree to
-// within the tolerance for that score band. When they do not, the panel is not
-// finished — this dialog says so, and Final Submit stays locked until the gap
-// closes (see JudgePanelReview.finalizePanelScore).
+// within the tolerance for that score band. When they do not, this dialog says
+// so (see JudgePanelReview.finalizePanelScore).
 //
 // Deliberately shaped like MismatchModal so the two read as the same kind of
 // alert, and coloured amber rather than red so a judge can tell which one they
 // are looking at without reading the heading.
+//
+// The Senior Judge may also close the panel as it stands: COP §3.4 scores a
+// breach on the base score, (execution average + Senior) ÷ 2. Once they tap
+// Understood, Panel Review's button reads "Final Submit with Base Score".
 export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap }) => {
   if (!isOpen) return null;
   const amber = '#F59E0B';
@@ -570,14 +579,15 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: 'rgb(var(--ink) / 0.08)', color: 'var(--fg-muted)' }}
               >
                 {isSeniorJudge
-                  ? `Final Submit stays locked until the gap is within tolerance. Adjust a judge's slip with the pencil on their card, or have them resubmit. Left unresolved, COP §3.4 would score this on the base score ${num(info.baseScore)} — (execution average + Senior) ÷ 2.`
-                  : `Final Submit is locked for the Senior Judge until this is resolved. Re-check your marks, or contact the Senior Judge.`}
+                  ? `Adjust a judge's slip with the pencil on their card, or have them resubmit. Or close the panel as it stands: COP §3.4 scores it on the base score ${num(info.baseScore)} — (execution average ${num(info.executionAvg)} + Senior ${num(info.seniorScore)}) ÷ 2. After Understood, the button below reads "Final Submit with Base Score".`
+                  : `The Senior Judge will resolve this or final submit on the base score. Re-check your marks, or contact the Senior Judge.`}
               </div>
             </div>
 
             {/* Footer */}
             <div className="px-5 py-4 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
               <motion.button
+                type="button"
                 onClick={onClose}
                 className="w-full py-3 rounded-xl font-bold text-sm text-ink"
                 style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}
