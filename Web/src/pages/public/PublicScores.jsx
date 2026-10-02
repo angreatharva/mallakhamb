@@ -268,8 +268,8 @@ const PublicScores = () => {
       {/* Sticky header */}
       <header className="sticky top-0 z-40 border-b"
         style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
-        <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-2 min-[360px]:gap-4">
+          <div className="flex items-center gap-2 min-[360px]:gap-4">
             <Link to="/"
               className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] tap-safe justify-center px-2 rounded-xl hover:bg-ink/5"
               style={{ color: 'rgb(var(--ink) / 0.6)' }}
@@ -286,7 +286,7 @@ const PublicScores = () => {
           <div className="flex items-center gap-2">
           {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
             <button onClick={handleClearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-ink/5"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-ink/5"
               style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}>
               <X className="w-3.5 h-3.5" aria-hidden="true" />
               Clear

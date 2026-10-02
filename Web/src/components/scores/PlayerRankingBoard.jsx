@@ -210,22 +210,26 @@ const PlayerRankingBoard = ({ players }) => {
 
   return (
     <div className="space-y-6">
-      {/* Podium: 2nd (left) - 1st (center, elevated) - 3rd (right) */}
+      {/*
+        Podium: 2nd (left) - 1st (center, elevated) - 3rd (right). Three cards side by side need ~500px, so a
+        phone stacks them in placing order instead. The markup is in placing order too (screen readers and the
+        keyboard meet 1st first); `sm:order-*` draws the podium.
+      */}
       {topPlayers.length > 0 && (
-        <div className="flex items-start justify-center gap-3 sm:gap-4">
-          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
-            {second && <PlayerCard player={second} rank={placeOf(second, 1)} index={1} podium />}
-          </div>
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-center sm:gap-4">
           {/* First place - center, no top margin so it sits highest */}
-          <div className="flex-1 max-w-xs">
+          <div className="sm:order-2 sm:flex-1 sm:max-w-xs">
             {first && (
               <PlayerCard player={first} rank={placeOf(first, 0)} index={0} podium
-                className="scale-105 sm:scale-110 origin-top" />
+                className="sm:scale-110 origin-top" />
             )}
           </div>
 
-          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
+          <div className="sm:order-1 sm:flex-1 sm:max-w-xs sm:mt-10">
+            {second && <PlayerCard player={second} rank={placeOf(second, 1)} index={1} podium />}
+          </div>
+
+          <div className="sm:order-3 sm:flex-1 sm:max-w-xs sm:mt-10">
             {third && <PlayerCard player={third} rank={placeOf(third, 2)} index={2} podium />}
           </div>
         </div>
