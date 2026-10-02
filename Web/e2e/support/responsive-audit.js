@@ -207,15 +207,21 @@ export const measurePage = async (page, { checkTouchTargets = true } = {}) =>
            */
           const hit = (() => {
             let { top, bottom, left, right } = r;
+            // An absolute pseudo-element is placed from the PADDING box, inside the border: a 1px border under the
+            // stepper's −16px reaches 15px past the border box, not 16. Measured from the border box, the probe
+            // below sat exactly on the far edge and missed every bordered extension by that pixel.
+            const own = getComputedStyle(el);
+            const bt = parseFloat(own.borderTopWidth) || 0; const bb = parseFloat(own.borderBottomWidth) || 0;
+            const bl = parseFloat(own.borderLeftWidth) || 0; const br = parseFloat(own.borderRightWidth) || 0;
             for (const pseudo of ['::before', '::after']) {
               const ps = getComputedStyle(el, pseudo);
               if (ps.content === 'none' || ps.position !== 'absolute') continue;
               const t = parseFloat(ps.top); const b = parseFloat(ps.bottom);
               const l = parseFloat(ps.left); const rt = parseFloat(ps.right);
-              if (t < 0) top = Math.min(top, r.top + t);
-              if (b < 0) bottom = Math.max(bottom, r.bottom - b);
-              if (l < 0) left = Math.min(left, r.left + l);
-              if (rt < 0) right = Math.max(right, r.right - rt);
+              if (t < 0) top = Math.min(top, r.top + bt + t);
+              if (b < 0) bottom = Math.max(bottom, r.bottom - bb - b);
+              if (l < 0) left = Math.min(left, r.left + bl + l);
+              if (rt < 0) right = Math.max(right, r.right - br - rt);
             }
             if (top === r.top && bottom === r.bottom && left === r.left && right === r.right) return null;
             const [sx, sy] = [window.scrollX, window.scrollY];
@@ -288,6 +294,28 @@ export const watchConsole = (page) => {
  *
  * @param {import('@playwright/test').Page} page
  */
+/**
+ * Wait until the controls on screen stop moving.
+ *
+ * framer drives its entrance animations from JavaScript, so `getAnimations()` cannot see them, and a fixed
+ * pause is a race: on the slower WebKit an iPhone measured reset-password's 44px "Back to Home" link at 43px,
+ * mid-way through its card's 0.97 → 1 scale-in. Two identical samples of every control's box, 200ms apart,
+ * mean nothing is animating any more (4s cap — a spinner may never stop).
+ */
+export const waitForStillness = async (page) => {
+  const sample = () => page.evaluate(() => [...document.querySelectorAll('a,button,input,select,textarea,[role="button"]')]
+    .slice(0, 400)
+    .map((el) => { const r = el.getBoundingClientRect(); return `${r.x.toFixed(1)},${r.y.toFixed(1)},${r.width.toFixed(1)},${r.height.toFixed(1)}`; })
+    .join('|')).catch(() => '');
+  let previous = await sample();
+  for (let elapsed = 0; elapsed < 4_000; elapsed += 200) {
+    await page.waitForTimeout(200);
+    const current = await sample();
+    if (current === previous) return;
+    previous = current;
+  }
+};
+
 export const settle = async (page) => {
   await page.waitForLoadState('domcontentloaded');
   await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
@@ -326,10 +354,15 @@ export const auditRoute = async (page, route, widths, appearance = 'dark') => {
   for (const requested of widths) {
     if (requested != null) await page.setViewportSize({ width: requested, height: heightFor(requested) });
     const width = requested ?? page.viewportSize()?.width;
+    // Let the page being left finish its requests first. WebKit reports a request cancelled by navigation to
+    // the page as a failure, so the app logged "Network Error" for its own dashboard's half-done fetches on
+    // every iPhone/iPad run — noise that hid any real console error behind it.
+    await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
     await page.goto(route.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
     await settle(page);
     if (route.prepare) await route.prepare(page).catch(() => {});
     await page.waitForTimeout(250);
+    await waitForStillness(page);
 
     const result = await measurePage(page, { checkTouchTargets: await wantsTouchTargets(page, width) });
     if (result.horizontalScroll || result.overflowing.length || result.tinyTargets.length) {
