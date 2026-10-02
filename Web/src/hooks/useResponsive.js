@@ -66,25 +66,35 @@ const store = {
   frame: 0,
 };
 
+// Fold a fresh measurement into the store, keeping object identity for whatever did not change (so a
+// consumer's memoised values stay stable, and useSyncExternalStore sees "no change"). True if it moved.
+const reconcile = () => {
+  const prev = store.snapshot;
+  const next = measure();
+  const viewport = sameKeys(next.viewport, prev.viewport) ? prev.viewport : next.viewport;
+  const breakpoints = sameKeys(next.breakpoints, prev.breakpoints) ? prev.breakpoints : next.breakpoints;
+  if (viewport === prev.viewport && breakpoints === prev.breakpoints) return false;
+  if (viewport.category !== prev.viewport.category) setResponsiveCSSProperties();
+  store.snapshot = { viewport, breakpoints };
+  return true;
+};
+
 const read = () => {
   if (typeof window === 'undefined') return SERVER_SNAPSHOT;
   if (!store.snapshot) {
     store.snapshot = measure();
     setResponsiveCSSProperties();
+  } else if (store.listeners.size === 0) {
+    // Nothing is subscribed, so no listener kept the measurement current — a phone rotated, or a window
+    // resized, while no component on screen asked. Measure again rather than hand back a stale answer.
+    reconcile();
   }
   return store.snapshot;
 };
 
-// Keep object identity for whatever did not change, so a consumer's memoised values stay stable.
 const refresh = () => {
-  const next = measure();
-  const prev = read();
-  const viewport = sameKeys(next.viewport, prev.viewport) ? prev.viewport : next.viewport;
-  const breakpoints = sameKeys(next.breakpoints, prev.breakpoints) ? prev.breakpoints : next.breakpoints;
-  if (viewport === prev.viewport && breakpoints === prev.breakpoints) return;
-  if (viewport.category !== prev.viewport.category) setResponsiveCSSProperties();
-  store.snapshot = { viewport, breakpoints };
-  store.listeners.forEach((listener) => listener());
+  read();
+  if (reconcile()) store.listeners.forEach((listener) => listener());
 };
 
 const onResize = () => {
@@ -97,7 +107,13 @@ const onResize = () => {
 
 const subscribe = (listener) => {
   store.listeners.add(listener);
-  if (store.listeners.size === 1) window.addEventListener('resize', onResize);
+  if (store.listeners.size === 1) {
+    window.addEventListener('resize', onResize);
+    // A resize between the first render and this subscription had no listener to hear it. React re-reads the
+    // snapshot right after subscribing, so folding the current size in here is enough to correct it.
+    read();
+    reconcile();
+  }
   return () => {
     store.listeners.delete(listener);
     if (store.listeners.size === 0) {

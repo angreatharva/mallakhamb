@@ -45,6 +45,19 @@ describe('useResponsive — one shared viewport store', () => {
     expect(seen.at(-1)).toEqual({ isMobile: true, isDesktop: false });
   });
 
+  it('is not stale after a resize that happened while nothing was subscribed', () => {
+    const seen = [];
+    const Probe = () => { const { isMobile } = useResponsive(); seen.push(isMobile); return null; };
+    const first = render(<Probe />);
+    expect(seen.at(-1)).toBe(false);
+    first.unmount(); // the last subscriber leaves: the resize listener comes off
+    setWidth(390); // a phone rotates on a screen with no responsive component
+    act(() => { window.dispatchEvent(new Event('resize')); vi.advanceTimersByTime(150); });
+    seen.length = 0;
+    render(<Probe />);
+    expect(seen[0]).toBe(true); // right on the very first render, not one resize later
+  });
+
   it('does not re-render when a resize leaves the measurement unchanged', () => {
     let renders = 0;
     const Probe = () => { useResponsive(); renders += 1; return null; };
