@@ -14,6 +14,7 @@ import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
 import { GlassCard } from '../../components/design-system/cards';
 import { FG, alpha } from '@/styles/tokens';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -227,6 +228,7 @@ const JudgeProfileInner = () => {
             <ArrowLeft className="w-4 h-4" />
             Dashboard
           </button>
+          <AppearanceMenu />
         </div>
 
         {/* Identity card */}

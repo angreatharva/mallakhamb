@@ -61,6 +61,9 @@ function AppContent() {
   const isForgotPasswordPage = location.pathname.includes('/forgot-password') || location.pathname.includes('/reset-password');
 
   const isJudgeRoute = location.pathname.startsWith('/judge');
+  // Pages with no header bar of their own: the super admin's player payment, and the bare Teams panel at
+  // /admin/teams (the dashboard's Teams tab is the linked one, inside the dashboard header).
+  const isHeaderlessPage = /^\/(admin\/teams|superadmin\/add-player-payment)\/?$/.test(location.pathname);
 
   const shouldHideNavbar =
     isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
@@ -70,7 +73,7 @@ function AppContent() {
       <div className="min-h-screen bg-bg">
         {!shouldHideNavbar && <Navbar user={user} userType={userType} onLogout={handleLogout} />}
         {/* Screens with no header bar carry the appearance control in the corner (§14.9). */}
-        {(isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage) && <CornerAppearanceMenu />}
+        {(isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isHeaderlessPage) && <CornerAppearanceMenu />}
 
         <div className={!shouldHideNavbar ? 'pt-16' : ''}>
           <AppRoutes />

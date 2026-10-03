@@ -20,6 +20,7 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { apparatusFor, entryGender } from '@/utils/scoring/apparatus';
 import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -626,7 +627,7 @@ const AdminScoring = () => {
                 <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
                     <div className="flex items-center gap-4">
                         <motion.button onClick={() => navigate(`${routePrefix}/dashboard/scores`)}
-                            className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
+                            className="flex items-center gap-2 text-sm font-semibold min-h-[44px] tap-safe justify-center px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
                             <ArrowLeft className="w-4 h-4" />
                             <span className="hidden sm:inline">Back to Scores</span>
                         </motion.button>
@@ -638,10 +639,13 @@ const AdminScoring = () => {
                             {isLocked && <Lock className="w-4 h-4" style={{ color: FG.danger }} />}
                         </div>
                     </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
                         style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
                         {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
                     </span>
+                    <AppearanceMenu />
+                    </div>
                 </div>
             </motion.header>
 
