@@ -15,6 +15,7 @@ const {
   ValidationError,
   NotFoundError
 } = require('../../errors');
+const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 // One rule for "may this principal act on this meet", shared with
 // middleware/competition-context.middleware so the token-minting half and the
 // per-request half can never disagree.
@@ -66,7 +67,9 @@ class AuthenticationService {
     logger,
     // Appended rather than inserted: the DI container wires this constructor
     // positionally, and every existing caller passes eight arguments.
-    judgeAccountRepository = null
+    judgeAccountRepository = null,
+    // Prometheus metrics; optional and last for the same reason.
+    metrics = noopMetrics
   ) {
     this.playerRepository = playerRepository;
     this.coachRepository = coachRepository;
@@ -79,6 +82,7 @@ class AuthenticationService {
     this.competitionRepository = competitionRepository;
     this.tokenService = tokenService;
     this.otpService = otpService;
+    this.metrics = metrics || noopMetrics;
     this.logger = {
       info: typeof logger?.info === 'function' ? logger.info.bind(logger) : () => {},
       warn: typeof logger?.warn === 'function' ? logger.warn.bind(logger) : () => {},
@@ -105,6 +109,9 @@ class AuthenticationService {
    * @throws {AuthenticationError} If credentials are invalid
    */
   async login(email, password, userType) {
+    // For mallakhamb_auth_logins_total: anything that fails is a 'failure'
+    // unless it was refused by the lockout.
+    let failureOutcome = 'failure';
     try {
       // Sanitize inputs
       const sanitizedEmail = normalizeEmail(email);
@@ -143,6 +150,7 @@ class AuthenticationService {
           userType: sanitizedUserType,
           remainingMinutes: lockout.remainingMinutes,
         });
+        failureOutcome = 'locked';
         throw new AuthenticationError(lockoutMessage(lockout.remainingMinutes));
       }
 
@@ -167,6 +175,7 @@ class AuthenticationService {
         // Tell the user they are now locked out rather than letting them keep
         // guessing against a door that is already shut.
         if (next.isLocked) {
+          failureOutcome = 'locked';
           throw new AuthenticationError(lockoutMessage(next.remainingMinutes));
         }
         throw new AuthenticationError('Invalid credentials');
@@ -197,11 +206,13 @@ class AuthenticationService {
         userType: sanitizedUserType
       });
 
+      this.metrics.business.login(sanitizedUserType, 'success');
       return {
         user: userWithoutPassword,
         token
       };
     } catch (error) {
+      this.metrics.business.login(userType, failureOutcome);
       if (error instanceof AuthenticationError) {
         throw error;
       }

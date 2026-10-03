@@ -13,6 +13,7 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
+const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const {
   AGE_GROUPS,
   GENDERS,
@@ -80,7 +81,9 @@ class ScoringService {
     // Appended rather than inserted so the existing positional construction
     // keeps working, and defaulted so the harnesses that build this service
     // with seven arguments still do.
-    teamRepository = null
+    teamRepository = null,
+    // Prometheus metrics; optional and last for the same reason.
+    metrics = noopMetrics
   ) {
     this.scoreRepository = scoreRepository;
     this.competitionRepository = competitionRepository;
@@ -92,6 +95,7 @@ class ScoringService {
     // keeps working. Required by the ranking methods moved here in task 3.1.
     this.calculationService = calculationService;
     this.teamRepository = teamRepository;
+    this.metrics = metrics || noopMetrics;
   }
 
   /**
@@ -171,8 +175,10 @@ class ScoringService {
         );
       }
 
+      this.metrics.business.scoreSubmitted('accepted');
       return score;
     } catch (error) {
+      this.metrics.business.scoreSubmitted('rejected');
       if (error instanceof ValidationError || 
           error instanceof NotFoundError || 
           error instanceof BusinessRuleError) {
@@ -1740,6 +1746,10 @@ class ScoringService {
         });
       }
 
+      // Every live score write — judge, admin, superadmin and the public
+      // save-score route — lands here, so this is what scores/min counts.
+      this.metrics.business.scoreSubmitted('accepted');
+
       // Return proper response format
       return {
         scoreId: savedScore._id,
@@ -1752,6 +1762,7 @@ class ScoringService {
         playerScores: savedScore.playerScores
       };
     } catch (error) {
+      this.metrics.business.scoreSubmitted('rejected');
       this.logger.error('Save scores error', { 
         scoreData, 
         error: error.message 

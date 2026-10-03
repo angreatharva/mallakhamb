@@ -11,11 +11,18 @@
  */
 
 const mongoose = require('mongoose');
+const { noopMetrics } = require('../prometheus/registry');
 
 class DatabaseConnection {
-  constructor(config, logger) {
+  /**
+   * @param {Object} config
+   * @param {Object} logger
+   * @param {Object} [metrics] - Prometheus metrics (createMetrics); optional
+   */
+  constructor(config, logger, metrics = noopMetrics) {
     this.config = config;
     this.logger = logger;
+    this.metrics = metrics || noopMetrics;
     this.isConnected = false;
     this.retryCount = 0;
     this.maxRetries = 5;
@@ -56,6 +63,15 @@ class DatabaseConnection {
         
         // Buffer commands when disconnected (useful for reconnection)
         bufferCommands: true,
+
+        // Emit commandStarted/Succeeded/Failed on the client, for the
+        // mongodb_driver_commands_seconds histogram. Off unless
+        // DB_MONITOR_COMMANDS=true: with it on, the driver calls toObject() on
+        // every reply — a second full BSON deserialization of each result set
+        // — just to attach it to the event. Measured at ~25% p50 across the
+        // read benchmark, all of it on the endpoints that return the most
+        // data. Pool (CMAP) events are emitted regardless.
+        monitorCommands: dbConfig.monitorCommands === true,
       };
 
       this.logger.info('Connecting to MongoDB...', {
@@ -69,8 +85,17 @@ class DatabaseConnection {
       // Requirement 9.6: Enable connection monitoring
       this.setupConnectionMonitoring();
 
-      // Connect to MongoDB
-      await mongoose.connect(dbConfig.uri, options);
+      // Connect to MongoDB.
+      //
+      // Mongoose builds the MongoClient synchronously inside connect(), before
+      // any socket opens, so listeners attached between the call and the await
+      // see every pool event — including the minPoolSize connections opened at
+      // start-up, which a listener attached after the await would miss and the
+      // pool gauges would never count. A retry builds a new client, and this
+      // runs again for it.
+      const connecting = mongoose.connect(dbConfig.uri, options);
+      this.attachDriverMonitoring(mongoose.connection.getClient());
+      await connecting;
 
       this.isConnected = true;
       this.retryCount = 0;
@@ -176,16 +201,33 @@ class DatabaseConnection {
       this.logger.info('MongoDB replica set fully connected');
     });
 
-    // Monitor connection pool events (if available)
-    if (mongoose.connection.db) {
-      const poolEvents = ['connectionPoolCreated', 'connectionPoolClosed', 'connectionCreated', 'connectionClosed'];
-      
-      poolEvents.forEach(event => {
-        mongoose.connection.db.on(event, (data) => {
-          this.logger.debug(`MongoDB pool event: ${event}`, data);
+    // Pool events are attached per client in attachDriverMonitoring(). They
+    // used to hang off `mongoose.connection.db` here, which is undefined until
+    // connect() resolves (this runs before it) and is the wrong emitter anyway
+    // — the driver emits pool and command events on the MongoClient — so that
+    // listener never fired.
+  }
+
+  /**
+   * Pool debug logging and Prometheus pool/command metrics, on the MongoClient.
+   * @param {import('mongodb').MongoClient|null} client
+   */
+  attachDriverMonitoring(client) {
+    if (!client || typeof client.on !== 'function' || this.monitoredClients?.has(client)) return;
+    this.monitoredClients = this.monitoredClients || new WeakSet();
+    this.monitoredClients.add(client);
+
+    const poolEvents = ['connectionPoolCreated', 'connectionPoolClosed', 'connectionCreated', 'connectionClosed'];
+    poolEvents.forEach((event) => {
+      client.on(event, (data) => {
+        this.logger.debug(`MongoDB pool event: ${event}`, {
+          address: data?.address,
+          connectionId: data?.connectionId,
         });
       });
-    }
+    });
+
+    this.metrics.mongo.attach(client);
   }
 
   /**

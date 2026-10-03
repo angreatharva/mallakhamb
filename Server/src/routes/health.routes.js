@@ -8,6 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { createMetricsAuthMiddleware } = require('../middleware/metrics-auth.middleware');
 
 /**
  * Initialize health routes with controller from DI container
@@ -54,9 +55,15 @@ function createHealthRoutes(container) {
    * @route GET /health/metrics
    * @desc Performance metrics - returns metrics in JSON or Prometheus format
    * @query {string} format - 'json' (default) or 'prometheus'
-   * @access Public
+   * @access Private — the same METRICS_TOKEN as GET /metrics. It was public,
+   *         exposing request counts, error types and socket counts to anyone;
+   *         now 404 when no token is configured and 401 without it. Retired in
+   *         Phase 6 of deploy/monitoring/PLAN.md.
    */
-  router.get('/metrics', (req, res) => healthController.metrics(req, res));
+  const metricsAuth = createMetricsAuthMiddleware(
+    () => container.resolve('config').get('observability.metricsTokens')
+  );
+  router.get('/metrics', metricsAuth, (req, res) => healthController.metrics(req, res));
 
   return router;
 }

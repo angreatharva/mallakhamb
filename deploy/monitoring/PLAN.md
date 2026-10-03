@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **PLAN ONLY — nothing in here has been executed.**
+Status: **Phase 0 in progress (account created 2026-10-03). Phase 1 implemented on branch `feat/prometheus-metrics` — see "Phase 1 — as built" below; awaiting merge.**
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -79,13 +79,13 @@ Side effect worth knowing: the 60-second scrape is inbound traffic, so it also k
 
 | Item | Value |
 |---|---|
-| Grafana Cloud stack URL | `https://<stack>.grafana.net` |
+| Grafana Cloud stack URL | `https://sinceresloth366.grafana.net` |
 | Stack region | |
 | Scrape job name | `mallakhamb-api` |
 | Scrape URL | `https://mallakhamb-server.onrender.com/metrics` |
 | Scrape interval | 60 s |
 | Where `METRICS_TOKEN` is stored | Render dashboard (`mallakhamb-server` → Environment) + Grafana Cloud scrape job. **Nowhere else.** |
-| Token created on | |
+| Token created on | 2026-10-03 (by the owner, locally; never shared) |
 | Alert contact point(s) | |
 | Synthetic check ids | |
 | Active series at end of Phase 3 | (from Grafana Cloud → Usage) |
@@ -134,9 +134,9 @@ The free tier allows **10,000 active series** (check the current limit at sign-u
 | `mongodb_driver_pool_checkedout` | gauge | — | `connectionCheckedOut` / `connectionCheckedIn` |
 | `mongodb_driver_pool_waitqueuesize` | gauge | — | `connectionCheckOutStarted` minus out/failed |
 | `mongodb_driver_pool_checkout_failed_total` | counter | `reason` (`timeout`, `poolClosed`, `connectionError`) | `connectionCheckOutFailed` |
-| `mongodb_driver_commands_seconds` | histogram, buckets `0.005 0.01 0.025 0.05 0.1 0.25 0.5 1 2.5` | `command`, `collection`, `status` (`SUCCESS`/`FAILED`) | `commandStarted` → `commandSucceeded`/`commandFailed` |
+| `mongodb_driver_commands_seconds` | histogram, buckets `0.005 0.01 0.025 0.05 0.1 0.25 0.5 1 2.5` | `command`, `collection`, `status` (`SUCCESS`/`FAILED`) | `commandStarted` → `commandSucceeded`/`commandFailed` — **only while `DB_MONITOR_COMMANDS=true`** |
 
-- Needs `monitorCommands: true` in the connect options ([connection.js:37](../../Server/src/infrastructure/database/connection.js)).
+- Command timing needs `monitorCommands: true`, which is **off by default** (`DB_MONITOR_COMMANDS=false`): it failed the Phase 1 overhead gate (see A10). Pool metrics need nothing.
 - `collection` comes from the `commandStarted` payload (`command[commandName]`), held in a `Map` keyed by `requestId` and deleted on finish.
 - `command` allow-list: `find insert update delete aggregate count distinct findAndModify getMore createIndexes`; anything else → `other`. Handshake/auth/heartbeat (`hello`, `isMaster`, `ping`, `saslStart`, `saslContinue`, `endSessions`) are **ignored**.
 
@@ -152,9 +152,9 @@ The free tier allows **10,000 active series** (check the current limit at sign-u
 ### 5.5 Business — ~60 series
 | Metric | Type | Labels | Instrumented in |
 |---|---|---|---|
-| `mallakhamb_scores_submitted_total` | counter | `outcome` (`accepted`, `rejected`) | `scoring.service.js` `submitScore` |
-| `mallakhamb_auth_logins_total` | counter | `role` (`admin superadmin coach judge`), `outcome` (`success`, `failure`, `locked`) | `authentication.service.js` |
-| `mallakhamb_payment_webhooks_total` | counter | `event` (`payment.captured`, `payment.failed`, `order.paid`, `other`), `outcome` (`processed`, `rejected_signature`, `error`) | `payment.service.js` webhook path |
+| `mallakhamb_scores_submitted_total` | counter | `outcome` (`accepted`, `rejected`) | `scoring.service.js` `saveScores` (every live write: judge, admin, superadmin, public save-score) and `submitScore` |
+| `mallakhamb_auth_logins_total` | counter | `role` (`admin coach judge player`; superadmins sign in as `admin`), `outcome` (`success`, `failure`, `locked`) | `authentication.service.js` `login`, `judge.service.js` `loginJudge` |
+| `mallakhamb_payment_webhooks_total` | counter | `event` (`payment.captured`, `payment.failed`, `order.paid`, `other`), `outcome` (`processed`, `ignored`, `rejected_signature`, `error`) | `payment.service.js` `reconcileWebhook` |
 | `mallakhamb_emails_sent_total` | counter | `provider` (`resend`, `nodemailer`), `outcome` (`sent`, `failed`) | email service |
 | `app_info` | gauge = 1 | `version` (`RENDER_GIT_COMMIT` short), `service` (`RENDER_SERVICE_NAME`), `node` | registry setup |
 
@@ -195,24 +195,24 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 **Prerequisites:** Phase 0 not required (can run in parallel). Branch off `master`.
 
 **Steps**
-- [ ] 1.1 `npm --prefix Server install prom-client@^15`.
-- [ ] 1.2 **New** `Server/src/infrastructure/prometheus/registry.js` — `createMetrics({ logger, env })` builds a **fresh `Registry` per call** (never the global default; jest builds several apps per process and the default registry throws on duplicate names), calls `collectDefaultMetrics({ register })`, defines every instrument in §5, sets `app_info`. Returns `{ registry, http, mongo, socket, business }`.
-- [ ] 1.3 **New** `Server/src/infrastructure/prometheus/route-label.js` — pure function `routeLabel(req)` implementing the §5.2 rules (fold `/api/v1`, pattern, `UNKNOWN`, `/**`, ObjectId fallback) plus the 400-value cap.
-- [ ] 1.4 **New** `Server/src/middleware/prometheus.middleware.js` — start a `process.hrtime.bigint()` timer, observe on `res.on('finish')`; on `res.on('close')` without finish, record `499/UNKNOWN`. Skips the excluded paths. Listens to events instead of wrapping `res.end` (the old middleware's approach).
-- [ ] 1.5 **New** `Server/src/middleware/metrics-auth.middleware.js` — reads `observability.metricsTokens`; none → `404`; checks Bearer, then Basic password; compares with `crypto.timingSafeEqual` over equal-length buffers (hash both sides with SHA-256 first so lengths always match); failure → `401` with no detail.
-- [ ] 1.6 **Edit** [config-manager.js](../../Server/src/config/config-manager.js) — add `observability: { metricsTokens: this.getArray('METRICS_TOKEN', []) }`.
-- [ ] 1.7 **Edit** [bootstrap.js](../../Server/src/infrastructure/bootstrap.js) — register `metrics` as a singleton; pass it as an **optional last constructor argument** to the socket manager, scoring, authentication, payment and email services. Each defaults to a no-op so every existing test that builds these services without it keeps passing.
-- [ ] 1.8 **Edit** [createApp.js](../../Server/src/infrastructure/createApp.js) —
+- [x] 1.1 `npm --prefix Server install prom-client@^15`.
+- [x] 1.2 **New** `Server/src/infrastructure/prometheus/registry.js` — `createMetrics({ logger, env })` builds a **fresh `Registry` per call** (never the global default; jest builds several apps per process and the default registry throws on duplicate names), calls `collectDefaultMetrics({ register })`, defines every instrument in §5, sets `app_info`. Returns `{ registry, http, mongo, socket, business }`.
+- [x] 1.3 **New** `Server/src/infrastructure/prometheus/route-label.js` — pure function `routeLabel(req)` implementing the §5.2 rules (fold `/api/v1`, pattern, `UNKNOWN`, `/**`, ObjectId fallback) plus the 400-value cap.
+- [x] 1.4 **New** `Server/src/middleware/prometheus.middleware.js` — start a `process.hrtime.bigint()` timer, observe on `res.on('finish')`; on `res.on('close')` without finish, record `499/UNKNOWN`. Skips the excluded paths. Listens to events instead of wrapping `res.end` (the old middleware's approach).
+- [x] 1.5 **New** `Server/src/middleware/metrics-auth.middleware.js` — reads `observability.metricsTokens`; none → `404`; checks Bearer, then Basic password; compares with `crypto.timingSafeEqual` over equal-length buffers (hash both sides with SHA-256 first so lengths always match); failure → `401` with no detail.
+- [x] 1.6 **Edit** [config-manager.js](../../Server/src/config/config-manager.js) — add `observability: { metricsTokens: this.getArray('METRICS_TOKEN', []) }`.
+- [x] 1.7 **Edit** [bootstrap.js](../../Server/src/infrastructure/bootstrap.js) — register `metrics` as a singleton; pass it as an **optional last constructor argument** to the socket manager, scoring, authentication, payment and email services. Each defaults to a no-op so every existing test that builds these services without it keeps passing.
+- [x] 1.8 **Edit** [createApp.js](../../Server/src/infrastructure/createApp.js) —
   - mount `app.get('/metrics', metricsAuth, handler)` **immediately after the HTTPS-redirect block**, before CORS. Handler: `Content-Type: registry.contentType`, `Cache-Control: no-store`, `await registry.metrics()`;
   - add the Prometheus middleware next to the existing metrics middleware (both run until Phase 6).
-- [ ] 1.9 **Edit** [health.routes.js](../../Server/src/routes/health.routes.js) — put the same `metricsAuth` in front of `/health/metrics`. **This closes the public exposure in §1.1.**
-- [ ] 1.10 **Edit** [connection.js](../../Server/src/infrastructure/database/connection.js) — add `monitorCommands: true`; after connect, `metrics.mongo.attach(mongoose.connection.getClient())`; replace the `mongoose.connection.db.on(...)` pool listener with the client-level one (keep its debug log).
-- [ ] 1.11 **Edit** [socket.manager.js](../../Server/src/socket/socket.manager.js) — gauge on connect/disconnect; in `registerSocketEvents`, count the event, time the handler, count errors in the existing `catch`. Rooms gauge reads `io.of('/').adapter.rooms.size` in a `collect()` callback.
-- [ ] 1.12 **Edit** the four services in §5.5 — one `inc()` per outcome at the points where the outcome is already decided (no new branches).
-- [ ] 1.13 **Edit** `.env_example`, `.env`, `.env.production` — add `METRICS_TOKEN=` (empty) with a comment, same position in all three. Run `npm --prefix Server run env:check`.
-- [ ] 1.14 **Edit** [render.yaml](../../render.yaml) — add `METRICS_TOKEN` with `sync: false` and a comment: dashboard-owned so a sync can never blank or overwrite it.
-- [ ] 1.15 Run `npm --prefix Server run docs:openapi:check`. If it reports `/metrics`, add it to [openapi.js](../../Server/src/docs/openapi.js) under an `internal` tag with bearer security.
-- [ ] 1.16 **Tests** (new, under `Server/tests/unit/infrastructure/` and `tests/integration/`):
+- [x] 1.9 **Edit** [health.routes.js](../../Server/src/routes/health.routes.js) — put the same `metricsAuth` in front of `/health/metrics`. **This closes the public exposure in §1.1.**
+- [x] 1.10 **Edit** [connection.js](../../Server/src/infrastructure/database/connection.js) — add `monitorCommands: true`; after connect, `metrics.mongo.attach(mongoose.connection.getClient())`; replace the `mongoose.connection.db.on(...)` pool listener with the client-level one (keep its debug log).
+- [x] 1.11 **Edit** [socket.manager.js](../../Server/src/socket/socket.manager.js) — gauge on connect/disconnect; in `registerSocketEvents`, count the event, time the handler, count errors in the existing `catch`. Rooms gauge reads `io.of('/').adapter.rooms.size` in a `collect()` callback.
+- [x] 1.12 **Edit** the four services in §5.5 — one `inc()` per outcome at the points where the outcome is already decided (no new branches).
+- [x] 1.13 **Edit** `.env_example`, `.env`, `.env.production` — add `METRICS_TOKEN=` (empty) with a comment, same position in all three. Run `npm --prefix Server run env:check`.
+- [x] 1.14 **Edit** [render.yaml](../../render.yaml) — add `METRICS_TOKEN` with `sync: false` and a comment: dashboard-owned so a sync can never blank or overwrite it.
+- [x] 1.15 Run `npm --prefix Server run docs:openapi:check`. If it reports `/metrics`, add it to [openapi.js](../../Server/src/docs/openapi.js) under an `internal` tag with bearer security.
+- [x] 1.16 **Tests** (new, under `Server/tests/unit/infrastructure/` and `tests/integration/`):
   - `route-label`: param route → pattern; `/api/v1/x` = `/api/x`; unmatched → `UNKNOWN`; router-level 401 → `/**`; raw ObjectId → `:id`; 401st distinct value → `OTHER`.
   - `metrics-auth`: unset → 404; missing → 401; wrong → 401; Bearer ok; Basic ok; second token in list ok.
   - **Label allow-list test:** walk `registry.getMetricsAsJSON()` and fail if any label name is outside `{method, uri, status, outcome, command, collection, reason, event, role, provider, version, service, node, le, quantile, kind, space}` — the guard against someone adding `userId` later.
@@ -235,6 +235,39 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 - Overhead: run `npm --prefix Server run perf:bench` before and after; p95 regression **< 3 %**.
 
 **Done when:** all of the above pass; PR merged to `master`.
+
+### Phase 1 — as built (2026-10-03, branch `feat/prometheus-metrics`)
+
+Verified: full jest suite green (66 suites, 852 tests); locally `/metrics` → 401 without the token, 200 with it; `/api/health/metrics` → 401; `/api/v1/x` and `/api/x` share one series; probes absent; `mongodb_driver_pool_size` non-zero (and `mongodb_driver_commands_seconds_count` when `DB_MONITOR_COMMANDS=true`). Local run: `.claude/launch.json` → `api-metrics` (the `api` entry with `METRICS_TOKEN=dev`).
+
+Where the build differs from the steps above, and why:
+
+| # | Change | Why |
+|---|---|---|
+| A1 | The `uri` label is captured **as Express assigns it** (accessors on `req.route` / `req.baseUrl`), not read on `finish` | A route that calls `next(err)` unwinds its routers, and each restores `req.baseUrl` to `''` before the error handler runs — reading on `finish` labels every 500 as `/scores/save` instead of `/api/admin/scores/save`. Covered by `prometheus.route-label.test.js` |
+| A2 | A request that entered a router but matched no route → `<deepest base>/**` (e.g. `/api/**` for `/api/nope`); `UNKNOWN` only when no router was entered | Same mechanism as A1; still bounded by the fixed set of mounts |
+| A3 | The request middleware mounts **right after `/metrics`** (before CORS), not next to the old one | So CORS and CSRF rejections are counted too (as `UNKNOWN`) — a silent CSRF 403 is a known trap here |
+| A4 | Scores are counted in `saveScores` as well as `submitScore` | `submitScore` serves only `/api/scoring`; every live judge/admin/superadmin/public write goes through `saveScores`, so counting only `submitScore` would leave the competition-day "Scores/min" panel flat |
+| A5 | Judge logins are counted in `judge.service.js` `loginJudge`; `role` has no `superadmin` | Judges don't sign in through `authentication.service`; superadmins sign in through the `admin` user type, so the label could never say `superadmin` |
+| A6 | Webhook `outcome` gains `ignored` (valid delivery, nothing to apply); the alert matches `rejected_signature|error` only | Without it, every unhandled Razorpay event type would page as a "problem" |
+| A7 | Label allow-list also contains `type`, `major`, `minor`, `patch` | prom-client's own runtime metrics (`nodejs_active_handles{type}`, `nodejs_version_info`) |
+| A8 | `docs:openapi:check` does not walk root-level `/metrics`, so it stays out of the spec; the legacy `/api/health/metrics` entry now documents the token (`metricsToken` scheme, 401/404) | Step 1.15 |
+| A9 | `scripts/perf/testApi.js` expects 401/404 from anonymous `/api/health/metrics` | It asserted 200 from the then-public endpoint |
+| A10 | `monitorCommands` is **off by default**, behind `DB_MONITOR_COMMANDS=false`; the "DB slow" alert becomes "DB pool waiting"; the three command panels are marked opt-in | Failed the overhead gate. With it on, the driver calls `toObject()` on every reply — a second full BSON deserialization of each result set — only to attach it to the event. See the benchmark below |
+
+**Overhead gate (`perf:bench`, 100 teams, 30 iterations, 39 read endpoints, local MongoDB; sum of per-endpoint ms):**
+
+| Run | Σ p50 | Σ p95 |
+|---|---|---|
+| master ×3 | 280.9 / 271.5 / 281.5 | 429.7 / 395.3 / 430.4 |
+| branch, `monitorCommands` on ×3 | 350.4 / 348.3 / 329.4 (**+24 %**) | 521.7 / 537.7 / 478.4 (**+21 %**) |
+| branch, `monitorCommands` off ×2 | 272.0 / 272.3 (−1.5 %) | 409.6 / 394.0 (−2.7 %) |
+
+With command monitoring off, the branch is inside run-to-run noise of master: **gate passed**. Everything else (HTTP histogram, route capture, runtime metrics, pool listeners) costs nothing measurable.
+
+**Finding — idle pool is 30, not 10.** `minPoolSize` is per replica-set member and Atlas runs three, so `DB_POOL_MIN=10` holds 30 idle connections (M0 cap: 500). Harmless today; consider `DB_POOL_MIN=2` once the database dashboard shows real checkout levels.
+
+**Finding — the old pool listener could never fire.** Confirmed: `setupConnectionMonitoring()` ran before `connect()`, when `mongoose.connection.db` is still undefined, and the driver emits on the MongoClient anyway. The fix attaches to `getClient()` between `mongoose.connect()` and its `await` (the client exists synchronously), so the start-up `minPoolSize` connections are counted. The integration test proves the events arrive with the real driver.
 
 ---
 
@@ -296,9 +329,9 @@ Build in the Grafana UI, then **export each as JSON into `deploy/monitoring/dash
 | Pool in use / open | `mongodb_driver_pool_checkedout`, `mongodb_driver_pool_size` |
 | Wait queue | `mongodb_driver_pool_waitqueuesize` |
 | Checkout failures | `sum by (reason) (increase(mongodb_driver_pool_checkout_failed_total[15m]))` |
-| Command p95 by collection | `topk(10, histogram_quantile(0.95, sum by (le, command, collection) (rate(mongodb_driver_commands_seconds_bucket[15m]))))` |
-| Commands/s | `sum by (command) (rate(mongodb_driver_commands_seconds_count[5m]))` |
-| Failed commands | `sum by (command, collection) (rate(mongodb_driver_commands_seconds_count{status="FAILED"}[5m]))` |
+| Command p95 by collection *(empty unless `DB_MONITOR_COMMANDS=true`)* | `topk(10, histogram_quantile(0.95, sum by (le, command, collection) (rate(mongodb_driver_commands_seconds_bucket[15m]))))` |
+| Commands/s *(same)* | `sum by (command) (rate(mongodb_driver_commands_seconds_count[5m]))` |
+| Failed commands *(same)* | `sum by (command, collection) (rate(mongodb_driver_commands_seconds_count{status="FAILED"}[5m]))` |
 
 **3.4 `mallakhamb-competition-day.json`** — the screen to leave open during a meet
 | Panel | PromQL |
@@ -338,9 +371,9 @@ Build in the Grafana UI, then **export each as JSON into `deploy/monitoring/dash
 | CPU saturated | `rate(process_cpu_seconds_total[5m]) > 0.08` (80 % of 0.1) | 15 m | warning |
 | Restart loop | `changes(process_start_time_seconds[30m]) > 2` | 0 m | critical |
 | DB checkout failing | `increase(mongodb_driver_pool_checkout_failed_total[5m]) > 0` | 5 m | critical |
-| DB slow | `histogram_quantile(0.95, sum by (le) (rate(mongodb_driver_commands_seconds_bucket[5m]))) > 0.5` | 10 m | warning |
+| DB pool waiting | `max_over_time(mongodb_driver_pool_waitqueuesize[5m]) > 0` (replaces "DB slow", which needed command timing — A10) | 10 m | warning |
 | Login failures spike | `sum(increase(mallakhamb_auth_logins_total{outcome="failure"}[5m])) > 25` | 0 m | warning |
-| Payment webhook problem | `sum(increase(mallakhamb_payment_webhooks_total{outcome!="processed"}[15m])) > 0` | 0 m | warning |
+| Payment webhook problem | `sum(increase(mallakhamb_payment_webhooks_total{outcome=~"rejected_signature|error"}[15m])) > 0` | 0 m | warning |
 
 - [ ] 4.4 Every rule's **summary** says what to look at first (link to the matching dashboard panel), and its **description** names the runbook line in §8.
 - [ ] 4.5 Export the rules (Alerting → Alert rules → *Export*, YAML) to `deploy/monitoring/alerts/mallakhamb-rules.yaml` and commit.
@@ -400,7 +433,7 @@ Metrics come from inside the server; these check it from outside, the way a judg
 | Slow API / Event loop blocked | Runtime + Slowest routes | A heavy synchronous handler (results computation, PDF/CSV export) on 0.1 CPU; long GC → memory panel |
 | Memory near limit / Restart loop | Runtime: RSS + heap | Leak (in-memory caches, socket rooms not cleaned). Render restarts the process at 512 MB; restarts lose live socket connections mid-meet |
 | CPU saturated | Runtime CPU | Expected during a meet on 0.1 CPU. Persistent → plan Starter instance |
-| DB checkout failing / DB slow | Database dashboard | Atlas M0 throttling or network access list change; Atlas status page |
+| DB checkout failing / DB pool waiting | Database dashboard | Atlas M0 throttling or network access list change; Atlas status page. To see which collection is slow, set `DB_MONITOR_COMMANDS=true` on Render for an hour (costs ~25% latency), read the command panels, then set it back |
 | Login failures spike | Logins by role | Brute force on one role → rate limits on (`RATE_LIMIT_ENABLED`); judges mistyping at venue start → ignore |
 | Payment webhook problem | Payment webhooks panel; Razorpay dashboard → Webhooks | `rejected_signature` → `RAZORPAY_WEBHOOK_SECRET` mismatch; `error` → logs |
 
@@ -437,7 +470,7 @@ Retention on the free tier is ~14 days: enough to compare "this meet vs. last we
 | Label cardinality explodes (a raw id reaches `uri`) | Pattern labels, ObjectId fallback, 400-value cap, allow-list test |
 | Free-tier limits change | Series target is half the current limit; *Usage* checked in Phase 2 |
 | Instrumentation overhead on 0.1 CPU | Histograms are O(1) per observation; scrape once a minute; Phase 1 benchmark gate (< 3 %) |
-| `monitorCommands` overhead | One small event per DB command; measured in the same benchmark. If it fails the gate, keep pool metrics and drop command timing |
+| `monitorCommands` overhead | **Failed the gate** (+25% p50) — off by default, opt-in diagnostic only (A10) |
 | Jest duplicate-registration errors | Registry per `createMetrics()` call, never the global default |
 | Token leaks | Comma-list rotation (§7) |
 | Alert fatigue on a quiet free instance | Rate floors in the 5xx rule; `for` durations; warning vs critical routing |

@@ -31,6 +31,17 @@
       "cwd": "Server",
       "port": 5000,
       "//": "Plain node, not nodemon: a watcher restarting mid-run is indistinguishable from the API being down."
+    },
+    {
+      "name": "api-metrics",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.METRICS_TOKEN='dev';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "The api entry with METRICS_TOKEN=dev, so GET /metrics answers locally (curl -H 'Authorization: Bearer dev'). Leaves .env untouched."
     }
   ]
 }

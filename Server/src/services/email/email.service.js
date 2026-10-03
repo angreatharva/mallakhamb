@@ -8,6 +8,7 @@
  */
 
 const NodemailerAdapter = require('./nodemailer.adapter');
+const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const ResendAdapter = require('./resend.adapter');
 const { generateOTPEmail } = require('./templates/otp.template');
 const { generatePasswordResetEmail } = require('./templates/password-reset.template');
@@ -18,10 +19,12 @@ class EmailService {
    * Create an email service
    * @param {ConfigManager} configManager - Configuration manager instance
    * @param {Logger} logger - Logger instance
+   * @param {Object} [metrics] - Prometheus metrics (createMetrics); optional
    */
-  constructor(configManager, logger) {
+  constructor(configManager, logger, metrics = noopMetrics) {
     this.config = configManager;
     this.logger = logger;
+    this.metrics = metrics || noopMetrics;
     this.provider = null;
     this.queue = [];
     this.deliveryLog = new Map();
@@ -115,6 +118,7 @@ class EmailService {
 
       // Track delivery
       this.trackDelivery(options.to, result);
+      this.metrics.business.emailSent(this.config.get('email.provider'), 'sent');
 
       return result;
     } catch (error) {
@@ -145,6 +149,7 @@ class EmailService {
         error: error.message,
         attempts: attempt
       });
+      this.metrics.business.emailSent(this.config.get('email.provider'), 'failed');
 
       throw error;
     }

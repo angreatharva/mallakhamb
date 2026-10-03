@@ -359,3 +359,39 @@ describe('Time Keeper — a stopped time reaches the Scorer', () => {
     expect(await errored).not.toBeNull();
   });
 });
+
+describe('Prometheus socket metrics (deploy/monitoring/PLAN.md §5.4)', () => {
+  /** Current value of a sample in the registry's text output, or 0. */
+  async function valueOf(pattern) {
+    const text = await container.resolve('metrics').metrics();
+    const match = pattern.exec(text);
+    return match ? Number(match[1]) : 0;
+  }
+
+  test('a received event is counted by name and the client shows as connected', async () => {
+    const before = await valueOf(/^socketio_events_received_total\{event="score_update"\} (\d+)/m);
+
+    const judge = await createJudge({ judgeNo: 1, judgeType: 'Judge 1', username: 'promj1' });
+    const socket = await connect(tokenFor(judge));
+
+    expect(await valueOf(/^socketio_connected_clients (\d+)/m)).toBeGreaterThanOrEqual(1);
+
+    socket.emit(EventTypes.SCORE_UPDATE, {
+      roomId: 'scoring_Male_Under14_competition_1',
+      playerId: String(new mongoose.Types.ObjectId()),
+      teamId: String(new mongoose.Types.ObjectId()),
+      score: 8.1,
+    });
+
+    // The handler runs asynchronously on the server; poll briefly.
+    const deadline = Date.now() + 3000;
+    let after = before;
+    while (Date.now() < deadline && after <= before) {
+      await new Promise((r) => setTimeout(r, 50));
+      after = await valueOf(/^socketio_events_received_total\{event="score_update"\} (\d+)/m);
+    }
+    expect(after).toBe(before + 1);
+    expect(await valueOf(/^socketio_event_handler_seconds_count\{event="score_update"\} (\d+)/m))
+      .toBeGreaterThanOrEqual(1);
+  });
+});

@@ -9,6 +9,8 @@ const { createCsrfMiddleware } = require('../middleware/csrf.middleware');
 const { createCorrelationMiddleware } = require('../middleware/correlation.middleware');
 const { errorHandler, notFoundHandler } = require('../middleware/error.middleware');
 const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('../middleware/metrics.middleware');
+const { createPrometheusMiddleware } = require('../middleware/prometheus.middleware');
+const { createMetricsAuthMiddleware } = require('../middleware/metrics-auth.middleware');
 const { loadRoutes } = require('../routes');
 const config = require('../config/config-manager');
 
@@ -34,6 +36,34 @@ function createApp(container) {
       next();
     });
   }
+
+  /**
+   * GET /metrics — the Prometheus scrape target for Grafana Cloud
+   * (deploy/monitoring/PLAN.md).
+   *
+   * Mounted here, ahead of CORS, CSRF, request coalescing and audit, on
+   * purpose: the scraper is a server-to-server GET with a bearer token, none of
+   * those layers apply to it, and request coalescing in particular must never
+   * see an auth-dependent response. Closed unless METRICS_TOKEN is set.
+   */
+  const metrics = container.resolve('metrics');
+  const metricsAuth = createMetricsAuthMiddleware(
+    () => container.resolve('config').get('observability.metricsTokens')
+  );
+  app.get('/metrics', metricsAuth, async (req, res, next) => {
+    try {
+      const body = await metrics.metrics();
+      res.set('Content-Type', metrics.contentType);
+      res.set('Cache-Control', 'no-store');
+      res.send(body);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Request metrics. Ahead of every router so the matched route pattern is
+  // captured as Express assigns it (see prometheus/route-label.js).
+  app.use(createPrometheusMiddleware(metrics, { logger }));
 
   // CORS
   app.use(createCorsMiddleware(container));

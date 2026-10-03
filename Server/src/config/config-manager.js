@@ -43,7 +43,14 @@ class ConfigManager {
         timeouts: {
           connection: this.getNumber('DB_CONNECT_TIMEOUT', 10000),
           socket: this.getNumber('DB_SOCKET_TIMEOUT', 45000)
-        }
+        },
+        /**
+         * Driver command monitoring, for mongodb_driver_commands_seconds.
+         * Diagnostic only and OFF by default: the driver deserializes every
+         * reply a second time to build the event, which cost ~25% p50 on the
+         * read benchmark. Pool metrics work without it.
+         */
+        monitorCommands: this.getBoolean('DB_MONITOR_COMMANDS', false)
       },
       jwt: {
         secret: this.getRequired('JWT_SECRET'),
@@ -125,6 +132,15 @@ class ConfigManager {
       },
       redis: {
         url: this.getString('REDIS_URL', ''),
+      },
+      observability: {
+        /**
+         * Bearer token(s) for GET /metrics, which Grafana Cloud scrapes.
+         * Empty means the endpoint answers 404 — closed by default. A
+         * comma-separated list lets an old and a new token overlap during a
+         * rotation (deploy/monitoring/PLAN.md §7).
+         */
+        metricsTokens: this.getArray('METRICS_TOKEN', []),
       }
     };
 

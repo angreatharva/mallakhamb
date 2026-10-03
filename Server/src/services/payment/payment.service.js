@@ -1,12 +1,14 @@
 const crypto = require('crypto');
 const { ValidationError, AuthenticationError } = require('../../errors');
+const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 
 class PaymentService {
-  constructor(config, logger, transactionRepository = null, competitionRepository = null) {
+  constructor(config, logger, transactionRepository = null, competitionRepository = null, metrics = noopMetrics) {
     this.config = config;
     this.logger = logger;
     this.transactionRepository = transactionRepository;
     this.competitionRepository = competitionRepository;
+    this.metrics = metrics || noopMetrics;
   }
 
   verifySignature(rawBody, signature) {
@@ -31,7 +33,30 @@ class PaymentService {
     return crypto.timingSafeEqual(computedBuffer, signatureBuffer);
   }
 
+  /**
+   * Apply a Razorpay webhook, counting every delivery by outcome for
+   * mallakhamb_payment_webhooks_total:
+   *   processed          — a registration was updated
+   *   ignored            — a valid delivery with nothing to apply (unhandled
+   *                        event, or no matching order)
+   *   rejected_signature — missing or wrong signature
+   *   error              — anything else, including a missing webhook secret
+   */
   async reconcileWebhook(rawBody, signature, payload) {
+    try {
+      const result = await this.applyWebhook(rawBody, signature, payload);
+      this.metrics.business.paymentWebhook(payload?.event, result?.processed ? 'processed' : 'ignored');
+      return result;
+    } catch (error) {
+      this.metrics.business.paymentWebhook(
+        payload?.event,
+        error instanceof AuthenticationError ? 'rejected_signature' : 'error'
+      );
+      throw error;
+    }
+  }
+
+  async applyWebhook(rawBody, signature, payload) {
     if (!this.verifySignature(rawBody, signature)) {
       throw new AuthenticationError('Invalid Razorpay webhook signature');
     }

@@ -103,6 +103,12 @@ services:
       # an in-memory store when unset, which is per-process and resets on deploy.
       - key: REDIS_URL
         sync: false
+      # Bearer token for GET /metrics, scraped by Grafana Cloud
+      # (deploy/monitoring/PLAN.md). Unset = endpoint closed (404). Dashboard-
+      # owned so a Blueprint sync can never blank or overwrite it — the same
+      # value lives in the Grafana scrape job, and the two must match.
+      - key: METRICS_TOKEN
+        sync: false
       # Email Configuration - Add in Render Dashboard (sensitive)
       - key: EMAIL_USER
         sync: false

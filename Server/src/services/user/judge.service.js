@@ -14,6 +14,7 @@
  */
 
 const UserService = require('./user.service');
+const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const {
   NotFoundError,
   AuthenticationError,
@@ -87,6 +88,8 @@ class JudgeService extends UserService {
     this.scoreRepository = dependencies.scoreRepository;
     this.tokenService = dependencies.tokenService;
     this.socketManager = dependencies.socketManager;
+    // Prometheus metrics; optional, so harnesses that omit it keep working.
+    this.metrics = dependencies.metrics || noopMetrics;
   }
 
   /**
@@ -108,6 +111,9 @@ class JudgeService extends UserService {
    * @throws {AuthenticationError} If credentials invalid
    */
   async loginJudge(email, password) {
+    // For mallakhamb_auth_logins_total: anything that fails is a 'failure'
+    // unless it was refused by the lockout.
+    let failureOutcome = 'failure';
     try {
       const normalizedEmail = String(email || '').trim().toLowerCase();
 
@@ -143,6 +149,7 @@ class JudgeService extends UserService {
           email: normalizedEmail,
           remainingMinutes: lockout.remainingMinutes,
         });
+        failureOutcome = 'locked';
         throw new AuthenticationError(lockoutMessage(lockout.remainingMinutes));
       }
 
@@ -164,6 +171,7 @@ class JudgeService extends UserService {
         });
 
         if (next.isLocked) {
+          failureOutcome = 'locked';
           throw new AuthenticationError(lockoutMessage(next.remainingMinutes));
         }
         throw new AuthenticationError('Invalid credentials');
@@ -211,6 +219,7 @@ class JudgeService extends UserService {
 
       const primary = activeAssignments[0] || null;
 
+      this.metrics.business.login('judge', 'success');
       return {
         judge: {
           _id: account._id,
@@ -235,6 +244,7 @@ class JudgeService extends UserService {
         competitions,
       };
     } catch (error) {
+      this.metrics.business.login('judge', failureOutcome);
       if (error instanceof AuthenticationError ||
           error instanceof AuthorizationError ||
           error instanceof NotFoundError) {

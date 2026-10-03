@@ -53,6 +53,7 @@ const createPerformanceOrderController = require('../controllers/performance-ord
 
 const HealthMonitor = require('./health-monitor');
 const MetricsCollector = require('./metrics-collector');
+const { createMetrics } = require('./prometheus/registry');
 const GracefulShutdownHandler = require('./graceful-shutdown');
 const DatabaseConnection = require('./database/connection');
 
@@ -70,9 +71,13 @@ function bootstrap() {
   configManager.load();
   container.register('config', () => configManager, 'singleton');
   container.register('logger', (c) => new Logger(c.resolve('config')), 'singleton');
-  container.register('databaseConnection', (c) => new DatabaseConnection(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('metricsCollector', (c) => new MetricsCollector(c.resolve('logger')), 'singleton');
-  container.register('emailService', (c) => new EmailService(c.resolve('config'), c.resolve('logger')), 'singleton');
+  // Prometheus registry for GET /metrics (deploy/monitoring/PLAN.md). Passed as
+  // an optional LAST argument to each instrumented class, which defaults to a
+  // no-op, so every harness that builds those classes without it still works.
+  container.register('metrics', (c) => createMetrics({ logger: c.resolve('logger') }), 'singleton');
+  container.register('databaseConnection', (c) => new DatabaseConnection(c.resolve('config'), c.resolve('logger'), c.resolve('metrics')), 'singleton');
+  container.register('emailService', (c) => new EmailService(c.resolve('config'), c.resolve('logger'), c.resolve('metrics')), 'singleton');
   container.register('healthMonitor', (c) => new HealthMonitor(c.resolve('config'), c.resolve('logger'), c.resolve('emailService')), 'singleton');
   container.register('gracefulShutdownHandler', (c) => new GracefulShutdownHandler(c.resolve('logger'), c.resolve('config')), 'singleton');
   container.register('requestCoalescingMiddleware', (c) => new RequestCoalescingMiddleware(c.resolve('logger')), 'singleton');
@@ -126,7 +131,8 @@ function bootstrap() {
     c.resolve('tokenService'),
     c.resolve('otpService'),
     c.resolve('logger'),
-    c.resolve('judgeAccountRepository')
+    c.resolve('judgeAccountRepository'),
+    c.resolve('metrics')
   ), 'singleton');
   container.register('authorizationService', (c) => new AuthorizationService(
     c.resolve('playerRepository'),
@@ -137,7 +143,7 @@ function bootstrap() {
     c.resolve('logger'),
     c.resolve('judgeAccountRepository')
   ), 'singleton');
-  container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository')), 'singleton');
+  container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository'), c.resolve('metrics')), 'singleton');
 
   container.register('playerService', (c) => new PlayerService(
     c.resolve('playerRepository'),
@@ -240,6 +246,7 @@ function bootstrap() {
       socketManager: null,
       logger: c.resolve('logger'),
       cacheService: c.resolve('cacheService'),
+      metrics: c.resolve('metrics'),
     });
   }, 'singleton');
   container.register('judgeAccountService', (c) => new JudgeAccountService({
@@ -290,7 +297,8 @@ function bootstrap() {
     // admin.service need the calculation service.
     c.resolve('calculationService'),
     // `submitScore` validates the team a score is filed against.
-    c.resolve('teamRepository')
+    c.resolve('teamRepository'),
+    c.resolve('metrics')
   ), 'singleton');
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
@@ -330,7 +338,8 @@ function initializeSocketIO(httpServer) {
       c.resolve('authorizationService'),
       c.resolve('config'),
       c.resolve('logger'),
-      c.resolve('metricsCollector')
+      c.resolve('metricsCollector'),
+      c.resolve('metrics')
     );
     
     // Initialize the Socket.IO server

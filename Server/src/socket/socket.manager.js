@@ -11,6 +11,7 @@ const { Server } = require('socket.io');
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { noopMetrics } = require('../infrastructure/prometheus/registry');
 const {
   assignmentCompetitionTypes,
   scoringRoomIds,
@@ -26,14 +27,16 @@ class SocketManager {
    * @param {ConfigManager} config - Configuration manager
    * @param {Logger} logger - Logger instance
    * @param {MetricsCollector} metricsCollector - Metrics collector
+   * @param {Object} [metrics] - Prometheus metrics (createMetrics); optional
    */
-  constructor(httpServer, tokenService, authorizationService, config, logger, metricsCollector) {
+  constructor(httpServer, tokenService, authorizationService, config, logger, metricsCollector, metrics = noopMetrics) {
     this.httpServer = httpServer;
     this.tokenService = tokenService;
     this.authorizationService = authorizationService;
     this.config = config;
     this.logger = logger;
     this.metricsCollector = metricsCollector;
+    this.metrics = metrics || noopMetrics;
     
     this.io = null;
     this.eventHandlers = new Map();
@@ -72,6 +75,18 @@ class SocketManager {
 
     // Handle connections
     this.io.on('connection', this.handleConnection.bind(this));
+
+    // Rooms in use, read at scrape time. Every socket also sits in a room named
+    // after its own id; those are not rooms anyone chose, so they are skipped.
+    this.metrics.socket.setRoomsSource(() => {
+      const adapter = this.io?.of('/').adapter;
+      if (!adapter) return 0;
+      let count = 0;
+      for (const roomId of adapter.rooms.keys()) {
+        if (!adapter.sids.has(roomId)) count += 1;
+      }
+      return count;
+    });
 
     this.logger.info('Socket.IO server initialized', {
       allowedOrigins: allowedOrigins.length > 0 ? allowedOrigins : ['*']
@@ -166,6 +181,7 @@ class SocketManager {
     if (this.metricsCollector) {
       this.metricsCollector.trackSocketConnection(1);
     }
+    this.metrics.socket.connected();
 
     // Store user connection mapping (Set of socket.ids per userId)
     if (!this.connectedUsers.has(socket.userId)) {
@@ -419,6 +435,7 @@ class SocketManager {
     if (this.metricsCollector) {
       this.metricsCollector.trackSocketConnection(-1);
     }
+    this.metrics.socket.disconnected();
 
     // Remove user connection mapping from Set
     if (this.connectedUsers.has(socket.userId)) {
@@ -455,6 +472,10 @@ class SocketManager {
   registerSocketEvents(socket) {
     for (const [eventName, handler] of this.eventHandlers) {
       socket.on(eventName, async (data) => {
+        // `eventName` is a key of eventHandlers — a fixed, server-defined set —
+        // so it is safe as a label. Unregistered events never reach here.
+        const endEvent = this.metrics.socket.startEvent(eventName);
+        let failed = false;
         try {
           this.logger.debug('Socket event received', {
             eventName,
@@ -471,6 +492,7 @@ class SocketManager {
           // Execute handler
           await handler(socket, data);
         } catch (error) {
+          failed = true;
           this.logger.error('Socket event handler error', {
             eventName,
             socketId: socket.id,
@@ -484,6 +506,8 @@ class SocketManager {
             message: error.message || 'An error occurred processing your request',
             eventName
           });
+        } finally {
+          endEvent(failed);
         }
       });
     }
