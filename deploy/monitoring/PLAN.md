@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **Phases 0–3 done (2026-10-03). Scrape live, `up` = 1 for every scrape since; four dashboards imported into the Grafana folder *Mallakhamb*. Next: Phase 4 alerts (needs Q1: email only, or Telegram too?).**
+Status: **Phases 0–4 done (2026-10-03). Scrape live; four dashboards and 12 alert rules in the Grafana folder *Mallakhamb*, emailing the owner. Next: Phase 5 external uptime checks.**
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -86,7 +86,7 @@ Side effect worth knowing: the 60-second scrape is inbound traffic, so it also k
 | Scrape interval | 60 s |
 | Where `METRICS_TOKEN` is stored | Render dashboard (`mallakhamb-server` → Environment) + Grafana Cloud scrape job. **Nowhere else.** |
 | Token created on | 2026-10-03 (by the owner, locally; never shared) |
-| Alert contact point(s) | |
+| Alert contact point(s) | `owner-email` → angreatharva08@gmail.com (email only, Q1). Route: `service=mallakhamb-api`, group by `alertname`, critical repeat 1 h, warning 4 h |
 | Synthetic check ids | |
 | Active series at end of Phase 3 | (from Grafana Cloud → Usage). First scrape, 2026-10-03: **122** series, 117 samples/scrape |
 | Prometheus data source | `grafanacloud-sinceresloth366-prom` (uid `grafanacloud-prom`) |
@@ -372,9 +372,9 @@ Verified: all 44 distinct panel queries parse and run against the live data sour
 **Prerequisites:** Phase 3 done.
 
 **Steps**
-- [ ] 4.1 **Contact points:** `owner-email` (your address). Optional `telegram` (bot token + chat id, Q1).
-- [ ] 4.2 **Notification policy:** `severity=critical` → all contact points, repeat every 1 h; `severity=warning` → email, repeat every 4 h. Group by `alertname`.
-- [ ] 4.3 **Rules** (folder `mallakhamb`, evaluation every 1 m). The `for` durations absorb a normal Render deploy restart (~1 min).
+- [x] 4.1 **Contact points:** `owner-email` (your address). Optional `telegram` (bot token + chat id, Q1).
+- [x] 4.2 **Notification policy:** `severity=critical` → all contact points, repeat every 1 h; `severity=warning` → email, repeat every 4 h. Group by `alertname`.
+- [x] 4.3 **Rules** (folder `mallakhamb`, evaluation every 1 m). The `for` durations absorb a normal Render deploy restart (~1 min).
 
 | Alert | Expression | For | Severity |
 |---|---|---|---|
@@ -391,14 +391,30 @@ Verified: all 44 distinct panel queries parse and run against the live data sour
 | Login failures spike | `sum(increase(mallakhamb_auth_logins_total{outcome="failure"}[5m])) > 25` | 0 m | warning |
 | Payment webhook problem | `sum(increase(mallakhamb_payment_webhooks_total{outcome=~"rejected_signature|error"}[15m])) > 0` | 0 m | warning |
 
-- [ ] 4.4 Every rule's **summary** says what to look at first (link to the matching dashboard panel), and its **description** names the runbook line in §8.
-- [ ] 4.5 Export the rules (Alerting → Alert rules → *Export*, YAML) to `deploy/monitoring/alerts/mallakhamb-rules.yaml` and commit.
+- [x] 4.4 Every rule's **summary** says what to look at first (link to the matching dashboard panel), and its **description** names the runbook line in §8.
+- [x] 4.5 Export the rules (Alerting → Alert rules → *Export*, YAML) to `deploy/monitoring/alerts/mallakhamb-rules.yaml` and commit.
 
 **Verify**
 - Contact point → **Test** delivers an email (and Telegram).
 - Temporarily set *API down*'s threshold to `== 1` for 5 minutes → alert fires and resolves → restore.
 
 **Done when:** test delivery works; rules exported and committed.
+
+### Phase 4 — as built (2026-10-03)
+
+Source of truth: [alerts/apply-alerts.js](alerts/apply-alerts.js) (paste into the Grafana console to apply; idempotent). [alerts/mallakhamb-rules.yaml](alerts/mallakhamb-rules.yaml) is generated from it. How-to: [alerts/README.md](alerts/README.md).
+
+Verified: all 12 rules evaluate with `health=ok` and sit at Normal on a healthy API. Per-rule hashes of the live rules match the repo, all 12. A temporary always-firing rule carrying the same labels (`service=mallakhamb-api`, `severity=critical`) went Normal → Firing → `active` in Alertmanager on receiver `owner-email`, and was then deleted (so a *resolved* email follows the *firing* one).
+
+| # | Change from the steps above | Why |
+|---|---|---|
+| C1 | Delivery tested with a temporary separate rule instead of flipping *API down* to `== 1` | Same route and contact point, with no risk of leaving a production rule in the wrong state |
+| C2 | Each query returns the raw value and a threshold step compares it; **No data → OK** for every rule | Quiet periods (no traffic, counters never incremented) must not page. *Scrape missing* covers data disappearing altogether |
+| C3 | Execution error → *Error* (pages) for critical rules, *KeepLast* for warnings | A broken query on a critical rule should be noticed; on a warning, it shouldn't flap |
+| C4 | *High 5xx* applies its traffic floor with `and on() (… > 0.05)` inside the query | One failed request at 3 a.m. is not a 100 % error rate |
+| C5 | *DB slow* became *DB pool waiting* (A10); *Payment webhook problem* matches `rejected_signature|error` only (A6) | Command timing is off by default; `ignored` webhooks are normal |
+| C6 | Every rule links its dashboard panel (`__dashboardUid__`/`__panelId__`) and the runbook (`runbook_url` → §8) | Step 4.4 |
+| C7 | The YAML is generated from the apply script, not downloaded from Grafana's export | The browser tool masks parts of the export text, so copying it out would corrupt the file; the hash check proves the two are the same rules |
 
 ---
 
@@ -495,7 +511,7 @@ Retention on the free tier is ~14 days: enough to compare "this meet vs. last we
 
 ## 12. Open questions (answer before Phase 4; defaults are fine for Phases 0–3)
 
-- **Q1.** Alerts to email only, or also Telegram? (Grafana has no native WhatsApp.)
+- **Q1.** ~~Alerts to email only, or also Telegram?~~ **Answered 2026-10-03: email only**, to angreatharva08@gmail.com.
 - **Q2.** Who else needs dashboard access, and as Viewer or Editor?
 - **Q3.** Should the competition-day dashboard be shared read-only with the technical official at the venue (Grafana *public dashboard* link — exposes the panels, not the data source)?
 
