@@ -2,7 +2,7 @@
 
 **Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
 **Audited against:** `master` @ `5a9cae8`, 2026-09-28
-**Status:** Implementation on branch `feat/responsive-appearance`. Phases 2–4 committed; Phase 5 in progress (foundation committed 2026-09-30). Gaps are noted in the log below.
+**Status:** All phases (2–11) done on branch `feat/responsive-appearance`; `master` merged in and everything re-verified 2026-10-02/03 on `1c187b4`. Final report: [RESPONSIVE_UIUX_REPORT.md](RESPONSIVE_UIUX_REPORT.md). Gaps are noted in the log below.
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
 
 ---
@@ -307,6 +307,25 @@ The final report is **[RESPONSIVE_UIUX_REPORT.md](RESPONSIVE_UIUX_REPORT.md)**: 
 - **Appearance persistence** — `appearance-persistence.spec.js`: Light chosen from the shell's menu survives logout and reload. On reload `data-appearance` takes only `light` from the first script, so there is no dark first frame.
 - **Keyboard focus** — `focus-visible.spec.js` tabs through every route, both appearances, and compares each stop focused against unfocused. **Every stop shows focus, 6/6 areas.**
 - 396 unit tests, 0 lint errors, production build clean.
+
+*Re-verification after merging `master` (2026-10-02/03).* The merge, its one conflict (the judge-panel mismatch chips), and the fixes found on the way are written up in the report's "Re-verification" section.
+
+The largest gap was screens no route audit could open, because they need state first:
+- results boards;
+- the judge's running order;
+- the panel review and its three dialogs.
+
+Two specs now reach them the way a person does: `deep-screens.spec.js` and `judge-deep-screens.spec.js`. They found the phone podium and the missing Light/Dark switch on the running order. They also found 32px dialog closes with no name, and a compact stepper pair where a tap below "−" pressed "+".
+
+The full chain then re-ran from scratch, strictly one run at a time:
+- functional;
+- pixel gate;
+- contrast;
+- the 15-width matrix in each appearance;
+- portrait and landscape;
+- devices.
+
+An earlier chain that had been "stopped" turned out to be still running beside the later ones. Overlapping runs share the audit accounts, which cannot be signed in twice, so their results were discarded. Final numbers are in the report; 405 unit tests pass.
 
 ### Phase 10 log
 
