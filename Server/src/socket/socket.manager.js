@@ -26,16 +26,14 @@ class SocketManager {
    * @param {AuthorizationService} authorizationService - Authorization service
    * @param {ConfigManager} config - Configuration manager
    * @param {Logger} logger - Logger instance
-   * @param {MetricsCollector} metricsCollector - Metrics collector
    * @param {Object} [metrics] - Prometheus metrics (createMetrics); optional
    */
-  constructor(httpServer, tokenService, authorizationService, config, logger, metricsCollector, metrics = noopMetrics) {
+  constructor(httpServer, tokenService, authorizationService, config, logger, metrics = noopMetrics) {
     this.httpServer = httpServer;
     this.tokenService = tokenService;
     this.authorizationService = authorizationService;
     this.config = config;
     this.logger = logger;
-    this.metricsCollector = metricsCollector;
     this.metrics = metrics || noopMetrics;
     
     this.io = null;
@@ -177,10 +175,6 @@ class SocketManager {
       competitionId: socket.competitionId
     });
 
-    // Track connection in metrics
-    if (this.metricsCollector) {
-      this.metricsCollector.trackSocketConnection(1);
-    }
     this.metrics.socket.connected();
 
     // Store user connection mapping (Set of socket.ids per userId)
@@ -431,10 +425,6 @@ class SocketManager {
       userType: socket.userType
     });
 
-    // Track disconnection in metrics
-    if (this.metricsCollector) {
-      this.metricsCollector.trackSocketConnection(-1);
-    }
     this.metrics.socket.disconnected();
 
     // Remove user connection mapping from Set
@@ -483,11 +473,6 @@ class SocketManager {
             userId: socket.userId,
             data
           });
-
-          // Track event in metrics
-          if (this.metricsCollector) {
-            this.metricsCollector.trackSocketEvent();
-          }
 
           // Execute handler
           await handler(socket, data);

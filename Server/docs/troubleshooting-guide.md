@@ -148,7 +148,7 @@ Error: Circular dependency detected: authService → tokenService → authServic
 **Symptoms:** High p95 response times, slow list endpoints.
 
 **Debugging steps:**
-1. Check `GET /api/health/metrics` for slow endpoint data
+1. Grafana → *Mallakhamb API overview* → "Slowest routes" for the slow endpoints
 2. Enable MongoDB query profiling:
    ```javascript
    mongoose.set('debug', true); // logs all queries to console
@@ -208,7 +208,7 @@ Migration 002_add_indexes failed: ...
 **Common causes:**
 
 1. **Cache growing too large**
-   - Check `GET /api/health/metrics` for cache size
+   - Check the Runtime dashboard (RSS and heap) in Grafana
    - Reduce `CACHE_MAX_SIZE` in `.env` (default: 1000 entries)
    - Reduce `CACHE_TTL_SECONDS` to evict entries faster
 
@@ -224,7 +224,7 @@ Migration 002_add_indexes failed: ...
 
 ### Cache hit rate below 60%
 
-**Symptom:** `GET /api/health/metrics` shows low cache hit rate.
+**Symptom:** low cache hit rate in the application logs.
 
 **Causes and fixes:**
 
@@ -244,7 +244,7 @@ Migration 002_add_indexes failed: ...
 ### p95 response time above 200ms
 
 **Debugging steps:**
-1. Check `GET /api/health/metrics` for the slowest endpoints
+1. Grafana → *Mallakhamb API overview* → "Slowest routes"
 2. Enable query logging: `mongoose.set('debug', true)`
 3. Look for N+1 query patterns (a query inside a loop)
 4. Check if the slow endpoint is missing cache
@@ -435,6 +435,6 @@ curl http://localhost:5000/api/health/ready
 # Full health status
 curl http://localhost:5000/api/health
 
-# Performance metrics
-curl http://localhost:5000/api/health/metrics
+# Performance metrics (Prometheus; needs METRICS_TOKEN)
+curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:5000/metrics
 ```

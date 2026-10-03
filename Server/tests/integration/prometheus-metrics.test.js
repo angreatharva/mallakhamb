@@ -68,9 +68,10 @@ describe('GET /metrics', () => {
     expect(text).not.toMatch(/uri="\/metrics"/);
   });
 
-  test('the legacy /api/health/metrics is no longer public', async () => {
-    await request(app).get('/api/health/metrics').expect(401);
-    await request(app).get('/api/health/metrics').set('Authorization', `Bearer ${TOKEN}`).expect(200);
+  test('the old /api/health/metrics is gone (Phase 6), even with the token', async () => {
+    await request(app).get('/api/health/metrics').expect(404);
+    await request(app).get('/api/health/metrics').set('Authorization', `Bearer ${TOKEN}`).expect(404);
+    await request(app).get('/api/v1/health/metrics').set('Authorization', `Bearer ${TOKEN}`).expect(404);
   });
 });
 

@@ -311,22 +311,9 @@ Detailed health status including all component checks.
 }
 ```
 
-### `GET /api/health/metrics`
+### `GET /metrics`
 
-Performance metrics in JSON format.
-
-```json
-{
-  "requests": {
-    "total": 1250,
-    "byEndpoint": { "GET /api/competitions": 450, "POST /api/auth/login": 200 }
-  },
-  "responseTimes": { "p50": 45, "p95": 180, "p99": 420 },
-  "errors": { "total": 12, "rate": "0.96%" },
-  "cache": { "hits": 890, "misses": 360, "hitRate": "71.2%" },
-  "socketConnections": 24
-}
-```
+Prometheus exposition format, not under `/api`. Returns 404 unless `METRICS_TOKEN` is set, and 401 without `Authorization: Bearer <METRICS_TOKEN>`. (The old `GET /api/health/metrics` JSON endpoint was removed in 2026-10.)
 
 ---
 
@@ -359,16 +346,19 @@ In production, logs are JSON-formatted for easy ingestion into log aggregators (
 
 ### Prometheus Integration
 
-The `/api/health/metrics` endpoint returns metrics that can be scraped by Prometheus. Add a scrape config:
+Metrics are at the root-level `GET /metrics` (Prometheus format, prom-client), closed unless `METRICS_TOKEN` is set and the request carries it as a bearer token. Grafana Cloud scrapes it once a minute; dashboards, alerts and uptime checks live in `deploy/monitoring/` (see `deploy/monitoring/PLAN.md`). Any Prometheus-compatible scraper works the same way:
 
 ```yaml
 # prometheus.yml
 scrape_configs:
   - job_name: 'mallakhamb-api'
+    scheme: https
+    metrics_path: /metrics
+    authorization:
+      credentials: <METRICS_TOKEN>
     static_configs:
-      - targets: ['your-api.com:5000']
-    metrics_path: '/api/health/metrics'
-    scrape_interval: 30s
+      - targets: ['mallakhamb-server.onrender.com']
+    scrape_interval: 60s
 ```
 
 ### Alerts to Configure

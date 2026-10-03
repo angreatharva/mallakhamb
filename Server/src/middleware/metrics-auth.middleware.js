@@ -1,6 +1,5 @@
 /**
- * Gate for the metrics endpoints (`/metrics`, and the legacy
- * `/api/health/metrics`).
+ * Gate for GET /metrics, the Prometheus endpoint Grafana Cloud scrapes.
  *
  * Closed by default:
  *   METRICS_TOKEN unset  → 404, so the endpoint looks absent

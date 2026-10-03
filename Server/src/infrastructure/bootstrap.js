@@ -52,7 +52,6 @@ const createPaymentController = require('../controllers/payment.controller');
 const createPerformanceOrderController = require('../controllers/performance-order.controller');
 
 const HealthMonitor = require('./health-monitor');
-const MetricsCollector = require('./metrics-collector');
 const { createMetrics } = require('./prometheus/registry');
 const GracefulShutdownHandler = require('./graceful-shutdown');
 const DatabaseConnection = require('./database/connection');
@@ -71,7 +70,6 @@ function bootstrap() {
   configManager.load();
   container.register('config', () => configManager, 'singleton');
   container.register('logger', (c) => new Logger(c.resolve('config')), 'singleton');
-  container.register('metricsCollector', (c) => new MetricsCollector(c.resolve('logger')), 'singleton');
   // Prometheus registry for GET /metrics (deploy/monitoring/PLAN.md). Passed as
   // an optional LAST argument to each instrumented class, which defaults to a
   // no-op, so every harness that builds those classes without it still works.
@@ -303,7 +301,7 @@ function bootstrap() {
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
   container.register('teamController', (c) => createTeamController(c), 'singleton');
-  container.register('healthController', (c) => new HealthController(c.resolve('healthMonitor'), c.resolve('metricsCollector'), c.resolve('logger')), 'singleton');
+  container.register('healthController', (c) => new HealthController(c.resolve('healthMonitor'), c.resolve('logger')), 'singleton');
   container.register('coachController', (c) => createCoachController(c), 'singleton');
   container.register('adminController', (c) => createAdminController(c), 'singleton');
   container.register('publicController', (c) => createPublicController(c), 'singleton');
@@ -338,7 +336,6 @@ function initializeSocketIO(httpServer) {
       c.resolve('authorizationService'),
       c.resolve('config'),
       c.resolve('logger'),
-      c.resolve('metricsCollector'),
       c.resolve('metrics')
     );
     

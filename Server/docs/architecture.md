@@ -61,7 +61,7 @@ The application is organized into four strict layers. Each layer only depends on
 ┌──────────────────────▼──────────────────────────────────┐
 │                 Infrastructure Layer                     │
 │   DI Container · ConfigManager · Logger                 │
-│   HealthMonitor · MetricsCollector · GracefulShutdown   │
+│   HealthMonitor · Prometheus metrics · GracefulShutdown │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -218,9 +218,9 @@ Winston-based structured logger. JSON format in production, human-readable in de
 
 Checks database connectivity, memory usage, and email service configuration. Exposes liveness and readiness probes.
 
-#### Metrics Collector (`src/infrastructure/metrics-collector.js`)
+#### Prometheus metrics (`src/infrastructure/prometheus/`)
 
-Tracks request counts, response time percentiles (p50/p95/p99), error rates, cache hit/miss rates, and active Socket.IO connections. Exports in Prometheus format.
+A prom-client registry served at `GET /metrics` (token-gated): HTTP request histograms by route pattern, Node runtime, MongoDB pool, Socket.IO events and business counters (scores, logins, payment webhooks, emails). Grafana Cloud scrapes it; see `deploy/monitoring/PLAN.md`.
 
 #### Graceful Shutdown (`src/infrastructure/graceful-shutdown.js`)
 
@@ -264,7 +264,7 @@ Server/
 │   │   ├── bootstrap.js               # Wires all DI registrations
 │   │   ├── logger.js
 │   │   ├── health-monitor.js
-│   │   ├── metrics-collector.js
+│   │   ├── prometheus/            # registry.js, route-label.js
 │   │   ├── graceful-shutdown.js
 │   │   └── database/
 │   │       ├── connection.js

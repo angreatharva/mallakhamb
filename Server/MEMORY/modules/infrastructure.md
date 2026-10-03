@@ -28,7 +28,7 @@ don't: the database/index/migration/Redis/shutdown machinery itself.
 | `src/infrastructure/database/migration-runner.js` | Applies/tracks migrations | Tracking is a Mongo collection, not a file |
 | `src/infrastructure/graceful-shutdown.js` | `GracefulShutdownHandler` | Registered by both entrypoints |
 | `src/infrastructure/redis-client.js` | `RedisClient` (ioredis wrapper) | Backs token invalidation; in-memory fallback |
-| `src/infrastructure/health-monitor.js`, `metrics-collector.js`, `logger.js` | — | See [11-OBSERVABILITY.md](../11-OBSERVABILITY.md) |
+| `src/infrastructure/health-monitor.js`, `prometheus/`, `logger.js` | — | See [11-OBSERVABILITY.md](../11-OBSERVABILITY.md) |
 | `src/infrastructure/bootstrap.js`, `createApp.js`, `di-container.js` | — | See [01-ARCHITECTURE.md](../01-ARCHITECTURE.md) |
 | `src/infrastructure/README.md` | Existing doc | Covers only the DI container — materially incomplete as a guide to this directory (see below) |
 | `src/infrastructure/database/README.md` | Existing doc | Mostly accurate; one overstated claim (see below) |
@@ -100,7 +100,7 @@ single most-recently-applied migration.
 
 ## `graceful-shutdown.js`
 
-`register({server, socketManager, dbConnection, metricsCollector,
+`register({server, socketManager, dbConnection,
 redisClient})` wires signal handlers: `SIGTERM`/`SIGINT` → clean shutdown;
 `uncaughtException`/`unhandledRejection` → shutdown with `exitCode:1`.
 `shutdown(signal, exitCode)` — guarded against re-entry — runs, in order:
@@ -114,9 +114,9 @@ redisClient})` wires signal handlers: `SIGTERM`/`SIGINT` → clean shutdown;
 4. `closeDatabaseConnections()` — `dbConnection.disconnect()`.
 5. `closeRedisConnection()` — wrapped so a Redis failure never blocks
    shutdown.
-6. `flushLogsAndMetrics()` — calls `metricsCollector.flush()` **only if that
-   method exists** (it doesn't — see GOTCHAS.md, always a no-op for
-   metrics); ends the Winston logger transports and awaits `'finish'`.
+6. `flushLogsAndMetrics()` — ends the Winston logger transports and awaits
+   `'finish'`. (No metrics flush: Prometheus metrics are pulled by the
+   scrape, and the old collector it used to guard for was removed 2026-10-03.)
 7. `process.exit(exitCode)`.
 
 Any thrown error mid-sequence forces `process.exit(1)` immediately — there's
@@ -186,7 +186,7 @@ importing the app for a test never triggers side effects.
   documents none of the 8 other files in this directory tree — not
   contradictory, but a reader relying on it alone wouldn't know
   `connection.js`, `index-manager.js`, `migration-runner.js`,
-  `health-monitor.js`, `metrics-collector.js`, `logger.js`,
+  `health-monitor.js`, `prometheus/`, `logger.js`,
   `graceful-shutdown.js`, `redis-client.js` exist.
 - **`src/infrastructure/database/README.md`**: claims *"Mongoose
   automatically attempts reconnection... Connection monitoring tracks

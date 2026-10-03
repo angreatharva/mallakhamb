@@ -30,7 +30,8 @@ the file-by-file index.
 | `competition-lock.middleware.js` | `createCompetitionLockGuard` → `requireUnlockedCompetition(options)` | Per-route, always after auth |
 | `validation.middleware.js` | `handleValidationErrors`, `validate(rules)` | Last element of a validator chain, per-route |
 | `correlation.middleware.js` | `createCorrelationMiddleware` | `createApp.js` (global, early) |
-| `metrics.middleware.js` | `createMetricsMiddleware`, `createMetricsEndpoint`, `createPrometheusEndpoint`, `createErrorMetricsMiddleware` | `createApp.js` (global) |
+| `prometheus.middleware.js` | `createPrometheusMiddleware` | `createApp.js` (global, ahead of CORS) |
+| `metrics-auth.middleware.js` | `createMetricsAuthMiddleware` | `createApp.js` (`GET /metrics`) |
 | `audit.middleware.js` | `createAuditMiddleware`, `auditOperation`, and named wrappers (`auditLogin`, `auditUserCreated`, etc.) | `createAuditMiddleware` global in `createApp.js`; named wrappers attached per-route, opt-in |
 | `request-coalescing.middleware.js` | `RequestCoalescingMiddleware` (class, `.middleware()` method) | `createApp.js` (global, one DI singleton instance) |
 | `error.middleware.js` | `asyncHandler`, `notFoundHandler`, `errorHandler` | `createApp.js` (end of chain) |

@@ -111,7 +111,6 @@ if (require.main === module) {
       server: server,
       socketManager: socketManager,
       dbConnection: databaseConnection,
-      metricsCollector: container.resolve('metricsCollector'),
       redisClient: redisClient,
     });
     logger.info('Graceful shutdown handler registered');

@@ -8,7 +8,6 @@ const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, c
 const { createCsrfMiddleware } = require('../middleware/csrf.middleware');
 const { createCorrelationMiddleware } = require('../middleware/correlation.middleware');
 const { errorHandler, notFoundHandler } = require('../middleware/error.middleware');
-const { createMetricsMiddleware, createErrorMetricsMiddleware } = require('../middleware/metrics.middleware');
 const { createPrometheusMiddleware } = require('../middleware/prometheus.middleware');
 const { createMetricsAuthMiddleware } = require('../middleware/metrics-auth.middleware');
 const { loadRoutes } = require('../routes');
@@ -17,7 +16,6 @@ const config = require('../config/config-manager');
 function createApp(container) {
   const app = express();
   const logger = container.resolve('logger');
-  const metricsCollector = container.resolve('metricsCollector');
 
   // Trust proxy - Required for Render and other reverse proxies
   app.set('trust proxy', 1);
@@ -125,9 +123,6 @@ function createApp(container) {
     next();
   });
 
-  // Metrics collection middleware
-  app.use(createMetricsMiddleware(metricsCollector));
-
   // Request coalescing middleware
   const requestCoalescingMiddleware = container.resolve('requestCoalescingMiddleware');
   app.use(requestCoalescingMiddleware.middleware());
@@ -230,9 +225,6 @@ function createApp(container) {
 
   // 404 handler
   app.use(notFoundHandler);
-
-  // Error metrics middleware
-  app.use(createErrorMetricsMiddleware(metricsCollector));
 
   // Error handling middleware
   app.use(errorHandler);

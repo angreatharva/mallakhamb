@@ -128,7 +128,7 @@ gracefulShutdownHandler.register({
   server: httpServer,
   socketManager: socketManager,
   dbConnection: databaseConnection,
-  metricsCollector: metricsCollector
+  redisClient: redisClient
 });
 ```
 

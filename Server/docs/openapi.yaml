@@ -82,10 +82,6 @@ components:
       in: cookie
       name: access_token
       description: Set by any login endpoint. Requires `X-CSRF-Token` on writes.
-    metricsToken:
-      type: http
-      scheme: bearer
-      description: The `METRICS_TOKEN` environment value. Metrics endpoints only.
   schemas:
     Error:
       type: object
@@ -976,58 +972,6 @@ paths:
         
         **Public** — no authentication required.
       security: []
-  /api/health/metrics:
-    get:
-      tags:
-        - Health
-      summary: Performance metrics (legacy)
-      operationId: healthMetrics
-      parameters:
-        - name: format
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - json
-              - prometheus
-            default: json
-          description: Output format
-      responses:
-        "200":
-          description: Metrics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data: {}
-                  message:
-                    type: string
-        "401":
-          description: Missing or wrong metrics token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: Metrics are disabled (METRICS_TOKEN unset)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Unhandled server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      description: "Request counts and latency percentiles from the old in-process collector. Requires `METRICS_TOKEN` as a bearer token (or as the Basic password): **404** when no token is configured, **401** without it. Superseded by the root-level `GET /metrics` (Prometheus, scraped by Grafana Cloud) and retired in Phase 6 of deploy/monitoring/PLAN.md."
-      security:
-        - metricsToken: []
   /api/health-legacy:
     get:
       tags:

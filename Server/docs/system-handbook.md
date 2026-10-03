@@ -124,7 +124,7 @@ Server/
 │   │   ├── bootstrap.js               # Wires all DI registrations
 │   │   ├── logger.js                  # Winston structured logger
 │   │   ├── health-monitor.js          # Health checks (DB, memory, email)
-│   │   ├── metrics-collector.js       # Prometheus-compatible metrics
+│   │   ├── prometheus/                # prom-client registry for GET /metrics
 │   │   ├── graceful-shutdown.js       # SIGTERM/SIGINT handler
 │   │   └── database/
 │   │       ├── connection.js          # MongoDB connection pool
@@ -1915,11 +1915,8 @@ curl http://localhost:5000/health/ready
 # Detailed health status (all components)
 curl http://localhost:5000/health
 
-# Performance metrics (JSON)
-curl http://localhost:5000/health/metrics
-
-# Performance metrics (Prometheus format)
-curl "http://localhost:5000/health/metrics?format=prometheus"
+# Performance metrics (Prometheus format; needs METRICS_TOKEN)
+curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:5000/metrics
 ```
 
 ### Sample Test Flow

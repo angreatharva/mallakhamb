@@ -1,14 +1,15 @@
 /**
  * Health Check Routes
  * 
- * Provides endpoints for health monitoring and metrics
+ * Health probes. Metrics are not here: they are served at the root-level
+ * GET /metrics (Prometheus, token-gated) — see createApp.js and
+ * deploy/monitoring/PLAN.md. The old /health/metrics was removed in Phase 6.
  * 
  * Requirements: 14.1, 14.2, 14.3
  */
 
 const express = require('express');
 const router = express.Router();
-const { createMetricsAuthMiddleware } = require('../middleware/metrics-auth.middleware');
 
 /**
  * Initialize health routes with controller from DI container
@@ -50,20 +51,6 @@ function createHealthRoutes(container) {
    * @access Public
    */
   router.get('/', (req, res) => healthController.health(req, res));
-
-  /**
-   * @route GET /health/metrics
-   * @desc Performance metrics - returns metrics in JSON or Prometheus format
-   * @query {string} format - 'json' (default) or 'prometheus'
-   * @access Private — the same METRICS_TOKEN as GET /metrics. It was public,
-   *         exposing request counts, error types and socket counts to anyone;
-   *         now 404 when no token is configured and 401 without it. Retired in
-   *         Phase 6 of deploy/monitoring/PLAN.md.
-   */
-  const metricsAuth = createMetricsAuthMiddleware(
-    () => container.resolve('config').get('observability.metricsTokens')
-  );
-  router.get('/metrics', metricsAuth, (req, res) => healthController.metrics(req, res));
 
   return router;
 }

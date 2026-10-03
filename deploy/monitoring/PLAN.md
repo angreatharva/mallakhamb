@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **Phases 0–5 done (2026-10-03). Scrape live; four dashboards with 70 / 80 / 90 % usage gauges; 13 alert rules emailing the owner; outside-in checks from Mumbai and Hyderabad. Remaining: Phase 6 (retire the old collector) on or after 2026-10-17.**
+Status: **All phases done (2026-10-03).** Scrape live; four dashboards with 70 / 80 / 90 % usage gauges; 13 alert rules emailing the owner; outside-in checks from Mumbai and Hyderabad; the old collector and `/api/health/metrics` removed. From here on, maintenance only: §7 rotation, §8 runbook, and the source-of-truth scripts in `dashboards/`, `alerts/`, `synthetics/`.
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -448,15 +448,23 @@ Every dashboard now shows usage as **% of its limit** with bands at 70 % (yellow
 
 ---
 
-## PHASE 6 — Retire the old collector (after 2 weeks of clean data, ~2 h)
+## PHASE 6 — Retire the old collector (done 2026-10-03)
 
 **Steps**
-- [ ] 6.1 Delete `/api/health/metrics` (route + controller method) and the old `createMetricsMiddleware` / `createErrorMetricsMiddleware` mounts.
-- [ ] 6.2 Delete [metrics-collector.js](../../Server/src/infrastructure/metrics-collector.js) and [metrics.middleware.js](../../Server/src/middleware/metrics.middleware.js); swap remaining `metricsCollector` injections (socket manager, graceful-shutdown, request-coalescing tests) to the new `metrics`.
-- [ ] 6.3 Update the OpenAPI spec and run `docs:openapi:check`.
+- [x] 6.1 Delete `/api/health/metrics` (route + controller method) and the old `createMetricsMiddleware` / `createErrorMetricsMiddleware` mounts.
+- [x] 6.2 Delete [metrics-collector.js](../../Server/src/infrastructure/metrics-collector.js) and [metrics.middleware.js](../../Server/src/middleware/metrics.middleware.js); swap remaining `metricsCollector` injections (socket manager, graceful-shutdown, request-coalescing tests) to the new `metrics`.
+- [x] 6.3 Update the OpenAPI spec and run `docs:openapi:check`.
 
 **Verify:** full jest suite green; dashboards unchanged (they never used the old names).
 **Done when:** merged.
+
+### Phase 6 — as built (2026-10-03)
+
+**The two-week wait was skipped, by the owner's decision.** The old collector was never relied on: nothing in `Web/` called it, Grafana never read it, and it had been token-gated since Phase 1. So two weeks of side-by-side data would have protected nothing.
+
+Removed: `metrics-collector.js` (646 lines), `metrics.middleware.js` (the per-request `res.end` wrapper and the error hook, which ran on every request), `GET /api/health/metrics` (route, controller method, OpenAPI entry, perf-harness step), and the graceful-shutdown metrics flush, which never ran (the class had no `flush()`). `SocketManager`'s constructor lost its old 6th argument, so `metrics` now sits in that position. The one positional caller (`tests/security/socket-scoring.security.test.js`) was updated, and the socket integration test still proves the Prometheus socket metrics arrive.
+
+Verified: full jest suite green (66 suites, 852 tests); `docs:openapi:check` 183/183. On a running server, `/api/health/metrics` and `/api/v1/health/metrics` return **404** with or without the token, and `/metrics` is unchanged (401 without the token; HTTP, pool, socket and `app_info` series with it). Docs that pointed at the old endpoint (Server README, deployment, troubleshooting, architecture, handbook, API reference, `Server/MEMORY/`) now point at `/metrics` and Grafana. Dashboards, alerts and uptime checks are untouched; none of them used the old names.
 
 ---
 

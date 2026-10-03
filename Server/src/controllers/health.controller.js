@@ -1,7 +1,7 @@
 /**
  * Health Controller
  *
- * Infrastructure controller for Kubernetes probes and Prometheus metrics.
+ * Infrastructure controller for liveness, readiness and component health.
  * Intentionally kept as a class — it is not a business domain controller and
  * has no DI container requirement. Dependencies are passed directly via constructor.
  *
@@ -9,20 +9,19 @@
  *   GET /health/live    — liveness probe
  *   GET /health/ready   — readiness probe
  *   GET /health         — detailed component health
- *   GET /health/metrics — JSON or Prometheus-format metrics
+ *
+ * Metrics live at the root-level GET /metrics (prom-client), not here.
  *
  * @module controllers/health.controller
  */
 
 class HealthController {
   /**
-   * @param {Object} healthMonitor     - Service that checks component health
-   * @param {Object} metricsCollector  - Service that collects performance metrics
-   * @param {Object} logger            - Logger instance
+   * @param {Object} healthMonitor - Service that checks component health
+   * @param {Object} logger        - Logger instance
    */
-  constructor(healthMonitor, metricsCollector, logger) {
+  constructor(healthMonitor, logger) {
     this.healthMonitor = healthMonitor;
-    this.metricsCollector = metricsCollector;
     this.logger = logger;
   }
 
@@ -70,30 +69,6 @@ class HealthController {
         status: 'unhealthy',
         message: error.message,
         timestamp: new Date().toISOString(),
-      });
-    }
-  }
-
-  /**
-   * Metrics endpoint — supports JSON (default) and Prometheus text format.
-   * @route GET /health/metrics
-   * @query {string} [format=json] — 'json' or 'prometheus'
-   */
-  async metrics(req, res) {
-    try {
-      if (req.query.format === 'prometheus') {
-        const output = this.metricsCollector.toPrometheusFormat();
-        res.set('Content-Type', 'text/plain; version=0.0.4');
-        return res.status(200).send(output);
-      }
-
-      const metrics = this.metricsCollector.getMetrics();
-      return res.status(200).json(metrics);
-    } catch (error) {
-      this.logger.error('Metrics endpoint failed', { error: error.message });
-      return res.status(500).json({
-        error: 'Failed to retrieve metrics',
-        message: error.message,
       });
     }
   }

@@ -643,26 +643,6 @@ function buildPaths() {
     responses: { 200: ok('Ready'), 503: errorResponse('Not ready') },
   }));
 
-  const legacyMetricsDescription = 'Request counts and latency percentiles from the old in-process '
-    + 'collector. Requires `METRICS_TOKEN` as a bearer token (or as the Basic password): **404** when '
-    + 'no token is configured, **401** without it. Superseded by the root-level `GET /metrics` '
-    + '(Prometheus, scraped by Grafana Cloud) and retired in Phase 6 of deploy/monitoring/PLAN.md.';
-  add('/api/health/metrics', 'get', {
-    ...op({
-      tag: 'Health', auth: false, operationId: 'healthMetrics',
-      summary: 'Performance metrics (legacy)',
-      parameters: [queryParam('format', { type: 'string', enum: ['json', 'prometheus'], default: 'json' }, 'Output format')],
-      responses: {
-        200: ok('Metrics'),
-        401: errorResponse('Missing or wrong metrics token'),
-        404: errorResponse('Metrics are disabled (METRICS_TOKEN unset)'),
-      },
-    }),
-    // op() describes an auth:false route as public; this one is token-gated.
-    description: legacyMetricsDescription,
-    security: [{ metricsToken: [] }],
-  });
-
   add('/api/health-legacy', 'get', op({
     tag: 'Health', auth: false, operationId: 'healthLegacy',
     summary: 'Legacy liveness string',
@@ -2287,10 +2267,6 @@ function buildOpenApiDocument({ serverUrl = 'http://localhost:5000' } = {}) {
         cookieAuth: {
           type: 'apiKey', in: 'cookie', name: 'access_token',
           description: 'Set by any login endpoint. Requires `X-CSRF-Token` on writes.',
-        },
-        metricsToken: {
-          type: 'http', scheme: 'bearer',
-          description: 'The `METRICS_TOKEN` environment value. Metrics endpoints only.',
         },
       },
       schemas,

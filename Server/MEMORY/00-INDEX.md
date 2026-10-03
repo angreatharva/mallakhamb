@@ -73,7 +73,7 @@ against commit `f0bdc1d`, 2026-09-23.
 | Change the running order / lot draw | `07-SCORING-ENGINE.md` | `src/services/competition/performance-order.service.js` |
 | Debug a socket broadcast that never arrives | `08-REALTIME-SOCKETS.md`, `GOTCHAS.md` | check whether the target room is ever joined **before** assuming the emit is broken |
 | Debug startup/shutdown/index/migration behavior | `01-ARCHITECTURE.md`, `modules/infrastructure.md` | `scripts/startup.js`, `src/infrastructure/database/*` |
-| Debug logging/metrics/health | `11-OBSERVABILITY.md` | `src/infrastructure/{logger,metrics-collector,health-monitor}.js` |
+| Debug logging/metrics/health | `11-OBSERVABILITY.md` | `src/infrastructure/{logger,health-monitor}.js`, `src/infrastructure/prometheus/` |
 | Deploy or roll back | `15-DEPLOYMENT.md` | `render.yaml` |
 | Check whether a README/doc claim is trustworthy | `GOTCHAS.md` | — several `docs/*.md` files are severely stale, see the list there before citing one |
 

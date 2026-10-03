@@ -58,7 +58,6 @@ noted). Full semantics of context/lock/rate-limit guards:
 | GET | `/live` | healthController.liveness |
 | GET | `/ready` | healthController.readiness |
 | GET | `` (`/api/health`) | healthController.health |
-| GET | `/metrics` | healthController.metrics |
 | GET | `/api/health-legacy` | inline in `routes/index.js` |
 
 ### Auth — `/api/auth`

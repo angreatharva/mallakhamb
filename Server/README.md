@@ -90,7 +90,7 @@ CSP nonce → helmet → compression → HTTPS enforce (prod) → CORS → JSON 
 | Config manager | `src/config/config-manager.js` | Single `config.get('dot.path')` singleton, validated at load |
 | Logger | `src/infrastructure/logger.js` | Winston + daily rotate, PII redaction |
 | Health monitor | `src/infrastructure/health-monitor.js` | DB / memory / email checks |
-| Metrics collector | `src/infrastructure/metrics-collector.js` | JSON + Prometheus output |
+| Prometheus metrics | `src/infrastructure/prometheus/` | prom-client registry behind `GET /metrics` |
 | Redis client | `src/infrastructure/redis-client.js` | Optional (`REDIS_URL`); in-memory fallback |
 | Graceful shutdown | `src/infrastructure/graceful-shutdown.js` | Drains HTTP, sockets, DB, Redis on SIGTERM/SIGINT |
 
@@ -361,25 +361,19 @@ different came out of different code.
 
 ## Health & monitoring
 
-All unauthenticated, all under `/api/health`:
+Probes, all unauthenticated, all under `/api/health`:
 
 | Endpoint | Use |
 |---|---|
 | `GET /api/health/live` | Liveness probe — restart decisions |
 | `GET /api/health/ready` | Readiness probe — includes a database check |
+| `GET /api/health/ping` | Uptime pinger / keep-alive target |
 | `GET /api/health` | Detailed status (database, memory, email) |
-| `GET /api/health/metrics` | Performance metrics as JSON |
-| `GET /api/health/metrics?format=prometheus` | Prometheus exposition format |
 
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'mallakhamb-backend'
-    static_configs:
-      - targets: ['localhost:5000']
-    metrics_path: '/api/health/metrics'
-    params:
-      format: ['prometheus']
+Metrics are at the root-level `GET /metrics` (Prometheus format, prom-client), closed unless `METRICS_TOKEN` is set and the request carries it as a bearer token. Grafana Cloud scrapes it once a minute; dashboards, alerts and uptime checks live in `deploy/monitoring/` (see `deploy/monitoring/PLAN.md`).
+
+```bash
+curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:5000/metrics
 ```
 
 A legacy `GET /api/health-legacy` returns a plain liveness message.

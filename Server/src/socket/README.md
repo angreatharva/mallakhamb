@@ -223,11 +223,11 @@ socket.on('error', (error) => {
 
 ## Metrics
 
-The Socket.IO manager tracks metrics via `MetricsCollector`:
+The Socket.IO manager reports to the Prometheus registry (`src/infrastructure/prometheus/registry.js`), served at `GET /metrics`:
 
-- Active connection count
-- Total events processed
-- Connection/disconnection events
+- `socketio_connected_clients` — connected sockets
+- `socketio_rooms` — rooms in use, excluding each socket's own room
+- `socketio_events_received_total{event}`, `socketio_event_errors_total{event}`, `socketio_event_handler_seconds{event}` — per registered event
 
 ## Testing
 

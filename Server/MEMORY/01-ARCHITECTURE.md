@@ -169,7 +169,9 @@ In mount order:
 10. `express-mongo-sanitize` — strips `$`/`.` keys, logs a warning per hit.
 11. Debug request-logging (`logger.debug`).
 12. Metrics middleware (`createMetricsMiddleware`) — wraps `res.end` to record
-    method/path/status/duration into `metricsCollector`.
+    method/path/status/duration into `metricsCollector`. (Removed 2026-10-03:
+    request metrics are now `prometheus.middleware.js`, mounted right after the
+    HTTPS redirect alongside `GET /metrics` — see 11-OBSERVABILITY.)
 13. Request-coalescing middleware (`requestCoalescingMiddleware.middleware()`)
     — see [10-CACHING-AND-PERF.md](10-CACHING-AND-PERF.md). Runs **before**
     any router's own auth middleware, so it cannot key on `req.user` — see the
@@ -220,7 +222,7 @@ calls `.initialize()`, then constructs+registers `ScoringHandler` and
 ## Shutdown
 
 `gracefulShutdownHandler.register({ server, socketManager, dbConnection,
-metricsCollector, redisClient })` is called at the end of both startup paths.
+redisClient })` is called at the end of both startup paths.
 Exact signal handling and close order: see `modules/infrastructure.md` /
 [11-OBSERVABILITY.md](11-OBSERVABILITY.md).
 

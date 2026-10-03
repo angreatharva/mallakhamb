@@ -255,7 +255,6 @@ async function serve(container, config) {
     server,
     socketManager,
     dbConnection: container.resolve('databaseConnection'),
-    metricsCollector: container.resolve('metricsCollector'),
     redisClient,
   });
 

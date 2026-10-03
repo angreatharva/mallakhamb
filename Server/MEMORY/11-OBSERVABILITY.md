@@ -2,10 +2,12 @@
 doc: 11-OBSERVABILITY
 covers:
   - src/infrastructure/logger.js
-  - src/infrastructure/metrics-collector.js
+  - src/infrastructure/prometheus/registry.js
+  - src/infrastructure/prometheus/route-label.js
   - src/infrastructure/health-monitor.js
   - src/middleware/correlation.middleware.js
-  - src/middleware/metrics.middleware.js
+  - src/middleware/prometheus.middleware.js
+  - src/middleware/metrics-auth.middleware.js
   - src/middleware/audit.middleware.js
   - src/controllers/health.controller.js
   - src/routes/health.routes.js
@@ -55,36 +57,34 @@ every call with `{correlationId}`. `errorHandler`
 `X-Correlation-ID` is deliberately included in the CORS `exposedHeaders` list
 so a client can surface it in a bug report.
 
-## Metrics — `src/infrastructure/metrics-collector.js`
+## Metrics — `src/infrastructure/prometheus/` (prom-client)
 
-Carries **two parallel APIs on purpose** — an older `record*`/Map-based
-internal state (kept for one set of tests) and a newer flat `_simple` object
-+ `track*` methods (used by `src/middleware/metrics.middleware.js` and the
-socket manager). The `track*` methods are thin wrappers that delegate to the
-`record*` methods, so both state shapes stay in sync from one call site —
-this is not accidental duplication, both are live.
+One registry, built per app by `createMetrics()` in `prometheus/registry.js`
+(never prom-client's global registry: jest builds several apps per process and
+the global one throws on duplicate names). Served at the **root-level
+`GET /metrics`**, mounted in `createApp.js` right after the HTTPS redirect and
+ahead of CORS/CSRF/coalescing/audit, behind `metrics-auth.middleware.js`:
+404 when `METRICS_TOKEN` is unset, 401 without the bearer token. Grafana Cloud
+scrapes it every 60 s; dashboards, alerts and synthetic checks are in
+`deploy/monitoring/` and the whole design is `deploy/monitoring/PLAN.md`.
 
-`normalizePath(path)` collapses Mongo ObjectIds, UUIDs, and numeric path
-segments to `/:id` for cardinality control before recording. Caps:
-`maxResponseTimeSamples`/`maxDbQuerySamples = 10000`; `_simple.responseTimes`
-capped at 1000.
+- **HTTP** — `prometheus.middleware.js` observes `http_server_requests_seconds
+  {method,uri,status,outcome}` (Micrometer names, for the Spring Boot port) on
+  `finish`/`close`. `uri` is the route PATTERN captured by `route-label.js`
+  through accessors on `req.route`/`req.baseUrl` as Express assigns them —
+  reading them on `finish` mislabels every 500, because Express restores
+  `baseUrl` to '' before the error handler. Probes and `/metrics` excluded.
+- **MongoDB** — pool gauges from CMAP events on the MongoClient, attached in
+  `connection.js` between `mongoose.connect()` and its `await`. Per-command
+  timing only with `DB_MONITOR_COMMANDS=true` (costs ~25 % p50).
+- **Socket.IO, business counters** — injected as an optional last constructor
+  argument (`metrics`, default `noopMetrics`) into the socket manager and the
+  scoring, auth, judge, payment and email services.
+- Label values from outside the process go through allow-lists; a unit test
+  fails if a label NAME outside `ALLOWED_LABEL_NAMES` ever appears.
 
-Two Prometheus exporters exist: `exportPrometheus()` (legacy format, from the
-Map-based state) and `toPrometheusFormat()` (new format, from `_simple`) —
-**`toPrometheusFormat()` is the one `HealthController.metrics()` actually
-calls** for `?format=prometheus`. `getMetrics()` returns the JSON payload
-(combining both old- and new-field-name shapes for backward compatibility)
-used by default (no `?format=` query).
-
-`middleware/metrics.middleware.js` wraps `res.end` to record
-method/path/status/duration on every response, and
-`createErrorMetricsMiddleware` tags `res.locals.errorType` from the thrown
-error's constructor name before the main error handler runs.
-
-⚠️ **`MetricsCollector` has no `flush()` method at all** — see
-[GOTCHAS.md](GOTCHAS.md): the graceful-shutdown handler's metrics-flush step
-guards on `typeof metricsCollector.flush === 'function'` and is therefore
-always a no-op today.
+The old hand-written `MetricsCollector`, `metrics.middleware.js` and
+`GET /api/health/metrics` were removed 2026-10-03 (PLAN.md Phase 6).
 
 ## Health checks — `src/infrastructure/health-monitor.js`
 
@@ -104,14 +104,13 @@ tests under `tests/unit/`) and `liveness`/`readiness` (newer, tests under
   `checkMemory` flags `unhealthy` above 90% heap or 95% system memory,
   `degraded` above 80% heap.
 
-## Health/metrics route table — `src/routes/health.routes.js`
+## Health route table — `src/routes/health.routes.js`
 
 | Method | Path | Controller | Purpose |
 |---|---|---|---|
 | GET | `/live` | `healthController.liveness` | Liveness probe — no DB check |
 | GET | `/ready` | `healthController.readiness` | Readiness probe — pings DB, 503 possible |
 | GET | `/` | `healthController.health` | Full component health (DB+memory+email) |
-| GET | `/metrics` | `healthController.metrics` | `?format=prometheus` → `toPrometheusFormat()` (`text/plain`); else `getMetrics()` (JSON) |
 
 Mounted under `/api/health` (and `/api/v1/health`) by `routes/index.js`, and
 registered **first**, ahead of everything else, so a load balancer's probe
@@ -139,9 +138,10 @@ operation is captured in `AuditLog` just because the constant exists.
 
 ## Change guidance
 
-- New metric: add a `record*`/`track*` pair to `metrics-collector.js` (both,
-  to keep the two state shapes in sync) and expose it from both `getMetrics()`
-  and `toPrometheusFormat()` if it should be Prometheus-visible.
+- New metric: define it in `prometheus/registry.js` behind a small method on
+  `http`/`mongo`/`socket`/`business`, add the method to `noopMetrics`, and
+  keep labels bounded and impersonal (extend `ALLOWED_LABEL_NAMES` only for a
+  fixed, non-personal set). Prefer a Micrometer name when one exists.
 - New audited operation: add a constant to `SENSITIVE_OPERATIONS`, a wrapper
   via `auditOperation(...)`, and attach it explicitly to the route — audit
   logging is opt-in per route, not automatic.
@@ -151,6 +151,6 @@ operation is captured in `AuditLog` just because the constant exists.
   logging the raw object in the first place.
 
 ## Open questions
-- ⚠️ UNVERIFIED: whether the `MetricsCollector.flush()` gap in graceful
-  shutdown is a regression (a method removed without updating the caller) or
-  simply never implemented.
+- (Resolved 2026-10-03: the `MetricsCollector.flush()` gap is moot — the
+  collector is gone, and Prometheus metrics are pulled, so nothing needs
+  flushing at shutdown.)

@@ -15,7 +15,6 @@ class GracefulShutdownHandler {
     this.server = null;
     this.socketManager = null;
     this.dbConnection = null;
-    this.metricsCollector = null;
     this.redisClient = null;
     this.shutdownTimeout = 30000; // 30 seconds max wait for in-flight requests
   }
@@ -26,13 +25,12 @@ class GracefulShutdownHandler {
    * @param {http.Server} options.server - HTTP server instance
    * @param {SocketManager} options.socketManager - Socket.IO manager
    * @param {mongoose.Connection} options.dbConnection - Database connection
-   * @param {MetricsCollector} options.metricsCollector - Metrics collector
+   * @param {Object} [options.redisClient] - Redis client
    */
-  register({ server, socketManager, dbConnection, metricsCollector, redisClient }) {
+  register({ server, socketManager, dbConnection, redisClient }) {
     this.server = server;
     this.socketManager = socketManager;
     this.dbConnection = dbConnection;
-    this.metricsCollector = metricsCollector;
     this.redisClient = redisClient || null;
 
     // Register signal handlers
@@ -273,19 +271,16 @@ class GracefulShutdownHandler {
   }
 
   /**
-   * Flush logs and metrics before exit
-   * Requirement: 10.6
+   * Flush logs before exit. Requirement: 10.6
+   *
+   * Metrics need no flush: Prometheus metrics are pulled by Grafana Cloud's
+   * scrape, so nothing is buffered in the process. (The old collector's flush
+   * branch never ran — that class had no flush() method.)
    */
   async flushLogsAndMetrics() {
-    this.logger.info('Flushing logs and metrics');
+    this.logger.info('Flushing logs');
 
     try {
-      // Flush metrics if available
-      if (this.metricsCollector && typeof this.metricsCollector.flush === 'function') {
-        await this.metricsCollector.flush();
-        this.logger.info('Metrics flushed');
-      }
-
       // Flush Winston logger transports
       const winstonLogger = this.logger.getLogger();
       if (winstonLogger && typeof winstonLogger.end === 'function') {

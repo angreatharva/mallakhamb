@@ -166,9 +166,6 @@ async function run() {
     await step('GET /api/health/live', anon.get('/api/health/live'));
     await step('GET /api/health/ready', anon.get('/api/health/ready'));
     await step('GET /api/health', anon.get('/api/health'));
-    // Token-gated since the Prometheus work: 404 when METRICS_TOKEN is unset,
-    // 401 when it is set. Either way an anonymous caller must not get a 200.
-    await step('GET /api/health/metrics (closed to anon)', anon.get('/api/health/metrics'), { expect: [401, 404] });
     await step('GET /api/csrf-token', anon.get('/api/csrf-token'));
     await step('GET /api/public/cop-rules', anon.get('/api/public/cop-rules'));
     const publicComps = await step('GET /api/public/competitions', anon.get('/api/public/competitions'));

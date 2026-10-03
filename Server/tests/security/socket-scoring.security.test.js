@@ -56,8 +56,7 @@ function buildManager(judgeDetailsById) {
     { verifyToken: () => ({}) },
     authorizationService,
     { get: () => 'test' },
-    noopLogger,
-    null
+    noopLogger
   );
 }
 

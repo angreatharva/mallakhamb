@@ -751,15 +751,13 @@ With details (validation errors):
 #### `liveness()` → `{ status: 'alive', timestamp }`
 #### `readiness()` → `Promise<{ status: 'ready' | 'not_ready', checks }>`
 
-### MetricsCollector
+### Prometheus metrics
 
-**File:** `src/infrastructure/metrics-collector.js`
+**File:** `src/infrastructure/prometheus/registry.js`
 
-#### `recordRequest(method, path, statusCode, durationMs)`
-#### `recordError(errorType)`
-#### `recordCacheHit()` / `recordCacheMiss()`
-#### `getMetrics()` → metrics object
-#### `getPrometheusMetrics()` → Prometheus-formatted string
+#### `createMetrics({ logger, env, collectDefaults })` → `{ registry, contentType, metrics(), http, mongo, socket, business }`
+
+A fresh registry per call. Served by `GET /metrics` (token-gated). Instrumented classes take it as an optional last constructor argument and default to `noopMetrics`.
 
 ### DIContainer
 
