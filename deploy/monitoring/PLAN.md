@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **Phases 0–1 done and merged (2026-10-03). Phase 2: scrape live since 2026-10-03, `up` = 1; waiting out the 1-hour stability check. Next: Phase 3 dashboards.**
+Status: **Phases 0–3 done (2026-10-03). Scrape live, `up` = 1 for every scrape since; four dashboards imported into the Grafana folder *Mallakhamb*. Next: Phase 4 alerts (needs Q1: email only, or Telegram too?).**
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -350,6 +350,20 @@ Build in the Grafana UI, then **export each as JSON into `deploy/monitoring/dash
 
 **Verify:** every panel shows data (sockets/scores may need a test meet — use the TRIALS seed locally against a deployed build, or wait for real traffic).
 **Done when:** four JSON files committed; dashboards render after re-importing them into a scratch folder (proves the export is complete).
+
+### Phase 3 — as built (2026-10-03)
+
+The JSON files in `deploy/monitoring/dashboards/` were written first and **imported from the repo** into the Grafana folder *Mallakhamb* (uid `mallakhamb`) through the Grafana API. That is the re-import proof the step asks for: what's in Grafana is exactly what's committed. Re-import and export steps: [dashboards/README.md](dashboards/README.md).
+
+Verified: all 44 distinct panel queries parse and run against the live data source; the overview showed UP, 0.42 req/s, 0 % 5xx and p95 ≈ 24 ms under test traffic. Socket, score, login and webhook panels read "No data" (or 0) until those events happen. prom-client creates a labelled counter's series on its first increment, so they fill in at the first real meet.
+
+| # | Change from the steps above | Why |
+|---|---|---|
+| B1 | Every query selects `scrape_job="mallakhamb-api"`; each dashboard has a `datasource` variable | The integration's `job` label is generated; the variable keeps the files portable |
+| B2 | Built directly, not from community dashboard 11159 | That dashboard targets prom-client's older names and the default `job`; trimming it was more work than writing the six panels |
+| B3 | Added: *Errors by route* table (overview), *Uptime* and *Active handles* (runtime), a "how to use" note over the command panels (database), *API* and *Handler errors* stats (competition day), and a restart/deploy annotation on all four | The runbook (§8) sends you to "errors by uri" first; the rest are the questions asked during a meet |
+| B4 | Score panels match `uri=~".*/(scores/save|save-score)"` | The actual score-write routes: `/api/{judge,admin,superadmin}/scores/save` and `/api/public/save-score` |
+| B5 | Plain ASCII titles (`Mallakhamb API overview`) | An em dash in the title becomes `e28094` in the URL slug |
 
 ---
 
