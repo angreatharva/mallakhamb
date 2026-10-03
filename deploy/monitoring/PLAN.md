@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **Phase 0 in progress (account created 2026-10-03). Phase 1 implemented on branch `feat/prometheus-metrics` — see "Phase 1 — as built" below; awaiting merge.**
+Status: **Phases 0–1 done and merged (2026-10-03). Phase 2: scrape live since 2026-10-03, `up` = 1; waiting out the 1-hour stability check. Next: Phase 3 dashboards.**
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -80,15 +80,17 @@ Side effect worth knowing: the 60-second scrape is inbound traffic, so it also k
 | Item | Value |
 |---|---|
 | Grafana Cloud stack URL | `https://sinceresloth366.grafana.net` |
-| Stack region | |
-| Scrape job name | `mallakhamb-api` |
+| Stack region | Singapore — `prod-ap-southeast-1` (AWS ap-southeast-1, mimir-prod-37), same region as Render |
+| Scrape job name | `mallakhamb-api` (Bearer auth, test connection passed 2026-10-03) |
 | Scrape URL | `https://mallakhamb-server.onrender.com/metrics` |
 | Scrape interval | 60 s |
 | Where `METRICS_TOKEN` is stored | Render dashboard (`mallakhamb-server` → Environment) + Grafana Cloud scrape job. **Nowhere else.** |
 | Token created on | 2026-10-03 (by the owner, locally; never shared) |
 | Alert contact point(s) | |
 | Synthetic check ids | |
-| Active series at end of Phase 3 | (from Grafana Cloud → Usage) |
+| Active series at end of Phase 3 | (from Grafana Cloud → Usage). First scrape, 2026-10-03: **122** series, 117 samples/scrape |
+| Prometheus data source | `grafanacloud-sinceresloth366-prom` (uid `grafanacloud-prom`) |
+| Series selector | `scrape_job="mallakhamb-api"` — the integration's `job` label is `integrations/metrics_endpoint/3632003-metrics-endpoint-mallakhamb-api`, so every query here uses `scrape_job` instead |
 
 ---
 
@@ -180,10 +182,10 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 **Prerequisites:** none.
 
 **Steps**
-- [ ] 0.1 Sign up at grafana.com with your Google account. Free plan.
-- [ ] 0.2 Create a stack named `mallakhamb`. Pick the **closest Asia-Pacific region offered** (Singapore if listed, else Mumbai). The region can't be changed later. Record it (§3).
+- [x] 0.1 Sign up at grafana.com with your Google account. Free plan.
+- [x] 0.2 Create a stack named `mallakhamb`. Pick the **closest Asia-Pacific region offered** (Singapore if listed, else Mumbai). The region can't be changed later. Record it (§3).
 - [ ] 0.3 Turn on 2-step verification for the grafana.com account.
-- [ ] 0.4 Generate `METRICS_TOKEN` (§6). Keep it in your password manager until Phase 2.
+- [x] 0.4 Generate `METRICS_TOKEN` (§6). Keep it in your password manager until Phase 2.
 
 **Verify:** you can open `https://<stack>.grafana.net` and see *Home*.
 **Done when:** stack exists, region recorded, token generated.
@@ -276,19 +278,19 @@ With command monitoring off, the branch is inside run-to-run noise of master: **
 **Prerequisites:** Phase 0 and 1 done.
 
 **Steps**
-- [ ] 2.1 Render → `mallakhamb-server` → Environment → add `METRICS_TOKEN` = the token → **Save and deploy**.
-- [ ] 2.2 After the deploy is live, from your machine:
+- [x] 2.1 Render → `mallakhamb-server` → Environment → add `METRICS_TOKEN` = the token → **Save and deploy**.
+- [x] 2.2 After the deploy is live, from your machine:
   ```bash
   curl -s -o /dev/null -w "%{http_code}\n" https://mallakhamb-server.onrender.com/metrics
   ```
   → `401` (the endpoint exists and is closed).
-- [ ] 2.3 Grafana Cloud → **Connections → Add new connection → "Metrics Endpoint"**:
+- [x] 2.3 Grafana Cloud → **Connections → Add new connection → "Metrics Endpoint"**:
   - Scrape job name `mallakhamb-api`
   - URL `https://mallakhamb-server.onrender.com/metrics`
   - Interval **60 s**
   - Authentication **Bearer**, token = `METRICS_TOKEN` (if only Basic is offered: username `grafana`, password = token — D2)
   - **Test connection** → must succeed → **Save**.
-- [ ] 2.4 Grafana → **Explore** → data source `grafanacloud-<stack>-prom` → run `up{job="mallakhamb-api"}`. (If empty, run `{__name__="up"}` and note the actual `job` label — the integration may prefix it. Use that value everywhere below.)
+- [x] 2.4 Grafana → **Explore** → data source `grafanacloud-<stack>-prom` → run `up{scrape_job="mallakhamb-api"}`. (Done: the integration prefixes `job`, so the plan selects on the `scrape_job` label it also adds.)
 
 **Verify:** `up` = 1 for 10 consecutive minutes; `rate(http_server_requests_seconds_count[5m])` returns data; `app_info` shows the deployed commit.
 **Done when:** scrape stable for 1 hour; active-series count recorded (§3) and **under 5,000**.
@@ -304,7 +306,7 @@ Build in the Grafana UI, then **export each as JSON into `deploy/monitoring/dash
 **3.1 `mallakhamb-api-overview.json`**
 | Panel | PromQL |
 |---|---|
-| Up | `up{job="mallakhamb-api"}` |
+| Up | `up{scrape_job="mallakhamb-api"}` |
 | Version | `app_info` (table: version, service) |
 | Requests/s | `sum(rate(http_server_requests_seconds_count[5m]))` |
 | 5xx ratio | `sum(rate(http_server_requests_seconds_count{outcome="SERVER_ERROR"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 1e-9)` |
@@ -362,8 +364,8 @@ Build in the Grafana UI, then **export each as JSON into `deploy/monitoring/dash
 
 | Alert | Expression | For | Severity |
 |---|---|---|---|
-| API down | `up{job="mallakhamb-api"} == 0` | 3 m | critical |
-| Scrape missing | `absent(up{job="mallakhamb-api"})` | 10 m | critical |
+| API down | `up{scrape_job="mallakhamb-api"} == 0` | 3 m | critical |
+| Scrape missing | `absent(up{scrape_job="mallakhamb-api"})` | 10 m | critical |
 | High 5xx | `(5xx ratio, §3.1) > 0.02 and sum(rate(http_server_requests_seconds_count[5m])) > 0.05` | 10 m | critical |
 | Slow API | `histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m]))) > 1.5` | 10 m | warning |
 | Event loop blocked | `nodejs_eventloop_lag_p99_seconds > 0.2` | 5 m | warning |
