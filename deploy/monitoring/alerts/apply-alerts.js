@@ -48,7 +48,7 @@
       'Event-loop lag p99 is above 200 ms ({{ humanizeDuration $values.A.Value }}).',
       'Every request and socket event waits behind this. First look: Runtime → CPU and GC; API overview → "Slowest routes". Runbook: PLAN.md §8 "Slow API / Event loop blocked".'],
     ['mk-memory', 'Memory near limit', `process_resident_memory_bytes{${S}}`, 'gt', 435e6, '10m', 'warning', 'mallakhamb-runtime', 6,
-      'API memory is above 85 % of the 512 MB free-plan limit ({{ humanize1024 $values.A.Value }}B).',
+      'API memory is above 435 MB, about 81 % of the 512 MiB free-plan limit ({{ humanize1024 $values.A.Value }}B).',
       'Render restarts the process at 512 MiB, which drops every live tablet connection. First look: Runtime → RSS and heap. Runbook: PLAN.md §8 "Memory near limit / Restart loop".'],
     ['mk-cpu', 'CPU saturated', `rate(process_cpu_seconds_total{${S}}[5m])`, 'gt', 0.08, '15m', 'warning', 'mallakhamb-runtime', 5,
       'API CPU is above 80 % of the 0.1-core free-plan allowance for 15 minutes.',
@@ -68,6 +68,12 @@
     ['mk-payment-webhook', 'Payment webhook problem', `sum(increase(mallakhamb_payment_webhooks_total{${S},outcome=~"rejected_signature|error"}[15m])) or vector(0)`, 'gt', 0, '0s', 'warning', 'mallakhamb-competition-day', 13,
       'A Razorpay webhook was rejected or failed in the last 15 minutes.',
       'First look: Competition day → "Payment webhooks", and Razorpay dashboard → Webhooks. rejected_signature → RAZORPAY_WEBHOOK_SECRET mismatch; error → Render logs. Runbook: PLAN.md §8 "Payment webhook problem".'],
+    // Phase 5: outside-in. Synthetic checks from Mumbai and Hyderabad
+    // (deploy/monitoring/synthetics/apply-checks.js). Fires when every probe —
+    // both of them — fails the same check, so one probe's bad network is not a page.
+    ['mk-uptime-check', 'Uptime check failing', 'count by (job) (probe_success{job=~"api-ready|web-home"} == 0)', 'gt', 1, '5m', 'critical', 'mallakhamb-api-overview', 24,
+      'Outside-in check {{ $labels.job }} is failing from both Mumbai and Hyderabad.',
+      'This is what a tablet in India sees, including DNS, TLS and Render\'s proxy. api-ready → GET /api/health/ready (needs the database); web-home → the SPA. First look: API overview → "Outside-in" row, then Render → Events. If /metrics still scrapes (API down is quiet), suspect DNS/TLS/Render routing or the database. Runbook: PLAN.md §8 "Uptime check failing".'],
   ];
 
   const buildRule = ([uid, title, expr, op, thr, forDur, severity, dash, panel, summary, description]) => ({

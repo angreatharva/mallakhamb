@@ -30,6 +30,109 @@
         "regex": "",
         "hide": 0,
         "refresh": 1
+      },
+      {
+        "name": "usage_datasource",
+        "label": "Usage data source",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "text": "grafanacloud-usage",
+          "value": "grafanacloud-usage"
+        },
+        "regex": "/usage/",
+        "hide": 2,
+        "refresh": 1
+      },
+      {
+        "name": "cpu_limit",
+        "label": "CPU limit, cores (Render free plan)",
+        "type": "constant",
+        "query": "0.1",
+        "hide": 2,
+        "current": {
+          "text": "0.1",
+          "value": "0.1"
+        },
+        "options": [
+          {
+            "text": "0.1",
+            "value": "0.1",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "mem_limit",
+        "label": "Memory limit, bytes (Render free plan, 512 MiB)",
+        "type": "constant",
+        "query": "536870912",
+        "hide": 2,
+        "current": {
+          "text": "536870912",
+          "value": "536870912"
+        },
+        "options": [
+          {
+            "text": "536870912",
+            "value": "536870912",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "pool_max",
+        "label": "MongoDB pool max (DB_POOL_MAX)",
+        "type": "constant",
+        "query": "100",
+        "hide": 2,
+        "current": {
+          "text": "100",
+          "value": "100"
+        },
+        "options": [
+          {
+            "text": "100",
+            "value": "100",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "atlas_conn_limit",
+        "label": "Atlas M0 connection cap",
+        "type": "constant",
+        "query": "500",
+        "hide": 2,
+        "current": {
+          "text": "500",
+          "value": "500"
+        },
+        "options": [
+          {
+            "text": "500",
+            "value": "500",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "sm_included",
+        "label": "Synthetic check executions included per month (free tier)",
+        "type": "constant",
+        "query": "100000",
+        "hide": 2,
+        "current": {
+          "text": "100000",
+          "value": "100000"
+        },
+        "options": [
+          {
+            "text": "100000",
+            "value": "100000",
+            "selected": true
+          }
+        ]
       }
     ]
   },
@@ -122,8 +225,8 @@
     },
     {
       "id": 2,
-      "type": "stat",
-      "title": "CPU (cores, 5m)",
+      "type": "gauge",
+      "title": "CPU % of plan",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -140,17 +243,18 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(process_cpu_seconds_total{scrape_job=\"mallakhamb-api\"}[5m])",
+          "expr": "100 * rate(process_cpu_seconds_total{scrape_job=\"mallakhamb-api\"}[5m]) / $cpu_limit",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "description": "0.1 = the whole free-plan allowance. Alert \"CPU saturated\" above 0.08 for 15 m.",
+      "description": "Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert \"CPU saturated\" fires at 80 % for 15 m.",
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "decimals": 3,
-          "mappings": [],
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -159,12 +263,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
                 "color": "orange",
-                "value": 0.08
+                "value": 80
               },
               {
                 "color": "red",
-                "value": 0.1
+                "value": 90
               }
             ]
           },
@@ -182,16 +290,15 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto",
-        "justifyMode": "center"
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
       }
     },
     {
       "id": 3,
-      "type": "stat",
-      "title": "Memory (RSS)",
+      "type": "gauge",
+      "title": "Memory % of plan",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -208,16 +315,18 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "process_resident_memory_bytes{scrape_job=\"mallakhamb-api\"}",
+          "expr": "100 * process_resident_memory_bytes{scrape_job=\"mallakhamb-api\"} / $mem_limit",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "description": "Render restarts the process at 512 MiB. Alert \"Memory near limit\" above 435 MB for 10 m.",
+      "description": "Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert \"Memory near limit\" fires at ~81 % (435 MB) for 10 m.",
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
-          "mappings": [],
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -226,12 +335,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
                 "color": "orange",
-                "value": 435000000
+                "value": 80
               },
               {
                 "color": "red",
-                "value": 536870912
+                "value": 90
               }
             ]
           },
@@ -249,10 +362,9 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto",
-        "justifyMode": "center"
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
       }
     },
     {
@@ -325,7 +437,7 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "CPU (cores)",
+      "title": "CPU: % of plan",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -342,16 +454,18 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(process_cpu_seconds_total{scrape_job=\"mallakhamb-api\"}[5m])",
+          "expr": "100 * rate(process_cpu_seconds_total{scrape_job=\"mallakhamb-api\"}[5m]) / $cpu_limit",
           "legendFormat": "cpu",
           "refId": "A"
         }
       ],
-      "description": "Dashed line: 0.1 core, the free-plan allowance.",
+      "description": "Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert \"CPU saturated\" fires at 80 % for 15 m. Dashed lines: 70 / 80 / 90 %.",
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percent",
           "min": 0,
+          "softMax": 100,
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -360,8 +474,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
                 "color": "red",
-                "value": 0.1
+                "value": 90
               }
             ]
           },
@@ -397,7 +519,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Memory (RSS)",
+      "title": "Memory: % of plan",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -414,16 +536,18 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "process_resident_memory_bytes{scrape_job=\"mallakhamb-api\"}",
+          "expr": "100 * process_resident_memory_bytes{scrape_job=\"mallakhamb-api\"} / $mem_limit",
           "legendFormat": "rss",
           "refId": "A"
         }
       ],
-      "description": "Dashed line: 512 MiB, where Render restarts the process.",
+      "description": "Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert \"Memory near limit\" fires at ~81 % (435 MB) for 10 m. Dashed lines: 70 / 80 / 90 %.",
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
+          "unit": "percent",
           "min": 0,
+          "softMax": 100,
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -432,8 +556,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
                 "color": "red",
-                "value": 536870912
+                "value": 90
               }
             ]
           },

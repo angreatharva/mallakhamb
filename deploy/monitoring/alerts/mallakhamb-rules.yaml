@@ -286,7 +286,7 @@ groups:
           service: mallakhamb-api
           severity: warning
         annotations:
-          summary: 'API memory is above 85 % of the 512 MB free-plan limit ({{ humanize1024 $values.A.Value }}B).'
+          summary: 'API memory is above 435 MB, about 81 % of the 512 MiB free-plan limit ({{ humanize1024 $values.A.Value }}B).'
           description: >-
             Render restarts the process at 512 MiB, which drops every live tablet connection. First look: Runtime → RSS
             and heap. Runbook: PLAN.md §8 "Memory near limit / Restart loop".
@@ -641,6 +641,60 @@ groups:
                     type: gt
                     params:
                       - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-uptime-check
+        title: Uptime check failing
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'Outside-in check {{ $labels.job }} is failing from both Mumbai and Hyderabad.'
+          description: >-
+            This is what a tablet in India sees, including DNS, TLS and Render's proxy. api-ready → GET
+            /api/health/ready (needs the database); web-home → the SPA. First look: API overview → "Outside-in" row,
+            then Render → Events. If /metrics still scrapes (API down is quiet), suspect DNS/TLS/Render routing or the
+            database. Runbook: PLAN.md §8 "Uptime check failing".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '24'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'count by (job) (probe_success{job=~"api-ready|web-home"} == 0)'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1
               datasource:
                 type: __expr__
                 uid: __expr__

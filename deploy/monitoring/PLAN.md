@@ -1,6 +1,6 @@
 # Mallakhamb — API Monitoring Plan (Prometheus metrics + Grafana Cloud)
 
-Status: **Phases 0–4 done (2026-10-03). Scrape live; four dashboards and 12 alert rules in the Grafana folder *Mallakhamb*, emailing the owner. Next: Phase 5 external uptime checks.**
+Status: **Phases 0–5 done (2026-10-03). Scrape live; four dashboards with 70 / 80 / 90 % usage gauges; 13 alert rules emailing the owner; outside-in checks from Mumbai and Hyderabad. Remaining: Phase 6 (retire the old collector) on or after 2026-10-17.**
 Written: 2026-10-03. Owner: Atharva Angre.
 Scope: the API service `mallakhamb-server` on Render (Singapore, free plan). The static site is out of scope except for one uptime check.
 
@@ -87,8 +87,8 @@ Side effect worth knowing: the 60-second scrape is inbound traffic, so it also k
 | Where `METRICS_TOKEN` is stored | Render dashboard (`mallakhamb-server` → Environment) + Grafana Cloud scrape job. **Nowhere else.** |
 | Token created on | 2026-10-03 (by the owner, locally; never shared) |
 | Alert contact point(s) | `owner-email` → angreatharva08@gmail.com (email only, Q1). Route: `service=mallakhamb-api`, group by `alertname`, critical repeat 1 h, warning 4 h |
-| Synthetic check ids | |
-| Active series at end of Phase 3 | (from Grafana Cloud → Usage). First scrape, 2026-10-03: **122** series, 117 samples/scrape |
+| Synthetic check ids | `api-ready` = 8476 (every 2 min), `web-home` = 8477 (every 5 min); probes Mumbai (16) + Hyderabad (101) |
+| Active series at end of Phase 3 | (from Grafana Cloud → Usage). First scrape, 2026-10-03: **122** series, 117 samples/scrape; 182 after Phase 5 (3.4 % of the 10,000 included) |
 | Prometheus data source | `grafanacloud-sinceresloth366-prom` (uid `grafanacloud-prom`) |
 | Series selector | `scrape_job="mallakhamb-api"` — the integration's `job` label is `integrations/metrics_endpoint/3632003-metrics-endpoint-mallakhamb-api`, so every query here uses `scrape_job` instead |
 
@@ -423,14 +423,28 @@ Verified: all 12 rules evaluate with `health=ok` and sit at Normal on a healthy 
 Metrics come from inside the server; these check it from outside, the way a judge's tablet sees it (DNS, TLS, Render's proxy).
 
 **Steps**
-- [ ] 5.1 Grafana Cloud → **Testing & synthetics → Synthetics → Add check → HTTP**:
+- [x] 5.1 Grafana Cloud → **Testing & synthetics → Synthetics → Add check → HTTP**:
   - `api-ready`: `https://mallakhamb-server.onrender.com/api/health/ready`, expect 200, every **2 min**, probes: the two nearest Asia-Pacific locations.
   - `web-home`: `https://mallakhamb-web.onrender.com/`, expect 200, every **5 min**, same probes.
-- [ ] 5.2 Alert: check fails on ≥ 2 probes for 5 m → critical.
-- [ ] 5.3 Confirm the monthly execution estimate shown by Grafana stays inside the free allowance. (2 probes × 1 check / 2 min + 2 × 1 / 5 min ≈ 61k/month; reduce frequency if the UI shows the allowance is lower.)
+- [x] 5.2 Alert: check fails on ≥ 2 probes for 5 m → critical.
+- [x] 5.3 Confirm the monthly execution estimate shown by Grafana stays inside the free allowance. (2 probes × 1 check / 2 min + 2 × 1 / 5 min ≈ 61k/month; reduce frequency if the UI shows the allowance is lower.)
 
 **Verify:** both checks green for 30 min.
 **Done when:** checks and their alert exist; ids recorded (§3).
+
+### Phase 5 — as built (2026-10-03)
+
+Synthetic Monitoring was not yet initialised on the stack ("Get started" done 2026-10-03). Checks are defined in [synthetics/apply-checks.js](synthetics/apply-checks.js) (console script, idempotent: matched by `job`, updated in place). Verified: all four check × probe results pass; from India, API 0.22–0.23 s and web 0.28–0.45 s; the execution counter steps exactly every 2 min and every 5 min.
+
+| # | Change from the steps above | Why |
+|---|---|---|
+| E1 | Probes **Mumbai + Hyderabad**, not the two nearest Singapore | The question is how the API looks from a venue tablet in India; Singapore is where Render runs, so a probe there sees almost none of the path |
+| E2 | The alert is rule 13, *Uptime check failing*, in `alerts/apply-alerts.js`: `count by (job) (probe_success{job=~"api-ready|web-home"} == 0) > 1` for 5 m, critical | "Fails on ≥ 2 probes" with two probes means both, so one probe's bad network doesn't page |
+| E3 | Budget is 60,480 executions/month, **60 % of the 100,000 included**, shown live on the overview's *Synthetic executions* gauge | Step 5.3; measured from `probe_all_success_count`. `probe_success` is re-published between runs, so counting its samples overstates |
+
+### Usage gauges, 70 / 80 / 90 % (added 2026-10-03, on request)
+
+Every dashboard now shows usage as **% of its limit** with bands at 70 % (yellow), 80 % (orange) and 90 % (red): CPU ÷ 0.1 core and RSS ÷ 512 MiB (Render free), checked-out connections ÷ `DB_POOL_MAX`, open connections ÷ the Atlas M0 cap of 500, Grafana active series ÷ the included 10,000 (both read live from `grafanacloud-usage`), and synthetic executions ÷ 100,000. The fixed limits are hidden dashboard constants defined once in [dashboards/build-dashboards.js](dashboards/build-dashboards.js), which is now the source of truth for the dashboard JSON. Live values when added: CPU 6 %, memory 26 %, pool 0 %, Atlas 6 %, series 3 %. The *Memory near limit* alert text now says "about 81 %", which is what 435 MB of 512 MiB is.
 
 ---
 
@@ -468,6 +482,7 @@ Metrics come from inside the server; these check it from outside, the way a judg
 | DB checkout failing / DB pool waiting | Database dashboard | Atlas M0 throttling or network access list change; Atlas status page. To see which collection is slow, set `DB_MONITOR_COMMANDS=true` on Render for an hour (costs ~25% latency), read the command panels, then set it back |
 | Login failures spike | Logins by role | Brute force on one role → rate limits on (`RATE_LIMIT_ENABLED`); judges mistyping at venue start → ignore |
 | Payment webhook problem | Payment webhooks panel; Razorpay dashboard → Webhooks | `rejected_signature` → `RAZORPAY_WEBHOOK_SECRET` mismatch; `error` → logs |
+| Uptime check failing | Overview → *Outside-in* row: which check, and since when | `api-ready` failing while *API down* is quiet → the process is up but the database is unreachable, or Render routing/TLS is broken; `web-home` failing → static-site deploy or Render edge. Check Render → Events and the Render status page |
 
 ---
 

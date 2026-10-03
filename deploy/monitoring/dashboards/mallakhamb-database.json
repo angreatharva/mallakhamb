@@ -30,6 +30,109 @@
         "regex": "",
         "hide": 0,
         "refresh": 1
+      },
+      {
+        "name": "usage_datasource",
+        "label": "Usage data source",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "text": "grafanacloud-usage",
+          "value": "grafanacloud-usage"
+        },
+        "regex": "/usage/",
+        "hide": 2,
+        "refresh": 1
+      },
+      {
+        "name": "cpu_limit",
+        "label": "CPU limit, cores (Render free plan)",
+        "type": "constant",
+        "query": "0.1",
+        "hide": 2,
+        "current": {
+          "text": "0.1",
+          "value": "0.1"
+        },
+        "options": [
+          {
+            "text": "0.1",
+            "value": "0.1",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "mem_limit",
+        "label": "Memory limit, bytes (Render free plan, 512 MiB)",
+        "type": "constant",
+        "query": "536870912",
+        "hide": 2,
+        "current": {
+          "text": "536870912",
+          "value": "536870912"
+        },
+        "options": [
+          {
+            "text": "536870912",
+            "value": "536870912",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "pool_max",
+        "label": "MongoDB pool max (DB_POOL_MAX)",
+        "type": "constant",
+        "query": "100",
+        "hide": 2,
+        "current": {
+          "text": "100",
+          "value": "100"
+        },
+        "options": [
+          {
+            "text": "100",
+            "value": "100",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "atlas_conn_limit",
+        "label": "Atlas M0 connection cap",
+        "type": "constant",
+        "query": "500",
+        "hide": 2,
+        "current": {
+          "text": "500",
+          "value": "500"
+        },
+        "options": [
+          {
+            "text": "500",
+            "value": "500",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "sm_included",
+        "label": "Synthetic check executions included per month (free tier)",
+        "type": "constant",
+        "query": "100000",
+        "hide": 2,
+        "current": {
+          "text": "100000",
+          "value": "100000"
+        },
+        "options": [
+          {
+            "text": "100000",
+            "value": "100000",
+            "selected": true
+          }
+        ]
       }
     ]
   },
@@ -72,7 +175,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 0
       },
@@ -123,16 +226,16 @@
     },
     {
       "id": 2,
-      "type": "stat",
-      "title": "Pool in use",
+      "type": "gauge",
+      "title": "DB pool in use %",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 5,
+        "x": 4,
         "y": 0
       },
       "targets": [
@@ -141,21 +244,36 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "mongodb_driver_pool_checkedout{scrape_job=\"mallakhamb-api\"}",
+          "expr": "100 * mongodb_driver_pool_checkedout{scrape_job=\"mallakhamb-api\"} / $pool_max",
           "legendFormat": "",
           "refId": "A"
         }
       ],
+      "description": "MongoDB connections checked out as a share of DB_POOL_MAX (pool_max). Near 100 % means requests queue (alert \"DB pool waiting\").",
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "mappings": [],
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
               }
             ]
           },
@@ -173,14 +291,85 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto",
-        "justifyMode": "center"
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
       }
     },
     {
       "id": 3,
+      "type": "gauge",
+      "title": "Atlas connections %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 9,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * mongodb_driver_pool_size{scrape_job=\"mallakhamb-api\"} / $atlas_conn_limit",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "Connections this API holds open as a share of the Atlas M0 cap (500). Other clients (scripts, Compass) count against the same cap.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
       "type": "stat",
       "title": "Waiting for a connection",
       "datasource": {
@@ -189,8 +378,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 14,
         "y": 0
       },
       "targets": [
@@ -243,7 +432,7 @@
       }
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "stat",
       "title": "Checkout failures (1h)",
       "datasource": {
@@ -252,8 +441,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 19,
         "y": 0
       },
       "targets": [
@@ -306,7 +495,7 @@
       }
     },
     {
-      "id": 5,
+      "id": 6,
       "type": "timeseries",
       "title": "Pool in use / open",
       "datasource": {
@@ -382,7 +571,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 7,
       "type": "timeseries",
       "title": "Wait queue",
       "datasource": {
@@ -449,7 +638,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 8,
       "type": "timeseries",
       "title": "Checkout failures by reason (15m)",
       "datasource": {
@@ -516,7 +705,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 9,
       "type": "row",
       "title": "Per-command timing — diagnostic, off by default",
       "collapsed": false,
@@ -529,7 +718,7 @@
       "panels": []
     },
     {
-      "id": 9,
+      "id": 10,
       "type": "text",
       "title": "How to use these panels",
       "gridPos": {
@@ -544,7 +733,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 11,
       "type": "table",
       "title": "Command p95 by collection, 15m (only with DB_MONITOR_COMMANDS=true)",
       "datasource": {
@@ -610,7 +799,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 12,
       "type": "timeseries",
       "title": "Commands/s (only with DB_MONITOR_COMMANDS=true)",
       "datasource": {
@@ -676,7 +865,7 @@
       }
     },
     {
-      "id": 12,
+      "id": 13,
       "type": "timeseries",
       "title": "Failed commands (only with DB_MONITOR_COMMANDS=true)",
       "datasource": {

@@ -1,20 +1,35 @@
 # Grafana dashboards
 
-These JSON files are the source of truth for the Grafana Cloud dashboards (deploy/monitoring/PLAN.md, Phase 3). A change made only in the Grafana UI doesn't count until it's exported back here.
+`build-dashboards.js` is the source of truth; the four `*.json` files are generated from it (deploy/monitoring/PLAN.md, Phase 3). A change made only in the Grafana UI doesn't count until it's made here too.
+
+```bash
+node deploy/monitoring/dashboards/build-dashboards.js
+```
 
 | File | uid | What it answers |
 |---|---|---|
-| `mallakhamb-api-overview.json` | `mallakhamb-api-overview` | Up? How busy, how fast, how many errors, which routes |
-| `mallakhamb-runtime.json` | `mallakhamb-runtime` | CPU / memory / event loop / GC against the free plan (0.1 CPU, 512 MB) |
-| `mallakhamb-database.json` | `mallakhamb-database` | MongoDB pool; per-command panels only while `DB_MONITOR_COMMANDS=true` |
-| `mallakhamb-competition-day.json` | `mallakhamb-competition-day` | The screen to leave open during a meet |
+| `mallakhamb-api-overview.json` | `mallakhamb-api-overview` | Up? How busy, how fast, how many errors, which routes; capacity vs. every limit; outside-in checks |
+| `mallakhamb-runtime.json` | `mallakhamb-runtime` | CPU / memory as % of the plan, event loop, GC |
+| `mallakhamb-database.json` | `mallakhamb-database` | MongoDB pool and Atlas connections as % of their caps; per-command panels only while `DB_MONITOR_COMMANDS=true` |
+| `mallakhamb-competition-day.json` | `mallakhamb-competition-day` | The screen to leave open during a meet, with CPU / memory / pool gauges at the bottom |
 
-Every query selects on `scrape_job="mallakhamb-api"`. Each dashboard has a **Data source** variable, so the files aren't tied to one stack.
+Every API query selects on `scrape_job="mallakhamb-api"`. Each dashboard has a **Data source** variable, so the files aren't tied to one stack.
+
+## Usage gauges: 70 / 80 / 90 %
+
+Every "% of limit" gauge and graph is **current usage ÷ limit × 100**, green below 70 %, yellow from 70 %, orange from 80 %, red from 90 %.
+
+| Gauge | Usage | Limit (where it comes from) |
+|---|---|---|
+| CPU % of plan | `rate(process_cpu_seconds_total[5m])` | `cpu_limit` = 0.1 core (Render free) |
+| Memory % of plan | `process_resident_memory_bytes` | `mem_limit` = 512 MiB (Render free) |
+| DB pool in use % | `mongodb_driver_pool_checkedout` | `pool_max` = 100 (`DB_POOL_MAX`) |
+| Atlas connections % | `mongodb_driver_pool_size` | `atlas_conn_limit` = 500 (Atlas M0) |
+| Grafana series % of included | `grafanacloud_instance_active_series` | `grafanacloud_org_metrics_included_series`, read live from the usage data source |
+| Synthetic executions % of included | `rate(probe_all_success_count[15m])` × 30 days | `sm_included` = 100,000 / month |
+
+The fixed limits are hidden dashboard constants, defined once in `LIMITS` at the top of `build-dashboards.js`. **If the Render plan, `DB_POOL_MAX` or the Atlas tier changes, change the value there, rebuild and re-import.** The alert thresholds (deploy/monitoring/alerts) sit inside these bands: CPU at 80 %, memory at about 81 %.
 
 ## Import or update
 
 Grafana → **Dashboards → New → Import** → upload the file → folder **Mallakhamb** → **Import**. If asked, overwrite: the uid stays the same, so links and alert panel references keep working.
-
-## After editing in the UI
-
-Dashboard → **Export → Export as JSON** → turn **off** "Export for sharing externally" (so the `${datasource}` variable stays as it is) → save over the file here, then commit.
