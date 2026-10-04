@@ -3,7 +3,7 @@ import { Users, UserCheck, Trophy, Calendar, Camera, Menu, X, MapPin, Phone, Mai
 import { useState, useEffect, useRef } from 'react';
 import { FadeIn, GradientText, SaffronButton } from '@/components/design-system';
 
-import { useReducedMotion as _useReducedMotion, useMediaQuery } from '../../hooks/useResponsive';
+import { useReducedMotion, useMediaQuery } from '../../hooks/useResponsive';
 import { motion, useScroll, useTransform, useInView, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import MainHomeImg from '../../assets/main-home.jpg';
 import TextRevealBg from '../../assets/Mallakhamb.png';
@@ -11,16 +11,15 @@ import BHALogo from '../../assets/BHA.png';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 // Import from unified design system
-import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING } from '../../styles/tokens';
+import { COLORS as DESIGN_COLORS, EASE_OUT as DESIGN_EASE_OUT, EASE_SPRING as DESIGN_EASE_SPRING, FG, alpha } from '../../styles/tokens';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // Re-export for backward compatibility
 export const COLORS = DESIGN_COLORS;
 const EASE_OUT = DESIGN_EASE_OUT;
 const EASE_SPRING = DESIGN_EASE_SPRING;
-
-// ─── Reduced-motion hook (re-exported from hooks/useResponsive for back-compat) ─
-export const useReducedMotion = _useReducedMotion;
 
 // ─── Animated counter hook ───────────────────────────────────────────────────
 const useCounter = (target, duration = 1800, inView = true) => {
@@ -93,8 +92,8 @@ const GridLines = () => {
         className="absolute bottom-0 left-0 right-0 h-72 opacity-[0.07]"
         style={{
           backgroundImage: `
-            linear-gradient(${COLORS.saffron}80 1px, transparent 1px),
-            linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)
+            linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px),
+            linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)
           `,
           backgroundSize: '60px 60px',
           transform: 'perspective(400px) rotateX(60deg)',
@@ -190,7 +189,7 @@ const MagneticCursor = () => {
         width: 480, height: 480,
         x: trailSpringX, y: trailSpringY,
         translateX: '-50%', translateY: '-50%',
-        background: `radial-gradient(circle, ${COLORS.saffron}0E 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${alpha(COLORS.saffron, 0x0E)} 0%, transparent 70%)`,
       }}
     />
   );
@@ -248,10 +247,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = isMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMenuOpen]);
+  useBodyScrollLock(isMenuOpen);
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -263,8 +259,9 @@ const Navbar = () => {
   return (
     <motion.header
       className="fixed top-0 left-0 right-0 z-50"
+      data-appearance={scrolled ? undefined : 'dark'}
       style={{
-        background: scrolled ? 'rgba(10,10,10,0.92)' : 'transparent',
+        background: scrolled ? 'rgb(var(--bg) / 0.92)' : 'transparent',
         backdropFilter: scrolled ? 'blur(20px)' : 'none',
         borderBottom: scrolled ? `1px solid ${COLORS.darkBorder}` : 'none',
         transition: 'background 0.3s, backdrop-filter 0.3s, border-bottom 0.3s',
@@ -278,25 +275,27 @@ const Navbar = () => {
           <motion.img src={BHALogo} alt="BHA Logo" className="h-10 md:h-14 w-auto object-contain"
             whileHover={{ scale: 1.05 }} transition={EASE_SPRING} />
           <div className="hidden sm:block">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: COLORS.saffron }}>Bhausaheb Ranade</p>
-            <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
+            <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-8" aria-label="Main navigation">
           {navLinks.map((link) => (
             <Link key={link.to} to={link.to}
-              className="relative text-sm font-semibold tracking-wide text-white/80 hover:text-white transition-colors duration-200 group py-2">
+              className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-ink/80 hover:text-ink transition-colors duration-200 group py-2 tap-safe">
               {link.label}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 rounded-full"
                 style={{ background: COLORS.saffron }} />
             </Link>
           ))}
           <SaffronButton to="/scores">Live Scores</SaffronButton>
+          <AppearanceMenu />
         </nav>
 
+        <AppearanceMenu className="md:hidden ml-auto mr-1" />
         <button onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden p-2 rounded-lg text-white min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 transition-colors"
+          className="md:hidden p-2 rounded-lg text-ink min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-ink/10 transition-colors"
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={isMenuOpen}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={isMenuOpen ? 'x' : 'menu'}
@@ -311,7 +310,7 @@ const Navbar = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div className="md:hidden absolute top-full left-0 right-0 border-t"
-            style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
+            style={{ background: 'rgb(var(--bg) / 0.97)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
             <div className="px-4 py-6 flex flex-col gap-2">
@@ -319,15 +318,15 @@ const Navbar = () => {
                 <motion.div key={link.to} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}>
                   <Link to={link.to} onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/5 font-medium transition-all min-h-[44px] flex items-center">
+                    className="block px-4 py-3 rounded-xl text-ink/80 hover:text-ink hover:bg-ink/5 font-medium transition-all min-h-[44px] flex items-center">
                     {link.label}
                   </Link>
                 </motion.div>
               ))}
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                 <Link to="/scores" onClick={() => setIsMenuOpen(false)}
-                  className="block mt-2 px-4 py-3 rounded-xl text-white font-bold text-center min-h-[44px] flex items-center justify-center"
-                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}>
+                  className="block mt-2 px-4 py-3 rounded-xl font-bold text-center min-h-[44px] flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}>
                   Live Scores
                 </Link>
               </motion.div>
@@ -351,7 +350,7 @@ const HeroSection = () => {
   const opacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
 
   return (
-    <section ref={ref} className="relative min-h-dvh overflow-hidden flex items-center justify-center" aria-label="Hero">
+    <section ref={ref} className="relative min-h-dvh overflow-hidden flex items-center justify-center" aria-label="Hero" data-appearance="dark">
       {/* Parallax BG */}
       <motion.div className="absolute inset-0 z-0" style={{ y: bgY, scale: bgScale }}>
         <img src={MainHomeImg} alt="" aria-hidden="true"
@@ -401,7 +400,7 @@ const HeroSection = () => {
         {/* Badge */}
         <motion.div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border"
-          style={{ background: `${COLORS.saffron}18`, borderColor: `${COLORS.saffron}45`, color: COLORS.saffronLight }}
+          style={{ background: `${alpha(COLORS.saffron, 0x18)}`, borderColor: `${alpha(COLORS.saffron, 0x45)}`, color: FG.brandSoft }}
           initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}>
           <Star className="w-3 h-3" fill="currentColor" aria-hidden="true" />
@@ -422,8 +421,8 @@ const HeroSection = () => {
               style={gradient ? {
                 background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                filter: `drop-shadow(0 0 50px ${COLORS.saffron}60)`,
-              } : { color: '#fff', textShadow: `0 0 100px ${COLORS.saffron}35` }}
+                filter: `drop-shadow(0 0 50px ${alpha(COLORS.saffron, 0x60)})`,
+              } : { color: '#fff', textShadow: `0 0 100px ${alpha(COLORS.saffron, 0x35)}` }}
               initial={{ opacity: 0, y: 80, rotateX: -25 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay, ease: EASE_OUT }}
@@ -433,13 +432,13 @@ const HeroSection = () => {
           ))}
         </h1>
 
-        <motion.p className="text-white/70 text-lg sm:text-xl md:text-2xl font-light tracking-widest uppercase mb-3"
+        <motion.p className="text-ink/70 text-lg sm:text-xl md:text-2xl font-light tracking-widest uppercase mb-3"
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.6 }}>
           Mallakhamb Competition
         </motion.p>
 
-        <motion.p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed"
+        <motion.p className="text-fg-muted text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.8 }}>
           The ultimate platform for traditional Indian gymnastics  where strength meets grace on the pole.
         </motion.p>
@@ -447,7 +446,7 @@ const HeroSection = () => {
         {/* Role cards with 3D tilt */}
         <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 1.0 }}>
-          <p className="text-white/35 text-xs tracking-widest uppercase mb-4">Choose your role to get started</p>
+          <p className="text-fg-muted text-xs tracking-widest uppercase mb-4">Choose your role to get started</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-3xl mx-auto">
             {roles.map((role, i) => {
               const Icon = role.icon;
@@ -458,26 +457,26 @@ const HeroSection = () => {
                   <TiltCard>
                     <div className="p-4 rounded-2xl border flex flex-col gap-3 text-left h-full"
                       style={{
-                        background: `${role.color}10`,
-                        borderColor: `${role.color}28`,
+                        background: `${alpha(role.color, 0x10)}`,
+                        borderColor: `${alpha(role.color, 0x28)}`,
                         backdropFilter: 'blur(12px)',
-                        boxShadow: `0 8px 32px ${role.color}10`,
+                        boxShadow: `0 8px 32px ${alpha(role.color, 0x10)}`,
                       }}>
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                        style={{ background: `${role.color}18` }}>
+                        style={{ background: `${alpha(role.color, 0x18)}` }}>
                         <Icon className="w-4 h-4" style={{ color: role.color }} aria-hidden="true" />
                       </div>
-                      <p className="text-white font-bold text-sm leading-tight">{role.title}</p>
+                      <p className="text-ink font-bold text-sm leading-tight">{role.title}</p>
                       <div className="flex gap-2 mt-auto">
                         <Link to={role.loginTo}
-                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe md:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
-                          style={{ background: role.color, color: '#fff' }}>
+                          className="flex-1 py-2 rounded-lg text-xs font-bold text-center tap-safe mouse:min-h-[36px] flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
+                          style={{ background: role.color, color: 'rgb(var(--on-accent))' }}>
                           Login
                         </Link>
                         {role.registerTo && (
                           <Link to={role.registerTo}
-                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe md:min-h-[36px] flex items-center justify-center hover:bg-white/10 transition-all duration-200 active:scale-95"
-                            style={{ borderColor: `${role.color}45`, color: role.color }}>
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold text-center border tap-safe mouse:min-h-[36px] flex items-center justify-center hover:bg-ink/10 transition-all duration-200 active:scale-95"
+                            style={{ borderColor: `${alpha(role.color, 0x45)}`, color: role.color }}>
                             Register
                           </Link>
                         )}
@@ -490,7 +489,7 @@ const HeroSection = () => {
           </div>
           <div className="mt-5">
             <Link to="/superadmin/login"
-              className="text-white/20 hover:text-white/45 text-xs transition-colors duration-200 underline underline-offset-4 inline-flex items-center justify-center tap-safe">
+              className="text-fg-muted hover:text-fg text-xs transition-colors duration-200 underline underline-offset-4 inline-flex items-center justify-center tap-safe">
               Super Admin Access
             </Link>
           </div>
@@ -503,7 +502,7 @@ const HeroSection = () => {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}
           style={{ opacity }}>
           <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
-            <ChevronDown className="w-5 h-5 text-white/30" aria-hidden="true" />
+            <ChevronDown className="w-5 h-5 text-ink/30" aria-hidden="true" />
           </motion.div>
         </motion.div>
       )}
@@ -522,7 +521,7 @@ const AnimatedStat = ({ num, suffix, label, delay }) => {
         <p className="text-3xl md:text-4xl font-black">
           <GradientText>{count}{suffix}</GradientText>
         </p>
-        <p className="text-white/45 text-xs tracking-widest uppercase mt-1">{label}</p>
+        <p className="text-fg-muted text-xs tracking-widest uppercase mt-1">{label}</p>
       </div>
     </FadeIn>
   );
@@ -553,11 +552,11 @@ const AboutSection = () => {
     <section ref={ref} className="relative overflow-hidden py-24 md:py-32"
       style={{ background: COLORS.dark }} aria-label="About Mallakhamb">
       <div className="absolute top-1/2 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-        style={{ background: `${COLORS.saffron}07`, filter: 'blur(80px)', transform: 'translate(-50%,-50%)' }} />
+        style={{ background: `${alpha(COLORS.saffron, 0x07)}`, filter: 'blur(80px)', transform: 'translate(-50%,-50%)' }} />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <FadeIn direction="right" className="relative order-2 lg:order-1">
-          <motion.div className="relative rounded-3xl overflow-hidden"
+          <motion.div className="relative rounded-3xl overflow-hidden" data-appearance="dark"
             style={{
               x: reduced ? 0 : imageX,
               boxShadow: `0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px ${COLORS.darkBorder}`,
@@ -565,13 +564,13 @@ const AboutSection = () => {
             <img src={TextRevealBg} alt="Mallakhamb athlete performing on pole"
               className="w-full aspect-[3/4] object-cover object-center" loading="lazy" />
             <div className="absolute inset-0"
-              style={{ background: `linear-gradient(to top, ${COLORS.dark}80, transparent 60%)` }} />
+              style={{ background: `linear-gradient(to top, ${alpha(COLORS.dark, 0x80)}, transparent 60%)` }} />
             <motion.div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl border"
               style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: 0.4 }}>
-              <p className="text-white font-bold text-sm">Traditional Indian Sport</p>
-              <p className="text-white/45 text-xs mt-1">Originating from the Indian subcontinent</p>
+              <p className="text-ink font-bold text-sm">Traditional Indian Sport</p>
+              <p className="text-fg-muted text-xs mt-1">Originating from the Indian subcontinent</p>
             </motion.div>
           </motion.div>
           <div className="absolute -top-4 -left-4 w-24 h-24 rounded-2xl border-t-2 border-l-2 pointer-events-none"
@@ -582,22 +581,22 @@ const AboutSection = () => {
 
         <FadeIn direction="left" delay={0.2} className="order-1 lg:order-2 space-y-8">
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>The Ancient Art</p>
-            <h2 className="text-4xl md:text-5xl font-black text-white leading-tight">
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>The Ancient Art</p>
+            <h2 className="text-4xl md:text-5xl font-black text-ink leading-tight">
               Where Strength<br />
               <GradientText>Meets Grace</GradientText>
             </h2>
           </div>
-          <p className="text-white/55 text-lg leading-relaxed">
+          <p className="text-fg-muted text-lg leading-relaxed">
             Mallakhamb is a traditional sport originating from the Indian subcontinent, in which a gymnast performs aerial yoga or gymnastic postures and wrestling grips in concert with a vertical stationary or hanging wooden pole, cane, or rope.
           </p>
-          <p className="text-white/40 leading-relaxed">
+          <p className="text-fg-muted leading-relaxed">
             The Bhausaheb Ranade Navodit Mallakhamb Competition has been a cornerstone of this tradition since 1984, producing national champions and preserving this ancient art form for future generations.
           </p>
           <div className="flex flex-wrap gap-3">
             {['Pole Mallakhamb', 'Rope Mallakhamb', 'Hanging Mallakhamb'].map((tag) => (
               <span key={tag} className="px-4 py-2 rounded-full text-xs font-semibold border"
-                style={{ borderColor: COLORS.darkBorder, color: COLORS.saffronLight, background: `${COLORS.saffron}0E` }}>
+                style={{ borderColor: COLORS.darkBorder, color: FG.brandSoft, background: `${alpha(COLORS.saffron, 0x0E)}` }}>
                 {tag}
               </span>
             ))}
@@ -620,15 +619,15 @@ const LegacyTimeline = () => (
   <section className="py-24 md:py-32 relative overflow-hidden" style={{ background: COLORS.darkElevated }}
     aria-label="Competition history timeline">
     <div className="absolute inset-0 pointer-events-none"
-      style={{ background: `radial-gradient(ellipse at 80% 50%, ${COLORS.saffron}06, transparent 60%)` }} />
+      style={{ background: `radial-gradient(ellipse at 80% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 60%)` }} />
     <div className="max-w-5xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>40+ Years</p>
-        <h2 className="text-4xl md:text-5xl font-black text-white">A Living <GradientText>Legacy</GradientText></h2>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>40+ Years</p>
+        <h2 className="text-4xl md:text-5xl font-black text-ink">A Living <GradientText>Legacy</GradientText></h2>
       </FadeIn>
       <div className="relative">
         <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px -translate-x-1/2 pointer-events-none"
-          style={{ background: `linear-gradient(to bottom, transparent, ${COLORS.saffron}50, transparent)` }} />
+          style={{ background: `linear-gradient(to bottom, transparent, ${alpha(COLORS.saffron, 0x50)}, transparent)` }} />
         <div className="space-y-12">
           {timelineEvents.map((ev, i) => (
             <FadeIn key={ev.year} delay={i * 0.1} direction={i % 2 === 0 ? 'right' : 'left'}>
@@ -636,9 +635,9 @@ const LegacyTimeline = () => (
                 <div className={`flex-1 pl-12 md:pl-0 ${i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
                   <div className="inline-block p-5 rounded-2xl border"
                     style={{ background: 'rgba(255,255,255,0.03)', borderColor: COLORS.darkBorder }}>
-                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.saffron }}>{ev.year}</p>
-                    <p className="text-white font-bold text-lg mb-1">{ev.title}</p>
-                    <p className="text-white/45 text-sm leading-relaxed">{ev.desc}</p>
+                    <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>{ev.year}</p>
+                    <p className="text-ink font-bold text-lg mb-1">{ev.title}</p>
+                    <p className="text-fg-muted text-sm leading-relaxed">{ev.desc}</p>
                   </div>
                 </div>
                 <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 mt-6"
@@ -659,14 +658,14 @@ const QuoteStrip = () => (
     style={{ background: COLORS.dark, borderColor: COLORS.darkBorder }}
     aria-label="Inspirational quote">
     <div className="absolute inset-0 pointer-events-none"
-      style={{ background: `radial-gradient(ellipse at 50% 50%, ${COLORS.saffron}06, transparent 70%)` }} />
+      style={{ background: `radial-gradient(ellipse at 50% 50%, ${alpha(COLORS.saffron, 0x06)}, transparent 70%)` }} />
     <FadeIn className="max-w-4xl mx-auto px-4 text-center relative z-10">
-      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: COLORS.saffron }} aria-hidden="true" />
+      <Quote className="w-8 h-8 mx-auto mb-6 opacity-30" style={{ color: FG.brand }} aria-hidden="true" />
       <blockquote>
-        <p className="text-2xl md:text-3xl font-black text-white leading-snug mb-6">
+        <p className="text-2xl md:text-3xl font-black text-ink leading-snug mb-6">
           &quot;Mallakhamb is not just a sport  it is a <GradientText>living meditation</GradientText> of strength, balance, and the ancient spirit of India.&quot;
         </p>
-        <footer className="text-white/35 text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
+        <footer className="text-fg-muted text-sm font-medium tracking-wide"> Bhausaheb Ranade, Founder</footer>
       </blockquote>
     </FadeIn>
   </section>
@@ -689,21 +688,21 @@ const FeatureCard = ({ feature, index }) => {
         <motion.div
           className="h-full min-h-[160px] p-6 rounded-2xl border relative overflow-hidden flex flex-col gap-4"
           style={{
-            background: feature.hero ? `linear-gradient(135deg, ${feature.accent}12, ${COLORS.darkCard})` : COLORS.darkCard,
-            borderColor: feature.hero ? `${feature.accent}30` : COLORS.darkBorderSubtle,
+            background: feature.hero ? `linear-gradient(135deg, ${alpha(feature.accent, 0x12)}, ${COLORS.darkCard})` : COLORS.darkCard,
+            borderColor: feature.hero ? `${alpha(feature.accent, 0x30)}` : COLORS.darkBorderSubtle,
             minHeight: feature.hero ? 280 : 160,
           }}
-          whileHover={{ borderColor: `${feature.accent}50`, boxShadow: `0 0 50px ${feature.accent}15`, y: -4 }}
+          whileHover={{ borderColor: `${alpha(feature.accent, 0x50)}`, boxShadow: `0 0 50px ${alpha(feature.accent, 0x15)}`, y: -4 }}
           transition={{ duration: 0.25 }}>
           <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(ellipse at 20% 20%, ${feature.accent}10, transparent 60%)` }} />
+            style={{ background: `radial-gradient(ellipse at 20% 20%, ${alpha(feature.accent, 0x10)}, transparent 60%)` }} />
           <div className={`rounded-xl flex items-center justify-center relative z-10 ${feature.hero ? 'w-14 h-14' : 'w-10 h-10'}`}
-            style={{ background: `${feature.accent}18` }}>
+            style={{ background: `${alpha(feature.accent, 0x18)}` }}>
             <Icon className={feature.hero ? 'w-7 h-7' : 'w-5 h-5'} style={{ color: feature.accent }} aria-hidden="true" />
           </div>
           <div className="relative z-10 flex-1">
-            <h3 className={`text-white font-bold ${feature.hero ? 'text-2xl' : 'text-lg'}`}>{feature.title}</h3>
-            <p className={`text-white/45 mt-1 leading-relaxed ${feature.hero ? 'text-base' : 'text-sm'}`}>{feature.description}</p>
+            <h3 className={`text-ink font-bold ${feature.hero ? 'text-2xl' : 'text-lg'}`}>{feature.title}</h3>
+            <p className={`text-fg-muted mt-1 leading-relaxed ${feature.hero ? 'text-base' : 'text-sm'}`}>{feature.description}</p>
           </div>
           <div className="mt-auto flex items-center gap-2 text-xs font-semibold relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
             style={{ color: feature.accent }}>
@@ -719,8 +718,8 @@ const FeaturesSection = () => (
   <section className="py-24 md:py-32" style={{ background: COLORS.dark }} aria-label="Platform features">
     <div className="max-w-6xl mx-auto px-4 md:px-8">
       <FadeIn className="text-center mb-16">
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: COLORS.saffron }}>Platform</p>
-        <h2 className="text-4xl md:text-5xl font-black text-white">Everything You <GradientText>Need</GradientText></h2>
+        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Platform</p>
+        <h2 className="text-4xl md:text-5xl font-black text-ink">Everything You <GradientText>Need</GradientText></h2>
       </FadeIn>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
         {features.map((f, i) => <FeatureCard key={f.title} feature={f} index={i} />)}
@@ -745,26 +744,26 @@ const Footer = () => {
   };
 
   return (
-    <footer style={{ background: '#050505' }} aria-label="Site footer">
+    <footer style={{ background: '#050505' }} aria-label="Site footer" data-appearance="dark">
       <div className="h-px" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}, transparent)` }} />
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-3">
             <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" loading="lazy" />
             <div>
-              <p className="text-white font-bold text-sm leading-tight">Bhausaheb Ranade Navodit</p>
-              <p className="text-white font-bold text-sm leading-tight">Mallakhamb Competition</p>
+              <p className="text-ink font-bold text-sm leading-tight">Bhausaheb Ranade Navodit</p>
+              <p className="text-ink font-bold text-sm leading-tight">Mallakhamb Competition</p>
             </div>
           </div>
-          <p className="text-white/35 text-sm leading-relaxed max-w-sm">
+          <p className="text-fg-muted text-sm leading-relaxed max-w-sm">
             A Sports Event started in 1984, producing award-winning national players and preserving the tradition of Mallakhamb.
           </p>
           <div className="flex gap-3 pt-2">
             <a href="https://www.facebook.com/bhausahebranade/" target="_blank" rel="noopener noreferrer"
               className="w-10 h-10 tap-safe rounded-full flex items-center justify-center border transition-all duration-200 hover:scale-110"
-              style={{ borderColor: COLORS.darkBorder, background: `${COLORS.saffron}0E` }}
+              style={{ borderColor: COLORS.darkBorder, background: `${alpha(COLORS.saffron, 0x0E)}` }}
               aria-label="Facebook">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: COLORS.saffronLight }} aria-hidden="true">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: FG.brandSoft }} aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </a>
@@ -773,12 +772,12 @@ const Footer = () => {
 
         {Object.entries(footerLinks).map(([section, links]) => (
           <div key={section}>
-            <p className="text-white font-bold text-sm mb-4 tracking-wide">{section}</p>
+            <p className="text-ink font-bold text-sm mb-4 tracking-wide">{section}</p>
             <ul className="space-y-3">
               {links.map((link) => (
                 <li key={link.to}>
                   <Link to={link.to}
-                    className="text-white/35 hover:text-white/70 text-sm transition-colors duration-200 flex items-center gap-2 group tap-safe">
+                    className="text-fg-muted hover:text-fg text-sm transition-colors duration-200 flex items-center gap-2 group tap-safe">
                     <span className="w-1 h-1 rounded-full group-hover:w-3 transition-all duration-200"
                       style={{ background: COLORS.saffron }} />
                     {link.label}
@@ -790,20 +789,20 @@ const Footer = () => {
         ))}
 
         <div className="space-y-4">
-          <p className="text-white font-bold text-sm mb-4 tracking-wide">Contact</p>
+          <p className="text-ink font-bold text-sm mb-4 tracking-wide">Contact</p>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
-              <p className="text-white/35 text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
+              <p className="text-fg-muted text-sm leading-relaxed">Sane Guruji Vidya Mandir, Santacruz(E), Mumbai.</p>
             </div>
             <a href="tel:+919820688420"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 tap-safe">
-              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 tap-safe">
+              <Phone className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               +91 982 068 8420
             </a>
             <a href="mailto:mallakhambindia@gmail.com"
-              className="flex items-center gap-3 text-white/35 hover:text-white/65 text-sm transition-colors duration-200 break-all tap-safe">
-              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              className="flex items-center gap-3 text-fg-muted hover:text-fg text-sm transition-colors duration-200 break-all tap-safe">
+              <Mail className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
               mallakhambindia@gmail.com
             </a>
           </div>
@@ -811,7 +810,7 @@ const Footer = () => {
       </div>
 
       <div className="border-t py-6 text-center" style={{ borderColor: COLORS.darkBorder }}>
-        <p className="text-white/20 text-xs">
+        <p className="text-fg-muted text-xs">
            2025 Bhausaheb Ranade Mallakhamb & Gymnastics Competition. All rights reserved.
         </p>
       </div>

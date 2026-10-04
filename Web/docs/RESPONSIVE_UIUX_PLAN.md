@@ -2,8 +2,400 @@
 
 **Version:** 2 (supersedes v1 of 2026-09-20, commit `fb8140d`)
 **Audited against:** `master` @ `5a9cae8`, 2026-09-28
-**Status:** Discovery complete for both scopes. **No application code modified.**
+**Status:** All phases (2–11) done on branch `feat/responsive-appearance`; `master` merged in and everything re-verified 2026-10-02/03 on `1c187b4`. Final report: [RESPONSIVE_UIUX_REPORT.md](RESPONSIVE_UIUX_REPORT.md). Gaps are noted in the log below.
 **Scope:** `Web/` only. `Server/` is out of scope and must not be touched.
+
+---
+
+## Implementation log
+
+### Phase 2 — safety net (done, with two gaps)
+- Harness: `TABLET_WIDTHS [768, 820, 834, 1024]` with portrait heights; 1280 and 1536 added to desktop; tap targets measured below 1024 or on a coarse pointer; `audit:tablet`; `APPEARANCE=dark|light|both` via an init script writing `mk-appearance`; the sweep factored into `e2e/support/audit-suite.js`.
+- WebKit: `iphone-13`, `ipad-mini`, `ipad-pro-11`, `ipad-pro-11-landscape`, **opt-in** (`E2E_WEBKIT=1`) and restricted to `responsive-*`/`visual-*` specs, so the seeding specs can never replay. `npm run test:e2e:install:webkit` has not been run on this machine yet.
+- **Audit DB (2.1) — not done; replaced for now.** Instead of a second database, `AUDIT_<ROLE>_EMAIL/PASSWORD` + `AUDIT_MEET` overrides let the read-only audits sign in with accounts that exist in the TRIALS dev DB (kept in gitignored `Web/.env.audit.local`). Nothing was dropped or reseeded. A real audit DB is still needed for the judge walk with a real `resetScores`.
+- **Visual baseline (2.5): `e2e/visual-baseline.spec.js` / `npm run audit:visual`.** 44 routes × 375/820/1366, dark — **132 screenshots, re-verified at 0 differing pixels on unchanged code** before any Phase 3 edit. Three fixes were needed before a baseline meant anything: `reducedMotion` must go through `contextOptions` (as a bare test option it is silently ignored); full-page shots must scroll first or every `whileInView` section photographs as black; and the capture waits for toasts and in-flight text to clear (the judge screens differed between two runs of the same build otherwise).
+- Not yet run: the AccessLint baseline (the AccessLint server failed to connect this session) and the full 13-width matrix.
+
+### Phase 3 — foundation (done; exit gate = dark diff 0 across the 132)
+- 3.1 The four `@apply` components **do** emit CSS when used — they are unused, not broken. Kept, per the rule.
+- 3.2/3.3 Screens are `sm md lg xl 2xl` from one module, `src/styles/breakpoints.js`, which `tailwind.config.js`, `utils/ui/responsive.js` and `styles/tokens.js` all read. "desktop" = ≥1024 everywhere; the 1440 step survives as `WIDE_CONTAINER_MIN` (`isDesktopBaseline`, `container-centered`, and `min-[1440px]:` in `ResponsiveContainer`). The 768/767 overlap lived in an unused `.responsive-bg` rule, now deleted.
+- 3.4 One z-index scale (`Z_INDEX`) as `--z-*` properties and `z-sticky … z-tooltip` utilities. The old named utilities had no users. **The ~70 numeric `z-10…z-[9999]` sites are not migrated** — they move file by file in Phase 5.
+- 3.5 Dead set deleted. The bundle confirmed it: the four lazy backgrounds were shipping as real chunks; DesignTokenAudit and the four Responsive* files were already tree-shaken. `ResponsiveFullWidthContainer` and `ResponsiveFormContainer` went with them.
+- 3.6 `useReducedMotion` has one implementation (hooks/useResponsive; the design-system path re-exports it; Home's re-export removed). `.table-mobile-cards`, the index.css `.aspect-*` copies and the unused `.touch-target` are gone.
+- 3.7 `.no-horizontal-scroll` / `.mobile-full-width` removed; `body`/`#root` use `100dvh` after a `100vh` fallback.
+- 3.8 Appearance plumbing: tokens for both appearances in `index.css` (role palettes on `[data-role]`, each `[data-appearance]` block picks its half, derived tokens redeclared per block so a dark island inside a light page resolves dark); `public/appearance-init.js` + two `theme-color` metas; `AppearanceProvider`/`useAppearance` (`src/contexts/`), helpers in `src/utils/ui/appearance.js`; `App.jsx` root is `bg-bg`. `?appearance=light|dark|system` works (and persists) — the only way in until Phase 9.
+- 3.9 **428 concatenations in 48 files → `alpha(X, 0xNN)`**; `src/styles/colourHygiene.test.js` keeps it at 0 in CI.
+- 3.10 Tailwind `white` = ink, plus `snow`. Of the 5 solid `bg-white`: the light-styled ErrorBoundary card and the SuperAdminManagement toggle knob are `snow`; the other 3 were in deleted ResponsiveForm. The 16 `placeholder-white/NN` correctly follow ink.
+- 3.11 Every light-only plugin/index.css utility was unreferenced and is deleted, except the scrollbars, which now follow the appearance.
+- Also from §14.6, because light cannot be legible without it: `DESIGN_TOKENS` surfaces, neutral borders and text, and `COMMON_STYLES`, are `rgb(var(--…))` strings (dark-identical). Role and status colours stay hex until the framer colour animations are gone (R9) and `ThemeProvider` sets `data-role` — the accent tokens are defined but dormant.
+
+**The one intentional dark change in Phase 3:** scrollbars were a light-grey track and thumb on the near-black app; they now follow the appearance (headless screenshots don't show scrollbars, so the diff can't see it).
+
+**Found, not fixed (belongs to Phase 5 per-file work):**
+- `alpha()` deliberately reproduces the old concatenation for non-token input, because several callers pass an `rgba()` and so have **always rendered invalid CSS**: the "Completed" status badge in `CompetitionSelector`, `CompetitionDisplay` and `CompetitionSelectionScreen` has no tint or border, and `CoachOrnament`'s gradient is dropped entirely when a ThemeProvider supplies `primaryDark`. Fixing them is a visible change.
+- The same class of bug in the Tailwind plugin: `.stacked-table` rows were meant to have a hairline border (`${theme('colors.white')}14`), but `colors.white` is `#fff`, so it produced the five-digit `#fff14` and the declaration was dropped — **phone stacked tables have never had that border**. The visual diff caught it (a valid border shifted every card by 1px on SuperAdminManagement and the add-player payment page); the rule now states no border, which is what has always rendered.
+- Light is legible on ordinary pages (checked: coach login). Text over photos is not yet `snow` — Home's hero nav and role-card labels turn dark on the photo. That is Home's Phase 5 pass (§14.5, the 7 known sites).
+
+### Phase 4 — accessibility foundation (done 2026-09-30, committed `8887d18`; every dark change here is intentional)
+- **4.1 Focus.** A global `:focus-visible` ring (2px `--focus-ring` = the role accent, 2px offset, placed after `@tailwind utilities`) replaces the `input:focus` rule that swapped every field's outline for a 10% glow. All 35 `outline-none` / `focus:outline-none` are gone (31 page sites, 4 in the Themed* inputs). ThemedButton's `focus:ring-3` is not a class in this config and drew nothing. Checked with the keyboard: Tab onto the show-password toggle on `/coach/login` gives a solid coach-green outline (it had none).
+- **4.2 Primary buttons.** `html[data-role]` now comes from the URL (`applyRoleAccent`, a layout effect in `AppContent`), so the accent tokens are live. It matches the JS theme on every screen because each `ThemeProvider` mount passes its own route's role. ThemedButton solid = `bg-accent text-on-accent`: the fill is unchanged in dark and the label is near-black — coach 2.28→8.69, player 2.86→6.93, superadmin 2.03→9.77, admin/judge 4.23→4.68, public 3.68→5.38. Outline/ghost read `accent-fg`, identical in dark.
+- **4.3 / 4.4 Text contrast.** Per-site decisions, kept in the codemod rather than a blanket replace: 214 `text-white/40–55` → `text-fg-muted`. Of the 118 at `/15–35`, 87 → muted (73 texts, 10 show/hide-password toggles, 4 links), 3 `·` separators → `fg-subtle`, and 24 decorative icons and 4 placeholders are left as they were. 20 hovers that would no longer brighten against a muted base → `hover:text-fg`. 107 inline `color:` at α .12–.55 → `var(--fg-muted)`; 20 are left (aria-hidden glyphs, chevrons inside labelled buttons, empty-state art, the 404 watermark, and the two "Completed" configs that feed the known-invalid `alpha()` badge, which is Phase 5). `DESIGN_TOKENS.colors.text.muted` → `var(--fg-muted)`. 49 files, 411 lines, every one a 1-for-1 line replacement.
+- **4.5 Motion.** `<MotionConfig reducedMotion="user">` at the root: movement stops for people who ask for it; opacity fades continue. The 13 framer rotate spinners are CSS `animate-spin`, so loading feedback keeps turning (every spinner is now 1 s). The unused `.fade-in` and five unused Tailwind animations are deleted. `button { transition: all }` → explicit properties.
+- **4.5 Labels.** 15 fields had no programmatic name (placeholder-only search boxes, the rankings selects, the Time Keeper / Scorer name fields in AdminScoring). Four wrappers drew a visible `<label>` that was never linked — `DarkInput` in AdminJudges; `DarkInput`, `DarkSelect` and `DarkTextarea` in SuperAdminManagement — plus the judge slip's `ScoreInput`; all now linked with `useId`. Score-sheet mark cells are named "<athlete>, <column>". In the Sr-Judge edit dialog, Execution is named, and the Originality None / +0.20 buttons carry `aria-pressed` (the choice was shown by colour alone). The 6 remaining scanner hits are verified false positives (wrapped checkboxes, a `display:none` file input, `<input>` written inside comments).
+- **4.6 Table semantics.** No grid qualified under D2: none of the 116 `grid-cols-` has a header row over repeating columns, and the tabular data was already `<table>`. Instead, `scope="col"` on all 5 header templates, and names for the score sheet, the rankings, and the three management tables.
+- **Links inside sentences** on the password pages ("Back to Login", "Request New OTP") were told apart by colour only (WCAG 1.4.1, and already under 3:1 against the text before this phase) → underlined.
+
+**Verification**
+- `npm test` 379/379, lint clean — same as before the phase.
+- AccessLint on the 8 public routes its logged-out Chrome can reach: **no contrast, label or focus violations**. What remains is `landmark-main` / `region` on every screen except the 9 that already render `<main>`, and NotFound has no `<h1>` — Phase 5, per screen (a global `<main>` would nest inside those 9).
+- `/scores` reported its muted empty-state text at 2.7:1. That is a measurement artifact: the text is inside a framer fade, and a background tab runs no animation frames (checked: `document.hidden`, 0 rAF ticks, parent stuck at `opacity: 0`). The computed colour on `#0a0a0a` is 6.28:1. The same stall means AccessLint contrast numbers on animated screens need checking against computed colours.
+- **Visual, against the Phase 3 baseline.** At the old 0.2 colour tolerance, 23 of 44 routes changed. At `threshold: 0`, all 44 do, at every width. Sampled 7 routes — the extremes and the odd cases, not every shot — and every difference traced to an intended change:
+  - muted text brightening, e.g. every card blurb on Choose Your Level, and one paragraph measured at grey 94 → 140, which is 0.35 → 0.55 ink exactly;
+  - `ThemedButton` labels going dark (judge profile: those two labels are the only changed pixels on the page);
+  - the superadmin Logout label (0.50 → 0.55; the only changed pixels on that dashboard);
+  - the "Super Admin" header link on NotFound, which only 1366 shows;
+  - on `/scores` at 375, an in-flight "Loading…" in the competition dropdown — timing noise, not a colour change.
+- **The one layout-looking diff is a 1px settle.** Forgot Password showed a moved button, a new line and ghosted card edges. Measured: the whole card sits exactly 1px higher (edge y 759 → 758; button fill off by one level). The harness captures with reduced motion on. Before Phase 4, framer ignored that and photographed the slide-up entrance about a pixel short of its end; with `MotionConfig reducedMotion="user"` the slide is skipped and the card is at its true resting position. Every screen with a framer entrance shows the same 1px shift, which is why all 44 differ at threshold 0. People without reduced motion still get the slide, ending in the same place.
+- **Still owed:** the keyboard walk from login to score submission (only the login page's focus was walked), and AccessLint on the logged-in screens.
+
+**Harness**
+- **The pixel gate had a colour tolerance.** `maxDiffPixels: 0` was set, but Playwright's per-pixel `threshold` stayed at its 0.2 default, under which a grey moving 94 → 140 is "the same pixel". So Phase 3's "dark diff 0" proved no change larger than roughly 35 grey levels, not zero change. The spec now uses `threshold: 0` (override with `VISUAL_THRESHOLD`). Phase 3's claim was not re-verified at 0 — it would need the Phase 2 commit's rendering as a baseline.
+- **The strict gate is deterministic.** Baseline re-recorded on the Phase 4 state at `threshold: 0`, then compared against an unchanged build: 132 of 132 shots, **0 changed pixels**. It is the baseline Phase 5 diffs against.
+- The "compare an unchanged build first" rule caught one bad baseline shot (judge sequence, 1366): it was recorded minutes before the API lost its Atlas connection, with an in-flight "Checking…" line in it. Re-recorded, then matched twice.
+- That same connection loss made every later sign-in fail as "Invalid credentials", because the auth service turns any lookup error into that message. Server-side and out of scope; raised as a separate task.
+
+**Found, not fixed**
+- `AdminJudges.jsx` and `SuperAdminManagement.jsx` still define their own local `useReducedMotion` (3.6 missed them).
+- Placeholders at 25–30% ink (4 `placeholder:text-white/…` + 16 `placeholder-white/30`) are under 4.5:1. Raising them risks a placeholder being read as an entered value — decide with each field in Phase 5.
+- `.stacked-table` sets rows and cells to `display: block` on phones, which drops their table semantics; only the `<table>` carries `role="table"`. Rows and cells need `role="row"` / `"cell"` — Phase 6.
+- A field inside an `overflow-hidden` wrapper can clip the 2px-offset ring. The judge slip's mark field is covered (its wrapper draws a solid purple focus border); the rest need the keyboard walk.
+
+### Phase 5 — per-file pass (in progress)
+
+**Foundation — committed `e89cddf`.** Tablets are touch devices that were getting desktop metrics.
+- `.tap-safe` covers `TOUCH`: below `lg`, **or** any coarse pointer (an iPad Pro in landscape is 1194px wide and still touch).
+- A new `mouse:` variant — `(min-width: 1024px) and (pointer: fine)`, the exact complement — carries compact desktop sizes. The 12 `tap-safe md:min-h-[…]` shrink sites moved to `mouse:` (D1: desktop intent).
+- Proof, against a Phase 4 baseline at threshold 0: 28 shots changed, **all at 820; zero at 375 and 1366**.
+- Tablet audit (768/820/834 portrait, Chromium): undersized targets **213 → 21**, and no overflow on any route, before or after. Most flagged controls already carried `tap-safe` — the report truncates selectors, so the class was not visible in it.
+- Left for their files: a 32×32 dialog close ✕ with **no accessible name** (12 hits), the "60 Players" chip, the judge profile's Change-photo button, and Home's inline nav links (36px at tablet).
+
+**Scope of (c), refined.** Text at 60%+ ink already works in both appearances through the ink alias (dark ink at 60% on the light page is ≥ 5.0:1), and Phase 4 fixed everything below that. Renaming it now would move the dark hierarchy for no accessibility gain. So per file, (c) means what actually breaks in light:
+- hard-coded dark backgrounds (`rgba(10,10,10,…)`, `#050505`, `#111`);
+- accent and status hex used as **text** (saffron on white is 2.86:1);
+- text over photos or saturated fills → `snow`;
+- glass surfaces (`bg-white/NN`) that would turn darker than the page in light.
+
+Renaming `white` → `ink` stays one mechanical, zero-diff pass at Phase 9.
+
+**Operational — shared checkout.** On 2026-09-30 the checkout was stashed and switched to `master` mid-run. The owner switched back; nothing was lost, but two things follow:
+- `master` commit `e24793c` **tracks the baseline PNGs** (force-added past `.gitignore`), so every checkout between `master` and this branch overwrites, then deletes, the local `Web/.visual-baseline/`. Whether baselines belong in git is the owner's call. Until then, a copy lives outside the repo.
+- Every long run now records branch, HEAD and a hash of the diff before and after, and is void if they differ.
+
+**Per-file log**
+
+*1. `public/Home.jsx`* (plus shared: brand text tokens in `index.css`; `GradientText`, `SaffronButton` and the index's `GlassCard` in `design-system/index.jsx`)
+- (a) 36 `md:` sites: 34 tablet-correct as written (gutters, header height, inline nav from 768, type sizes, 4-up stats, two-sided timeline, 2-column footer); 2 desktop intent → `mouse:` (in the foundation commit).
+- (b) The inline nav links were 36px at tablet width → `tap-safe`.
+- (c) New brand text tokens `--brand-fg`, `--brand-fg-soft`, `--brand-gold-fg` — the brand hexes in dark, the -700 shades in light (~5:1) — for saffron eyebrows, years, pills, the brand name and the index's `GradientText`. Dark islands: the hero (photo under a dark scrim), the navbar while it is over the hero, the About photo card, and the `#050505` footer. The navbar and mobile-menu backdrops follow `--bg` once scrolled. The role-card Login labels were white on the role fills (saffron 2.86, green 2.28, admin red 3.76) → `on-accent`, near-black in the island. `SaffronButton` solid label → near-black (D6); outline text → `--brand-fg-soft`.
+- (d) Dark, 5 widths: the changed pixels are only the role-card labels (every width), the Live Scores label (768+) and the nav links (768/820) — everything below the hero is identical. Light: hero text, stats, headings, the About caption and the footer were unreadable and now read. Public Scores changed in light only (shared `GradientText` / `GlassCard`); every other public page is identical in both appearances.
+- Why the whole hero is the island, not just its text: the scrim fades to the page colour from 40% to 100% of the hero's height, which is where the role cards sit (on a phone the hero is taller than the screen). A light-bottomed fade would put white text on a whitened photo.
+
+*2–9. The rest of the public group* — `PublicScores`, `UnifiedLogin` (5 portals), `UnifiedRegister` (3), `AdminRegister`, `ForgotPassword`, `ResetPassword`, `NotFound`, and the shared `layout/Navbar`, `auth/Dropdown` and Themed* inputs.
+- (a) 5 `md:` sites (gutters, a heading size, a card's padding) — all tablet-correct.
+- (b) 16px text in fields below `lg`/on touch (`text-base mouse:text-sm`) so iOS does not zoom on focus; the scores search box's `sm:min-h-[40px]` (a touch target shrinking from 640px) → `mouse:`.
+- (c) A mechanical, dark-identical codemod (`rgba(255,255,255,A)` → `rgb(var(--ink) / A)`, `rgba(10,10,10,A)` → `rgb(var(--bg) / A)`) that refuses framer animation props and SVG presentation attributes, where a CSS variable cannot work. Then by hand:
+  - **Role colour as text at 38–56% opacity** — the auth field labels, the portal eyebrow, the feature labels, the Forgot/Register links — failed in DARK too (saffron ~3.1, purple ~2.9:1), and purple has no passing opacity. → full-strength `--accent-fg`. Visible in dark: these labels are brighter.
+  - `#EF4444` required markers and errors → `--danger-fg` (identical in dark). Status text `text-green-400` / `text-red-400` (≈2:1 on light) → `text-*-700 dark:text-*-400`, the one place `dark:` earns its keep: identical in dark.
+  - `ResetPassword` had its own `COLORS` with `dark: '#0A0A0A'`, so its page stayed black in light with invisible text. `NotFound` hard-coded `#0a0a0a` (same failure) and became a `<main>`.
+  - `Dropdown`: the option hover was framer animating to `'#fff'` — white text on a light menu → CSS hover. Its trigger's placeholder is the button's visible NAME ("Select competition first") at 45% → muted.
+  - White labels on saffron fills (Send OTP, the reset step dots) → near-black (D6). `AdminRegister`'s strength label now takes a status token; the meter's fills keep their hex.
+- (d) Dark: every edited screen changed only where intended — the Send OTP label is the only change on Forgot Password at 1366; on Public Scores, the inactive tab and the dropdown placeholders. `NotFound` is pixel-identical in dark, which proves its tokens and the shared `Navbar` zero-diff. Home is untouched by this batch. Light: Reset Password, NotFound and the Public Scores header/filters were unreadable and now read; the auth labels read in the deep role shade.
+- The Public Scores filter labels stay faint in both appearances while their dropdown is disabled (until a competition is chosen) — WCAG exempts inactive controls.
+
+*10–15. Competition selection* — `LevelSelectionScreen`, `CompetitionSelectionScreen` (every signed-in role passes through both), `CompetitionSelector`, `CompetitionDisplay`, `CompetitionLockBanner`, `auth/ConfirmDialog`.
+- (a) 6 `md:` sites (padding, heading size, a 2-up card grid at 768) — tablet-correct.
+- (b) The "· change" level chip was 32px on touch → `tap-safe`; two search fields 16px on touch.
+- (c) **`SAFFRON_CTA`** in `tokens.js`: the saffron gradient plus a near-black label. Twenty-two buttons wrote that gradient by hand with `text-white` (2.86:1); each file adopts the shared style in its own pass. **Status colours** `#22C55E` / `#3B82F6` → `rgb(var(--success-fg))` / `rgb(var(--info-fg))` — equal in dark, and the form `alpha()` understands. **"Completed"** was `rgba(255,255,255,0.3)`: 2.6:1 text, and `alpha()` glued it into invalid CSS so the badge never drew its tint (the Phase 3 note) → `var(--fg-muted)`, readable and a valid tint. New `--danger-fg-soft` (`#F87171` in dark, `#B91C1C` in light) for "Locked". `ConfirmDialog`'s confirm label → near-black on its accent fill (red 3.76, green 2.28 with white); its close button's `hover:bg-white/08` was not a Tailwind class (no hover) → `/[0.08]`.
+- (d) Dark: the eight selection screens are pixel-identical. The dashboards changed at every width — **all 40 shots by exactly one colour level** (classified mechanically: max channel delta 1). That is 8-bit alpha rounding: `rgba(255,255,255,0.03)` and `rgb(var(--ink) / 0.03)` are the same colour but composite a large tinted surface one level apart. Light: the level cards were white-on-white with invisible icons; the "Locked" badge reads.
+
+**Reading a dark diff from here on.** "Identical in dark" means *within one colour level*. Every dark diff is classified mechanically — max channel delta ≤ 1 is rounding; anything larger is a real change that must be explained.
+
+*16–22. Player group and the score boards* — `PlayerTeamSelection`, `PlayerDashboard`, `performance/PerformancePanel` (also on the coach dashboard), `scores/PlayerRankingBoard`, `scores/TeamChampionshipBoard`, `scores/ScoreCategoryFilters`, `responsive/ResponsiveRankings`.
+- (a) 9 `md:` sites (gutters, card padding, heading sizes, a 2-up team grid at 768) — tablet-correct.
+- (b) Nothing to add: no field below 16px, no target under 44px.
+- (c) **`DATA_COLORS`** in `tokens.js`: medal gold/silver/bronze and the score-category blue/purple/green/red as channel tokens — the old hexes in dark, -700/-800 shades in light. The boards wrote them as text (bronze `#CD7F32` on white is 3.3:1). `PlayerTeamSelection` had its own `COLORS` with `dark: '#0A0A0A'`, so its page stayed black in light — the `ResetPassword` failure again.
+- (d) Dark: two intended changes only. The "not assigned" badge was 50% ink → muted (3.58:1 in light). `PlayerTeamSelection`'s own `#FF9933` saffron → the one brand saffron (a hue shift on its icons and "Click to join"). `ResponsiveRankings`' rank-2 silver `#94A3B8` → the `#C0C0C0` every other board uses, but no audited route renders a rank 2 there. The coach dashboard (which hosts `PerformancePanel`) moved by rounding only. Light: Team Selection was a black page with invisible team names and now reads; the medal scores read in their deep shades; the score filters' labels on Public Scores and Admin Scores read (the codemod gave them ink).
+
+**`FG`** in `tokens.js` — the semantic text colours (`FG.brand`, `FG.accent`, `FG.danger`, …) as one frozen object. Files 1–22 had written them as string literals (`'rgb(var(--brand-fg))'`), which the repo's `design-system/no-hardcoded-colors` lint rule flags (it exempts `tokens.js`): 165 literals in 23 files → `FG.*`, value-identical, from here on the only form. The ink codemod's partial strings (`1px solid rgb(var(--ink) / 0.1)`) still warn, exactly as the `rgba()` they replaced did.
+
+*20–22. Coach group* — `CoachCreateTeam`, `CoachDashboard`, `CoachPayment`.
+- (a) 15 `md:` sites (gutters, card padding, header height, heading sizes, 2-up grids) — tablet-correct.
+- (b) The discount-code field 16px on touch. Every other field already inherits 16px; every target is already 44px or `tap-safe`.
+- (c) Nine saffron buttons → `SAFFRON_CTA` (two had the gradient as a hex literal; the two logo squares that share it stay). The pay button's green "discount" fill gets the same near-black label (D6, white was 2.28:1). New `--cat-pink` for the girls' accent (`#EC4899`; pink-700 in light). The create-team step dots: the current step's number was white on green → near-black. Other steps' numbers and labels were 30% ink (2.6:1) → muted. The navbar's `rgba(10,10,10,…)` became `--bg`, so it is no longer a dark bar on the light page. The dashboard's one framer `whileHover` background (the Save button) is left — a hover tint, not text.
+- (d) Dark: three intended changes — CTA labels near-black (including the *disabled* Add Player button, whose label went from dim white to dim black), the green step dot's number, the muted step labels. The same run proved the `FG` refactor zero-diff: player, public and admin are pixel-identical in both appearances. Light: the navbar, the player rows, the age-group chips and both forms' fields were invisible and now read.
+
+*23–28. Admin group* — `unified/UnifiedDashboard` (the admin and super-admin shell), `AdminTeams`, `AdminLots`, `AdminScores`, `AdminJudges`, `AdminTransactions`. Verified on both the admin and super-admin routes, which share these pages.
+- (a) 17 `md:` sites. 15 are tablet-correct (gutters, padding, 2- and 3-up grids, a filter row). The other two are `AdminTransactions`' card/table switch: at 768–1023 its 11-column table clipped Amount and Status off-screen → cards **wherever the touch floor applies** (`mouse:hidden` / `hidden mouse:block`). The table, unchanged, is for a mouse at 1024+.
+- (b) `tap-safe` on the 28–36px targets: the search fields' clear ✕ (moved to `right-1` on touch so the 44px box fits the field), the desktop nav tabs (iPad landscape), Start, View Details, the copy-registration-link button and `DarkBtn`'s small size. `DarkBtn` had set its height inline, which beats any class, so heights moved to classes. The transactions players modal's close was a 32px "×" with that glyph as its only name → `tap-safe`, `aria-label="Close"`. Search and form fields 16px on touch.
+- (c) `color: ADMIN_COLORS.x` (60 sites) → `FG.*` / `DATA_COLORS.*`, identical in dark. New `--cat-violet` (the admin `#8B5CF6`, for stat cards and the Female pill) and `--cat-blue-soft` (the evaluation-judge badge's `#93C5FD`). Role colour as text (`theme.colors.primary`, the role-dark hex) → `FG.accent`, which equals it in dark and is the deep role shade in light. Three framer colour hovers → CSS: the nav tabs (they animated to `'#fff'`, white on the now-light header), Logout, the team modal's Close. "Select a competition to enable filters" was saffron at 50% (~2.3:1 in dark too) → full-strength soft brand. Labels on fills: near-black on saffron, green and red (D6). `snow` on purple, since `text-white` is the ink alias, which would put dark ink on purple in light. `theme.colors.primary + '30'` and `ADMIN_COLORS.red + '60'` → `alpha()`.
+- (d) Dark: the inactive nav tabs and score-type tabs moved from 50% ink to muted (55%) — every desktop shot, delta ≤ 12. Transactions at 768/820 show cards. Nothing else moved: the stat cards, badges and labels are identical. Light: **the dark header is gone** (its `rgba(10,10,10,…)` is `--bg` now). Labels, stats, badges and the status pills read in their deep shades.
+
+*30–32. Super-admin group* — `SuperAdminManagement`, `SuperAdminAddPlayerPayment`, `superadmin/AddPlayerForm`.
+- (a) 4 `md:` sites (a 2-up form grid, gutters, a table cell's `nowrap` from 768) — tablet-correct.
+- (b) Six fields 16px on touch. `DarkBtn` got the same fix as `AdminJudges'` (heights as classes, so `tap-safe` wins). The admins table's Edit/Delete were 32px icon buttons **with no name** → `tap-safe`, named "Edit"/"Delete" like the competitions table's.
+- (c) 49 `color: ADMIN_COLORS.x` → `FG.*` / `DATA_COLORS.*`. The level, status and fee-phase colour maps → tokens. Their tints had been written `${color}20`; with a token that would be invalid CSS → `alpha()`. "Completed" competitions were 40% ink, and their `rgba(…)20` tint was invalid CSS that never drew → muted, with a tint that draws. The section tabs' framer hover to `'#fff'` → CSS. Near-black labels on the saffron Create button and the three red delete-confirm buttons (D6, as `ConfirmDialog`). `AddPlayerForm`'s strength label takes a status token, as `AdminRegister`'s does. The payment page adopts `SAFFRON_CTA` (Razorpay's `theme.color` stays a hex — the checkout cannot read CSS variables).
+- (d) Dark: the Create label and the section tabs (50% → muted) only. Light: the section tabs were white on white and now read; the table's level/status pills read in deep shades.
+
+*33 + the sheet. `AdminScoring` and `responsive/ResponsiveTable`* (the admin and Scorer score sheet, protected — §15.1–3)
+- (a) 5 `md:` sites — tablet-correct.
+- (b) The sheet's layout is untouched (fixed layout, divided shares, explicit `panelSize`, text mark fields). Mark fields are 16px on touch **in the mobile cards only**. In the table, 16px "0.00" does not fit a 768 cell and is clipped; a mark you cannot read is worse than a focus-zoom. iPadOS does not zoom on focus, and an iPhone gets the cards. The officials' fields 16px on touch; Unlock (40px) `tap-safe`.
+- (c) Sheet text: secondary 50% and muted 30% (the column headers and the "Senior Judge's mark" note were 2.6:1 even in dark) → `--fg-muted`. Judge names, averages and final scores → `DATA_COLORS` / `FG`. **Found:** the "Base Score Applied" badge used `C.amber`, which `ADMIN_COLORS` does not have — it drew `undefined22` and inherited its colour. It is `FG.warning` now, amber as written. `AdminScoring`: header `rgba(10,10,10,…)` → `--bg`, the Back button's framer hover → CSS, near-black on the green Save & Lock, `snow` on the purple Back to Scores.
+- (d) The visual suite cannot reach the sheet: `/admin/scoring` reads its team from router state, and a direct visit redirects to the scores list. The admin and super-admin suites are pixel-identical in both appearances. **New `e2e/responsive-score-sheet.spec.js`** walks the real path (Scores → Female / Above 16 / Competition I / Rope, the 5-judge published category → a team) and measures and shoots the sheet in both appearances. Read-only. Result at 768 and 1024: 11 columns, no sideways scroll on the page or in the sheet, 42 decimal mark fields, 0 native number inputs. Fields are 13px in the table; 16px in the 375 cards.
+- **For Phase 6:** at 768 the 11 divided columns clip a mark's last digit ("0.00" → "0.0") and the time ("00:"), and the headers wrap mid-word ("SENIO / R"). This predates this pass. The fix is a layout choice — the cards below `lg` on touch, or fewer visible columns — which §15.1 forbids doing silently. It needs the owner's call. **Decided (owner: "do the best thing possible"), 2026-10-02:** cards below 1024, the table from 1024 up. Fewer columns would drop data (§15.1). The spec's new `clippedFields` metric measures each field's box against the widest thing it holds ("10.00", "00:00") in its own font:
+  - **before:** all 48 fields clipped at 768, none at 1024 and up;
+  - **after:** cards with 16px fields at 375/768/820/1023, two per row from `md`, 0 clipped; the table at 1024, 0 clipped.
+
+  The cards carry every seat's field and the explicit `panelSize`, and the table's layout rules are untouched.
+
+*34–41. Judge group* — `judgeShared`, `JudgeScoring` (the phone slip), `JudgeDashboard`, `JudgeTeamPlayers`, `JudgeSequence`, `JudgePanelReview`, `JudgeProfile`, `ScorerScoring`, `TimeKeeperScoring` + `StopwatchFace`. Also `scores/ScoreCategoryFilters` and `forms/ThemedSelect`, found on the way. Structure untouched: the three tabs, the pinned Live Final Score, the fixed Submit footer, the mark fields, COP wording (no case utilities added), the framer-free stopwatch.
+- (a) 7 `md:` sites (`ScorerScoring`'s and `TimeKeeperScoring`'s gutters and grids, `JudgeProfile`'s form grid) — tablet-correct.
+- (b) `ScorerScoring`'s officials' fields 16px on touch. Every slip control was already 44px or more.
+- (c) A **value-scoped** pass: only inside a `color:` expression, the judge palette (`J.purpleLight`, `J.green`, `J.amber`, `#EF4444`, …) and `ADMIN_COLORS` members → `FG` / `DATA_COLORS`, 94 sites plus 8 uses of `judgeShared`'s local `red`/`amber`, each identical in dark. It skips framer props and the `AmbientOrbs` config (that component concatenates `${color}${alpha}`). `#fff` text was reviewed per site:
+  - on a tint → `FG.ink`;
+  - on the difficulty grid's solid purple selected cell → stays white;
+  - purple-gradient buttons' `text-white` (the ink alias, dark on purple in light) → `snow`;
+  - the green states (Submit once submitted, Finalize, Save & Lock) → near-black (D6).
+
+  Status classes `text-purple-200/300/400`, `text-green-400`, `text-red-500` gained deep light shades through `dark:`. `JudgeProfile`'s labels were the role colour at 56% → `FG.accent`. Hard-coded dark surfaces: the category and assignment modals (`bg-[#0f0f0f]`), the mismatch/tolerance/edit modals (`#0E0E0E`, `#0D0D0D`) → `surface`. The phone slip's tab track (`bg-black/40`, a grey band in light) → `bg-bg/40`. `ThemedSelect`'s native options (`bg-gray-900` with ink text: dark on dark in light) → `bg-surface`. The stopwatch face is a dark island (`data-appearance="dark"`): black in both appearances, as §14.7 specifies. The score filters' labels: saffron (2.86:1 in light) → `FG.brand`, 45% ink → muted.
+- (d) Dark, every judge route: two changes. The modal panels moved from `#0f0f0f` to `#111` (exactly 2 levels), and the profile labels were raised. Public and admin scores: the filter labels went from 45% to muted. Light: the category modal, which was a dark card with an invisible title, is a light card now. **The slip itself** is reached through `responsive-judge-walk.spec.js` (now `WALK_APPEARANCE` and `WALK_AGE`; the TRIALS judge sits on Male / Above 18 / Competition I, which neither default category covers). At 375 in light, the three tabs, the pinned live score and the Submit footer all read; the walk passes at 375 light and 768 dark.
+
+**Phase 5 exit.**
+- `audit:tablet` (Chromium, all six areas): portrait 768/820/834/1024 and landscape 1024×768. Its only findings were the judge category modals' unnamed 32px close ✕ and `JudgeProfile`'s 36px Change photo — both → `tap-safe`, the ✕ named, the photo icon `snow` on its role fill. Clean after that.
+- No `${X}NN` hex-plus-byte concatenation is left in `src`; `AmbientOrbs`, the last one, now tints through `alpha()`, byte-identical.
+- "`text-white` only where `snow` was meant" stays with the Phase 9 rename, as §14.5 planned.
+- **Real devices** (`E2E_DEVICES=1`, after Phase 6): `audit:responsive` is clean in all six areas on all eight profiles — iPhone 13, iPad Mini, iPad Pro 11 and iPad Pro 11 landscape (WebKit 26.5); Galaxy S24, Tab S4, Z Fold 7 and Tab S9 landscape (Chromium). That is 48 of 48 with no overflow and no undersized target. One iPad Mini sign-in timed out against a slow Atlas, and its re-run is clean.
+- Two operational notes:
+  - a run is void if the API loses Atlas (here `getaddrinfo ENOTFOUND` mid-run), which shows as "Authentication failed" toasts and "0 competitions". Check the API's log before reading a surprising diff.
+  - `appearance.test.js`'s timed transition release failed once under full-suite load and passed alone and on re-run.
+
+### Phase 6 log
+
+*6.2 — one counted scroll lock.* Only one dialog of 19 froze the page behind it, and the three menus (`Navbar`, `Home`, `UnifiedDashboard`) each wrote `body.style.overflow` themselves — so closing a menu under an open dialog handed scrolling back beneath it. The menus now call `useBodyScrollLock`. Every `.modal-overlay` mounts `<BodyScrollLock />` (the hook as an element) as its first child, 14 sites. The lock lives exactly as long as the overlay — through its exit animation — and no hook had to move above an early return. `SuperAdminManagement`'s dialogs already held it. `useBodyScrollLock.test.js` pins the count: a menu closing under an open dialog leaves the page frozen. Checked live: the Home menu locks and releases. `modal-scroll.spec.js` passes. The judge area is pixel-identical apart from the two Phase 5 exit targets.
+
+*6.1 — the last hand-rolled dialog.*
+- Three of v1's four have since moved onto `.modal-overlay`. The rest of the plan's list:
+  - `Navbar`'s full-screen layer is a menu backdrop;
+  - the two payment pages' `fixed inset-0` layers are `pointer-events-none` orb clips;
+  - the slip's "Loading your submitted score…" cover is a status, not a dialog.
+- That leaves the COP viewer. It is full-screen by design (a PDF wants every pixel), so it keeps its own frame. What it lacked was a dialog's contract → `role="dialog"`, `aria-modal`, the name "Code of Points", `<BodyScrollLock />`, and a `tap-safe` close.
+- It sits on a 92% black backdrop, so it is a dark island (`data-appearance="dark"`): its header text was ink on black in light.
+
+*6.3 — the one table that still scrolls sideways.*
+- `SuperAdminManagement`'s `DarkTable` already stacks below `md`, and the tablet audit finds nothing above it.
+- `AdminTransactions`' 11-column table is now mouse-only (Phase 5: touch gets cards). It is the data-dense case D2 keeps as a table, and it overflows on purpose → `data-allow-overflow`, plus `tabIndex=0`, `role="region"` and a name, so a keyboard can scroll it (WCAG 2.1.1).
+
+*6.4 — the slip walk, both appearances.*
+- `responsive-judge-walk.spec.js` gained `WALK_APPEARANCE`/`WALK_AGE` (Phase 5) and a COP step: it opens the viewer, shoots it, asserts the slip is frozen behind it, closes it, and asserts the slip scrolls again.
+- Fixed a race: the walk waited for "Loading players" to be *hidden*, which returns at once if the spinner has not appeared yet. On a slow database it read an empty roster as "all finalized" and never reached the slip. It now waits for the rows.
+- Results at 375 and 768, light and dark: the slip is reached, the three tabs open, nothing is trapped under the 77px Submit bar, and the COP viewer locks and releases.
+- **Open:** at 375 the Difficulty steppers' − buttons are 54×29. That passes WCAG 2.5.8 AA (24px) but not this plan's 44px touch floor. Raising them grows each class row of the slip by about 15px. The slip is a judge-trial-tuned screen, so that is the owner's call; a hit area expanded without moving the layout is the alternative.
+  - **Decided, 2026-10-02:** the hit area grows, the layout does not.
+    - **How:** each button's inward `::before` borrows 15px of the non-interactive count between them. The column's `overflow-hidden` would clip anything outward, and the count is ~36px, so the two never meet.
+    - **Verified:** the walk now taps 10px *outside* each box, inside its extension, and asserts the count moves (+1, then back) at 375 in both appearances.
+    - **Audit:** `measurePage` now counts an absolutely-positioned pseudo-element's extension, but only where `elementFromPoint` confirms a tap there lands on the control. It also skips disabled controls (they take no tap) and controls whose centre a dialog covers.
+    - **Result:** the walk at 375 is clean in both appearances.
+    - The "−" glyph was still the raw light purple (~2.2:1 in light) → `DATA_COLORS.purpleSoft`.
+
+### Phase 7 log
+
+`e2e/desktop-fold.spec.js` measures every route at 1280×720 and 1366×768: page height in screens, and where the first primary control (a field, a select, a table, a picker) sits.
+- **No working screen puts its primary control below the fold** at either size. Every form, filter and table starts within the first screen.
+- Four pages run past two screens:
+  - Home — 6.9 screens, a marketing page, long by design;
+  - the judge profile — 1.95;
+  - the player dashboard — 1.77;
+  - the coach dashboard — 5.1.
+- The coach dashboard's length is its content: a 60-athlete roster in two gender columns, ten age groups of six. At 1366 the apparatus note already truncates, so more columns would truncate further. Shortening it means collapsing age groups, which changes how a coach reads their squad — a flow change, so it is not made here.
+- **Decision:** no Phase 7 layout change. The 1440 container step stays: it is pixel-identical today and gives wide monitors room for the data tables.
+
+### Phase 9 log
+
+*9.1 — the contrast gate.* `e2e/contrast-audit.spec.js` checks WCAG 1.4.3 on every visible text element of every route, in either appearance.
+- **Method:** it composites the text colour (with every ancestor's opacity) over its stack of backgrounds and checks 4.5:1, or 3:1 for large text.
+- **Exclusions:** disabled controls are skipped (WCAG exempts them). Text over gradients, photos or a dark island without its own background is counted as unmeasured, never guessed.
+- **Result:** at 1366 and 375 in Chromium, **88 of 88 route/width checks pass in light and 88 of 88 in dark** (44 routes × 2 widths).
+- **What the first sweep found, and the fixes** —
+  - *Light:*
+    - Brand text on its own saffron tint (active tabs, Verify, the Level Selection pill, "Closed" pills): 4.0–4.5 with `#C2410C` → light `--brand-fg`/`--brand-fg-soft` `#B43408` (4.7 on the deepest tint, 6.1 on white).
+    - Amber "upcoming" pills: 3.99 → light `--brand-gold-fg` amber-800, as the medal gold.
+    - The level cards' count chip: raw saffron-light 1.9:1, and 35% ink → tokens.
+    - `ResponsiveFilters`, never migrated: literal white text, **white on white** in light (Admin Teams' filter labels) → the `ResponsiveTable` treatment.
+    - The super-admin stat labels at 80% of their colour (3.4–4.3) → the full token.
+    - The performance tabs: raw saffron-light labels and sub-labels faded a further 30% → tokens.
+    - The coach roster's apparatus note: muted, then faded 40% more (2.8 light, ~2.5 dark) → muted.
+  - *Dark* (the original palette's near-misses):
+    - The admin/judge violet `#8B5CF6` as text: 4.45 on `#111`.
+    - The public/info/category blue `#3B82F6` on tints: 4.17–4.49.
+    - Fix: a per-role `--role-dark-fg` now feeds the dark `--accent-fg` — violet-400 for admin/judge, blue-400 for the public default, unchanged for player, coach and super admin. Dark `--info-fg`, `--cat-blue` and `--cat-violet` step up one shade. **Fills keep their colours**, since `--accent` still reads `--role-dark`.
+  - The 404 page's 12%-ink numeral is a watermark → `aria-hidden`; the heading says it in words.
+- **Visual run** (all six areas, both appearances, checkout stable):
+  - Dark moved only where those changes reach, deltas 23–105:
+    - violet text on the admin/judge portals and screens;
+    - blue chips;
+    - the empty level count;
+    - the stat labels, the filters, the performance tabs and the coach notes.
+  - Light moved wherever brand text appears (the deeper `--brand-fg`).
+  - Admin Teams' filter labels and hint read in light; they were invisible.
+
+*9.2 — by eye.*
+- The toasts stay an inverse surface: white on `#363636`, 11.6:1, the snackbar pattern. They read on either page.
+- Orbs, scrims and shadows were already per-appearance tokens.
+- Five icons on solid purple fills — the judge avatar in four screens, the sequence badge — were `text-white`, the ink alias, so dark on purple in light → `snow`.
+
+*9.3 — the switch is exposed; the rollout gate (§14.10) is lifted.* `AppearanceMenu` sits in every shell, before Log out and after the account control, in the order §14.9 fixes:
+
+| Shell | Placement |
+|---|---|
+| `Navbar` | the desktop cluster; signed-out, before Super Admin; below `lg`, beside the hamburger |
+| `Home` | the inline nav; below `md`, beside the hamburger |
+| `PublicScores` | the header's right end |
+| `UnifiedDashboard` | the admin and super-admin header |
+| `CoachDashboard` | both of its headers |
+| `JudgeDashboard` | before Profile |
+| `JudgeTeamPlayers` | a new right cluster with Log out |
+| `JudgeScoring`, `JudgePanelReview` | the phone and desktop header clusters — never the Submit bar |
+| `ScorerScoring`, `TimeKeeperScoring` | beside the Live pill |
+| sign-in, registration, password and chooser screens | one `CornerAppearanceMenu` from `App.jsx`, on exactly the routes where it hides the navbar; fixed top-right, clear of a notch, backed so content never shows through |
+
+`useOptionalAppearance()` lets the control render nothing outside a provider (isolated page tests) while `useAppearance()` keeps its guard.
+
+**Home's tablet nav.** With the extra button, "Gallery" and "Contact" wrapped mid-word at 768 → `gap-4 lg:gap-8` and `whitespace-nowrap`. The row now ends 40px inside the viewport with every item one 44px line.
+
+**Verified.**
+- Live in the browser: one trigger named "Appearance: Dark"; three choices with the current one checked and focused. Light flips `data-appearance` in the same document (no reload), persists, announces "Appearance: Light", and returns focus to the button.
+- Guarded run, all six areas, checkout stable: every shell gains the control and nothing else moves. The judge routes behind the category picker change only by rounding — their header sits under its 90% scrim.
+- The judge walk at 375 light and 768 dark: the slip header carries the control, the three tabs open, and nothing is trapped under the Submit bar.
+- 388 unit tests pass.
+
+*9.4 — the `white` → ink alias is retired.*
+- Phases 3–9 spelled ink `white`: a transitional Tailwind alias that made `text-white` mean white in dark and near-black in light.
+- All 645 utilities (`text-`, `bg-`, `border-`, `border-t-` and `placeholder-white`, with their variants and opacities) are now `*-ink`, the same `--ink` channel. Two comment lines that record history keep their wording.
+- `tailwind.config.js` defines `ink` and no longer overrides `white`, which is plain white again. `snow` stays the name for "white on any background".
+- `colourHygiene.test.js` now **fails CI on any `*-white` utility**, since one would be invisible on the light page. Comment lines are exempt.
+- **Verified:**
+  - computed values `text-ink` = `#fff` in dark, `#0B0D12` in light; `text-white` = `#fff` in both;
+  - the full guarded visual run (dev server restarted for the config change) is **pixel-identical** in all six areas, every width, both appearances;
+  - 393 tests pass and the production build is clean.
+
+### Phase 11 log — regression and report
+
+The final report is **[RESPONSIVE_UIUX_REPORT.md](RESPONSIVE_UIUX_REPORT.md)**: what changed, the verification matrix, each §15 protected behaviour with its evidence, the decisions taken on the owner's behalf, and known limitations.
+
+- **Matrix** (guarded, checkout stable): `audit:responsive` checks overflow, touch targets and console on every route.
+  - Chromium portrait: 15 widths (320–1920), both appearances.
+  - Chromium phone landscape (667–932 × 375) and tablet landscape (1024/1180 × 768).
+  - WebKit: iPhone 13, iPad Mini, iPad Pro 11 portrait and landscape, both appearances.
+
+  One finding: the coach dashboard's header ran **5px past a 320px screen** once the Light/Dark control joined its cluster. Fix: `gap-1 min-[360px]:gap-2` on that cluster, both headers; the old gap from 360 up, so every baseline width is pixel-identical. Re-audited clean at 320/360/375 in both appearances. The only console output is the known `CompetitionContext` race ("Competition switch already in progress"), listed under "Found, not ours to change".
+- **Edge cases** — `edge-cases.spec.js` rewrites API responses in the browser, never the database:
+  - long names (a long unbroken word plus a long phrase);
+  - every list empty;
+  - 2.5 s latency;
+  - every data request answering 500.
+
+  24/24 area × scenario runs pass, at 375 and 1366, with no sideways scroll and no uncaught error. Long names were confirmed on screen for transactions, the coach dashboard and payment, the player dashboard and team selection, and — by walking the filters — Admin Scores' team list and score sheet.
+- **Appearance persistence** — `appearance-persistence.spec.js`: Light chosen from the shell's menu survives logout and reload. On reload `data-appearance` takes only `light` from the first script, so there is no dark first frame.
+- **Keyboard focus** — `focus-visible.spec.js` tabs through every route, both appearances, and compares each stop focused against unfocused. **Every stop shows focus, 6/6 areas.**
+- 396 unit tests, 0 lint errors, production build clean.
+
+*Re-verification after merging `master` (2026-10-02/03).* The merge, its one conflict (the judge-panel mismatch chips), and the fixes found on the way are written up in the report's "Re-verification" section.
+
+The largest gap was screens no route audit could open, because they need state first:
+- results boards;
+- the judge's running order;
+- the panel review and its three dialogs.
+
+Two specs now reach them the way a person does: `deep-screens.spec.js` and `judge-deep-screens.spec.js`. They found the phone podium and the missing Light/Dark switch on the running order. They also found 32px dialog closes with no name, and a compact stepper pair where a tap below "−" pressed "+".
+
+The full chain then re-ran from scratch, strictly one run at a time:
+- functional;
+- pixel gate;
+- contrast;
+- the 15-width matrix in each appearance;
+- portrait and landscape;
+- devices.
+
+An earlier chain that had been "stopped" turned out to be still running beside the later ones. Overlapping runs share the audit accounts, which cannot be signed in twice, so their results were discarded. Final numbers are in the report; 405 unit tests pass.
+
+### Phase 10 log
+
+*One shared viewport store.* Every `useResponsive()` (20 call sites) used to:
+- add its own `resize` listener and debounce timer;
+- re-render once right after mount, through an "initial update" effect;
+- rewrite the document's responsive CSS custom properties on every resize — twenty identical writes.
+
+It is now a module-level store behind `useSyncExternalStore`:
+- **one listener**, attached while anyone is subscribed;
+- a ~100ms trailing debounce, measured on the next animation frame;
+- the CSS properties written only when the viewport *category* changes;
+- unchanged parts keep their object identity, so a consumer re-renders only when the measurement moved — and the first render already has the right value.
+
+The return shape is unchanged. The `debounceMs`/`updateCSSProperties` options went with the per-instance version; no caller passed either.
+
+- `useResponsive.test.jsx` pins it: one listener for five consumers, the right answer on the first render with no extra render, it follows a resize once settled, and it does not re-render when a resize changes nothing.
+- `responsive-score-sheet.spec.js` resizes a live sheet 1024 → 800 → 1024 (and from 1366): table → cards → table, no reload.
+- The full guarded visual run is **pixel-identical** in all six areas. 396 tests pass.
+
+*Appearance switches commit nothing outside the menu.* This is pinned by `AppearanceProvider.test` ("does not re-render children that do not read the appearance"); the switch is an attribute flip on `<html>`.
+
+*Left as is:*
+- `useReducedMotion` (44 callers) holds one `matchMedia` listener each. A media-query listener costs nothing until the setting changes, and the setting almost never does.
+- Re-checking memoisation found no hot path: the inline colour styles became stable token strings.
+
+### Phase 8 log
+
+Only proven duplication is extracted, and each step must leave every screen pixel-identical in both appearances. A local copy is removed only after its whitespace-normalised body is checked against the shared one, and anything unrecognised aborts.
+
+*8.1 — the admin kit.*
+- The six admin and super-admin pages each declared the same building blocks; they now come from **`components/admin/AdminKit.jsx`**. The copies, by number:
+  - `DarkCard` ×6;
+  - `FadeIn` ×5;
+  - a local `useReducedMotion` ×5;
+  - `EmptyState` ×5 in two variants;
+  - `LoadingState` ×4 in two variants;
+  - `DarkSearch` ×2;
+  - `DarkBtn` ×3 (with `AddPlayerForm`).
+- Every body is byte-identical apart from two additive differences, now explicit props: `EmptyState`'s optional `action`, and `LoadingState`'s default label.
+- `useReducedMotion` comes from `hooks/useResponsive`, the same logic plus a guard for a missing `matchMedia`. `DarkBtn`'s `type="button"` default changes nothing: none of its callers sits inside a `<form>`.
+- Elsewhere:
+  - the three judge pages' local `J` palettes (strict subsets of `judgeShared`'s, same values) → the import;
+  - the password screens' `GradientText` → the design-system one (the same style object);
+  - `ResetPassword`'s own `COLORS` → the tokens' (identical values);
+  - their once-read `useReducedMotion` → the shared hook, which also follows a mid-session change.
+- **411 lines removed.** The guarded visual run is **pixel-identical**: public, admin, super-admin and judge, all widths, both appearances, 0 diffs. 388 tests pass.
+
+*8.2 — `JudgeLogoutButton`.*
+- The judge headers' six hand-copied Log out buttons → one component in `judgeShared`, in two variants: icon-only for the phone header, labelled elsewhere.
+- **Found:** the labelled copy in the slip's and panel review's desktop header had a bare `min-h-[36px]`, so it was 36px on a touch screen from 640 to 1023. The walk measures targets below 768 only, so it never saw it. It is `tap-safe` now, like the others.
+- **Verified:** the judge visual run is pixel-identical in dark. In light, 8 pixels moved (delta 4) at one width on the untouched profile page — antialiasing. The walk passes at 375 light and 768 dark with the steppers' tap areas answering.
+
+*8.3 — the password meter.*
+- `AdminRegister` and `AddPlayerForm` each carried `PasswordStrengthIndicator` and `PasswordRequirements` → `components/auth/PasswordStrength.jsx`.
+- The copies differed only in **policy**: admin accounts need 12 characters and score length at 12/16; player accounts need 8 and score at 8/12. That is now explicit `minLength`/`strongLength`, the admin form passes 12/16, and the script checked each file's rule before handing it over.
+- `PasswordStrength.test.jsx` pins both policies.
+- `AdminRegister`'s requirement tick was still `text-green-500` (2.3:1 in light, under the 3:1 icon floor); the shared one has the light shade.
+- The public visual run is pixel-identical; the meters render only once a password is typed.
+
+**Not extracted, on purpose:**
+- `design-system/index.jsx`'s own `GlassCard`/`FadeIn`/`GradientText` differ from the `cards/`, `animations/` and `ornaments/` versions, so merging them would change pixels.
+- An `AccountControls` cluster would restyle every shell's Log out. The shared piece the shells needed — `AppearanceMenu` — already exists.
+- `StatusBadge` means two different things in `PlayerDashboard` and `SuperAdminManagement`.
+
+**Found, not ours to change**
+- Home's navbar links to `/about`, `/gallery` and `/contact`, and its feature cards to `/gallery` and `/schedule`. None of those routes exists — all land on the 404 page. Adding pages or removing links is a navigation change, which this project does not make.
+- `design-system/index.jsx` defines its own `GlassCard`, `FadeIn` and `GradientText`, duplicating `cards/`, `animations/` and `ornaments/` — consolidation belongs to Phase 8.
+- More local copies for Phase 8: `ResetPassword` defines its own (non-reactive) `useReducedMotion`, `COLORS` and `GradientText`; `ForgotPassword` its own `GradientText` — now four local `useReducedMotion`s (with `AdminJudges` and `SuperAdminManagement`).
+- The tablet audit logged `Failed to auto-select competition: Competition switch already in progress` (`CompetitionContext.jsx`) — two automatic selections colliding. App logic, not presentation.
 
 ---
 

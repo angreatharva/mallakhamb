@@ -3,7 +3,7 @@ import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '@/components/auth/Dropdown';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import { getAgeGroupsForGender, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 
 /**
@@ -31,9 +31,9 @@ const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;
-const textPrimary   = 'rgba(255,255,255,0.90)';
-const textSecondary = 'rgba(255,255,255,0.50)';
-const textMuted     = 'rgba(255,255,255,0.30)';
+const textPrimary   = 'rgb(var(--ink) / 0.90)';
+const textSecondary = 'var(--fg-muted)';
+const textMuted     = 'var(--fg-muted)';
 
 // ─── Shared search input ──────────────────────────────────────────────────────
 const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
@@ -44,7 +44,8 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
     }} />
     <input
       type="text"
-      placeholder={placeholder}
+      className="text-base mouse:text-sm"
+      placeholder={placeholder} aria-label={placeholder || 'Search'}
       value={value}
       onChange={e => onChange(e.target.value)}
       style={{
@@ -56,12 +57,11 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
         border: `1px solid ${borderMid}`,
         borderRadius: 10,
         color: textPrimary,
-        fontSize: 14,
         outline: 'none',
         boxSizing: 'border-box',
         transition: 'border-color 0.15s',
       }}
-      onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
+      onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
       onBlur={e => { e.target.style.borderColor = borderMid; }}
     />
     {value && (
@@ -84,7 +84,7 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
 const FilterLabel = ({ children, required }) => (
   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: textSecondary, marginBottom: 6 }}>
     {children}
-    {required && <span style={{ color: C.red, marginLeft: 3 }}>*</span>}
+    {required && <span style={{ color: FG.danger, marginLeft: 3 }}>*</span>}
   </label>
 );
 
@@ -95,7 +95,7 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
     style={{
       width: fullWidth ? '100%' : 'auto',
       padding: '9px 18px',
-      background: 'rgba(255,255,255,0.06)',
+      background: 'rgb(var(--ink) / 0.06)',
       border: `1px solid ${borderMid}`,
       borderRadius: 10,
       color: textSecondary,
@@ -104,8 +104,8 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
       cursor: 'pointer',
       transition: 'background 0.15s, color 0.15s',
     }}
-    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; e.currentTarget.style.color = textPrimary; }}
-    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = textSecondary; }}
+    onMouseEnter={e => { e.currentTarget.style.background = 'rgb(var(--ink) / 0.10)'; e.currentTarget.style.color = textPrimary; }}
+    onMouseLeave={e => { e.currentTarget.style.background = 'rgb(var(--ink) / 0.06)'; e.currentTarget.style.color = textSecondary; }}
   >
     Clear Filters
   </button>
@@ -114,9 +114,9 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
 // ─── Active filter count badge ────────────────────────────────────────────────
 const ActiveBadge = ({ count }) => count > 0 ? (
   <span style={{
-    background: `${C.saffron}22`,
-    color: C.saffronLight,
-    border: `1px solid ${C.saffron}44`,
+    background: `${alpha(C.saffron, 0x22)}`,
+    color: FG.brandSoft,
+    border: `1px solid ${alpha(C.saffron, 0x44)}`,
     borderRadius: 20,
     padding: '1px 8px',
     fontSize: 11,
@@ -169,7 +169,7 @@ export const ResponsiveFilters = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Filter style={{ width: 15, height: 15, color: C.saffron }} />
+                  <Filter style={{ width: 15, height: 15, color: FG.brand }} />
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Filters</span>
                   <ActiveBadge count={activeCount} />
                 </div>

@@ -8,32 +8,20 @@ import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
-import { COLORS, EASE_OUT } from '../../styles/tokens';
+import { COLORS, EASE_OUT, FG, alpha } from '../../styles/tokens';
+import { GradientText } from '@/components/design-system';
+import { useReducedMotion } from '@/hooks/useResponsive';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-
-const useReducedMotion = () => {
-  const [reduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-  return reduced;
-};
-
-const GradientText = ({ children, className = '' }) => (
-  <span className={className} style={{
-    background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  }}>{children}</span>
-);
 
 const StyledInput = ({ error, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
     style={{
-      background: 'rgba(255,255,255,0.05)',
+      background: 'rgb(var(--ink) / 0.05)',
       border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
       caretColor: COLORS.saffron,
     }}
-    onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`; }}
+    onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`; }}
     onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
     {...props}
   />
@@ -90,7 +78,7 @@ const ForgotPassword = () => {
       {!reduced && (
         <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
           style={{
-            backgroundImage: `linear-gradient(${COLORS.saffron}80 1px, transparent 1px), linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
             transform: 'perspective(400px) rotateX(60deg)',
             transformOrigin: 'bottom center',
@@ -106,8 +94,8 @@ const ForgotPassword = () => {
           <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>Bhausaheb Ranade</p>
-          <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
+          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
 
@@ -117,7 +105,7 @@ const ForgotPassword = () => {
         animate={cardInView ? { opacity: 1, y: 0, scale: 1 } : {}}
         transition={{ duration: 0.65, ease: EASE_OUT }}>
         <div className="rounded-3xl p-8 border" style={{
-          background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(24px)',
+          background: 'rgb(var(--ink) / 0.03)', backdropFilter: 'blur(24px)',
           borderColor: COLORS.darkBorder,
           boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
         }}>
@@ -125,15 +113,15 @@ const ForgotPassword = () => {
           <div className="text-center mb-8">
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.darkBorder}` }}
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
-              <Mail className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Mail className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
-            <h1 className="text-2xl font-black text-white mb-2">
+            <h1 className="text-2xl font-black text-ink mb-2">
               Forgot <GradientText>Password?</GradientText>
             </h1>
-            <p className="text-white/45 text-sm leading-relaxed">
+            <p className="text-fg-muted text-sm leading-relaxed">
               Enter your email and we&apos;ll send you a one-time code to reset your password.
             </p>
           </div>
@@ -141,8 +129,8 @@ const ForgotPassword = () => {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="mb-5">
-              <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
-                Email Address <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+              <label htmlFor="email" className="block text-sm font-semibold text-ink/70 mb-2">
+                Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
               </label>
               <StyledInput
                 {...register('email', {
@@ -158,7 +146,7 @@ const ForgotPassword = () => {
               />
               {errors.email && (
                 <motion.p id="email-error" role="alert" className="mt-2 text-xs font-medium"
-                  style={{ color: '#EF4444' }}
+                  style={{ color: FG.danger }}
                   initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}>
                   {errors.email.message}
@@ -168,14 +156,13 @@ const ForgotPassword = () => {
 
             <motion.button
               type="submit" disabled={loading || sent}
-              className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm text-white min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}
               whileHover={!loading && !sent ? { scale: 1.02 } : {}}
               whileTap={!loading && !sent ? { scale: 0.97 } : {}}>
               {loading ? (
                 <>
-                  <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                    animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
                   Sending OTP…
                 </>
               ) : sent ? (
@@ -186,10 +173,10 @@ const ForgotPassword = () => {
             </motion.button>
 
             {loading && (
-              <motion.div className="mt-4 p-3 rounded-xl border text-xs text-white/50 flex items-center gap-2"
-                style={{ background: `${COLORS.saffron}0A`, borderColor: `${COLORS.saffron}20` }}
+              <motion.div className="mt-4 p-3 rounded-xl border text-xs text-fg-muted flex items-center gap-2"
+                style={{ background: `${alpha(COLORS.saffron, 0x0A)}`, borderColor: `${alpha(COLORS.saffron, 0x20)}` }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-                <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffronLight }} aria-hidden="true" />
+                <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brandSoft }} aria-hidden="true" />
                 This may take a moment if the server is starting up.
               </motion.div>
             )}
@@ -200,8 +187,8 @@ const ForgotPassword = () => {
               style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }} role="status" aria-live="polite">
-              <p className="text-sm font-semibold text-green-400">OTP sent to your email</p>
-              <p className="text-xs text-green-400/70 mt-1">Redirecting to reset page…</p>
+              <p className="text-sm font-semibold text-green-700 dark:text-green-400">OTP sent to your email</p>
+              <p className="text-xs text-green-700 dark:text-green-400/70 mt-1">Redirecting to reset page…</p>
             </motion.div>
           )}
 
@@ -210,20 +197,20 @@ const ForgotPassword = () => {
               style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }} role="alert" aria-live="assertive">
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             </motion.div>
           )}
 
           {/* Footer links */}
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
-            <p className="text-sm text-white/35">
+            <p className="text-sm text-fg-muted">
               Remember your password?{' '}
-              <Link to="/player/login" className="font-semibold transition-colors duration-200 hover:opacity-80"
-                style={{ color: COLORS.saffronLight }}>
+              <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
+                style={{ color: FG.brandSoft }}>
                 Back to Login
               </Link>
             </p>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home
             </Link>

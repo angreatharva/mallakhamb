@@ -1,22 +1,22 @@
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, DATA_COLORS, alpha } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
 const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;
-const textPrimary   = 'rgba(255,255,255,0.90)';
-const textSecondary = 'rgba(255,255,255,0.50)';
-const textMuted     = 'rgba(255,255,255,0.28)';
+const textPrimary   = 'rgb(var(--ink) / 0.90)';
+const textSecondary = 'rgb(var(--ink) / 0.50)';
+const textMuted     = 'rgb(var(--ink) / 0.28)';
 
 // ─── Medal config ─────────────────────────────────────────────────────────────
 const MEDALS = [
-  { emoji: '🥇', color: '#F5A623', bg: 'rgba(245,166,35,0.10)', border: 'rgba(245,166,35,0.25)' },
-  { emoji: '🥈', color: '#94A3B8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' },
-  { emoji: '🥉', color: '#CD7F32', bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.20)' },
+  { emoji: '🥇', color: DATA_COLORS.gold, bg: 'rgba(245,166,35,0.10)', border: 'rgba(245,166,35,0.25)' },
+  { emoji: '🥈', color: DATA_COLORS.silver, bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' },
+  { emoji: '🥉', color: DATA_COLORS.bronze, bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.20)' },
 ];
 
 const getMedalStyle = (index, searching) => {
@@ -35,8 +35,8 @@ const ScoreChip = ({ value, color, label }) => (
 // ─── Tied badge ───────────────────────────────────────────────────────────────
 const TiedBadge = () => (
   <span style={{
-    background: `${C.gold}22`, color: C.gold,
-    border: `1px solid ${C.gold}44`,
+    background: `${alpha(C.gold, 0x22)}`, color: DATA_COLORS.gold,
+    border: `1px solid ${alpha(C.gold, 0x44)}`,
     borderRadius: 20, padding: '1px 8px',
     fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
   }}>
@@ -104,7 +104,7 @@ export const ResponsiveIndividualRankings = ({
                 {tied && <TiedBadge />}
               </div>
               <p style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{player.teamName}</p>
-              {tied && <p style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
+              {tied && <p style={{ fontSize: 11, color: DATA_COLORS.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
             </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -186,11 +186,11 @@ export const ResponsiveIndividualRankings = ({
   return (
     <ResponsiveContainer className={className} {...props}>
       <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table aria-label="Rankings" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: elevated }}>
               {['Rank', 'Player', 'Team', 'Time', 'Average', 'Senior Judge', 'Final Score'].map((h, i) => (
-                <th key={i} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
+                <th key={i} scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
                   {h}
                 </th>
               ))}
@@ -203,7 +203,7 @@ export const ResponsiveIndividualRankings = ({
               const tied = isTied(player);
               return (
                 <tr key={player.playerId} style={{ background: ms.bg, borderBottom: `1px solid ${border}`, transition: 'background 0.12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${C.saffron}08`; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha(C.saffron, 0x08)}`; }}
                   onMouseLeave={e => { e.currentTarget.style.background = ms.bg; }}
                 >
                   <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
@@ -217,12 +217,12 @@ export const ResponsiveIndividualRankings = ({
                   </td>
                   <td style={{ padding: '13px 16px' }}>
                     <p style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>{player.playerName}</p>
-                    {tied && <p style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
+                    {tied && <p style={{ fontSize: 11, color: DATA_COLORS.gold, marginTop: 2 }}>{player.tieBreakNotes}</p>}
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: textSecondary, whiteSpace: 'nowrap' }}>{player.teamName}</td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: textSecondary, whiteSpace: 'nowrap' }}>{player.time || 'N/A'}</td>
                   <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
-                    <span style={{ background: `${C.blue}18`, color: C.blue, borderRadius: 8, padding: '3px 10px', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: C.blue, borderRadius: 8, padding: '3px 10px', fontSize: 13, fontWeight: 600 }}>
                       {player.averageMarks?.toFixed(2) || '0.00'}
                     </span>
                     {player.baseScoreApplied && (
@@ -233,7 +233,7 @@ export const ResponsiveIndividualRankings = ({
                     {player.judgeScores?.seniorJudge?.toFixed(2) || '0.00'}
                   </td>
                   <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
-                    <span style={{ background: `${C.green}18`, color: C.green, borderRadius: 8, padding: '4px 12px', fontSize: 15, fontWeight: 800 }}>
+                    <span style={{ background: `${alpha(C.green, 0x18)}`, color: C.green, borderRadius: 8, padding: '4px 12px', fontSize: 15, fontWeight: 800 }}>
                       {player.finalScore?.toFixed(2) || '0.00'}
                     </span>
                   </td>
@@ -297,7 +297,7 @@ export const ResponsiveTeamRankings = ({
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
             {team.topPlayerScores?.map(player => (
               <div key={player.playerId} style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'rgb(var(--ink) / 0.04)',
                 border: `1px solid ${border}`,
                 borderRadius: 10,
                 padding: '10px 12px',
@@ -350,7 +350,7 @@ export const ResponsiveRankingsFilters = ({
   const selectStyle = (disabled = false) => ({
     width: '100%',
     padding: '9px 12px',
-    background: disabled ? 'rgba(255,255,255,0.03)' : elevated,
+    background: disabled ? 'rgb(var(--ink) / 0.03)' : elevated,
     border: `1px solid ${borderMid}`,
     borderRadius: 10,
     color: disabled ? textMuted : textPrimary,
@@ -378,29 +378,29 @@ export const ResponsiveRankingsFilters = ({
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Search..." aria-label="Search athletes"
           value={searchTerm}
           onChange={e => onSearchChange(e.target.value)}
           style={inputStyle}
-          onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
+          onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         />
         <select
-          value={selectedGender?.value || ''}
+          value={selectedGender?.value || ''} aria-label="Gender"
           onChange={e => onGenderChange(genders.find(g => g.value === e.target.value))}
           style={selectStyle()}
-          onFocus={e => { e.target.style.borderColor = `${C.saffron}70`; }}
+          onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         >
           <option value="">Select Gender</option>
           {genders.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
         </select>
         <select
-          value={selectedAgeGroup?.value || ''}
+          value={selectedAgeGroup?.value || ''} aria-label="Age group"
           onChange={e => onAgeGroupChange(ageGroups.find(ag => ag.value === e.target.value))}
           style={selectStyle(!selectedGender)}
           disabled={!selectedGender}
-          onFocus={e => { if (selectedGender) e.target.style.borderColor = `${C.saffron}70`; }}
+          onFocus={e => { if (selectedGender) e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         >
           <option value="">Select Age Group</option>

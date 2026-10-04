@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Appearance (dark | light). The two tags let a browser colour its own
+      chrome from the OS setting; appearance-init.js overrides both when the
+      person has chosen explicitly (the default is dark). The script is a
+      blocking CLASSIC script, placed before any stylesheet, so the first paint
+      is already in the right appearance — see src/utils/ui/appearance.js.
+    -->
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <script src="/appearance-init.js"></script>
     <!-- CSP: unsafe-inline/unsafe-eval required for React/Vite in development -->
     <!-- For production: Consider implementing nonce-based CSP -->
     <!--

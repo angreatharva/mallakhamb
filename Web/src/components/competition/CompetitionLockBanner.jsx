@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 
 /**
  * "This meet has closed."
@@ -36,7 +36,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
       role="status"
       className={`rounded-2xl border overflow-hidden ${className}`}
       style={{
-        background: 'linear-gradient(135deg, rgba(248,113,113,0.10), rgba(255,255,255,0.02))',
+        background: 'linear-gradient(135deg, rgba(248,113,113,0.10), rgb(var(--ink) / 0.02))',
         borderColor: 'rgba(248,113,113,0.28)',
       }}
       initial={{ opacity: 0, y: -8 }}
@@ -48,15 +48,15 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(248,113,113,0.15)' }}
         >
-          <Lock className="w-4 h-4" style={{ color: '#F87171' }} aria-hidden="true" />
+          <Lock className="w-4 h-4" style={{ color: FG.dangerSoft }} aria-hidden="true" />
         </div>
 
         <div className="min-w-0">
-          <h3 className="text-white font-bold text-sm leading-tight">
+          <h3 className="text-ink font-bold text-sm leading-tight">
             {competitionName ? <SafeText as="span">{competitionName}</SafeText> : 'This competition'}
             {' has closed'}
           </h3>
-          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             {closedOn
               ? `Entries, scores and running orders were locked at the end of ${closedOn}. `
               : 'Entries, scores and running orders are locked. '}
@@ -67,7 +67,7 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
 
       <div
         className="h-px w-full"
-        style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}30, transparent)` }}
+        style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x30)}, transparent)` }}
       />
     </motion.div>
   );

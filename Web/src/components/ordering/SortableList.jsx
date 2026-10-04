@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Reorder, useDragControls } from 'framer-motion';
 import { GripVertical } from 'lucide-react';
+import { alpha } from '@/styles/tokens';
 
 /**
  * Drag-to-reorder list, built on framer-motion's `Reorder` (already a
@@ -33,7 +34,7 @@ const SortableList = ({
 
   if (!items || items.length === 0) {
     return (
-      <p className="text-sm text-white/40 py-6 text-center">{emptyMessage}</p>
+      <p className="text-sm text-fg-muted py-6 text-center">{emptyMessage}</p>
     );
   }
 
@@ -79,8 +80,8 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
       onDragEnd={onDragEnd}
       className="rounded-xl border flex items-stretch gap-2 overflow-hidden"
       style={{
-        background: isDragging ? `${accent}18` : 'rgba(255,255,255,0.03)',
-        borderColor: isDragging ? `${accent}60` : 'rgba(255,255,255,0.08)',
+        background: isDragging ? `${alpha(accent, 0x18)}` : 'rgba(255,255,255,0.03)',
+        borderColor: isDragging ? `${alpha(accent, 0x60)}` : 'rgba(255,255,255,0.08)',
         cursor: disabled ? 'default' : 'grab',
         position: 'relative',
         // Lift the row being dragged above its neighbours, otherwise it slides
@@ -98,10 +99,10 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
             event.preventDefault();
             controls.start(event);
           }}
-          className="flex-shrink-0 flex items-center justify-center px-2 min-w-[44px] min-h-[44px] transition-colors hover:bg-white/5"
+          className="flex-shrink-0 flex items-center justify-center px-2 min-w-[44px] min-h-[44px] transition-colors hover:bg-ink/5"
           // Only the handle blocks native touch scrolling — see the note at
           // the top of this file.
-          style={{ touchAction: 'none', cursor: 'grab', color: 'rgba(255,255,255,0.35)' }}
+          style={{ touchAction: 'none', cursor: 'grab', color: 'var(--fg-muted)' }}
         >
           <GripVertical className="w-5 h-5" aria-hidden="true" />
         </button>

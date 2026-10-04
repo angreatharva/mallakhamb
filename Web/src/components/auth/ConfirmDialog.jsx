@@ -2,9 +2,10 @@ import { X, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useResponsive } from '@/hooks/useResponsive';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 const ConfirmDialog = ({
@@ -71,6 +72,7 @@ const ConfirmDialog = ({
           aria-labelledby="confirm-dialog-title"
           aria-describedby="confirm-dialog-message"
         >
+            <BodyScrollLock />
           {/* Backdrop */}
           <motion.div
             className="absolute inset-0"
@@ -91,9 +93,9 @@ const ConfirmDialog = ({
                * set inline beats `modal-panel`'s auto block margins — which is
                * what centres a dialog short enough to fit.
                */
-              background: '#111111',
-              borderColor: `${accentColor}25`,
-              boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}15`,
+              background: 'rgb(var(--surface))',
+              borderColor: `${alpha(accentColor, 0x25)}`,
+              boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(accentColor, 0x15)}`,
             }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -101,21 +103,21 @@ const ConfirmDialog = ({
             transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             {/* Top accent line */}
-            <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)` }} />
+            <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${alpha(accentColor, 0x60)}, transparent)` }} />
 
             {/* Header */}
             <div className="flex items-start justify-between p-6 pb-4" style={{ padding: isMobile ? '1rem' : '1.5rem', paddingBottom: isMobile ? '0.75rem' : '1rem' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${accentColor}18` }}>
+                  style={{ background: `${alpha(accentColor, 0x18)}` }}>
                   <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
                 </div>
-                <h3 id="confirm-dialog-title" className="text-white font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
+                <h3 id="confirm-dialog-title" className="text-ink font-bold leading-tight" style={{ fontSize: isMobile ? '1rem' : '1.125rem' }}>{title}</h3>
               </div>
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/08 transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:outline-none focus:ring-2"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-muted hover:text-ink hover:bg-ink/[0.08] transition-colors disabled:opacity-40 flex-shrink-0 ml-2 focus:ring-2"
                 style={{ outlineColor: accentColor }}
                 aria-label="Close dialog"
               >
@@ -125,7 +127,7 @@ const ConfirmDialog = ({
 
             {/* Body */}
             <div className="px-6 pb-4" style={{ padding: isMobile ? '0 1rem 0.75rem' : '0 1.5rem 1rem' }}>
-              <p id="confirm-dialog-message" className="text-white/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
+              <p id="confirm-dialog-message" className="text-ink/60 leading-relaxed text-sm whitespace-pre-line">{message}</p>
 
               <AnimatePresence>
                 {error && (
@@ -135,8 +137,8 @@ const ConfirmDialog = ({
                     initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     role="alert"
                   >
-                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <AlertTriangle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -146,7 +148,7 @@ const ConfirmDialog = ({
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t"
               style={{ 
                 borderColor: COLORS.darkBorderSubtle, 
-                background: 'rgba(255,255,255,0.02)',
+                background: 'rgb(var(--ink) / 0.02)',
                 padding: isMobile ? '1rem' : '1.5rem',
                 flexDirection: isMobile ? 'column' : 'row',
               }}>
@@ -154,10 +156,10 @@ const ConfirmDialog = ({
                 ref={cancelRef}
                 onClick={onClose}
                 disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-white/70 hover:text-white transition-all duration-200 min-h-[44px] disabled:opacity-40"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold border text-ink/70 hover:text-ink transition-all duration-200 min-h-[44px] disabled:opacity-40"
                 style={{ 
                   borderColor: COLORS.darkBorderSubtle, 
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'rgb(var(--ink) / 0.04)',
                   width: isMobile ? '100%' : 'auto',
                 }}
               >
@@ -166,9 +168,10 @@ const ConfirmDialog = ({
               <motion.button
                 onClick={handleConfirm}
                 disabled={loading}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold text-ink transition-all duration-200 min-h-[44px] disabled:opacity-50 flex items-center gap-2 ${confirmButtonClass}`}
                 style={{ 
-                  background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                  background: `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0xCC)})`,
+                  color: '#0A0A0A',
                   width: isMobile ? '100%' : 'auto',
                   justifyContent: 'center',
                 }}
@@ -177,10 +180,8 @@ const ConfirmDialog = ({
               >
                 {loading ? (
                   <>
-                    <motion.div
-                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    <div
+                      className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink"
                     />
                     Processing...
                   </>

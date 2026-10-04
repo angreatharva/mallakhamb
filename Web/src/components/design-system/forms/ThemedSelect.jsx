@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../theme/useTheme';
+import { FG } from '../../../styles/tokens';
 
 /**
  * ThemedSelect - A themed select component that adapts to the current role context
@@ -52,10 +53,10 @@ export const ThemedSelect = forwardRef(({
         className={clsx(
           // Base styles
           'w-full px-4 py-3 pr-10 rounded-lg',
-          'bg-white/5 backdrop-blur-sm',
-          'text-white',
+          'bg-ink/5 backdrop-blur-sm',
+          'text-ink',
           'border transition-all duration-200',
-          'outline-none appearance-none',
+          'appearance-none',
           'cursor-pointer',
           
           // Minimum touch target (44px)
@@ -63,8 +64,8 @@ export const ThemedSelect = forwardRef(({
           
           // Normal state
           !disabled && !readOnly && [
-            'border-white/10',
-            'hover:border-white/20',
+            'border-ink/10',
+            'hover:border-ink/20',
             'focus:border-current',
           ],
           
@@ -72,20 +73,20 @@ export const ThemedSelect = forwardRef(({
           disabled && [
             'opacity-50',
             'cursor-not-allowed',
-            'border-white/5',
+            'border-ink/5',
           ],
           
           // Readonly state
           readOnly && [
             'cursor-default',
-            'border-white/5',
+            'border-ink/5',
           ],
           
           className
         )}
         style={{
           // Role-specific focus color
-          color: theme.colors.primary,
+          color: FG.accent,
         }}
         whileFocus={{
           boxShadow: `0 0 0 3px ${theme.colors.primaryLight}`,
@@ -103,7 +104,7 @@ export const ThemedSelect = forwardRef(({
           <option 
             key={option.value} 
             value={option.value}
-            className="bg-gray-900 text-white"
+            className="bg-surface text-ink"
           >
             {option.label}
           </option>

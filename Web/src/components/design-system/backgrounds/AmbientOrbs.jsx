@@ -28,6 +28,11 @@
 import { motion } from 'framer-motion';
 import PropTypes from 'prop-types';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { alpha } from '@/styles/tokens';
+
+// The recipes are hex bytes ('44'); alpha() appends them to a hex colour exactly as the
+// old `${color}${byte}` did, and also understands a token colour, which concatenation broke.
+const tint = (color, byte) => alpha(color, parseInt(byte, 16));
 
 const Orb = ({ x, y, size, color, delay = 0, duration = 8, blur = 80, intensity }) => (
   <motion.div
@@ -39,7 +44,7 @@ const Orb = ({ x, y, size, color, delay = 0, duration = 8, blur = 80, intensity 
       // still gets the authored desktop size rather than a zero-width orb.
       width: `calc(${size}px * var(--orb-scale, 1))`,
       height: `calc(${size}px * var(--orb-scale, 1))`,
-      background: `radial-gradient(circle at 35% 35%, ${color}${intensity.inner}, ${color}${intensity.outer}, transparent 70%)`,
+      background: `radial-gradient(circle at 35% 35%, ${tint(color, intensity.inner)}, ${tint(color, intensity.outer)}, transparent 70%)`,
       filter: `blur(calc(${blur}px * var(--orb-scale, 1)))`,
       transform: 'translate(-50%, -50%)',
     }}

@@ -49,4 +49,15 @@ export const useBodyScrollLock = (isLocked) => {
   }, [isLocked]);
 };
 
+/**
+ * The same lock as an element. Mounted as an overlay's first child, it holds for
+ * exactly as long as the overlay is mounted — through its exit animation, since
+ * AnimatePresence keeps it mounted until then — and no hook has to be placed
+ * above an early return in the page that owns the dialog's state.
+ */
+export const BodyScrollLock = () => {
+  useBodyScrollLock(true);
+  return null;
+};
+
 export default useBodyScrollLock;

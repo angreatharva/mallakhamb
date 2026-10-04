@@ -21,30 +21,34 @@ export default function NotFound() {
   const hasRoleContext = loginPath !== '/';
 
   return (
-    <div
+    // <main>: the page's one landmark (the audit found content outside any).
+    // Colours from the appearance tokens — identical in dark, legible in light.
+    <main
       className="min-h-dvh flex items-center justify-center px-4"
-      style={{ background: '#0a0a0a' }}
+      style={{ background: 'rgb(var(--bg))' }}
     >
       <div className="text-center max-w-md">
+        {/* A watermark at 12% ink, so decoration (WCAG 1.4.3 exempts it); the heading says it in words. */}
         <p
           className="text-7xl font-black tracking-tight mb-2"
-          style={{ color: 'rgba(255,255,255,0.12)' }}
+          style={{ color: 'rgb(var(--ink) / 0.12)' }}
+          aria-hidden="true"
         >
           404
         </p>
-        <h1 className="text-xl font-bold text-white mb-2">Page not found</h1>
-        <p className="text-sm text-white/50 mb-8">
-          We couldn&apos;t find <span className="text-white/70">{location.pathname}</span>.
+        <h1 className="text-xl font-bold text-ink mb-2">Page not found</h1>
+        <p className="text-sm text-fg-muted mb-8">
+          We couldn&apos;t find <span className="text-ink/70">{location.pathname}</span>.
           The link may be out of date, or the page may have moved.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             to="/"
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px] flex items-center justify-center transition-colors"
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-ink min-h-[44px] flex items-center justify-center transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.14)',
+              background: 'rgb(var(--ink) / 0.08)',
+              border: '1px solid rgb(var(--ink) / 0.14)',
             }}
           >
             Go to home
@@ -53,14 +57,14 @@ export default function NotFound() {
           {hasRoleContext && (
             <Link
               to={loginPath}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-white/70 hover:text-white transition-colors"
-              style={{ border: '1px solid rgba(255,255,255,0.10)' }}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-ink/70 hover:text-ink transition-colors"
+              style={{ border: '1px solid rgb(var(--ink) / 0.10)' }}
             >
               Sign in
             </Link>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

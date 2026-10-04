@@ -1,5 +1,5 @@
 import Dropdown from '@/components/auth/Dropdown';
-import { COLORS } from '@/styles/tokens';
+import { FG } from '@/styles/tokens';
 
 /**
  * The category picker above the results board.
@@ -21,7 +21,7 @@ const GENDERS = [
 
 const FilterLabel = ({ children, primary = false }) => (
   <label className="block text-xs font-bold tracking-widest uppercase mb-2"
-    style={{ color: primary ? COLORS.saffron : 'rgba(255,255,255,0.45)' }}>
+    style={{ color: primary ? FG.brand : 'var(--fg-muted)' }}>
     {children}
   </label>
 );
@@ -130,8 +130,8 @@ const ScoreCategoryFilters = ({
         <button
           type="button"
           onClick={onClearFilters}
-          className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-white/5"
-          style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>
+          className="px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-ink/5"
+          style={{ borderColor: 'rgb(var(--ink) / 0.12)', color: 'var(--fg-muted)' }}>
           Clear Filters
         </button>
       </div>

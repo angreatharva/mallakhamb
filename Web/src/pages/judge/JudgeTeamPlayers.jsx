@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, User, LogOut, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
+  Scale, User, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { apparatusFor, apparatusKey, apparatusToJudge, entryGender, isRegisteredFor } from '@/utils/scoring/apparatus';
@@ -19,16 +18,10 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
-import { JudgeAmbience } from './judgeShared';
-
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-};
+import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const JudgeTeamPlayers = () => {
   const navigate = useNavigate();
@@ -384,24 +377,24 @@ const JudgeTeamPlayers = () => {
       <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => navigate('/judge/dashboard')}
-              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
               aria-label="Back to dashboard"
             >
-              <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+              <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
             </button>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-              <Scale className="w-4 h-4 text-white" aria-hidden="true" />
+              <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
+              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>
                 {resolveJudgeSeat(judgeInfo, {
                   gender: selectedGender,
                   ageGroup: selectedAgeGroup,
@@ -410,13 +403,10 @@ const JudgeTeamPlayers = () => {
               </p>
             </div>
           </div>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-red-500/10"
-            style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
-            aria-label="Logout">
-            <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+          <AppearanceMenu />
+          <JudgeLogoutButton onLogout={handleLogout} />
+          </div>
         </div>
       </header>
 
@@ -424,15 +414,15 @@ const JudgeTeamPlayers = () => {
         <FadeIn delay={0}>
           <div className="rounded-2xl border p-5 mb-6"
             style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: J.purpleLight }}>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>
               Team
             </p>
-            <h1 className="text-2xl font-black text-white">{team?.name || 'Loading…'}</h1>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <h1 className="text-2xl font-black text-ink">{team?.name || 'Loading…'}</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
               Coach: {team?.coach?.name || 'N/A'}
             </p>
             {!loading && team && (
-              <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p className="text-xs mt-3" style={{ color: 'var(--fg-muted)' }}>
                 {players.length} {players.length === 1 ? 'player' : 'players'}
                 {finalizedCount > 0 ? ` · ${finalizedCount} finalized` : scoredCount > 0 ? ` · ${scoredCount} submitted` : ''}
               </p>
@@ -441,16 +431,15 @@ const JudgeTeamPlayers = () => {
         </FadeIn>
 
         <FadeIn delay={0.05} className="flex-1 flex flex-col">
-          <h2 className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: J.purpleLight }}>
+          <h2 className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: DATA_COLORS.purpleSoft }}>
             Players
           </h2>
 
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3 flex-1">
-              <motion.div className="w-6 h-6 rounded-full border-2 border-t-transparent"
-                style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-              <span className="text-sm text-white/50">Loading players…</span>
+              <div className="animate-spin w-6 h-6 rounded-full border-2 border-t-transparent"
+                style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
+              <span className="text-sm text-fg-muted">Loading players…</span>
             </div>
           ) : players.length > 0 ? (
             <div className="space-y-2 pb-12">
@@ -463,80 +452,87 @@ const JudgeTeamPlayers = () => {
                     key={player.id}
                     type="button"
                     onClick={() => handlePlayerSelect(player)}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
+                    className={`w-full flex items-center justify-between gap-3 p-4 rounded-xl border transition-all group ${
                       isLocked
                         ? 'bg-green-500/10 border-green-500/30 cursor-default'
                         : isSubmitted
                         ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 cursor-pointer'
-                        : 'hover:bg-purple-500/15 border-white/10 hover:border-purple-500/30 bg-white/[0.02] cursor-pointer'
+                        : 'hover:bg-purple-500/15 border-ink/10 hover:border-purple-500/30 bg-ink/[0.02] cursor-pointer'
                     }`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                       {/* Running position within the team. The lot number, when
                           one was drawn, sits underneath — the two diverge as
                           soon as the panel re-sequences. */}
                       <span className="flex flex-col items-center justify-center w-8 flex-shrink-0">
-                        <span className="text-sm font-black" style={{ color: J.purpleLight }}>
+                        <span className="text-sm font-black" style={{ color: DATA_COLORS.purpleSoft }}>
                           {orderIdx + 1}
                         </span>
                         {player.lotNo != null && (
-                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'var(--fg-muted)' }}>
                             Lot {player.lotNo}
                           </span>
                         )}
                       </span>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
+                      <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center border transition-colors ${
                         isLocked
                           ? 'bg-green-500/20 border-green-500/40'
                           : isSubmitted
                           ? 'bg-purple-500/20 border-purple-500/40 group-hover:bg-purple-500/30'
-                          : 'bg-white/5 border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
+                          : 'bg-ink/5 border-ink/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
                       }`}>
                         {isLocked ? (
-                          <Lock className="w-5 h-5 text-green-400" aria-hidden="true" />
+                          <Lock className="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                         ) : isSubmitted ? (
-                          <CheckCircle className="w-5 h-5" style={{ color: J.purpleLight }} aria-hidden="true" />
+                          <CheckCircle className="w-5 h-5" style={{ color: DATA_COLORS.purpleSoft }} aria-hidden="true" />
                         ) : (
-                          <User className="w-5 h-5 text-white/60 group-hover:text-purple-400" aria-hidden="true" />
+                          <User className="w-5 h-5 text-ink/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         )}
                       </div>
-                      <div className="text-left">
-                        <p className="font-bold text-base text-white flex items-center gap-2">
+                      <div className="text-left min-w-0">
+                        <p className="font-bold text-base text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
                           {player.name}
                           {isLocked ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(34,197,94,0.2)', color: J.green }}>
+                              style={{ background: 'rgba(34,197,94,0.2)', color: FG.success }}>
                               Finalized
                             </span>
                           ) : isSubmitted ? (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(168,85,247,0.2)', color: J.purpleLight }}>
+                              style={{ background: 'rgba(168,85,247,0.2)', color: DATA_COLORS.purpleSoft }}>
                               Partial Score Submitted
                             </span>
                           ) : null}
                         </p>
-                        <p className="text-xs text-white/40 mt-0.5">
+                        <p className="text-xs text-fg-muted mt-0.5">
                           {player.gender} - {player.ageGroup}
                           {isLocked && player.finalScore != null
                             ? ` · Final ${Number(player.finalScore).toFixed(2)}`
                             : ''}
                         </p>
+                        {/* Below sm the apparatus sits under the name: beside it, a three-apparatus list
+                            squeezed the name and age group into a one-letter column on a phone. */}
+                        {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
+                          <span className="sm:hidden mt-1.5 inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
+                            {player.apparatus[selectedCompetitionType].join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/10 text-white/80 border border-white/5">
+                        <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5 text-right">
                           {player.apparatus[selectedCompetitionType].join(', ')}
                         </span>
                       )}
                       {isLocked ? (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                        <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center"
                           style={{ background: 'rgba(34,197,94,0.2)' }}>
-                          <Lock className="w-4 h-4 text-green-400" aria-hidden="true" />
+                          <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400" aria-hidden="true" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 group-hover:bg-purple-500/20 transition-colors">
+                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         </div>
                       )}
                     </div>
@@ -545,10 +541,10 @@ const JudgeTeamPlayers = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
-              <Users className="w-12 h-12 mb-4 text-white/20" />
-              <p className="text-lg font-bold text-white/70">No eligible players</p>
-              <p className="text-sm text-white/40 mt-2 max-w-sm text-center">
+            <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+              <Users className="w-12 h-12 mb-4 text-ink/20" />
+              <p className="text-lg font-bold text-ink/70">No eligible players</p>
+              <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                 None of the players match your assigned category and apparatus.
               </p>
             </div>

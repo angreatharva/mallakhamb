@@ -7,45 +7,24 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import BHALogo from '../../assets/BHA.png';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-
-const COLORS = {
-  saffron: '#FF6B00',
-  saffronLight: '#FF8C38',
-  saffronDark: '#CC5500',
-  gold: '#F5A623',
-  dark: '#0A0A0A',
-  darkBorder: 'rgba(255,107,0,0.15)',
-  darkBorderSubtle: 'rgba(255,255,255,0.06)',
-};
+import { COLORS, FG, alpha } from '@/styles/tokens';
+import { GradientText } from '@/components/design-system';
+import { useReducedMotion } from '@/hooks/useResponsive';
 
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
-const useReducedMotion = () => {
-  const [reduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-  return reduced;
-};
-
-const GradientText = ({ children, className = '' }) => (
-  <span className={className} style={{
-    background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.gold}, ${COLORS.saffronLight})`,
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  }}>{children}</span>
-);
-
 const StyledInput = ({ error, verified, ...props }) => (
   <input
-    className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+    className="w-full px-4 py-3 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
     style={{
-      background: verified ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.05)',
+      background: verified ? 'rgba(34,197,94,0.06)' : 'rgb(var(--ink) / 0.05)',
       border: `1px solid ${error ? '#EF4444' : verified ? 'rgba(34,197,94,0.4)' : COLORS.darkBorderSubtle}`,
       caretColor: COLORS.saffron,
     }}
     onFocus={e => {
       if (!verified) {
         e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron;
-        e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`;
+        e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`;
       }
     }}
     onBlur={e => {
@@ -62,20 +41,20 @@ const PasswordInput = ({ error, showPassword, onToggle, ...props }) => (
   <div className="relative flex items-center">
     <input
       type={showPassword ? 'text' : 'password'}
-      className="w-full px-4 py-3 pr-12 rounded-xl text-white text-sm outline-none transition-all duration-200 min-h-[48px] placeholder:text-white/25"
+      className="w-full px-4 py-3 pr-12 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
       style={{
-        background: 'rgba(255,255,255,0.05)',
+        background: 'rgb(var(--ink) / 0.05)',
         border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
         caretColor: COLORS.saffron,
       }}
-      onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${COLORS.saffron}20`}`; }}
+      onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`; }}
       onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     <button
       type="button"
       onClick={onToggle}
-      className="absolute right-3 top-0 bottom-0 my-auto h-9 w-9 rounded-lg text-white/35 hover:text-white/70 transition-colors duration-200 flex items-center justify-center"
+      className="absolute right-3 top-0 bottom-0 my-auto h-9 w-9 rounded-lg text-fg-muted hover:text-fg transition-colors duration-200 flex items-center justify-center"
       aria-label={showPassword ? 'Hide password' : 'Show password'}
     >
       {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
@@ -203,7 +182,7 @@ const ResetPassword = () => {
       {!reduced && (
         <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
           style={{
-            backgroundImage: `linear-gradient(${COLORS.saffron}80 1px, transparent 1px), linear-gradient(90deg, ${COLORS.saffron}80 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
             transform: 'perspective(400px) rotateX(60deg)',
             transformOrigin: 'bottom center',
@@ -219,8 +198,8 @@ const ResetPassword = () => {
           <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>Bhausaheb Ranade</p>
-          <p className="text-white text-sm font-bold leading-tight">Mallakhamb Competition</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
+          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
         </div>
       </motion.div>
 
@@ -230,7 +209,7 @@ const ResetPassword = () => {
         animate={cardInView ? { opacity: 1, y: 0, scale: 1 } : {}}
         transition={{ duration: 0.65, ease: EASE_OUT }}>
         <div className="rounded-3xl p-8 border" style={{
-          background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(24px)',
+          background: 'rgb(var(--ink) / 0.03)', backdropFilter: 'blur(24px)',
           borderColor: COLORS.darkBorder,
           boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
         }}>
@@ -238,15 +217,15 @@ const ResetPassword = () => {
           <div className="text-center mb-6">
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.darkBorder}` }}
+              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
-              <Lock className="w-7 h-7" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <Lock className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
             </motion.div>
-            <h1 className="text-2xl font-black text-white mb-2">
+            <h1 className="text-2xl font-black text-ink mb-2">
               Reset <GradientText>Password</GradientText>
             </h1>
-            <p className="text-white/45 text-sm">
+            <p className="text-fg-muted text-sm">
               {isOTPMethod ? 'Verify your OTP then set a new password' : 'Enter your new password below'}
             </p>
           </div>
@@ -258,13 +237,13 @@ const ResetPassword = () => {
                 <div key={s} className="flex items-center gap-2 flex-1">
                   <div className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-all duration-300"
                     style={{
-                      background: step >= s ? COLORS.saffron : 'rgba(255,255,255,0.08)',
-                      color: step >= s ? '#fff' : 'rgba(255,255,255,0.3)',
+                      background: step >= s ? COLORS.saffron : 'rgb(var(--ink) / 0.08)',
+                      color: step >= s ? '#0A0A0A' : 'var(--fg-muted)',
                     }}>
                     {step > s ? <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> : s}
                   </div>
                   <span className="text-xs font-medium transition-colors duration-300"
-                    style={{ color: step >= s ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)' }}>
+                    style={{ color: step >= s ? 'rgb(var(--ink) / 0.7)' : 'var(--fg-muted)' }}>
                     {s === 1 ? 'Verify OTP' : 'New Password'}
                   </span>
                   {s < 2 && <div className="flex-1 h-px" style={{ background: step > s ? COLORS.saffron : COLORS.darkBorderSubtle }} />}
@@ -281,10 +260,10 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}
                 role="alert">
-                <Shield className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <Shield className="w-5 h-5 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <p className="text-sm font-semibold text-red-400">Account Temporarily Locked</p>
-                  <p className="text-xs text-red-400/70 mt-0.5">Too many failed attempts. Try again in {formatTime(lockoutSeconds)}</p>
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-400">Account Temporarily Locked</p>
+                  <p className="text-xs text-red-700 dark:text-red-400/70 mt-0.5">Too many failed attempts. Try again in {formatTime(lockoutSeconds)}</p>
                 </div>
               </motion.div>
             )}
@@ -298,8 +277,8 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
                 role="status" aria-live="polite">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: COLORS.gold }} aria-hidden="true" />
-                <p className="text-xs font-medium" style={{ color: COLORS.gold }}>
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.brandGold }} aria-hidden="true" />
+                <p className="text-xs font-medium" style={{ color: FG.brandGold }}>
                   {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining
                 </p>
               </motion.div>
@@ -314,8 +293,8 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, type: 'spring', stiffness: 300, damping: 25 }}
                 role="status" aria-live="polite">
-                <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" aria-hidden="true" />
-                <p className="text-xs font-semibold text-green-400">OTP verified — set your new password below</p>
+                <CheckCircle2 className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0" aria-hidden="true" />
+                <p className="text-xs font-semibold text-green-700 dark:text-green-400">OTP verified — set your new password below</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -326,8 +305,8 @@ const ResetPassword = () => {
               <>
                 {/* Email */}
                 <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
-                    Email Address <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                  <label htmlFor="email" className="block text-sm font-semibold text-ink/70 mb-2">
+                    Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <StyledInput
                     {...register('email', {
@@ -341,7 +320,7 @@ const ResetPassword = () => {
                     aria-invalid={!!errors.email}
                   />
                   {errors.email && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
+                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                       {errors.email.message}
                     </motion.p>
@@ -350,8 +329,8 @@ const ResetPassword = () => {
 
                 {/* OTP */}
                 <div className="mb-4">
-                  <label htmlFor="otp" className="block text-sm font-semibold text-white/70 mb-2">
-                    OTP Code <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                  <label htmlFor="otp" className="block text-sm font-semibold text-ink/70 mb-2">
+                    OTP Code <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
@@ -368,7 +347,7 @@ const ResetPassword = () => {
                       />
                       {otpVerified && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <CheckCircle2 className="w-4 h-4 text-green-400" aria-hidden="true" />
+                          <CheckCircle2 className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       )}
                     </div>
@@ -378,26 +357,25 @@ const ResetPassword = () => {
                       disabled={loading || verifying || isLockedOut || otpVerified}
                       className="px-4 rounded-xl text-sm font-bold min-h-[48px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       style={{
-                        background: otpVerified ? 'rgba(34,197,94,0.15)' : `${COLORS.saffron}18`,
+                        background: otpVerified ? 'rgba(34,197,94,0.15)' : `${alpha(COLORS.saffron, 0x18)}`,
                         border: `1px solid ${otpVerified ? 'rgba(34,197,94,0.3)' : COLORS.darkBorder}`,
-                        color: otpVerified ? '#4ade80' : COLORS.saffronLight,
+                        color: otpVerified ? FG.success : FG.brandSoft,
                       }}
                       whileHover={!otpVerified && !verifying ? { scale: 1.03 } : {}}
                       whileTap={!otpVerified && !verifying ? { scale: 0.97 } : {}}>
                       {verifying ? (
-                        <motion.div className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto"
-                          animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                        <div className="animate-spin w-4 h-4 rounded-full border-2 border-current/30 border-t-current mx-auto" />
                       ) : otpVerified ? '✓ Verified' : 'Verify'}
                     </motion.button>
                   </div>
                   {errors.otp && (
-                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
+                    <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                       {errors.otp.message}
                     </motion.p>
                   )}
                   {!otpVerified && !errors.otp && (
-                    <p className="mt-1.5 text-xs text-white/30">Check your email for the 6-digit code</p>
+                    <p className="mt-1.5 text-xs text-fg-muted">Check your email for the 6-digit code</p>
                   )}
                 </div>
               </>
@@ -410,8 +388,8 @@ const ResetPassword = () => {
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.3 }}>
                   <div className="mb-4">
-                    <label htmlFor="password" className="block text-sm font-semibold text-white/70 mb-2">
-                      New Password <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    <label htmlFor="password" className="block text-sm font-semibold text-ink/70 mb-2">
+                      New Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
                       {...register('password', {
@@ -427,7 +405,7 @@ const ResetPassword = () => {
                       aria-invalid={!!errors.password}
                     />
                     {errors.password && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
+                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                         {errors.password.message}
                       </motion.p>
@@ -435,8 +413,8 @@ const ResetPassword = () => {
                   </div>
 
                   <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-white/70 mb-2">
-                      Confirm Password <span style={{ color: COLORS.saffron }} aria-hidden="true">*</span>
+                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-ink/70 mb-2">
+                      Confirm Password <span style={{ color: FG.brand }} aria-hidden="true">*</span>
                     </label>
                     <PasswordInput
                       {...register('confirmPassword', {
@@ -452,7 +430,7 @@ const ResetPassword = () => {
                       aria-invalid={!!errors.confirmPassword}
                     />
                     {errors.confirmPassword && (
-                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: '#EF4444' }}
+                      <motion.p role="alert" className="mt-1.5 text-xs font-medium" style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                         {errors.confirmPassword.message}
                       </motion.p>
@@ -467,14 +445,13 @@ const ResetPassword = () => {
               <motion.button
                 type="submit"
                 disabled={loading || isLockedOut || success}
-                className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm text-white min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})` }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}
                 whileHover={!loading && !isLockedOut && !success ? { scale: 1.02 } : {}}
                 whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}>
                 {loading ? (
                   <>
-                    <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                    <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
                     Resetting Password…
                   </>
                 ) : success ? (
@@ -494,8 +471,8 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
                 role="status" aria-live="polite">
-                <p className="text-sm font-semibold text-green-400">Password reset successfully!</p>
-                <Link to="/player/login" className="text-xs text-green-400/70 hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center">
+                <p className="text-sm font-semibold text-green-700 dark:text-green-400">Password reset successfully!</p>
+                <Link to="/player/login" className="text-xs text-green-700 dark:text-green-400/70 hover:text-green-700 dark:hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center">
                   Go to Login →
                 </Link>
               </motion.div>
@@ -510,7 +487,7 @@ const ResetPassword = () => {
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
                 role="alert" aria-live="assertive">
-                <p className="text-sm text-red-400">{error}</p>
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -518,23 +495,23 @@ const ResetPassword = () => {
           {/* Footer links */}
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
             {isOTPMethod ? (
-              <p className="text-sm text-white/35">
+              <p className="text-sm text-fg-muted">
                 Didn&apos;t receive OTP?{' '}
-                <Link to="/forgot-password" className="font-semibold transition-colors duration-200 hover:opacity-80"
-                  style={{ color: COLORS.saffronLight }}>
+                <Link to="/forgot-password" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
+                  style={{ color: FG.brandSoft }}>
                   Request New OTP
                 </Link>
               </p>
             ) : (
-              <p className="text-sm text-white/35">
+              <p className="text-sm text-fg-muted">
                 Remember your password?{' '}
-                <Link to="/player/login" className="font-semibold transition-colors duration-200 hover:opacity-80"
-                  style={{ color: COLORS.saffronLight }}>
+                <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
+                  style={{ color: FG.brandSoft }}>
                   Back to Login
                 </Link>
               </p>
             )}
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors duration-200 min-h-[44px]">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home
             </Link>

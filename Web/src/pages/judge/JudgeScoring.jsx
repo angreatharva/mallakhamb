@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Scale, User, LogOut, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
+  Scale, User, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -28,8 +28,11 @@ import TimeKeeperScoring from './TimeKeeperScoring';
 import {
   J, EASE_OUT, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
   playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES,
+  JudgeLogoutButton,
 } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
 const CopPdfModal = ({ isOpen, onClose }) => {
@@ -39,12 +42,17 @@ const CopPdfModal = ({ isOpen, onClose }) => {
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[9999] flex flex-col"
+          data-appearance="dark"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Code of Points"
           style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
         >
+          <BodyScrollLock />
           {/* Modal header */}
           <div
             className="flex items-center justify-between px-4 sm:px-6 py-3 flex-shrink-0 border-b"
@@ -55,17 +63,17 @@ const CopPdfModal = ({ isOpen, onClose }) => {
                 className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
               >
-                <BookOpen className="w-4 h-4 text-white" />
+                <BookOpen className="w-4 h-4 text-ink" />
               </div>
               <div>
-                <p className="text-white font-black text-sm leading-tight">Code of Points</p>
+                <p className="text-ink font-black text-sm leading-tight">Code of Points</p>
                 <p className="text-xs" style={{ color: 'rgba(192,132,252,0.8)' }}>COP Mallakhamb — Rules &amp; Scoring Guide</p>
               </div>
             </div>
             <motion.button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
+              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10"
+              style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
               whileTap={{ scale: 0.9 }}
               aria-label="Close COP PDF"
             >
@@ -89,17 +97,20 @@ const CopPdfModal = ({ isOpen, onClose }) => {
 
 const ScoreInput = ({ label, value, onChange, hint }) => {
   const [focused, setFocused] = useState(false);
+  // The label was visible but not linked, so the mark field had no name for a
+  // screen reader ("edit text" — for Execution or Originality alike).
+  const inputId = useId();
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>{label}</label>
-        {hint && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{hint}</span>}
+        <label htmlFor={inputId} className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>{label}</label>
+        {hint && <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>{hint}</span>}
       </div>
       <motion.div
         className="relative rounded-xl border overflow-hidden"
         animate={{
-          borderColor: focused ? J.purple : 'rgba(255,255,255,0.08)',
-          boxShadow: focused ? `0 0 0 3px ${J.purple}20` : 'none',
+          borderColor: focused ? J.purple : 'rgb(var(--ink) / 0.08)',
+          boxShadow: focused ? `0 0 0 3px ${alpha(J.purple, 0x20)}` : 'none',
         }}
         transition={{ duration: 0.2 }}>
         <style>{`
@@ -113,12 +124,13 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
           }
         `}</style>
         <DecimalInput
+          id={inputId}
           value={value}
           onValueChange={onChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full px-4 py-3 text-2xl font-black text-center outline-none bg-transparent no-spinners"
-          style={{ color: '#fff', background: 'rgba(255,255,255,0.04)', fontSize: '1.5rem' }}
+          className="w-full px-4 py-3 text-2xl font-black text-center bg-transparent no-spinners"
+          style={{ color: FG.ink, background: 'rgb(var(--ink) / 0.04)', fontSize: '1.5rem' }}
         />
       </motion.div>
     </div>
@@ -126,11 +138,11 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
 };
 
 const ScoreRow = ({ label, value, max, color = J.purple }) => (
-  <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+  <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'rgb(var(--ink) / 0.05)' }}>
+    <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>{label}</span>
     <span className="text-sm font-black" style={{ color }}>
       {typeof value === 'number' ? value.toFixed(2) : value}
-      <span className="text-xs font-normal ml-1" style={{ color: 'rgba(255,255,255,0.3)' }}>/ {max}</span>
+      <span className="text-xs font-normal ml-1" style={{ color: 'var(--fg-muted)' }}>/ {max}</span>
     </span>
   </div>
 );
@@ -138,16 +150,16 @@ const ScoreRow = ({ label, value, max, color = J.purple }) => (
 const CheckRow = ({ checked, onChange, label, penalty }) => (
   <label className="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px]"
     style={{
-      background: checked ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)',
-      borderColor: checked ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)',
+      background: checked ? 'rgba(34,197,94,0.08)' : 'rgb(var(--ink) / 0.03)',
+      borderColor: checked ? 'rgba(34,197,94,0.3)' : 'rgb(var(--ink) / 0.07)',
     }}>
     <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
-      style={{ borderColor: checked ? J.green : 'rgba(255,255,255,0.2)', background: checked ? J.green : 'transparent' }}>
-      {checked && <CheckCircle className="w-3.5 h-3.5 text-white" aria-hidden="true" />}
+      style={{ borderColor: checked ? J.green : 'rgb(var(--ink) / 0.2)', background: checked ? J.green : 'transparent' }}>
+      {checked && <CheckCircle className="w-3.5 h-3.5 text-ink" aria-hidden="true" />}
     </div>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-    <span className="text-sm font-medium" style={{ color: checked ? '#fff' : 'rgba(255,255,255,0.5)' }}>{label}</span>
-    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>{penalty.toFixed(2)}</span>}
+    <span className="text-sm font-medium" style={{ color: checked ? FG.ink : 'rgb(var(--ink) / 0.5)' }}>{label}</span>
+    {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{penalty.toFixed(2)}</span>}
   </label>
 );
 
@@ -171,13 +183,13 @@ const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
         borderColor: all ? 'rgba(34,197,94,0.3)' : 'rgba(168,85,247,0.3)',
       }}>
       <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
-        style={{ borderColor: all || some ? J.green : 'rgba(255,255,255,0.2)', background: all ? J.green : 'transparent' }}>
-        {all && <CheckCircle className="w-3.5 h-3.5 text-white" aria-hidden="true" />}
-        {some && <Minus className="w-3.5 h-3.5" style={{ color: J.green }} aria-hidden="true" />}
+        style={{ borderColor: all || some ? J.green : 'rgb(var(--ink) / 0.2)', background: all ? J.green : 'transparent' }}>
+        {all && <CheckCircle className="w-3.5 h-3.5 text-ink" aria-hidden="true" />}
+        {some && <Minus className="w-3.5 h-3.5" style={{ color: FG.success }} aria-hidden="true" />}
       </div>
       <input ref={inputRef} type="checkbox" checked={all} onChange={onChange} className="sr-only" />
-      <span className="text-sm font-bold text-white">Select all</span>
-      <span className="ml-auto text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>{metCount} / {itemCount}</span>
+      <span className="text-sm font-bold text-ink">Select all</span>
+      <span className="ml-auto text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{metCount} / {itemCount}</span>
     </label>
   );
 };
@@ -684,54 +696,45 @@ const JudgeSlip = () => {
 
       {/*  Header  */}
       <header ref={headerRef} className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={goBackAfterScoring}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
                 aria-label="Back to team">
-                <ArrowLeft className="w-4 h-4 text-white" aria-hidden="true" />
+                <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
               </button>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-                <Scale className="w-4 h-4 text-white" aria-hidden="true" />
+                <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="text-white font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
+                <p className="text-ink font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
+                <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
               <LiveDot connected={isConnected} compact />
-              <button onClick={handleLogout}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
-                style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
-                aria-label="Logout">
-                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
+              <AppearanceMenu />
+              <JudgeLogoutButton onLogout={handleLogout} compact />
             </div>
           </div>
 
           {/* Scoring-for banner */}
           <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-xl border min-w-0 w-full sm:w-auto sm:max-w-xs"
             style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
-            <User className="w-4 h-4 flex-shrink-0" style={{ color: J.green }} aria-hidden="true" />
+            <User className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
-              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{selectedTeam?.name}</p>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--fg-muted)' }}>{selectedTeam?.name}</p>
             </div>
           </div>
 
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <LiveDot connected={isConnected} />
-            <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
-              aria-label="Logout">
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Logout</span>
-            </button>
+            <AppearanceMenu />
+            <JudgeLogoutButton onLogout={handleLogout} />
           </div>
         </div>
       </header>
@@ -743,8 +746,8 @@ const JudgeSlip = () => {
 
         {!slipReady && (
           <div className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: 'rgba(10,10,10,0.85)' }} role="status" aria-live="polite">
-            <p className="text-sm font-bold text-white">Loading your submitted score…</p>
+            style={{ background: 'rgb(var(--bg) / 0.85)' }} role="status" aria-live="polite">
+            <p className="text-sm font-bold text-ink">Loading your submitted score…</p>
           </div>
         )}
 
@@ -756,31 +759,31 @@ const JudgeSlip = () => {
                   {/* 1. Fixed Top Score Header */}
                   <div className="sticky z-30 pt-2 pb-3 -mx-3 px-3 backdrop-blur-xl border-b"
                     data-testid="mobile-score-bar"
-                    style={{ top: headerHeight, background: 'rgba(10,10,10,0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                    style={{ top: headerHeight, background: 'rgb(var(--bg) / 0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
                     <div className="rounded-2xl p-3 flex items-center justify-between relative overflow-hidden"
                       style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(124,58,237,0.18))', border: '1px solid rgba(168,85,247,0.35)' }}>
                       <div className="min-w-0 pr-2">
-                        <p className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color: J.purpleLight }}>Live Final Score</p>
-                        <p className="text-xs text-white/60 truncate mt-0.5">{selectedPlayer?.name} • <span className="text-white/40">{selectedApparatus || 'Pole'}</span></p>
+                        <p className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Live Final Score</p>
+                        <p className="text-xs text-ink/60 truncate mt-0.5">{selectedPlayer?.name} • <span className="text-fg-muted">{selectedApparatus || 'Pole'}</span></p>
                       </div>
                       <motion.div className="flex items-baseline gap-1 flex-shrink-0"
                         key={calcFinal()}
                         initial={{ scale: 0.95, opacity: 0.8 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.15 }}>
-                        <span className="text-4xl font-black text-white leading-none">{calcFinal()}</span>
-                        <span className="text-xs text-white/40 font-semibold">/ 10.00</span>
+                        <span className="text-4xl font-black text-ink leading-none">{calcFinal()}</span>
+                        <span className="text-xs text-fg-muted font-semibold">/ 10.00</span>
                       </motion.div>
                     </div>
 
                     {/* 2. 3-Tab Bar */}
-                    <div className="grid grid-cols-3 gap-1 mt-2 p-1 rounded-xl border bg-black/40"
-                      style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                    <div className="grid grid-cols-3 gap-1 mt-2 p-1 rounded-xl border bg-bg/40"
+                      style={{ borderColor: 'rgb(var(--ink) / 0.08)' }}>
                       <button
                         type="button"
                         onClick={() => setActiveMobileTab('difficulty')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'difficulty' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                          activeMobileTab === 'difficulty' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Difficulty
@@ -789,7 +792,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('combination')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'combination' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                          activeMobileTab === 'combination' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Combination
@@ -798,7 +801,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('exec_orig')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'exec_orig' ? 'bg-purple-600/30 text-white border border-purple-500/40 shadow-sm' : 'text-white/50 hover:text-white/80'
+                          activeMobileTab === 'exec_orig' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Exec & Orig
@@ -821,14 +824,14 @@ const JudgeSlip = () => {
                           exit={{ opacity: 0, x: 10 }}
                           transition={{ duration: 0.15 }}
                           className="rounded-2xl border p-4 space-y-4"
-                          style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}
+                          style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="font-black text-white text-base">Difficulty Elements</h3>
-                              <p className="text-xs text-white/40 mt-0.5">Select counts for Class A, B, and C elements</p>
+                              <h3 className="font-black text-ink text-base">Difficulty Elements</h3>
+                              <p className="text-xs text-fg-muted mt-0.5">Select counts for Class A, B, and C elements</p>
                             </div>
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 3.80</span>
                           </div>
 
                           <div className="space-y-5 pt-1">
@@ -838,17 +841,17 @@ const JudgeSlip = () => {
                             ))}
                           </div>
 
-                          <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                            <span className="text-xs font-bold text-white/50">Difficulty Subtotal</span>
-                            <span className="text-xl font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
-                              {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal text-white/30">/ 3.80</span>
+                          <div className="flex items-center justify-between pt-3 border-t border-ink/5">
+                            <span className="text-xs font-bold text-fg-muted">Difficulty Subtotal</span>
+                            <span className="text-xl font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? FG.success : FG.warning }}>
+                              {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal text-fg-muted">/ 3.80</span>
                             </span>
                           </div>
 
                           <motion.button
                             onClick={() => setShowCopModal(true)}
                             className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
-                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
@@ -864,14 +867,14 @@ const JudgeSlip = () => {
                           exit={{ opacity: 0, x: 10 }}
                           transition={{ duration: 0.15 }}
                           className="rounded-2xl border p-4 space-y-4"
-                          style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}
+                          style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div>
-                              <h3 className="font-black text-white text-base">Combination Requirements</h3>
-                              <p className="text-xs text-white/40 mt-0.5 truncate">{selectedApparatus || 'Pole Mallakhamb'}</p>
+                              <h3 className="font-black text-ink text-base">Combination Requirements</h3>
+                              <p className="text-xs text-fg-muted mt-0.5 truncate">{selectedApparatus || 'Pole Mallakhamb'}</p>
                             </div>
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 1.60</span>
                           </div>
 
                           <div className="space-y-2 pt-1">
@@ -883,17 +886,17 @@ const JudgeSlip = () => {
                             ))}
                           </div>
 
-                          <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                            <span className="text-xs font-bold text-white/50">Combination Subtotal</span>
-                            <span className="text-xl font-black" style={{ color: J.purple }}>
-                              {scores.combination.total.toFixed(2)} <span className="text-xs font-normal text-white/30">/ 1.60</span>
+                          <div className="flex items-center justify-between pt-3 border-t border-ink/5">
+                            <span className="text-xs font-bold text-fg-muted">Combination Subtotal</span>
+                            <span className="text-xl font-black" style={{ color: DATA_COLORS.purple }}>
+                              {scores.combination.total.toFixed(2)} <span className="text-xs font-normal text-fg-muted">/ 1.60</span>
                             </span>
                           </div>
 
                           <motion.button
                             onClick={() => setShowCopModal(true)}
                             className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2"
-                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
@@ -912,10 +915,10 @@ const JudgeSlip = () => {
                         >
                           {/* Execution Card */}
                           <div className="rounded-2xl border p-4 space-y-3"
-                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                            style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                             <div className="flex items-center justify-between">
-                              <h3 className="font-black text-white text-base">Execution Score</h3>
-                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+                              <h3 className="font-black text-ink text-base">Execution Score</h3>
+                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 4.40</span>
                             </div>
                             <ScoreInput label="" value={scores.execution}
                               onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
@@ -923,10 +926,10 @@ const JudgeSlip = () => {
 
                           {/* Originality Card */}
                           <div className="rounded-2xl border p-4 space-y-3"
-                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                            style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                             <div className="flex items-center justify-between">
-                              <h3 className="font-black text-white text-base">Originality Bonus</h3>
-                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 0.20</span>
+                              <h3 className="font-black text-ink text-base">Originality Bonus</h3>
+                              <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 0.20</span>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                               {[['None', 0], ['+0.20', POINT_CEILINGS.bonus]].map(([label, val]) => {
@@ -936,9 +939,9 @@ const JudgeSlip = () => {
                                     onClick={() => setScores({ ...scores, bonus: val })}
                                     className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[46px]"
                                     style={{
-                                      background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
-                                      borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
-                                      color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                                      background: active ? 'rgba(168,85,247,0.15)' : 'rgb(var(--ink) / 0.03)',
+                                      borderColor: active ? J.purple : 'rgb(var(--ink) / 0.08)',
+                                      color: active ? FG.ink : 'rgb(var(--ink) / 0.5)',
                                     }}>
                                     {label}
                                   </button>
@@ -949,8 +952,8 @@ const JudgeSlip = () => {
 
                           {/* Summary Card */}
                           <div className="rounded-2xl border p-4 space-y-1"
-                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                            <h3 className="font-black text-white text-sm mb-2">Overall Score Breakdown</h3>
+                            style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+                            <h3 className="font-black text-ink text-sm mb-2">Overall Score Breakdown</h3>
                             <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
                             <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
                             <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
@@ -960,7 +963,7 @@ const JudgeSlip = () => {
                           <motion.button
                             onClick={() => setShowCopModal(true)}
                             className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200"
-                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                            style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}
                             whileTap={{ scale: 0.97 }}
                           >
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
@@ -980,34 +983,34 @@ const JudgeSlip = () => {
                       animate={{ boxShadow: finalScore > 0 ? `0 0 60px rgba(168,85,247,0.2)` : 'none' }}>
                       <div className="absolute inset-0 pointer-events-none"
                         style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
-                      <p className="text-xs font-bold tracking-widest uppercase mb-2 relative z-10" style={{ color: J.purpleLight }}>Final Score</p>
+                      <p className="text-xs font-bold tracking-widest uppercase mb-2 relative z-10" style={{ color: DATA_COLORS.purpleSoft }}>Final Score</p>
                       <motion.p className="text-7xl font-black relative z-10"
                         key={calcFinal()}
                         initial={{ scale: 0.9, opacity: 0.5 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.2 }}
-                        style={{ color: '#fff' }}>
+                        style={{ color: FG.ink }}>
                         {calcFinal()}
                       </motion.p>
-                      <p className="text-sm relative z-10 mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>out of 10.00</p>
+                      <p className="text-sm relative z-10 mt-1" style={{ color: 'var(--fg-muted)' }}>out of 10.00</p>
                     </motion.div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="rounded-2xl border p-4"
-                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-black text-white text-sm">Execution</h3>
-                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 4.40</span>
+                          <h3 className="font-black text-ink text-sm">Execution</h3>
+                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 4.40</span>
                         </div>
                         <ScoreInput label="" value={scores.execution}
                           onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
                       </div>
 
                       <div className="rounded-2xl border p-4"
-                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-black text-white text-sm">Originality</h3>
-                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>0.20</span>
+                          <h3 className="font-black text-ink text-sm">Originality</h3>
+                          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>0.20</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           {[['None', 0], ['+0.20', POINT_CEILINGS.bonus]].map(([label, val]) => {
@@ -1017,9 +1020,9 @@ const JudgeSlip = () => {
                                 onClick={() => setScores({ ...scores, bonus: val })}
                                 className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[44px]"
                                 style={{
-                                  background: active ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.03)',
-                                  borderColor: active ? J.purple : 'rgba(255,255,255,0.08)',
-                                  color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                                  background: active ? 'rgba(168,85,247,0.15)' : 'rgb(var(--ink) / 0.03)',
+                                  borderColor: active ? J.purple : 'rgb(var(--ink) / 0.08)',
+                                  color: active ? FG.ink : 'rgb(var(--ink) / 0.5)',
                                 }}>
                                 {label}
                               </button>
@@ -1030,13 +1033,13 @@ const JudgeSlip = () => {
                     </div>
 
                     <div className="rounded-2xl border p-4 flex-1"
-                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                       <div className="flex items-center justify-between mb-3 gap-2">
                         <div className="min-w-0">
-                          <h3 className="font-black text-white text-sm">Combination</h3>
-                          <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{selectedApparatus || 'Pole Mallakhamb'}</p>
+                          <h3 className="font-black text-ink text-sm">Combination</h3>
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--fg-muted)' }}>{selectedApparatus || 'Pole Mallakhamb'}</p>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 1.60</span>
+                        <span className="text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 1.60</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <SelectAllRow metCount={combinationMet} itemCount={combinationChecklist.length}
@@ -1047,8 +1050,8 @@ const JudgeSlip = () => {
                         ))}
                       </div>
                       <div className="flex justify-end pt-2">
-                        <span className="text-lg font-black" style={{ color: J.purple }}>
-                          {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 1.60</span>
+                        <span className="text-lg font-black" style={{ color: DATA_COLORS.purple }}>
+                          {scores.combination.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'var(--fg-muted)' }}>/ 1.60</span>
                         </span>
                       </div>
                     </div>
@@ -1057,10 +1060,10 @@ const JudgeSlip = () => {
                   {/* Right Column: Summary & Submit (desktop difficulty) */}
                   <div className="flex flex-col gap-4 order-2">
                     <div className="rounded-2xl border p-4 space-y-3"
-                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
                       <div className="flex items-center justify-between">
-                        <h3 className="font-black text-white text-sm">Difficulty</h3>
-                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: J.purpleLight }}>Max 3.80</span>
+                        <h3 className="font-black text-ink text-sm">Difficulty</h3>
+                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 3.80</span>
                       </div>
                       <div className="space-y-4">
                         {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
@@ -1069,15 +1072,15 @@ const JudgeSlip = () => {
                         ))}
                       </div>
                       <div className="flex justify-end">
-                        <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? J.green : J.amber }}>
-                          {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'rgba(255,255,255,0.3)' }}>/ 3.80</span>
+                        <span className="text-lg font-black" style={{ color: Math.abs(scores.difficulty.total - 3.80) < 0.01 ? FG.success : FG.warning }}>
+                          {scores.difficulty.total.toFixed(2)} <span className="text-xs font-normal" style={{ color: 'var(--fg-muted)' }}>/ 3.80</span>
                         </span>
                       </div>
                     </div>
 
                     <div className="rounded-2xl border p-4 space-y-1"
-                      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <h3 className="font-black text-white text-sm mb-2">Score Summary</h3>
+                      style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+                      <h3 className="font-black text-ink text-sm mb-2">Score Summary</h3>
                       <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
                       <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
                       <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
@@ -1089,9 +1092,9 @@ const JudgeSlip = () => {
                       <motion.button
                         onClick={submitScore}
                         disabled={submitting || !isConnected || submitted || competitionLocked}
-                        className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
+                        className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden"
                         style={{
-                          background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
+                          background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`, color: submitted ? '#0A0A0A' : '#FFFFFF',
                           opacity: (!isConnected || submitting) ? 0.6 : 1,
                         }}
                         whileHover={reduced || submitting || !isConnected ? {} : { scale: 1.01, filter: 'brightness(1.1)' }}
@@ -1101,7 +1104,7 @@ const JudgeSlip = () => {
                           {submitting ? (
                             <motion.span key="submitting" className="flex items-center gap-2"
                               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                              <motion.div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white"
+                              <motion.div className="w-5 h-5 rounded-full border-2 border-ink/30 border-t-ink"
                                 animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
                               Submitting...
                             </motion.span>
@@ -1120,14 +1123,14 @@ const JudgeSlip = () => {
                         </AnimatePresence>
                       </motion.button>
                       {!isConnected && (
-                        <p className="text-center text-xs" style={{ color: '#EF4444' }}>
+                        <p className="text-center text-xs" style={{ color: FG.danger }}>
                           Not connected to server. Scores cannot be submitted.
                         </p>
                       )}
                       <motion.button
                         onClick={() => setShowCopModal(true)}
                         className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200"
-                        style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#C084FC', background: 'rgba(168,85,247,0.06)' }}
+                        style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}
                         whileHover={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.5)' }}
                         whileTap={{ scale: 0.97 }}
                       >
@@ -1140,22 +1143,22 @@ const JudgeSlip = () => {
             {/* Mobile sticky submit bar */}
               <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 border-t"
                 style={{
-                  background: 'rgba(10,10,10,0.96)',
+                  background: 'rgb(var(--bg) / 0.96)',
                   backdropFilter: 'blur(16px)',
                   borderColor: 'rgba(168,85,247,0.2)',
                   paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
                 }}>
                 <div className="max-w-[1400px] mx-auto flex items-center gap-3">
                   <div className="flex-shrink-0 text-center px-2">
-                    <p className="text-[10px] uppercase tracking-widest" style={{ color: J.purpleLight }}>Total</p>
-                    <p className="text-xl font-black text-white leading-none">{calcFinal()}</p>
+                    <p className="text-[10px] uppercase tracking-widest" style={{ color: DATA_COLORS.purpleSoft }}>Total</p>
+                    <p className="text-xl font-black text-ink leading-none">{calcFinal()}</p>
                   </div>
                   <motion.button
                     onClick={submitScore}
                     disabled={submitting || !isConnected || submitted || competitionLocked}
-                    className="flex-1 py-3.5 rounded-2xl font-black text-sm text-white flex items-center justify-center gap-2 min-h-[52px]"
+                    className="flex-1 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 min-h-[52px]"
                     style={{
-                      background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`,
+                      background: submitted ? `linear-gradient(135deg, ${J.green}, ${J.greenDark})` : `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})`, color: submitted ? '#0A0A0A' : '#FFFFFF',
                       opacity: (!isConnected || submitting || competitionLocked) ? 0.6 : 1,
                     }}
                     whileTap={reduced || submitting || !isConnected ? {} : { scale: 0.98 }}
@@ -1168,7 +1171,7 @@ const JudgeSlip = () => {
                   </motion.button>
                 </div>
                 {!isConnected && (
-                  <p className="text-center text-[10px] mt-1.5" style={{ color: '#EF4444' }}>
+                  <p className="text-center text-[10px] mt-1.5" style={{ color: FG.danger }}>
                     Offline — cannot submit
                   </p>
                 )}

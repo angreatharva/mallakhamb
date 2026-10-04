@@ -13,6 +13,8 @@ import { logger } from '@/infrastructure/logger';
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
 import { GlassCard } from '../../components/design-system/cards';
+import { FG, alpha } from '@/styles/tokens';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -57,11 +59,11 @@ const SectionHeading = ({ children, hint }) => {
   const theme = useTheme();
   return (
     <div className="mb-5">
-      <h2 className="text-lg font-black text-white">{children}</h2>
-      {hint && <p className="text-white/35 text-xs mt-1">{hint}</p>}
+      <h2 className="text-lg font-black text-ink">{children}</h2>
+      {hint && <p className="text-fg-muted text-xs mt-1">{hint}</p>}
       <div
         className="h-px mt-3"
-        style={{ background: `linear-gradient(90deg, ${theme.colors.primary}40, transparent)` }}
+        style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }}
       />
     </div>
   );
@@ -74,12 +76,12 @@ const Field = ({ id, label, icon, error, children }) => {
       <label
         htmlFor={id}
         className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: `${theme.colors.primary}90` }}
+        style={{ color: FG.accent }}
       >
         {label}
       </label>
       {children}
-      {error && <p className="text-xs mt-1.5" style={{ color: '#EF4444' }} role="alert">{error}</p>}
+      {error && <p className="text-xs mt-1.5" style={{ color: FG.danger }} role="alert">{error}</p>}
     </div>
   );
 };
@@ -205,10 +207,10 @@ const JudgeProfileInner = () => {
       <div className="min-h-dvh flex items-center justify-center" style={{ background: theme.colors.background }}>
         <div className="flex items-center gap-3">
           <div
-            className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin"
+            className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin"
             style={{ borderTopColor: theme.colors.primary }}
           />
-          <span className="text-white/40 text-sm">Loading your profile…</span>
+          <span className="text-fg-muted text-sm">Loading your profile…</span>
         </div>
       </div>
     );
@@ -221,11 +223,12 @@ const JudgeProfileInner = () => {
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => navigate('/judge/dashboard')}
-            className="flex items-center gap-2 text-white/50 hover:text-white/80 transition-colors text-sm min-h-[44px]"
+            className="flex items-center gap-2 text-fg-muted hover:text-ink/80 transition-colors text-sm min-h-[44px]"
           >
             <ArrowLeft className="w-4 h-4" />
             Dashboard
           </button>
+          <AppearanceMenu />
         </div>
 
         {/* Identity card */}
@@ -234,20 +237,20 @@ const JudgeProfileInner = () => {
             <div className="relative">
               <div
                 className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center"
-                style={{ background: `${theme.colors.primary}15`, border: `1px solid ${theme.colors.primary}35` }}
+                style={{ background: `${alpha(theme.colors.primary, 0x15)}`, border: `1px solid ${alpha(theme.colors.primary, 0x35)}` }}
               >
                 {photo
                   ? <img src={photo} alt="" className="w-full h-full object-cover" />
-                  : <Scale className="w-9 h-9" style={{ color: theme.colors.primary }} aria-hidden="true" />}
+                  : <Scale className="w-9 h-9" style={{ color: FG.accent }} aria-hidden="true" />}
               </div>
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 w-9 h-9 max-md:w-11 max-md:h-11 rounded-xl flex items-center justify-center transition-transform hover:scale-105"
+                className="absolute -bottom-2 -right-2 w-9 h-9 max-md:w-11 max-md:h-11 tap-safe rounded-xl flex items-center justify-center transition-transform hover:scale-105"
                 style={{ background: theme.colors.primary }}
                 aria-label="Change photo"
               >
-                <Camera className="w-4 h-4 text-white" />
+                <Camera className="w-4 h-4 text-snow" aria-hidden="true" />
               </button>
               <input
                 ref={photoInputRef}
@@ -259,11 +262,11 @@ const JudgeProfileInner = () => {
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: theme.colors.primary }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>
                 Judge
               </p>
-              <h1 className="text-2xl font-black text-white mt-0.5 truncate">{profile?.name}</h1>
-              <p className="text-white/40 text-sm truncate">{profile?.email}</p>
+              <h1 className="text-2xl font-black text-ink mt-0.5 truncate">{profile?.name}</h1>
+              <p className="text-fg-muted text-sm truncate">{profile?.email}</p>
             </div>
           </div>
         </GlassCard>

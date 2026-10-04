@@ -10,6 +10,8 @@
  * Read-only: it stops at the score sheet and never submits a slip.
  *
  *   WALK_WIDTH=375 npx playwright test e2e/responsive-judge-walk.spec.js
+ *
+ * WALK_APPEARANCE=light|dark pins the appearance (default: the app's own).
  */
 
 import { test, expect } from '@playwright/test';
@@ -18,11 +20,12 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { signInAs } from './support/audit-routes.js';
 import { chooseCategory } from './support/scoring-flows.js';
-import { measurePage, settle } from './support/responsive-audit.js';
+import { applyAppearance, measurePage, settle } from './support/responsive-audit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, '../test-results/shots');
 const WIDTH = Number(process.env.WALK_WIDTH || 375);
+const APPEARANCE = process.env.WALK_APPEARANCE;
 
 test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   test.setTimeout(10 * 60_000);
@@ -93,7 +96,7 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   const findings = [];
   const shoot = async (label) => {
     await settle(page);
-    const slug = `walk-${WIDTH}-${label}`;
+    const slug = `walk-${WIDTH}${APPEARANCE ? `-${APPEARANCE}` : ''}-${label}`;
     await page.screenshot({ path: resolve(OUT, `${slug}.png`), fullPage: true });
     const m = await measurePage(page, { checkTouchTargets: WIDTH < 768 });
     if (m.horizontalScroll || m.overflowing.length || m.tinyTargets.length) {
@@ -103,6 +106,7 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
   };
 
   await page.setViewportSize({ width: WIDTH, height: WIDTH < 768 ? 812 : 900 });
+  if (APPEARANCE) await applyAppearance(page, APPEARANCE);
   await signInAs(page, 'judge');
   await shoot('1-dashboard-picker');
 
@@ -116,6 +120,13 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
    * finalized.
    */
   const CANDIDATES = [
+    // WALK_AGE (with WALK_GENDER / WALK_TYPE) tries the judge's own seat first — on the TRIALS
+    // meet the audit judge sits on Male / Above18 / Competition I, which neither default covers.
+    ...(process.env.WALK_AGE ? [{
+      gender: process.env.WALK_GENDER || 'Male',
+      ageGroup: process.env.WALK_AGE,
+      competitionType: process.env.WALK_TYPE || 'Competition I',
+    }] : []),
     { gender: 'Male', ageGroup: 'Under14', competitionType: 'Competition I' },
     { gender: 'Male', ageGroup: 'Under10', competitionType: 'Competition I' },
   ];
@@ -132,7 +143,13 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
     const team = page.getByRole('button', { name: /SGAM-/i }).first();
     if (!(await team.count())) continue;
     await team.click();
-    await page.getByText(/Loading players/i).waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    /*
+     * Wait for the ROWS, not for the spinner to go. Waiting for "Loading
+     * players" to be hidden returns at once when it has not appeared yet, so
+     * on a slow database the walk read an empty list as "all finalized".
+     */
+    await page.locator('button').filter({ hasText: /Male|Female/ }).first()
+      .waitFor({ timeout: 30_000 }).catch(() => {});
     await page.waitForTimeout(800);
     if (!reached) await shoot('3-athletes');
 
@@ -227,6 +244,47 @@ test(`judge scoring walkthrough @ ${WIDTH}px`, async ({ page }) => {
       await button.click().catch(() => {});
       await page.waitForTimeout(600);
       await shoot(`5-${i + 1}-tab-${tab.replace(/\W/g, '')}`);
+    }
+
+    /*
+     * The Difficulty steppers are 29px boxes with 44px tap areas (an inward
+     * ::before over the count). Tap OUTSIDE each box, inside its extension,
+     * and the count must move: +1 above "+", then -1 below "−" — net zero, in
+     * this throwaway browser context.
+     */
+    await page.getByRole('button', { name: 'Difficulty', exact: true }).first().click().catch(() => {});
+    const plus = page.getByRole('button', { name: /^Increase /i }).first();
+    const minus = page.getByRole('button', { name: /^Decrease /i }).first();
+    if (await plus.count()) {
+      await plus.scrollIntoViewIfNeeded();
+      const countOf = () => plus.locator('xpath=preceding-sibling::span[1]').innerText();
+      const before = Number(await countOf());
+      const p = await plus.boundingBox();
+      await page.mouse.click(p.x + p.width / 2, p.y - 10);
+      expect(Number(await countOf()), 'a tap just above "+" (inside its tap area) did not count').toBe(before + 1);
+      const m = await minus.boundingBox();
+      await page.mouse.click(m.x + m.width / 2, m.y + m.height + 10);
+      expect(Number(await countOf()), 'a tap just below "−" (inside its tap area) did not count').toBe(before);
+      console.log('  stepper tap areas: +/− answer 10px outside their boxes');
+    }
+
+    /*
+     * The COP viewer is the slip's one full-screen dialog. Opened, it must
+     * freeze the slip behind it (the counted body lock) and read in either
+     * appearance (it is a dark island); closed, the slip must scroll again.
+     */
+    const cop = page.getByRole('button', { name: /View COP Rules Reference/i }).first();
+    if (await cop.count()) {
+      await cop.click().catch(() => {});
+      const dialog = page.getByRole('dialog', { name: 'Code of Points' });
+      await dialog.waitFor({ timeout: 10_000 });
+      await shoot('7-cop-viewer');
+      expect(await page.evaluate(() => document.body.style.overflow), 'the slip scrolls behind the COP viewer').toBe('hidden');
+      await page.getByRole('button', { name: 'Close COP PDF' }).click();
+      await dialog.waitFor({ state: 'detached', timeout: 10_000 });
+      expect(await page.evaluate(() => document.body.style.overflow), 'the slip stays frozen after the COP viewer closed').not.toBe('hidden');
+    } else {
+      console.log('  COP reference button not found');
     }
   } else {
     /*

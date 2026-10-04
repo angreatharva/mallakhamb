@@ -2,13 +2,220 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ── Appearance tokens ────────────────────────────────────────────────────────
+ *
+ * Two orthogonal axes meet here (Web/docs/RESPONSIVE_UIUX_PLAN.md §14):
+ *   - APPEARANCE, dark | light, on `[data-appearance]` — set on <html> by
+ *     public/appearance-init.js before first paint, and on any element that
+ *     must stay one appearance (the stopwatch is a dark instrument in both).
+ *   - ROLE ACCENT, on `html[data-role]` — which of the five palettes.
+ *
+ * Colours are RGB channel triplets so Tailwind's `/50` modifiers still work:
+ * `rgb(var(--surface) / 0.8)`. Dark values are the existing design, unchanged;
+ * light values were chosen against the contrast targets in §14.4.
+ *
+ * Every derived token (fg, line, accent, …) is declared in the SAME blocks that
+ * match an appearance island, not just on :root. A custom property that
+ * references another is resolved where it is declared, so a token computed
+ * once on <html> would carry the page's appearance straight into the island.
+ */
+
+/* Role palettes. Each appearance block below picks its half. */
+:root {
+  /* public (no role) */
+  --role-dark: 59 130 246;
+  --role-dark-fg: 96 165 250;   /* blue-400: #3B82F6 as text is 4.2–4.5 on dark tints */
+  --role-light: 29 78 216;
+  --role-light-fg: 29 78 216;
+}
+[data-role="player"] {
+  --role-dark: 255 107 0;
+  --role-dark-fg: 255 107 0;
+  --role-light: 194 65 12;
+  --role-light-fg: 194 65 12;
+}
+[data-role="superadmin"] {
+  --role-dark: 245 166 35;
+  --role-dark-fg: 245 166 35;
+  --role-light: 180 83 9;
+  --role-light-fg: 146 64 14; /* -700 text is 4.39 on the sunken surface; -800 clears 4.5 */
+}
+[data-role="coach"] {
+  --role-dark: 34 197 94;
+  --role-dark-fg: 34 197 94;
+  --role-light: 21 128 61;
+  --role-light-fg: 22 101 52;
+}
+[data-role="admin"],
+[data-role="judge"] {
+  --role-dark: 139 92 246;
+  --role-dark-fg: 167 139 250; /* violet-400: #8B5CF6 as text is 4.45 on #111 */
+  --role-light: 109 40 217;
+  --role-light-fg: 109 40 217;
+}
+
+:root,
+[data-appearance="dark"] {
+  color-scheme: dark;
+
+  --bg: 10 10 10;
+  --surface: 17 17 17;
+  --surface-raised: 22 22 22;
+  --surface-sunken: 10 10 10;
+  --surface-overlay: 26 26 26;
+  --scrim: rgb(0 0 0 / 0.6);
+  --shadow-raised: none;
+  --fg-root: #f3f4f6;
+
+  /* Ink: what text and hairlines are made of. */
+  --ink: 255 255 255;
+  --a-fg-secondary: 0.7;
+  --a-fg-muted: 0.55;
+  --a-fg-subtle: 0.38;
+  --a-line: 0.1;
+  --a-line-strong: 0.38;
+
+  --accent: var(--role-dark);
+  --accent-fg: var(--role-dark-fg);
+  --on-accent: 10 10 10;
+
+  --success-fg: 34 197 94;
+  --warning-fg: 245 158 11;
+  --danger-fg: 239 68 68;
+  --info-fg: 96 165 250;
+  --status-on: 10 10 10;
+
+  /*
+   * Brand saffron and gold as TEXT (eyebrows, gradient headings, pills) — not
+   * the role accent. Dark = the brand hexes exactly (#FF6B00, #FF8C38,
+   * #F5A623), so nothing moves. A bright fill with a label keeps a near-black
+   * label in both appearances (plan D6), so fills need no token.
+   */
+  --brand-fg: 255 107 0;
+  --brand-fg-soft: 255 140 56;
+  --brand-gold-fg: 245 166 35;
+
+  /* red-400 as status text ("Locked"): #F87171 exactly in dark. */
+  --danger-fg-soft: 248 113 113;
+
+  /*
+   * Data palette — score-section colours and medals used as TEXT on the
+   * boards. Dark = the hexes those boards already used, exactly; light = shades
+   * at 5.7:1 or better on every light surface.
+   */
+  --success-fg-soft: 74 222 128;   /* #4ADE80 */
+  --cat-blue: 96 165 250;          /* Difficulty */
+  --cat-purple: 168 85 247;        /* Combination */
+  --cat-purple-soft: 192 132 252;
+  --cat-green: 34 197 94;          /* Originality */
+  --cat-red: 239 68 68;            /* deductions */
+  --cat-pink: 236 72 153;          /* girls */
+  --cat-violet: 167 139 250;       /* admin stat cards, the Female pill */
+  --cat-blue-soft: 147 197 253;    /* evaluation-judge badge */
+  --medal-gold: 245 166 35;
+  --medal-silver: 192 192 192;
+  --medal-bronze: 205 127 50;
+}
+
+[data-appearance="light"] {
+  color-scheme: light;
+
+  --bg: 246 247 249;
+  --surface: 255 255 255;
+  --surface-raised: 255 255 255;
+  --surface-sunken: 238 240 243;
+  --surface-overlay: 255 255 255;
+  --scrim: rgb(11 13 18 / 0.45);
+  --shadow-raised: 0 1px 2px rgb(11 13 18 / 0.06), 0 4px 12px rgb(11 13 18 / 0.06);
+  --fg-root: rgb(11 13 18);
+
+  --ink: 11 13 18;
+  --a-fg-secondary: 0.78;
+  --a-fg-muted: 0.64;
+  --a-fg-subtle: 0.45;
+  --a-line: 0.12;
+  --a-line-strong: 0.45;
+
+  --accent: var(--role-light);
+  --accent-fg: var(--role-light-fg);
+  --on-accent: 255 255 255;
+
+  --success-fg: 21 128 61;
+  --warning-fg: 180 83 9;
+  --danger-fg: 185 28 28;
+  --info-fg: 29 78 216;
+  --status-on: 255 255 255;
+
+  /* Saffron and gold as text fail on white (2.86 and 2.03:1); the -700 shades
+     read 5.2 / 5.0 on white and 4.8 / 4.7 on the page. */
+  --brand-fg: 180 52 8;
+  --brand-fg-soft: 180 52 8;
+  --brand-gold-fg: 146 64 14;
+  --danger-fg-soft: 185 28 28; /* #F87171 is 2.8:1 on white */
+  --success-fg-soft: 22 101 52;
+  --cat-blue: 29 78 216;
+  --cat-purple: 126 34 206;
+  --cat-purple-soft: 126 34 206;
+  --cat-green: 22 101 52;
+  --cat-red: 185 28 28;
+  --cat-pink: 190 24 93;
+  --cat-violet: 109 40 217;
+  --cat-blue-soft: 29 78 216;
+  --medal-gold: 146 64 14;
+  --medal-silver: 71 85 105;
+  --medal-bronze: 154 52 18;
+}
+
+/* Derived — recomputed wherever an appearance is declared (see above). */
+:root,
+[data-appearance] {
+  --fg: rgb(var(--ink) / 1);
+  --fg-secondary: rgb(var(--ink) / var(--a-fg-secondary));
+  --fg-muted: rgb(var(--ink) / var(--a-fg-muted));
+  --fg-subtle: rgb(var(--ink) / var(--a-fg-subtle));
+  --line: rgb(var(--ink) / var(--a-line));
+  --line-strong: rgb(var(--ink) / var(--a-line-strong));
+
+  --focus-ring: rgb(var(--accent-fg));
+
+  --success-fill: var(--success-fg);
+  --warning-fill: var(--warning-fg);
+  --danger-fill: var(--danger-fg);
+  --info-fill: var(--info-fg);
+  --success-on: var(--status-on);
+  --warning-on: var(--status-on);
+  --danger-on: var(--status-on);
+  --info-on: var(--status-on);
+  --success-tint: rgb(var(--success-fg) / 0.1);
+  --warning-tint: rgb(var(--warning-fg) / 0.1);
+  --danger-tint: rgb(var(--danger-fg) / 0.1);
+  --info-tint: rgb(var(--info-fg) / 0.1);
+
+  --scrollbar-track: rgb(var(--bg));
+  --scrollbar-thumb: rgb(var(--ink) / 0.18);
+  --scrollbar-thumb-hover: rgb(var(--ink) / 0.3);
+}
+
+/*
+ * One frame without transitions while the appearance switches, so two hundred
+ * elements do not cross-fade at once (src/utils/ui/appearance.js adds the
+ * class for two animation frames). The one justified `!important`: it has to
+ * beat every component's own transition for exactly that long.
+ */
+.appearance-switching,
+.appearance-switching *,
+.appearance-switching *::before,
+.appearance-switching *::after {
+  transition: none !important;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: dark;
-  color: #f3f4f6;
-  background-color: #0a0a0a;
+  color: var(--fg-root);
+  background-color: rgb(var(--bg));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,9 +226,15 @@
   box-sizing: border-box;
 }
 
+/*
+ * `100dvh` after a `100vh` fallback: on phones `vh` is the height with the
+ * browser's toolbars retracted, so a full-height page ran under them. Old
+ * WebKit that lacks `dvh` keeps the first declaration.
+ */
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.6;
   /*
    * Respect the notch/home-indicator on phones that report insets. Zero on
@@ -33,6 +246,7 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /*
@@ -45,67 +259,62 @@ body {
   overflow-wrap: break-word;
 }
 
-/* Custom scrollbar */
+/*
+ * Scrollbars follow the appearance. They were a light-grey track and thumb
+ * (#f1f1f1 / #c1c1c1) on a near-black app — the one light surface left in the
+ * dark design.
+ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* Thin scrollbar for horizontal overflow */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+/*
+ * Focus: one visible ring for every control (WCAG 2.4.7).
+ *
+ * This replaced a rule that took the outline off every input, select and
+ * textarea and put back a 3px glow at 10% opacity — close to invisible on
+ * #0a0a0a — and 35 `outline-none` classes that did the same to buttons and
+ * fields. Keyboard users had no way to see where they were.
+ *
+ * `:focus-visible`, not `:focus`: a mouse click on a button shows no ring; a
+ * text field shows one however it was focused, which is what browsers decide
+ * for fields and what people expect. The colour is the role accent, measured at
+ * 4.1:1 or better against every surface in both appearances (plan §14.4), and
+ * an outline — not a box-shadow — survives Windows High Contrast.
+ *
+ * It sits after `@tailwind utilities`, so a stray `outline-none` loses to it on
+ * equal specificity; a component that genuinely needs a different ring says so
+ * with a `focus-visible:` utility, which is more specific and wins.
+ */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-}
-
-.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* Form focus styles */
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Button hover effects */
+/*
+ * Buttons animate the properties that actually change on hover and press.
+ * `transition: all` also animated layout properties, so a button whose padding
+ * or width changed (a label swap, a spinner appearing) was tweened through
+ * every intermediate layout.
+ */
 button {
-  transition: all 0.2s ease-in-out;
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
 }
 
 /*
@@ -136,22 +345,6 @@ button:active {
 
 .animate-spin {
   animation: spin 1s linear infinite;
-}
-
-/* Custom animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.5s ease-out;
 }
 
 /* Responsive design helpers */
@@ -194,90 +387,12 @@ img {
 }
 
 /* Prevent images from causing horizontal overflow */
-img, 
-video, 
-canvas, 
+img,
+video,
+canvas,
 svg {
   max-width: 100%;
   height: auto;
-}
-
-/* Responsive image containers */
-.responsive-image-wrapper {
-  position: relative;
-  overflow: hidden;
-  width: 100%;
-}
-
-.responsive-image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-/* Aspect ratio utilities for images */
-.aspect-square {
-  aspect-ratio: 1 / 1;
-}
-
-.aspect-video {
-  aspect-ratio: 16 / 9;
-}
-
-.aspect-photo {
-  aspect-ratio: 4 / 3;
-}
-
-.aspect-portrait {
-  aspect-ratio: 3 / 4;
-}
-
-/* Loading states for images */
-.image-loading {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Image error states */
-.image-error {
-  background-color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 0.875rem;
-}
-
-/* Responsive background images */
-.responsive-bg {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-@media (max-width: 768px) {
-  .responsive-bg {
-    background-attachment: scroll; /* Better performance on mobile */
-  }
-}
-
-/* High DPI image support */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .high-dpi-image {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
 }
 
 .bg-dot-black\/\[0\.2\] {

@@ -5,15 +5,16 @@ import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } f
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
 import { useReducedMotion } from '@/hooks/useResponsive';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 const statusColors = {
-  ongoing: '#22C55E',
-  upcoming: '#3B82F6',
-  completed: 'rgba(255,255,255,0.3)',
+  ongoing: FG.success,
+  upcoming: FG.info,
+  completed: 'rgb(var(--ink) / 0.3)',
 };
 
 const CompetitionSelector = ({ userType }) => {
@@ -119,28 +120,28 @@ const CompetitionSelector = ({ userType }) => {
         disabled={isLoadingOrSwitching}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
         style={{
-          background: isOpen ? `${COLORS.saffron}10` : 'rgba(255,255,255,0.05)',
-          borderColor: isOpen ? `${COLORS.saffron}40` : COLORS.darkBorderSubtle,
-          boxShadow: isOpen ? `0 0 0 3px ${COLORS.saffron}12` : 'none',
+          background: isOpen ? `${alpha(COLORS.saffron, 0x10)}` : 'rgb(var(--ink) / 0.05)',
+          borderColor: isOpen ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
+          boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
         }}
         whileTap={{ scale: 0.97 }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label="Select competition"
       >
-        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />
+        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
         <div className="flex flex-col items-start max-w-[160px]">
-          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
             Competition
           </span>
-          <span className="text-xs font-semibold text-white truncate w-full" key={currentCompetition?._id}>
+          <span className="text-xs font-semibold text-ink truncate w-full" key={currentCompetition?._id}>
             {currentCompetition
               ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
               : (userType === 'coach' ? 'Select Competition' : 'Select')}
           </span>
         </div>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.35)' }} />
         </motion.div>
       </motion.button>
 
@@ -149,9 +150,9 @@ const CompetitionSelector = ({ userType }) => {
           <motion.div
             className="absolute right-0 mt-2 w-80 rounded-2xl border overflow-hidden z-50"
             style={{
-              background: '#111111',
-              borderColor: `${COLORS.saffron}25`,
-              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${COLORS.saffron}10`,
+              background: 'rgb(var(--surface))',
+              borderColor: `${alpha(COLORS.saffron, 0x25)}`,
+              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
               maxHeight: 380,
             }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
@@ -162,7 +163,7 @@ const CompetitionSelector = ({ userType }) => {
           >
             {/* Header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.saffron }}>
+              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>
                 {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0) 
                   ? 'Select Competition' 
                   : 'Switch Competition'}
@@ -174,23 +175,23 @@ const CompetitionSelector = ({ userType }) => {
               <div className="p-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgba(255,255,255,0.3)' }} aria-hidden="true" />
+                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
                   <input
                     type="text"
-                    placeholder="Search competitions..."
+                    placeholder="Search competitions..." aria-label="Search competitions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 text-xs rounded-lg focus:outline-none"
+                    className="w-full pl-8 pr-8 py-2 text-base mouse:text-xs rounded-lg"
                     style={{
-                      background: 'rgba(255,255,255,0.06)',
+                      background: 'rgb(var(--ink) / 0.06)',
                       border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: '#fff',
+                      color: FG.ink,
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
                   {searchQuery && (
                     <button onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg"
                       aria-label="Clear search">
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -202,7 +203,7 @@ const CompetitionSelector = ({ userType }) => {
             {/* List */}
             <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
               {filteredCompetitions && filteredCompetitions.length === 0 ? (
-                <div className="py-8 text-center text-white/30 text-xs">
+                <div className="py-8 text-center text-fg-muted text-xs">
                   No competitions found for &quot;{searchQuery}&quot;
                 </div>
               ) : (
@@ -216,34 +217,34 @@ const CompetitionSelector = ({ userType }) => {
                       disabled={isSwitching}
                       className="w-full text-left px-4 py-3 transition-colors duration-150 disabled:opacity-50 border-b last:border-b-0"
                       style={{
-                        background: isActive ? `${COLORS.saffron}10` : 'transparent',
+                        background: isActive ? `${alpha(COLORS.saffron, 0x10)}` : 'transparent',
                         borderColor: COLORS.darkBorderSubtle,
                       }}
-                      whileHover={{ background: `${COLORS.saffron}08` }}
+                      whileHover={{ background: `${alpha(COLORS.saffron, 0x08)}` }}
                       role="option"
                       aria-selected={isActive}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white truncate">
+                            <span className="text-sm font-semibold text-ink truncate">
                               {competition.name} {competition.year || ''}
                             </span>
-                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: COLORS.saffron }} aria-hidden="true" />}
+                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {competition.place && (
-                              <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                                 <MapPin className="w-2.5 h-2.5" aria-hidden="true" />
                                 {competition.place}
                               </span>
                             )}
-                            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                               {levelLabel(competition.level)}
                             </span>
                           </div>
                           {competition.startDate && competition.endDate && (
-                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
                               <Calendar className="w-2.5 h-2.5" aria-hidden="true" />
                               {new Date(competition.startDate).toLocaleDateString()} –{' '}
                               {new Date(competition.endDate).toLocaleDateString()}
@@ -251,7 +252,7 @@ const CompetitionSelector = ({ userType }) => {
                           )}
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
-                          style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}>
+                          style={{ background: `${alpha(sc, 0x15)}`, color: sc, border: `1px solid ${alpha(sc, 0x30)}` }}>
                           {competition.status}
                         </span>
                       </div>
@@ -270,12 +271,12 @@ const CompetitionSelector = ({ userType }) => {
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
                   whileHover={{ background: 'rgba(34,197,94,0.08)' }}
                 >
-                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22C55E' }} aria-hidden="true" />
+                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#22C55E' }}>
+                    <p className="text-sm font-semibold" style={{ color: FG.success }}>
                       Sign up for new competition
                     </p>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
                       Register your team
                     </p>
                   </div>
@@ -294,18 +295,17 @@ const CompetitionSelector = ({ userType }) => {
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
+              <BodyScrollLock />
             <motion.div
               className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
-              style={{ background: '#111111', borderColor: `${COLORS.saffron}30` }}
+              style={{ background: 'rgb(var(--surface))', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
             >
-              <motion.div
-                className="w-5 h-5 rounded-full border-2 border-t-transparent"
-                style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+              <div
+                className="animate-spin w-5 h-5 rounded-full border-2 border-t-transparent"
+                style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
               />
-              <span className="text-white/70 text-sm font-medium">Switching competition...</span>
+              <span className="text-ink/70 text-sm font-medium">Switching competition...</span>
             </motion.div>
           </motion.div>
         )}

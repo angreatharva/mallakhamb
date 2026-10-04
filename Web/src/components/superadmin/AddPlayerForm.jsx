@@ -4,12 +4,14 @@ import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import Dropdown from '@/components/auth/Dropdown';
 import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
+import { DarkBtn } from '@/components/admin/AdminKit';
+import { PasswordRequirements, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength';
 
 /** Keep in sync with SuperAdminAddPlayerPayment.jsx */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -18,120 +20,21 @@ const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_che
 const DarkInput = ({ label, required, error, hint, id, ...props }) => (
   <div>
     {label && (
-      <label htmlFor={id} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-        {label}{required && <span style={{ color: ADMIN_COLORS.red }}> *</span>}
+      <label htmlFor={id} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+        {label}{required && <span style={{ color: FG.danger }}> *</span>}
       </label>
     )}
     <input
       id={id}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
-    {hint && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{hint}</p>}
+    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
   </div>
 );
-
-// ─── Dark Button Component ────────────────────────────────────────────────────
-const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => {
-  const bg = {
-    primary: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, ${ADMIN_COLORS.saffronDark})`,
-    ghost: 'transparent',
-  }[variant];
-  const h = size === 'sm' ? '32px' : '44px';
-  return (
-    <motion.button type={type} onClick={onClick} disabled={disabled}
-      className={`rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-      style={{ background: bg, border: variant === 'ghost' ? `1px solid ${ADMIN_COLORS.darkBorderSubtle}` : 'none', minHeight: h, padding: size === 'sm' ? '0 0.75rem' : '0 1.25rem' }}
-      whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
-      whileTap={!disabled ? { scale: 0.97 } : {}}>
-      {children}
-    </motion.button>
-  );
-};
-
-// ─── Password Strength Indicator ──────────────────────────────────────────────
-const PasswordStrengthIndicator = ({ password }) => {
-  const getStrength = (pwd) => {
-    if (!pwd) return { level: 0, label: '', color: '' };
-    
-    let strength = 0;
-    if (pwd.length >= 8) strength++;
-    if (pwd.length >= 12) strength++;
-    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++;
-    if (/\d/.test(pwd)) strength++;
-    if (/[^a-zA-Z0-9]/.test(pwd)) strength++;
-    
-    const levels = [
-      { level: 0, label: '', color: '' },
-      { level: 1, label: 'Weak', color: '#EF4444' },
-      { level: 2, label: 'Fair', color: '#F59E0B' },
-      { level: 3, label: 'Good', color: '#10B981' },
-      { level: 4, label: 'Strong', color: '#10B981' },
-      { level: 5, label: 'Very Strong', color: '#059669' },
-    ];
-    
-    return levels[strength];
-  };
-  
-  const strength = getStrength(password);
-  
-  if (!password) return null;
-  
-  return (
-    <div className="mt-2">
-      <div className="flex gap-1 mb-1">
-        {[1, 2, 3, 4, 5].map((level) => (
-          <div
-            key={level}
-            className="h-1 flex-1 rounded-full transition-all duration-300"
-            style={{
-              background: level <= strength.level ? strength.color : 'rgba(255,255,255,0.1)',
-            }}
-          />
-        ))}
-      </div>
-      {strength.label && (
-        <p className="text-xs mt-1" style={{ color: strength.color }}>
-          Password strength: {strength.label}
-        </p>
-      )}
-    </div>
-  );
-};
-
-// ─── Password Requirements Checklist ──────────────────────────────────────────
-const PasswordRequirements = ({ password }) => {
-  const requirements = [
-    { label: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
-    { label: 'Contains uppercase letter', test: (pwd) => /[A-Z]/.test(pwd) },
-    { label: 'Contains lowercase letter', test: (pwd) => /[a-z]/.test(pwd) },
-    { label: 'Contains number', test: (pwd) => /\d/.test(pwd) },
-  ];
-  
-  return (
-    <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-semibold text-white/40 mb-2">Password requirements:</p>
-      {requirements.map((req, index) => {
-        const met = password && req.test(password);
-        return (
-          <div key={index} className="flex items-center gap-2">
-            {met ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-            ) : (
-              <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
-            )}
-            <span className={`text-xs ${met ? 'text-white/60' : 'text-white/30'}`}>
-              {req.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 /**
  * AddPlayerForm Component
@@ -428,7 +331,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.firstName && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <AlertCircle className="w-3 h-3" />
                 {errors.firstName.message}
@@ -452,7 +355,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.lastName && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <AlertCircle className="w-3 h-3" />
                 {errors.lastName.message}
@@ -480,7 +383,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.email && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <AlertCircle className="w-3 h-3" />
                 {errors.email.message}
@@ -509,7 +412,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.dateOfBirth && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <AlertCircle className="w-3 h-3" />
                 {errors.dateOfBirth.message}
@@ -542,17 +445,17 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedAgeGroup && errors.ageGroup}
           />
           {!selectedGender && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Select gender first
             </p>
           )}
           {selectedGender && !dateOfBirth && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Enter date of birth first
             </p>
           )}
           {selectedGender && dateOfBirth && playerAge !== null && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Player age: {playerAge} years. Showing eligible categories.
             </p>
           )}
@@ -576,14 +479,14 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             const fee = getCompetitionPlayerFeeRupees(doc);
             if (fee === null) {
               return (
-                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: ADMIN_COLORS.red, background: 'rgba(239,68,68,0.08)', border: `1px solid ${ADMIN_COLORS.red}40` }}>
+                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: FG.danger, background: 'rgba(239,68,68,0.08)', border: `1px solid ${alpha(ADMIN_COLORS.red, 0x40)}` }}>
                   This competition has no valid per-player fee. Open Competitions, edit this competition, and set the fee.
                 </p>
               );
             }
             return (
-              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
-                Fee for this competition: <span className="font-bold text-white">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
+              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'var(--fg-muted)', background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                Fee for this competition: <span className="font-bold text-ink">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
               </p>
             );
           })()}
@@ -601,17 +504,17 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedTeam && errors.team}
           />
           {!selectedCompetition && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               Select a competition first
             </p>
           )}
           {selectedCompetition && loadingTeams && (
-            <p className="text-xs mt-1" style={{ color: ADMIN_COLORS.saffron }}>
+            <p className="text-xs mt-1" style={{ color: FG.brand }}>
               Loading teams for selected competition...
             </p>
           )}
           {selectedCompetition && !loadingTeams && teamOptions.length === 0 && (
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
               No teams found for this competition
             </p>
           )}
@@ -621,15 +524,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       {/* Apparatus */}
       {selectedCompetition && Object.keys(availableApparatusesByType).length > 0 && (
         <div className="pt-2 border-t mt-4" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <label className="block text-xs font-bold tracking-wide uppercase mb-3" style={{ color: ADMIN_COLORS.saffronLight }}>
-            Apparatus Selection <span style={{ color: ADMIN_COLORS.red }}>*</span>
+          <label className="block text-xs font-bold tracking-wide uppercase mb-3" style={{ color: FG.brandSoft }}>
+            Apparatus Selection <span style={{ color: FG.danger }}>*</span>
           </label>
           <div className="space-y-4">
             {Object.entries(availableApparatusesByType).map(([compType, apparatuses]) => {
               const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
               return (
-                <div key={compType} className="p-3 rounded-xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                  <p className="text-xs font-bold text-white/60 mb-2">{typeLabel}</p>
+                <div key={compType} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                  <p className="text-xs font-bold text-ink/60 mb-2">{typeLabel}</p>
                   <div className="flex flex-wrap gap-3">
                     {apparatuses.map((app) => {
                       const isSelected = (selectedApparatus[compType] || []).includes(app);
@@ -639,7 +542,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                           onClick={() => toggleApparatus(compType, app)}
                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200"
                           style={{
-                            background: isSelected ? `${ADMIN_COLORS.saffron}15` : 'rgba(255,255,255,0.04)',
+                            background: isSelected ? `${alpha(ADMIN_COLORS.saffron, 0x15)}` : 'rgb(var(--ink) / 0.04)',
                             border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : ADMIN_COLORS.darkBorderMid}`,
                           }}
                         >
@@ -647,12 +550,12 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                             className="w-4 h-4 rounded-md flex items-center justify-center transition-colors"
                             style={{
                               background: isSelected ? ADMIN_COLORS.saffron : 'transparent',
-                              border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : 'rgba(255,255,255,0.2)'}`,
+                              border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.2)'}`,
                             }}
                           >
                             {isSelected && <CheckCircle2 className="w-3 h-3 text-dark" />}
                           </div>
-                          <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-white/70'}`}>
+                          <span className={`text-sm ${isSelected ? 'text-ink font-medium' : 'text-ink/70'}`}>
                             {app}
                           </span>
                         </label>
@@ -664,7 +567,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             })}
           </div>
           {Object.values(selectedApparatus).flat().length === 0 && (
-            <p className="text-xs mt-2" style={{ color: ADMIN_COLORS.red }}>
+            <p className="text-xs mt-2" style={{ color: FG.danger }}>
               At least one apparatus must be selected across all competitions
             </p>
           )}
@@ -673,24 +576,24 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       
       {/* Password */}
       <div>
-        <label htmlFor="password" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-          Password <span style={{ color: ADMIN_COLORS.red }}>*</span>
+        <label htmlFor="password" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+          Password <span style={{ color: FG.danger }}>*</span>
         </label>
         <div className="relative">
           <input
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
+            className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
-              background: 'rgba(255,255,255,0.04)', 
-              border: `1px solid ${errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
+              background: 'rgb(var(--ink) / 0.04)', 
+              border: `1px solid ${errors.password ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
               padding: '0.625rem 3rem 0.625rem 0.875rem',
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
-            onBlur={(e) => { e.target.style.borderColor = errors.password ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
+            onBlur={(e) => { e.target.style.borderColor = errors.password ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
             {...register('password', {
               required: 'Password is required',
               minLength: { value: 8, message: 'Password must be at least 8 characters' }
@@ -699,7 +602,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            className="absolute flex items-center justify-center rounded hover:bg-ink/10 transition-colors"
             style={{
               right: '0.5rem',
               top: '50%',
@@ -711,15 +614,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff className="w-4 h-4 text-white/40" />
+              <EyeOff className="w-4 h-4 text-fg-muted" />
             ) : (
-              <Eye className="w-4 h-4 text-white/40" />
+              <Eye className="w-4 h-4 text-fg-muted" />
             )}
           </button>
         </div>
         <AnimatePresence>
           {errors.password && (
-            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <AlertCircle className="w-3 h-3" />
               {errors.password.message}
@@ -732,24 +635,24 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       
       {/* Confirm Password */}
       <div>
-        <label htmlFor="confirmPassword" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: ADMIN_COLORS.saffronLight }}>
-          Confirm Password <span style={{ color: ADMIN_COLORS.red }}>*</span>
+        <label htmlFor="confirmPassword" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
+          Confirm Password <span style={{ color: FG.danger }}>*</span>
         </label>
         <div className="relative">
           <input
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••••••"
-            className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all duration-200"
+            className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
-              background: 'rgba(255,255,255,0.04)', 
-              border: `1px solid ${errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid}`, 
+              background: 'rgb(var(--ink) / 0.04)', 
+              border: `1px solid ${errors.confirmPassword ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
               padding: '0.625rem 3rem 0.625rem 0.875rem',
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
-            onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? ADMIN_COLORS.red + '60' : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
+            onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
             {...register('confirmPassword', {
               required: 'Please confirm your password',
               validate: (value) => value === password || 'Passwords do not match'
@@ -758,7 +661,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+            className="absolute flex items-center justify-center rounded hover:bg-ink/10 transition-colors"
             style={{
               right: '0.5rem',
               top: '50%',
@@ -770,15 +673,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
             {showConfirmPassword ? (
-              <EyeOff className="w-4 h-4 text-white/40" />
+              <EyeOff className="w-4 h-4 text-fg-muted" />
             ) : (
-              <Eye className="w-4 h-4 text-white/40" />
+              <Eye className="w-4 h-4 text-fg-muted" />
             )}
           </button>
         </div>
         <AnimatePresence>
           {errors.confirmPassword && (
-            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: ADMIN_COLORS.red }}
+            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <AlertCircle className="w-3 h-3" />
               {errors.confirmPassword.message}
@@ -787,8 +690,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           {!errors.confirmPassword && confirmPassword && password === confirmPassword && (
             <motion.div className="flex items-center gap-1.5 mt-1.5"
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              <p className="text-xs text-green-500">Passwords match</p>
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-700 dark:text-green-500" />
+              <p className="text-xs text-green-700 dark:text-green-500">Passwords match</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -802,10 +705,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         <DarkBtn type="submit" variant="primary" disabled={loading}>
           {loading ? (
             <>
-              <motion.div
-                className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+              <div
+                className="animate-spin w-4 h-4 border-2 border-ink/20 border-t-ink rounded-full"
               />
               Opening payment…
             </>

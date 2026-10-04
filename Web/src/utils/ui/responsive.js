@@ -7,33 +7,32 @@
  * Requirements: 1.1, 1.2, 8.1
  */
 
-// Enhanced breakpoint definitions matching Tailwind CSS configuration
+import { SCREENS, DEVICE_BANDS, WIDE_CONTAINER_MIN } from '@/styles/breakpoints';
+
+/*
+ * Derived from src/styles/breakpoints.js, which tailwind.config.js reads too,
+ * so a class like `md:` and a flag like `isTablet` can no longer disagree.
+ * "desktop" means ONE thing — the band from `lg` (1024) up. It used to mean
+ * 1440 here and 1024 two lines below.
+ */
 export const BREAKPOINTS = {
-  mobile: 320,
-  mobileLarge: 480,
-  sm: 640,
-  md: 768,
-  tablet: 768,
-  lg: 1024,
-  xl: 1280,
-  desktop: 1440, // Specific desktop baseline from requirements
-  '2xl': 1536,
-  desktopLarge: 1920,
+  ...SCREENS,
+  mobile: DEVICE_BANDS.mobile.min,
+  tablet: DEVICE_BANDS.tablet.min,
+  desktop: DEVICE_BANDS.desktop.min,
 };
 
 // Enhanced responsive ranges for easier categorization
 export const RESPONSIVE_RANGES = {
-  mobile: { min: 320, max: 767 },
-  tablet: { min: 768, max: 1023 },
-  desktop: { min: 1024, max: Infinity },
-  desktopBaseline: { min: 1440, max: Infinity }, // Requirements baseline
+  ...DEVICE_BANDS,
+  // The wide-container step (`max-w-desktop-wide`). Not a device band.
+  desktopBaseline: { min: WIDE_CONTAINER_MIN, max: Infinity },
 };
 
 // Breakpoint helpers for common responsive patterns
 export const BREAKPOINT_HELPERS = {
   // Mobile-first breakpoint queries
   mobile: `(min-width: ${BREAKPOINTS.mobile}px)`,
-  mobileLarge: `(min-width: ${BREAKPOINTS.mobileLarge}px)`,
   tablet: `(min-width: ${BREAKPOINTS.tablet}px)`,
   desktop: `(min-width: ${BREAKPOINTS.desktop}px)`,
   
@@ -113,12 +112,12 @@ export const isDesktop = () => {
 };
 
 /**
- * Check if viewport meets desktop baseline requirements (>= 1440px)
+ * Wide enough for the 1440 container step (>= WIDE_CONTAINER_MIN)
  * @returns {boolean}
  */
 export const isDesktopBaseline = () => {
   if (typeof window === 'undefined') return true;
-  return window.innerWidth >= BREAKPOINTS.desktop;
+  return window.innerWidth >= WIDE_CONTAINER_MIN;
 };
 
 /**

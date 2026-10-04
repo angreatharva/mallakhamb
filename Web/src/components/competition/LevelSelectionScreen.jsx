@@ -8,7 +8,7 @@ import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, SAFFRON_CTA, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
@@ -40,13 +40,13 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
     <motion.button
       onClick={() => onSelect(level)}
       disabled={disabled}
-      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 focus:outline-none"
+      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200"
       style={{
         background: isSelected
-          ? `linear-gradient(135deg, ${COLORS.saffron}12, rgba(255,255,255,0.03))`
-          : 'rgba(255,255,255,0.03)',
-        borderColor: isSelected ? `${COLORS.saffron}45` : COLORS.darkBorderSubtle,
-        boxShadow: isSelected ? `0 0 0 1px ${COLORS.saffron}20, 0 8px 32px ${COLORS.saffron}10` : 'none',
+          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.03))`
+          : 'rgb(var(--ink) / 0.03)',
+        borderColor: isSelected ? `${alpha(COLORS.saffron, 0x45)}` : COLORS.darkBorderSubtle,
+        boxShadow: isSelected ? `0 0 0 1px ${alpha(COLORS.saffron, 0x20)}, 0 8px 32px ${alpha(COLORS.saffron, 0x10)}` : 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         // Empty levels stay selectable on purpose — see the note on the counts
         // below — but they are visibly quieter than levels with meets behind them.
@@ -56,8 +56,8 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
       whileHover={disabled ? {} : {
-        borderColor: `${COLORS.saffron}35`,
-        background: `linear-gradient(135deg, ${COLORS.saffron}08, rgba(255,255,255,0.03))`,
+        borderColor: `${alpha(COLORS.saffron, 0x35)}`,
+        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgb(var(--ink) / 0.03))`,
         y: -2,
       }}
       whileTap={disabled ? {} : { scale: 0.99 }}
@@ -65,26 +65,26 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
     >
       {isSelected && (
         <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${COLORS.saffron}60, transparent)` }} />
+          style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x60)}, transparent)` }} />
       )}
 
       <div className="p-5 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: isSelected ? `${COLORS.saffron}20` : 'rgba(255,255,255,0.06)' }}>
+          style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgb(var(--ink) / 0.06)' }}>
           <Layers className="w-5 h-5"
-            style={{ color: isSelected ? COLORS.saffron : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+            style={{ color: isSelected ? COLORS.saffron : 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-bold text-sm leading-tight">{meta.label}</h3>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <h3 className="text-ink font-bold text-sm leading-tight">{meta.label}</h3>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             {meta.blurb}
           </p>
           {counting ? (
             // The meets are still being fetched: say so, rather than showing a
             // "0 competitions" that turns into a real number a moment later.
             <span className="inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)' }}
+              style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}
               role="status" aria-label={`Counting ${meta.label} competitions`}>
               <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
               Counting…
@@ -92,8 +92,8 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
           ) : (
             <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
               style={{
-                background: isEmpty ? 'rgba(255,255,255,0.05)' : `${COLORS.saffron}12`,
-                color: isEmpty ? 'rgba(255,255,255,0.35)' : COLORS.saffronLight,
+                background: isEmpty ? 'rgb(var(--ink) / 0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
+                color: isEmpty ? 'var(--fg-muted)' : FG.brandSoft,
               }}>
               {count === 1 ? '1 competition' : `${count} competitions`}
             </span>
@@ -107,7 +107,7 @@ const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disab
             initial={{ scale: 0 }} animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <Check className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+            <Check className="w-3.5 h-3.5 text-ink" aria-hidden="true" />
           </motion.div>
         )}
       </div>
@@ -229,13 +229,13 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="text-center">
           <motion.div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: `${COLORS.saffron}18`, border: `1px solid ${COLORS.saffron}30` }}
+            style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x30)}` }}
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+            <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
           </motion.div>
-          <p className="text-white/50 text-sm">Loading levels...</p>
+          <p className="text-fg-muted text-sm">Loading levels...</p>
         </div>
       </div>
     );
@@ -263,14 +263,14 @@ const LevelSelectionScreen = ({ userType }) => {
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
           <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${COLORS.saffron}12`, borderColor: `${COLORS.saffron}35`, color: COLORS.saffronLight }}>
+              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: FG.brandSoft }}>
               <Layers className="w-3 h-3" aria-hidden="true" />
               Level Selection
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
+            <h1 className="text-4xl md:text-5xl font-black text-ink mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
               Choose Your <GradientText>Level</GradientText>
             </h1>
-            <p className="text-white/40 text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
+            <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
               Competitions are organised by level. Pick one to see its meets.
             </p>
           </FadeIn>
@@ -295,12 +295,12 @@ const LevelSelectionScreen = ({ userType }) => {
             <motion.button
               onClick={handleContinue}
               disabled={!pendingLevel}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-ink font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 background: pendingLevel
-                  ? `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`
-                  : 'rgba(255,255,255,0.08)',
-                border: `1px solid ${pendingLevel ? 'transparent' : COLORS.darkBorderSubtle}`,
+                  ? SAFFRON_CTA.background
+                  : 'rgb(var(--ink) / 0.08)',
+                border: `1px solid ${pendingLevel ? 'transparent' : COLORS.darkBorderSubtle}`, color: pendingLevel ? SAFFRON_CTA.color : undefined,
               }}
               whileHover={pendingLevel ? { scale: 1.02 } : {}}
               whileTap={pendingLevel ? { scale: 0.97 } : {}}

@@ -23,6 +23,7 @@ import { useReducedMotion } from '../../components/design-system/animations';
 // API services
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
+import { FG, alpha } from '@/styles/tokens';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -53,14 +54,14 @@ const getRoleConfig = (role) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
       <motion.div className="absolute w-24 h-24 rounded-full border"
-        style={{ borderColor: `${color}30` }}
+        style={{ borderColor: `${alpha(color, 0x30)}` }}
         animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
       <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
         style={{
-          background: `linear-gradient(135deg, ${color}20, ${color}15)`,
-          border: `1px solid ${color}40`,
-          boxShadow: `0 0 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          background: `linear-gradient(135deg, ${alpha(color, 0x20)}, ${alpha(color, 0x15)})`,
+          border: `1px solid ${alpha(color, 0x40)}`,
+          boxShadow: `0 0 40px ${alpha(color, 0x20)}, inset 0 1px 0 rgb(var(--ink) / 0.08)`,
         }}>
         {/* Role-specific icon but same size and positioning */}
         {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
@@ -462,11 +463,11 @@ const UnifiedRegisterInner = () => {
       <label
         htmlFor={`${role}-reg-${field.name}`}
         className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: `${theme.colors.primary}90` }}
+        style={{ color: FG.accent }}
       >
         {field.label}
         {field.rules?.required && (
-          <span style={{ color: '#EF4444' }} aria-hidden="true"> *</span>
+          <span style={{ color: FG.danger }} aria-hidden="true"> *</span>
         )}
       </label>
       <ThemedInput
@@ -485,7 +486,7 @@ const UnifiedRegisterInner = () => {
           <motion.p
             id={`${role}-reg-${field.name}-error`}
             className="text-xs mt-1.5"
-            style={{ color: '#EF4444' }}
+            style={{ color: FG.danger }}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
@@ -532,7 +533,7 @@ const UnifiedRegisterInner = () => {
           >
             <p
               className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: `${theme.colors.primary}80` }}
+              style={{ color: FG.accent }}
             >
               Bhausaheb Ranade Mallakhamb
             </p>
@@ -545,7 +546,7 @@ const UnifiedRegisterInner = () => {
                 {config.subtitle}
               </GradientText>
             </h1>
-            <p className="text-white/30 text-sm leading-relaxed max-w-xs mx-auto">
+            <p className="text-fg-muted text-sm leading-relaxed max-w-xs mx-auto">
               {config.description}
             </p>
           </motion.div>
@@ -561,19 +562,19 @@ const UnifiedRegisterInner = () => {
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{
-                    background: `${theme.colors.primary}12`,
-                    border: `1px solid ${theme.colors.primary}25`,
+                    background: `${alpha(theme.colors.primary, 0x12)}`,
+                    border: `1px solid ${alpha(theme.colors.primary, 0x25)}`,
                   }}
                 >
                   <FeatureIcon
                     className="w-4 h-4"
-                    style={{ color: theme.colors.primary }}
+                    style={{ color: FG.accent }}
                     aria-hidden="true"
                   />
                 </div>
                 <span
                   className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: `${theme.colors.primary}60` }}
+                  style={{ color: FG.accent }}
                 >
                   {label}
                 </span>
@@ -585,7 +586,7 @@ const UnifiedRegisterInner = () => {
         <div
           className="absolute bottom-0 left-0 right-0 h-px"
           style={{
-            background: `linear-gradient(90deg, transparent, ${theme.colors.primary}40, transparent)`,
+            background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)}, transparent)`,
           }}
         />
       </div>
@@ -597,7 +598,7 @@ const UnifiedRegisterInner = () => {
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse at 50% 30%, ${theme.colors.primary}10, transparent 65%)`,
+              background: `radial-gradient(ellipse at 50% 30%, ${alpha(theme.colors.primary, 0x10)}, transparent 65%)`,
             }}
           />
         </div>
@@ -610,15 +611,15 @@ const UnifiedRegisterInner = () => {
           transition={{ delay: 0.15, ease: EASE }}
         >
           <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
-          <div className="w-px h-8 bg-white/10" />
+          <div className="w-px h-8 bg-ink/10" />
           <div>
             <p
               className="text-[10px] font-bold tracking-widest uppercase"
-              style={{ color: theme.colors.primary }}
+              style={{ color: FG.accent }}
             >
               Mallakhamb
             </p>
-            <p className="text-white/30 text-[10px]">{config.title} Portal</p>
+            <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
           </div>
         </motion.div>
 
@@ -639,13 +640,13 @@ const UnifiedRegisterInner = () => {
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{
-                  background: `${theme.colors.primary}15`,
-                  border: `1px solid ${theme.colors.primary}35`,
+                  background: `${alpha(theme.colors.primary, 0x15)}`,
+                  border: `1px solid ${alpha(theme.colors.primary, 0x35)}`,
                 }}
               >
                 <IconComponent
                   className="w-8 h-8"
-                  style={{ color: theme.colors.primary }}
+                  style={{ color: FG.accent }}
                   aria-hidden="true"
                 />
               </div>
@@ -655,24 +656,24 @@ const UnifiedRegisterInner = () => {
               <div
                 className="h-px flex-1"
                 style={{
-                  background: `linear-gradient(90deg, ${theme.colors.primary}40, transparent)`,
+                  background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)`,
                 }}
               />
               <span
                 className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: `${theme.colors.primary}70` }}
+                style={{ color: FG.accent }}
               >
                 {config.accessLabel}
               </span>
               <div
                 className="h-px flex-1"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${theme.colors.primary}40)`,
+                  background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})`,
                 }}
               />
             </div>
-            <h2 className="text-3xl font-black text-white mt-3">{config.formTitle}</h2>
-            <p className="text-white/35 text-sm mt-1">{config.formSubtitle}</p>
+            <h2 className="text-3xl font-black text-ink mt-3">{config.formTitle}</h2>
+            <p className="text-fg-muted text-sm mt-1">{config.formSubtitle}</p>
           </motion.div>
 
           {/* Registration form */}
@@ -692,9 +693,9 @@ const UnifiedRegisterInner = () => {
                   <label
                     htmlFor="player-reg-gender"
                     className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: `${theme.colors.primary}90` }}
+                    style={{ color: FG.accent }}
                   >
-                    Gender <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                    Gender <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                   </label>
                   <ThemedSelect
                     id="player-reg-gender"
@@ -712,7 +713,7 @@ const UnifiedRegisterInner = () => {
                       <motion.p
                         id="player-reg-gender-error"
                         className="text-xs mt-1.5"
-                        style={{ color: '#EF4444' }}
+                        style={{ color: FG.danger }}
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
@@ -732,7 +733,7 @@ const UnifiedRegisterInner = () => {
                   <label
                     htmlFor="judge-reg-certificationLevel"
                     className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: `${theme.colors.primary}90` }}
+                    style={{ color: FG.accent }}
                   >
                     Certification Level
                   </label>
@@ -755,9 +756,9 @@ const UnifiedRegisterInner = () => {
                 <label
                   htmlFor={`${role}-reg-password`}
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }}
+                  style={{ color: FG.accent }}
                 >
-                  Password <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                  Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-password`}
@@ -772,12 +773,12 @@ const UnifiedRegisterInner = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
+                      className="p-1 rounded hover:bg-ink/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('password', PASSWORD_RULES)}
@@ -787,7 +788,7 @@ const UnifiedRegisterInner = () => {
                     <motion.p
                       id={`${role}-reg-password-error`}
                       className="text-xs mt-1.5"
-                      style={{ color: '#EF4444' }}
+                      style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
@@ -805,9 +806,9 @@ const UnifiedRegisterInner = () => {
                 <label
                   htmlFor={`${role}-reg-confirmPassword`}
                   className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: `${theme.colors.primary}90` }}
+                  style={{ color: FG.accent }}
                 >
-                  Confirm Password <span style={{ color: '#EF4444' }} aria-hidden="true">*</span>
+                  Confirm Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
                 </label>
                 <ThemedInput
                   id={`${role}-reg-confirmPassword`}
@@ -822,12 +823,12 @@ const UnifiedRegisterInner = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
+                      className="p-1 rounded hover:bg-ink/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
                       aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
                     >
                       {showConfirm
-                        ? <EyeOff className="w-4 h-4 text-white/25" />
-                        : <Eye className="w-4 h-4 text-white/25" />}
+                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
+                        : <Eye className="w-4 h-4 text-fg-muted" />}
                     </button>
                   }
                   {...register('confirmPassword', {
@@ -841,7 +842,7 @@ const UnifiedRegisterInner = () => {
                     <motion.p
                       id={`${role}-reg-confirmPassword-error`}
                       className="text-xs mt-1.5"
-                      style={{ color: '#EF4444' }}
+                      style={{ color: FG.danger }}
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
@@ -870,23 +871,23 @@ const UnifiedRegisterInner = () => {
           {/* Footer links */}
           <motion.div
             className="mt-7 pt-5 border-t flex items-center justify-between"
-            style={{ borderColor: `${theme.colors.primary}12` }}
+            style={{ borderColor: `${alpha(theme.colors.primary, 0x12)}` }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.65 }}
           >
             <Link
               to="/"
-              className="text-xs text-white/20 hover:text-white/45 transition-colors inline-flex items-center tap-safe justify-center"
+              className="text-xs text-fg-muted hover:text-fg transition-colors inline-flex items-center tap-safe justify-center"
             >
               ← Home
             </Link>
             <div className="flex items-center gap-3">
-              <span className="text-white/15 text-xs">·</span>
+              <span className="text-fg-subtle text-xs">·</span>
               <Link
                 to={config.loginLink}
                 className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: `${theme.colors.primary}70` }}
+                style={{ color: FG.accent }}
               >
                 Sign in
               </Link>
@@ -899,7 +900,7 @@ const UnifiedRegisterInner = () => {
       <motion.div
         className="absolute right-0 top-0 bottom-0 w-[2px] hidden lg:block"
         style={{
-          background: `linear-gradient(to bottom, transparent, ${theme.colors.primary}30, transparent)`,
+          background: `linear-gradient(to bottom, transparent, ${alpha(theme.colors.primary, 0x30)}, transparent)`,
         }}
         initial={{ scaleY: 0 }}
         animate={{ scaleY: 1 }}

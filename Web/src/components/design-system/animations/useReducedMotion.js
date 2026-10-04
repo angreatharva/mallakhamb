@@ -1,50 +1,13 @@
-import { useState, useEffect } from 'react';
-
 /**
- * useReducedMotion - Hook that detects user's motion preference
- * 
- * Checks the prefers-reduced-motion media query and listens for changes.
- * Returns true if the user prefers reduced motion, false otherwise.
- * 
- * @returns {boolean} True if user prefers reduced motion
- * 
+ * useReducedMotion — true when the person has asked for less motion.
+ *
+ * ONE implementation, in hooks/useResponsive.js; this path re-exports it so the
+ * design-system imports keep working. There were two copies (and a third
+ * re-export from Home.jsx) that behaved the same today and could only drift.
+ *
  * @example
  * const shouldReduceMotion = useReducedMotion();
- * 
- * <motion.div
- *   animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
- * />
+ * <motion.div animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }} />
  */
-export const useReducedMotion = () => {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
-    // Check if window is available (SSR safety)
-    if (typeof window === 'undefined' || !window.matchMedia) return false;
-    
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    return mediaQuery.matches;
-  });
-
-  useEffect(() => {
-    // Check if window is available (SSR safety)
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    
-    // Handler for media query changes
-    const handleChange = (event) => {
-      setPrefersReducedMotion(event.matches);
-    };
-
-    // Listen for changes to user preference
-    mediaQuery.addEventListener('change', handleChange);
-
-    // Cleanup listener on unmount
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange);
-    };
-  }, []);
-
-  return prefersReducedMotion;
-};
-
-export default useReducedMotion;
+export { useReducedMotion } from '../../../hooks/useResponsive';
+export { useReducedMotion as default } from '../../../hooks/useResponsive';

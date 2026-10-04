@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e:install": "playwright install chromium",
+    "test:e2e:install:webkit": "playwright install webkit",
     "test:e2e:player": "playwright test e2e/register-player.spec.js",
     "test:e2e:player:headed": "playwright test e2e/register-player.spec.js --headed",
     "test:e2e:coach": "playwright test e2e/register-coach.spec.js",
@@ -39,9 +40,11 @@
     "seed:scores:headed": "playwright test e2e/score-all.spec.js --workers=1 --headed",
     "seed:ui": "playwright test e2e/register-coaches.spec.js e2e/register-players.spec.js e2e/register-judges.spec.js e2e/build-squads.spec.js e2e/seat-panels.spec.js",
     "audit:responsive": "playwright test e2e/responsive-audit.spec.js",
+    "audit:tablet": "playwright test e2e/responsive-tablet.spec.js",
     "audit:modals": "playwright test e2e/responsive-modals.spec.js",
     "audit:judge-walk": "playwright test e2e/responsive-judge-walk.spec.js",
-    "audit:shots": "playwright test e2e/responsive-shots.spec.js"
+    "audit:shots": "playwright test e2e/responsive-shots.spec.js",
+    "audit:visual": "playwright test e2e/visual-baseline.spec.js"
   },
   "dependencies": {
     "axios": "^1.6.2",

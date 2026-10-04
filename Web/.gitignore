@@ -28,3 +28,6 @@ dist-ssr
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Visual baselines (e2e/visual-baseline.spec.js) — one machine's rendering of one database
+.visual-baseline/

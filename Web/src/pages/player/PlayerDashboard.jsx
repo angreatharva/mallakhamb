@@ -9,12 +9,13 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
 import PerformancePanel from '@/components/performance/PerformancePanel';
 import { levelLabel } from '@/utils/competition/levels';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
@@ -22,19 +23,19 @@ const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => 
     <motion.div
       className="p-5 rounded-2xl border relative overflow-hidden"
       style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
-      whileHover={{ borderColor: `${accent}35`, boxShadow: `0 0 30px ${accent}10` }}
+      whileHover={{ borderColor: `${alpha(accent, 0x35)}`, boxShadow: `0 0 30px ${alpha(accent, 0x10)}` }}
       transition={{ duration: 0.25 }}>
       <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-        style={{ background: `${accent}06`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
+        style={{ background: `${alpha(accent, 0x06)}`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
       <div className="flex items-start gap-4 relative z-10">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${accent}15` }}>
+          style={{ background: `${alpha(accent, 0x15)}` }}>
           <Icon className="w-5 h-5" style={{ color: accent }} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-white/45 text-xs font-medium tracking-wide uppercase mb-1">{label}</p>
+          <p className="text-fg-muted text-xs font-medium tracking-wide uppercase mb-1">{label}</p>
           {children || (
-            <p className="text-white font-bold text-lg leading-tight truncate">{value || '—'}</p>
+            <p className="text-ink font-bold text-lg leading-tight truncate">{value || '—'}</p>
           )}
         </div>
       </div>
@@ -46,18 +47,18 @@ const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => 
 const InfoRow = ({ label, value, last = false }) => (
   <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b' : ''}`}
     style={{ borderColor: COLORS.darkBorderSubtle }}>
-    <span className="text-white/45 text-sm font-medium">{label}</span>
-    <span className="text-white text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
+    <span className="text-fg-muted text-sm font-medium">{label}</span>
+    <span className="text-ink text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
   </div>
 );
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
-    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: '#4ADE80' },
-    Active: { bg: `${COLORS.saffron}18`, border: `${COLORS.saffron}40`, text: COLORS.saffronLight },
+    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: FG.successSoft },
+    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: FG.brandSoft },
   };
-  const style = map[status] || { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.5)' };
+  const style = map[status] || { bg: 'rgb(var(--ink) / 0.06)', border: 'rgb(var(--ink) / 0.12)', text: 'var(--fg-muted)' };
   return (
     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border"
       style={{ background: style.bg, borderColor: style.border, color: style.text }}>
@@ -270,10 +271,9 @@ const PlayerDashboard = () => {
       <div className="min-h-dvh flex items-center justify-center"
         style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
-            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
-          <p className="text-white/45 text-sm">Loading your profile...</p>
+          <div className="animate-spin w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
+          <p className="text-fg-muted text-sm">Loading your profile...</p>
         </div>
       </div>
     );
@@ -289,7 +289,7 @@ const PlayerDashboard = () => {
           <FadeIn>
             <div className="rounded-2xl border p-4 text-center"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-white/40 text-sm">
+              <p className="text-fg-muted text-sm">
                 No competitions assigned yet. Your coach will add you to competitions.
               </p>
             </div>
@@ -301,21 +301,21 @@ const PlayerDashboard = () => {
           <div className="rounded-3xl border p-6 md:p-8 relative overflow-hidden"
             style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}>
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: `radial-gradient(ellipse at 0% 50%, ${COLORS.saffron}08, transparent 60%)` }} />
+              style={{ background: `radial-gradient(ellipse at 0% 50%, ${alpha(COLORS.saffron, 0x08)}, transparent 60%)` }} />
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
-                <h1 className="text-2xl md:text-3xl font-black text-white">
+                <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
+                <h1 className="text-2xl md:text-3xl font-black text-ink">
                   {player?.firstName} <GradientText>{player?.lastName}</GradientText>
                 </h1>
-                <p className="text-white/40 text-sm mt-1">
+                <p className="text-fg-muted text-sm mt-1">
                   {player?.team ? `Team: ${player.team.name}` : 'No team assigned yet'}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => fetchPlayerProfile(true)}
-                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors tap-safe justify-center"
+                  className="p-2 rounded-lg text-fg-muted hover:text-fg hover:bg-ink/5 transition-colors tap-safe justify-center"
                   title="Refresh player data"
                   /*
                    * `title` is not an accessible name a screen reader announces
@@ -338,7 +338,7 @@ const PlayerDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Trophy} label="Team" accent={COLORS.saffron} delay={0}>
             {player?.team ? (
-              <p className="text-white font-bold text-base leading-tight truncate">{player.team.name}</p>
+              <p className="text-ink font-bold text-base leading-tight truncate">{player.team.name}</p>
             ) : (
               <div className="mt-1">
                 <Dropdown
@@ -369,8 +369,8 @@ const PlayerDashboard = () => {
           <FadeIn delay={0.1}>
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <User className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
+                <User className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Profile Information
               </h2>
               <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
@@ -386,8 +386,8 @@ const PlayerDashboard = () => {
           <FadeIn delay={0.15}>
             <div className="rounded-2xl border p-6"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-white font-bold text-lg mb-5 flex items-center gap-2">
-                <Trophy className="w-4 h-4" style={{ color: COLORS.saffron }} aria-hidden="true" />
+              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
+                <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
                 Team Information
               </h2>
 
@@ -397,18 +397,18 @@ const PlayerDashboard = () => {
                   <InfoRow label="Age Group"
                     value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || player.ageGroup) : 'Not assigned'} />
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1">
-                    <span className="text-white/45 text-sm font-medium">Status</span>
+                    <span className="text-fg-muted text-sm font-medium">Status</span>
                     <StatusBadge status={player.teamStatus} />
                   </div>
                 </>
               ) : (
                 <div className="py-6 text-center">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <Users className="w-6 h-6 text-white/20" />
+                    style={{ background: 'rgb(var(--ink) / 0.04)' }}>
+                    <Users className="w-6 h-6 text-ink/20" />
                   </div>
-                  <p className="text-white/45 text-sm mb-1">Not assigned to any team yet.</p>
-                  <p className="text-white/25 text-xs mb-5">Select a team from the card above to join.</p>
+                  <p className="text-fg-muted text-sm mb-1">Not assigned to any team yet.</p>
+                  <p className="text-fg-muted text-xs mb-5">Select a team from the card above to join.</p>
                   <div className="max-w-xs mx-auto">
                     <Dropdown
                       options={teams}
@@ -419,7 +419,7 @@ const PlayerDashboard = () => {
                       disabled={updatingTeam}
                     />
                     {updatingTeam && (
-                      <p className="text-xs mt-2 text-center" style={{ color: COLORS.saffronLight }}>
+                      <p className="text-xs mt-2 text-center" style={{ color: FG.brandSoft }}>
                         Joining team...
                       </p>
                     )}
@@ -461,6 +461,7 @@ const PlayerDashboard = () => {
               e.stopPropagation();
             }}
           >
+              <BodyScrollLock />
             <motion.div
               className="w-full max-w-2xl rounded-3xl border p-6 md:p-8 modal-panel"
               style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}
@@ -471,11 +472,11 @@ const PlayerDashboard = () => {
             >
               <div className="text-center mb-6">
                 <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                  style={{ background: `${COLORS.saffron}15` }}>
-                  <Trophy className="w-8 h-8" style={{ color: COLORS.saffron }} />
+                  style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
+                  <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2">Select Competition</h2>
-                <p className="text-white/45 text-sm">
+                <h2 className="text-2xl font-black text-ink mb-2">Select Competition</h2>
+                <p className="text-fg-muted text-sm">
                   You&apos;re registered for multiple competitions. Please select one to continue.
                 </p>
               </div>
@@ -505,21 +506,21 @@ const PlayerDashboard = () => {
                       borderColor: COLORS.darkBorderSubtle 
                     }}
                     whileHover={{ 
-                      borderColor: `${COLORS.saffron}40`,
-                      boxShadow: `0 0 20px ${COLORS.saffron}10` 
+                      borderColor: `${alpha(COLORS.saffron, 0x40)}`,
+                      boxShadow: `0 0 20px ${alpha(COLORS.saffron, 0x10)}` 
                     }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${COLORS.saffron}15` }}>
-                        <Trophy className="w-5 h-5" style={{ color: COLORS.saffron }} />
+                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
+                        <Trophy className="w-5 h-5" style={{ color: FG.brand }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-bold text-base mb-1 truncate">
+                        <h3 className="text-ink font-bold text-base mb-1 truncate">
                           {competition.name}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
                           {competition.place && <span>{competition.place}</span>}
                           {competition.level && (
                             <>

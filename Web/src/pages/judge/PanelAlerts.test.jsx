@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MismatchModal, ToleranceModal } from './judgeShared';
 import { analyzePanelMismatches } from '@/utils/scoring/copRules';
+import { FG } from '@/styles/tokens';
 
 const slip = (judgeType, difficulty, combination, score) => ({
   judgeType,
@@ -23,7 +24,8 @@ const slip = (judgeType, difficulty, combination, score) => ({
   },
 });
 
-const RED = 'rgb(239, 68, 68)';
+// The mismatch red is the danger token (#EF4444 in dark, a deeper red in light), not a fixed hex.
+const RED = FG.danger;
 const chip = (label) => screen.getAllByText((_, el) => el?.tagName === 'SPAN' && el.textContent.startsWith(label));
 
 describe('MismatchModal — Senior Judge view', () => {

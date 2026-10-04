@@ -22,11 +22,12 @@ import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS } from '../../styles/tokens';
+import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import BHALogo from '../../assets/BHA.png';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -681,9 +682,9 @@ const ScorerScoring = () => {
     }
   };
 
-  const darkInput = `w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
+  const darkInput = `w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
   const darkInputStyle = (disabled) => ({
-    background: disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+    background: disabled ? 'rgb(var(--ink) / 0.02)' : 'rgb(var(--ink) / 0.04)',
     border: `1px solid ${ADMIN_COLORS.darkBorderMid}`
   });
 
@@ -691,9 +692,9 @@ const ScorerScoring = () => {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-white/10 rounded-full mx-auto mb-4 animate-spin"
+          <div className="w-10 h-10 border-2 border-ink/10 rounded-full mx-auto mb-4 animate-spin"
             style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-          <p className="text-white/40 text-sm">Loading scoring page…</p>
+          <p className="text-fg-muted text-sm">Loading scoring page…</p>
         </div>
       </div>
     );
@@ -703,9 +704,9 @@ const ScorerScoring = () => {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
         <div className="text-center">
-          <p className="text-white/50 mb-4">Invalid scoring session. Please go back and select a team.</p>
+          <p className="text-fg-muted mb-4">Invalid scoring session. Please go back and select a team.</p>
           <motion.button onClick={() => navigate('/judge/dashboard')}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-white min-h-[44px]"
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-snow min-h-[44px]"
             style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
             Back to Dashboard
@@ -718,22 +719,21 @@ const ScorerScoring = () => {
   return (
     <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <motion.header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgba(10,10,10,0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}
+        style={{ background: 'rgb(var(--bg) / 0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}
         initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <motion.button onClick={() => navigate('/judge/dashboard')}
-              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-white/10 transition-colors"
-              style={{ color: 'rgba(255,255,255,0.6)' }} whileHover={{ color: '#fff' }}>
+              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </motion.button>
-            <div className="w-px h-5 bg-white/10" />
+            <div className="w-px h-5 bg-ink/10" />
             <div className="flex items-center gap-2">
               <img src={BHALogo} alt="BHA" className="h-7 w-auto object-contain opacity-70" />
-              <Trophy className="w-4 h-4" style={{ color: ADMIN_COLORS.saffron }} />
-              <span className="text-white font-bold text-sm hidden sm:inline">Scorer Scoring</span>
-              {isLocked && <Lock className="w-4 h-4" style={{ color: ADMIN_COLORS.red }} />}
+              <Trophy className="w-4 h-4" style={{ color: FG.brand }} />
+              <span className="text-ink font-bold text-sm hidden sm:inline">Scorer Scoring</span>
+              {isLocked && <Lock className="w-4 h-4" style={{ color: FG.danger }} />}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -750,20 +750,21 @@ const ScorerScoring = () => {
               */}
             <motion.button
               onClick={() => navigate('/judge/sequence')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold min-h-[36px] transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold tap-safe mouse:min-h-[36px] transition-colors"
               style={{
-                borderColor: `${ADMIN_COLORS.purple}40`,
-                color: ADMIN_COLORS.purpleLight,
-                background: `${ADMIN_COLORS.purple}12`,
+                borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
+                color: DATA_COLORS.purpleSoft,
+                background: `${alpha(ADMIN_COLORS.purple, 0x12)}`,
               }}
-              whileHover={{ background: `${ADMIN_COLORS.purple}25` }}
+              whileHover={{ background: `${alpha(ADMIN_COLORS.purple, 0x25)}` }}
               whileTap={{ scale: 0.97 }}
             >
               <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Set Sequence</span>
             </motion.button>
+            <AppearanceMenu />
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={isLocked ? { background: `${ADMIN_COLORS.red}20`, color: ADMIN_COLORS.red } : { background: `${ADMIN_COLORS.green}20`, color: ADMIN_COLORS.green }}>
+              style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
               {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
             </span>
           </div>
@@ -775,13 +776,13 @@ const ScorerScoring = () => {
 
         {isLocked && (
           <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
-            style={{ background: `${ADMIN_COLORS.red}10`, borderColor: `${ADMIN_COLORS.red}30` }}
+            style={{ background: `${alpha(ADMIN_COLORS.red, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.red, 0x30)}` }}
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: ADMIN_COLORS.red }} />
+              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: FG.danger }} />
               <div>
-                <p className="font-bold text-white text-sm">Scoring session is locked</p>
-                <p className="text-xs mt-0.5 text-white/50">Scores saved and locked. Cannot be modified.</p>
+                <p className="font-bold text-ink text-sm">Scoring session is locked</p>
+                <p className="text-xs mt-0.5 text-fg-muted">Scores saved and locked. Cannot be modified.</p>
               </div>
             </div>
           </motion.div>
@@ -793,17 +794,17 @@ const ScorerScoring = () => {
           style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
           <div className="flex items-center justify-between gap-4 sm:block sm:flex-shrink-0">
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: ADMIN_COLORS.saffron }}>Scoring Session</p>
-              <h2 className="text-lg sm:text-xl font-black text-white leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
+              <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Scoring Session</p>
+              <h2 className="text-lg sm:text-xl font-black text-ink leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
             </div>
             {/* Count on the right of the title on a phone… */}
             <p className="sm:hidden flex items-baseline gap-1.5">
-              <span className="text-2xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
-              <span className="text-[10px] uppercase tracking-widest text-white/40">Players</span>
+              <span className="text-2xl font-black" style={{ color: FG.brand }}>{players.length}</span>
+              <span className="text-[10px] uppercase tracking-widest text-fg-muted">Players</span>
             </p>
           </div>
 
-          <div className="hidden sm:block w-px self-stretch bg-white/10" aria-hidden="true" />
+          <div className="hidden sm:block w-px self-stretch bg-ink/10" aria-hidden="true" />
 
           <dl className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
             {[
@@ -813,33 +814,33 @@ const ScorerScoring = () => {
               ['Apparatus', seatApparatus],
             ].filter(([, value]) => value).map(([label, value]) => (
               <div key={label} className="min-w-0">
-                <dt className="text-[10px] uppercase tracking-widest text-white/40">{label}</dt>
-                <dd className="text-sm font-semibold text-white truncate">{value}</dd>
+                <dt className="text-[10px] uppercase tracking-widest text-fg-muted">{label}</dt>
+                <dd className="text-sm font-semibold text-ink truncate">{value}</dd>
               </div>
             ))}
           </dl>
 
           {/* …and at the far end on a wide screen. */}
           <p className="hidden sm:flex flex-col items-end flex-shrink-0 leading-none">
-            <span className="text-3xl font-black" style={{ color: ADMIN_COLORS.saffron }}>{players.length}</span>
-            <span className="text-[10px] uppercase tracking-widest text-white/40 mt-1">Players</span>
+            <span className="text-3xl font-black" style={{ color: FG.brand }}>{players.length}</span>
+            <span className="text-[10px] uppercase tracking-widest text-fg-muted mt-1">Players</span>
           </p>
         </div>
 
-        {/* <div className="rounded-2xl border p-4" style={{ background: `${ADMIN_COLORS.blue}08`, borderColor: `${ADMIN_COLORS.blue}25` }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: '#93C5FD' }}>Scoring System</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/50">
-            <p><span className="text-white/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
-            <p><span className="text-white/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
-            <p><span className="text-white/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
-            <p><span className="text-white/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
+        {/* <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
+          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.blueSoft }}>Scoring System</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-fg-muted">
+            <p><span className="text-ink/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
+            <p><span className="text-ink/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
+            <p><span className="text-ink/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
+            <p><span className="text-ink/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
           </div>
         </div> */}
 
         {players.length > 0 ? (
           <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: ADMIN_COLORS.saffron }}>
-              <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-white/30" />}
+            <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: FG.brand }}>
+              <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-ink/30" />}
             </p>
             {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
                 the Chief's copy on a 4-judge panel, and the size is what picks
@@ -848,7 +849,7 @@ const ScorerScoring = () => {
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-white/40">No players found for this category.</p>
+            <p className="text-fg-muted">No players found for this category.</p>
           </div>
         )}
 
@@ -865,12 +866,12 @@ const ScorerScoring = () => {
               const fieldId = `scorer-${label.toLowerCase().replace(/\s+/g, '-')}`;
               return (
               <div key={label}>
-                <label htmlFor={fieldId} className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: ADMIN_COLORS.saffronLight }}>
+                <label htmlFor={fieldId} className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
                   {label}
-                  {required && <span className="text-red-500 ml-1">*</span>}
+                  {required && <span className="text-red-700 dark:text-red-500 ml-1">*</span>}
                 </label>
                 <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
-                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; } }}
+                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; } }}
                   onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
               </div>
               );
@@ -879,13 +880,13 @@ const ScorerScoring = () => {
           <div className="flex justify-end">
             {!readOnly ? (
               <motion.button onClick={handleSaveScores}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white min-h-[48px]"
-                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)` }}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]"
+                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`, color: '#0A0A0A' }}
                 whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }} whileTap={{ scale: 0.97 }}>
                 <Save className="w-4 h-4" /> Save & Lock Scores
               </motion.button>
             ) : (
-              <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--fg-muted)' }}>
                 <Lock className="w-4 h-4" />
                 {isLocked ? 'Scores are saved and locked' : 'This competition has closed'}
               </div>

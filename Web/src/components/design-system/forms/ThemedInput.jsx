@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../theme/useTheme';
 import { useResponsive } from '../../../hooks/useResponsive';
+import { FG } from '../../../styles/tokens';
 
 /**
  * ThemedInput - A themed input component that adapts to the current role context
@@ -123,10 +124,9 @@ export const ThemedInput = forwardRef(({
           className={clsx(
             // Base styles
             'w-full rounded-lg',
-            'bg-white/5',
-            'text-white placeholder:text-white/45',
+            'bg-ink/5',
+            'text-ink placeholder:text-fg-muted',
             'border transition-all duration-200',
-            'outline-none',
             
             // Responsive padding and font size
             paddingClass,
@@ -141,8 +141,8 @@ export const ThemedInput = forwardRef(({
             
             // Normal state
             !hasError && !disabled && !readOnly && [
-              'border-white/10',
-              'hover:border-white/20',
+              'border-ink/10',
+              'hover:border-ink/20',
               'focus:border-current',
             ],
             
@@ -156,20 +156,20 @@ export const ThemedInput = forwardRef(({
             disabled && [
               'opacity-50',
               'cursor-not-allowed',
-              'border-white/5',
+              'border-ink/5',
             ],
             
             // Readonly state
             readOnly && [
               'cursor-default',
-              'border-white/5',
+              'border-ink/5',
             ],
             
             className
           )}
           style={{
             // Role-specific focus color with 3:1 contrast ratio
-            color: theme.colors.primary,
+            color: FG.accent,
           }}
           whileFocus={whileFocusAnimation}
           {...props}

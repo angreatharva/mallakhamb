@@ -2,7 +2,7 @@ import { UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useReducedMotion } from '../animations/useReducedMotion';
 import { useTheme } from '../theme/useTheme';
-import { DESIGN_TOKENS } from '../../../styles/tokens';
+import { DESIGN_TOKENS, alpha } from '../../../styles/tokens';
 
 /**
  * CoachOrnament - Role-specific ornament component for coach role
@@ -59,7 +59,7 @@ const CoachOrnament = ({ size = 'md', color }) => {
           style={{ 
             width: `${sizes.outer}rem`,
             height: `${sizes.outer}rem`,
-            borderColor: `${primaryColor}22`, 
+            borderColor: `${alpha(primaryColor, 0x22)}`, 
             borderStyle: 'dashed' 
           }}
           animate={{ rotate: -360 }}
@@ -77,7 +77,7 @@ const CoachOrnament = ({ size = 'md', color }) => {
         style={{ 
           width: `${sizes.middle}rem`,
           height: `${sizes.middle}rem`,
-          borderColor: `${primaryColor}30` 
+          borderColor: `${alpha(primaryColor, 0x30)}` 
         }}
         animate={reduced ? {} : { 
           scale: [1, 1.06, 1], 
@@ -96,9 +96,9 @@ const CoachOrnament = ({ size = 'md', color }) => {
         style={{
           width: `${sizes.inner}rem`,
           height: `${sizes.inner}rem`,
-          background: `linear-gradient(135deg, ${primaryColor}20, ${darkerColor}15)`,
-          border: `1px solid ${primaryColor}40`,
-          boxShadow: `0 0 40px ${primaryColor}20, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          background: `linear-gradient(135deg, ${alpha(primaryColor, 0x20)}, ${alpha(darkerColor, 0x15)})`,
+          border: `1px solid ${alpha(primaryColor, 0x40)}`,
+          boxShadow: `0 0 40px ${alpha(primaryColor, 0x20)}, inset 0 1px 0 rgba(255,255,255,0.08)`,
         }}
       >
         {/* UserCheck icon */}

@@ -8,8 +8,6 @@
  */
 
 import React from 'react';
-import { useResponsive } from '../../hooks/useResponsive';
-import { getResponsiveLayout } from '@/utils/ui/responsive';
 
 /**
  * ResponsiveContainer component for consistent responsive layouts
@@ -31,11 +29,6 @@ export const ResponsiveContainer = ({
   as: Component = 'div',
   ...props
 }) => {
-  const { viewport, isMobile, isTablet, isDesktop } = useResponsive();
-  
-  // Get responsive layout configuration
-  const layout = getResponsiveLayout('container');
-  
   // Determine container classes based on props and viewport
   const getContainerClasses = () => {
     const classes = ['w-full'];
@@ -47,7 +40,7 @@ export const ResponsiveContainer = ({
     
     // Add responsive padding - mobile-first approach
     if (padding === 'responsive') {
-      classes.push('px-4 md:px-6 lg:px-8 desktop:px-8');
+      classes.push('px-4 md:px-6 lg:px-8');
     } else if (padding === 'mobile') {
       classes.push('px-4');
     } else if (padding === 'tablet') {
@@ -59,7 +52,10 @@ export const ResponsiveContainer = ({
       classes.push(padding);
     }
     
-    // Add max-width constraints for different viewport categories
+    // Add max-width constraints for different viewport categories.
+    // `min-[1440px]:` is the old `desktop:` screen, written out: 1440 is the
+    // wide-container step, not a breakpoint (`xl` is 1280, so `xl:` would widen
+    // these containers between 1280 and 1439).
     switch (maxWidth) {
       case 'mobile':
         classes.push('max-w-mobile');
@@ -68,13 +64,13 @@ export const ResponsiveContainer = ({
         classes.push('max-w-tablet md:max-w-tablet-content');
         break;
       case 'desktop':
-        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide');
+        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop min-[1440px]:max-w-desktop-wide');
         break;
       case 'full':
         // No max-width constraint - full viewport width
         break;
       default:
-        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop desktop:max-w-desktop-wide');
+        classes.push('max-w-mobile md:max-w-tablet-content lg:max-w-desktop min-[1440px]:max-w-desktop-wide');
     }
     
     return classes.join(' ');
@@ -106,27 +102,6 @@ export const ResponsiveCenteredContainer = ({ children, className = '', ...props
 );
 
 /**
- * Full-width container that breaks out of parent constraints on mobile
- * Ensures no horizontal scrolling while maintaining desktop layouts
- */
-export const ResponsiveFullWidthContainer = ({ children, className = '', ...props }) => {
-  const { isMobile } = useResponsive();
-  
-  const fullWidthClasses = isMobile ? 'mobile-full-width no-horizontal-scroll' : '';
-  
-  return (
-    <ResponsiveContainer
-      maxWidth="full"
-      padding="responsive"
-      className={`${fullWidthClasses} ${className}`}
-      {...props}
-    >
-      {children}
-    </ResponsiveContainer>
-  );
-};
-
-/**
  * Section container with responsive vertical spacing
  * Provides consistent section-level spacing across viewports
  */
@@ -136,23 +111,6 @@ export const ResponsiveSectionContainer = ({ children, className = '', ...props 
       maxWidth="desktop"
       padding="responsive"
       className={`py-section-mobile md:py-section-tablet lg:py-section-desktop ${className}`}
-      {...props}
-    >
-      {children}
-    </ResponsiveContainer>
-  );
-};
-
-/**
- * Form container optimized for mobile interaction
- * Provides optimal form layout across all viewport sizes
- */
-export const ResponsiveFormContainer = ({ children, className = '', ...props }) => {
-  return (
-    <ResponsiveContainer
-      maxWidth="tablet"
-      padding="responsive"
-      className={`space-y-4 md:space-y-6 ${className}`}
       {...props}
     >
       {children}

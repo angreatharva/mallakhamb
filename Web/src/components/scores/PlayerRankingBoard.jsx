@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Users } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { sortByRank } from './scoreRows';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
@@ -34,9 +34,9 @@ const TIE_BREAK_LABELS = {
 
 export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   const colors = {
-    1: { bg: 'rgba(245,166,35,0.2)', border: 'rgba(245,166,35,0.5)', text: '#F5A623' },
-    2: { bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', text: '#C0C0C0' },
-    3: { bg: 'rgba(205,127,50,0.15)', border: 'rgba(205,127,50,0.4)', text: '#CD7F32' },
+    1: { bg: 'rgba(245,166,35,0.2)', border: 'rgba(245,166,35,0.5)', text: DATA_COLORS.gold },
+    2: { bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', text: DATA_COLORS.silver },
+    3: { bg: 'rgba(205,127,50,0.15)', border: 'rgba(205,127,50,0.4)', text: DATA_COLORS.bronze },
   };
   const c = colors[rank];
   if (c) {
@@ -49,29 +49,29 @@ export const RankBadge = ({ rank, size = 'w-9 h-9', textSize = 'text-sm' }) => {
   }
   return (
     <div className={`${size} rounded-full flex items-center justify-center ${textSize} font-bold flex-shrink-0`}
-      style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+      style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}>
       {rank}
     </div>
   );
 };
 
-const ScorePill = ({ label, value, accent = COLORS.saffron }) => (
+const ScorePill = ({ label, value, accent = FG.brand }) => (
   <div className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl"
-    style={{ background: `${accent}0E`, border: `1px solid ${accent}20` }}>
+    style={{ background: `${alpha(accent, 0x0E)}`, border: `1px solid ${alpha(accent, 0x20)}` }}>
     <span className="text-xs font-bold" style={{ color: accent }}>{value}</span>
-    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+    <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>{label}</span>
   </div>
 );
 
 export const SkeletonRow = () => (
   <div className="flex items-center gap-4 p-4 rounded-2xl border animate-pulse"
-    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
-    <div className="w-9 h-9 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.05)' }}>
+    <div className="w-9 h-9 rounded-full" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
     <div className="flex-1 space-y-2">
-      <div className="h-3 rounded-full w-1/3" style={{ background: 'rgba(255,255,255,0.06)' }} />
-      <div className="h-2 rounded-full w-1/4" style={{ background: 'rgba(255,255,255,0.04)' }} />
+      <div className="h-3 rounded-full w-1/3" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
+      <div className="h-2 rounded-full w-1/4" style={{ background: 'rgb(var(--ink) / 0.04)' }} />
     </div>
-    <div className="h-8 w-16 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    <div className="h-8 w-16 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
   </div>
 );
 
@@ -111,10 +111,10 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
       className={`rounded-2xl border overflow-hidden ${className}`}
       style={{
         background: rank <= 3
-          ? `linear-gradient(135deg, ${rank === 1 ? 'rgba(245,166,35,0.1)' : rank === 2 ? 'rgba(192,192,192,0.08)' : 'rgba(205,127,50,0.08)'}, rgba(255,255,255,0.02))`
-          : 'rgba(255,255,255,0.02)',
-        borderColor: rank === 1 ? 'rgba(245,166,35,0.35)' : rank === 2 ? 'rgba(192,192,192,0.25)' : rank === 3 ? 'rgba(205,127,50,0.25)' : 'rgba(255,255,255,0.06)',
-        boxShadow: podium ? `0 8px 28px ${rankAccent}22` : 'none',
+          ? `linear-gradient(135deg, ${rank === 1 ? 'rgba(245,166,35,0.1)' : rank === 2 ? 'rgba(192,192,192,0.08)' : 'rgba(205,127,50,0.08)'}, rgb(var(--ink) / 0.02))`
+          : 'rgb(var(--ink) / 0.02)',
+        borderColor: rank === 1 ? 'rgba(245,166,35,0.35)' : rank === 2 ? 'rgba(192,192,192,0.25)' : rank === 3 ? 'rgba(205,127,50,0.25)' : 'rgb(var(--ink) / 0.06)',
+        boxShadow: podium ? `0 8px 28px ${alpha(rankAccent, 0x22)}` : 'none',
       }}
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -125,10 +125,10 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
         <RankBadge rank={rank} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-white font-bold text-sm leading-tight">{player.playerName}</p>
+            <p className="text-ink font-bold text-sm leading-tight">{player.playerName}</p>
             {tieBreak?.unresolved && (
               <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-                style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623', border: '1px solid rgba(245,166,35,0.3)' }}>
+                style={{ background: 'rgba(245,166,35,0.15)', color: DATA_COLORS.gold, border: '1px solid rgba(245,166,35,0.3)' }}>
                 Tied
               </span>
             )}
@@ -137,49 +137,49 @@ const PlayerCard = ({ player, rank, index, podium = false, className = '' }) => 
             {/* Team is shown as a chip — the board mixes every team, so it must read at a glance */}
             {player.teamName && (
               <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+                style={{ background: 'rgb(var(--ink) / 0.06)', border: '1px solid rgb(var(--ink) / 0.1)', color: 'rgb(var(--ink) / 0.7)' }}>
                 <Users className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
                 {player.teamName}
               </span>
             )}
             {player.coach && (
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Coach: {player.coach}</span>
+              <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>Coach: {player.coach}</span>
             )}
           </div>
           {player.time && (
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Time: {player.time}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>Time: {player.time}</p>
           )}
           {/* Why this athlete placed where they did, when a tie decided it */}
           {tieLabel && (
-            <p className="text-xs mt-0.5" style={{ color: '#F5A623' }}>{tieLabel}</p>
+            <p className="text-xs mt-0.5" style={{ color: DATA_COLORS.gold }}>{tieLabel}</p>
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-2xl font-black" style={{ color: COLORS.saffron }}>{toFixed(player.finalScore)}</p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Final</p>
+          <p className="text-2xl font-black" style={{ color: FG.brand }}>{toFixed(player.finalScore)}</p>
+          <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>Final</p>
         </div>
       </div>
 
       {/* Score breakdown — inside the SAME card */}
-      <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
         <p className="text-[10px] font-bold tracking-widest uppercase mb-2"
-          style={{ color: 'rgba(255,255,255,0.35)' }}>Score Breakdown (Average)</p>
+          style={{ color: 'var(--fg-muted)' }}>Score Breakdown (Average)</p>
         <div className="flex flex-wrap gap-2">
-          <ScorePill label="Difficulty" value={toFixed(avgBreakdown.difficulty)} accent="#3B82F6" />
-          <ScorePill label="Combination" value={toFixed(avgBreakdown.combination)} accent="#A855F7" />
+          <ScorePill label="Difficulty" value={toFixed(avgBreakdown.difficulty)} accent={DATA_COLORS.blue} />
+          <ScorePill label="Combination" value={toFixed(avgBreakdown.combination)} accent={DATA_COLORS.purple} />
           <ScorePill label="Execution" value={toFixed(avgBreakdown.execution)} accent={COLORS.saffron} />
-          <ScorePill label="Originality" value={toFixed(avgBreakdown.bonus)} accent="#22C55E" />
-          {player.deduction > 0 && <ScorePill label="Deduct" value={`-${player.deduction}`} accent="#EF4444" />}
-          {player.otherDeduction > 0 && <ScorePill label="Other" value={`-${player.otherDeduction}`} accent="#EF4444" />}
+          <ScorePill label="Originality" value={toFixed(avgBreakdown.bonus)} accent={DATA_COLORS.green} />
+          {player.deduction > 0 && <ScorePill label="Deduct" value={`-${player.deduction}`} accent={DATA_COLORS.red} />}
+          {player.otherDeduction > 0 && <ScorePill label="Other" value={`-${player.otherDeduction}`} accent={DATA_COLORS.red} />}
           {player.baseScoreApplied && (
             <span className="text-xs px-2 py-1 rounded-xl font-bold self-center"
-              style={{ background: 'rgba(168,85,247,0.15)', color: '#C084FC', border: '1px solid rgba(168,85,247,0.25)' }}>
+              style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft, border: '1px solid rgba(168,85,247,0.25)' }}>
               Base Score
             </span>
           )}
         </div>
         {fromSlips && (
-          <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <p className="text-[10px] mt-2" style={{ color: 'var(--fg-muted)' }}>
             {describeSlipAverage(fromSlips)}
           </p>
         )}
@@ -210,22 +210,26 @@ const PlayerRankingBoard = ({ players }) => {
 
   return (
     <div className="space-y-6">
-      {/* Podium: 2nd (left) - 1st (center, elevated) - 3rd (right) */}
+      {/*
+        Podium: 2nd (left) - 1st (center, elevated) - 3rd (right). Three cards side by side need ~500px, so a
+        phone stacks them in placing order instead. The markup is in placing order too (screen readers and the
+        keyboard meet 1st first); `sm:order-*` draws the podium.
+      */}
       {topPlayers.length > 0 && (
-        <div className="flex items-start justify-center gap-3 sm:gap-4">
-          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
-            {second && <PlayerCard player={second} rank={placeOf(second, 1)} index={1} podium />}
-          </div>
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-center sm:gap-4">
           {/* First place - center, no top margin so it sits highest */}
-          <div className="flex-1 max-w-xs">
+          <div className="sm:order-2 sm:flex-1 sm:max-w-xs">
             {first && (
               <PlayerCard player={first} rank={placeOf(first, 0)} index={0} podium
-                className="scale-105 sm:scale-110 origin-top" />
+                className="sm:scale-110 origin-top" />
             )}
           </div>
 
-          <div className="flex-1 max-w-xs mt-8 sm:mt-10">
+          <div className="sm:order-1 sm:flex-1 sm:max-w-xs sm:mt-10">
+            {second && <PlayerCard player={second} rank={placeOf(second, 1)} index={1} podium />}
+          </div>
+
+          <div className="sm:order-3 sm:flex-1 sm:max-w-xs sm:mt-10">
             {third && <PlayerCard player={third} rank={placeOf(third, 2)} index={2} podium />}
           </div>
         </div>

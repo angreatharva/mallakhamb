@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, LogOut, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
+  Scale, Users, Trophy, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
   CalendarDays, Loader2, ClipboardList, Timer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,13 +14,15 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS } from '@/styles/tokens';
+import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/design-system';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { JudgeAmbience } from './judgeShared';
+import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
+import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -47,15 +49,6 @@ const SEQUENCE_JUDGE_TYPES = ['Senior Judge', 'Scorer'];
 const RECORDER_ROLES = ['Scorer', 'Time Keeper'];
 const holdsBothRecorderSeats = (seatTypes) => RECORDER_ROLES.every((role) => seatTypes.includes(role));
 
-// Design tokens for judge theme
-const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-  amber: '#F59E0B',
-};
-
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   const reduced = useReducedMotion();
   return (
@@ -63,9 +56,9 @@ const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
       onClick={onClick}
       className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3"
       style={{
-        background: selected ? `${accent}14` : 'rgba(255,255,255,0.03)',
-        borderColor: selected ? `${accent}50` : 'rgba(255,255,255,0.07)',
-        color: selected ? '#fff' : 'rgba(255,255,255,0.6)',
+        background: selected ? `${alpha(accent, 0x14)}` : 'rgb(var(--ink) / 0.03)',
+        borderColor: selected ? `${alpha(accent, 0x50)}` : 'rgb(var(--ink) / 0.07)',
+        color: selected ? FG.ink : 'rgb(var(--ink) / 0.6)',
       }}
       whileHover={reduced ? {} : { scale: 1.005 }}
       whileTap={reduced ? {} : { scale: 0.995 }}
@@ -772,33 +765,28 @@ const JudgeDashboard = () => {
       <JudgeAmbience />
 
       <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-              <Scale className="w-4 h-4 text-white" aria-hidden="true" />
+              <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: J.purpleLight }}>{myJudgeType}</p>
+              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
+              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <AppearanceMenu />
             <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-purple-500/10"
-              style={{ borderColor: 'rgba(168,85,247,0.3)', color: J.purpleLight }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
+              style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft }}
               aria-label="Your profile">
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
             </button>
-            <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe md:min-h-[36px] hover:bg-red-500/10"
-              style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#EF4444' }}
-              aria-label="Logout">
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+            <JudgeLogoutButton onLogout={handleLogout} />
           </div>
         </div>
       </header>
@@ -815,8 +803,8 @@ const JudgeDashboard = () => {
         <FadeIn delay={0}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Welcome back</p>
-              <h1 className="text-2xl font-black text-white">{judgeInfo.name}</h1>
+              <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
+              <h1 className="text-2xl font-black text-ink">{judgeInfo.name}</h1>
             </div>
             
             {!showModal && selectedCompetitionType && (
@@ -826,7 +814,7 @@ const JudgeDashboard = () => {
                 {canSequence && (
                   <button
                     onClick={() => navigate('/judge/sequence')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-800 dark:text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
                     <ListOrdered className="w-4 h-4" />
                     Set Sequence
                   </button>
@@ -834,14 +822,14 @@ const JudgeDashboard = () => {
                 {needsRoleChoice && (
                   <button
                     onClick={() => setShowRoleModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
                     {chosenRole === 'Time Keeper' ? <Timer className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                     Change Role
                   </button>
                 )}
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
                   <Filter className="w-4 h-4" />
                   Change Category
                 </button>
@@ -853,8 +841,8 @@ const JudgeDashboard = () => {
             <div className="rounded-2xl border p-4 flex flex-col sm:flex-row gap-4 mb-6"
               style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
               <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: J.purple }} aria-hidden="true" />
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: J.purpleLight }}>Current Assignment</span>
+                <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: DATA_COLORS.purple }} aria-hidden="true" />
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Current Assignment</span>
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
@@ -874,8 +862,8 @@ const JudgeDashboard = () => {
                   ...(needsRoleChoice && roleChosen ? [{ label: 'Role', value: chosenRole }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</span>
-                    <span className="text-sm font-bold text-white">{value}</span>
+                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--fg-muted)' }}>{label}</span>
+                    <span className="text-sm font-bold text-ink">{value}</span>
                   </div>
                 ))}
               </div>
@@ -888,17 +876,17 @@ const JudgeDashboard = () => {
         {/* Registered, but on no panel yet */}
         {!hasSeats && (
           <FadeIn delay={0.1}>
-            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-white/5 bg-white/5">
-              <Scale className="w-12 h-12 mb-4 text-white/20" />
-              <p className="text-lg font-bold text-white/70">No panel assignments yet</p>
-              <p className="text-sm text-white/40 mt-2 max-w-sm">
+            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-ink/5 bg-ink/5">
+              <Scale className="w-12 h-12 mb-4 text-ink/20" />
+              <p className="text-lg font-bold text-ink/70">No panel assignments yet</p>
+              <p className="text-sm text-fg-muted mt-2 max-w-sm">
                 Your account is ready. An organiser adds you to a competition panel — the
                 categories you are judging will appear here once they do. Sign in again after
                 that to start scoring.
               </p>
               <button
                 onClick={() => navigate('/judge/profile')}
-                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
+                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
                 <UserCircle className="w-4 h-4" />
                 View your profile
               </button>
@@ -910,22 +898,21 @@ const JudgeDashboard = () => {
         {!showModal && selectedCompetitionType && !awaitingRole && (
           <FadeIn delay={0.1} className="flex-1 flex flex-col">
             <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-muted" />
               <input 
                 type="text" 
-                placeholder="Search teams by name..." 
+                placeholder="Search teams by name..." aria-label="Search teams" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-base text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors shadow-lg"
+                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-purple-500/50 transition-colors shadow-lg"
               />
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12 gap-3 flex-1">
-                <motion.div className="w-6 h-6 rounded-full border-2 border-t-transparent"
-                  style={{ borderColor: J.purple, borderTopColor: 'transparent' }}
-                  animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-                <span className="text-sm text-white/50">Loading teams...</span>
+                <div className="animate-spin w-6 h-6 rounded-full border-2 border-t-transparent"
+                  style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
+                <span className="text-sm text-fg-muted">Loading teams...</span>
               </div>
             ) : filteredTeams.length > 0 ? (
               <div className="space-y-4 pb-12">
@@ -938,10 +925,10 @@ const JudgeDashboard = () => {
                       key={team._id}
                       type="button"
                       onClick={() => handleTeamSelect(team)}
-                      className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-white/5"
+                      className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-ink/5"
                       style={{ 
-                        background: 'rgba(255,255,255,0.02)',
-                        borderColor: 'rgba(255,255,255,0.08)'
+                        background: 'rgb(var(--ink) / 0.02)',
+                        borderColor: 'rgb(var(--ink) / 0.08)'
                       }}
                     >
                       <div className="flex items-center justify-between p-5 gap-3">
@@ -952,33 +939,33 @@ const JudgeDashboard = () => {
                               other. */}
                           <span className="flex flex-col items-center justify-center w-10 flex-shrink-0">
                             <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
-                              style={{ background: 'rgba(168,85,247,0.18)', color: J.purpleLight }}>
+                              style={{ background: 'rgba(168,85,247,0.18)', color: DATA_COLORS.purpleSoft }}>
                               {orderIdx + 1}
                             </span>
                             {team.lotNo != null && (
                               <span className="text-[9px] mt-0.5 font-bold tracking-wider uppercase"
-                                style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                style={{ color: 'var(--fg-muted)' }}>
                                 Lot {team.lotNo}
                               </span>
                             )}
                           </span>
                           <div className="min-w-0">
-                          <p className="font-bold text-lg text-white truncate">{team.name}</p>
-                          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <p className="font-bold text-lg text-ink truncate">{team.name}</p>
+                          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
                             Coach: {team.coach?.name || 'N/A'}
                           </p>
                           {scoredCount > 0 && (
-                            <p className="text-xs mt-1.5" style={{ color: J.green }}>
+                            <p className="text-xs mt-1.5" style={{ color: FG.success }}>
                               {scoredCount} of {teamPlayers.length} scored
                             </p>
                           )}
                           </div>
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
-                          <span className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/70 font-semibold">
+                          <span className="text-xs px-3 py-1.5 rounded-lg bg-ink/10 text-ink/70 font-semibold">
                             {teamPlayers.length} {teamPlayers.length === 1 ? 'Player' : 'Players'}
                           </span>
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/40">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 text-fg-muted">
                             <ChevronRight className="w-5 h-5" aria-hidden="true" />
                           </div>
                         </div>
@@ -988,10 +975,10 @@ const JudgeDashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-white/5 bg-white/5">
-                <Users className="w-12 h-12 mb-4 text-white/20" />
-                <p className="text-lg font-bold text-white/70">No teams found</p>
-                <p className="text-sm text-white/40 mt-2 max-w-sm text-center">
+              <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+                <Users className="w-12 h-12 mb-4 text-ink/20" />
+                <p className="text-lg font-bold text-ink/70">No teams found</p>
+                <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                   {searchQuery 
                     ? "No teams match your search query." 
                     : "There are no teams submitted for this competition category yet."}
@@ -1008,9 +995,10 @@ const JudgeDashboard = () => {
           <motion.div 
             className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BodyScrollLock />
             
             <motion.div 
-              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
+              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
               
@@ -1018,25 +1006,25 @@ const JudgeDashboard = () => {
               {selectedCompetitionType && isSelectionComplete && (
                 <button 
                   onClick={() => setShowModal(false)}
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
-                  <X className="w-4 h-4" />
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-ink/5 hover:bg-ink/10 flex items-center justify-center text-fg-muted hover:text-ink transition-colors" aria-label="Close">
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <Filter className="w-6 h-6 text-purple-400" />
+                    <Filter className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
-                  <h2 className="text-2xl font-black text-white">Select Judging Category</h2>
-                  <p className="text-white/50 text-sm mt-2">Choose the competition context you are judging for right now.</p>
+                  <h2 className="text-2xl font-black text-ink">Select Judging Category</h2>
+                  <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
                 {/* Competition — the meet, not the competition type. Only asked
                     when this judge is seated at more than one. */}
                 {availableCompetitions.length > 1 && (
                   <div>
-                    <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition</p>
+                    <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition</p>
                     <div className="grid grid-cols-1 gap-3">
                       {availableCompetitions.map(comp => (
                         <SelectBtn
@@ -1044,11 +1032,11 @@ const JudgeDashboard = () => {
                           selected={String(selectedCompetitionId) === String(comp._id)}
                           onClick={() => selectCompetition(comp._id)}>
                           <div className="flex items-center gap-2">
-                            <CalendarDays className="w-4 h-4 flex-shrink-0 text-white/40" aria-hidden="true" />
+                            <CalendarDays className="w-4 h-4 flex-shrink-0 text-fg-muted" aria-hidden="true" />
                             <div>
                               <p>{comp.name || 'Untitled competition'}</p>
                               {(comp.place || comp.level) && (
-                                <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">
+                                <p className="text-[10px] font-normal text-fg-muted uppercase tracking-widest mt-0.5">
                                   {[comp.place, comp.level && levelLabel(comp.level)].filter(Boolean).join(' · ')}
                                 </p>
                               )}
@@ -1058,7 +1046,7 @@ const JudgeDashboard = () => {
                       ))}
                     </div>
                     {switchingCompetition && (
-                      <p className="flex items-center gap-2 text-xs text-white/50 mt-3 ml-1">
+                      <p className="flex items-center gap-2 text-xs text-fg-muted mt-3 ml-1">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                         Switching competition…
                       </p>
@@ -1071,7 +1059,7 @@ const JudgeDashboard = () => {
                   {/* Gender Selection or Display */}
                   {availableGenders.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Gender</p>
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Gender</p>
                       <div className="grid grid-cols-2 gap-3">
                         {availableGenders.map(g => (
                           <SelectBtn key={g} selected={selectedGender === g} onClick={() => setSelectedGender(g)}>
@@ -1081,9 +1069,9 @@ const JudgeDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Gender</p>
-                      <p className="font-bold text-white">{availableGenders[0] || judgeInfo.gender || '—'}</p>
+                    <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Gender</p>
+                      <p className="font-bold text-ink">{availableGenders[0] || judgeInfo.gender || '—'}</p>
                     </div>
                   )}
 
@@ -1093,7 +1081,7 @@ const JudgeDashboard = () => {
                       category and Above 18 to a Female one. */}
                   {availableAgeGroups.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">
+                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">
                         Age Group{selectedGender ? ` · ${selectedGender}` : ''}
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1105,9 +1093,9 @@ const JudgeDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-1">Assigned Age Group</p>
-                      <p className="font-bold text-white">
+                    <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Age Group</p>
+                      <p className="font-bold text-ink">
                         {availableAgeGroups[0]
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
                           || '—'}
@@ -1118,7 +1106,7 @@ const JudgeDashboard = () => {
 
                 {/* Competition Type */}
                 <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Competition Type</p>
+                  <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
                       .filter(ct => availableCompetitionTypes.includes(ct.value))
@@ -1130,7 +1118,7 @@ const JudgeDashboard = () => {
                           }}>
                           <div>
                             <p>{ct.label}</p>
-                            <p className="text-[10px] font-normal text-white/40 uppercase tracking-widest mt-0.5">{ct.sub}</p>
+                            <p className="text-[10px] font-normal text-fg-muted uppercase tracking-widest mt-0.5">{ct.sub}</p>
                           </div>
                         </SelectBtn>
                       ))}
@@ -1146,7 +1134,7 @@ const JudgeDashboard = () => {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden">
                       <div className="pt-2">
-                        <p className="text-xs font-bold tracking-widest uppercase text-purple-400 mb-3 ml-1">Apparatus</p>
+                        <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {availableApparatus.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
@@ -1155,7 +1143,7 @@ const JudgeDashboard = () => {
                           ))}
                         </div>
                         {loading && (
-                          <p className="flex items-center gap-2 text-xs text-white/40 mt-3 ml-1">
+                          <p className="flex items-center gap-2 text-xs text-fg-muted mt-3 ml-1">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                             Checking what the entered athletes are registered for…
                           </p>
@@ -1166,12 +1154,12 @@ const JudgeDashboard = () => {
                 </AnimatePresence>
 
                 {/* Confirm Button */}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-ink/10">
                   <button 
                     onClick={handleConfirmSelection}
                     disabled={!isSelectionComplete}
-                    className="w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgba(255,255,255,0.1)' }}>
+                    className="w-full py-4 rounded-xl font-bold text-ink transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.1)', color: isSelectionComplete ? '#FFFFFF' : undefined }}>
                     {isSelectionComplete ? (
                       <>Continue to Dashboard <ChevronRight className="w-5 h-5" /></>
                     ) : (
@@ -1192,8 +1180,9 @@ const JudgeDashboard = () => {
           <motion.div
             className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BodyScrollLock />
             <motion.div
-              className="bg-[#0f0f0f] border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
+              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
               role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
@@ -1203,18 +1192,18 @@ const JudgeDashboard = () => {
                 <button
                   onClick={() => setShowRoleModal(false)}
                   aria-label="Close"
-                  className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
-                  <X className="w-4 h-4" />
+                  className="absolute top-6 right-6 w-8 h-8 tap-safe rounded-full bg-ink/5 hover:bg-ink/10 flex items-center justify-center text-fg-muted hover:text-ink transition-colors">
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <ClipboardList className="w-6 h-6 text-purple-400" />
+                    <ClipboardList className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                   </div>
-                  <h2 id="role-modal-title" className="text-2xl font-black text-white">Select Your Role</h2>
-                  <p className="text-white/50 text-sm mt-2">
+                  <h2 id="role-modal-title" className="text-2xl font-black text-ink">Select Your Role</h2>
+                  <p className="text-fg-muted text-sm mt-2">
                     You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {selectedAgeGroup || judgeInfo.ageGroup} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
                   </p>
                 </div>
@@ -1226,10 +1215,10 @@ const JudgeDashboard = () => {
                   ].map(({ role, Icon, desc }) => (
                     <SelectBtn key={role} selected={chosenRole === role} onClick={() => chooseRole(role)}>
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-300" aria-hidden="true" />
+                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-300" aria-hidden="true" />
                         <div>
-                          <p className="font-bold text-white">{role}</p>
-                          <p className="text-xs text-white/50 mt-0.5">{desc}</p>
+                          <p className="font-bold text-ink">{role}</p>
+                          <p className="text-xs text-fg-muted mt-0.5">{desc}</p>
                         </div>
                       </div>
                     </SelectBtn>

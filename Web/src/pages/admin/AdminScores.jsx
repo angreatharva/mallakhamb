@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Filter, X, Search, Users } from 'lucide-react';
-import { motion, useInView } from 'framer-motion';
+import { Trophy, Filter, Search, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -10,79 +10,15 @@ import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, ADMIN_EASE_OUT } from '../../styles/tokens';
+import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
-
-const useReducedMotion = () => {
-  const [r, setR] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const h = (e) => setR(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, []);
-  return r;
-};
-
-const FadeIn = ({ children, delay = 0, className = '' }) => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  const reduced = useReducedMotion();
-  return (
-    <motion.div ref={ref} className={className}
-      initial={{ opacity: 0, y: reduced ? 0 : 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay, ease: ADMIN_EASE_OUT }}>
-      {children}
-    </motion.div>
-  );
-};
-
-const DarkCard = ({ children, className = '', style = {} }) => (
-  <div className={`rounded-2xl border ${className}`}
-    style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle, ...style }}>
-    {children}
-  </div>
-);
-
-const DarkSearch = ({ value, onChange, placeholder }) => (
-  <div className="relative">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(255,255,255,0.3)' }} />
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full rounded-xl text-sm text-white placeholder-white/30 outline-none min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: value ? '2.5rem' : '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${ADMIN_COLORS.saffron}50`; e.target.style.boxShadow = `0 0 0 3px ${ADMIN_COLORS.saffron}12`; }}
-      onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
-    />
-    {value && (
-      <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center" aria-label="Clear search">
-        <X className="w-3.5 h-3.5 text-white/40" />
-      </button>
-    )}
-  </div>
-);
-
-const EmptyState = ({ icon: Icon, title, desc, action }) => (
-  <div className="text-center py-12">
-    <Icon className="w-12 h-12 mx-auto mb-3 text-white/15" />
-    <p className="text-white/60 font-semibold">{title}</p>
-    {desc && <p className="text-white/30 text-sm mt-1">{desc}</p>}
-    {action && <div className="mt-4">{action}</div>}
-  </div>
-);
-
-const LoadingState = ({ label }) => (
-  <div className="flex items-center justify-center py-12 gap-3">
-    <div className="w-5 h-5 border-2 border-white/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
-    <span className="text-white/40 text-sm">{label}</span>
-  </div>
-);
+import { DarkCard, FadeIn, EmptyState, LoadingState, DarkSearch } from '@/components/admin/AdminKit';
 
 const InfoBanner = ({ color, children }) => (
-  <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${color}10`, borderColor: `${color}30` }}>
+  <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(color, 0x10)}`, borderColor: `${alpha(color, 0x30)}` }}>
     {children}
   </div>
 );
@@ -119,11 +55,11 @@ const ScoreTypeTabs = ({ value, onChange }) => (
           role="tab"
           aria-selected={active}
           onClick={() => onChange(type.value)}
-          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe md:min-h-[38px] border"
+          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[38px] border"
           style={{
-            background: active ? `${ADMIN_COLORS.saffron}18` : 'rgba(255,255,255,0.03)',
-            borderColor: active ? `${ADMIN_COLORS.saffron}45` : ADMIN_COLORS.darkBorderSubtle,
-            color: active ? ADMIN_COLORS.saffronLight : 'rgba(255,255,255,0.5)',
+            background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgb(var(--ink) / 0.03)',
+            borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x45)}` : ADMIN_COLORS.darkBorderSubtle,
+            color: active ? FG.brandSoft : 'var(--fg-muted)',
           }}>
           {type.label}
         </button>
@@ -389,8 +325,8 @@ const Scores = () => {
     <div className="space-y-6">
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: ADMIN_COLORS.saffron }}>Scoring System</p>
-          <h2 className="text-2xl font-black text-white mb-6">Scores &amp; Rankings</h2>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Scoring System</p>
+          <h2 className="text-2xl font-black text-ink mb-6">Scores &amp; Rankings</h2>
 
           <ScoreTypeTabs value={scoreType} onChange={setScoreType} />
 
@@ -424,13 +360,13 @@ const Scores = () => {
               <div>
                 {scoreType === 'add' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Add New Score</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Add New Score</h3>
                     {submittedTeams.length > 0 && (
                       <>
                         <InfoBanner color={ADMIN_COLORS.green}>
-                          <span className="text-white/70">Showing teams for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
-                          <span className="text-white/50 ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
+                          <span className="text-ink/70">Showing teams for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
+                          <span className="text-fg-muted ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
                       </>
@@ -439,7 +375,7 @@ const Scores = () => {
                       {submittedTeams.length > 0 ? (
                         filteredTeams.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <ResponsiveTeamTable
                             teams={filteredTeams}
@@ -450,14 +386,14 @@ const Scores = () => {
                             searchTerm={searchTerm}
                             renderMobileCard={(team) => (
                               <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                <h4 className="font-bold text-white">Team: {team.name}</h4>
-                                <p className="text-sm text-white/50 mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
-                                <p className="text-xs text-white/30 mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
+                                <h4 className="font-bold text-ink">Team: {team.name}</h4>
+                                <p className="text-sm text-fg-muted mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
+                                <p className="text-xs text-fg-muted mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
                                 <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-                                  <span className="text-sm text-white/50">Players: <span className="font-bold text-white">{team.players?.length || 0}</span></span>
+                                  <span className="text-sm text-fg-muted">Players: <span className="font-bold text-ink">{team.players?.length || 0}</span></span>
                                   <motion.button
                                     onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white min-h-[36px]"
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-snow tap-safe mouse:min-h-[36px]"
                                     style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                                     View Details →
@@ -476,18 +412,18 @@ const Scores = () => {
 
                 {scoreType === 'individual' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Individual Rankings</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Individual Rankings</h3>
                     {scores.length > 0 ? (
                       <>
                         <InfoBanner color={ADMIN_COLORS.blue}>
-                          <span className="text-white/70">Individual rankings for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
+                          <span className="text-ink/70">Individual rankings for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
 
                         <div className="flex items-center gap-2 px-1 mb-4">
-                          <Users className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
-                          <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          <Users className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.35)' }} aria-hidden="true" />
+                          <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
                             {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
                             {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
                           </span>
@@ -495,7 +431,7 @@ const Scores = () => {
 
                         {filteredPlayers.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No players found" desc={`No players match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <PlayerRankingBoard players={filteredPlayers} />
                         )}
@@ -508,18 +444,18 @@ const Scores = () => {
 
                 {scoreType === 'rankings' && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-4">Team Rankings</h3>
+                    <h3 className="text-lg font-bold text-ink mb-4">Team Rankings</h3>
                     {scores.length > 0 ? (
                       <>
                         <InfoBanner color={ADMIN_COLORS.purple}>
-                          <span className="text-white/70">Team rankings for: </span>
-                          <span className="font-bold text-white">{categoryLabel}</span>
-                          <span className="text-white/50 ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
+                          <span className="text-ink/70">Team rankings for: </span>
+                          <span className="font-bold text-ink">{categoryLabel}</span>
+                          <span className="text-fg-muted ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
                         {filteredTeamRankings.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: ADMIN_COLORS.saffronLight }}>Clear search</button>} />
+                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
                         ) : (
                           <ResponsiveTeamRankings teams={filteredTeamRankings} searchTerm={searchTerm} />
                         )}

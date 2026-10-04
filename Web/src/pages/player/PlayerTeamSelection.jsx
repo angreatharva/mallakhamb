@@ -7,12 +7,13 @@ import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
+import { FG, alpha } from '@/styles/tokens';
 
 const COLORS = {
-  dark: '#0A0A0A',
-  darkCard: '#111111',
-  darkBorder: 'rgba(255,255,255,0.08)',
-  darkBorderSubtle: 'rgba(255,255,255,0.04)',
+  dark: 'rgb(var(--bg))',
+  darkCard: 'rgb(var(--surface))',
+  darkBorder: 'rgb(var(--ink) / 0.08)',
+  darkBorderSubtle: 'rgb(var(--ink) / 0.04)',
   saffron: '#FF9933',
   saffronLight: '#FFB366',
   saffronDark: '#E67300',
@@ -107,10 +108,9 @@ const PlayerTeamSelection = () => {
       <div className="min-h-dvh flex items-center justify-center"
         style={{ background: COLORS.dark }}>
         <div className="text-center">
-          <motion.div className="w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${COLORS.saffron}40`, borderTopColor: COLORS.saffron }}
-            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
-          <p className="text-white/45 text-sm">Loading teams...</p>
+          <div className="animate-spin w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
+            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
+          <p className="text-fg-muted text-sm">Loading teams...</p>
         </div>
       </div>
     );
@@ -125,12 +125,12 @@ const PlayerTeamSelection = () => {
         <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
           <div className="flex items-center gap-3 mb-4">
             <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-80" />
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-ink/10" />
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-white/40">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted">
                 Bhausaheb Ranade Mallakhamb
               </p>
-              <p className="text-white/60 text-xs">Player Portal</p>
+              <p className="text-ink/60 text-xs">Player Portal</p>
             </div>
           </div>
           
@@ -138,10 +138,10 @@ const PlayerTeamSelection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE }}>
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
+            <h1 className="text-3xl md:text-4xl font-black text-ink mb-2">
               Select Your Team
             </h1>
-            <p className="text-white/45 text-sm md:text-base">
+            <p className="text-fg-muted text-sm md:text-base">
               Choose the team you want to join to start competing
             </p>
           </motion.div>
@@ -158,13 +158,13 @@ const PlayerTeamSelection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: EASE }}>
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/30" />
               <input
                 type="text"
-                placeholder="Search teams by name, description, or coach..."
+                placeholder="Search teams by name, description, or coach..." aria-label="Search teams"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-white placeholder:text-white/30 focus:outline-none focus:border-opacity-100 transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-ink placeholder:text-ink/30 focus:border-opacity-100 transition-colors"
                 style={{ 
                   borderColor: COLORS.darkBorder,
                   background: COLORS.darkCard 
@@ -181,13 +181,13 @@ const PlayerTeamSelection = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}>
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                style={{ background: `${COLORS.saffron}15`, border: `1px solid ${COLORS.saffron}35` }}>
-                <Users className="w-8 h-8" style={{ color: COLORS.saffron }} />
+                style={{ background: `${alpha(COLORS.saffron, 0x15)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
+                <Users className="w-8 h-8" style={{ color: FG.brand }} />
               </div>
-              <h3 className="text-white font-bold text-lg mb-2">
+              <h3 className="text-ink font-bold text-lg mb-2">
                 {searchQuery ? 'No teams found' : 'No teams available'}
               </h3>
-              <p className="text-white/45 text-sm">
+              <p className="text-fg-muted text-sm">
                 {searchQuery 
                   ? 'Try adjusting your search query' 
                   : 'There are no teams available at the moment'}
@@ -203,23 +203,23 @@ const PlayerTeamSelection = () => {
                     disabled={joining}
                     className="text-left p-6 rounded-2xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ 
-                      background: selectedTeam?._id === team._id ? `${COLORS.saffron}10` : COLORS.darkCard,
-                      borderColor: selectedTeam?._id === team._id ? `${COLORS.saffron}40` : COLORS.darkBorderSubtle,
+                      background: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x10)}` : COLORS.darkCard,
+                      borderColor: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
                     }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4, delay: index * 0.05, ease: EASE }}
                     whileHover={!joining ? { 
-                      borderColor: `${COLORS.saffron}35`,
-                      boxShadow: `0 0 30px ${COLORS.saffron}10` 
+                      borderColor: `${alpha(COLORS.saffron, 0x35)}`,
+                      boxShadow: `0 0 30px ${alpha(COLORS.saffron, 0x10)}` 
                     } : {}}
                     whileTap={!joining ? { scale: 0.98 } : {}}>
                     
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${COLORS.saffron}15` }}>
-                        <Users className="w-6 h-6" style={{ color: COLORS.saffron }} />
+                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
+                        <Users className="w-6 h-6" style={{ color: FG.brand }} />
                       </div>
                       
                       {selectedTeam?._id === team._id && joining && (
@@ -227,34 +227,34 @@ const PlayerTeamSelection = () => {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: COLORS.saffron }} />
+                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: FG.brand }} />
                         </motion.div>
                       )}
                     </div>
 
-                    <h3 className="text-white font-bold text-lg mb-1 truncate">
+                    <h3 className="text-ink font-bold text-lg mb-1 truncate">
                       {team.name}
                     </h3>
                     
                     {team.description && (
-                      <p className="text-white/45 text-sm mb-3 line-clamp-2">
+                      <p className="text-fg-muted text-sm mb-3 line-clamp-2">
                         {team.description}
                       </p>
                     )}
 
                     {team.coach?.name && (
-                      <div className="flex items-center gap-2 text-xs text-white/40">
+                      <div className="flex items-center gap-2 text-xs text-fg-muted">
                         <span>Coach:</span>
-                        <span className="font-semibold text-white/60">{team.coach.name}</span>
+                        <span className="font-semibold text-ink/60">{team.coach.name}</span>
                       </div>
                     )}
 
                     <div className="mt-4 pt-4 border-t flex items-center justify-between"
                       style={{ borderColor: COLORS.darkBorderSubtle }}>
-                      <span className="text-xs font-semibold" style={{ color: COLORS.saffron }}>
+                      <span className="text-xs font-semibold" style={{ color: FG.brand }}>
                         {selectedTeam?._id === team._id && joining ? 'Joining...' : 'Click to join'}
                       </span>
-                      <ArrowRight className="w-4 h-4" style={{ color: COLORS.saffron }} />
+                      <ArrowRight className="w-4 h-4" style={{ color: FG.brand }} />
                     </div>
                   </motion.button>
                 ))}

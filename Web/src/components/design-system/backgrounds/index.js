@@ -19,9 +19,5 @@ import { lazy } from 'react';
  */
 export { default as AmbientOrbs, ORB_INTENSITY } from './AmbientOrbs';
 
-// Lazy load background decorations to reduce initial bundle size
+// Lazy, to keep it out of the pages that never draw it.
 export const HexGrid = lazy(() => import('./HexGrid'));
-export const RadialBurst = lazy(() => import('./RadialBurst'));
-export const DiagonalBurst = lazy(() => import('./DiagonalBurst'));
-export const HexMesh = lazy(() => import('./HexMesh'));
-export const Constellation = lazy(() => import('./Constellation'));
