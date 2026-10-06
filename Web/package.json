@@ -44,14 +44,18 @@
     "audit:modals": "playwright test e2e/responsive-modals.spec.js",
     "audit:judge-walk": "playwright test e2e/responsive-judge-walk.spec.js",
     "audit:shots": "playwright test e2e/responsive-shots.spec.js",
-    "audit:visual": "playwright test e2e/visual-baseline.spec.js"
+    "audit:visual": "playwright test e2e/visual-baseline.spec.js",
+    "audit:home": "node e2e/home-device-audit.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/teko": "^5.3.0",
     "axios": "^1.6.2",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
     "dompurify": "^3.3.3",
     "framer-motion": "^12.23.25",
+    "gsap": "3.15.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.546.0",
     "react": "^19.1.1",
@@ -61,6 +65,7 @@
     "react-router-dom": "^7.18.2",
     "socket.io-client": "^4.7.4",
     "tailwind-merge": "^3.4.0",
+    "three": "0.186.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
