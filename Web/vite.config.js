@@ -52,6 +52,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     css: true,
+    /*
+     * Four workers, not one per core. The judge-screen tests render whole
+     * screens in jsdom; with a worker per core (15 on a 16-core laptop) they
+     * compete for the machine and the slowest took 3.5 s of the 5 s timeout, so
+     * a busy machine tipped a different handful over the edge on every run
+     * (master included). With four, the slowest takes 1.2 s. The timeout stays
+     * at the default, so a real hang still fails.
+     */
+    maxWorkers: 4,
     // Scoped to src so Vitest never tries to run the Playwright specs in e2e/,
     // which its default glob would otherwise match on `*.spec.js`.
     include: ['src/**/*.{test,spec}.{js,jsx}'],

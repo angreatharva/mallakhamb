@@ -17,6 +17,16 @@ mocking layer — individual test files mock their own API modules
 directly. No Playwright involvement here; e2e/seeding via Playwright is
 a separate harness, see [15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md).
 
+## Workers: capped at 4 (`vite.config.js` `test.maxWorkers`)
+
+With one worker per core (15 on the 16-core dev laptop) the judge-screen tests
+(`JudgeScoring.*`, `JudgePanelReview.live`, `TimeKeeper.flow`) took up to 3.5 s
+of the 5 s default timeout, and a busy machine timed out a different handful
+on every full run, master included (2026-10-08). Capped at 4 the slowest is
+~1.0 s and the suite takes ~5 s longer. Don't raise `testTimeout` instead: it
+would hide real hangs. If a judge test times out again, measure first
+(`--reporter=json`, sort by duration) before touching the timeout.
+
 ## `src/setupTests.js` — the entirety of global setup (32 lines)
 
 ```js
