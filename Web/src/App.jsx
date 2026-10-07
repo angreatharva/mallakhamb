@@ -13,6 +13,7 @@ import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
+import { applyLook } from '@/utils/ui/look';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
 
 function AppContent() {
@@ -33,11 +34,13 @@ function AppContent() {
     verifyCopRulesAgainstServer();
   }, []);
 
-  // Role accent for the CSS tokens, from the URL like everything else here.
-  // A layout effect, so a route change never paints one frame in the old role.
+  // Role accent and look for the CSS tokens, from the URL like everything else
+  // here. A layout effect, so a route change never paints one frame in the old
+  // role or look. Both only flip an attribute on <html>; nothing remounts.
   useLayoutEffect(() => {
     applyRoleAccent(getRoleFromPath(location.pathname));
-  }, [location.pathname]);
+    applyLook(location.pathname, location.search);
+  }, [location.pathname, location.search]);
 
   if (loading) {
     return <PageLoader />;

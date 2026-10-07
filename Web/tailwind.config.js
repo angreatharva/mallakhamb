@@ -1,4 +1,5 @@
 import { SCREENS, WIDE_CONTAINER_MIN, Z_INDEX } from './src/styles/breakpoints.js';
+import { DURATION_STEPS } from './src/styles/looks/contract.js';
 
 const px = (n) => `${n}px`;
 
@@ -107,8 +108,59 @@ export default {
           900: '#14532d',
         }
       },
+      /*
+       * Type, shape and motion read the LOOK tokens (src/styles/looks/,
+       * generated into styles/generated/looks.css). The `classic` look holds
+       * the values these scales had before — Tailwind's defaults, and this
+       * file's old `Inter, system-ui, sans-serif` — so nothing moved; a look
+       * restyles 600+ `rounded-*` uses without a page edit. Only token NAMES
+       * live here: a new look never edits this file (design-language PLAN §4.5).
+       */
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: 'var(--font-text)',
+        display: 'var(--font-display)',
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        DEFAULT: 'var(--radius)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        '3xl': 'var(--radius-3xl)',
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        '2xl': 'var(--shadow-2xl)',
+        inner: 'var(--shadow-inner)',
+      },
+      backdropBlur: {
+        sm: 'var(--backdrop-blur-sm)',
+        DEFAULT: 'var(--backdrop-blur)',
+        md: 'var(--backdrop-blur-md)',
+        lg: 'var(--backdrop-blur-lg)',
+        xl: 'var(--backdrop-blur-xl)',
+        '2xl': 'var(--backdrop-blur-2xl)',
+        '3xl': 'var(--backdrop-blur-3xl)',
+      },
+      transitionTimingFunction: {
+        DEFAULT: 'var(--ease)',
+        in: 'var(--ease-in)',
+        out: 'var(--ease-out)',
+        'in-out': 'var(--ease-in-out)',
+        cut: 'var(--ease-cut)',
+      },
+      transitionDuration: {
+        DEFAULT: 'var(--duration-default)',
+        ...Object.fromEntries(DURATION_STEPS.map((step) => [step, `var(--duration-${step})`])),
+        press: 'var(--dur-1)',
+        hover: 'var(--dur-2)',
+        wipe: 'var(--dur-3)',
+        entrance: 'var(--dur-4)',
       },
       // Enhanced responsive spacing system
       spacing: {

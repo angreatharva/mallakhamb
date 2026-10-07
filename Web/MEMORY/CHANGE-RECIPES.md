@@ -139,12 +139,12 @@ helper either).
 ## change-design-tokens
 
 **Read [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) first** (rewritten
-2026-10-07), and check `docs/design-language/PLAN.md`'s status line — once
-its Phase 1 lands, colour values move from `index.css` into the look packs
-under `src/styles/looks/` and this recipe changes.
+2026-10-07) and `docs/design-language/PLAN.md` §11 (the playbook for
+changing a look).
 
-- **Colour:** the RGB triplet in **both** `[data-appearance]` blocks of
-  `src/index.css` (and the `[data-role]` block if it's a role colour).
+- **Colour:** the value in **both** appearances of every look pack
+  (`src/styles/looks/*.js`; role colours in its `roles`), then `npm run looks`.
+  A brand-new token also goes in `looks/contract.js`.
   Tailwind reads it as a channel; JS reads it through `FG`/`DATA_COLORS`/
   `DESIGN_TOKENS`. Opacity only via `alpha()` or `/NN`.
 - **Breakpoint or z-index:** `src/styles/breakpoints.js` only, then restart

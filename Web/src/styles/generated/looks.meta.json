@@ -1,0 +1,42 @@
+{
+  "generatedBy": "scripts/build-looks.mjs",
+  "default": "classic",
+  "looks": {
+    "classic": {
+      "dark": {
+        "bg": "#0a0a0a",
+        "surface": "#111111",
+        "surface-raised": "#161616",
+        "surface-sunken": "#0a0a0a",
+        "surface-overlay": "#1a1a1a",
+        "accent": "#3b82f6"
+      },
+      "light": {
+        "bg": "#f6f7f9",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "surface-sunken": "#eef0f3",
+        "surface-overlay": "#ffffff",
+        "accent": "#1d4ed8"
+      }
+    },
+    "prime-time": {
+      "dark": {
+        "bg": "#000000",
+        "surface": "#140e09",
+        "surface-raised": "#20160e",
+        "surface-sunken": "#000000",
+        "surface-overlay": "#20160e",
+        "accent": "#ff6b00"
+      },
+      "light": {
+        "bg": "#f3eee6",
+        "surface": "#fbf8f3",
+        "surface-raised": "#ffffff",
+        "surface-sunken": "#e8e0d4",
+        "surface-overlay": "#ffffff",
+        "accent": "#ff6b00"
+      }
+    }
+  }
+}

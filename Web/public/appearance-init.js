@@ -28,6 +28,9 @@
     : pref;
   var root = document.documentElement;
   root.setAttribute('data-appearance', resolved);
+  // The default look (src/utils/ui/look.js DEFAULT_LOOK); the app then sets the
+  // route's own look before its first paint (docs/design-language/PLAN.md §4.4).
+  root.setAttribute('data-look', 'classic');
   root.style.colorScheme = resolved;
 
   // `system` leaves the two media-scoped theme-color tags to the browser; an

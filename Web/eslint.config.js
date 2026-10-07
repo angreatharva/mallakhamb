@@ -76,4 +76,14 @@ export default defineConfig([
       },
     },
   },
+  {
+    // The look packs ARE the token source (docs/design-language/PLAN.md §4.3):
+    // the one place a raw colour or length is supposed to be written. The
+    // rules already exempt styles/tokens.js for the same reason.
+    files: ['src/styles/looks/**/*.js'],
+    rules: {
+      'design-system/no-hardcoded-colors': 'off',
+      'design-system/no-hardcoded-spacing': 'off',
+    },
+  },
 ])

@@ -3,6 +3,10 @@ doc: 05-DESIGN-SYSTEM
 covers:
   - src/styles/**
   - src/index.css
+  - src/styles/looks/**
+  - src/styles/generated/**
+  - src/utils/ui/look.js
+  - scripts/build-looks.mjs
   - public/appearance-init.js
   - src/utils/ui/appearance.js
   - src/contexts/AppearanceProvider.jsx
@@ -13,7 +17,7 @@ covers:
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: 7f250ee
+verified_against_commit: 90a5060
 last_verified: 2026-10-07
 ---
 
@@ -24,13 +28,28 @@ source, colours are CSS custom properties, and the app has Light and
 Dark. Full history: `docs/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
 `docs/RESPONSIVE_UIUX_REPORT.md` (summary).
 
-**Next:** `docs/design-language/PLAN.md` (2026-10-07) rolls the new
-Home's "Prime Time" look across the site through a third axis, *Look*
-(`html[data-look]`), with token packs in `src/styles/looks/`. When that
-lands, this doc's "where colour values live" section moves into the
-packs — check the plan's status line before trusting it.
+**Look packs (Phase 1 of `docs/design-language/PLAN.md`, branch
+`look/phase-1-tokens`, 2026-10-07).** Token VALUES no longer live in
+`index.css`: they are in look packs, `src/styles/looks/{classic,prime-time}.js`,
+compiled by `npm run looks` (also `predev`/`prebuild`) into the committed
+`src/styles/generated/looks.css`, which `index.css` `@import`s first.
+- `contract.js` lists every token (role, appearance, look scopes) and the
+  contrast pairs; `looks.contract/contrast/drift.test.js` hold every pack to it.
+  New token → add it to the contract and to **every** pack.
+- `classic` = the pre-plan values verbatim (don't "improve" it: classic routes
+  must not move; it lists 3 known contrast exceptions). `prime-time` = Home's
+  language, passes every pair.
+- A third axis, **Look**, on `html[data-look]`: `src/utils/ui/look.js`
+  (`LOOK_BY_ROUTE`, empty for now → every route is classic; `applyLook` beside
+  `applyRoleAccent`; `?look=prime-time` preview in dev or builds with
+  `VITE_LOOK_OVERRIDE=1`). `appearance-init.js` sets the default before paint.
+- Tailwind's `fontFamily.sans`/`display`, `borderRadius`, `boxShadow`,
+  `backdropBlur`, `transitionTimingFunction`, `transitionDuration` read tokens.
+  A new look never edits `tailwind.config.js`.
+- Below, "Where colour values live" still describes the token NAMES correctly;
+  for the VALUES read the packs.
 
-## Two styling axes today (three once the plan lands)
+## The styling axes (Look is the third; see above)
 
 ```
 <html data-appearance="light" data-role="judge">
@@ -64,12 +83,10 @@ axis is "Look", for the same reason.
 
 ## Where colour values live
 
-- **`src/index.css`** holds every value: `:root` + `[data-role]` role
-  palettes, then `[data-appearance="dark"]` and `[data-appearance="light"]`
-  blocks of **RGB triplets** (`--bg`, `--surface*`, `--ink`, `--fg*`,
+- **The look packs** hold every value (`classic` is what every route uses
+  today): role palettes, then dark and light blocks of **RGB triplets** (`--bg`, `--surface*`, `--ink`, `--fg*`,
   `--line*`, status, data palette `--cat-*`, `--medal-*`), then derived
-  tokens re-declared per appearance. This file is the one the design-language
-  plan moves into the `classic` pack verbatim.
+  tokens re-declared per appearance — generated into `looks.css`.
 - **`tailwind.config.js`** colours are channels: `ink: rgb(var(--ink) / <alpha>)`
   etc., so `bg-ink/10` works in both appearances. **`snow` is literal
   `#ffffff`** (text on a photo or saturated fill). Tailwind's `white` is
@@ -163,10 +180,10 @@ differ visually). Before editing one, grep the call site's import path.
 
 ## Change guidance
 
-- New colour: add the triplet to **both** appearance blocks in `index.css`
-  (plus a `[data-role]` override if role-specific), expose it in Tailwind as
-  a channel, and through `FG`/`DATA_COLORS` for JS. Then run the contrast
-  audit in both appearances.
+- New colour token: add it to `src/styles/looks/contract.js` and to both
+  appearances of **every** pack, run `npm run looks`, expose it in Tailwind as
+  a channel and through `FG`/`DATA_COLORS` for JS. `npx vitest run src/styles`,
+  then the browser contrast audit in both appearances.
 - Opacity on a token: `alpha()`, or Tailwind's `/NN` on a channel colour.
   Never string-glue.
 - Breakpoints / z-index: `breakpoints.js` only, then restart the dev server.

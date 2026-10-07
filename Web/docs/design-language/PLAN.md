@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** plan only (2026-10-07). Nothing in this document is implemented yet.
+**Status:** Phase 1 done on branch `look/phase-1-tokens` (2026-10-07), not merged; Phase 0.4 (performance baseline) still open. See the progress log (§14).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -680,3 +680,35 @@ What must **never** be needed for a restyle: editing pages, editing Tailwind's c
 - GSAP or three.js on app screens.
 - Per-competition skins: the architecture makes them possible (§11), but none is built.
 - Self-hosting the Home photos as AVIF. That is a separate change, and downloading the photos needs the owner's OK.
+
+---
+
+## 14. Progress log
+
+### 2026-10-07: Phase 0 and Phase 1 (branch `look/phase-1-tokens`, from `a5c7556`)
+
+**Phase 0 (baselines)**
+- 0.1: the owner asked for the work to start.
+- 0.2: fresh pixel baselines for every audited route × 375/768/820/1024/1366 × dark/light, recorded against a **frozen production build** of `a5c7556` served by `vite preview` on :4174 (launch config `look-frozen`). Source edits can't reach a frozen build, so Phase 1 was written while the baselines recorded. Baselines: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look/` (outside the repo; the 2026-09-30 set is untouched). Runner: `.mk-look-builds/look-visual.sh <update|compare> <tag>` (one area at a time, a lock, a void-run signature of the served build and the spec files).
+- **Home is not pixel-gated.** Its full-page capture never settles: the GSAP runtime flips ~27% of the pixels between two shots of the same build. Compare runs use `VISUAL_ONLY='^(?!home$)'`. Home stays covered by `npm run audit:home` (41 devices), as §8 item 14 already says.
+- 0.3: `lint-baseline.json` (1,429 warnings: colours 855, spacing 490, hooks 35, unused vars 49) and `npm run lint:ratchet`. The look packs are exempt from the two design-system rules: they are the token source.
+- 0.4 (performance baseline): not done yet. Needed before Phase 2.
+
+**Phase 1 (token architecture)**
+- 1.1: `src/styles/looks/{contract,define,build,color,index}.js` and `scripts/build-looks.mjs` (`npm run looks`, `looks:check`, run by `predev`/`prebuild`). Output: `src/styles/generated/looks.css` + `looks.meta.json`, committed.
+- 1.2: the `classic` pack holds `index.css`'s token blocks verbatim; `index.css` now `@import`s the generated file. A one-off parse of the old `index.css` confirmed every old declaration is reproduced exactly. New tokens only: `ident`, `ident-fg`, `on-ident` (classic mirrors the role accent), and the look tokens below.
+- 1.3: Tailwind's `fontFamily.sans` (+ new `display`), `borderRadius`, `boxShadow`, `backdropBlur`, `transitionTimingFunction` (+ `cut`) and `transitionDuration` (+ `press`/`hover`/`wipe`/`entrance`) read tokens; `classic` holds the old values. No coloured shadows exist in the app, so tokenised shadows lose nothing.
+- 1.4: `src/utils/ui/look.js` (`LOOK_BY_ROUTE`, `applyLook`, `?look=` dev override, `currentLook`), called beside `applyRoleAccent`; `appearance-init.js` sets the default look before first paint.
+- 1.5: the `prime-time` pack: dark from Home, light "chalk paper" from §5. **It passes every contrast pair with no exceptions.** One data colour re-tuned for dark teak: Combination purple `#C084FC` (classic's `#A855F7` is 4.49 on teak-2, just under 4.5); the rest keep classic's dark hexes.
+- **Deviation from 1.4/1.6 (decided on the owner's behalf):** `/` is **not** mapped to prime-time yet, and Home's local variables are not yet aliases of the shared tokens. Home's masthead holds the shared `AppearanceMenu` (Tailwind `rounded-lg`, `text-ink`, …), which prime-time tokens would visibly restyle, and Phase 1's exit gate requires Home unchanged. Both move to Phase 3.2, where Home adopts the shared primitives and is re-baselined anyway. Done now: `.cd-rb`'s local `--bg`/`--fg` renamed to `--rb-bg`/`--rb-fg`.
+- 1.7: `looks.contract.test.js`, `looks.contrast.test.js`, `looks.drift.test.js`, `utils/ui/look.test.js` (47 tests). `classic` lists three contrast exceptions: worst-case pairings today's design fails (4.39–4.40) that no audited screen draws. They retire with classic.
+- **Evidence (Phase 1 exit gate):**
+  - **Computed styles:** frozen `a5c7556` build vs the Phase 1 build, every element × 20 properties, 8 public routes × 375/1366 × dark/light: **identical**. A positive control (player vs coach login) shows the comparison does detect a difference.
+  - **Pixel gate, threshold 0, every audited route except Home × 375/768/820/1024/1366 × dark/light: identical.** Coach, admin and superadmin matched on the first run. Public, judge and player needed re-captures, for reasons the unchanged build shows too (the self-check of `a5c7556` against its own baseline failed on the same screens):
+    - player `select-level` / `select-competition` land on the level chooser in one capture and pass straight through to the dashboard in another (one competition at the level; the CompetitionContext auto-select race). Both states matched exactly on re-capture.
+    - judge `select-level`, `select-competition` and the dashboard family differed in one run and matched exactly in the next.
+    - public `reset-password` at 375 dark differed by 8 pixels, in the self-check too; it matched on re-capture.
+    - One self-check superadmin run failed to sign in ("Invalid credentials" with `loginAttempts: 0`): the API briefly lost Atlas. Void, re-run clean.
+  - **The gate itself is only as deterministic as the data.** Before Phase 5 relies on it, make the chooser and dashboard captures wait for a settled competition state (or pin it), so a diff means a change.
+  - **Home** (not pixel-gated): `npm run audit:home` against the Phase 1 build **41/41 devices clean**, and the computed-style comparison on `/` (≈1,050 elements, 375/1366, dark/light) **identical**.
+  - vitest **435/435** (48 files); `npm run looks:check` clean; `npm run lint:ratchet` holds.
