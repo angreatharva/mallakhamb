@@ -24,6 +24,17 @@ The Gmail API sends from the same Gmail account over HTTPS on port 443, which Re
    GMAIL_CLIENT_ID=<id> GMAIL_CLIENT_SECRET=<secret> npm run gmail:token
    ```
 
+   In Windows PowerShell, which doesn't accept the inline `VAR=value` form:
+
+   ```powershell
+   cd Server
+   $env:GMAIL_CLIENT_ID="<id>"
+   $env:GMAIL_CLIENT_SECRET="<secret>"
+   npm run gmail:token
+   ```
+
+   Putting both values in `Server/.env` also works; the script reads it.
+
    Open the printed URL and sign in as **the account that should send the mail**, the same address as `EMAIL_USER`. Allow *Send email on your behalf*. The terminal then prints the refresh token. The script writes nothing to disk.
 6. **Set these four variables** in the Render dashboard, under mallakhamb-server and then Environment:
 
