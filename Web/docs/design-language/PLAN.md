@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** Phases 0–2 done (2026-10-07) on branch `look/phase-2-type` (stacked on `look/phase-1-tokens`), not merged. Next: Phase 3 (primitives, the `/__look` specimen, owner checkpoint). See the progress log (§14).
+**Status:** Phases 0–3 done (2026-10-08) on branch `look/phase-3-primitives` (stacked on Phases 1–2), not merged. Phase 3's owner checkpoint material is in [README.md](README.md). Next: Phase 4 (shells and the brand sweep). See the progress log (§14).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -759,3 +759,47 @@ The judge dashboard already shifts on master, so its gate is "no worse", not 0. 
   - LCP and CLS within master's own run-to-run spread on every route; Home unchanged (137 KB fonts, CLS 0).
 - vitest **450/450**; `looks:check` clean; lint ratchet holds.
 - **Not yet measurable:** the 100 KB first-paint font budget on a real prime-time screen. No route is prime-time until Phase 3's specimen page; measure it there.
+
+### 2026-10-08: Phase 3 (branch `look/phase-3-primitives`, stacked on Phase 2)
+
+**3.1 Primitives** (`src/components/ui/`, with the guide in [README.md](README.md)):
+- Button, IconButton, Field with Input/Select/Textarea/PasswordInput, Panel, Heading, Tag, StatusTag, Stat, SpecList, DataTable, Tabs/TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton, EmptyState, ErrorState, Grain, `toastOptions`.
+- New component tokens in the contract: radius-control, radius-panel, rule, ring, focus-width/offset, control-h(-mouse), pad, grain-opacity, hover-lift.
+  - `index.css`'s focus ring and button hover lift now read tokens; classic's values reproduce today's exactly.
+- Tailwind gained `ident` colours.
+- `ui.test.jsx`: 17 tests (roles, keyboard, focus trap, states).
+
+**Defects found and fixed on the way:**
+- `:where()` base rules lost to Tailwind's preflight, so primitive base rules are single classes.
+- Primitive CSS in lazy chunks beat pages' layout utilities. All of it is now one `ui.css`, imported at the top of `index.css`, before Tailwind's layers.
+- A loading button lost its accessible name (`visibility: hidden`), so the label is `color: transparent`.
+- The phone table's `::before` labels failed contrast, and the route audit can't see pseudo text. `ui-table` restyles them; the specimen spec measures them.
+- Segmented options were 40 px on touch; now 44 px.
+- The dev-only specimen chunk shipped in production builds. `vite.config.js` now `define`s `VITE_LOOK_OVERRIDE`.
+
+**3.2 Home on the shared layer.**
+- `/` maps to prime-time, and Home's root carries `data-look`.
+- Its colour variables are aliases of the prime-time tokens.
+- Its buttons and tags are `ui-btn` / `type-tag`; its grain is `<Grain/>`.
+- The stinger stays Home's own (scroll-driven by GSAP).
+- Computed styles of Home's own sections are unchanged, apart from the font-stack text. What changed is intended: the masthead's Light/Dark menu now takes the prime-time style.
+
+**3.3 / 3.4 Specimen.**
+- `/__look` (dev and `VITE_LOOK_OVERRIDE=1` builds only), driven by the URL: `?look=&appearance=&role=`.
+- `e2e/look-specimen.spec.js`: prime-time × dark/light × 6 roles × 375/1366, plus dialog, confirm and menu open.
+  - **0 contrast failures** (2,066 text elements per appearance, `::before` labels included).
+  - No sideways scroll, and every target ≥ 44 px at touch widths.
+- The contrast measurement moved to `e2e/support/contrast.js`. `measurePage` no longer counts focusable containers (tab panels, dialogs) as tap targets.
+
+**Phase 3 exit gate:**
+- **Classic routes: pixel-identical to master** (threshold 0, v3 baselines, no database-error windows). The only exception is the coach chooser capture that master's own build fails identically.
+- **Home:** `audit:home` 41/41.
+- **Speed:**
+  - **Home LCP equal to master:** median 2168 vs 2184 ms, n=10 interleaved, CLS 0.
+  - Classic routes: within master's spread, CSS +5.4 KB (the primitives' rules), still 0 font bytes.
+  - Prime-time specimen: LCP 1.66 s, CLS 0.
+- **A regression found and removed.** Home first measured ~90 ms slower. Bisecting ruled out `ui.css`, the `/` mapping and the barrel import (which was still fixed: Home imports `ui/Stage` directly). The cause was the metric-matched fallback faces in the font stacks: listing them cost ~80–90 ms before first render, and neither a single `local()` source nor `font-display: swap` helped. They were removed from the stacks; `npm run fonts:metrics` remains as a lever.
+- **Font budget: 104.4 KB** on a prime-time page using every type step (Archivo 88 + Teko 500/600). That is over the §5.4 estimate, which counted only Teko 600. Speed is within budget, so this is accepted for now. The lever is Archivo's weight-only file (−54 KB, losing the 125% width on tags).
+- vitest 467/467; lint ratchet holds; `looks:check` clean.
+
+**3.5 Owner checkpoint.** The specimen screenshots are in [README.md](README.md), and every combination is at `/__look`. The owner asked to continue through the phases, so Phase 4 goes ahead. Any change asked for at this checkpoint is a pack or primitive edit, which the waves inherit.

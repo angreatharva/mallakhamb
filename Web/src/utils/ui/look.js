@@ -23,12 +23,14 @@ export const DEFAULT_LOOK = 'classic';
 export const KNOWN_LOOKS = ['classic', 'prime-time'];
 
 /**
- * First match wins. Empty while every route is `classic`: the landing page
- * (`/`) is drawn by its own scoped CSS until Phase 3.2 moves it onto the shared
- * tokens (see the plan's progress log).
+ * First match wins. Each rollout wave adds its route group here, in the same
+ * change that finishes the wave (design-language PLAN §9).
  * @type {{ match: RegExp, look: string }[]}
  */
-export const LOOK_BY_ROUTE = [];
+export const LOOK_BY_ROUTE = [
+  // The landing page: the reference implementation of prime-time (Phase 3.2).
+  { match: /^\/$/, look: 'prime-time' },
+];
 
 const OVERRIDE_KEY = 'mk-look-override';
 
@@ -38,7 +40,7 @@ const OVERRIDE_KEY = 'mk-look-override';
  * build, so the half-finished state is seen by developers only.
  */
 export const lookOverrideAllowed = () =>
-  Boolean(import.meta.env?.DEV) || import.meta.env?.VITE_LOOK_OVERRIDE === '1';
+  import.meta.env.DEV || import.meta.env.VITE_LOOK_OVERRIDE === '1';
 
 const readOverride = (search) => {
   if (!lookOverrideAllowed()) return null;
@@ -77,3 +79,20 @@ export const applyLook = (pathname, search = '') => {
 /** The look on <html> right now (for the rare component that must branch). */
 export const currentLook = () =>
   (typeof document !== 'undefined' && document.documentElement.getAttribute('data-look')) || DEFAULT_LOOK;
+
+/**
+ * A look's easing curve as framer-motion wants it: `readEase('ease-cut')` →
+ * [0.62, 0, 0.12, 1]. framer cannot read CSS variables, so `AnimatePresence`
+ * timings follow the pack through this (plan §4.6). Falls back to `fallback`
+ * outside a browser or for a value that is not a cubic-bezier().
+ * @param {string} name token name without the leading dashes
+ * @param {number[]} [fallback]
+ */
+export const readEase = (name, fallback = [0.22, 1, 0.36, 1]) => {
+  if (typeof document === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+  const m = value.match(/^cubic-bezier\(([^)]+)\)$/);
+  if (!m) return fallback;
+  const points = m[1].split(',').map((n) => Number(n.trim()));
+  return points.length === 4 && points.every(Number.isFinite) ? points : fallback;
+};

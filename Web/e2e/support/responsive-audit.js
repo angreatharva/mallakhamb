@@ -188,6 +188,8 @@ export const measurePage = async (page, { checkTouchTargets = true } = {}) =>
            * reported as a 1x1 failure.
            */
           if (el.classList.contains('sr-only') || (cs.clip === 'rect(0px, 0px, 0px, 0px)')) continue;
+          // A focusable CONTAINER (a tab panel, a dialog, a region) takes keyboard focus, not taps.
+          if (el.matches('[role=tabpanel], [role=dialog], [role=region], [role=tablist]')) continue;
           // A disabled control takes no tap (and answers no hit test); it is measured once it is enabled.
           if (el.disabled || el.getAttribute('aria-disabled') === 'true') continue;
           if (el.labels?.length && [...el.labels].some((l) => l.getBoundingClientRect().height >= 43.5)) continue;

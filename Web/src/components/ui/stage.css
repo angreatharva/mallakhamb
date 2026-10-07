@@ -1,0 +1,24 @@
+/*
+ * Stage signatures and entrance motion (design-language PLAN §5.6, §5.7).
+ *
+ * Grain belongs to STAGE screens only (public pages, the login side panel) —
+ * never working screens. Its strength is the look's --grain-opacity (0 in
+ * classic). The same static noise tile Home uses.
+ */
+.ui-grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tooltip); /* over everything: it is texture, never in the way (pointer-events: none) */
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* One wipe for page headers, a short fade for lists (≤ 6 staggered items). */
+.ui-wipe-in { animation: ui-wipe-in var(--dur-4) var(--ease-cut) both; }
+.ui-fade-in { animation: ui-fade-in var(--dur-3) var(--ease-out) both; animation-delay: calc(var(--stagger, 0) * 60ms); }
+@keyframes ui-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes ui-fade-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .ui-wipe-in, .ui-fade-in { animation: none; }
+}

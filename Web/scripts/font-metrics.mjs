@@ -3,6 +3,13 @@
  * npm run fonts:metrics — measure the look fonts against local fallbacks and
  * write src/styles/fonts-fallback.css (docs/design-language/PLAN.md §5.4).
  *
+ * NOT IN USE (2026-10-08): listing these faces in a font stack cost ~80-90 ms
+ * before first render on the phone profile (Home, interleaved A/B, n=10; one
+ * local() source or font-display: swap did not help). Prime-time routes preload
+ * their fonts instead. Regenerate, import from styles/look-fonts.js and add the
+ * family names to the pack's font stacks only if a wave shows a font-swap shift
+ * worth more than that.
+ *
  * While a web font downloads, text is drawn in a fallback. If the fallback is
  * wider or taller, lines re-wrap when the font arrives and the page jumps (CLS).
  * A metric-matched fallback is the local font scaled (`size-adjust`) to the web

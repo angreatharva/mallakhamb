@@ -3,7 +3,7 @@
  * Phone-profile speed check — the design-language plan's performance baseline
  * (docs/design-language/PLAN.md Phase 0.4) and its per-phase speed gate (§10).
  *
- *   node e2e/perf-baseline.mjs [--out report.json] [--build <dist dir>] [--runs 3] [--only <name>]
+ *   node e2e/perf-baseline.mjs [--out report.json] [--build <dist dir>] [--runs 3] [--only <name>] [--add name=/path]
  *
  * Against PERF_URL (default http://localhost:4174, the frozen production build
  * served by the `look-frozen` launch config — measure a production build, never
@@ -41,6 +41,8 @@ const ROUTES = [
   { name: 'player-login', path: '/player/login' },
   { name: 'scores', path: '/scores' },
   { name: 'judge-dashboard', path: '/judge/dashboard', role: 'judge' },
+  // `--add name=/path` measures one more route (e.g. the specimen on an override build).
+  ...(arg('add', null) ? [{ name: arg('add').split('=')[0], path: arg('add').split('=').slice(1).join('=') }] : []),
 ].filter((r) => !ONLY || r.name.includes(ONLY));
 
 const NETWORK = { offline: false, latency: 60, downloadThroughput: (9 * 1024 * 1024) / 8, uploadThroughput: (1.5 * 1024 * 1024) / 8 };

@@ -167,6 +167,19 @@ export const LOOK_TOKENS = {
   'dur-2': { type: 'duration', purpose: 'hover colour swap' },
   'dur-3': { type: 'duration', purpose: 'wipes, dialog in, tab bar' },
   'dur-4': { type: 'duration', purpose: 'the longest entrance on a working screen' },
+
+  // Shape and component knobs the primitives (components/ui) read (plan §5.5, §6).
+  'radius-control': { type: 'length', purpose: 'buttons, fields, tags, menus' },
+  'radius-panel': { type: 'length', purpose: 'panels, dialogs, tables' },
+  rule: { type: 'length', purpose: 'the "live/active" accent rule (top of a feature panel, left of an active row)' },
+  ring: { type: 'length', purpose: 'inset ring of line buttons and fields' },
+  'focus-width': { type: 'length', purpose: 'focus outline width (index.css :focus-visible)' },
+  'focus-offset': { type: 'length', purpose: 'focus outline offset' },
+  'control-h': { type: 'length', purpose: 'control height on touch (44px floor)' },
+  'control-h-mouse': { type: 'length', purpose: 'control height with a mouse on a desktop-width screen' },
+  pad: { type: 'raw', purpose: 'page gutter' },
+  'grain-opacity': { type: 'raw', purpose: 'film grain on stage screens (0 = none)' },
+  'hover-lift': { type: 'length', purpose: 'how far a button rises on mouse hover (index.css)' },
 };
 
 /**

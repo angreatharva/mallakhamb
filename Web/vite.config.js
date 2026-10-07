@@ -1,4 +1,5 @@
 import path from 'path'
+import process from 'node:process'
 import { fileURLToPath } from 'url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -8,6 +9,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  /*
+   * The look preview switch (design-language PLAN §4.4) as a build-time
+   * constant: '' unless the build sets VITE_LOOK_OVERRIDE=1. Vite only inlines
+   * env vars that exist, so without this an unset one stayed a runtime lookup
+   * and the dev-only specimen chunk shipped in every production build.
+   */
+  define: {
+    'import.meta.env.VITE_LOOK_OVERRIDE': JSON.stringify(process.env.VITE_LOOK_OVERRIDE || ''),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

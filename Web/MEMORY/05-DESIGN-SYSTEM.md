@@ -47,9 +47,8 @@ compiled by `npm run looks` (also `predev`/`prebuild`) into the committed
   `backdropBlur`, `transitionTimingFunction`, `transitionDuration` read tokens.
   A new look never edits `tailwind.config.js`.
 - **Fonts and type (Phase 2, branch `look/phase-2-type`).** The @font-face
-  rules (Archivo Variable wdth+wght, Teko 500/600, and `fonts-fallback.css` —
-  metric-matched local fallbacks 'Archivo Fallback'/'Teko Fallback' from
-  `npm run fonts:metrics`) live in `src/styles/look-fonts.js`, a separate CSS
+  rules (Archivo Variable wdth+wght, Teko 500/600) live in
+  `src/styles/look-fonts.js`, a separate CSS
   chunk imported ONLY by what is drawn in those fonts: Home (statically),
   prime-time routes via `loadLookFonts(look)` (`styles/fonts.js`, called in
   App.jsx beside `applyLook`; also preloads the two latin first-paint files),
@@ -57,6 +56,17 @@ compiled by `npm run looks` (also `predev`/`prebuild`) into the committed
   merely declaring these faces shifted anti-aliasing on a classic screen
   (judge profile avatar corner, 3–7 px; found by bisect), and classic routes
   must not move. A browser downloads a font file only when text uses it.
+  **No metric-matched fallback faces** in the font stacks: listing them cost
+  ~80-90 ms before first render on the phone profile (Phase 3 bisect);
+  `npm run fonts:metrics` can regenerate them if a wave shows a swap shift.
+- **Phase 3 (branch `look/phase-3-primitives`).** `/` maps to prime-time
+  (`LOOK_BY_ROUTE`); Home's root carries `data-look="prime-time"`, its
+  colour variables are aliases of the prime-time tokens, and its buttons and
+  tags are the shared `ui-btn` / `type-tag` (computed styles of Home's own
+  sections unchanged). Component tokens joined the contract: radius-control,
+  radius-panel, rule, ring, focus-width/offset (index.css `:focus-visible`),
+  control-h(-mouse), pad, grain-opacity, hover-lift (index.css button lift).
+  Tailwind gained `ident` / `ident-fg` / `on-ident` colours.
 - **Type steps:** `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`,
   `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input` —
   Tailwind utilities (safelisted, so they exist before any page uses them)

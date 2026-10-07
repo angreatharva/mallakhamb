@@ -175,11 +175,13 @@ export default defineLook({
   },
 
   look: {
-    // Each web font, then its metric-matched local stand-in (styles/fonts-fallback.css),
-    // so the swap when the font arrives moves nothing.
-    'font-root': "'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif",
-    'font-text': "'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif",
-    'font-display': "Teko, 'Teko Fallback', 'Arial Narrow', Impact, sans-serif",
+    // No metric-matched fallback faces in these stacks: listing one cost ~80-90 ms
+    // before first render on the phone profile (measured on Home, 2026-10-08;
+    // `npm run fonts:metrics` regenerates them if a wave ever shows a font-swap
+    // shift). Prime-time routes preload the fonts, which arrive before first render.
+    'font-root': "'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    'font-text': "'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    'font-display': "Teko, 'Arial Narrow', Impact, sans-serif",
 
     // Square: sm…lg 2px, xl…3xl 4px; `rounded-full` stays round (dots, avatars).
     'radius-sm': '2px',
@@ -229,6 +231,20 @@ export default defineLook({
     'dur-4': '600ms',
 
     ...typeScaleTokens(),
+
+    // Square, ruled, flat (§5.5): 2px controls, square panels, a 3px accent
+    // rule for "live", a 1.5px inset ring, a 3px focus ring, no hover lift.
+    'radius-control': '2px',
+    'radius-panel': '0px',
+    rule: '3px',
+    ring: '1.5px',
+    'focus-width': '3px',
+    'focus-offset': '2px',
+    'control-h': '44px',
+    'control-h-mouse': '36px',
+    pad: 'clamp(16px, 4vw, 56px)',
+    'grain-opacity': '0.075',
+    'hover-lift': '0px',
   },
 
   // One switch for everything: every duration is 0 under reduced motion.

@@ -225,6 +225,22 @@ export default defineLook({
 
     // New with the type scale; no classic screen uses a `type-*` utility.
     ...typeScaleTokens(),
+
+    // Component knobs. focus-width/offset and hover-lift reproduce index.css's
+    // existing 2px/2px ring and 1px lift exactly; the rest only shape the
+    // primitives, which no classic screen uses (radii: the rounded-lg/-2xl the
+    // app's controls and cards use today).
+    'radius-control': '0.5rem',
+    'radius-panel': '1rem',
+    rule: '3px',
+    ring: '1px',
+    'focus-width': '2px',
+    'focus-offset': '2px',
+    'control-h': '44px',
+    'control-h-mouse': '36px',
+    pad: '1rem',
+    'grain-opacity': '0',
+    'hover-lift': '-1px',
   },
 
   // Classic's motion never zeroed under reduced motion; it doesn't start now.

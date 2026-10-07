@@ -49,6 +49,17 @@
   --dur-2: 160ms;
   --dur-3: 300ms;
   --dur-4: 600ms;
+  --radius-control: 0.5rem;
+  --radius-panel: 1rem;
+  --rule: 3px;
+  --ring: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --control-h: 44px;
+  --control-h-mouse: 36px;
+  --pad: 1rem;
+  --grain-opacity: 0;
+  --hover-lift: -1px;
   --type-display-xl-family: var(--font-display);
   --type-display-xl-weight: 600;
   --type-display-xl-size: clamp(52px, 8vw, 136px);
@@ -133,7 +144,7 @@
   --type-button-weight: 600;
   --type-button-size: 14.5px;
   --type-button-leading: 1;
-  --type-button-tracking: 0;
+  --type-button-tracking: 0.01em;
   --type-button-transform: none;
   --type-button-stretch: normal;
   --type-button-numeric: normal;
@@ -348,9 +359,9 @@
 
 /* ── look: prime-time ── */
 [data-look="prime-time"] {
-  --font-root: 'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-text: 'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: Teko, 'Teko Fallback', 'Arial Narrow', Impact, sans-serif;
+  --font-root: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-text: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: Teko, 'Arial Narrow', Impact, sans-serif;
   --radius-sm: 2px;
   --radius: 2px;
   --radius-md: 2px;
@@ -390,6 +401,17 @@
   --dur-2: 160ms;
   --dur-3: 300ms;
   --dur-4: 600ms;
+  --radius-control: 2px;
+  --radius-panel: 0px;
+  --rule: 3px;
+  --ring: 1.5px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --control-h: 44px;
+  --control-h-mouse: 36px;
+  --pad: clamp(16px, 4vw, 56px);
+  --grain-opacity: 0.075;
+  --hover-lift: 0px;
   --type-display-xl-family: var(--font-display);
   --type-display-xl-weight: 600;
   --type-display-xl-size: clamp(52px, 8vw, 136px);
@@ -474,7 +496,7 @@
   --type-button-weight: 600;
   --type-button-size: 14.5px;
   --type-button-leading: 1;
-  --type-button-tracking: 0;
+  --type-button-tracking: 0.01em;
   --type-button-transform: none;
   --type-button-stretch: normal;
   --type-button-numeric: normal;

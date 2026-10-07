@@ -10,7 +10,6 @@
  *
  *   Archivo Variable (wdth + wght)   text and UI
  *   Teko 500 / 600                   display type and big numbers (≥ 24px)
- *   fonts-fallback.css               metric-matched local fallbacks (CLS 0)
  *
  * Faces are split by `unicode-range`, so Teko's Devanagari subset (≈33 KB)
  * downloads only where Marathi text appears.
@@ -18,4 +17,3 @@
 import '@fontsource-variable/archivo/wdth.css';
 import '@fontsource/teko/500.css';
 import '@fontsource/teko/600.css';
-import './fonts-fallback.css';

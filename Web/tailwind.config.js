@@ -81,6 +81,13 @@ export default {
         },
         'on-accent': channel('on-accent'),
 
+        // Role ident (prime-time: the role shown as a tag; never a button colour).
+        ident: {
+          DEFAULT: channel('ident'),
+          fg: channel('ident-fg'),
+        },
+        'on-ident': channel('on-ident'),
+
         // Status, each with text, fill, label-on-fill and tint.
         ...Object.fromEntries(['success', 'warning', 'danger', 'info'].map((status) => [status, {
           fg: channel(`${status}-fg`),

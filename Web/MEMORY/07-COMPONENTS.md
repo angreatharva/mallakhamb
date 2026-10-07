@@ -7,6 +7,7 @@ covers:
   - src/components/auth/SafeText.jsx
   - src/components/auth/PasswordStrength.jsx
   - src/components/admin/AdminKit.jsx
+  - src/components/ui/**
   - src/components/layout/AppearanceMenu.jsx
   - src/components/layout/ErrorBoundary.jsx
   - src/components/layout/Navbar.jsx
@@ -49,6 +50,27 @@ components/superadmin/AddPlayerForm.jsx
 [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md) instead (it's a
 `protected-route.jsx` implementation detail); noted here only for
 completeness.
+
+## `ui/` — the look primitives (design-language Phase 3, branch `look/phase-3-primitives`)
+
+`@/components/ui`: Button, IconButton, Field + Input/Select/Textarea/
+PasswordInput, Panel, Heading, Tag, StatusTag, Stat, SpecList, DataTable,
+Tabs/TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton,
+EmptyState, ErrorState, Grain, `toastOptions`. The guide is
+`docs/design-language/README.md`; the specimen is `/__look` (dev /
+`VITE_LOOK_OVERRIDE=1` builds only). They read tokens only and import
+`@/styles/look-fonts`. Their CSS is NOT imported per component: it is one
+`ui.css`, imported at the top of `index.css` before Tailwind's layers, so
+preflight loses to them and pages' layout utilities beat them on ties.
+Traps already hit:
+- `:where()` base rules lost to preflight (`button { padding: 0 }`) — base
+  rules are single classes.
+- A loading label hidden with `visibility: hidden` dropped the button's
+  accessible name — it is `color: transparent`.
+- `.stacked-table`'s `::before` labels (35% ink) fail contrast on light
+  surfaces and the route audit cannot see pseudo text — `ui-table` restyles
+  them; `look-specimen.spec.js` measures `::before` text.
+Tests: `ui/ui.test.jsx` (roles, keyboard, focus trap, states).
 
 ## Shared pieces added by the responsive/appearance work (2026-10)
 

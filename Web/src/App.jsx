@@ -69,8 +69,11 @@ function AppContent() {
   // /admin/teams (the dashboard's Teams tab is the linked one, inside the dashboard header).
   const isHeaderlessPage = /^\/(admin\/teams|superadmin\/add-player-payment)\/?$/.test(location.pathname);
 
+  // The look specimen (dev/preview only) carries its own controls.
+  const isSpecimen = location.pathname === '/__look';
+
   const shouldHideNavbar =
-    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
+    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isSpecimen;
 
   return (
     <CompetitionProvider userType={userType}>

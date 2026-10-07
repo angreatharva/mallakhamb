@@ -1,4 +1,5 @@
 @import './styles/generated/looks.css';
+@import './components/ui/ui.css'; /* before Tailwind's layers: see that file */
 
 @tailwind base;
 @tailwind components;
@@ -124,8 +125,8 @@ body {
  * with a `focus-visible:` utility, which is more specific and wins.
  */
 :focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 /*
@@ -151,7 +152,7 @@ button {
  */
 @media (hover: hover) and (pointer: fine) {
   button:hover {
-    transform: translateY(-1px);
+    transform: translateY(var(--hover-lift)); /* -1px in classic; prime-time keeps buttons still */
   }
 }
 

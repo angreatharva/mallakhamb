@@ -1,0 +1,26 @@
+/*
+ * The look primitives' styles, in cascade order (design-language PLAN §4.7, D11).
+ *
+ * Imported once, at the top of src/index.css — BEFORE Tailwind's layers:
+ *   - preflight's element resets (`button { padding: 0 }`) lose to these
+ *     single-class rules on specificity, wherever they sit;
+ *   - Tailwind's utilities come AFTER, so on equal specificity a page's layout
+ *     classes (`grid`, `gap-4`, `mt-6`, `md:grid-cols-2`) win over a
+ *     primitive's defaults. Pages decide layout; primitives decide the look.
+ * Never import these from a component: a lazy chunk lands after the utilities
+ * and would win those ties.
+ *
+ * Unused on classic routes, and harmless there: class rules that match nothing.
+ * The @font-face rules are NOT here (styles/look-fonts.js, per route).
+ */
+@import './button.css';
+@import './field.css';
+@import './panel.css';
+@import './text.css';
+@import './table.css';
+@import './tabs.css';
+@import './dialog.css';
+@import './menu.css';
+@import './states.css';
+@import './stage.css';
+@import './toast.css';

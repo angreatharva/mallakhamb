@@ -24,7 +24,7 @@ const SCALE = {
   'body-s': [TEXT, '400', '14.5px', '1.45', '0', 'none', 'normal', 'normal'],
   caption: [TEXT, '400', '13.5px', '1.4', '0', 'none', 'normal', 'normal'],
   tag: [TEXT, '700', '12px', '1', '0.06em', 'uppercase', '125%', 'normal'],
-  button: [TEXT, '600', '14.5px', '1', '0', 'none', 'normal', 'normal'],
+  button: [TEXT, '600', '14.5px', '1', '0.01em', 'none', 'normal', 'normal'],
   input: [TEXT, '400', '16px', '1.4', '0', 'none', 'normal', 'normal'],
 };
 
