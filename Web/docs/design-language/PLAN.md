@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** Phase 1 done on branch `look/phase-1-tokens` (2026-10-07), not merged; Phase 0.4 (performance baseline) still open. See the progress log (§14).
+**Status:** Phases 0–2 done (2026-10-07) on branch `look/phase-2-type` (stacked on `look/phase-1-tokens`), not merged. Next: Phase 3 (primitives, the `/__look` specimen, owner checkpoint). See the progress log (§14).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
