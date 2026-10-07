@@ -685,35 +685,29 @@ function buildPaths() {
     responses: { 200: ok('New access token issued', ref('LoginResponse')), 401: errorResponse('Refresh token missing, expired or revoked') },
   }));
 
+  // One email can own several role accounts; userType picks which one.
+  const RESET_USER_TYPE = { type: 'string', enum: ['player', 'coach', 'admin', 'judge'] };
+
   add('/api/auth/forgot-password', 'post', op({
     tag: 'Auth', auth: false, operationId: 'forgotPassword',
     summary: 'Send a password-reset OTP',
     description: 'Always answers 200 whether or not the address is registered, so the endpoint cannot be used to enumerate accounts.',
-    requestBody: jsonBody(inline({ email: S.email, userType: S.str }, ['email'])),
+    requestBody: jsonBody(inline({ email: S.email, userType: RESET_USER_TYPE }, ['email'])),
     responses: { 200: ok('OTP sent if the account exists'), ...VALIDATION_ERROR },
   }));
 
   add('/api/auth/verify-otp', 'post', op({
     tag: 'Auth', auth: false, operationId: 'verifyOtp',
     summary: 'Verify a reset OTP',
-    requestBody: jsonBody(inline({ email: S.email, otp: S.str, userType: S.str }, ['email', 'otp'])),
+    requestBody: jsonBody(inline({ email: S.email, otp: S.str, userType: RESET_USER_TYPE }, ['email', 'otp'])),
+    description: 'Every failure — unknown email, no code, expired, wrong, or discarded after OTP_MAX_ATTEMPTS wrong guesses — returns the same message.',
     responses: { 200: ok('OTP accepted'), ...VALIDATION_ERROR },
   }));
 
   add('/api/auth/reset-password-otp', 'post', op({
     tag: 'Auth', auth: false, operationId: 'resetPasswordOtp',
     summary: 'Reset a password with an OTP',
-    requestBody: jsonBody(inline({ email: S.email, otp: S.str, newPassword: S.str, userType: S.str }, ['email', 'otp', 'newPassword'])),
-    responses: { 200: ok('Password changed'), ...VALIDATION_ERROR },
-  }));
-
-  add('/api/auth/reset-password/{token}', 'post', op({
-    tag: 'Auth', auth: false, operationId: 'resetPasswordToken',
-    summary: 'Reset a password with a URL token (legacy)',
-    description: 'Superseded by the OTP flow. Retained for links already in the wild.',
-    deprecated: true,
-    parameters: [pathParam('token', 'Reset token from the e-mail link')],
-    requestBody: jsonBody(inline({ password: S.str }, ['password'])),
+    requestBody: jsonBody(inline({ email: S.email, otp: S.str, password: S.str, userType: RESET_USER_TYPE }, ['email', 'otp', 'password'])),
     responses: { 200: ok('Password changed'), ...VALIDATION_ERROR },
   }));
 

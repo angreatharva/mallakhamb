@@ -66,12 +66,10 @@ function createAuthRoutes(container) {
     authController.resetPasswordWithOTP
   );
 
-  /**
-   * @route   POST /api/auth/reset-password/:token
-   * @desc    Reset password using URL token (legacy method)
-   * @access  Public
-   */
-  router.post('/reset-password/:token', authController.resetPassword);
+  // POST /api/auth/reset-password/:token was removed. Nothing issued URL
+  // tokens any more, and it matched the token against the same field the OTP
+  // flow writes — so anyone could reset ANY account with a pending code by
+  // guessing six digits, with no email address needed.
 
   /**
    * @route   POST /api/auth/set-competition

@@ -233,6 +233,7 @@ const SENSITIVE_USER_FIELDS = [
   'password',
   'resetPasswordToken',
   'resetPasswordExpires',
+  'resetPasswordAttempts',
   'loginAttempts',
   'lockUntil',
 ];

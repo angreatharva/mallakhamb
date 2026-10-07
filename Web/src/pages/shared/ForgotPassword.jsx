@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Mail, Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
+import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
 import { logger } from '@/infrastructure/logger';
 import BHALogo from '../../assets/BHA.png';
 import { COLORS, EASE_OUT, FG, alpha } from '../../styles/tokens';
@@ -33,6 +34,8 @@ const ForgotPassword = () => {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const portal = portalFromSearch(location.search);
   const reduced = useReducedMotion();
   const cardRef = useRef(null);
   const cardInView = useInView(cardRef, { once: true });
@@ -45,15 +48,18 @@ const ForgotPassword = () => {
     try {
       logger.log('🔐 Sending forgot password request for:', data.email);
       const timeout = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 120000));
-      await Promise.race([authAPI.forgotPassword(data.email), timeout]);
+      await Promise.race([authAPI.forgotPassword(data.email, accountTypeFor(portal)), timeout]);
       setSent(true);
-      toast.success('OTP sent! Check your email.', { id: 'forgot-password' });
-      setTimeout(() => navigate('/reset-password', { state: { email: data.email } }), 2000);
+      // The server answers the same for every address, so neither can we.
+      toast.success('Check your email for the code.', { id: 'forgot-password' });
+      setTimeout(() => navigate(withPortal('/reset-password', portal), { state: { email: data.email } }), 2000);
     } catch (err) {
       logger.error('❌ Forgot password error:', err);
       let msg = 'An error occurred. Please try again.';
       if (err.message === 'timeout') msg = 'Server is starting up. Please try again in a moment.';
-      else if (err.response?.data?.message) msg = err.response.data.message;
+      else if (err.response?.data?.error?.message || err.response?.data?.message) {
+        msg = err.response.data.error?.message || err.response.data.message;
+      }
       else if (err.message?.includes('Network Error')) msg = 'Network error. Check your connection.';
       setError(msg);
       toast.error(msg, { id: 'forgot-password' });
@@ -187,7 +193,7 @@ const ForgotPassword = () => {
               style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }} role="status" aria-live="polite">
-              <p className="text-sm font-semibold text-green-700 dark:text-green-400">OTP sent to your email</p>
+              <p className="text-sm font-semibold text-green-700 dark:text-green-400">If that email has an account, a 6-digit code is on its way</p>
               <p className="text-xs text-green-700 dark:text-green-400/70 mt-1">Redirecting to reset page…</p>
             </motion.div>
           )}
@@ -205,7 +211,7 @@ const ForgotPassword = () => {
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
             <p className="text-sm text-fg-muted">
               Remember your password?{' '}
-              <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
+              <Link to={loginPathFor(portal)} className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
                 style={{ color: FG.brandSoft }}>
                 Back to Login
               </Link>

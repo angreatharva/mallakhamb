@@ -15,6 +15,7 @@
     "test:coverage": "jest --coverage",
     "docs:openapi": "node scripts/generateOpenApi.js",
     "docs:openapi:check": "node scripts/generateOpenApi.js --check",
+    "gmail:token": "node scripts/gmail-oauth-token.js",
     "perf:seed": "node scripts/perf/seedScale.js",
     "perf:test": "node scripts/perf/testApi.js",
     "perf:bench": "node scripts/perf/benchmarkApi.js",

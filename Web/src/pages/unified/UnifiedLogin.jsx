@@ -149,7 +149,8 @@ const getRoleConfig = (role) => {
     // (J1-M-U14-1), which is why they could collide across meets.
     usesEmail: true,
     registerLink: ['coach', 'player', 'judge'].includes(role) ? `/${role}/register` : null,
-    forgotPasswordLink: '/forgot-password',
+    // The role says which account to reset when one email owns several.
+    forgotPasswordLink: `/forgot-password?role=${role}`,
   };
 };
 

@@ -52,7 +52,23 @@ const adminSchema = new mongoose.Schema({
   competitions: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Competition'
-  }]
+  }],
+  // Password-reset OTP. These were missing from this schema while every other
+  // account type had them, so Mongoose's strict mode silently dropped the OTP
+  // the reset flow wrote — no admin or superadmin could ever reset a password.
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
+  resetPasswordAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  }
 }, {
   timestamps: true,
   toJSON: {

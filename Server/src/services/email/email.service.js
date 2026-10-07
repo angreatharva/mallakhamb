@@ -10,6 +10,7 @@
 const NodemailerAdapter = require('./nodemailer.adapter');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const ResendAdapter = require('./resend.adapter');
+const GmailApiAdapter = require('./gmail-api.adapter');
 const { generateOTPEmail } = require('./templates/otp.template');
 const { generatePasswordResetEmail } = require('./templates/password-reset.template');
 const { generateNotificationEmail } = require('./templates/notification.template');
@@ -31,6 +32,11 @@ class EmailService {
     this.isProcessingQueue = false;
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second initial delay
+    // checkHealth() opens a real connection to the provider, and /api/health
+    // is polled by monitoring — cache the answer instead of dialling out on
+    // every poll.
+    this.healthCacheMs = 5 * 60 * 1000;
+    this.healthCache = null;
     this.initialize();
   }
 
@@ -44,6 +50,11 @@ class EmailService {
       if (providerType === 'resend') {
         this.provider = new ResendAdapter(
           this.config.get('email.resend'),
+          this.logger
+        );
+      } else if (providerType === 'gmail-api') {
+        this.provider = new GmailApiAdapter(
+          this.config.get('email.gmailApi'),
           this.logger
         );
       } else {
@@ -367,6 +378,30 @@ class EmailService {
       this.logger.error('Email configuration verification failed', { error: error.message });
       return false;
     }
+  }
+
+  /**
+   * Health probe used by HealthMonitor. Unlike "a provider is configured", this
+   * asks the provider to actually connect/authenticate, so a host that blocks
+   * the provider (Render free blocking SMTP) shows up as unhealthy instead of
+   * passing silently. Cached for `healthCacheMs`.
+   * @returns {Promise<{healthy: boolean, provider: string, checkedAt: string}>}
+   */
+  async checkHealth() {
+    const now = Date.now();
+    if (this.healthCache && now - this.healthCache.at < this.healthCacheMs) {
+      return this.healthCache.result;
+    }
+
+    const healthy = await this.verifyConfiguration();
+    const result = {
+      healthy,
+      provider: this.config.get('email.provider'),
+      checkedAt: new Date(now).toISOString(),
+      ...(healthy ? {} : { message: 'Email provider unreachable or credentials rejected' }),
+    };
+    this.healthCache = { at: now, result };
+    return result;
   }
 
   /**

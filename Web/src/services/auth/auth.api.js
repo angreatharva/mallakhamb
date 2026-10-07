@@ -7,10 +7,11 @@ export const authAPI = {
    * is still valid — a fresh tab, or storage that was evicted (MED-W1).
    */
   me: () => api.get('/auth/me'),
-  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  verifyOTP: (email, otp) => api.post('/auth/verify-otp', { email, otp }),
-  resetPasswordWithOTP: (email, otp, password) => api.post('/auth/reset-password-otp', { email, otp, password }),
-  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
+  // userType picks the account when one email owns several (player, coach,
+  // admin, judge); omitted, the server takes the first match.
+  forgotPassword: (email, userType) => api.post('/auth/forgot-password', { email, userType }),
+  verifyOTP: (email, otp, userType) => api.post('/auth/verify-otp', { email, otp, userType }),
+  resetPasswordWithOTP: (email, otp, password, userType) => api.post('/auth/reset-password-otp', { email, otp, password, userType }),
   getAssignedCompetitions: () => api.get('/auth/competitions/assigned'),
   setCompetition: (competitionId) => api.post('/auth/set-competition', { competitionId }),
 };

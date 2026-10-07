@@ -20,9 +20,21 @@ const { email, password } = require('./common.validator');
 /**
  * Validate forgot password request
  */
+/**
+ * Optional account type: one email can own a player, a coach, an admin and a
+ * judge account, so the reset screens say which one is being reset.
+ */
+const RESET_USER_TYPES = ['player', 'coach', 'admin', 'judge'];
+const userType = () =>
+  body('userType')
+    .optional({ values: 'falsy' })
+    .isIn(RESET_USER_TYPES)
+    .withMessage(`userType must be one of: ${RESET_USER_TYPES.join(', ')}`);
+
 const forgotPassword = () => {
   return [
-    email('email')
+    email('email'),
+    userType()
   ];
 };
 
@@ -39,7 +51,8 @@ const verifyOTP = () => {
       .isLength({ min: 6, max: 6 })
       .withMessage('OTP must be 6 digits')
       .isNumeric()
-      .withMessage('OTP must contain only numbers')
+      .withMessage('OTP must contain only numbers'),
+    userType()
   ];
 };
 
@@ -57,7 +70,8 @@ const resetPassword = () => {
       .withMessage('OTP must be 6 digits')
       .isNumeric()
       .withMessage('OTP must contain only numbers'),
-    password('password')
+    password('password'),
+    userType()
   ];
 };
 

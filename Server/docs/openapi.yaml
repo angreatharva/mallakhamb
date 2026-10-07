@@ -1180,6 +1180,11 @@ paths:
                   format: email
                 userType:
                   type: string
+                  enum:
+                    - player
+                    - coach
+                    - admin
+                    - judge
               required:
                 - email
       responses:
@@ -1233,6 +1238,11 @@ paths:
                   type: string
                 userType:
                   type: string
+                  enum:
+                    - player
+                    - coach
+                    - admin
+                    - judge
               required:
                 - email
                 - otp
@@ -1262,7 +1272,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      description: "**Public** — no authentication required."
+      description: |-
+        Every failure — unknown email, no code, expired, wrong, or discarded after OTP_MAX_ATTEMPTS wrong guesses — returns the same message.
+        
+        **Public** — no authentication required.
       security: []
   /api/auth/reset-password-otp:
     post:
@@ -1282,65 +1295,18 @@ paths:
                   format: email
                 otp:
                   type: string
-                newPassword:
+                password:
                   type: string
                 userType:
                   type: string
+                  enum:
+                    - player
+                    - coach
+                    - admin
+                    - judge
               required:
                 - email
                 - otp
-                - newPassword
-      responses:
-        "200":
-          description: Password changed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data: {}
-                  message:
-                    type: string
-        "400":
-          description: Request failed validation — `error.details` names the field
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Unhandled server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      description: "**Public** — no authentication required."
-      security: []
-  /api/auth/reset-password/{token}:
-    post:
-      tags:
-        - Auth
-      summary: Reset a password with a URL token (legacy)
-      operationId: resetPasswordToken
-      parameters:
-        - name: token
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Reset token from the e-mail link
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                password:
-                  type: string
-              required:
                 - password
       responses:
         "200":
@@ -1368,11 +1334,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      description: |-
-        Superseded by the OTP flow. Retained for links already in the wild.
-        
-        **Public** — no authentication required.
-      deprecated: true
+      description: "**Public** — no authentication required."
       security: []
   /api/auth/set-competition:
     post:

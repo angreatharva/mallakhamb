@@ -66,6 +66,13 @@ class ConfigManager {
           user: this.getString('EMAIL_USER', ''),
           password: this.getString('EMAIL_PASS', '')
         },
+        // Gmail over HTTPS — for hosts that block SMTP ports (Render free).
+        gmailApi: {
+          clientId: this.getString('GMAIL_CLIENT_ID', ''),
+          clientSecret: this.getString('GMAIL_CLIENT_SECRET', ''),
+          refreshToken: this.getString('GMAIL_REFRESH_TOKEN', ''),
+          user: this.getString('EMAIL_USER', '')
+        },
         resend: {
           apiKey: this.getString('RESEND_API_KEY', ''),
           fromEmail: this.getString('RESEND_FROM_EMAIL', '')
@@ -75,6 +82,7 @@ class ConfigManager {
         bcryptRounds: this.getNumber('BCRYPT_ROUNDS', 12),
         otpLength: this.getNumber('OTP_LENGTH', 6),
         otpExpiry: this.getNumber('OTP_EXPIRY_MINUTES', 10),
+        otpMaxAttempts: this.getNumber('OTP_MAX_ATTEMPTS', 5),
         maxLoginAttempts: this.getNumber('MAX_LOGIN_ATTEMPTS', 5),
         lockoutDuration: this.getNumber('LOCKOUT_DURATION_MINUTES', 15),
         csrfEnabled: this.getBoolean('CSRF_ENABLED', true),
@@ -220,6 +228,13 @@ class ConfigManager {
       if (!this.config.email.resend.apiKey) {
         if (this.config.server.nodeEnv === 'production') {
           errors.push('RESEND_API_KEY is required when using resend provider');
+        }
+      }
+    } else if (this.config.email.provider === 'gmail-api') {
+      const g = this.config.email.gmailApi;
+      if (!g.clientId || !g.clientSecret || !g.refreshToken || !g.user) {
+        if (this.config.server.nodeEnv === 'production') {
+          errors.push('GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN and EMAIL_USER are required when using gmail-api provider');
         }
       }
     }

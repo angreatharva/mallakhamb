@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Lock, Shield, Eye, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
+import { validatePasswordStrength } from '@/validators/form.validator';
+import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
 import BHALogo from '../../assets/BHA.png';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 import { COLORS, FG, alpha } from '@/styles/tokens';
@@ -70,46 +72,23 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
-  const [isLockedOut, setIsLockedOut] = useState(false);
-  const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useParams();
-  const isOTPMethod = !token;
+  const portal = portalFromSearch(location.search);
+  const userType = accountTypeFor(portal);
   const emailFromState = location.state?.email || '';
-  const [resetToken, setResetToken] = useState('');
   const reduced = useReducedMotion();
   const cardRef = useRef(null);
   const cardInView = useInView(cardRef, { once: true });
-
-  useEffect(() => {
-    if (token) {
-      setResetToken(token);
-      window.history.replaceState(null, '', '/reset-password');
-    }
-  }, [token]);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: { email: emailFromState },
   });
   const password = watch('password');
 
-  useEffect(() => {
-    if (lockoutSeconds <= 0) return;
-    const t = setTimeout(() => {
-      setLockoutSeconds(p => {
-        const n = p - 1;
-        if (n <= 0) { setIsLockedOut(false); setAttemptsRemaining(3); }
-        return n;
-      });
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [lockoutSeconds]);
-
-  const formatTime = s => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-
+  // The server answers every failed code with one message and discards a code
+  // after too many wrong guesses, so there is no attempt counter to show here.
   const handleVerifyOTP = async () => {
     const email = watch('email');
     const otp = watch('otp');
@@ -117,54 +96,37 @@ const ResetPassword = () => {
     if (otp.length !== 6) { toast.error('OTP must be 6 digits'); return; }
     setVerifying(true); setError('');
     try {
-      await authAPI.verifyOTP(email, otp);
+      await authAPI.verifyOTP(email, otp, userType);
       setOtpVerified(true);
-      setAttemptsRemaining(3);
       toast.success('OTP verified! Set your new password.');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid OTP';
-      const left = err.response?.data?.attemptsRemaining;
-      const locked = err.response?.data?.lockedOut;
-      const secs = err.response?.data?.remainingSeconds;
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Invalid OTP';
       toast.error(msg); setError(msg);
-      if (locked) { setIsLockedOut(true); setLockoutSeconds(secs || 900); setAttemptsRemaining(0); }
-      else if (left !== undefined) setAttemptsRemaining(left);
     } finally {
       setVerifying(false);
     }
   };
 
   const onSubmit = async (data) => {
-    if (isLockedOut) { toast.error(`Locked. Try again in ${formatTime(lockoutSeconds)}`); return; }
     setLoading(true); setError('');
     try {
-      if (isOTPMethod) {
-        await authAPI.resetPasswordWithOTP(data.email, data.otp, data.password);
-      } else {
-        if (!resetToken) { setError('Invalid reset link. Please request a new one.'); setLoading(false); return; }
-        await authAPI.resetPassword(resetToken, data.password);
-      }
+      await authAPI.resetPasswordWithOTP(data.email, data.otp, data.password, userType);
       setSuccess(true);
       toast.success('Password reset successfully!');
-      if (resetToken) setResetToken('');
-      setTimeout(() => navigate('/player/login'), 2000);
+      setTimeout(() => navigate(loginPathFor(portal)), 2000);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to reset password. Please try again.';
-      const left = err.response?.data?.attemptsRemaining;
-      const locked = err.response?.data?.lockedOut;
-      const secs = err.response?.data?.remainingSeconds;
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to reset password. Please try again.';
       setError(msg); toast.error(msg);
-      if (isOTPMethod) {
-        if (locked) { setIsLockedOut(true); setLockoutSeconds(secs || 900); setAttemptsRemaining(0); }
-        else if (left !== undefined) setAttemptsRemaining(left);
-      }
+      // A code rejected at this step (expired, or replaced by a newer one) must
+      // be re-entered, so unlock the code field again. A weak-password
+      // rejection keeps the verified code.
+      if (err.response?.status === 400 && !/password/i.test(msg)) setOtpVerified(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Step indicator for OTP flow
-  const step = !isOTPMethod ? 2 : otpVerified ? 2 : 1;
+  const step = otpVerified ? 2 : 1;
 
   return (
     <div
@@ -226,12 +188,12 @@ const ResetPassword = () => {
               Reset <GradientText>Password</GradientText>
             </h1>
             <p className="text-fg-muted text-sm">
-              {isOTPMethod ? 'Verify your OTP then set a new password' : 'Enter your new password below'}
+              Verify your OTP then set a new password
             </p>
           </div>
 
-          {/* Step indicator (OTP flow only) */}
-          {isOTPMethod && (
+          {/* Step indicator */}
+          {(
             <div className="flex items-center gap-2 mb-6">
               {[1, 2].map(s => (
                 <div key={s} className="flex items-center gap-2 flex-1">
@@ -252,39 +214,6 @@ const ResetPassword = () => {
             </div>
           )}
 
-          {/* Lockout banner */}
-          <AnimatePresence>
-            {isLockedOut && (
-              <motion.div className="mb-5 p-4 rounded-xl border flex items-start gap-3"
-                style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}
-                role="alert">
-                <Shield className="w-5 h-5 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold text-red-700 dark:text-red-400">Account Temporarily Locked</p>
-                  <p className="text-xs text-red-700 dark:text-red-400/70 mt-0.5">Too many failed attempts. Try again in {formatTime(lockoutSeconds)}</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Attempts warning */}
-          <AnimatePresence>
-            {isOTPMethod && !isLockedOut && attemptsRemaining < 3 && !otpVerified && (
-              <motion.div className="mb-5 p-3 rounded-xl border flex items-center gap-2"
-                style={{ background: 'rgba(245,166,35,0.08)', borderColor: 'rgba(245,166,35,0.25)' }}
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-                role="status" aria-live="polite">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.brandGold }} aria-hidden="true" />
-                <p className="text-xs font-medium" style={{ color: FG.brandGold }}>
-                  {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* OTP verified banner */}
           <AnimatePresence>
             {otpVerified && (
@@ -301,7 +230,7 @@ const ResetPassword = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            {isOTPMethod && (
+            {(
               <>
                 {/* Email */}
                 <div className="mb-4">
@@ -315,7 +244,7 @@ const ResetPassword = () => {
                     })}
                     id="email" type="email" autoComplete="email"
                     placeholder="you@example.com"
-                    disabled={loading || isLockedOut || otpVerified}
+                    disabled={loading || otpVerified}
                     error={!!errors.email} verified={otpVerified}
                     aria-invalid={!!errors.email}
                   />
@@ -341,7 +270,7 @@ const ResetPassword = () => {
                         })}
                         id="otp" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
                         placeholder="6-digit code"
-                        disabled={loading || isLockedOut || otpVerified}
+                        disabled={loading || otpVerified}
                         error={!!errors.otp} verified={otpVerified}
                         aria-invalid={!!errors.otp}
                       />
@@ -354,7 +283,7 @@ const ResetPassword = () => {
                     <motion.button
                       type="button"
                       onClick={handleVerifyOTP}
-                      disabled={loading || verifying || isLockedOut || otpVerified}
+                      disabled={loading || verifying || otpVerified}
                       className="px-4 rounded-xl text-sm font-bold min-h-[48px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       style={{
                         background: otpVerified ? 'rgba(34,197,94,0.15)' : `${alpha(COLORS.saffron, 0x18)}`,
@@ -381,9 +310,9 @@ const ResetPassword = () => {
               </>
             )}
 
-            {/* New password — only shown after OTP verified (or token method) */}
+            {/* New password — only shown after OTP verified */}
             <AnimatePresence>
-              {(!isOTPMethod || otpVerified) && (
+              {otpVerified && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.3 }}>
@@ -394,11 +323,12 @@ const ResetPassword = () => {
                     <PasswordInput
                       {...register('password', {
                         required: 'Password is required',
-                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                        // The server's rule, checked before the round trip.
+                        validate: v => validatePasswordStrength(v).errors[0] || true,
                       })}
                       id="password" autoComplete="new-password"
-                      placeholder="Min. 8 characters"
-                      disabled={loading || isLockedOut}
+                      placeholder="8+ characters, A–Z, a–z and 0–9"
+                      disabled={loading}
                       error={!!errors.password}
                       showPassword={showPassword}
                       onToggle={() => setShowPassword(p => !p)}
@@ -423,7 +353,7 @@ const ResetPassword = () => {
                       })}
                       id="confirmPassword" autoComplete="new-password"
                       placeholder="Repeat your password"
-                      disabled={loading || isLockedOut}
+                      disabled={loading}
                       error={!!errors.confirmPassword}
                       showPassword={showConfirmPassword}
                       onToggle={() => setShowConfirmPassword(p => !p)}
@@ -441,14 +371,14 @@ const ResetPassword = () => {
             </AnimatePresence>
 
             {/* Submit */}
-            {(!isOTPMethod || otpVerified) && (
+            {otpVerified && (
               <motion.button
                 type="submit"
-                disabled={loading || isLockedOut || success}
+                disabled={loading || success}
                 className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}
-                whileHover={!loading && !isLockedOut && !success ? { scale: 1.02 } : {}}
-                whileTap={!loading && !isLockedOut && !success ? { scale: 0.97 } : {}}>
+                whileHover={!loading && !success ? { scale: 1.02 } : {}}
+                whileTap={!loading && !success ? { scale: 0.97 } : {}}>
                 {loading ? (
                   <>
                     <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
@@ -472,7 +402,7 @@ const ResetPassword = () => {
                 exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
                 role="status" aria-live="polite">
                 <p className="text-sm font-semibold text-green-700 dark:text-green-400">Password reset successfully!</p>
-                <Link to="/player/login" className="text-xs text-green-700 dark:text-green-400/70 hover:text-green-700 dark:hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center">
+                <Link to={loginPathFor(portal)} className="text-xs text-green-700 dark:text-green-400/70 hover:text-green-700 dark:hover:text-green-400 transition-colors mt-1 inline-block min-h-[36px] flex items-center">
                   Go to Login →
                 </Link>
               </motion.div>
@@ -481,7 +411,7 @@ const ResetPassword = () => {
 
           {/* Error */}
           <AnimatePresence>
-            {error && !isLockedOut && !success && (
+            {error && !success && (
               <motion.div className="mt-5 p-4 rounded-xl border"
                 style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -494,23 +424,17 @@ const ResetPassword = () => {
 
           {/* Footer links */}
           <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
-            {isOTPMethod ? (
-              <p className="text-sm text-fg-muted">
-                Didn&apos;t receive OTP?{' '}
-                <Link to="/forgot-password" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                  style={{ color: FG.brandSoft }}>
-                  Request New OTP
-                </Link>
-              </p>
-            ) : (
-              <p className="text-sm text-fg-muted">
-                Remember your password?{' '}
-                <Link to="/player/login" className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                  style={{ color: FG.brandSoft }}>
-                  Back to Login
-                </Link>
-              </p>
-            )}
+            <p className="text-sm text-fg-muted">
+              Didn&apos;t receive OTP?{' '}
+              <Link to={withPortal('/forgot-password', portal)} className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
+                style={{ color: FG.brandSoft }}>
+                Request New OTP
+              </Link>
+            </p>
+            <Link to={loginPathFor(portal)} className="text-sm font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80 min-h-[44px] inline-flex items-center"
+              style={{ color: FG.brandSoft }}>
+              Back to Login
+            </Link>
             <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               Back to Home

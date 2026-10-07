@@ -40,7 +40,13 @@ class NodemailerAdapter extends IEmailProvider {
         auth: {
           user: this.config.user,
           pass: this.config.password
-        }
+        },
+        // Nodemailer waits 2 minutes for a TCP connect by default. Where the
+        // SMTP port is blocked (Render free) that turned one send — retried 3
+        // times — into a 6-minute hang. Fail fast instead.
+        connectionTimeout: 10 * 1000,
+        greetingTimeout: 10 * 1000,
+        socketTimeout: 20 * 1000
       });
 
       this.logger.info('Nodemailer adapter initialized', {

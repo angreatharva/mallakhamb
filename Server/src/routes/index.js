@@ -145,7 +145,6 @@ function loadRoutes(app, container, options = {}) {
     guessable.post('/forgot-password', authLimiter);
     guessable.post('/verify-otp', authLimiter);
     guessable.post('/reset-password-otp', authLimiter);
-    guessable.post('/reset-password/:token', authLimiter);
     apiRouter.use('/auth', guessable);
   }
   apiRouter.use('/auth', authRouter);

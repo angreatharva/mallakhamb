@@ -82,6 +82,13 @@ const coachSchema = new mongoose.Schema({
   resetPasswordExpires: {
     type: Date,
     default: null
+  },
+  // Wrong OTP guesses against the current code. At the cap the code is
+  // discarded, so a 6-digit code can't be brute-forced from many IPs.
+  resetPasswordAttempts: {
+    type: Number,
+    default: 0,
+    select: false
   }
 }, {
   timestamps: true,

@@ -11,6 +11,17 @@ const crypto = require('crypto');
 const { ValidationError } = require('../../errors');
 const { createUserRepositoryResolver } = require('../../utils/auth/user-repository-resolver');
 
+/**
+ * One message for every way a code can fail — unknown email, no code issued,
+ * expired, wrong, or burnt by too many guesses. Distinct messages told a
+ * caller which addresses had accounts ("No OTP found" vs "Invalid OTP").
+ */
+const INVALID_CODE_MESSAGE = 'That code is invalid or has expired. Check your latest email or request a new code.';
+
+// Wrong guesses allowed against one code before it is discarded. The per-IP
+// rate limit alone doesn't stop guesses spread across many IPs.
+const DEFAULT_MAX_OTP_ATTEMPTS = 5;
+
 class OTPService {
   /**
    * Create an OTP service
@@ -56,128 +67,176 @@ class OTPService {
   }
 
   /**
-   * Generate and send OTP to user
+   * Generate an OTP, store it on the account, and start sending the email.
+   *
+   * The email is sent in the background: the request no longer waits on the
+   * mail provider. That keeps forgot-password fast when the provider is slow or
+   * unreachable, and stops the response time from revealing whether an account
+   * exists (an unknown address returned in 0.4 s, a real one after the send).
+   * Delivery failures are logged and counted by EmailService
+   * (mallakhamb_emails_sent_total{outcome="failed"}).
+   *
    * @param {Object} user - User object
-   * @param {string} userType - User type (player, coach, admin)
-   * @returns {Promise<void>}
+   * @param {string} userType - User type (player, coach, admin, judge)
+   * @returns {Promise<{delivery: Promise<void>}>} resolves once the OTP is
+   *   stored; `delivery` settles when the email attempt finishes (never rejects)
    */
   async generateAndSendOTP(user, userType) {
+    const otp = this.generateOTPCode();
+    const otpExpiryMinutes = this.config.get('security.otpExpiry');
+    const expiresAt = new Date(Date.now() + otpExpiryMinutes * 60 * 1000);
+
     try {
-      // Generate OTP
-      const otp = this.generateOTPCode();
-      
-      // Calculate expiration time
-      const otpExpiryMinutes = this.config.get('security.otpExpiry');
-      const expiresAt = new Date(Date.now() + otpExpiryMinutes * 60 * 1000);
-
-      // Get repository for user type
       const repository = this.getRepositoryByType(userType);
-
-      // Store OTP in user document
       await repository.updateById(user._id, {
         resetPasswordToken: otp,
-        resetPasswordExpires: expiresAt
-      });
-
-      // Send OTP via email service if available
-      if (this.emailService) {
-        try {
-          await this.emailService.sendOTP(user.email || user.username, {
-            otp,
-            userName: user.name || user.username || 'User',
-            expiryMinutes: otpExpiryMinutes
-          });
-          
-          this.logger.info('OTP sent via email', { 
-            userId: user._id, 
-            userType,
-            email: user.email || user.username
-          });
-        } catch (emailError) {
-          this.logger.error('Failed to send OTP email', {
-            userId: user._id,
-            userType,
-            error: emailError.message
-          });
-          // Don't fail the OTP generation if email fails
-        }
-      } else {
-        // Log OTP in development mode if email service not available
-        if (this.config.get('server.nodeEnv') === 'development') {
-          this.logger.info('OTP generated (DEV MODE - no email service)', { 
-            userId: user._id, 
-            userType, 
-            otp,
-            email: user.email || user.username
-          });
-        }
-      }
-
-      this.logger.info('OTP generated and sent', { 
-        userId: user._id, 
-        userType,
-        email: user.email || user.username
+        resetPasswordExpires: expiresAt,
+        resetPasswordAttempts: 0
       });
     } catch (error) {
-      this.logger.error('OTP generation failed', { 
-        userId: user._id, 
-        userType, 
-        error: error.message 
+      this.logger.error('OTP generation failed', {
+        userId: user._id,
+        userType,
+        error: error.message
       });
       throw error;
     }
+
+    this.logger.info('OTP generated', { userId: user._id, userType });
+
+    const delivery = this._sendInBackground('OTP', user, userType, (to) =>
+      this.emailService.sendOTP(to, {
+        otp,
+        userName: user.name || user.username || 'User',
+        expiryMinutes: otpExpiryMinutes
+      }),
+      { otp }
+    );
+
+    return { delivery };
   }
 
   /**
-   * Verify OTP for user
-   * @param {Object} user - User object
+   * Tell the account holder their password was just changed, so a reset they
+   * didn't ask for doesn't go unnoticed. Background, never throws.
+   * @param {Object} user
+   * @param {string} userType
+   * @returns {Promise<void>}
+   */
+  notifyPasswordChanged(user, userType) {
+    return this._sendInBackground('password-changed notice', user, userType, (to) =>
+      this.emailService.sendPasswordReset(to, {
+        userName: user.name || user.username || 'User'
+      })
+    );
+  }
+
+  /**
+   * Run an email send without letting it reject. Returns the settled promise
+   * so tests can await the attempt; production callers ignore it.
+   * @private
+   */
+  _sendInBackground(what, user, userType, send, devExtras = {}) {
+    const to = user.email || user.username;
+
+    if (!this.emailService) {
+      // Without an email service the code is only reachable from the log.
+      if (this.config.get('server.nodeEnv') === 'development') {
+        this.logger.info(`${what} not emailed (DEV MODE - no email service)`, {
+          userId: user._id, userType, email: to, ...devExtras
+        });
+      }
+      return Promise.resolve();
+    }
+
+    return Promise.resolve()
+      .then(() => send(to))
+      .then(() => {
+        this.logger.info(`${what} email sent`, { userId: user._id, userType, email: to });
+      })
+      .catch((error) => {
+        this.logger.error(`Failed to send ${what} email`, {
+          userId: user._id,
+          userType,
+          error: error.message
+        });
+      });
+  }
+
+  /**
+   * Verify OTP for user. Every failure throws the same INVALID_CODE_MESSAGE.
+   * A wrong guess is counted on the account; at the cap the code is discarded
+   * and the user has to request a new one.
+   * @param {Object} user - User object (as loaded by findByEmail)
    * @param {string} otp - OTP code to verify
-   * @param {string} userType - User type (player, coach, admin)
+   * @param {string} userType - User type (player, coach, admin, judge)
    * @returns {Promise<boolean>} True if OTP is valid
-   * @throws {ValidationError} If OTP is invalid or expired
+   * @throws {ValidationError} If OTP is missing, expired, wrong or exhausted
    */
   async verifyOTP(user, otp, userType) {
+    const stored = user.resetPasswordToken;
+
+    if (!stored) {
+      this.logger.warn('OTP verification failed: no code issued', { userId: user._id, userType });
+      throw new ValidationError(INVALID_CODE_MESSAGE);
+    }
+
+    if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
+      this.logger.warn('OTP verification failed: code expired', { userId: user._id, userType });
+      throw new ValidationError(INVALID_CODE_MESSAGE);
+    }
+
+    if (!this._codesMatch(stored, otp)) {
+      await this._recordWrongGuess(user, stored, userType);
+      throw new ValidationError(INVALID_CODE_MESSAGE);
+    }
+
+    this.logger.info('OTP verified successfully', { userId: user._id, userType });
+    return true;
+  }
+
+  /**
+   * Constant-time comparison, so response timing can't leak how many leading
+   * digits were right.
+   * @private
+   */
+  _codesMatch(stored, given) {
+    const a = Buffer.from(String(stored));
+    const b = Buffer.from(String(given ?? ''));
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+
+  /**
+   * Count a wrong guess atomically and discard the code at the cap. Guarded on
+   * the stored code, so a guess against an older code can't burn a newer one.
+   * @private
+   */
+  async _recordWrongGuess(user, stored, userType) {
+    const maxAttempts = this.config.get('security.otpMaxAttempts') || DEFAULT_MAX_OTP_ATTEMPTS;
+    const model = this.getRepositoryByType(userType)?.model;
+    if (!model?.findOneAndUpdate) return;
+
     try {
-      // Check if OTP exists
-      if (!user.resetPasswordToken) {
-        this.logger.warn('OTP verification failed: No OTP found', { 
-          userId: user._id, 
-          userType 
-        });
-        throw new ValidationError('No OTP found for this user');
+      const updated = await model.findOneAndUpdate(
+        { _id: user._id, resetPasswordToken: stored },
+        { $inc: { resetPasswordAttempts: 1 } },
+        { new: true, projection: { resetPasswordAttempts: 1 } }
+      ).lean();
+
+      const attempts = updated?.resetPasswordAttempts ?? 0;
+      this.logger.warn('OTP verification failed: wrong code', { userId: user._id, userType, attempts });
+
+      if (attempts >= maxAttempts) {
+        await model.updateOne(
+          { _id: user._id, resetPasswordToken: stored },
+          { $set: { resetPasswordToken: null, resetPasswordExpires: null, resetPasswordAttempts: 0 } }
+        );
+        this.logger.warn('OTP discarded after too many wrong guesses', { userId: user._id, userType });
       }
-
-      // Check if OTP has expired
-      if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
-        this.logger.warn('OTP verification failed: OTP expired', { 
-          userId: user._id, 
-          userType 
-        });
-        throw new ValidationError('OTP has expired');
-      }
-
-      // Verify OTP matches
-      if (user.resetPasswordToken !== otp) {
-        this.logger.warn('OTP verification failed: Invalid OTP', { 
-          userId: user._id, 
-          userType 
-        });
-        throw new ValidationError('Invalid OTP');
-      }
-
-      this.logger.info('OTP verified successfully', { 
-        userId: user._id, 
-        userType 
-      });
-
-      return true;
     } catch (error) {
-      this.logger.error('OTP verification error', { 
-        userId: user._id, 
-        userType, 
-        error: error.message 
-      });
-      throw error;
+      // Counting is a safeguard; failing to count must not turn a wrong code
+      // into a 500.
+      this.logger.error('Failed to record wrong OTP guess', { userId: user._id, userType, error: error.message });
     }
   }
 
@@ -193,7 +252,8 @@ class OTPService {
       
       await repository.updateById(userId, {
         resetPasswordToken: null,
-        resetPasswordExpires: null
+        resetPasswordExpires: null,
+        resetPasswordAttempts: 0
       });
 
       this.logger.debug('OTP cleared', { userId, userType });
@@ -219,3 +279,4 @@ class OTPService {
 }
 
 module.exports = OTPService;
+module.exports.INVALID_CODE_MESSAGE = INVALID_CODE_MESSAGE;

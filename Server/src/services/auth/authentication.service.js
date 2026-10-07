@@ -33,6 +33,7 @@ const {
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
 const { createUserRepositoryResolver } = require('../../utils/auth/user-repository-resolver');
+const { INVALID_CODE_MESSAGE } = require('./otp.service');
 // Shared so /auth/me and login can never disagree about what is sensitive.
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // Shared with judge.service, which authenticates against a different collection
@@ -293,35 +294,36 @@ class AuthenticationService {
   /**
    * Initiate password reset with OTP
    * @param {string} email - User email
+   * @param {string} [userType] - Which account to reset (player, coach, admin,
+   *   judge). One email can own several role accounts; without this the first
+   *   match wins (player → coach → admin → judge).
    * @returns {Promise<void>}
    */
-  async forgotPassword(email) {
+  async forgotPassword(email, userType = null) {
     try {
-      // Sanitize and normalize email
       const normalizedEmail = normalizeEmail(email);
-
-      // Find user across all types
-      const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
+      const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
 
       if (!user) {
         // Don't reveal if email exists (security best practice)
-        this.logger.info('Password reset requested for non-existent email', { 
-          email: normalizedEmail 
+        this.logger.info('Password reset requested for non-existent email', {
+          email: normalizedEmail,
+          userType
         });
         return;
       }
 
-      // Generate and send OTP
-      await this.otpService.generateAndSendOTP(user, userType);
+      // Stores the code and starts the email in the background.
+      await this.otpService.generateAndSendOTP(user, foundType);
 
-      this.logger.info('Password reset initiated', { 
-        userId: user._id, 
-        userType 
+      this.logger.info('Password reset initiated', {
+        userId: user._id,
+        userType: foundType
       });
     } catch (error) {
-      this.logger.error('Forgot password error', { 
-        email, 
-        error: error.message 
+      this.logger.error('Forgot password error', {
+        email,
+        error: error.message
       });
       throw error;
     }
@@ -331,35 +333,32 @@ class AuthenticationService {
    * Verify OTP
    * @param {string} email - User email
    * @param {string} otp - OTP code
+   * @param {string} [userType] - Account type, as for forgotPassword
    * @returns {Promise<boolean>}
    * @throws {ValidationError} If OTP is invalid
    */
-  async verifyOTP(email, otp) {
+  async verifyOTP(email, otp, userType = null) {
     try {
-      // Sanitize and normalize email
       const normalizedEmail = normalizeEmail(email);
-
-      // Find user across all types
-      const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
+      const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
 
       if (!user) {
         this.logger.warn('OTP verification failed: User not found', { email });
-        throw new ValidationError('Invalid OTP');
+        throw new ValidationError(INVALID_CODE_MESSAGE);
       }
 
-      // Verify OTP
-      const isValid = await this.otpService.verifyOTP(user, otp, userType);
+      const isValid = await this.otpService.verifyOTP(user, otp, foundType);
 
-      this.logger.info('OTP verified', { userId: user._id, userType });
+      this.logger.info('OTP verified', { userId: user._id, userType: foundType });
 
       return isValid;
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
       }
-      this.logger.error('OTP verification error', { 
-        email, 
-        error: error.message 
+      this.logger.error('OTP verification error', {
+        email,
+        error: error.message
       });
       throw new ValidationError('OTP verification failed');
     }
@@ -370,36 +369,31 @@ class AuthenticationService {
    * @param {string} email - User email
    * @param {string} otp - OTP code
    * @param {string} newPassword - New password
+   * @param {string} [userType] - Account type, as for forgotPassword
    * @returns {Promise<void>}
    * @throws {ValidationError} If OTP is invalid
    */
-  async resetPasswordWithOTP(email, otp, newPassword) {
+  async resetPasswordWithOTP(email, otp, newPassword, userType = null) {
     try {
-      // Sanitize and normalize email
-      const normalizedEmail = normalizeEmail(email);
-
-      // Find user across all types
-      const { user, userType } = await this.findUserAcrossTypes(normalizedEmail);
-
-      if (!user) {
-        this.logger.warn('Password reset failed: User not found', { email });
-        throw new ValidationError('Invalid OTP');
-      }
-
-      // Verify OTP (read-only verification check first)
-      const isValid = await this.otpService.verifyOTP(user, otp, userType);
-
-      if (!isValid) {
-        throw new ValidationError('Invalid or expired OTP');
-      }
-
-      // Validate password strength (MED-9)
+      // Validate password strength (MED-9) first: a weak password is the
+      // user's typo, and must not cost them one of their code attempts.
       if (!newPassword || newPassword.length < 8) {
         throw new ValidationError('Password must be at least 8 characters long');
       }
       if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
         throw new ValidationError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
       }
+
+      const normalizedEmail = normalizeEmail(email);
+      const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
+
+      if (!user) {
+        this.logger.warn('Password reset failed: User not found', { email });
+        throw new ValidationError(INVALID_CODE_MESSAGE);
+      }
+
+      // Read-only check first; counts a wrong guess against the code.
+      await this.otpService.verifyOTP(user, otp, foundType);
 
       // MED-3: this hardcoded 10 while every model pre-save hook uses 12 and
       // BCRYPT_ROUNDS documents 12, so any password set through the reset flow
@@ -408,10 +402,12 @@ class AuthenticationService {
       const salt = await bcrypt.genSalt(securitySetting('security.bcryptRounds', DEFAULT_BCRYPT_ROUNDS));
       const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-      // Get repository for user type
-      const repository = this.getRepositoryByType(userType);
+      const repository = this.getRepositoryByType(foundType);
 
-      // Atomic find and update under matching conditions to prevent parallel replay
+      // Atomic find-and-update under the matching code, so a parallel replay of
+      // the same code can't reset twice. Proving control of the mailbox also
+      // ends any login lockout — otherwise a locked-out user who just reset
+      // their password still couldn't sign in.
       const updatedUser = await repository.model.findOneAndUpdate(
         {
           _id: user._id,
@@ -422,115 +418,58 @@ class AuthenticationService {
           $set: {
             password: hashedPassword,
             resetPasswordToken: null,
-            resetPasswordExpires: null
+            resetPasswordExpires: null,
+            resetPasswordAttempts: 0,
+            loginAttempts: 0,
+            lockUntil: null
           }
         },
         { new: true }
       );
 
       if (!updatedUser) {
-        throw new ValidationError('Invalid or expired OTP');
+        throw new ValidationError(INVALID_CODE_MESSAGE);
       }
 
-      // Clear OTP explicitly
-      await this.otpService.clearOTP(user._id, userType);
+      await this._endSessionsAfterPasswordChange(user._id, foundType);
+      this.otpService.notifyPasswordChanged?.(user, foundType);
 
-      this.logger.info('Password reset successful', { 
-        userId: user._id, 
-        userType 
+      this.logger.info('Password reset successful', {
+        userId: user._id,
+        userType: foundType
       });
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
       }
-      this.logger.error('Password reset error', { 
-        email, 
-        error: error.message 
+      this.logger.error('Password reset error', {
+        email,
+        error: error.message
       });
       throw error;
     }
   }
 
   /**
-   * Reset password with a URL token (legacy flow, kept for the routed
-   * `POST /api/auth/reset-password/:token` endpoint).
-   *
-   * Unlike the OTP flow, the caller does not identify the account by email —
-   * the token itself is the lookup key. It is matched against the same
-   * `resetPasswordToken`/`resetPasswordExpires` pair the OTP flow writes, so
-   * both flows share one storage mechanism; only the read path differs.
-   * Tried across user types in the same order as `findUserAcrossTypes`.
-   * @param {string} token - Reset token from the URL
-   * @param {string} newPassword - New password
-   * @returns {Promise<void>}
-   * @throws {ValidationError} If the token is missing, invalid, or expired
+   * After a password reset, sign the account out everywhere: revoke every
+   * refresh token and invalidate access tokens issued before now. Whoever held
+   * the old password (or a stolen session) must not stay signed in.
+   * Best-effort — the password is already changed, so a failure here is
+   * logged rather than reported to the user as a failed reset.
+   * @private
    */
-  async resetPasswordWithToken(token, newPassword) {
+  async _endSessionsAfterPasswordChange(userId, userType) {
     try {
-      if (!token) {
-        throw new ValidationError('Reset token is required');
+      if (typeof this.tokenService?.revokeAllRefreshTokens === 'function') {
+        await this.tokenService.revokeAllRefreshTokens(userId.toString());
       }
-
-      // Validate password strength (MED-9) — same rule as the OTP flow.
-      if (!newPassword || newPassword.length < 8) {
-        throw new ValidationError('Password must be at least 8 characters long');
-      }
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
-        throw new ValidationError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
-      }
-
-      // MED-3: read the configured cost rather than hardcoding one, so a
-      // password set through this flow is hashed exactly as strongly as one
-      // set at registration.
-      const salt = await bcrypt.genSalt(securitySetting('security.bcryptRounds', DEFAULT_BCRYPT_ROUNDS));
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-      const repositoriesByType = [
-        ['player', this.playerRepository],
-        ['coach', this.coachRepository],
-        ['admin', this.adminRepository],
-        ['judge', this.judgeAccountRepository],
-      ];
-
-      for (const [userType, repository] of repositoriesByType) {
-        if (!repository?.model?.findOneAndUpdate) continue;
-
-        // Atomic find-and-update: the token is the only thing distinguishing
-        // "this is the account" from "a stranger", so the condition and the
-        // write happen in one step — the same TOCTOU-safe shape as
-        // resetPasswordWithOTP — instead of a read-then-decide that a
-        // concurrent replay of the same (now-cleared) token could race.
-        const updatedUser = await repository.model.findOneAndUpdate(
-          {
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: new Date() },
-          },
-          {
-            $set: {
-              password: hashedPassword,
-              resetPasswordToken: null,
-              resetPasswordExpires: null,
-            },
-          },
-          { new: true }
-        );
-
-        if (updatedUser) {
-          this.logger.info('Password reset successful (token flow)', {
-            userId: updatedUser._id,
-            userType,
-          });
-          return;
-        }
-      }
-
-      throw new ValidationError('Invalid or expired reset token');
+      await recordLogout(userId.toString());
     } catch (error) {
-      if (error instanceof ValidationError) {
-        throw error;
-      }
-      this.logger.error('Password reset (token) error', { error: error.message });
-      throw error;
+      this.logger.error('Failed to end sessions after password reset', {
+        userId,
+        userType,
+        error: error.message
+      });
     }
   }
 
@@ -741,41 +680,34 @@ class AuthenticationService {
   /**
    * Find user across all user types
    * @param {string} email - User email
+   * @param {string} [onlyType] - Restrict the search to one account type. The
+   *   same address may own a player, a coach and a judge account; the reset
+   *   flow passes the type of the portal the user came from.
    * @returns {Promise<Object>} { user, userType } or { user: null, userType: null }
    */
-  async findUserAcrossTypes(email) {
+  async findUserAcrossTypes(email, onlyType = null) {
+    // Judges are looked up in the account collection: a panel seat never had
+    // an address to send an OTP to.
+    const order = [
+      ['player', this.playerRepository],
+      ['coach', this.coachRepository],
+      ['admin', this.adminRepository],
+      ['judge', this.judgeAccountRepository],
+    ];
+
     try {
-      // Try player
-      let user = await this.playerRepository.findByEmail(email);
-      if (user) {
-        return { user, userType: 'player' };
+      for (const [userType, repository] of order) {
+        if (onlyType && userType !== onlyType) continue;
+        const user = await repository.findByEmail(email);
+        if (user) {
+          return { user, userType };
+        }
       }
-
-      // Try coach
-      user = await this.coachRepository.findByEmail(email);
-      if (user) {
-        return { user, userType: 'coach' };
-      }
-
-      // Try admin
-      user = await this.adminRepository.findByEmail(email);
-      if (user) {
-        return { user, userType: 'admin' };
-      }
-
-      // Try judge. This looks in the account collection now, which is what
-      // finally makes password reset work for judges: a panel seat never had
-      // an address to send an OTP to.
-      user = await this.judgeAccountRepository.findByEmail(email);
-      if (user) {
-        return { user, userType: 'judge' };
-      }
-
       return { user: null, userType: null };
     } catch (error) {
-      this.logger.error('Find user across types error', { 
-        email, 
-        error: error.message 
+      this.logger.error('Find user across types error', {
+        email,
+        error: error.message
       });
       return { user: null, userType: null };
     }

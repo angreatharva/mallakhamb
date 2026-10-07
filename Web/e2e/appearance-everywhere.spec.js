@@ -23,7 +23,9 @@ const SHEET_CATEGORY = [
 const JUDGE_CATEGORY = { gender: 'Female', ageGroup: 'Above16', competitionType: 'Competition I', apparatus: 'Rope Mallakhamb' };
 // Pages the audit route list does not name, all reached by URL. (Dashboard tabs share the dashboard's header.)
 const EXTRA = {
-  public: [{ name: 'Reset password (token link)', url: '/reset-password/not-a-real-token' }],
+  // The token-link reset page is gone (its API reset any account from six guessed digits);
+  // the role-scoped reset is what the login pages link to now.
+  public: [{ name: 'Reset password (from coach login)', url: '/reset-password?role=coach' }],
   admin: [{ name: 'Admin dashboard: teams tab', url: '/admin/dashboard/teams' }],
   superadmin: [{ name: 'Superadmin dashboard: lots tab', url: '/superadmin/dashboard/lots' }],
 };

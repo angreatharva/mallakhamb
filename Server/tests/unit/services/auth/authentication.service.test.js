@@ -1,5 +1,6 @@
 const AuthenticationService = require('../../../../src/services/auth/authentication.service');
 const { ValidationError } = require('../../../../src/errors');
+const { INVALID_CODE_MESSAGE } = require('../../../../src/services/auth/otp.service');
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
@@ -24,7 +25,9 @@ describe('AuthenticationService - Password Reset', () => {
 
     mockOtpService = {
       verifyOTP: jest.fn(),
-      clearOTP: jest.fn()
+      clearOTP: jest.fn(),
+      generateAndSendOTP: jest.fn().mockResolvedValue({ delivery: Promise.resolve() }),
+      notifyPasswordChanged: jest.fn()
     };
 
     mockLogger = {
@@ -64,8 +67,79 @@ describe('AuthenticationService - Password Reset', () => {
       await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!');
 
       expect(mockOtpService.verifyOTP).toHaveBeenCalled();
-      expect(mockPlayerRepo.model.findOneAndUpdate).toHaveBeenCalled();
-      expect(mockOtpService.clearOTP).toHaveBeenCalled();
+      expect(mockPlayerRepo.model.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: 'user123', resetPasswordToken: '123456' }),
+        expect.any(Object),
+        { new: true }
+      );
+    });
+
+    it('clears the code AND any login lockout in the same atomic write', async () => {
+      mockOtpService.verifyOTP.mockResolvedValue(true);
+      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'user123' });
+
+      await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!');
+
+      const [, update] = mockPlayerRepo.model.findOneAndUpdate.mock.calls[0];
+      expect(update.$set).toEqual({
+        password: 'hashedPassword',
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        resetPasswordAttempts: 0,
+        loginAttempts: 0,
+        lockUntil: null
+      });
+    });
+
+    it('signs the account out everywhere and sends a password-changed notice', async () => {
+      const tokenService = { revokeAllRefreshTokens: jest.fn().mockResolvedValue() };
+      authService.tokenService = tokenService;
+      mockOtpService.verifyOTP.mockResolvedValue(true);
+      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'user123' });
+
+      await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!');
+
+      expect(tokenService.revokeAllRefreshTokens).toHaveBeenCalledWith('user123');
+      expect(mockOtpService.notifyPasswordChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: 'user123' }), 'player'
+      );
+    });
+
+    it('still reports success when revoking old sessions fails — the password is already changed', async () => {
+      authService.tokenService = { revokeAllRefreshTokens: jest.fn().mockRejectedValue(new Error('db down')) };
+      mockOtpService.verifyOTP.mockResolvedValue(true);
+      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'user123' });
+
+      await expect(authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!'))
+        .resolves.toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to end sessions after password reset', expect.any(Object));
+    });
+
+    it('rejects a weak password before spending one of the code attempts', async () => {
+      await expect(authService.resetPasswordWithOTP('test@example.com', '123456', 'weak'))
+        .rejects.toThrow('Password must be at least 8 characters long');
+      expect(mockOtpService.verifyOTP).not.toHaveBeenCalled();
+    });
+
+    it('answers an unknown email with the same message as a wrong code', async () => {
+      authService.findUserAcrossTypes.mockResolvedValue({ user: null, userType: null });
+      await expect(authService.resetPasswordWithOTP('nobody@example.com', '123456', 'StrongPass1!'))
+        .rejects.toThrow(INVALID_CODE_MESSAGE);
+    });
+
+    it('rejects when the code was used or replaced in between (atomic write matched nothing)', async () => {
+      mockOtpService.verifyOTP.mockResolvedValue(true);
+      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue(null);
+      await expect(authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!'))
+        .rejects.toThrow(INVALID_CODE_MESSAGE);
+      expect(mockOtpService.notifyPasswordChanged).not.toHaveBeenCalled();
+    });
+
+    it('passes the account type through to the lookup', async () => {
+      mockOtpService.verifyOTP.mockResolvedValue(true);
+      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'user123' });
+      await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!', 'player');
+      expect(authService.findUserAcrossTypes).toHaveBeenCalledWith('test@example.com', 'player');
     });
 
     it('should reject passwords shorter than 8 characters', async () => {
@@ -100,80 +174,66 @@ describe('AuthenticationService - Password Reset', () => {
     });
   });
 
+  describe('forgotPassword', () => {
+    it('stores and sends a code for the account of the requested type', async () => {
+      await authService.forgotPassword('Test@Example.com', 'coach');
+      expect(authService.findUserAcrossTypes).toHaveBeenCalledWith('test@example.com', 'coach');
+      expect(mockOtpService.generateAndSendOTP).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: 'user123' }), 'player'
+      );
+    });
+
+    it('returns quietly for an unknown email', async () => {
+      authService.findUserAcrossTypes.mockResolvedValue({ user: null, userType: null });
+      await expect(authService.forgotPassword('nobody@example.com')).resolves.toBeUndefined();
+      expect(mockOtpService.generateAndSendOTP).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyOTP', () => {
+    it('answers an unknown email with the same message as a wrong code', async () => {
+      authService.findUserAcrossTypes.mockResolvedValue({ user: null, userType: null });
+      await expect(authService.verifyOTP('nobody@example.com', '123456'))
+        .rejects.toThrow(INVALID_CODE_MESSAGE);
+    });
+  });
+
   describe('resetPasswordWithToken', () => {
-    it('should reject when no token is provided', async () => {
-      await expect(authService.resetPasswordWithToken('', 'StrongPass1!'))
-        .rejects.toThrow('Reset token is required');
+    it('no longer exists — it reset any account with a pending code from six digits alone', () => {
+      expect(authService.resetPasswordWithToken).toBeUndefined();
     });
+  });
 
-    it('should reject a weak password before ever touching a repository', async () => {
-      await expect(authService.resetPasswordWithToken('sometoken', 'weak'))
-        .rejects.toThrow('Password must be at least 8 characters long');
+  describe('findUserAcrossTypes', () => {
+    // One email owning a player AND a coach account is normal (seed roster).
+    const sharedEmail = 'mayur.p@gmail.com';
+    let service;
+    let repos;
 
-      expect(mockPlayerRepo.model.findOneAndUpdate).not.toHaveBeenCalled();
-    });
-
-    it('should update the player whose resetPasswordToken matches, and stop looking', async () => {
-      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'player123' });
-
-      await authService.resetPasswordWithToken('the-token', 'StrongPass1!');
-
-      expect(mockPlayerRepo.model.findOneAndUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ resetPasswordToken: 'the-token' }),
-        expect.objectContaining({
-          $set: expect.objectContaining({
-            password: 'hashedPassword',
-            resetPasswordToken: null,
-            resetPasswordExpires: null,
-          }),
-        }),
-        { new: true }
+    beforeEach(() => {
+      repos = {
+        player: { findByEmail: jest.fn().mockResolvedValue({ _id: 'p1' }) },
+        coach: { findByEmail: jest.fn().mockResolvedValue({ _id: 'c1' }) },
+        admin: { findByEmail: jest.fn().mockResolvedValue(null) },
+        judge: { findByEmail: jest.fn().mockResolvedValue({ _id: 'j1' }) },
+      };
+      service = new AuthenticationService(
+        repos.player, repos.coach, repos.admin, {}, {}, {}, mockOtpService, mockLogger, repos.judge
       );
     });
 
-    it('should fall through to the next user type when the token matches nobody in the first repository', async () => {
-      const mockCoachRepo = { model: { findOneAndUpdate: jest.fn().mockResolvedValue({ _id: 'coach123' }) } };
-      const mockAdminRepo = { model: { findOneAndUpdate: jest.fn() } };
-      const mockJudgeRepo = { model: { findOneAndUpdate: jest.fn() } };
-      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue(null);
-
-      const service = new AuthenticationService(
-        mockPlayerRepo,
-        mockCoachRepo,
-        mockAdminRepo,
-        mockJudgeRepo,
-        {},
-        {},
-        mockOtpService,
-        mockLogger,
-        mockJudgeRepo // judgeAccountRepository
-      );
-
-      await service.resetPasswordWithToken('the-token', 'StrongPass1!');
-
-      expect(mockPlayerRepo.model.findOneAndUpdate).toHaveBeenCalled();
-      expect(mockCoachRepo.model.findOneAndUpdate).toHaveBeenCalled();
-      expect(mockAdminRepo.model.findOneAndUpdate).not.toHaveBeenCalled();
+    it('without a type, the first match wins (player → coach → admin → judge)', async () => {
+      await expect(service.findUserAcrossTypes(sharedEmail)).resolves.toEqual({ user: { _id: 'p1' }, userType: 'player' });
     });
 
-    it('should reject an unknown or expired token', async () => {
-      mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue(null);
-      const emptyRepo = { model: { findOneAndUpdate: jest.fn().mockResolvedValue(null) } };
+    it('with a type, only that account is considered', async () => {
+      await expect(service.findUserAcrossTypes(sharedEmail, 'coach')).resolves.toEqual({ user: { _id: 'c1' }, userType: 'coach' });
+      await expect(service.findUserAcrossTypes(sharedEmail, 'judge')).resolves.toEqual({ user: { _id: 'j1' }, userType: 'judge' });
+      expect(repos.player.findByEmail).not.toHaveBeenCalled();
+    });
 
-      const service = new AuthenticationService(
-        mockPlayerRepo,
-        emptyRepo,
-        emptyRepo,
-        emptyRepo,
-        {},
-        {},
-        mockOtpService,
-        mockLogger,
-        emptyRepo
-      );
-
-      await expect(service.resetPasswordWithToken('bogus-token', 'StrongPass1!'))
-        .rejects.toThrow('Invalid or expired reset token');
+    it('with a type the email has no account of, finds nobody (does not fall back)', async () => {
+      await expect(service.findUserAcrossTypes(sharedEmail, 'admin')).resolves.toEqual({ user: null, userType: null });
     });
   });
 });

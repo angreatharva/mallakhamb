@@ -114,7 +114,21 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
-      # Resend Email Service (Recommended) - Add in Render Dashboard
+      # Free Render blocks outbound SMTP (ports 25/465/587), so Gmail SMTP can't
+      # send from here. Production sends through the Gmail API over HTTPS:
+      # EMAIL_PROVIDER=gmail-api plus the three GMAIL_* keys, all set in the
+      # dashboard (Server/docs/gmail-api-email.md). Dashboard-owned on purpose:
+      # a Blueprint sync that set EMAIL_PROVIDER before the keys existed would
+      # fail startup validation and take the API down.
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      # Resend Email Service - needs a verified domain; Add in Render Dashboard
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL

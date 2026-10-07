@@ -30,7 +30,7 @@ function createAuthController(container) {
 
     /** @route POST /api/auth/forgot-password */
     forgotPassword: asyncHandler(async (req, res) => {
-      await authenticationService.forgotPassword(req.body.email);
+      await authenticationService.forgotPassword(req.body.email, req.body.userType);
       // Always same message — prevents email enumeration
       res.json({
         success: true,
@@ -40,30 +40,19 @@ function createAuthController(container) {
 
     /** @route POST /api/auth/verify-otp */
     verifyOTP: asyncHandler(async (req, res) => {
-      const { email, otp } = req.body;
-      const result = await authenticationService.verifyOTP(email, otp);
+      const { email, otp, userType } = req.body;
+      const result = await authenticationService.verifyOTP(email, otp, userType);
       res.json({ success: true, data: result });
     }),
 
     /** @route POST /api/auth/reset-password-otp */
     resetPasswordWithOTP: asyncHandler(async (req, res) => {
-      const { email, otp, password } = req.body;
-      await authenticationService.resetPasswordWithOTP(email, otp, password);
+      const { email, otp, password, userType } = req.body;
+      await authenticationService.resetPasswordWithOTP(email, otp, password, userType);
       res.json({
         success: true,
         message: 'Password reset successfully. You can now log in.',
       });
-    }),
-
-    /**
-     * Legacy URL-token reset — kept for backward compatibility
-     * @route POST /api/auth/reset-password/:token
-     */
-    resetPassword: asyncHandler(async (req, res) => {
-      const { token } = req.params;
-      const { password } = req.body;
-      await authenticationService.resetPasswordWithToken(token, password);
-      res.json({ success: true, message: 'Password has been reset successfully.' });
     }),
 
     // ==================== Competition Context ====================

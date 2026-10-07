@@ -406,8 +406,10 @@ class HealthMonitor {
 
       if (typeof this.emailService.checkHealth === 'function') {
         const result = await this.emailService.checkHealth();
+        // Degraded, not unhealthy: the API still serves everything except
+        // outgoing mail, so this must not turn /api/health into a 503.
         return {
-          status: result.healthy ? 'healthy' : 'unhealthy',
+          status: result.healthy ? 'healthy' : 'degraded',
           configured: true,
           healthy: result.healthy,
           provider: result.provider || provider,

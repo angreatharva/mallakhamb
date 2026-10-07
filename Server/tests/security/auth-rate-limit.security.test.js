@@ -89,10 +89,16 @@ describe('/api/auth rate limiting', () => {
       ['post', '/api/auth/forgot-password'],
       ['post', '/api/auth/verify-otp'],
       ['post', '/api/auth/reset-password-otp'],
-      ['post', '/api/auth/reset-password/some-token'],
     ])('%s %s is limited', async (method, path) => {
       const statuses = await hammer(app, method, path);
       expect(statuses).toContain(429);
+    });
+
+    it('the legacy URL-token reset is gone, not merely limited', async () => {
+      // It reset any account with a pending OTP from six guessed digits and no
+      // email address. Removing it is the fix; a limiter was never enough.
+      const response = await request(app).post('/api/auth/reset-password/123456').send({ password: 'Whatever1' });
+      expect(response.status).toBe(404);
     });
   });
 
