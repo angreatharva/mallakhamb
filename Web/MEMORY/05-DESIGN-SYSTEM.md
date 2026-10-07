@@ -17,7 +17,7 @@ covers:
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: 90a5060
+verified_against_commit: 3a6cca9
 last_verified: 2026-10-07
 ---
 
