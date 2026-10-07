@@ -60,7 +60,8 @@ etc.) before use.
 - [x] src/utils/auth/{otp.util,token.util,user-repository-resolver}.js
 - [x] src/utils/security/{cookie,login-response,login-security,account-lockout,token-invalidation}.util.js
 - [x] src/models/RefreshToken.js, src/models/JudgeAccount.js (cross-checked against domain-data report)
-- [x] src/services/email/{email.service,email-provider.interface,nodemailer.adapter,resend.adapter}.js
+- [x] src/services/email/{email.service,email-provider.interface,nodemailer.adapter,resend.adapter,gmail-api.adapter}.js (gmail-api added 2026-10-07, `b5b0672`) → modules/email
+- [x] scripts/gmail-oauth-token.js, docs/gmail-api-email.md (2026-10-07) → modules/email, 13-SCRIPTS-AND-OPS
 - [x] src/services/email/templates/{notification,otp,password-reset}.template.js
 - [x] src/services/auth/README.md, src/services/email/README.md (reconciled — auth README materially stale, see GOTCHAS.md; email README accurate)
 
@@ -154,7 +155,7 @@ Summary:
 - Whether `TokenInvalidationService`'s admin-assignment-change half has a real caller (modules/auth)
 - Whether `CompetitionRepository.addTeam`/`updateRegistration`'s unaddressed read-modify-save hazard has since been fixed (modules/repositories, GOTCHAS)
 - Whether the `Transaction` webhook-duplicate-insert risk has been mitigated (09-PAYMENTS, GOTCHAS)
-- Whether `resetPasswordWithToken`/`competitionService.assignAdmin`/`removeAdmin` (confirmed-missing methods) have since been fixed (GOTCHAS, 05-API-SURFACE, modules/competition)
+- ~~Whether `resetPasswordWithToken`/`competitionService.assignAdmin`/`removeAdmin` have since been fixed~~ — resolved: assign/remove fixed 2026-09-23; `resetPasswordWithToken` and its route removed 2026-10-07 (GOTCHAS)
 - Whether `tests/unit/routes/admin.routes.test.js` currently passes (14-TESTING, GOTCHAS)
 - `waitForInFlightRequests()`'s actual drain behavior during shutdown (modules/infrastructure, GOTCHAS)
 - MongoDB driver auto-reconnect sufficiency post-initial-connect (modules/infrastructure)

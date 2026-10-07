@@ -138,26 +138,24 @@ helper either).
 
 ## change-design-tokens
 
-**Read
-[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#there-are-three-independent-copies-of-the-design-values-not-one)
-first.** A color, spacing value, or breakpoint may need editing in up
-to **four** places, none of which import each other:
+**Read [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) first** (rewritten
+2026-10-07), and check `docs/design-language/PLAN.md`'s status line — once
+its Phase 1 lands, colour values move from `index.css` into the look packs
+under `src/styles/looks/` and this recipe changes.
 
-1. `src/styles/tokens.js` — the intended source of truth.
-2. `eslint-rules/no-hardcoded-colors.js` and/or
-   `no-hardcoded-spacing.js` — each ships its own internal copy of the
-   values it recognizes as "already tokenized."
-3. `tailwind.config.js` — fully standalone, no import of `tokens.js`.
-4. For breakpoints specifically: `src/utils/ui/responsive.js` and any
-   hardcoded `@media` queries in `src/index.css`.
+- **Colour:** the RGB triplet in **both** `[data-appearance]` blocks of
+  `src/index.css` (and the `[data-role]` block if it's a role colour).
+  Tailwind reads it as a channel; JS reads it through `FG`/`DATA_COLORS`/
+  `DESIGN_TOKENS`. Opacity only via `alpha()` or `/NN`.
+- **Breakpoint or z-index:** `src/styles/breakpoints.js` only, then restart
+  the dev server.
+- **Spacing:** Tailwind's scale; `tokens.js` `spacing` and the copy in
+  `eslint-rules/no-hardcoded-spacing.js` (lint suggestions only).
 
-Nothing enforces these stay in sync — check all four before assuming a
-token change propagated everywhere.
-
-**Verify with**: visually inspect the affected component in the
-browser preview at the breakpoints/colors you changed; run `npm run
-lint` and check whether the design-token warn-level rules newly flag
-(or stop flagging) the literal you changed.
+**Verify with:** `npx vitest run src/styles` (hygiene + alpha), then the
+contrast audit and the pixel gate in **both** appearances (see
+[15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md#the-responsive--appearance-audit-harness)).
+The in-app preview can't judge mobile layout.
 
 ## run-seed-or-e2e-script
 

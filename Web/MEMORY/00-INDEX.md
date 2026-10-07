@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 # MEMORY — router
@@ -63,8 +63,12 @@ against commit `f0bdc1d`, 2026-09-23.
 | Change the judge slip / mismatch review flow | [11-SCORING-CLIENT.md](11-SCORING-CLIENT.md), [06-SCREENS/judge-scoring.md](06-SCREENS/judge-scoring.md), [06-SCREENS/judge-panel-review.md](06-SCREENS/judge-panel-review.md) | `src/pages/judge/{JudgeScoring,JudgePanelReview,judgeShared,useJudgePanelData}.js*` |
 | Add a socket event | `CHANGE-RECIPES.md#add-socket-event`, [09-REALTIME.md](09-REALTIME.md) | `Server/src/socket/events/event-types.js`, the relevant judge/admin screen |
 | Add a form | `CHANGE-RECIPES.md#add-form`, [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md) | the relevant screen; check `form.validator.js` first, most forms don't use it |
-| Change a color/spacing/breakpoint | `CHANGE-RECIPES.md#change-design-tokens`, [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | up to 4 files — `tokens.js`, both eslint rules, `tailwind.config.js` |
-| Fix a horizontal-scroll bug | [12-RESPONSIVE.md](12-RESPONSIVE.md) | check whether it's the scoring table (`tableLayout:fixed` pattern) or a decorative background (`AmbientOrbs` clipping) — different bugs, different fixes |
+| Change a color/spacing/breakpoint | `CHANGE-RECIPES.md#change-design-tokens`, [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/index.css` (both appearance blocks), `src/styles/breakpoints.js`, `src/styles/tokens.js` |
+| Light/Dark, or anything that must read in both appearances | [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/utils/ui/appearance.js`, `public/appearance-init.js`, `src/contexts/AppearanceProvider.jsx`, `src/components/layout/AppearanceMenu.jsx` |
+| Restyle screens / the site-wide design language | `docs/design-language/PLAN.md` (the active plan), [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/styles/looks/*` once Phase 1 lands |
+| Change the landing page | [06-SCREENS/public-home-and-scores.md](06-SCREENS/public-home-and-scores.md), `docs/homepage/README.md` | `src/pages/public/Home.jsx`, `src/pages/public/home/**`; verify with `npm run audit:home` |
+| Change password reset | [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md#password-reset--otp-only-scoped-to-the-login-page-it-came-from) | `src/pages/shared/{ForgotPassword,ResetPassword,resetPortal}.*`, `src/services/auth/auth.api.js` |
+| Fix a horizontal-scroll or touch-target bug | [12-RESPONSIVE.md](12-RESPONSIVE.md) | measure with the Playwright audits, never the in-app preview; the shared primitives (`.tap-safe`, `mouse:`, `.modal-panel`, `.stacked-table`) live in `tailwind.config.js` |
 | Change login/logout/session/cross-tab behavior | [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md) | `src/contexts/AuthProvider.jsx`, `src/utils/auth/**`, `src/middleware/protected-route.jsx` |
 | Change competition selection or the level/competition chooser | [04-STATE-MANAGEMENT.md](04-STATE-MANAGEMENT.md), [06-SCREENS/](06-SCREENS/) competition-selection docs | `src/contexts/CompetitionContext.jsx` — read the auto-select race section before touching the mount effect |
 | Run or add a seed/e2e script | `CHANGE-RECIPES.md#run-seed-or-e2e-script`, [15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md) | `e2e/support/**`, `e2e/*.spec.js`, `package.json`'s `seed:*` scripts — **read the blast-radius table first** |

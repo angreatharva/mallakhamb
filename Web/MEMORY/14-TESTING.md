@@ -6,8 +6,8 @@ covers:
   - "**/*.test.jsx"
 read_when: "adding a test, debugging a failing test, or deciding whether a test file already covers something"
 depends_on: [SHARED-CONTRACTS, 10-AUTH-AND-SECURITY, 13-FORMS-AND-VALIDATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 ## Stack
@@ -53,12 +53,28 @@ the same provider stack, there's no existing `renderWithProviders` to
 extend — you'd be the first to add one**, or continue the established
 pattern of duplicating the wrapper inline.
 
-## Full test-file inventory (21 files), by subsystem
+## Full test-file inventory (44 files, 405 tests — green 2026-10-07), by subsystem
 
-- **hooks/** — 1: `useAgeGroups.test.js`
-- **pages/judge/** — 5: `judgeCategoryOptions.test.js`,
-  `judgeSeat.test.js`, `useJudgePanelData.test.js`, `scorerRows.test.js`,
-  `JudgeScoring.hooks.test.jsx`
+- **styles/** — 2: `alpha.test.js` (byte-exact `alpha()`),
+  `colourHygiene.test.js` (fails on any `` `${hex}NN` `` concatenation —
+  even in a comment — and on any Tailwind `*-white` utility; see
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md))
+- **utils/ui/** — 1: `appearance.test.js`; **contexts/** adds
+  `AppearanceProvider.test.jsx`; **components/layout/** —
+  `AppearanceMenu.test.jsx` (keyboard, announcement, no reload)
+- **hooks/** — 3: `useAgeGroups.test.js`, `useResponsive.test.jsx` (shared
+  store; re-measures on read while unsubscribed), `useBodyScrollLock.test.js`
+  (counted lock)
+- **components/** also: `auth/PasswordStrength.test.jsx` (each form's
+  policy), `competition/PostLoginFlow.test.jsx` (pass-through),
+  `scores/PlayerRankingBoard.test.jsx`
+- **utils/competition/** — 1: `levels.test.js`
+- **pages/judge/** — 17: `judgeCategoryOptions`, `judgeSeat`, `scorerRows`,
+  `timeKeeper`, `useJudgePanelData` (+ `.refresh`), `JudgeScoring.{hooks,
+  combination,edit,refresh,tabs}`, `JudgePanelReview.live`,
+  `JudgeDashboard.role`, `PanelAlerts`, `TimeKeeper.flow`, `DecimalInput`,
+  `DifficultyPicker`. The refresh-keeps-the-slip and edit-never-shows-the-old-
+  score rules are pinned here
 - **services/** — 1: `api-client.csrf.test.js` (see
   [08-API-INTEGRATION.md](08-API-INTEGRATION.md#csrf-double-submit-read-from-the-response-body-never-from-documentcookie))
 - **utils/auth/** — 3: `authEvents.crosstab.test.js`,
@@ -75,7 +91,7 @@ pattern of duplicating the wrapper inline.
   files are the cross-stack drift detectors; `apparatus.test.js` and
   `judgePanel.test.js` are confirmed to NOT cross-import the server,
   isolated client-logic tests only)
-- **contexts/** — 1: `AuthProvider.test.jsx` (see
+- **contexts/** — `AuthProvider.test.jsx` (see
   [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md))
 - **middleware/** — 1: `protected-route.test.jsx` (see
   [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md))
@@ -88,11 +104,9 @@ pattern of duplicating the wrapper inline.
   wondering what else might break.
 
 Not read file-by-file beyond the auth/scoring files already covered
-elsewhere in this MEMORY tree — this is a survey, not an exhaustive
-per-file writeup. If you need behavior detail for one of the
-not-yet-covered files above (the `pages/judge/*.test.js` group in
-particular), that needs a follow-up read; none of that group is
-documented anywhere in `Web/MEMORY` yet.
+elsewhere in this MEMORY tree — this is a survey. Browser-level checks
+(layout, contrast, appearance, Home) are Playwright specs, see
+[15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md#the-responsive--appearance-audit-harness).
 
 ## Change guidance
 

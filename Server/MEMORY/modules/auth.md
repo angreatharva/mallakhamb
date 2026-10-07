@@ -7,8 +7,8 @@ covers:
   - src/services/email/**
 read_when: "changing auth service internals, token/OTP mechanics, or email delivery"
 depends_on: [06-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 Flow-level narrative (login/refresh/logout/reset sequences, cookie
@@ -22,13 +22,13 @@ file-by-file export map.
 |---|---|
 | `login(email, password, userType)` | Full credential/lockout flow, returns `{user, token}` |
 | `register(userData, userType)` | Creates via the type's repository, returns `{user, token}` |
-| `forgotPassword(email)` | Cross-type lookup, triggers OTP email; silent no-op if not found |
-| `verifyOTP(email, otp)` | Cross-type lookup + `otpService.verifyOTP` |
-| `resetPasswordWithOTP(email, otp, newPassword)` | Verify, enforce password policy, atomic replay-safe update, clear OTP |
+| `forgotPassword(email, userType?)` | Lookup (restricted to `userType` when given), stores the OTP, mail goes in the background; silent no-op if not found |
+| `verifyOTP(email, otp, userType?)` | Lookup + `otpService.verifyOTP`; every failure is `INVALID_CODE_MESSAGE` |
+| `resetPasswordWithOTP(email, otp, newPassword, userType?)` | Password policy **first**, then verify, atomic replay-safe update that also clears lockout; then revokes all refresh tokens + `recordLogout`, and mails "password changed" |
 | `setCompetitionContext(userId, userType, competitionId)` | Mints a competition-scoped token; **refuses judges** (`AuthorizationError`); enforces `mayActOnCompetition` for admins |
 | `getAssignedCompetitions(userId, userType)` | Role-specific query — admin/superadmin/judge/coach/player each branch differently |
 | `logout(userId, token)` | Records the logout timestamp; the `token` argument is read but functionally inert (only `hasToken` is logged) |
-| `findUserByType`/`findUserAcrossTypes`/`isEmailTaken`/`verifyPassword`/`getRepositoryByType` | Lookups/helpers |
+| `findUserByType`/`findUserAcrossTypes(email, onlyType?)`/`isEmailTaken`/`verifyPassword`/`getRepositoryByType` | Lookups/helpers |
 | `persistLockoutState(userType, userId, state)` | Direct `model.updateOne` (bypasses full validation) so an unrelated schema error can't turn a failed login into a 500 |
 
 ## `authorization.service.js` (`AuthorizationService`) — much smaller than its own README claims
@@ -61,10 +61,16 @@ this, but the service's README was never updated — see GOTCHAS.md.
 
 `generateOTPCode` (crypto.randomInt, N digits per `OTP_LENGTH`),
 `generateAndSendOTP(user, userType)` (persists **plaintext** on
-`resetPasswordToken`/`resetPasswordExpires` — see GOTCHAS.md — emails via
-`emailService.sendOTP`, or dev-logs if no email service configured),
-`verifyOTP(user, otp, userType)` (presence+expiry+equality, no attempt
-cap), `clearOTP`, `getRepositoryByType` (includes judge account resolution).
+`resetPasswordToken`/`resetPasswordExpires` and zeroes
+`resetPasswordAttempts` — see GOTCHAS.md — then starts `emailService.sendOTP`
+**in the background** and returns `{ delivery }`, a promise that never
+rejects; tests await it, production ignores it. Dev-logs the code if no
+email service is configured), `notifyPasswordChanged(user, userType)`
+(background "password changed" mail), `verifyOTP(user, otp, userType)`
+(presence + expiry + constant-time compare; a wrong guess is counted
+atomically and the code is discarded at `security.otpMaxAttempts`, default
+5), `clearOTP`, `getRepositoryByType` (includes judge account resolution).
+Exports `INVALID_CODE_MESSAGE` — the one message for every code failure.
 
 ## `token-invalidation.service.js` (`TokenInvalidationService`)
 
@@ -95,13 +101,15 @@ the synchronous-looking shim wired to `TokenInvalidationService` via
 ## Email — `src/services/email/`
 
 `email.service.js` selects a provider (`email.provider` config —
-`'nodemailer'` or `'resend'`) and delegates to `nodemailer.adapter.js`/
-`resend.adapter.js`, both implementing `email-provider.interface.js`.
-Templates: `templates/otp.template.js` (the only one with a real caller —
-`otp.service.js:generateAndSendOTP`), `templates/password-reset.template.js`
-and `templates/notification.template.js` (both fully implemented,
-**zero callers anywhere** — no password-reset confirmation email is ever
-sent, see GOTCHAS.md).
+`'nodemailer'` (default), `'resend'` or `'gmail-api'`) and delegates to
+`nodemailer.adapter.js`/`resend.adapter.js`/`gmail-api.adapter.js`, all
+implementing `email-provider.interface.js`. **Production on Render must use
+`gmail-api`**: free Render blocks outbound SMTP (25/465/587), so Nodemailer
+can't reach Gmail from there — see [email.md](email.md).
+Templates: `templates/otp.template.js` (`otp.service.js:generateAndSendOTP`),
+`templates/password-reset.template.js` (the "password changed" notice,
+`otp.service.js:notifyPasswordChanged`, since 2026-10-07), and
+`templates/notification.template.js` (**zero callers**).
 
 ## Change guidance
 

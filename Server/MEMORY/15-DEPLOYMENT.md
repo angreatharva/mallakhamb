@@ -5,8 +5,8 @@ covers:
   - docs/RELEASE-RUNBOOK.md
 read_when: "deploying, rolling back, or changing render.yaml/deployment-relevant env vars"
 depends_on: [01-ARCHITECTURE, 12-CONFIG-AND-ENV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 ## Topology
@@ -70,6 +70,12 @@ because a sync would silently reset an incident mitigation:**
 - `REDIS_URL` — optional; unset means the in-memory token-invalidation
   fallback, per-process, reset on every deploy.
 - `EMAIL_USER`/`EMAIL_PASS`/`RESEND_API_KEY`/`RESEND_FROM_EMAIL` — sensitive.
+- `EMAIL_PROVIDER` + `GMAIL_CLIENT_ID`/`GMAIL_CLIENT_SECRET`/`GMAIL_REFRESH_TOKEN`
+  — **free Render blocks outbound SMTP**, so production mail must use
+  `EMAIL_PROVIDER=gmail-api`. Dashboard-owned so a Blueprint sync can't set
+  the provider before the keys exist (that fails startup validation and
+  takes the API down). Set the three keys first, then the provider. Setup:
+  `Server/docs/gmail-api-email.md`; see [modules/email.md](modules/email.md).
 
 ## Deploy sequence
 

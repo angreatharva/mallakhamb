@@ -55,14 +55,10 @@ docs for any current-state claim.**
   mid-session-competition-switch mechanism that isn't wired up (a judge
   switching meets today gets a fresh page load, not a live room hop).
   See [09-REALTIME.md](09-REALTIME.md#server-defined-events-with-no-client-listener).
-- **`design-system/audit/DesignTokenAudit.jsx`** (709 lines) — a token
-  swatch-viewer tool with zero references anywhere in the app.
-- **5 of 8 `src/components/responsive/*` components** —
-  `ResponsiveGrid`, `ResponsiveForm`, `ResponsiveTypography`,
-  `ResponsiveImage`, and `ResponsiveContainer` (as a standalone export —
-  its internals are still used by the other Responsive* files) — ~2,161
-  lines combined, confirmed zero external usage. See
-  [12-RESPONSIVE.md](12-RESPONSIVE.md#srcomponentsresponsive--which-components-are-actually-alive).
+- `DesignTokenAudit.jsx` and the nine dead `components/responsive/*`
+  components were **deleted** in the responsive work (2026-10). Still unused
+  per the design-language plan §2 (re-verify before deleting): `TiltCard`,
+  `CoachOrnament`, `ThemedTextarea`, `LiveRegion`.
 - **`usesEmail === false` branch in `UnifiedLogin.jsx`** — renders a
   Username field/label, but `usesEmail: true` is hardcoded for every
   current role; this branch is unreachable in practice (⚠️ UNVERIFIED
@@ -148,13 +144,12 @@ hand-verified-identical-in-prose or genuinely untested:
   rules — they don't fully agree (`AddPlayerForm.jsx`'s password rule
   is weaker than the other two). See
   [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md#the-net-effect-three-to-four-hand-maintained-copies-of-password-complexity-and-phone-format).
-- Design tokens (colors/spacing/breakpoints) exist in **up to four**
-  independent copies: `src/styles/tokens.js` (intended source of
-  truth), the two custom ESLint rules (each ships its own partial
-  internal copy), and `tailwind.config.js` (fully standalone, no import
-  of `tokens.js` at all — confirmed, including a `zIndex` scale that
-  disagrees with `tokens.js`'s own values under the same names). See
-  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#there-are-three-independent-copies-of-the-design-values-not-one).
+- Breakpoints and z-index have **one** source since 2026-09-29
+  (`src/styles/breakpoints.js`); colours live as CSS variables in
+  `src/index.css`. What's still copied by hand: the two custom ESLint
+  rules each ship their own partial copy of colour/spacing values, which
+  only affects lint suggestions. See
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#one-breakpoint-and-z-index-source).
 - `?competitionId=` one-shot-URL-param handling is duplicated
   near-verbatim across **three** independent files —
   `CoachDashboard.jsx`, `PlayerDashboard.jsx`, and
@@ -166,12 +161,30 @@ hand-verified-identical-in-prose or genuinely untested:
 `src/components/design-system/index.jsx` is not a barrel — it directly
 defines its own `GlassCard`/`FadeIn`/`GradientText`/`SaffronButton`,
 separate implementations from the same-named components under
-`cards/`/`animations/`/`ornaments/`. **11 real pages** import from the
+`cards/`/`animations/`/`ornaments/`. **12 files** import from the
 bare `@/components/design-system` path (resolving to `index.jsx`), not
-the subfolder versions. Before editing `FadeIn` or `GradientText`,
-check which import path the call site you care about actually uses.
-See
-[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#a-real-component-name-collision-both-versions-live-in-production).
+the subfolder versions, and `components/admin/AdminKit.jsx` adds a third
+`FadeIn` and a second `DarkCard`. Before editing one, check which import
+path the call site you care about actually uses. See
+[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components-still-true).
+
+## Styling traps (responsive/appearance work, 2026-10)
+
+- **Never glue an alpha byte onto a colour** (`` `${c}NN` ``). Once a value is
+  `rgb(var(--x))` it emits invalid CSS, silently dropped. Use `alpha()`.
+  `colourHygiene.test.js` fails CI on it — even inside a comment.
+- **`text-white` / `bg-white` fail CI.** `ink` follows the appearance;
+  `snow` is the deliberate always-white.
+- **Don't call dark/light "theme".** `ThemeProvider` is the role accent;
+  dark/light is Appearance.
+- **`data-role` only on `<html>`** — an inner `data-role` never reaches
+  `--accent`.
+- **The in-app preview browser can't measure mobile layout**; use the
+  Playwright audits. And its hidden tab freezes framer-motion at
+  `opacity: 0`, which reads as false contrast failures.
+- **Tailwind config edits need a dev-server restart.**
+- **Password policies differ on purpose** (admin 12/16, player 8) —
+  `PasswordStrength` takes them as props.
 
 ## Safety-critical: the e2e/seed harness writes to a real database
 
@@ -219,8 +232,6 @@ your own machine.
 - **`AdminJudges`/`AdminScores`/`AdminTransactions`/`AdminLots` are not
   top-level routes** — they're tabs inside `UnifiedDashboard.jsx`'s
   `switch(activeTab)`, reached only via `dashboard/:tab`.
-- **`Home.jsx`'s navbar links to `/about`, `/gallery`, `/contact`** —
-  none of these routes exist; each hits the `NotFound` catch-all.
 - **`PlayerTeamSelection.jsx`'s team list ignores the competition
   filter server-side** — the client sends `competitionId` correctly,
   but `PlayerService.getAvailableTeams` (server) ignores it and returns

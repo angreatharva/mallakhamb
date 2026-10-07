@@ -16,8 +16,8 @@ covers:
   - src/services/user/player.api.js
 read_when: "adding or changing any API call, touching CSRF/refresh/competition-lock handling, or looking up which endpoint a screen actually calls"
 depends_on: [10-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 ## Two axios instances, one interceptor stack
@@ -199,10 +199,13 @@ default (`api`).
 | Function | Method + path |
 |---|---|
 | `me()` | GET `/auth/me` |
-| `forgotPassword(email)` | POST `/auth/forgot-password` |
-| `verifyOTP(email, otp)` | POST `/auth/verify-otp` |
-| `resetPasswordWithOTP(email, otp, password)` | POST `/auth/reset-password-otp` |
-| `resetPassword(token, password)` | POST `/auth/reset-password/:token` |
+| `forgotPassword(email, userType?)` | POST `/auth/forgot-password` |
+| `verifyOTP(email, otp, userType?)` | POST `/auth/verify-otp` |
+| `resetPasswordWithOTP(email, otp, password, userType?)` | POST `/auth/reset-password-otp` |
+
+`userType` (player/coach/admin/judge) picks the account when one email owns
+several; the screens derive it from `?role=` via `pages/shared/resetPortal.js`.
+`resetPassword(token, password)` was removed with its endpoint (2026-10-07).
 | `getAssignedCompetitions()` | GET `/auth/competitions/assigned` |
 | `setCompetition(competitionId)` | POST `/auth/set-competition` |
 

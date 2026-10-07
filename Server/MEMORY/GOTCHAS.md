@@ -13,13 +13,12 @@ built, and were fixed in a follow-up pass. Kept here, briefly, so a future
 agent doesn't rediscover the same defect from an old comment or a stale copy
 of this doc — see each numbered doc's own body for the current behavior.
 
-- **`POST /api/auth/reset-password/:token` no longer 500s.**
-  `AuthenticationService.resetPasswordWithToken(token, newPassword)` is now
-  implemented (`src/services/auth/authentication.service.js`) — it searches
-  player→coach→admin→judgeAccount repositories for a matching, unexpired
-  `resetPasswordToken` (the same fields the OTP flow writes) and updates
-  atomically, mirroring `resetPasswordWithOTP`'s TOCTOU-safe shape. See
-  [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md).
+- **`POST /api/auth/reset-password/:token` is gone** (2026-10-07). It was
+  "fixed" on 2026-09-23 by implementing `resetPasswordWithToken`, which
+  turned a 500 into a takeover: it matched the token against the OTP field
+  with no email, so any 6-digit guess reset whichever account had a pending
+  code. Removed with its controller, service method and SPA route. Don't
+  bring it back. See [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md).
 - **`POST/DELETE /api/competitions/:id/admins(/:adminId)` no longer 500s.**
   `CompetitionService.assignAdmin`/`removeAdmin` are now implemented
   (`src/services/competition/competition.service.js`), mirroring
@@ -58,8 +57,7 @@ of this doc — see each numbered doc's own body for the current behavior.
   what "warm all users" should mean wasn't part of this fix. See
   [10-CACHING-AND-PERF.md](10-CACHING-AND-PERF.md).
 
-Regression tests added: `tests/unit/services/auth/authentication.service.test.js`
-(`resetPasswordWithToken`), `tests/unit/services/competition/competition.service.test.js`
+Regression tests added: `tests/unit/services/competition/competition.service.test.js`
 (new file — `assignAdmin`/`removeAdmin`), `tests/integration/payment-webhook-reconcile.test.js`
 (redelivery case), `tests/integration/socket/scoring-socket.test.js` (competition-room
 auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
@@ -117,8 +115,10 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 - **`/auth/refresh` is a public route with no `authMiddleware`.** It authenticates purely off the refresh-token cookie (path-scoped to `/api/auth/refresh`), by design — a request with an expired access-token cookie but a valid refresh-token cookie must still be able to refresh.
 - **Two independent token-rotation mechanisms coexist and don't share code**: `auth.middleware.js`'s silent 12h-threshold access-token re-sign (`rotateTokenIfNeeded`), and the explicit, client-invoked, theft-detecting refresh-token rotation via `POST /auth/refresh`. Don't conflate them when reading "rotation" in a file.
 - **Refresh-token reuse detection revokes the WHOLE family**, not just the reused token — the intended theft response is "kill the whole session chain, force full re-login."
-- **OTP codes are stored in plaintext** on the user document (`resetPasswordToken`/`resetPasswordExpires`), not hashed — inconsistent with `RefreshToken`'s hash-only storage, but this is the current, confirmed behavior; `utils/auth/otp.util.js` ships an unused `hashOTP` helper nobody calls. The same fields now also serve the URL-token reset flow (`resetPasswordWithToken`) — the token is stored in that same plaintext field, since it's the identical mechanism as the OTP.
-- **No password-reset confirmation email is sent.** `emailService.sendPasswordReset`/`sendNotification` are fully implemented but have zero callers anywhere; only `sendOTP` is wired into a real flow.
+- **OTP codes are stored in plaintext** on the user document (`resetPasswordToken`/`resetPasswordExpires`), not hashed — inconsistent with `RefreshToken`'s hash-only storage, but this is the current, confirmed behavior; `utils/auth/otp.util.js` ships an unused `hashOTP` helper nobody calls. The wrong-guess cap (`resetPasswordAttempts`, `OTP_MAX_ATTEMPTS`) and the constant-time compare are what make plaintext tolerable for a 10-minute code.
+- **SMTP never leaves free Render.** Ports 25/465/587 are blocked, so the default `nodemailer` provider times out there while working perfectly locally. Production must run `EMAIL_PROVIDER=gmail-api`. See [modules/email.md](modules/email.md).
+- **A new account model needs `resetPasswordToken`, `resetPasswordExpires` and `resetPasswordAttempts`.** `Admin.js` lacked them until 2026-10-07; strict mode dropped the OTP silently and no admin or superadmin could ever reset. `tests/unit/models/password-reset-fields.test.js` guards the four existing models.
+- **`emailService.sendNotification` has zero callers.** (`sendPasswordReset` is now the "password changed" notice after a reset.)
 - **Superadmin login is not a separate credential store.** `SuperAdminService.loginSuperAdmin` calls the same `AuthenticationService.login(email, password, 'admin')` as a regular admin, then checks `result.user.role === 'superadmin'` post-hoc.
 - **Judges cannot call `/api/auth/set-competition`.** `AuthenticationService.setCompetitionContext` explicitly throws `AuthorizationError` for judge callers by design — judges must use the judge-specific `PUT /api/judge/competition/:competitionId/set`, which independently re-sets the access-token cookie (a fix for a prior bug where only the response body was updated and the cookie kept serving the old competition).
 - **`score_identity_unique` includes `competitionType`, and this is load-bearing** (HIGH-3 fix) — omitting it from a lookup, as an earlier version did, let scoring a team in Competition II silently find and overwrite its Competition I document. Any new score-identity query must include it.

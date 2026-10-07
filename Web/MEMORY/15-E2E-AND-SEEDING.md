@@ -5,8 +5,8 @@ covers:
   - playwright.config.js
 read_when: "running ANY e2e/seed/audit npm script, or before pointing E2E_BASE_URL/E2E_API_URL at anything other than localhost"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 ## Read this before running anything in `e2e/`
@@ -77,7 +77,7 @@ mistake.
 | `seed:competitions`, `seed:coaches`, `seed:players`, `seed:judges` | Additive account/meet creation | Idempotent/self-repairing — safe to re-run, skips what already exists |
 | `test:e2e:player`, `test:e2e:coach` | One ad-hoc account each; `test:e2e:coach` also enters a real competition | Low volume, but `test:e2e:coach` performs a real stateful registration |
 | `test:e2e:scoring` (+ `:five`/`:four`/`:three`) | Finalizes 1-3 real scores (one per panel size) | **No** — same as `seed:scores`, just narrow |
-| `audit:responsive`, `audit:modals`, `audit:judge-walk`, `audit:shots` | **Read-only** — signs in as real seeded accounts but writes nothing (explicitly documented in `support/responsive-audit.js`: "nothing here writes to the database") | N/A — safe to re-run against any environment that has the accounts to sign in as |
+| `audit:responsive`, `audit:tablet`, `audit:modals`, `audit:judge-walk`, `audit:shots`, `audit:visual`, `audit:home`, and the contrast/deep-screens/appearance specs | **Read-only** — signs in as real seeded accounts but writes nothing (explicitly documented in `support/responsive-audit.js`: "nothing here writes to the database") | N/A — safe to re-run against any environment that has the accounts to sign in as |
 
 **No script in `Web/` ever deletes, drops, or truncates anything.** Data
 removal exists only as manual one-off Mongoose snippets documented in
@@ -201,6 +201,40 @@ bug), `register-coaches.spec.js`/`register-players.spec.js`/
 `modal-scroll.spec.js`/`responsive-audit.spec.js` (explicitly read-only),
 `register-coach.spec.js` (singular ad-hoc variant, includes a real
 competition entry).
+
+## The responsive & appearance audit harness
+
+Added by the responsive/appearance work (merged `3fab1e9`, 2026-10-04) and
+the new Home (`9814afa`). All read-only. Results and run commands:
+`docs/RESPONSIVE_UIUX_REPORT.md` ("Running the harness").
+
+| Spec / script | Measures |
+|---|---|
+| `visual-baseline.spec.js` (`audit:visual`) | Pixel gate, **`threshold: 0`** (Playwright's default 0.2 called grey 94→140 "the same pixel"). Baselines live **outside the repo** at `../.mallakhamb-visual-baseline/<project>/` (`VISUAL_BASELINE_DIR`). Must be `contextOptions: { reducedMotion }` — `test.use({ reducedMotion })` is silently ignored. Re-run the compare on an unchanged build first |
+| `contrast-audit.spec.js` | Every text element composited over its real background stack (`APPEARANCE=`, `ROLE=`, `CONTRAST_WIDTHS=`); waits out running animations. 88/88 in both appearances |
+| `responsive-audit.spec.js` (`audit:responsive`), `responsive-tablet.spec.js` | Overflow, 44px targets (pseudo-element reach measured from the PADDING box), console errors; `WIDTHS=`, `AUDIT_HEIGHT=`, `APPEARANCE=both` |
+| `deep-screens.spec.js` | Screens behind filters and tabs (results boards, rankings, lots, judges, teams) — route audits never reach them |
+| `judge-deep-screens.spec.js` | Running order, panel review, Senior Judge edit dialog, Mismatch/Tolerance alerts. Rewrites the scores response **in the browser only**; asserts the page stayed put |
+| `responsive-judge-walk.spec.js` (`audit:judge-walk`) | The slip's three tabs, nothing under the Submit bar, steppers. `WALK_UNLOCK=1`, `WALK_AGE=`, `WALK_APPEARANCE=` |
+| `responsive-score-sheet.spec.js` | Score sheet: cards below 1024, table from 1024, 0 clipped fields |
+| `appearance-everywhere.spec.js` | The Light/Dark switch on every page of every role, one choice everywhere (114/114) |
+| `appearance-persistence.spec.js`, `focus-visible.spec.js`, `edge-cases.spec.js`, `desktop-fold.spec.js`, `responsive-modals.spec.js` | Persistence across logout/reload; a visible focus change on every Tab stop; long names/empty lists/latency/500s; fold; dialog scrolling |
+| `home-device-audit.mjs` (`audit:home`) | The landing page on 41 device profiles against a **preview build** (`HOME_URL`, default `localhost:4173`) |
+
+**Rules that came from void runs:**
+- **One audit at a time.** The audit accounts can't be signed in from two
+  browsers at once, and the machine has 7.7 GB RAM.
+- **Accounts:** `AUDIT_<ROLE>_EMAIL/PASSWORD` + `AUDIT_MEET` override the
+  roster people; TRIALS values live in gitignored `.env.audit.local`
+  (`set -a && . ./.env.audit.local && set +a`).
+- **A run is void** if the API lost Atlas mid-run ("Authentication failed"
+  toasts, "0 competitions", `getaddrinfo ENOTFOUND`), or if branch/HEAD/
+  `git diff | md5sum` changed during it (the shared checkout gets switched).
+- On Windows a stopped background shell keeps running: kill leftover
+  `node.exe`/`playwright` processes before trusting a result. Keep each run
+  under 2 hours.
+- `E2E_DEVICES=1` adds iPhone 13 / iPad Mini / iPad Pro 11 (WebKit) and Galaxy
+  S24 / Tab S4 / Z Fold 7 / Tab S9 (Chromium) projects.
 
 ## Change guidance
 

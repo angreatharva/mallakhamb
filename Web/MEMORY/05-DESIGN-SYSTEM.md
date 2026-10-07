@@ -1,194 +1,176 @@
 ---
 doc: 05-DESIGN-SYSTEM
 covers:
-  - src/styles/tokens.js
+  - src/styles/**
+  - src/index.css
+  - public/appearance-init.js
+  - src/utils/ui/appearance.js
+  - src/contexts/AppearanceProvider.jsx
   - tailwind.config.js
   - src/components/design-system/**
   - src/utils/ui/cn.js
   - eslint-rules/no-hardcoded-colors.js
   - eslint-rules/no-hardcoded-spacing.js
-read_when: "adding a UI primitive, touching colors/spacing/breakpoints, or wondering why two components share a name"
+read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
-## There are three independent copies of the design values, not one
+Rewritten 2026-10-07. The responsive/appearance work (branch
+`feat/responsive-appearance`, merged `3fab1e9` on 2026-10-04) replaced
+most of what this doc used to describe: there is now one breakpoint
+source, colours are CSS custom properties, and the app has Light and
+Dark. Full history: `docs/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
+`docs/RESPONSIVE_UIUX_REPORT.md` (summary).
 
-`src/styles/tokens.js` is the intended single source of truth
-(`DESIGN_TOKENS` default export, `:7-167` — `colors` [brand/roles/
-semantic/status/surfaces/borders/text/extended], `spacing` [xs 4px…4xl
-96px], `typography`, `radii`, `shadows`, `easings`, `breakpoints`
-[mobile 320/tablet 768/desktop 1024/wide 1280], `zIndex`, plus helper
-fns `getStatusColor`/`getStatusBg`/`getRoleColor`/`getRoleBg`). **But
-three other places hold their own independent copies, none of them
-imports of `tokens.js`:**
+**Next:** `docs/design-language/PLAN.md` (2026-10-07) rolls the new
+Home's "Prime Time" look across the site through a third axis, *Look*
+(`html[data-look]`), with token packs in `src/styles/looks/`. When that
+lands, this doc's "where colour values live" section moves into the
+packs — check the plan's status line before trusting it.
 
-1. **`eslint-rules/no-hardcoded-colors.js`** ships its own `DESIGN_TOKENS`
-   literal (`:14-47`) — currently **byte-identical** to `tokens.js` for
-   every value it includes, but it's an incomplete subset (omits
-   `status`, `borders`, `extended`, and 3 of 4 `text` sub-keys). No
-   import, no test, no codegen keeps it in sync — a future edit to
-   `tokens.js` colors will silently desync the lint rule's suggestions
-   with nothing failing.
-2. **`eslint-rules/no-hardcoded-spacing.js`** ships a complete,
-   currently-exact copy of `tokens.js`'s `spacing` object (`:13-24`) —
-   same drift risk, currently in sync, no guard against going out of
-   sync.
-3. **`tailwind.config.js`** has **no import of `tokens.js` anywhere** —
-   fully standalone:
-   - `theme.screens` (`:9-21`, 11 breakpoints) numerically matches
-     `src/utils/ui/responsive.js`'s `BREAKPOINTS` but under **different
-     key names** (`mobile-lg` vs `mobileLarge`, `desktop-lg` vs
-     `desktopLarge`) — a third, differently-named hardcode of the same
-     scale, and neither matches `tokens.js`'s own much shorter 4-key
-     `breakpoints` object.
-   - `theme.extend.colors.primary`/`secondary` (`:24-47`) is a generic
-     Tailwind 50-900 blue/green ramp with **no relationship to any
-     `tokens.js` category by name** — only the `500` shade coincidentally
-     lines up (`primary.500` ≈ `semantic.info`/`roles.public`,
-     `secondary.500` ≈ `semantic.success`/`roles.coach`/`extended.green`).
-     `Web/docs/RESPONSIVE_UIUX_PLAN.md` independently calls this "two
-     unrelated palettes."
-   - `theme.extend.zIndex` (`:119-123`: `mobile-menu:50, modal:100,
-     tooltip:200`) **does not match** `tokens.js`'s `zIndex` scale
-     (`modal:50, tooltip:70`) — same concept names, different absolute
-     values.
-   - The plugin section (`:128-693`) defines dozens of utility classes
-     with yet more inline hardcoded values, inconsistently sourced —
-     most call `theme('spacing.3')` etc., but e.g. `.table-mobile-cards`
-     (`:645-672`) hardcodes `border: '1px solid #e5e7eb'` and
-     `padding: '1rem'` as raw literals with no `theme()` lookup at all.
+## Two styling axes today (three once the plan lands)
 
-**Practical implication**: if you're asked to change a brand color, a
-spacing scale, or a breakpoint, changing `tokens.js` alone changes
-nothing in Tailwind-authored JSX (`className="..."`) or in what the two
-ESLint rules recognize as "already tokenized." All three surfaces need
-editing by hand, and nothing will fail CI if you miss one.
+```
+<html data-appearance="light" data-role="judge">
+```
 
-## `Web/docs/RESPONSIVE_UIUX_PLAN.md` independently corroborates this, and adds more
+| Axis | Values | Set by | Where it's read |
+|---|---|---|---|
+| **Appearance** | `dark` (default), `light`; preference also `system` | `public/appearance-init.js` (classic script, runs before any CSS — no flash), then `AppearanceProvider` | `src/index.css` `[data-appearance=…]` blocks |
+| **Role** (accent) | `player`, `coach`, `admin`, `judge`, `superadmin`; none = public | `applyRoleAccent(getRoleFromPath())` in `App.jsx`'s layout effect, from the URL | `index.css` `[data-role=…]` blocks → `--accent`, `--accent-fg`, `--on-accent`, focus ring |
 
-A 451-line audit dated 2026-09-20 (3 days before this doc was written),
-explicitly scoped as "Phase 1 (Discovery) complete. No application code
-modified." Confirms the three-source breakpoint problem (§4.1, and adds
-that hardcoded `@media` queries in `src/index.css` are a *fourth* copy,
-plus that `responsive.js`'s own `BREAKPOINT_HELPERS.desktop` (1440px)
-contradicts `RESPONSIVE_RANGES.desktop.min` (1024px) **within the same
-file**) and the two-unrelated-palettes finding (§4.5). Additional
-findings from the same document, not independently re-verified line by
-line but consistent with everything read directly:
+**Naming is load-bearing.** "Theme" (`ThemeProvider`/`useTheme` in
+`design-system/theme/`) means the per-role ACCENT in JS; "Appearance"
+means dark/light. Never call the dark/light axis "theme". The plan's new
+axis is "Look", for the same reason.
 
-- **`useReducedMotion` exists three times**: `hooks/useResponsive.js:243`,
-  `design-system/animations/useReducedMotion.js:18`, and a third
-  re-export site in `public/Home.jsx:23` (§4.5).
-- **`.stacked-table` vs `.table-mobile-cards`** (§4.5) — the latter is
-  legacy, still live in `tailwind.config.js`, and uses
-  `thead{display:none}`, which removes headers from screen readers; the
-  former clips visually instead, an accessibility regression risk if
-  the legacy class is ever reached for again.
-- **`.touch-target` vs `.tap-safe`** (§4.5) — conflicting always-on vs.
-  mobile-only minimum touch-target floors.
-- **§4.6**: `tailwind.config.js`'s
-  `addComponents({.responsive-container: {'@apply container-responsive':{}}})`
-  pattern is flagged as invalid Tailwind plugin syntax (`@apply` cannot
-  be an object-literal key like that) — `.responsive-container`/`-grid`/
-  `-flex`/`-text` "almost certainly emit nothing." ⚠️ UNVERIFIED against
-  actual built CSS output.
-  §4.3 flags a related class of likely-dead utilities:
-  `.responsive-input`/`-select`/`-button`/`.mobile-menu-panel` hardcode a
-  **light theme** (`background: white`, `color: gray.900`) inside an app
-  whose actual surface is `#0a0a0a` — no dark-token awareness at all,
-  plausibly dead for the same reason.
-- **`DesignTokenAudit.jsx`** (`design-system/audit/`, 709 lines) — a
-  visual QA tool that renders every token category as swatches; it
-  *correctly* reads live values from `tokens.js` (not itself a drift
-  source), but per the plan doc has **zero references anywhere in the
-  app** — dead code.
+- `data-role` goes on `<html>` **only**: `--accent` is derived where
+  `data-appearance` is declared, so a `data-role` on an inner element never
+  reaches it.
+- Any element may carry `data-appearance` as an **island**. The stopwatch
+  (`StopwatchFace`) is always dark; Home (`.mk-home`) is always dark.
+- The preference is in plain `localStorage` key `mk-appearance` (not
+  obfuscated storage): the bootstrap reads it before the bundle exists,
+  and it must outlive logout. `appearance-init.js` restates the key, the
+  default and `THEME_COLOR` because it can't import — keep it in step with
+  `src/utils/ui/appearance.js`.
+- Switching never reloads or remounts: a judge mid-slip keeps every mark.
+- The switch (`AppearanceMenu`, `components/layout/`) is in every shell;
+  header-less pages get `CornerAppearanceMenu` via `App.jsx`
+  (`isHeaderlessPage` etc.). `e2e/appearance-everywhere.spec.js` (114/114)
+  proves it's on every page.
 
-## A real component-name collision, both versions live in production
+## Where colour values live
 
-`src/components/design-system/index.jsx` is **not a barrel re-export**
-— it's its own file directly defining `GlassCard`, `FadeIn`,
-`GradientText`, `SaffronButton` (`:9-96`), each a **separate
-implementation** from the same-named components in `cards/GlassCard.jsx`,
-`animations/FadeIn.jsx`, and `ornaments/GradientText.jsx`. This isn't a
-hypothetical risk: confirmed by grep, **11 page files** — including
-`PlayerDashboard.jsx`, `CoachDashboard.jsx`, `CoachPayment.jsx`,
-`PublicScores.jsx`, `Home.jsx`, `JudgeDashboard.jsx`,
-`JudgeTeamPlayers.jsx`, `PerformancePanel.jsx`,
-`SuperAdminAddPlayerPayment.jsx`, `CompetitionSelectionScreen.jsx`,
-`LevelSelectionScreen.jsx` — import `FadeIn`/`GradientText`/
-`SaffronButton` from `@/components/design-system` (the bare directory
-import resolves to `index.jsx`, **not** the subfolder versions). The
-"legacy" single-file components in `index.jsx` are the ones actually in
-production use; the folder-organized `cards/`/`animations/`/`ornaments/`
-versions are maintained separately and may or may not be used elsewhere.
-**If you're asked to change `FadeIn` or `GradientText` behavior, check
-which import path the call site actually uses before editing — editing
-the "obviously organized" subfolder version can silently change nothing
-for 11 real pages.**
+- **`src/index.css`** holds every value: `:root` + `[data-role]` role
+  palettes, then `[data-appearance="dark"]` and `[data-appearance="light"]`
+  blocks of **RGB triplets** (`--bg`, `--surface*`, `--ink`, `--fg*`,
+  `--line*`, status, data palette `--cat-*`, `--medal-*`), then derived
+  tokens re-declared per appearance. This file is the one the design-language
+  plan moves into the `classic` pack verbatim.
+- **`tailwind.config.js`** colours are channels: `ink: rgb(var(--ink) / <alpha>)`
+  etc., so `bg-ink/10` works in both appearances. **`snow` is literal
+  `#ffffff`** (text on a photo or saturated fill). Tailwind's `white` is
+  literal white too, and **`colourHygiene.test.js` fails CI on any `*-white`
+  utility** — use `ink` (follows appearance) or `snow` (always white).
+  Tailwind's legacy `primary`/`secondary` 50–900 ramps still exist and follow
+  nothing.
+- **`src/styles/tokens.js`** — `DESIGN_TOKENS.colors.surfaces/borders/text`
+  are `rgb(var(--…))` strings, so they follow the appearance. Semantic text
+  colour in JS is **`FG.*`** (and `DATA_COLORS.*` for Difficulty/Combination/
+  Originality/deductions/medals), never a `'rgb(var(--x))'` literal — the
+  `design-system/no-hardcoded-colors` lint rule exempts only tokens.js.
+  `SAFFRON_CTA`, `COMMON_STYLES`, the deprecated `COLORS`/`ADMIN_COLORS`
+  proxies and `EASE_*` constants are also here.
+- **`alpha(color, 0xNN)`** (tokens.js) is the only way to add opacity to a
+  token. It replaced 428 `` `${hex}NN` `` string concatenations, which emit
+  invalid CSS (`var(--x)0A`) once a value is a variable. It understands the
+  `rgb(var(--x))` form; for non-token input it concatenates **exactly as
+  before, on purpose** (some callers pass rgba strings that were always
+  invalid — fixing those is a visible change). `colourHygiene.test.js` fails
+  on any new concatenation, **even inside a comment**, so never write the
+  literal pattern in a doc under `src/`.
+- **Text-on-fill rule:** text on a solid purple fill is `text-snow`; on
+  saffron/green/red fills it's near-black `#0A0A0A`. Dark-mode text-only
+  role shades (`--role-dark-fg`: violet-400 for admin/judge, blue-400 for
+  public) feed `--accent-fg` while fills keep `--role-dark`. Don't merge
+  them back into one token — contrast fails.
+- Contrast: `e2e/contrast-audit.spec.js` composites every text element over
+  its real background; **88/88 route×width pass in both appearances**.
+
+## One breakpoint and z-index source
+
+**`src/styles/breakpoints.js`** (plain values, no imports — Tailwind loads it
+at config time) is the single definition: `SCREENS` (Tailwind's own
+sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1536), `DEVICE_BANDS` (phone
+< 768, tablet 768–1023, desktop ≥ 1024), `WIDE_CONTAINER_MIN` (1440, a
+container step written `min-[1440px]:`, not a screen), and `Z_INDEX`
+(base 0, sticky 20, dropdown 30, overlay-nav 40, scrim 50, modal 60,
+popover 70, toast 80, tooltip 90 — emitted as `--z-*` and Tailwind
+`z-*`). `tailwind.config.js` builds `screens`/`zIndex` from it;
+`utils/ui/responsive.js` and `tokens.js` re-export it. The old "three
+copies under different names" problem is gone.
+
+Still independent copies (unchanged, unguarded): the `DESIGN_TOKENS`
+literal inside `eslint-rules/no-hardcoded-colors.js` and the spacing copy
+in `eslint-rules/no-hardcoded-spacing.js`. They only affect lint
+suggestions.
+
+**Editing `tailwind.config.js` needs a dev-server restart.** It doesn't
+hot-reload; the utility silently doesn't exist.
 
 ## `design-system/` — by subfolder
 
-- **`theme/`** — foundational. `ThemeProvider.jsx` (role-aware context,
-  auto-detects role from the URL path via regex, falls back to
-  `getRoleColor`/`tokens.js`, memoized + cached per role) +
-  `useTheme.js` (context hook; throws in dev if used outside the
-  provider, returns a `DEFAULT_THEME` fallback in production). Exposes
-  `{role, colors:{primary, primaryLight, primaryDark, background, card,
-  border, borderBright}, spacing, typography, radii, shadows}`.
-- **`forms/`** — foundational. `ThemedButton` (variant solid/outline/
-  ghost, size sm/md/lg, loading state, icon slot, 44px min touch target,
-  framer-motion hover/tap/focus), `ThemedInput` (icon slot, error state
-  with `aria-live`, `rightElement` slot, responsive padding/font-size via
-  `useResponsive`), `ThemedSelect`, `ThemedTextarea` — all theme-aware
-  via `useTheme()`.
-- **`cards/`** — foundational. `GlassCard` (glassmorphism, responsive
-  padding via `getResponsiveValue`), `DarkCard` (dark glass + optional
-  role-colored hover border), `StatCard` (icon/label/value/subtitle,
-  wraps in `FadeIn`), `TiltCard` (3D mouse-tilt via framer-motion,
-  respects reduced motion). All `React.memo`-wrapped.
-- **`animations/`** — `FadeIn.jsx` (IntersectionObserver-based, runs
-  once, respects reduced motion) + `useReducedMotion.js` (see the
-  triple-implementation note above) + its own `index.js`, which defines
-  its own `EASE_OUT`/`EASE_SPRING`/`DURATION`/`ANIMATION_CONFIG`
-  constants independent of `tokens.js`'s `easings`.
-- **`backgrounds/`** — 6 decorative SVG/motion components
-  (`AmbientOrbs` non-lazy, the rest lazy-loaded). `AmbientOrbs.jsx`'s
-  header comment documents a real, separate horizontal-scroll bug fix:
-  six pages each hand-rolled a decorative orb at `left: 95%`, which
-  extended the document to 1668px inside a 1440px window; fixed with an
-  `inset-0 overflow-hidden` clipping layer plus a CSS custom property
-  (`--orb-scale`) instead of JS-computed layout. Distinct from — and
-  unrelated to — the score-sheet no-sideways-scroll mechanism in
-  [12-RESPONSIVE.md](12-RESPONSIVE.md).
-- **`ornaments/`** — `ShieldOrnament` (admin/judge), `CoachOrnament`
-  (coach), `GradientText` — all lazy-loaded via `index.js`.
-- **`accessibility/`** — `LiveRegion.jsx` (+ `ErrorAnnouncement`/
-  `StatusAnnouncement` convenience wrappers), ARIA live-region
-  primitives.
-- **`audit/DesignTokenAudit.jsx`** — dead, see above.
+- **`theme/`** — `ThemeProvider` (role-aware JS context, role from the URL
+  path, memoized per role) + `useTheme` (throws in dev outside the
+  provider; `DEFAULT_THEME` in prod). Exposes `{role, colors:{primary,
+  primaryLight, primaryDark, background, card, border, borderBright},
+  spacing, typography, radii, shadows}`.
+- **`forms/`** — `ThemedButton` (reads `bg-accent text-on-accent`; 5
+  users), `ThemedInput`, `ThemedSelect`, `ThemedTextarea` (0 users).
+- **`cards/`** — `GlassCard` (2 users), `DarkCard`, `StatCard` (2),
+  `TiltCard` (0).
+- **`animations/`** — `FadeIn` (IntersectionObserver, once, reduced-motion
+  aware), `useReducedMotion`, and its own `EASE_*`/`DURATION` constants.
+- **`backgrounds/`** — `AmbientOrbs` (one clipping layer; its `--orb-scale`
+  is set by media query in `index.css`, CSS not JS) and `HexGrid`. The
+  other decorative backgrounds were deleted.
+- **`ornaments/`** — `ShieldOrnament`, `CoachOrnament` (0 users),
+  `GradientText`.
+- **`accessibility/`** — `LiveRegion` (+ `ErrorAnnouncement`/
+  `StatusAnnouncement`); 0 imports.
+- `audit/DesignTokenAudit.jsx` — **deleted** (was dead).
+
+User counts are from the design-language plan §2 (measured at `9814afa`);
+re-verify before deleting anything.
+
+## Same names, different components (still true)
+
+`src/components/design-system/index.jsx` is **not a barrel**: it defines
+its own `GlassCard`, `FadeIn`, `GradientText`, `SaffronButton`, separate
+from `cards/`, `animations/`, `ornaments/`. Twelve files import the bare
+`@/components/design-system` and get the `index.jsx` versions.
+`components/admin/AdminKit.jsx` adds a **third** `FadeIn` and a second
+`DarkCard` (the admin kit: `DarkCard`, `FadeIn`, `EmptyState`,
+`LoadingState`, `DarkSearch`, `DarkBtn`). Left unmerged on purpose (they
+differ visually). Before editing one, grep the call site's import path.
 
 ## `src/utils/ui/cn.js`
 
-```js
-export const cn = (...inputs) => twMerge(clsx(inputs));
-```
-Standard clsx + tailwind-merge composition. Nothing else to know.
+`cn = (...inputs) => twMerge(clsx(inputs))`. Nothing else to know.
 
 ## Change guidance
 
-- Changing a color, spacing value, or breakpoint: it must be edited in
-  up to **four** places by hand — `tokens.js`, the relevant ESLint rule
-  (colors and/or spacing), `tailwind.config.js`, and (for breakpoints)
-  `src/utils/ui/responsive.js`/`src/index.css`. Nothing enforces this;
-  check all four before assuming the change propagated.
-- Before editing `FadeIn`, `GradientText`, `GlassCard`, or
-  `SaffronButton`: grep the actual import path at each call site first —
-  `@/components/design-system` (bare, → `index.jsx`) and
-  `@/components/design-system/{cards,animations,ornaments}/...` are two
-  different implementations sharing a name.
-- Before extending `useReducedMotion`: there are two real
-  implementations (`hooks/useResponsive.js` and
-  `design-system/animations/useReducedMotion.js`) plus a re-export in
-  `Home.jsx` — confirm which one a given call site imports.
+- New colour: add the triplet to **both** appearance blocks in `index.css`
+  (plus a `[data-role]` override if role-specific), expose it in Tailwind as
+  a channel, and through `FG`/`DATA_COLORS` for JS. Then run the contrast
+  audit in both appearances.
+- Opacity on a token: `alpha()`, or Tailwind's `/NN` on a channel colour.
+  Never string-glue.
+- Breakpoints / z-index: `breakpoints.js` only, then restart the dev server.
+- Text that must stay white on a photo: `snow`. Text that should follow
+  the appearance: `ink` / `FG`.
+- A restyle beyond a value tweak: read `docs/design-language/PLAN.md` first —
+  pages are meant to stop holding visual decisions.

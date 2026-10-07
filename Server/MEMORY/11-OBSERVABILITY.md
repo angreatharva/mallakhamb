@@ -13,8 +13,8 @@ covers:
   - src/routes/health.routes.js
 read_when: "adding logging, debugging why a metric/health check reads wrong, or working on the audit trail"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 ## Logging — `src/infrastructure/logger.js` (Winston wrapper)
@@ -102,7 +102,10 @@ tests under `tests/unit/`) and `liveness`/`readiness` (newer, tests under
   `Promise.allSettled([checkDatabase(), checkMemory(), checkEmailService()])`;
   overall status `healthy` only if all three are `healthy` or `degraded`.
   `checkMemory` flags `unhealthy` above 90% heap or 95% system memory,
-  `degraded` above 80% heap.
+  `degraded` above 80% heap. `checkEmailService` calls
+  `emailService.checkHealth()`, which really connects to the provider
+  (cached 5 min) and maps a failure to **`degraded`**, never `unhealthy`:
+  broken mail must not turn `/api/health` into a 503 (2026-10-07).
 
 ## Health route table — `src/routes/health.routes.js`
 

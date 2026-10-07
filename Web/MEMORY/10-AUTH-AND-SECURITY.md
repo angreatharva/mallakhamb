@@ -7,12 +7,13 @@ covers:
   - src/utils/auth/**
   - src/pages/shared/ForgotPassword.jsx
   - src/pages/shared/ResetPassword.jsx
+  - src/pages/shared/resetPortal.js
   - src/pages/shared/NotFound.jsx
   - src/components/auth/AuthLoadingSpinner.jsx
 read_when: "changing login/logout/session behavior, route guarding, cross-tab sync, or the password-reset screens"
 depends_on: [04-STATE-MANAGEMENT, 08-API-INTEGRATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 ## Session model in one paragraph
@@ -257,59 +258,47 @@ subscriber (`:90-100`), and `broadcastLogout(undefined)` must not throw
    proactive `isTokenExpired` check in `protected-route.jsx`. They don't
    share code.
 
-### Password reset — one component, two flows
-`ForgotPassword.jsx` collects an email, calls `authAPI.forgotPassword(email)`
-(`POST /auth/forgot-password`, raced against a 120s client timeout), then
-navigates to `/reset-password` with router state `{email}`.
+### Password reset — OTP only, scoped to the login page it came from
+Rewritten 2026-10-07 (`b5b0672`) together with the Server side (Server
+MEMORY `06-AUTH-AND-SECURITY.md`). The token-link flow and its route
+`/reset-password/:token` are **gone**: the server endpoint behind it reset
+any account with a pending code from six guessed digits.
 
-`ResetPassword.jsx` **branches purely on the presence of a `:token` URL
-param** (`const isOTPMethod = !token`):
-- **Token flow** (`/reset-password/:token`): copies the token into local
-  state, strips it from the visible URL via `history.replaceState` (so it
-  doesn't linger in browser history), skips straight to the password
-  fields, submits via `authAPI.resetPassword(resetToken, password)` (→
-  `POST /auth/reset-password/:token`, the Server's recently-fixed legacy
-  flow — see Server MEMORY's `06-AUTH-AND-SECURITY.md`).
-- **OTP flow** (`/reset-password`, no token, email pre-filled from
-  `ForgotPassword`'s router state): email + 6-digit OTP → `authAPI.verifyOTP`
-  (`POST /auth/verify-otp`) → only after verified, password fields render →
-  `authAPI.resetPasswordWithOTP(email, otp, password)` (→ `POST
-  /auth/reset-password-otp`).
-- Shared: password `minLength:8` + confirm-match client-side; both consume
-  `err.response.data.{attemptsRemaining, lockedOut, remainingSeconds}` to
-  drive a live lockout countdown (reset to 3 / cleared when a client-side
-  timer hits 0 — optimistic, doesn't re-check with the server); **both
-  redirect to `/player/login` on success regardless of the account's
-  actual role** (worth knowing — screen is role-agnostic but the success
-  redirect is hardcoded to one role).
-- **The two screens validate email differently.** `ForgotPassword.jsx`
-  uses the shared `validateEmailFormat` from `@/validators/form.validator`
-  (`ForgotPassword.jsx:148-151`). `ResetPassword.jsx` does **not** call the
-  same helper — it uses its own inline regex,
-  `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` (`ResetPassword.jsx:335`), which happens
-  to be character-for-character identical to `validateEmailFormat`'s own
-  regex today, but is a second hand-maintained copy that could silently
-  diverge from the shared one on a future edit.
-- **The OTP flow's `verify` step doesn't re-gate the final submit.**
-  `handleVerifyOTP` (`:134-156`) calls `authAPI.verifyOTP` standalone and,
-  only on success, flips `otpVerified` true — which conditionally renders
-  the password fields (`:407-408`). But the final `onSubmit`
-  (`:158-185`) does **not** call `verifyOTP` again; it posts
-  `resetPasswordWithOTP(email, otp, password)` directly, trusting the OTP
-  value still sitting in the form. If the OTP expires in the gap between
-  clicking "Verify" and submitting the new password, nothing on the client
-  catches that — the server is the only thing that can reject it at that
-  point.
-- Token flow strips the token from the visible URL/history immediately on
-  mount via `window.history.replaceState(null, '', '/reset-password')`
-  (`:108-113`), before the user even sees the password fields.
-- `ForgotPassword.jsx` only ever produces the OTP path — nothing in the
-  client generates a `/reset-password/:token` URL. That link comes from
-  outside this component's control (a server-sent email template,
-  presumably, or a legacy integration) — ⚠️ UNVERIFIED where it's actually
-  generated; not found anywhere under `Web/`, would need to check
-  `Server/src/services/**` for an email template referencing
-  `reset-password/`.
+**The portal travels in `?role=`.** One email can own a player, a coach and
+a judge account, so every login page links to
+`/forgot-password?role=<role>` (`UnifiedLogin.jsx`'s `forgotPasswordLink`).
+`src/pages/shared/resetPortal.js` turns it into: `portalFromSearch(search)`
+(validated against player/coach/admin/superadmin/judge), `accountTypeFor`
+(superadmin → `admin`, the server's account type), `loginPathFor` (back to
+that role's login, or `/` with no role), and `withPortal(path, portal)` (keeps
+`?role=` on the next page). No `?role=` → the server takes the first match
+(player → coach → admin → judge).
+
+- `ForgotPassword.jsx`: `authAPI.forgotPassword(email, userType)` raced against
+  a 120 s client timeout, then navigates to `withPortal('/reset-password')` with
+  router state `{email}`. The success copy is deliberately non-committal
+  ("If that email has an account, a 6-digit code is on its way") because the
+  server answers the same for every address.
+- `ResetPassword.jsx` (`/reset-password`): email + 6-digit OTP →
+  `authAPI.verifyOTP(email, otp, userType)` → only then the password fields →
+  `authAPI.resetPasswordWithOTP(email, otp, password, userType)` → back to
+  `loginPathFor(portal)` after 2 s (it used to hardcode `/player/login`).
+- **Password strength uses the server's rule** (`validatePasswordStrength`
+  from `@/validators/form.validator`: ≥ 8, upper + lower + digit), so the server
+  never rejects what the client accepted.
+- **Errors read `err.response.data.error.message`** (the server's error shape),
+  falling back to `data.message`. The old code read only `data.message`, which
+  never matched, so every failure showed the generic text.
+- There is **no attempt counter or lockout countdown** any more: the server
+  answers every failed code with one message and discards the code after
+  `OTP_MAX_ATTEMPTS` (5) wrong guesses.
+- If the final submit is rejected for the code (expired, burnt, replaced by a
+  newer one), `otpVerified` resets so the code field unlocks; a weak-password
+  rejection keeps the verified code.
+- The final submit doesn't re-call `verifyOTP`; the server re-verifies
+  atomically, so that's fine.
+- `ResetPassword.jsx` still validates email with its own inline regex
+  (identical to `validateEmailFormat` today) — a second copy that could drift.
 
 ## Stale / aspirational docs
 
@@ -389,10 +378,6 @@ param** (`const isOTPMethod = !token`):
   report's narrative was partly reconstructed from `AuthProvider.test.jsx`
   behavior per the task's "tests are the spec" framing, not from re-reading
   the implementation line-by-line a second time.
-- ⚠️ UNVERIFIED: where the `/reset-password/:token` email link is actually
-  generated (not produced by any client code found — check
-  `Server/src/services/**` for an email template referencing
-  `reset-password/`).
 - ⚠️ UNVERIFIED: HIGH-W3's full seven-module axios-bypass fix — corroborated
   by `judge.api.js`'s in-file comment and the progress log, not
   independently re-audited module-by-module.

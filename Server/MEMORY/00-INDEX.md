@@ -66,6 +66,7 @@ against commit `f0bdc1d`, 2026-09-23.
 | Add a cached read | `CHANGE-RECIPES.md#add-cached-read`, `10-CACHING-AND-PERF.md` | the owning service, `cache.service.js` |
 | Add a background/seed/perf script | `CHANGE-RECIPES.md#add-background-script`, `13-SCRIPTS-AND-OPS.md` | `scripts/`, `scripts/lib/setup-chain.js` |
 | Write a test | `14-TESTING.md` | the matching `tests/{unit,integration,security}/` file |
+| Change password reset or outgoing email | `06-AUTH-AND-SECURITY.md#forgot-password--otp--reset`, `modules/email.md` | `src/services/auth/{authentication,otp}.service.js`, `src/services/email/*` — prod on Render must use `gmail-api` |
 | Change login/token/cookie/CSRF/rate-limit behavior | `06-AUTH-AND-SECURITY.md`, `modules/auth.md` | `src/middleware/{auth,csrf,security}.middleware.js`, `src/services/auth/*` |
 | Change competition scope or the end-date lock | `06-AUTH-AND-SECURITY.md`, `modules/competition.md` | `src/middleware/competition-{context,lock}.middleware.js`, `src/utils/security/competition-{access,lock}.util.js` |
 | Change registration/payment/discount/fee logic | `09-PAYMENTS.md`, `modules/payment.md` | `src/config/payment.config.js`, `src/services/payment/*`, `coach.service.js`/`super-admin.service.js` payment methods |

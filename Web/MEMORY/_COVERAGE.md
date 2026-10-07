@@ -52,6 +52,21 @@ Legend: `[x]` read and covered · `(direct)` · `(agent)`.
 - [x] cross-reference: Server/src/config/cop-rules.js, Server/src/utils/data/apparatus.util.js, Server/src/config/payment.config.js, Server/src/utils/security/competition-lock.util.js, Server/src/utils/scoring/calculation.util.js, Server/src/utils/scoring/tie-breaker.util.js (direct)
 - Key finding: only 3 of 8 pairs are cross-stack-test-guarded (COP static tables, fee window, lock boundary). The panel-averaging methodology (calculateAverageMarks/resolveDifficultyValue vs calculateIndividualScore) and apparatus.js vs apparatus.util.js have NO automated drift detector — see SHARED-CONTRACTS.md.
 
+## Re-verification 2026-10-07 (`7f250ee`) — responsive/appearance merge, new Home, reset rewrite
+
+Rewritten from the code and `docs/RESPONSIVE_UIUX_REPORT.md`:
+05-DESIGN-SYSTEM, 12-RESPONSIVE, 06-SCREENS/public-home-and-scores (Home),
+10-AUTH-AND-SECURITY (password reset). Updated: 07-COMPONENTS, 08-API-INTEGRATION,
+14-TESTING, 15-E2E-AND-SEEDING, GOTCHAS, CHANGE-RECIPES, 00-INDEX.
+- [x] src/styles/{breakpoints,tokens}.js, alpha.test.js, colourHygiene.test.js → 05-DESIGN-SYSTEM
+- [x] src/index.css, public/appearance-init.js, src/utils/ui/appearance.js, src/contexts/AppearanceProvider.jsx → 05-DESIGN-SYSTEM
+- [x] src/components/layout/AppearanceMenu.jsx, components/admin/AdminKit.jsx, components/auth/PasswordStrength.jsx, hooks/useBodyScrollLock.js → 07-COMPONENTS
+- [x] src/hooks/useResponsive.js, components/responsive/** (dead nine deleted) → 12-RESPONSIVE
+- [x] src/pages/public/Home.jsx, src/pages/public/home/** (rebuilt `9814afa`) → 06-SCREENS/public-home-and-scores; detail in docs/homepage/README.md
+- [x] src/pages/shared/{ForgotPassword,ResetPassword,resetPortal}.{jsx,js} (`b5b0672`) → 10-AUTH-AND-SECURITY
+- [x] e2e/{visual-baseline,contrast-audit,deep-screens,judge-deep-screens,appearance-everywhere,appearance-persistence,focus-visible,edge-cases,desktop-fold,responsive-score-sheet,responsive-tablet}.spec.js, e2e/home-device-audit.mjs → 15-E2E-AND-SEEDING (by purpose; not read line by line)
+- [ ] 06-SCREENS/* per-screen docs were NOT re-read for the Phase 5 restyle; their logic sections still hold, but inline-style and colour details predate Light mode.
+
 ## Design system + responsive (agent, complete) → 05-DESIGN-SYSTEM, 12-RESPONSIVE
 - [x] src/styles/tokens.js, tailwind.config.js (agent) — 3 independent token copies confirmed, value-by-value
 - [x] src/components/design-system/** (agent) — real name collision: index.jsx vs cards/animations/ornaments subfolders, 11 pages affected

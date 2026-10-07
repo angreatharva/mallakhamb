@@ -7,8 +7,8 @@ covers:
   - src/infrastructure/database/index-manager.js
 read_when: "adding/changing a schema field, an index, or writing a migration"
 depends_on: [03-DOMAIN-MODEL, modules/repositories, modules/infrastructure]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 For entity meaning/relationships/lifecycle, see
@@ -27,10 +27,20 @@ is display form (`'Competition I'`); `Judge`/`Competition`/
 
 ## Models — compact field reference
 
+**Every account model** (Admin, Coach, Player, JudgeAccount) carries the
+reset trio `resetPasswordToken` (plaintext OTP), `resetPasswordExpires`, and
+`resetPasswordAttempts` (`select: false`, wrong-guess count). The trio is
+listed in `SENSITIVE_USER_FIELDS` (`utils/data/user-projection.util.js`) and
+pinned by `tests/unit/models/password-reset-fields.test.js`. See
+[06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md#forgot-password--otp--reset).
+
 ### Admin (`src/models/Admin.js`)
 `name`, `email` (unique), `password` (select:false, bcrypt cost 12),
 `loginAttempts`/`lockUntil` (select:false), `role` enum `[admin,superadmin]`
-default `admin`, `isActive`, `competitions[]` ref Competition. No explicit
+default `admin`, `isActive`, `competitions[]` ref Competition,
+`resetPasswordToken`/`resetPasswordExpires`/`resetPasswordAttempts`
+(select:false) — added 2026-10-07; before that strict mode dropped every
+admin OTP. No explicit
 index beyond unique `email`. `toJSON` strips password/reset fields (not
 `.lean()`/`.toObject()` — see [03-DOMAIN-MODEL.md](03-DOMAIN-MODEL.md)
 invariant 4). Methods: `comparePassword`, `hasAccessToCompetition`,

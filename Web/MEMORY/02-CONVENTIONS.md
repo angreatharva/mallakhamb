@@ -62,7 +62,7 @@ level (`eslint.config.js:47-48`) — **deliberately not `error`**, per the
 comment: "warn in development, can be upgraded to error later." Both
 rules ship their **own internal copy** of the token values they check
 against (not an import of `src/styles/tokens.js`) — see
-[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#there-are-three-independent-copies-of-the-design-values-not-one)
+[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#one-breakpoint-and-z-index-source)
 for the full drift analysis; the practical consequence for this doc is
 that a lint warning's *suggestion* (which token to use instead) can be
 wrong or missing for a color/spacing category the rule's internal copy

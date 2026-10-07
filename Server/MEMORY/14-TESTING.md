@@ -5,8 +5,8 @@ covers:
   - package.json (jest config)
 read_when: "writing a test for any layer, or figuring out where an existing test for a subsystem lives"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 ## Setup
@@ -34,8 +34,12 @@ incl. judge; timing-safe unknown-account handling),
 `unit/refresh-token-rotation.test.js`,
 `unit/judge-competition-cookie.test.js`,
 `unit/middleware/auth.middleware.test.js`,
-`unit/services/auth/authentication.service.test.js` (password reset),
-`unit/services/auth/otp.service.test.js`,
+`unit/services/auth/authentication.service.test.js` (password reset:
+`userType` scoping, generic errors, lockout cleared, sessions ended),
+`unit/services/auth/otp.service.test.js` (background send, wrong-guess cap,
+constant-time compare), `unit/models/password-reset-fields.test.js` (every
+account model has the reset trio), `unit/services/email/gmail-api.adapter.test.js`,
+`unit/services/email/email-health.test.js`,
 `unit/utils/security/account-lockout.util.test.js`.
 
 **Scoring / COP**: `unit/calculation.service.test.js`,

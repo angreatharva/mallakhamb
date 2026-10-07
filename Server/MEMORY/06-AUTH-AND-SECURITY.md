@@ -13,8 +13,8 @@ covers:
   - src/models/JudgeAccount.js
 read_when: "changing login/token/cookie behavior, adding a role guard, touching CSRF/rate-limiting, or working on competition scope/lock enforcement"
 depends_on: [01-ARCHITECTURE, 03-DOMAIN-MODEL]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 ## Roles
@@ -28,7 +28,7 @@ model, not a separate model — see [03-DOMAIN-MODEL.md](03-DOMAIN-MODEL.md)),
 
 **`auth.controller.js`/`auth.routes.js` do NOT handle any role's login.**
 `auth.routes.js` mounts only: forgot-password, verify-otp, reset-password-otp,
-reset-password/:token (legacy — fixed 2026-09-23, see below), set-competition,
+set-competition,
 competitions/assigned, me, logout, refresh. Each role's login lives in its own
 router/controller/service (`player.routes.js`→`playerService.loginPlayer`,
 `coach.routes.js`→`coachService.loginCoach`, `admin.routes.js`→
@@ -170,34 +170,55 @@ mechanism covers the other.
 
 ## Forgot-password → OTP → reset
 
-1. `forgotPassword(email)` — `findUserAcrossTypes` tries player → coach →
-   admin → **judgeAccountRepository** in that order (explicitly not the panel
-   `judgeRepository` — OTP goes to the account). Not-found → silent success
-   (no enumeration).
-2. `OTPService.generateAndSendOTP` — `crypto.randomInt`-bounded N-digit code
-   (`security.otpLength`, default 6), expiry `security.otpExpiry` minutes
-   (default 10). **Stored in plaintext** on `resetPasswordToken`/
-   `resetPasswordExpires` (not hashed — see Gotchas). Emailed via
-   `emailService.sendOTP`, or dev-logged if no email service and
-   `NODE_ENV==='development'`.
-3. `verify-otp` — presence + expiry + exact string equality, no attempt cap at
-   this layer.
-4. `reset-password-otp` — re-verifies OTP, enforces password strength (≥8
-   chars, upper+lower+digit — **enforced only here, not at registration**),
-   hashes at the configured bcrypt cost, then an **atomic**
-   `findOneAndUpdate` re-matching `{_id, resetPasswordToken: otp,
-   resetPasswordExpires: {$gt: now}}` — TOCTOU-safe against a concurrent
-   replay winning after the read-only check already passed. No confirmation
-   email is sent (see GOTCHAS.md).
-5. **`reset-password/:token` (legacy) — fixed 2026-09-23.** Calls
-   `authenticationService.resetPasswordWithToken(token, password)`, now
-   implemented: tries player→coach→admin→judgeAccount repositories for a
-   document whose `resetPasswordToken` matches `token` and hasn't expired
-   (the same fields the OTP flow writes — this route shares that storage,
-   it just looks the account up by token instead of by email), then the same
-   TOCTOU-safe atomic `findOneAndUpdate` pattern as step 4. Stops at the
-   first repository that matches. Regression tests:
-   `tests/unit/services/auth/authentication.service.test.js`.
+Rewritten 2026-10-07 (`b5b0672`). Every step takes an optional `userType`
+(`player|coach|admin|judge`, validated by `auth.validator.js`): one address
+can own several role accounts, and the SPA sends the type of the login page
+the user came from. Without it, `findUserAcrossTypes(email, onlyType)` takes
+the first match in the order player → coach → admin → **judgeAccount** (never
+the panel `judgeRepository` — a seat has no address).
+
+1. `forgotPassword(email, userType)` — not-found → silent success (no
+   enumeration). Found → `OTPService.generateAndSendOTP`, which stores the
+   code and **returns before the mail is sent**: the send runs in the
+   background (`_sendInBackground`, never rejects; failures are logged and
+   counted by `EmailService`). This keeps the response fast when the provider
+   is slow and stops response time from revealing whether the account exists.
+2. The code: `crypto.randomInt`, `security.otpLength` digits (default 6),
+   expiry `security.otpExpiry` minutes (default 10). **Stored in plaintext** on
+   `resetPasswordToken`/`resetPasswordExpires`, with `resetPasswordAttempts`
+   reset to 0 (see GOTCHAS.md).
+3. `verify-otp` → `OTPService.verifyOTP`: presence, expiry, then a
+   **constant-time** compare (`crypto.timingSafeEqual`). A wrong guess
+   `$inc`s `resetPasswordAttempts`, guarded on the stored code (a guess
+   against an older code can't burn a newer one); at
+   `security.otpMaxAttempts` (`OTP_MAX_ATTEMPTS`, default 5) the code is
+   discarded and a new one must be requested. This per-account cap is what
+   stops guesses spread across many IPs — `authLimiter` is per-IP only.
+   **Every failure throws the same `INVALID_CODE_MESSAGE`** (unknown email,
+   no code, expired, wrong, exhausted); the old distinct messages told a
+   caller which addresses had accounts.
+4. `reset-password-otp` → `resetPasswordWithOTP(email, otp, password,
+   userType)`: password strength is checked **first** (≥8, upper+lower+digit)
+   so a typo doesn't cost a code attempt; then verify (counts a wrong guess),
+   hash at the configured bcrypt cost, and an **atomic** `findOneAndUpdate`
+   re-matching `{_id, resetPasswordToken: otp, resetPasswordExpires: {$gt:
+   now}}` that also clears the code, `resetPasswordAttempts`, `loginAttempts`
+   and `lockUntil` — proving control of the mailbox ends a login lockout.
+   Then `_endSessionsAfterPasswordChange` revokes every refresh token and
+   calls `recordLogout` (best-effort, logged on failure), and
+   `notifyPasswordChanged` sends the "password changed" mail in the
+   background (`sendPasswordReset` template — its first real caller).
+5. **`POST /auth/reset-password/:token` was removed** (2026-10-07). Nothing
+   issued URL tokens, and it matched the token against the same field the
+   OTP flow writes **without an email** — anyone could reset any account
+   with a pending code by guessing six digits. Don't restore it; the SPA
+   route `/reset-password/:token` went with it.
+
+**Admin reset never worked before 2026-10-07.** `Admin.js` lacked the
+`resetPassword*` fields every other account model had, so Mongoose strict
+mode silently dropped the OTP. Pinned by
+`tests/unit/models/password-reset-fields.test.js` — a new account model
+needs all three fields (`resetPasswordAttempts` with `select: false`).
 
 ## CSRF (`src/middleware/csrf.middleware.js`)
 
@@ -224,8 +245,8 @@ global/per-IP limiter exists anywhere** — a venue NATs an entire judge panel
 behind one address, so any per-IP limit would throttle a live panel. Three
 distinct limiters, all defined in `security.middleware.js`:
 - `authLimiter` — per-IP, wraps only the genuinely guessable `/auth`
-  endpoints (`forgot-password`, `verify-otp`, `reset-password-otp`,
-  `reset-password/:token`) plus each role's `/register`+`/login` — **not**
+  endpoints (`forgot-password`, `verify-otp`, `reset-password-otp`) plus
+  each role's `/register`+`/login` — **not**
   `/auth/me`, `/refresh`, `/set-competition` (those are either authenticated
   or hold their own revocable credential, and a shared-IP venue would
   otherwise lock out a whole panel signing in).
@@ -327,10 +348,6 @@ above).
   implementation like judge's.
 
 ## Open questions
-- ⚠️ UNVERIFIED: whether `AuthenticationService`'s constructor is actually
-  supplied `judgeAccountRepository` in production DI wiring (vs. relying on
-  its `null`-defaulting fallback) — affects whether judge forgot-password
-  truly reaches the `judges` collection.
 - ⚠️ UNVERIFIED: whether `TokenInvalidationService.recordAdminAssignmentChange`/
   `isTokenInvalidated` (the admin-competition-assignment-change invalidation
   half of the same service) is actually called from admin-management code —

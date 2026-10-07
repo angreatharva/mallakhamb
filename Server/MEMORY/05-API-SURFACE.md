@@ -8,8 +8,8 @@ covers:
   - src/docs/api-enums.js
 read_when: "adding/changing any HTTP endpoint, or checking what auth/lock/validator a route already has"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 ## Coverage check (per the build instructions' verification step)
@@ -64,15 +64,18 @@ noted). Full semantics of context/lock/rate-limit guards:
 | Method | Path | Auth | Rate limit | Controller |
 |---|---|---|---|---|
 | GET | `/api/csrf-token` | public | — | inline `csrfTokenHandler` |
-| POST | `/forgot-password` | public | `authLimiter` (IP) | authController.forgotPassword — always 200, no enumeration |
-| POST | `/verify-otp` | public | `authLimiter` | authController.verifyOTP |
-| POST | `/reset-password-otp` | public | `authLimiter` | authController.resetPasswordWithOTP |
-| POST | `/reset-password/:token` | public | `authLimiter` | authController.resetPassword — fixed 2026-09-23, see [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md) |
+| POST | `/forgot-password` | public | `authLimiter` (IP) | authController.forgotPassword — always 200, no enumeration; body `{email, userType?}` |
+| POST | `/verify-otp` | public | `authLimiter` | authController.verifyOTP — `{email, otp, userType?}` |
+| POST | `/reset-password-otp` | public | `authLimiter` | authController.resetPasswordWithOTP — `{email, otp, password, userType?}` |
 | POST | `/set-competition` | authMiddleware | — | authController.setCompetition |
 | GET | `/competitions/assigned` | authMiddleware | — | authController.getAssignedCompetitions |
 | GET | `/me` | authMiddleware | — | authController.me |
 | POST | `/logout` | authMiddleware | — | authController.logout |
 | POST | `/refresh` | public (refresh-token cookie) | — | authController.refresh |
+
+`POST /reset-password/:token` was **removed** 2026-10-07 (it reset any
+account with a pending code, no email needed). See
+[06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md).
 
 `authLimiter` used to wrap the entire `/auth` router; narrowed to just these
 4 guessable endpoints after it was found to lock out a whole venue's judge
@@ -276,8 +279,6 @@ and GOTCHAS.md).
    `docs:openapi:check` doesn't fail CI.
 
 ## Open questions
-- None outstanding for this doc as of 2026-09-23 — the two routes previously
-  flagged as 500ing on every call (`POST /auth/reset-password/:token`,
-  `POST/DELETE /api/competitions/:id/admins(/:adminId)`) were fixed in a
-  follow-up pass the same day; see GOTCHAS.md's "Fixed since this MEMORY
-  build" section.
+- None outstanding. `POST/DELETE /api/competitions/:id/admins(/:adminId)`
+  (once 500ing) were fixed 2026-09-23; `POST /auth/reset-password/:token`
+  was removed 2026-10-07.

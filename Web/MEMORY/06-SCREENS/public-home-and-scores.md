@@ -2,42 +2,50 @@
 doc: 06-SCREENS/public-home-and-scores
 covers:
   - src/pages/public/Home.jsx
+  - src/pages/public/home/**
   - src/pages/public/PublicScores.jsx
 read_when: "changing the public landing page or the public results viewer"
 depends_on: [07-COMPONENTS, 05-DESIGN-SYSTEM]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
-## `Home.jsx` — the public landing page (839 lines, ~44KB)
+## `Home.jsx` — the landing page (rebuilt 2026-10-06, `9814afa`)
 
-Route `/`, no auth, no layout wrapper. Composition:
-`MagneticCursor` (desktop cursor-follow effect) → `Navbar` →
-`<main>` (`HeroSection`, `StatsBar`, `AboutSection`, `LegacyTimeline`,
-`QuoteStrip`, `FeaturesSection`) → `Footer`. Entirely presentational —
-**no data fetching anywhere in this file** (no API calls of any kind);
-all content is static/hardcoded.
+**The reference is `docs/homepage/README.md`** (fixed requirements, facts,
+quality bar). The old 839-line Home (particles, `MagneticCursor`, dead
+`/about`/`/gallery`/`/contact` links) is gone.
 
-**A real dead-link finding worth flagging**: the nav includes links to
-`/about`, `/gallery`, `/contact` (`:256-261`) — **none of these routes
-exist** in `routes/index.jsx` (only `/`, `/scores`, the auth routes, and
-the catch-all `NotFound`). Clicking any of the three hits `NotFound`.
-⚠️ UNVERIFIED whether these pages are simply not built yet or this is a
-genuine stale-link bug — either way, it's user-facing on the primary
-landing page and worth surfacing if you're asked to audit dead links.
-
-**Role entry points**: a local `roles` array (`:46-51`) drives the hero
-section's role cards — Player, Team Coach, and Judge each get both a
-`loginTo` and `registerTo` link; Admin gets `loginTo: '/admin/login'`
-only, `registerTo: null` (no self-registration card — consistent with
-`AdminRegister` being a separate flow, see
-[admin-register.md](admin-register.md)). No card for superadmin at all
-(not self-service, as expected).
-
-**Reduced-motion handling**: `ParticleField` and `GridLines` both
-early-return `null` under `useReducedMotion()` (`:56, :88`) —
-consistent with the reduced-motion patterns documented elsewhere in
-[05-DESIGN-SYSTEM.md](../05-DESIGN-SYSTEM.md).
+- **`Home.jsx` (156 lines)** renders only the first screen in JSX: masthead,
+  hero, and a **static role portal** of real `<Link>`s — Player/Coach/Judge
+  login + register, Admin login only — plus `/scores` and the `AppearanceMenu`.
+  `appearance-everywhere.spec.js` picks Light on Home, so the switch must stay.
+- **`home/sections.html` + `home/footer.html`**: static markup injected with
+  `dangerouslySetInnerHTML`, rendered once and never re-rendered. Links inside
+  it go through `navigate` (no reload). The footer links `/scores` and
+  `/superadmin/login`.
+- **`home/runtime/{index,name,apparatus,code}.js`**: GSAP, lazy-loaded after
+  first paint; three.js only when the apparatus section is near. On unmount
+  everything is reverted (ScrollTriggers killed, WebGL disposed, listeners
+  removed, pristine markup restored) — keeps StrictMode's double mount safe.
+- **`home/home.css`**: every rule scoped to `.mk-home`, because Vite keeps a
+  lazy route's CSS on the page after you leave it.
+- **`home/preload.js`** + an inline script in `index.html`: on `/` the hero
+  photo, the Home chunk and the fonts (self-hosted Fontsource Teko + Archivo,
+  CSP `font-src 'self'`) start with the app's boot.
+- Home is a **dark island**: its own palette (black stage, teak, chalk,
+  saffron), whatever the appearance. It's the reference implementation of the
+  "Prime Time" language that `docs/design-language/PLAN.md` rolls out
+  site-wide. Note `.cd-rb` sets local `--bg`/`--fg` that shadow global token
+  names — rename before Home consumes shared tokens.
+- Brand rule: the page says **"Mallakhamb India"**; "Bhausaheb", "Ranade",
+  "Navodit" must not appear. `src/assets/main-home.jpg` shows "RANADE" in its
+  pixels — never use it here.
+- No data fetching. Photos are hotlinked from Wikimedia/Pexels (CSP
+  `img-src https:`).
+- **Verify:** `npm run build && npm run preview`, then `npm run audit:home`
+  (41 device profiles). Measured phone (4x CPU, fast 4G) FCP 1.5 s / LCP 2.5 s /
+  CLS 0.
 
 ## `PublicScores.jsx` — the public results viewer (362 lines)
 
@@ -87,6 +95,5 @@ search-yields-nothing sub-state within results ("No players found for
 - If the public competitions endpoint ever starts returning
   `ageGroups`: no client change should be needed — `PublicScores.jsx`
   is already written to use it once present (`:109-112`).
-- If asked to fix the dead `/about`/`/gallery`/`/contact` links on
-  `Home.jsx`: confirm with the user whether the intent is to build those
-  pages or remove the links — this doc doesn't resolve that ambiguity.
+- Changing Home: follow `docs/homepage/README.md`'s fixed requirements and
+  re-run `npm run audit:home` on a preview build.

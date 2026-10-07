@@ -5,6 +5,9 @@ covers:
   - src/components/auth/ConfirmDialog.jsx
   - src/components/auth/Dropdown.jsx
   - src/components/auth/SafeText.jsx
+  - src/components/auth/PasswordStrength.jsx
+  - src/components/admin/AdminKit.jsx
+  - src/components/layout/AppearanceMenu.jsx
   - src/components/layout/ErrorBoundary.jsx
   - src/components/layout/Navbar.jsx
   - src/components/ordering/SortableList.jsx
@@ -21,8 +24,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 7f250ee
+last_verified: 2026-10-07
 ---
 
 ## Scope
@@ -46,6 +49,33 @@ components/superadmin/AddPlayerForm.jsx
 [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md) instead (it's a
 `protected-route.jsx` implementation detail); noted here only for
 completeness.
+
+## Shared pieces added by the responsive/appearance work (2026-10)
+
+Phase 8 merged proven duplicates; each keeps every caller's behaviour.
+
+- **`auth/PasswordStrength.jsx`** — `PasswordStrengthIndicator({password,
+  minLength = 8, strongLength = 12})` and `PasswordRequirements({password,
+  minLength = 8})`. **Each form passes its own policy**: admin registration
+  and the superadmin add-player form use 12/16, player-style forms 8. Don't
+  "unify" the defaults — the differences are deliberate.
+- **`admin/AdminKit.jsx`** — the admin screens' kit: `DarkCard`, `FadeIn`,
+  `EmptyState`, `LoadingState`, `DarkSearch`, `DarkBtn`. Note the names
+  collide with `design-system` components of the same name (see
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components-still-true)).
+- **`JudgeLogoutButton`** (exported from `pages/judge/judgeShared.jsx`,
+  `{onLogout, compact}`) — the one judge logout control.
+- **`layout/AppearanceMenu.jsx`** — the Light/Dark control: an icon button
+  showing the RESOLVED appearance, opening a menu of Dark / Light / Match
+  device (a menu, not a cycling button). Full keyboard support, announces the
+  change through a polite live region, renders nothing outside an
+  `AppearanceProvider`. Switching is an attribute flip — nothing remounts or
+  reloads. `CornerAppearanceMenu` is the fixed corner version for pages with
+  no header (`App.jsx` decides which pages). In the judge slip it sits in the
+  header, never in the Submit bar.
+- **`hooks/useBodyScrollLock(isLocked)`** — one counted lock, used by
+  `ConfirmDialog`, `Navbar`'s drawer, `CompetitionSelector`, and the dialogs
+  in the admin/coach/player/judge/superadmin screens.
 
 ## `auth/` — small shared primitives
 
@@ -145,8 +175,8 @@ top nav (desktop bar + separate mobile drawer) across all roles.
   **before** `onLogout(navigate)` (`:40-43`) — relevant to competition
   scoping: without this, a stale competition context could otherwise
   leak into the next session on the same tab.
-- Locks `document.body.style.overflow` while the mobile drawer is open
-  (`:27-30`).
+- Locks page scroll while the mobile drawer is open (`useBodyScrollLock`).
+- Carries the `AppearanceMenu` in its bar.
 
 ## `ordering/SortableList.jsx`
 

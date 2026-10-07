@@ -5,8 +5,8 @@ covers:
   - src/config/payment.config.js
 read_when: "adding a new env var, changing a default, or debugging why a config value isn't what you expect"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: b5b0672
+last_verified: 2026-10-07
 ---
 
 All values loaded once via `config.load()` at process start
@@ -39,12 +39,13 @@ this doc — names only.**
 
 | Var | Default | Required? |
 |---|---|---|
-| `EMAIL_PROVIDER` | `nodemailer` | `'nodemailer'` or `'resend'` |
+| `EMAIL_PROVIDER` | `nodemailer` | `'nodemailer'`, `'resend'` or `'gmail-api'`. **Production on Render must be `gmail-api`**: free Render blocks SMTP ports |
 | `EMAIL_USER` | `''` | **Required in production** when provider=nodemailer |
 | `EMAIL_HOST` | `smtp.gmail.com` | |
 | `EMAIL_PORT` | `587` | |
 | `EMAIL_SECURE` | `false` | |
 | `EMAIL_PASS` | `''` | **Required in production** when provider=nodemailer |
+| `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN` | `''` | All three plus `EMAIL_USER` **required in production** when provider=gmail-api. Minted by `npm run gmail:token`. `sync: false` in `render.yaml` on purpose: a Blueprint sync setting the provider before the keys exist would fail startup validation. See [modules/email.md](modules/email.md) |
 | `RESEND_API_KEY` | `''` | **Required in production** when provider=resend |
 | `RESEND_FROM_EMAIL` | `''` | |
 
@@ -55,6 +56,7 @@ this doc — names only.**
 | `BCRYPT_ROUNDS` | `12` | Validated 10-15 |
 | `OTP_LENGTH` | `6` | Validated 4-8 |
 | `OTP_EXPIRY_MINUTES` | `10` | |
+| `OTP_MAX_ATTEMPTS` | `5` | Wrong guesses against one reset code before it is discarded (per account, not per IP) |
 | `MAX_LOGIN_ATTEMPTS` | `5` | Lockout threshold |
 | `LOCKOUT_DURATION_MINUTES` | `15` | |
 | `CSRF_ENABLED` | `true` | Must stay true in production — see [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md) |
