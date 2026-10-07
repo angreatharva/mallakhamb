@@ -27,6 +27,38 @@
       "//": "The production build (npm run build first): what Render serves. Used by npm run audit:home."
     },
     {
+      "name": "look-frozen",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--outDir",
+        "../../.mk-look-builds/serve",
+        "--port",
+        "4174",
+        "--strictPort"
+      ],
+      "cwd": "Web",
+      "port": 4174,
+      "//": "A FROZEN production build for the design-language pixel gate (docs/design-language/PLAN.md Phase 0/1): copy a build into ../.mk-look-builds/serve, then run the audit with E2E_BASE_URL=http://localhost:4174. Source edits never reach it mid-run."
+    },
+    {
+      "name": "look-candidate",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--outDir",
+        "../../.mk-look-builds/candidate",
+        "--port",
+        "4175",
+        "--strictPort"
+      ],
+      "cwd": "Web",
+      "port": 4175,
+      "//": "The candidate build beside look-frozen, for side-by-side computed-style checks."
+    },
+    {
       "name": "web-crosssite",
       "runtimeExecutable": "node",
       "runtimeArgs": [
