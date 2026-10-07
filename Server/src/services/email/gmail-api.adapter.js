@@ -56,6 +56,15 @@ class GmailApiAdapter extends IEmailProvider {
       this.logger.error('Gmail API initialization failed', { error: error.message });
       throw error;
     }
+    // Google refresh tokens start "1//". A paste that turned "//" into "\" (it
+    // happened) is rejected by Google as a bare "invalid_grant: Bad Request" —
+    // say what's wrong at startup instead.
+    if (!this.config.refreshToken.startsWith('1//') || /[\s"'\\]/.test(this.config.refreshToken)) {
+      this.logger.warn('GMAIL_REFRESH_TOKEN looks malformed: Google refresh tokens start with "1//" and contain no spaces, quotes or backslashes. Re-paste it exactly as `npm run gmail:token` printed it.', {
+        startsWith: this.config.refreshToken.slice(0, 4),
+        length: this.config.refreshToken.length,
+      });
+    }
     this.logger.info('Gmail API adapter initialized', { user: this.config.user });
   }
 
@@ -89,7 +98,10 @@ class GmailApiAdapter extends IEmailProvider {
       const hint = body.error === 'invalid_grant'
         ? ' (refresh token revoked or expired — run `npm run gmail:token` again and update GMAIL_REFRESH_TOKEN)'
         : '';
-      throw new Error(`Gmail token refresh failed: ${body.error || response.status}${hint}`);
+      // error_description is where Google says WHICH problem it is ("Token has
+      // been expired or revoked." vs "Bad Request" for a mangled paste).
+      const detail = body.error_description ? ` — ${body.error_description}` : '';
+      throw new Error(`Gmail token refresh failed: ${body.error || response.status}${detail}${hint}`);
     }
 
     this.accessToken = body.access_token;

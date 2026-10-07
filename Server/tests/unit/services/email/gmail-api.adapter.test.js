@@ -31,6 +31,15 @@ describe('GmailApiAdapter', () => {
       .toThrow('missing configuration: refreshToken');
   });
 
+  it('warns at startup when the refresh token was mangled in a paste', () => {
+    new GmailApiAdapter({ ...config, refreshToken: '1\\0gAbc' }, logger, fakeFetch());
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('GMAIL_REFRESH_TOKEN looks malformed'), expect.any(Object));
+
+    logger.warn.mockClear();
+    new GmailApiAdapter({ ...config, refreshToken: '1//0gAbc' }, logger, fakeFetch());
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
   it('sends over HTTPS with a refreshed access token and an RFC 822 message', async () => {
     const fetch = fakeFetch();
     const adapter = new GmailApiAdapter(config, logger, fetch);

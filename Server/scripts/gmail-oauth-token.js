@@ -81,10 +81,30 @@ const server = http.createServer(async (req, res) => {
       throw new Error(body.error_description || body.error || `HTTP ${response.status} (no refresh_token — revoke the app's access at myaccount.google.com/permissions and retry)`);
     }
 
+    // Prove the token works exactly the way the server will use it, so a
+    // failure on Render can only mean the value changed on the way there.
+    const check = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: body.refresh_token,
+        grant_type: 'refresh_token',
+      }).toString(),
+    });
+    if (!check.ok) {
+      const checkBody = await check.json().catch(() => ({}));
+      throw new Error(`the new token failed its own test: ${checkBody.error_description || checkBody.error || check.status}`);
+    }
+
     finish(200, 'Done. You can close this tab and return to the terminal.');
-    console.log('\nGMAIL_REFRESH_TOKEN (paste into Render → mallakhamb-server → Environment):\n');
+    console.log('\nVerified: this token refreshes against this client ID and secret.');
+    console.log(`GMAIL_REFRESH_TOKEN — ${body.refresh_token.length} characters, one line, no quotes or spaces.`);
+    console.log('Paste into Render → mallakhamb-server → Environment, then check the length there matches:\n');
     console.log(body.refresh_token);
-    console.log('\nKeep it secret: it can send mail as this Gmail account.');
+    console.log(`\nIt must be used with client ID ${clientId.slice(0, 12)}… — the same GMAIL_CLIENT_ID as on Render.`);
+    console.log('Keep it secret: it can send mail as this Gmail account.');
   } catch (err) {
     finish(500, 'Token exchange failed — see the terminal.');
     console.error(`Token exchange failed: ${err.message}`);
