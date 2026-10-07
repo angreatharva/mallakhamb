@@ -118,14 +118,33 @@ export const signInAs = async (page, role) => {
    */
   await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 90_000 });
 
+  /*
+   * Wait for the chooser the URL says is coming before asking whether it is
+   * there. Both screens are lazy chunks: asked the instant the URL changed,
+   * `count()` was sometimes 0, the level was never chosen, and every later
+   * capture of /select-competition depended on that race — the level chooser
+   * in one run, a pass-through to the dashboard in the next (the pixel gate's
+   * "flaky" screens; design-language PLAN §14).
+   */
+  const onPath = (suffix) => new URL(page.url()).pathname.endsWith(suffix);
+
   const level = page.getByRole('heading', { name: 'Choose Your Level' });
+  if (onPath('/select-level')) await level.waitFor({ timeout: 20_000 }).catch(() => {});
   if (await level.count().catch(() => 0)) {
     await page.getByRole('button', { name: /^district\b/i }).first().click({ timeout: 10_000 }).catch(() => {});
     await page.getByRole('button', { name: /^continue$/i }).click({ timeout: 10_000 }).catch(() => {});
+    await page.waitForURL((url) => !url.pathname.endsWith('/select-level'), { timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(900);
   }
 
   const arena = page.getByRole('heading', { name: 'Choose Your Arena' });
+  if (onPath('/select-competition')) {
+    // Either the arena list draws, or a level with one meet passes straight through.
+    await Promise.race([
+      arena.waitFor({ timeout: 20_000 }),
+      page.waitForURL((url) => !url.pathname.endsWith('/select-competition'), { timeout: 20_000 }),
+    ]).catch(() => {});
+  }
   if (await arena.count().catch(() => 0)) {
     await page.getByRole('button', { name: MEET }).first().click({ timeout: 10_000 }).catch(() => {});
     await page.getByRole('button', { name: /Continue to Dashboard/i }).click({ timeout: 10_000 }).catch(() => {});

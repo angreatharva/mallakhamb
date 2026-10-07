@@ -9,6 +9,7 @@
  * classic route must not move. Change prime-time instead.
  */
 import { defineLook } from './define.js';
+import { typeScaleTokens } from './type-scale.js';
 
 /* Role palettes (were index.css `:root` / `[data-role]`). Classic has no ident:
    the role colour IS the accent, so ident mirrors it. */
@@ -221,6 +222,9 @@ export default defineLook({
     'dur-2': '160ms',
     'dur-3': '300ms',
     'dur-4': '600ms',
+
+    // New with the type scale; no classic screen uses a `type-*` utility.
+    ...typeScaleTokens(),
   },
 
   // Classic's motion never zeroed under reduced motion; it doesn't start now.

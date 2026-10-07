@@ -712,3 +712,50 @@ What must **never** be needed for a restyle: editing pages, editing Tailwind's c
   - **The gate itself is only as deterministic as the data.** Before Phase 5 relies on it, make the chooser and dashboard captures wait for a settled competition state (or pin it), so a diff means a change.
   - **Home** (not pixel-gated): `npm run audit:home` against the Phase 1 build **41/41 devices clean**, and the computed-style comparison on `/` (≈1,050 elements, 375/1366, dark/light) **identical**.
   - vitest **435/435** (48 files); `npm run looks:check` clean; `npm run lint:ratchet` holds.
+
+### 2026-10-07 (evening): Phase 0.4, a deterministic gate, Phase 2 (branch `look/phase-2-type`, from Phase 1)
+
+Worked in a git worktree (`D:/Mallakhamb-Repo/mk-look`) so the main checkout stays on master. Its `node_modules` must be a real install (`npm ci`), not a junction: Vite refuses to serve files resolved outside the root ("Denied ID … ?url").
+
+**Phase 0.4: performance baseline (done).** `e2e/perf-baseline.mjs`: phone profile (390×844, 4× CPU, Fast 4G, cold cache), median of 3, against a frozen production build. Master `a5c7556`:
+
+| Route | LCP | CLS | Fonts | JS |
+|---|---|---|---|---|
+| Home | 2.09–2.20 s | 0 | 137 KB | 283 KB |
+| Player login | 2.48 s | 0 | 0 | 244 KB |
+| /scores | 1.70–2.60 s (bimodal on the same build) | 0 | 0 | 217 KB |
+| Judge dashboard | 1.39–1.80 s | **0.077–0.091** | 0 | 239 KB |
+
+The judge dashboard already shifts on master, so its gate is "no worse", not 0. Home's 137 KB = Archivo latin 88 + Teko latin 500/600 15 + Teko Devanagari 33×2 (मल्लखांब). A lever if the budget ever bites: Archivo's weight-only latin file is **34 KB** against 88 KB with the width axis (only the 125%-wide tags need it).
+
+**The gate is deterministic now.**
+- **Cause of the chooser flake:** `e2e/support/audit-routes.js` `signInAs` asked `count()` for the lazy level chooser the instant the URL changed. When it wasn't drawn yet, no level was chosen, and later `/select-competition` captures flipped between the chooser and a pass-through. It now waits for the chooser the URL promises.
+- **Runner guard:** `.mk-look-builds/look-visual.sh` reads the API log and marks an area **VOID** if any Mongo network error falls inside its window. On 2026-10-07 Atlas dropped repeatedly from 20:30 to 21:43 IST and voided a whole baseline run; that run was discarded.
+- Baselines v3: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look-v3`, recorded clean from master's frozen build.
+
+**Phase 2 (type and fonts)**
+- 2.1:
+  - `src/styles/look-fonts.js`: the @font-face rules (Archivo Variable wdth+wght, Teko 500/600) plus `fonts-fallback.css`.
+  - `fonts-fallback.css`: metric-matched 'Archivo Fallback' (Arial at 98.92%) and 'Teko Fallback' (Arial at 67.49%), measured in Chromium by `npm run fonts:metrics`.
+  - `src/styles/fonts.js`: `loadLookFonts(look)`, called beside `applyLook`. For prime-time it preloads the two latin first-paint files and loads the faces; for classic it does nothing.
+- **Deviation from §5.4 ("loaded once, app-wide"):** the faces are a separate chunk, loaded only by what is drawn in them:
+  - Home (statically, as before);
+  - prime-time routes;
+  - from Phase 3, the primitives.
+  - Why: merely declaring them in the entry CSS changed Chrome's anti-aliasing on a classic screen (judge profile avatar corner, 3–7 px, reproducible). A bisect pinned it to the fontsource faces. Classic routes now ship master's exact entry CSS rules plus unused tokens and utilities.
+- 2.2: `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`, `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input`.
+  - Tailwind utilities, safelisted, reading `--type-<step>-<prop>`. Values are in `looks/type-scale.js`, written against each look's own font tokens.
+  - `type-scale.test.js` enforces: display face only at 24 px and up; text ≥ 12 px, tags ≥ 11 px; inputs 16 px on touch; uppercase only on display steps and tags; tabular numbers.
+- Checked live on a `VITE_LOOK_OVERRIDE=1` build: every step resolves as specified (Teko 600 uppercase display, Teko 500 tabular numbers, Archivo 700 tags at 125%) in dark and chalk-paper light.
+
+**Phase 2 exit gate**
+- **Pixel gate (threshold 0, v3 baselines): every audited route identical.** Two screens needed a closer look:
+  - coach `select-competition` 1024 light: master's own build fails it identically (3527 vs 3675 px), so the baseline caught an odd state;
+  - `reset-password` 375 light: 8 px once, matched on re-capture, like master.
+- **Computed styles:** identical on 9 public routes and Home.
+- **Speed:**
+  - Classic routes still download **0 font bytes**.
+  - CSS +2.4 KB transferred (the type tokens and utilities); entry chunks 211.3 → 214.2 KB gzip.
+  - LCP and CLS within master's own run-to-run spread on every route; Home unchanged (137 KB fonts, CLS 0).
+- vitest **450/450**; `looks:check` clean; lint ratchet holds.
+- **Not yet measurable:** the 100 KB first-paint font budget on a real prime-time screen. No route is prime-time until Phase 3's specimen page; measure it there.

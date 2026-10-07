@@ -1,9 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
-import '@fontsource/teko/500.css';
-import '@fontsource/teko/600.css';
-import '@fontsource-variable/archivo/wdth.css';
+import '@/styles/look-fonts';
 import './home/home.css';
 import sectionsHtml from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';

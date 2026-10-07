@@ -14,6 +14,7 @@ import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
 import { applyLook } from '@/utils/ui/look';
+import { loadLookFonts } from '@/styles/fonts';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
 
 function AppContent() {
@@ -39,7 +40,7 @@ function AppContent() {
   // role or look. Both only flip an attribute on <html>; nothing remounts.
   useLayoutEffect(() => {
     applyRoleAccent(getRoleFromPath(location.pathname));
-    applyLook(location.pathname, location.search);
+    loadLookFonts(applyLook(location.pathname, location.search));
   }, [location.pathname, location.search]);
 
   if (loading) {

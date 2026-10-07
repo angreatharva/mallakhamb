@@ -169,6 +169,33 @@ export const LOOK_TOKENS = {
   'dur-4': { type: 'duration', purpose: 'the longest entrance on a working screen' },
 };
 
+/**
+ * Type steps (plan §5.4): one vocabulary for type, as `type-<step>` utilities
+ * (tailwind.config.js) that read `--type-<step>-<prop>`. Display steps are
+ * uppercase: use them only on text the site writes itself — never on COP
+ * wording, stored values or people's names (protected behaviours 5 and 10).
+ */
+export const TYPE_STEPS = [
+  'display-xl', 'display-l', 'display-m', 'display-s',
+  'num-l', 'num-m',
+  'body', 'body-s', 'caption', 'tag', 'button', 'input',
+];
+export const TYPE_PROPS = {
+  family: 'font-family',
+  weight: 'font-weight',
+  size: 'font-size',
+  leading: 'line-height',
+  tracking: 'letter-spacing',
+  transform: 'text-transform',
+  stretch: 'font-stretch',
+  numeric: 'font-variant-numeric',
+};
+Object.assign(LOOK_TOKENS, Object.fromEntries(TYPE_STEPS.flatMap((step) => Object.keys(TYPE_PROPS).map((prop) => [
+  `type-${step}-${prop}`,
+  { type: prop === 'family' ? 'font' : 'raw', purpose: `type-${step}: ${TYPE_PROPS[prop]}` },
+]))));
+LOOK_TOKENS['type-input-size-mouse'] = { type: 'raw', purpose: 'type-input with a mouse (16px on touch stops iOS zooming)' };
+
 /** Tailwind duration keys that read LOOK_TOKENS (`duration-200` → `--duration-200`). */
 export const DURATION_STEPS = ['75', '100', '150', '200', '300', '500', '700', '1000'];
 

@@ -46,6 +46,24 @@ compiled by `npm run looks` (also `predev`/`prebuild`) into the committed
 - Tailwind's `fontFamily.sans`/`display`, `borderRadius`, `boxShadow`,
   `backdropBlur`, `transitionTimingFunction`, `transitionDuration` read tokens.
   A new look never edits `tailwind.config.js`.
+- **Fonts and type (Phase 2, branch `look/phase-2-type`).** The @font-face
+  rules (Archivo Variable wdth+wght, Teko 500/600, and `fonts-fallback.css` —
+  metric-matched local fallbacks 'Archivo Fallback'/'Teko Fallback' from
+  `npm run fonts:metrics`) live in `src/styles/look-fonts.js`, a separate CSS
+  chunk imported ONLY by what is drawn in those fonts: Home (statically),
+  prime-time routes via `loadLookFonts(look)` (`styles/fonts.js`, called in
+  App.jsx beside `applyLook`; also preloads the two latin first-paint files),
+  and from Phase 3 the look primitives. **Never import it from the entry**:
+  merely declaring these faces shifted anti-aliasing on a classic screen
+  (judge profile avatar corner, 3–7 px; found by bisect), and classic routes
+  must not move. A browser downloads a font file only when text uses it.
+- **Type steps:** `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`,
+  `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input` —
+  Tailwind utilities (safelisted, so they exist before any page uses them)
+  reading `--type-<step>-<prop>`; values in `looks/type-scale.js`, against each
+  look's own font tokens. Rules (tested in `type-scale.test.js`): display face
+  only ≥ 24px; text ≥ 12px, tags ≥ 11px; inputs 16px on touch; uppercase only
+  on display steps and tags — never put those on COP wording or names.
 - Below, "Where colour values live" still describes the token NAMES correctly;
   for the VALUES read the packs.
 

@@ -1,5 +1,5 @@
 import { SCREENS, WIDE_CONTAINER_MIN, Z_INDEX } from './src/styles/breakpoints.js';
-import { DURATION_STEPS } from './src/styles/looks/contract.js';
+import { DURATION_STEPS, TYPE_PROPS, TYPE_STEPS } from './src/styles/looks/contract.js';
 
 const px = (n) => `${n}px`;
 
@@ -26,6 +26,12 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  /*
+   * The type steps are the vocabulary the look primitives are built on, so they
+   * exist whether or not a page uses one yet (Tailwind otherwise emits only the
+   * classes it finds in source).
+   */
+  safelist: TYPE_STEPS.map((step) => `type-${step}`),
   /*
    * Appearance (dark | light) is carried by `html[data-appearance]` and almost
    * everything follows it through the colour tokens below, not through
@@ -215,6 +221,19 @@ export default {
        * TOUCH band `.tap-safe` covers, so the two never fight over a property.
        */
       addVariant('mouse', MOUSE);
+
+      /*
+       * Type steps — `type-display-l`, `type-tag`, `type-num-m`, … — the one
+       * vocabulary for type (design-language PLAN §5.4). Each reads its look's
+       * `--type-<step>-<prop>` tokens, so a look changes them without a page
+       * edit. Display steps are uppercase: never on COP wording or names.
+       */
+      addUtilities(Object.fromEntries(TYPE_STEPS.map((step) => [
+        `.type-${step}`,
+        Object.fromEntries(Object.entries(TYPE_PROPS).map(([prop, css]) => [css, `var(--type-${step}-${prop})`])),
+      ])));
+      // 16px on touch stops iOS zooming into a field; a mouse gets the compact size.
+      addUtilities({ '.type-input': { [MOUSE]: { fontSize: 'var(--type-input-size-mouse)' } } });
 
       // The stacking scale as custom properties, from the same table as the
       // `z-*` utilities, so CSS and JS read one set of numbers.

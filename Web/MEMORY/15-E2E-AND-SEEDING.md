@@ -219,7 +219,10 @@ the new Home (`9814afa`). All read-only. Results and run commands:
 | `responsive-score-sheet.spec.js` | Score sheet: cards below 1024, table from 1024, 0 clipped fields |
 | `appearance-everywhere.spec.js` | The Light/Dark switch on every page of every role, one choice everywhere (114/114) |
 | `appearance-persistence.spec.js`, `focus-visible.spec.js`, `edge-cases.spec.js`, `desktop-fold.spec.js`, `responsive-modals.spec.js` | Persistence across logout/reload; a visible focus change on every Tab stop; long names/empty lists/latency/500s; fold; dialog scrolling |
+| `perf-baseline.mjs` | Phone-profile speed (390×844, 4× CPU, Fast 4G, cold cache): median LCP, CLS and font/JS/CSS bytes for Home, player login, `/scores`, judge dashboard, against a production build (`PERF_URL`, default :4174). `--build <dir>` adds entry-chunk gzip sizes. Baselines in the design-language plan §14 |
 | `home-device-audit.mjs` (`audit:home`) | The landing page on 41 device profiles against a **preview build** (`HOME_URL`, default `localhost:4173`) |
+
+**`signInAs` waits for the chooser the URL promises** (2026-10-07). It used to ask `count()` the instant the URL left `/login`; the lazy level chooser was sometimes not drawn yet, no level was chosen, and every later `/select-competition` capture flipped between the chooser and a pass-through to the dashboard — the pixel gate's "flaky" screens.
 
 **Rules that came from void runs:**
 - **One audit at a time.** The audit accounts can't be signed in from two

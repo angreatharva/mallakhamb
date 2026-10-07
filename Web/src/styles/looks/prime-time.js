@@ -11,6 +11,7 @@
  * change a value and run `npm run looks`, then that test (plan §11).
  */
 import { defineLook } from './define.js';
+import { typeScaleTokens } from './type-scale.js';
 
 /* Raw material. Only this file names these; components read semantic tokens. */
 const P = {
@@ -174,9 +175,11 @@ export default defineLook({
   },
 
   look: {
-    'font-root': "'Archivo Variable', Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif",
-    'font-text': "'Archivo Variable', Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif",
-    'font-display': "Teko, 'Arial Narrow', Impact, sans-serif",
+    // Each web font, then its metric-matched local stand-in (styles/fonts-fallback.css),
+    // so the swap when the font arrives moves nothing.
+    'font-root': "'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    'font-text': "'Archivo Variable', 'Archivo Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    'font-display': "Teko, 'Teko Fallback', 'Arial Narrow', Impact, sans-serif",
 
     // Square: sm…lg 2px, xl…3xl 4px; `rounded-full` stays round (dots, avatars).
     'radius-sm': '2px',
@@ -224,6 +227,8 @@ export default defineLook({
     'dur-2': '160ms',
     'dur-3': '300ms',
     'dur-4': '600ms',
+
+    ...typeScaleTokens(),
   },
 
   // One switch for everything: every duration is 0 under reduced motion.

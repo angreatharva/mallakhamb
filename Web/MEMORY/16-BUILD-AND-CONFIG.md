@@ -123,6 +123,7 @@ prebuild       = looks
 build          vite build
 lint           eslint .                  (reports everything, incl. warn-level design-token rules)
 lint:ci        eslint . --quiet          (errors only — the CI-facing gate, though nothing runs it automatically)
+fonts:metrics  node scripts/font-metrics.mjs  (re-measure the metric-matched fallbacks → src/styles/fonts-fallback.css; only when a font file changes)
 lint:ratchet   node scripts/lint-ratchet.mjs  (warnings per rule may not rise above lint-baseline.json; `-- --update` after a reduction)
 preview        vite preview
 test           vitest run

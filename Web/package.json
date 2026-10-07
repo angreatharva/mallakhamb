@@ -6,6 +6,7 @@
   "scripts": {
     "looks": "node scripts/build-looks.mjs",
     "looks:check": "node scripts/build-looks.mjs --check",
+    "fonts:metrics": "node scripts/font-metrics.mjs",
     "predev": "node scripts/build-looks.mjs",
     "dev": "vite",
     "dev:host": "vite --host 0.0.0.0",
