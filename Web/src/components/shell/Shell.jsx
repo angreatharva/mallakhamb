@@ -20,18 +20,18 @@ export const RoleIdent = ({ role, className = '' }) =>
   (ROLE_LABEL[role] ? <Tag tone="ident" className={className}>{ROLE_LABEL[role]}</Tag> : null);
 RoleIdent.propTypes = { role: PropTypes.string, className: PropTypes.string };
 
-/** Light/Dark, Profile, Log out — the account cluster every signed-in screen carries. */
-export const AccountControls = ({ onLogout, profileTo = null, className = '' }) => (
+/** Light/Dark, Profile, Logout — the account cluster every signed-in screen carries. "Logout", the site's word for it (the e2e flows find it by that name). */
+export const AccountControls = ({ onLogout, profileTo = null, appearance = true, className = '' }) => (
   // Its own class, not Tailwind's `flex`: a utility here would beat the shell's
   // own breakpoint rules (utilities win ties by design), and the header hides
   // this cluster on phones.
   <div className={cx('shell-account', className)}>
-    <AppearanceMenu />
+    {appearance && <AppearanceMenu />}
     {profileTo && <IconButton as={Link} to={profileTo} label="Profile" icon={UserRound} variant="ghost" />}
-    {onLogout && <Button variant="line" size="sm" icon={LogOut} onClick={onLogout}>Log out</Button>}
+    {onLogout && <Button variant="line" size="sm" icon={LogOut} onClick={onLogout}>Logout</Button>}
   </div>
 );
-AccountControls.propTypes = { onLogout: PropTypes.func, profileTo: PropTypes.string, className: PropTypes.string };
+AccountControls.propTypes = { onLogout: PropTypes.func, profileTo: PropTypes.string, appearance: PropTypes.bool, className: PropTypes.string };
 
 /**
  * Tabs that are links: one per route. The current page is marked by
@@ -61,13 +61,21 @@ TabNav.propTypes = {
 
 /**
  * The masthead: wordmark, role ident, the competition as the "segment", tabs,
- * account controls. Below `lg` the tabs, and below `md` the account controls
- * too, move into a drawer behind one menu button.
+ * account controls. Below `lg` the tabs (and `extra`, e.g. a competition
+ * picker), and below `md` Profile and Logout too, move into a drawer behind
+ * one menu button. The Light/Dark switch never moves into the drawer: it stays
+ * in the bar at every width (appearance-everywhere checks it is drawn).
+ *
+ * `fixed` pins the bar to the viewport instead of the page's flow (screens
+ * that pad themselves for a 64px bar).
  */
-export const AppHeader = ({ role = null, segment = null, nav = [], navLabel = 'Sections', onLogout = null, profileTo = null, homeTo = '/' }) => {
+export const AppHeader = ({
+  role = null, segment = null, nav = [], navLabel = 'Sections', onLogout = null, profileTo = null, homeTo = '/',
+  extra = null, fixed = false,
+}) => {
   const [open, setOpen] = useState(false);
   return (
-    <header className="shell-header">
+    <header className={cx('shell-header', fixed && 'shell-header--fixed')}>
       <div className="shell-header__bar">
         <div className="shell-header__brand">
           <Wordmark to={homeTo} />
@@ -75,12 +83,15 @@ export const AppHeader = ({ role = null, segment = null, nav = [], navLabel = 'S
           {segment && <span className="shell-header__segment type-body-s">{segment}</span>}
         </div>
         {nav.length > 0 && <TabNav items={nav} label={navLabel} className="shell-header__nav" />}
+        {extra && <div className="shell-header__extra">{extra}</div>}
         <AccountControls onLogout={onLogout} profileTo={profileTo} className="shell-header__account" />
+        <AppearanceMenu className="shell-header__appearance" />
         <IconButton className="shell-header__menu" label="Menu" icon={MenuIcon} variant="line" aria-expanded={open} onClick={() => setOpen(true)} />
       </div>
       <Dialog open={open} onClose={() => setOpen(false)} title="Menu" sheet>
+        {extra && <div className="shell-drawer__extra">{extra}</div>}
         {nav.length > 0 && <TabNav items={nav} label={navLabel} vertical onNavigate={() => setOpen(false)} />}
-        <AccountControls onLogout={onLogout} profileTo={profileTo} className="shell-drawer__account" />
+        <AccountControls onLogout={onLogout} profileTo={profileTo} appearance={false} className="shell-drawer__account" />
       </Dialog>
     </header>
   );
@@ -93,17 +104,24 @@ AppHeader.propTypes = {
   onLogout: PropTypes.func,
   profileTo: PropTypes.string,
   homeTo: PropTypes.string,
+  extra: PropTypes.node,
+  fixed: PropTypes.bool,
 };
 
 /** The page header: a tag, the title (display-l), a lede, actions on the right. */
-export const PageHeader = ({ eyebrow = null, title, lede = null, actions = null, className = '' }) => (
+export const PageHeader = ({ eyebrow = null, title, lede = null, actions = null, asIs = false, className = '' }) => (
   <div className={cx('shell-page-header', className)}>
     <div className="shell-page-header__text">
       {eyebrow && <Tag>{eyebrow}</Tag>}
-      <Heading level={1} step="display-l" className="shell-page-header__title ui-wipe-in">{title}</Heading>
+      <Heading level={1} step="display-l" asIs={asIs} className="shell-page-header__title ui-wipe-in">{title}</Heading>
       {lede && <p className="shell-page-header__lede type-body">{lede}</p>}
     </div>
     {actions && <div className="shell-page-header__actions">{actions}</div>}
   </div>
 );
-PageHeader.propTypes = { eyebrow: PropTypes.node, title: PropTypes.node.isRequired, lede: PropTypes.node, actions: PropTypes.node, className: PropTypes.string };
+PageHeader.propTypes = {
+  eyebrow: PropTypes.node, title: PropTypes.node.isRequired, lede: PropTypes.node, actions: PropTypes.node,
+  /** The title is a name (a person, a team): keep its case. */
+  asIs: PropTypes.bool,
+  className: PropTypes.string,
+};

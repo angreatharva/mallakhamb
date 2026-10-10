@@ -1,21 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
-import { ChevronDown, Check, Search, X, PlusCircle, Trophy, MapPin, Calendar } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, Check, Search, X, PlusCircle, MapPin, Calendar } from 'lucide-react';
+import { StatusTag, Tag } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, FG, alpha } from '@/styles/tokens';
 import { levelLabel } from '@/utils/competition/levels';
-import { useReducedMotion } from '@/hooks/useResponsive';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
-const statusColors = {
-  ongoing: FG.success,
-  upcoming: FG.info,
-  completed: 'rgb(var(--ink) / 0.3)',
-};
+/** A meet's stored status, as a status tag; "completed" is a plain tag. */
+const STATUS = { ongoing: 'success', upcoming: 'info' };
 
 const CompetitionSelector = ({ userType }) => {
   const navigate = useNavigate();
@@ -24,7 +19,6 @@ const CompetitionSelector = ({ userType }) => {
   const [isSwitching, setIsSwitching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef(null);
-  const reduced = useReducedMotion();
 
   // Log when currentCompetition changes
   useEffect(() => {
@@ -115,201 +109,142 @@ const CompetitionSelector = ({ userType }) => {
 
   return (
     <div className="relative" ref={dropdownRef} key={`${currentCompetition?._id || 'no-competition'}-${assignedCompetitions?.length || 0}`}>
-      <motion.button
+      <button
+        type="button"
         onClick={() => !isLoadingOrSwitching && setIsOpen(!isOpen)}
         disabled={isLoadingOrSwitching}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-h-[44px] disabled:opacity-50"
-        style={{
-          background: isOpen ? `${alpha(COLORS.saffron, 0x10)}` : 'rgb(var(--ink) / 0.05)',
-          borderColor: isOpen ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
-          boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
-        }}
-        whileTap={{ scale: 0.97 }}
+        className="ui-picker"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label="Select competition"
       >
-        <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
-        <div className="flex flex-col items-start max-w-[160px]">
-          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--fg-muted)' }}>
-            Competition
-          </span>
-          <span className="text-xs font-semibold text-ink truncate w-full" key={currentCompetition?._id}>
+        <span className="ui-picker__text">
+          <span className="ui-picker__label type-tag">Competition</span>
+          <span className="ui-picker__value" key={currentCompetition?._id}>
             {currentCompetition
               ? `${currentCompetition.name}${currentCompetition.year ? ` ${currentCompetition.year}` : ''}`
               : (userType === 'coach' ? 'Select Competition' : 'Select')}
           </span>
-        </div>
-        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.35)' }} />
-        </motion.div>
-      </motion.button>
+        </span>
+        <ChevronDown className="ui-picker__chevron" aria-hidden="true" />
+      </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="absolute right-0 mt-2 w-80 rounded-2xl border overflow-hidden z-50"
-            style={{
-              background: 'rgb(var(--surface))',
-              borderColor: `${alpha(COLORS.saffron, 0x25)}`,
-              boxShadow: `0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
-              maxHeight: 380,
-            }}
-            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            role="listbox"
-          >
-            {/* Header */}
-            <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>
-                {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0) 
-                  ? 'Select Competition' 
-                  : 'Switch Competition'}
+      {isOpen && (
+        <div className="ui-popover ui-popover--wide ui-fade-in" role="listbox">
+          {/* Header */}
+          <p className="ui-popover__title type-tag">
+            {userType === 'coach' && (!assignedCompetitions || assignedCompetitions.length === 0)
+              ? 'Select Competition'
+              : 'Switch Competition'}
+          </p>
+
+          {/* Search */}
+          {assignedCompetitions && assignedCompetitions.length > 3 && (
+            <div className="ui-popover__search">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-muted pointer-events-none z-10" aria-hidden="true" />
+                <input
+                  type="text"
+                  placeholder="Search competitions..." aria-label="Search competitions"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="ui-input pl-8 pr-10"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {searchQuery && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
+                    className="ui-popover__clear"
+                    aria-label="Clear search">
+                    <X className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* List */}
+          <div className="ui-popover__list">
+            {filteredCompetitions && filteredCompetitions.length === 0 ? (
+              <p className="ui-popover__empty type-body-s">
+                No competitions found for &quot;{searchQuery}&quot;
               </p>
-            </div>
-
-            {/* Search */}
-            {assignedCompetitions && assignedCompetitions.length > 3 && (
-              <div className="p-3 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
-                  <input
-                    type="text"
-                    placeholder="Search competitions..." aria-label="Search competitions"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 text-base mouse:text-xs rounded-lg"
-                    style={{
-                      background: 'rgb(var(--ink) / 0.06)',
-                      border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: FG.ink,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  {searchQuery && (
-                    <button onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg"
-                      aria-label="Clear search">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* List */}
-            <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
-              {filteredCompetitions && filteredCompetitions.length === 0 ? (
-                <div className="py-8 text-center text-fg-muted text-xs">
-                  No competitions found for &quot;{searchQuery}&quot;
-                </div>
-              ) : (
-                filteredCompetitions?.map((competition) => {
-                  const isActive = currentCompetition?._id === competition._id;
-                  const sc = statusColors[competition.status] || statusColors.completed;
-                  return (
-                    <motion.button
-                      key={competition._id}
-                      onClick={() => handleSwitch(competition._id)}
-                      disabled={isSwitching}
-                      className="w-full text-left px-4 py-3 transition-colors duration-150 disabled:opacity-50 border-b last:border-b-0"
-                      style={{
-                        background: isActive ? `${alpha(COLORS.saffron, 0x10)}` : 'transparent',
-                        borderColor: COLORS.darkBorderSubtle,
-                      }}
-                      whileHover={{ background: `${alpha(COLORS.saffron, 0x08)}` }}
-                      role="option"
-                      aria-selected={isActive}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-ink truncate">
-                              {competition.name} {competition.year || ''}
-                            </span>
-                            {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            {competition.place && (
-                              <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
-                                <MapPin className="w-2.5 h-2.5" aria-hidden="true" />
-                                {competition.place}
-                              </span>
-                            )}
-                            <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
-                              {levelLabel(competition.level)}
-                            </span>
-                          </div>
-                          {competition.startDate && competition.endDate && (
-                            <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
-                              <Calendar className="w-2.5 h-2.5" aria-hidden="true" />
-                              {new Date(competition.startDate).toLocaleDateString()} –{' '}
-                              {new Date(competition.endDate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0"
-                          style={{ background: `${alpha(sc, 0x15)}`, color: sc, border: `1px solid ${alpha(sc, 0x30)}` }}>
-                          {competition.status}
+            ) : (
+              filteredCompetitions?.map((competition) => {
+                const isActive = currentCompetition?._id === competition._id;
+                const status = STATUS[competition.status];
+                return (
+                  <button
+                    type="button"
+                    key={competition._id}
+                    onClick={() => handleSwitch(competition._id)}
+                    disabled={isSwitching}
+                    className="ui-popover__option"
+                    role="option"
+                    aria-selected={isActive}
+                  >
+                    <span className="flex-1 min-w-0 grid gap-1">
+                      <span className="flex items-center gap-2">
+                        <span className="ui-popover__option-name">
+                          {competition.name} {competition.year || ''}
                         </span>
-                      </div>
-                    </motion.button>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Register new - only for coaches */}
-            {userType === 'coach' && (
-              <div className="border-t" style={{ borderColor: COLORS.darkBorderSubtle }}>
-                <motion.button
-                  onClick={handleNewRegistration}
-                  disabled={isSwitching}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-50"
-                  whileHover={{ background: 'rgba(34,197,94,0.08)' }}
-                >
-                  <PlusCircle className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: FG.success }}>
-                      Sign up for new competition
-                    </p>
-                    <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
-                      Register your team
-                    </p>
-                  </div>
-                </motion.button>
-              </div>
+                        {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent-fg" aria-hidden="true" />}
+                      </span>
+                      <span className="flex items-center gap-x-3 gap-y-1 flex-wrap type-caption text-fg-muted">
+                        {competition.place && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" aria-hidden="true" />
+                            {competition.place}
+                          </span>
+                        )}
+                        <span>{levelLabel(competition.level)}</span>
+                        {competition.startDate && competition.endDate && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" aria-hidden="true" />
+                            {new Date(competition.startDate).toLocaleDateString()} –{' '}
+                            {new Date(competition.endDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    {competition.status && (status
+                      ? <StatusTag status={status} className="flex-shrink-0">{competition.status}</StatusTag>
+                      : <Tag className="flex-shrink-0">{competition.status}</Tag>)}
+                  </button>
+                );
+              })
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+
+          {/* Register new - only for coaches */}
+          {userType === 'coach' && (
+            <div className="ui-popover__foot">
+              <button
+                type="button"
+                onClick={handleNewRegistration}
+                disabled={isSwitching}
+                className="ui-popover__option"
+              >
+                <PlusCircle className="w-4 h-4 flex-shrink-0 text-accent-fg" aria-hidden="true" />
+                <span className="grid gap-0.5">
+                  <span className="ui-popover__option-name">Sign up for new competition</span>
+                  <span className="type-caption text-fg-muted">Register your team</span>
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Switching overlay */}
-      <AnimatePresence>
-        {isSwitching && (
-          <motion.div
-            className="modal-overlay z-[100]"
-            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          >
-              <BodyScrollLock />
-            <motion.div
-              className="flex items-center gap-3 px-6 py-4 rounded-2xl border modal-panel"
-              style={{ background: 'rgb(var(--surface))', borderColor: `${alpha(COLORS.saffron, 0x30)}` }}
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-            >
-              <div
-                className="animate-spin w-5 h-5 rounded-full border-2 border-t-transparent"
-                style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
-              />
-              <span className="text-ink/70 text-sm font-medium">Switching competition...</span>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isSwitching && (
+        <div className="modal-overlay ui-dialog-overlay z-[100]">
+          <BodyScrollLock />
+          <div className="modal-panel ui-popover__busy">
+            <span className="ui-spinner text-accent-fg" aria-hidden="true" />
+            <span className="type-body-s">Switching competition...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,9 +1,7 @@
 import { Lock } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 import SafeText from '@/components/auth/SafeText';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { COLORS, FG, alpha } from '@/styles/tokens';
 
 /**
  * "This meet has closed."
@@ -31,45 +29,24 @@ const CompetitionLockBanner = ({ competition, className = '' }) => {
 
   if (!locked) return null;
 
+  // A Notice's anatomy (the 3px danger rule), with the heading the screens
+  // have always had. The meet's name keeps its own case.
   return (
-    <motion.div
-      role="status"
-      className={`rounded-2xl border overflow-hidden ${className}`}
-      style={{
-        background: 'linear-gradient(135deg, rgba(248,113,113,0.10), rgb(var(--ink) / 0.02))',
-        borderColor: 'rgba(248,113,113,0.28)',
-      }}
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      <div className="flex items-start gap-3 p-4">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(248,113,113,0.15)' }}
-        >
-          <Lock className="w-4 h-4" style={{ color: FG.dangerSoft }} aria-hidden="true" />
-        </div>
-
-        <div className="min-w-0">
-          <h3 className="text-ink font-bold text-sm leading-tight">
-            {competitionName ? <SafeText as="span">{competitionName}</SafeText> : 'This competition'}
-            {' has closed'}
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
-            {closedOn
-              ? `Entries, scores and running orders were locked at the end of ${closedOn}. `
-              : 'Entries, scores and running orders are locked. '}
-            Results are read-only — only a super admin can make further changes.
-          </p>
-        </div>
-      </div>
-
-      <div
-        className="h-px w-full"
-        style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x30)}, transparent)` }}
-      />
-    </motion.div>
+    <div role="status" className={`ui-notice ui-notice--danger ui-fade-in ${className}`}>
+      <h3 className="ui-notice__title m-0 flex items-center gap-2 text-sm font-bold normal-case tracking-normal">
+        <Lock className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+        <span>
+          {competitionName ? <SafeText as="span">{competitionName}</SafeText> : 'This competition'}
+          {' has closed'}
+        </span>
+      </h3>
+      <p className="ui-notice__text type-body-s m-0">
+        {closedOn
+          ? `Entries, scores and running orders were locked at the end of ${closedOn}. `
+          : 'Entries, scores and running orders are locked. '}
+        Results are read-only — only a super admin can make further changes.
+      </p>
+    </div>
   );
 };
 

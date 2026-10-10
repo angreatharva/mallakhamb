@@ -62,8 +62,14 @@ describe('route groups (rollout waves)', () => {
     ]) expect(lookForPath(path), path).toBe('prime-time');
   });
 
+  it('W2: every player and coach screen is prime-time', () => {
+    for (const path of [
+      '/player/dashboard', '/player/select-team', '/coach/dashboard', '/coach/create-team', '/coach/payment', '/coach',
+    ]) expect(lookForPath(path), path).toBe('prime-time');
+  });
+
   it('does not reach past a group: look-alike paths keep the default', () => {
-    for (const path of ['/scoresheet', '/player/login-help', '/superadmin/register', '/judge/select-team']) {
+    for (const path of ['/scoresheet', '/players', '/coaching', '/superadmin/register', '/judge/select-team']) {
       expect(lookForPath(path), path).toBe(DEFAULT_LOOK);
     }
   });

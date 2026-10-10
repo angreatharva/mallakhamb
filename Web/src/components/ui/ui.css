@@ -26,6 +26,7 @@
 @import './toast.css';
 @import './notice.css';
 @import './order.css';
+@import './popover.css';
 
 /* Brand and the working-screen shell (Phase 4) — same cascade position. */
 @import '../brand/brand.css';

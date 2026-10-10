@@ -54,7 +54,7 @@ describe('shell', () => {
     const onLogout = vi.fn();
     at('/', <AccountControls onLogout={onLogout} profileTo="/judge/profile" />);
     expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/judge/profile');
-    await user.click(screen.getByRole('button', { name: 'Log out' }));
+    await user.click(screen.getByRole('button', { name: 'Logout' }));
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 
@@ -68,7 +68,7 @@ describe('shell', () => {
     const drawer = screen.getByRole('dialog', { name: 'Menu' });
     expect(drawer).toHaveClass('ui-dialog--sheet');
     expect(drawer).toContainElement(screen.getAllByRole('link', { name: 'Teams' }).at(-1));
-    expect(drawer).toContainElement(screen.getAllByRole('button', { name: 'Log out' }).at(-1));
+    expect(drawer).toContainElement(screen.getAllByRole('button', { name: 'Logout' }).at(-1));
     await user.click(screen.getAllByRole('link', { name: 'Teams' }).at(-1));
     expect(screen.queryByRole('dialog')).toBeNull();
   });

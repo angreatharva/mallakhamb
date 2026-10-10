@@ -1,25 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ArrowRight, Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
-import { PoleMark } from '@/components/brand/Brand';
-import { FG, alpha } from '@/styles/tokens';
-
-const COLORS = {
-  dark: 'rgb(var(--bg))',
-  darkCard: 'rgb(var(--surface))',
-  darkBorder: 'rgb(var(--ink) / 0.08)',
-  darkBorderSubtle: 'rgb(var(--ink) / 0.04)',
-  saffron: '#FF9933',
-  saffronLight: '#FFB366',
-  saffronDark: '#E67300',
-};
-
-const EASE = [0.22, 1, 0.36, 1];
+import { EmptyState, Input, RunningOrder, RunningOrderItem, Tag } from '@/components/ui';
+import { PageHeader } from '@/components/shell';
 
 /**
  * PlayerTeamSelection - Screen for players to select their team
@@ -105,163 +92,73 @@ const PlayerTeamSelection = () => {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center"
-        style={{ background: COLORS.dark }}>
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-fg-muted text-sm">Loading teams...</p>
-        </div>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          Loading teams...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh flex flex-col" 
-      style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      
-      {/* Header */}
-      <div className="border-b" style={{ borderColor: COLORS.darkBorder }}>
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <PoleMark className="h-10 w-auto opacity-80" />
-            <div className="w-px h-8 bg-ink/10" />
-            <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted">
-                Mallakhamb India
-              </p>
-              <p className="text-ink/60 text-xs">Player Portal</p>
-            </div>
-          </div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: EASE }}>
-            <h1 className="text-3xl md:text-4xl font-black text-ink mb-2">
-              Select Your Team
-            </h1>
-            <p className="text-fg-muted text-sm md:text-base">
-              Choose the team you want to join to start competing
-            </p>
-          </motion.div>
+    <div className="min-h-dvh bg-bg text-fg">
+      <div className="max-w-4xl mx-auto px-[var(--pad)] pb-12">
+        <PageHeader
+          eyebrow="Player"
+          title="Select Your Team"
+          lede="Choose the team you want to join to start competing"
+        />
+
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none z-10" aria-hidden="true" />
+          <Input
+            type="text"
+            placeholder="Search teams by name, description, or coach..." aria-label="Search teams"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-          
-          {/* Search */}
-          <motion.div className="mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: EASE }}>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/30" />
-              <input
-                type="text"
-                placeholder="Search teams by name, description, or coach..." aria-label="Search teams"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border bg-transparent text-ink placeholder:text-ink/30 focus:border-opacity-100 transition-colors"
-                style={{ 
-                  borderColor: COLORS.darkBorder,
-                  background: COLORS.darkCard 
-                }}
-              />
-            </div>
-          </motion.div>
-
-          {/* Teams Grid */}
-          {filteredTeams.length === 0 ? (
-            <motion.div
-              className="text-center py-16"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}>
-              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                style={{ background: `${alpha(COLORS.saffron, 0x15)}`, border: `1px solid ${alpha(COLORS.saffron, 0x35)}` }}>
-                <Users className="w-8 h-8" style={{ color: FG.brand }} />
-              </div>
-              <h3 className="text-ink font-bold text-lg mb-2">
-                {searchQuery ? 'No teams found' : 'No teams available'}
-              </h3>
-              <p className="text-fg-muted text-sm">
-                {searchQuery 
-                  ? 'Try adjusting your search query' 
-                  : 'There are no teams available at the moment'}
-              </p>
-            </motion.div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <AnimatePresence mode="popLayout">
-                {filteredTeams.map((team, index) => (
-                  <motion.button
-                    key={team._id}
-                    onClick={() => !joining && handleTeamSelect(team)}
-                    disabled={joining}
-                    className="text-left p-6 rounded-2xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ 
-                      background: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x10)}` : COLORS.darkCard,
-                      borderColor: selectedTeam?._id === team._id ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle,
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4, delay: index * 0.05, ease: EASE }}
-                    whileHover={!joining ? { 
-                      borderColor: `${alpha(COLORS.saffron, 0x35)}`,
-                      boxShadow: `0 0 30px ${alpha(COLORS.saffron, 0x10)}` 
-                    } : {}}
-                    whileTap={!joining ? { scale: 0.98 } : {}}>
-                    
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                        <Users className="w-6 h-6" style={{ color: FG.brand }} />
-                      </div>
-                      
-                      {selectedTeam?._id === team._id && joining && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: FG.brand }} />
-                        </motion.div>
-                      )}
-                    </div>
-
-                    <h3 className="text-ink font-bold text-lg mb-1 truncate">
-                      {team.name}
-                    </h3>
-                    
-                    {team.description && (
-                      <p className="text-fg-muted text-sm mb-3 line-clamp-2">
-                        {team.description}
-                      </p>
-                    )}
-
-                    {team.coach?.name && (
-                      <div className="flex items-center gap-2 text-xs text-fg-muted">
-                        <span>Coach:</span>
-                        <span className="font-semibold text-ink/60">{team.coach.name}</span>
-                      </div>
-                    )}
-
-                    <div className="mt-4 pt-4 border-t flex items-center justify-between"
-                      style={{ borderColor: COLORS.darkBorderSubtle }}>
-                      <span className="text-xs font-semibold" style={{ color: FG.brand }}>
-                        {selectedTeam?._id === team._id && joining ? 'Joining...' : 'Click to join'}
-                      </span>
-                      <ArrowRight className="w-4 h-4" style={{ color: FG.brand }} />
-                    </div>
-                  </motion.button>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+        {/* Teams */}
+        {filteredTeams.length === 0 ? (
+          <EmptyState tag={searchQuery ? 'No teams found' : 'No teams available'} className="ui-fade-in">
+            {searchQuery
+              ? 'Try adjusting your search query'
+              : 'There are no teams available at the moment'}
+          </EmptyState>
+        ) : (
+          <RunningOrder label="Teams">
+            {filteredTeams.map((team, index) => {
+              const isJoining = selectedTeam?._id === team._id && joining;
+              return (
+                <RunningOrderItem
+                  key={team._id}
+                  index={index + 1}
+                  // An h3, as the card had: the join flow finds the team by it.
+                  titleAs="h3"
+                  title={team.name}
+                  meta={(team.description || team.coach?.name) ? (
+                    <>
+                      {team.description && <span className="block line-clamp-2">{team.description}</span>}
+                      {team.coach?.name && <span className="block">Coach: {team.coach.name}</span>}
+                    </>
+                  ) : null}
+                  aside={isJoining ? (
+                    <Tag tone="accent"><span className="ui-spinner" aria-hidden="true" />Joining...</Tag>
+                  ) : (
+                    <Tag>Join</Tag>
+                  )}
+                  selected={selectedTeam?._id === team._id}
+                  disabled={joining}
+                  onClick={() => !joining && handleTeamSelect(team)}
+                />
+              );
+            })}
+          </RunningOrder>
+        )}
       </div>
     </div>
   );

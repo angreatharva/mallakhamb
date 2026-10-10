@@ -24,10 +24,10 @@ Panel.propTypes = {
  * Display steps are uppercase — only on text the site writes, never COP
  * wording or names. `sting` is for stage screens only (§5.7).
  */
-export const Heading = ({ level = 2, step = 'display-m', sting = false, className = '', children, ...rest }) => {
+export const Heading = ({ level = 2, step = 'display-m', sting = false, asIs = false, className = '', children, ...rest }) => {
   const Tag = `h${level}`;
   return (
-    <Tag className={cx('ui-heading', `type-${step}`, className)} {...rest}>
+    <Tag className={cx('ui-heading', `type-${step}`, asIs && 'ui-heading--as-is', className)} {...rest}>
       {sting ? (
         <span className="ui-sting">
           {children}
@@ -40,7 +40,10 @@ export const Heading = ({ level = 2, step = 'display-m', sting = false, classNam
 Heading.propTypes = {
   level: PropTypes.oneOf([1, 2, 3, 4, 5, 6]),
   step: PropTypes.oneOf(['display-xl', 'display-l', 'display-m', 'display-s', 'body', 'body-s']),
-  sting: PropTypes.bool, className: PropTypes.string, children: PropTypes.node,
+  sting: PropTypes.bool,
+  /** Keep the text's own case: a person's or a team's name in a display step (plan §8.10). */
+  asIs: PropTypes.bool,
+  className: PropTypes.string, children: PropTypes.node,
 };
 
 /** Tag: square, always text. `ident` shows a role; `solid` fills it. */

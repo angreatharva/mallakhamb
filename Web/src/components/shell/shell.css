@@ -37,12 +37,21 @@
 .shell-header__nav { display: none; margin-left: auto; }
 .shell-header__account { display: none; align-items: center; gap: 8px; margin-left: auto; }
 .shell-header__nav + .shell-header__account { margin-left: 8px; }
-.shell-header__menu { margin-left: auto; }
+.shell-header--fixed { position: fixed; left: 0; right: 0; }
+.shell-header__extra { display: none; align-items: center; margin-left: auto; min-width: 0; }
+.shell-header__nav + .shell-header__extra { margin-left: 8px; }
+.shell-header__extra + .shell-header__account { margin-left: 8px; }
+/* The switch on its own, while the account cluster is in the drawer (phones). */
+.shell-header__appearance { margin-left: auto; }
+.shell-header__menu { margin-left: 8px; }
+.shell-drawer__extra { margin-bottom: 16px; }
 @media (min-width: 768px) {
   .shell-header__account { display: flex; }
+  .shell-header__appearance { display: none; }
 }
 @media (min-width: 1024px) {
   .shell-header__nav { display: flex; }
+  .shell-header__extra { display: flex; }
   .shell-header__menu { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023px) {

@@ -40,6 +40,8 @@ export const LOOK_BY_ROUTE = [
   { match: /^\/(player|coach|judge|admin)\/register\/?$/, look: 'prime-time' },
   { match: /^\/(forgot|reset)-password\/?$/, look: 'prime-time' },
   { match: /^\/(player|coach|judge|admin)\/select-(level|competition)\/?$/, look: 'prime-time' },
+  // W2, player and coach: every screen under their prefixes.
+  { match: /^\/(player|coach)(\/|$)/, look: 'prime-time' },
 ];
 
 const OVERRIDE_KEY = 'mk-look-override';

@@ -50,3 +50,26 @@ select.ui-input { appearance: none; padding-right: 40px; cursor: pointer; }
 .ui-password { position: relative; }
 .ui-password .ui-input { padding-right: calc(var(--control-h) + 4px); }
 .ui-password__toggle { position: absolute; top: 0; right: 0; }
+
+/* A checkbox chip: the real input is sr-only inside the label; the box draws its state. */
+.ui-check {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-sunken));
+  box-shadow: inset 0 0 0 var(--ring) var(--line-strong);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  transition: box-shadow var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+.ui-check:hover { color: var(--fg); }
+.ui-check[data-checked] { color: var(--fg); box-shadow: inset 0 0 0 var(--ring) rgb(var(--accent)); }
+.ui-check:focus-within { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.ui-check__box {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 18px; height: 18px;
+  border-radius: calc(var(--radius-control) / 2);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  color: rgb(var(--on-accent));
+}
+.ui-check[data-checked] .ui-check__box { background: rgb(var(--accent)); box-shadow: none; }

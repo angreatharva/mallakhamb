@@ -3,6 +3,8 @@
  * Type comes from the `type-*` steps; this file only adds colour and anatomy.
  */
 .ui-heading { margin: 0; color: var(--fg); }
+/* Names and other stored values keep their case in a display step (beats the type utility). */
+.ui-heading.ui-heading--as-is { text-transform: none; }
 
 /* The stinger (stage screens only): a saffron bar wipes across the heading. */
 .ui-sting { position: relative; display: inline-block; }

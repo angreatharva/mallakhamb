@@ -131,3 +131,4 @@
 .shell-steps__step[data-state='done'] { color: var(--fg); box-shadow: inset 0 var(--rule) 0 0 var(--line-strong); }
 .shell-auth__match { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; color: rgb(var(--success-fg)); }
 .shell-auth__match svg { width: 14px; height: 14px; flex: none; }
+.shell-steps--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
