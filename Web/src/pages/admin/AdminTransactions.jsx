@@ -5,7 +5,7 @@ import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '@/infrastructure/logger';
 import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { DarkCard, FadeIn } from '@/components/admin/AdminKit';
@@ -130,19 +130,19 @@ const AdminTransactions = () => {
         <DarkCard className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
-                <ReceiptIndianRupee className="w-5 h-5" style={{ color: DATA_COLORS.violet }} />
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-surface-raised">
+                <ReceiptIndianRupee className="w-5 h-5 text-fg-secondary" />
               </div>
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Transactions</p>
+                <p className="type-tag text-accent-fg">Transactions</p>
                 <h2 className="text-xl font-black text-ink">Payment History</h2>
               </div>
             </div>
 
             {isSuperAdmin && (
               <div className="sm:w-64">
-                <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
-                  Competition <span style={{ color: FG.danger }}>*</span>
+                <label className="block type-tag mb-2 text-accent-fg">
+                  Competition <span className="text-danger-fg">*</span>
                 </label>
                 <Dropdown
                   options={competitions.map(c => ({
@@ -160,7 +160,7 @@ const AdminTransactions = () => {
 
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+              <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin border-t-accent"/>
               <span className="text-fg-muted text-sm">Loading transactions…</span>
             </div>
           ) : transactions.length === 0 ? (
@@ -195,8 +195,7 @@ const AdminTransactions = () => {
                 const row = deriveTransactionRow(tx);
                 const { bg, color } = statusStyle(tx.paymentStatus);
                 return (
-                  <div key={tx._id} className="rounded-2xl border p-4"
-                    style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                  <div key={tx._id} className="rounded-2xl border p-4 bg-surface-overlay border-line">
                     {/* What the page is for: how much, and did it go through. */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -256,10 +255,9 @@ const AdminTransactions = () => {
             <div className="overflow-x-auto hidden mouse:block" data-allow-overflow tabIndex={0} role="region" aria-label="Transactions (scrolls sideways)">
               <table className="min-w-full text-sm" aria-label="Transactions table">
                 <thead>
-                  <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <tr className="border-b border-line">
                     {['Date / Time', 'Type', 'Source', 'Competition', 'Team', 'Coach', 'Razorpay Order ID', 'Razorpay Payment ID', 'Players', 'Amount', 'Status'].map(h => (
-                      <th key={h} scope="col" className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                        style={{ color: 'var(--fg-muted)' }}>{h}</th>
+                      <th key={h} scope="col" className="px-4 py-3 text-left type-tag whitespace-nowrap text-fg-muted">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -269,11 +267,7 @@ const AdminTransactions = () => {
                       deriveTransactionRow(tx);
                     const { bg, color } = statusStyle(tx.paymentStatus);
                     return (
-                      <motion.tr key={tx._id}
-                        style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.02, duration: 0.3 }}>
+                      <tr className="border-b border-line" key={tx._id}>
                         <td className="px-4 py-3 whitespace-nowrap text-ink/60">{formatDateTime(tx.createdAt)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink/80">{typeLabel(tx.type)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink/80">{sourceLabel(tx.source)}</td>
@@ -306,7 +300,7 @@ const AdminTransactions = () => {
                             {tx.paymentStatus || 'unknown'}
                           </span>
                         </td>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -320,32 +314,18 @@ const AdminTransactions = () => {
       {/* Players Modal */}
       <AnimatePresence>
         {playersModalOpen && (
-          <motion.div
-            className="modal-overlay z-50"
-            style={{ background: 'rgba(0,0,0,0.75)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closePlayersModal}
-          >
+          <div className="modal-overlay z-50 bg-scrim" onClick={closePlayersModal}>
               <BodyScrollLock />
-            <motion.div
-              className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden modal-panel"
-              style={{ 
+            <div className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden modal-panel" style={{ 
                 background: ADMIN_COLORS.darkCard, 
                 borderColor: ADMIN_COLORS.darkBorderSubtle 
-              }}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+              }} onClick={(e) => e.stopPropagation()}>
               {/* Header */}
-              <div className="p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <div className="p-6 border-b border-line">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(ADMIN_COLORS.purple, 0x18)}` }}>
-                      <Users className="w-5 h-5" style={{ color: DATA_COLORS.violet }} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-surface-raised">
+                      <Users className="w-5 h-5 text-fg-secondary" />
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-ink">Team Players</h3>
@@ -354,8 +334,7 @@ const AdminTransactions = () => {
                   </div>
                   <button
                     onClick={closePlayersModal}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors tap-safe"
-                    style={{ background: 'rgb(var(--ink) / 0.05)' }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors tap-safe bg-surface-raised"
                     aria-label="Close"
                   >
                     <span className="text-ink/60 text-xl" aria-hidden="true">×</span>
@@ -373,17 +352,10 @@ const AdminTransactions = () => {
                 ) : (
                   <div className="space-y-3">
                     {selectedPlayers.map((player, idx) => (
-                      <motion.div
-                        key={idx}
-                        className="p-4 rounded-xl border"
-                        style={{ 
+                      <div key={idx} className="p-4 rounded-xl border" style={{ 
                           background: 'rgb(var(--ink) / 0.02)', 
                           borderColor: ADMIN_COLORS.darkBorderSubtle 
-                        }}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                      >
+                        }}>
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-ink font-bold">{player.name}</p>
@@ -405,20 +377,20 @@ const AdminTransactions = () => {
                                 {player.gender}
                               </span>
                               {player.apparatus && (Object.keys(player.apparatus).length > 0 || typeof player.apparatus === 'string') && (
-                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--ink) / 0.05)', color: 'rgb(var(--ink) / 0.7)' }}>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-surface-raised text-fg">
                                   {typeof player.apparatus === 'object' ? Object.values(player.apparatus).flat().join(', ') : player.apparatus}
                                 </span>
                               )}
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -71,14 +71,14 @@ TabNav.propTypes = {
  */
 export const AppHeader = ({
   role = null, segment = null, nav = [], navLabel = 'Sections', onLogout = null, profileTo = null, homeTo = '/',
-  extra = null, fixed = false,
+  extra = null, fixed = false, navFrom = 'lg', compactBrand = false,
 }) => {
   const [open, setOpen] = useState(false);
   return (
-    <header className={cx('shell-header', fixed && 'shell-header--fixed')}>
+    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl')}>
       <div className="shell-header__bar">
         <div className="shell-header__brand">
-          <Wordmark to={homeTo} />
+          <Wordmark to={homeTo} compact={compactBrand} />
           <RoleIdent role={role} />
           {segment && <span className="shell-header__segment type-body-s">{segment}</span>}
         </div>
@@ -106,6 +106,10 @@ AppHeader.propTypes = {
   homeTo: PropTypes.string,
   extra: PropTypes.node,
   fixed: PropTypes.bool,
+  /** Where the tabs join the bar: `xl` for a long row (the admin dashboards' six or seven). */
+  navFrom: PropTypes.oneOf(['lg', 'xl']),
+  /** The mark alone (named for screen readers), to leave the bar to the tabs. */
+  compactBrand: PropTypes.bool,
 };
 
 /** The page header: a tag, the title (display-l), a lede, actions on the right. */

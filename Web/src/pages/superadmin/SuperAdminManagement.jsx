@@ -6,10 +6,10 @@ import { useLocation } from 'react-router-dom';
 import {
   Shield, UserPlus, Edit, Trash2, UserCheck, UserX, Trophy, Plus, X, Search, Save
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Dropdown from '@/components/auth/Dropdown';
@@ -40,8 +40,8 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={inputId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-        {label}{required && <span style={{ color: FG.danger }}> *</span>}
+      <label htmlFor={inputId} className="block type-tag mb-1.5 text-accent-fg">
+        {label}{required && <span className="text-danger-fg"> *</span>}
       </label>
     )}
     <input
@@ -52,8 +52,8 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => {
       onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
-    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
-    {error && <p className="text-xs mt-1" style={{ color: FG.danger }}>{error}</p>}
+    {hint && <p className="text-xs mt-1 text-fg-muted">{hint}</p>}
+    {error && <p className="text-xs mt-1 text-danger-fg">{error}</p>}
   </div>
   );
 };
@@ -63,14 +63,13 @@ const DarkSelect = ({ label, required, children, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={selectId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-        {label}{required && <span style={{ color: FG.danger }}> *</span>}
+      <label htmlFor={selectId} className="block type-tag mb-1.5 text-accent-fg">
+        {label}{required && <span className="text-danger-fg"> *</span>}
       </label>
     )}
     <select
       id={selectId}
-      className="w-full rounded-xl text-sm text-ink min-h-[44px] px-3 transition-all duration-200"
-      style={{ background: 'rgb(var(--ink) / 0.06)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}` }}
+      className="w-full rounded-xl text-sm text-ink min-h-[44px] px-3 transition-all duration-200 bg-surface-sunken border border-line"
       {...props}>
       {children}
     </select>
@@ -83,8 +82,8 @@ const DarkTextarea = ({ label, required, id, ...props }) => {
   return (
   <div>
     {label && (
-      <label htmlFor={textareaId} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-        {label}{required && <span style={{ color: FG.danger }}> *</span>}
+      <label htmlFor={textareaId} className="block type-tag mb-1.5 text-accent-fg">
+        {label}{required && <span className="text-danger-fg"> *</span>}
       </label>
     )}
     <textarea
@@ -233,25 +232,19 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div className="modal-overlay z-50"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={(e) => e.target === e.currentTarget && onClose()}>
-          <motion.div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden modal-panel`}
-            style={{ 
+        <div className="modal-overlay z-50 bg-scrim" onClick={(e) => e.target === e.currentTarget && onClose()}>
+          <div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden modal-panel`} style={{ 
               background: ADMIN_COLORS.darkElevated, 
               borderColor: ADMIN_COLORS.darkBorderSubtle,
               margin: isMobile ? '0 0.5rem' : '0',
-            }}
-            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+            }}>
             <div className="flex items-center justify-between border-b flex-shrink-0" 
               style={{ 
                 borderColor: ADMIN_COLORS.darkBorderSubtle,
                 padding: isMobile ? '1rem' : '1.5rem',
               }}>
               <div>
-                {subtitle && <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>{subtitle}</p>}
+                {subtitle && <p className="type-tag mb-0.5 text-accent-fg">{subtitle}</p>}
                 <h3 className="font-black text-ink" style={{ fontSize: isMobile ? '1.125rem' : '1.25rem' }}>{title}</h3>
               </div>
               <button onClick={onClose} className="p-2 rounded-xl hover:bg-ink/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close">
@@ -288,8 +281,8 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
                 {footer}
               </div>
             )}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -321,10 +314,9 @@ const DarkTable = ({ headers, children, empty, label }) => (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm stacked-table" role="table" aria-label={label}>
         <thead>
-          <tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+          <tr className="border-b border-line">
             {headers.map(h => (
-              <th key={h} scope="col" className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                style={{ color: 'var(--fg-muted)' }}>{h}</th>
+              <th key={h} scope="col" className="px-4 py-3 text-left type-tag whitespace-nowrap text-fg-muted">{h}</th>
             ))}
           </tr>
         </thead>
@@ -338,9 +330,7 @@ const DarkTable = ({ headers, children, empty, label }) => (
 const DarkTr = ({ children, delay = 0 }) => {
   const headers = useContext(TableHeadersContext);
   return (
-    <motion.tr style={{ borderBottom: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}>
+    <tr className="border-b border-line">
       {/*
         * `data-label` is what the stacked layout prints beside each value.
         * Injected by position rather than asked for at the call site, so the
@@ -349,7 +339,7 @@ const DarkTr = ({ children, delay = 0 }) => {
       {Children.map(children, (child, i) =>
         isValidElement(child) ? cloneElement(child, { 'data-label': headers[i] }) : child
       )}
-    </motion.tr>
+    </tr>
   );
 };
 
@@ -825,15 +815,13 @@ const SuperAdminManagement = () => {
               const Icon = s.icon;
               const isActive = activeSection === s.id;
               return (
-                <motion.button key={s.id} onClick={() => setActiveSection(s.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-ink' : 'text-fg-muted hover:text-ink'}`}
-                  style={{
+                <button key={s.id} onClick={() => setActiveSection(s.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-ink' : 'text-fg-muted hover:text-ink'}`} style={{
                     background: isActive ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'transparent',
                     border: `1px solid ${isActive ? alpha(ADMIN_COLORS.saffron, 0x30) : 'transparent'}`,
                   }}>
                   <Icon className="w-4 h-4" aria-hidden="true" />
                   {s.label}
-                </motion.button>
+                </button>
               );
             })}
           </div>
@@ -846,7 +834,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
+                <p className="type-tag mb-0.5 text-accent-fg">Management</p>
                 <h2 className="text-2xl font-black text-ink">Competitions</h2>
               </div>
               <DarkBtn onClick={() => openCompetitionModal()}>
@@ -935,24 +923,15 @@ const SuperAdminManagement = () => {
                     </Td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <motion.button onClick={() => openAdminManagementModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: FG.success }} title="Manage Admins" aria-label="Manage Admins"
-                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        <button onClick={() => openAdminManagementModal(comp)} className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-success-fg" title="Manage Admins" aria-label="Manage Admins">
                           <UserPlus className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button onClick={() => openCompetitionModal(comp)}
-                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: FG.info }} title="Edit" aria-label="Edit"
-                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        </button>
+                        <button onClick={() => openCompetitionModal(comp)} className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-info-fg" title="Edit" aria-label="Edit">
                           <Edit className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button onClick={() => openDeleteConfirmation(comp)}
-                          className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: FG.danger }} title="Delete" aria-label="Delete"
-                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        </button>
+                        <button onClick={() => openDeleteConfirmation(comp)} className="p-1.5 rounded-lg hover:bg-ink/10 transition-colors tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-danger-fg" title="Delete" aria-label="Delete">
                           <Trash2 className="w-4 h-4" />
-                        </motion.button>
+                        </button>
                       </div>
                     </td>
                   </DarkTr>
@@ -969,7 +948,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
+                <p className="type-tag mb-0.5 text-accent-fg">Management</p>
                 <h2 className="text-2xl font-black text-ink">Admins</h2>
               </div>
               <DarkBtn onClick={() => setShowAddAdminModal(true)}>
@@ -993,16 +972,12 @@ const SuperAdminManagement = () => {
                     <Td><StatusBadge active={admin.isActive} /></Td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <motion.button onClick={() => openEditModal(admin)}
-                          className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: FG.info }} title="Edit" aria-label="Edit" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        <button onClick={() => openEditModal(admin)} className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-info-fg" title="Edit" aria-label="Edit">
                           <Edit className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button onClick={() => openDeleteAdminConfirmation(admin)}
-                          className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center"
-                          style={{ color: FG.danger }} title="Delete" aria-label="Delete" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        </button>
+                        <button onClick={() => openDeleteAdminConfirmation(admin)} className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-danger-fg" title="Delete" aria-label="Delete">
                           <Trash2 className="w-4 h-4" />
-                        </motion.button>
+                        </button>
                       </div>
                     </td>
                   </DarkTr>
@@ -1018,7 +993,7 @@ const SuperAdminManagement = () => {
         <FadeIn>
           <DarkCard className="p-6">
             <div className="mb-6">
-              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
+              <p className="type-tag mb-0.5 text-accent-fg">Management</p>
               <h2 className="text-2xl font-black text-ink">Coaches</h2>
             </div>
             {loading ? <LoadingState /> : coaches.length === 0 ? (
@@ -1051,7 +1026,7 @@ const SuperAdminManagement = () => {
         <FadeIn>
           <DarkCard className="p-6">
             <div className="mb-6">
-              <p className="text-xs font-bold tracking-widest uppercase mb-0.5" style={{ color: FG.brand }}>Management</p>
+              <p className="type-tag mb-0.5 text-accent-fg">Management</p>
               <h2 className="text-2xl font-black text-ink">Add Player to Team</h2>
             </div>
             <AddPlayerForm 
@@ -1219,10 +1194,10 @@ const SuperAdminManagement = () => {
 
         {/* Apparatus Fees (Optional) */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
+          <p className="type-tag mb-3 text-accent-fg">
             APPARATUS-WISE FEES (Optional)
           </p>
-          <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          <div className="space-y-3 p-4 rounded-xl border bg-surface-sunken border-line">
             <p className="text-xs text-fg-muted mb-4 leading-relaxed">
               Enter any additional fees for specific apparatuses here. These will be <strong>added on top</strong> of the base per-player fee. Leave blank for no additional charge.
             </p>
@@ -1255,8 +1230,8 @@ const SuperAdminManagement = () => {
 
         {/* Max Team Size — per team, per gender + age group */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
-            Max Team Size (per age group) <span style={{ color: FG.danger }}>*</span>
+          <p className="type-tag mb-3 text-accent-fg">
+            Max Team Size (per age group) <span className="text-danger-fg">*</span>
           </p>
           <div role="radiogroup" aria-label="Max team size per age group" className="grid grid-cols-2 gap-3">
             {TEAM_SIZE_OPTIONS.map((option) => {
@@ -1283,8 +1258,8 @@ const SuperAdminManagement = () => {
 
         {/* Competition Types & Apparatus */}
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
-            Competition Types & Apparatus <span style={{ color: FG.danger }}>*</span>
+          <p className="type-tag mb-3 text-accent-fg">
+            Competition Types & Apparatus <span className="text-danger-fg">*</span>
           </p>
           <div className="space-y-4">
             {[
@@ -1349,8 +1324,8 @@ const SuperAdminManagement = () => {
         {/* Age Groups */}
         <div>
           <div className="flex items-center justify-between gap-3 mb-3">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brandSoft }}>
-              Age Groups <span style={{ color: FG.danger }}>*</span>
+            <p className="type-tag text-accent-fg">
+              Age Groups <span className="text-danger-fg">*</span>
             </p>
             {/* Fourteen cells is a lot of clicking for the common case, which is
                 "run every category". Clicking it again clears the lot. */}
@@ -1370,7 +1345,7 @@ const SuperAdminManagement = () => {
               containing block or they stay behind when it moves. */}
           <div className="relative space-y-2 max-h-56 overflow-y-auto pr-1">
             {defaultAgeGroups.map(ag => (
-              <div key={ag} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+              <div key={ag} className="p-3 rounded-xl border bg-surface-sunken border-line">
                 <p className="text-xs font-bold text-ink/60 mb-2">{ageGroupLabels[ag]}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Male','Female'].map(gender => {
@@ -1397,11 +1372,11 @@ const SuperAdminManagement = () => {
         {/* Assign Admins (create only) */}
         {!editingCompetition && (
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>
-              Assign Admins <span style={{ color: FG.danger }}>*</span>
+            <p className="type-tag mb-3 text-accent-fg">
+              Assign Admins <span className="text-danger-fg">*</span>
             </p>
             <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-fg-muted" />
               <input type="text" placeholder="Search admins…" aria-label="Search admins" value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
                 className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all"
@@ -1438,12 +1413,11 @@ const SuperAdminManagement = () => {
         {selectedCompetition && (
           <div className="space-y-4">
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>Assigned Admins</p>
+              <p className="type-tag mb-3 text-accent-fg">Assigned Admins</p>
               {selectedCompetition.admins?.length ? (
                 <div className="space-y-2">
                   {selectedCompetition.admins.map(admin => (
-                    <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
-                      style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border bg-surface-sunken border-line">
                       <div>
                         <p className="text-sm font-bold text-ink">{admin.name}</p>
                         <p className="text-xs text-fg-muted">{admin.email}</p>
@@ -1457,11 +1431,10 @@ const SuperAdminManagement = () => {
               ) : <p className="text-sm text-fg-muted">No admins assigned.</p>}
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brandSoft }}>Available Admins</p>
+              <p className="type-tag mb-3 text-accent-fg">Available Admins</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {(admins || []).filter(a => a.role !== 'superadmin' && !selectedCompetition.admins?.find(sa => sa._id === a._id)).map(admin => (
-                  <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border"
-                    style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                  <div key={admin._id} className="flex items-center justify-between p-3 rounded-xl border bg-surface-sunken border-line">
                     <div>
                       <p className="text-sm font-bold text-ink">{admin.name}</p>
                       <p className="text-xs text-fg-muted">{admin.email}</p>
@@ -1480,28 +1453,21 @@ const SuperAdminManagement = () => {
       {/* Delete Competition Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirmation && competitionToDelete && (
-          <motion.div className="modal-overlay z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="absolute inset-0" 
-              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-              onClick={() => setShowDeleteConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
-              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="modal-overlay z-50">
+            <div className="absolute inset-0 bg-scrim" onClick={() => setShowDeleteConfirmation(false)}/>
+            <div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel bg-surface-overlay border-line">
               <div className="p-6">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-danger-tint">
+                  <Trash2 className="w-7 h-7 text-danger-fg" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-ink text-center mb-3">Delete Competition?</h3>
                 <div className="space-y-3 mb-6">
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <div className="p-4 rounded-xl bg-danger-tint border border-line">
                     <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
@@ -1512,7 +1478,7 @@ const SuperAdminManagement = () => {
                       {competitionToDelete.place} • {new Date(competitionToDelete.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed">
                       All associated data including <strong>teams, players, scores, and registrations</strong> will be permanently deleted.
                     </p>
@@ -1521,8 +1487,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleDeleteCompetition(competitionToDelete._id)}
-                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110 bg-danger-fill text-danger-on">
                     Yes, Delete Competition
                   </button>
                   <button 
@@ -1530,42 +1495,34 @@ const SuperAdminManagement = () => {
                       setShowDeleteConfirmation(false);
                       setCompetitionToDelete(null);
                     }}
-                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
-                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px] border-line">
                     Cancel
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Remove Admin Confirmation Modal */}
       <AnimatePresence>
         {showRemoveAdminConfirmation && adminToRemove && (
-          <motion.div className="modal-overlay z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="absolute inset-0" 
-              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-              onClick={() => setShowRemoveAdminConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
-              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="modal-overlay z-50">
+            <div className="absolute inset-0 bg-scrim" onClick={() => setShowRemoveAdminConfirmation(false)}/>
+            <div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel bg-surface-overlay border-line">
               <div className="p-6">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <UserX className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-danger-tint">
+                  <UserX className="w-7 h-7 text-danger-fg" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-ink text-center mb-3">Remove Admin?</h3>
                 <div className="space-y-3 mb-6">
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <div className="p-4 rounded-xl bg-danger-tint border border-line">
                     <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This admin will lose access to this competition.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to remove:
                     </p>
@@ -1576,7 +1533,7 @@ const SuperAdminManagement = () => {
                       {adminToRemove.email}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed">
                       From competition: <strong>{selectedCompetition?.name}</strong>
                     </p>
@@ -1585,8 +1542,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleRemoveAdmin(adminToRemove._id)}
-                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110 bg-danger-fill text-danger-on">
                     Yes, Remove Admin
                   </button>
                   <button 
@@ -1594,42 +1550,34 @@ const SuperAdminManagement = () => {
                       setShowRemoveAdminConfirmation(false);
                       setAdminToRemove(null);
                     }}
-                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
-                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px] border-line">
                     Cancel
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Delete Admin Confirmation Modal */}
       <AnimatePresence>
         {showDeleteAdminConfirmation && adminToDelete && (
-          <motion.div className="modal-overlay z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="absolute inset-0" 
-              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-              onClick={() => setShowDeleteAdminConfirmation(false)} />
-            <motion.div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel"
-              style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
+          <div className="modal-overlay z-50">
+            <div className="absolute inset-0 bg-scrim" onClick={() => setShowDeleteAdminConfirmation(false)}/>
+            <div className="relative w-full max-w-md rounded-3xl border overflow-hidden modal-panel bg-surface-overlay border-line">
               <div className="p-6">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${alpha(ADMIN_COLORS.red, 0x18)}`, border: `1px solid ${alpha(ADMIN_COLORS.red, 0x28)}` }}>
-                  <Trash2 className="w-7 h-7" style={{ color: FG.danger }} aria-hidden="true" />
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-danger-tint">
+                  <Trash2 className="w-7 h-7 text-danger-fg" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-black text-ink text-center mb-3">Delete Admin Account?</h3>
                 <div className="space-y-3 mb-6">
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <div className="p-4 rounded-xl bg-danger-tint border border-line">
                     <p className="text-sm text-ink/80 leading-relaxed">
                       ⚠️ <strong>Warning:</strong> This action <strong>cannot be undone</strong>.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed mb-2">
                       You are about to delete:
                     </p>
@@ -1640,7 +1588,7 @@ const SuperAdminManagement = () => {
                       {adminToDelete.email}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+                  <div className="p-4 rounded-xl bg-surface-sunken border border-line">
                     <p className="text-sm text-ink/70 leading-relaxed">
                       This admin will be <strong>permanently removed</strong> from the system and lose access to all competitions.
                     </p>
@@ -1649,8 +1597,7 @@ const SuperAdminManagement = () => {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handleDeleteAdmin(adminToDelete._id)}
-                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.red}, #DC2626)`, color: '#0A0A0A' }}>
+                    className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] transition-all hover:brightness-110 bg-danger-fill text-danger-on">
                     Yes, Delete Admin
                   </button>
                   <button 
@@ -1658,14 +1605,13 @@ const SuperAdminManagement = () => {
                       setShowDeleteAdminConfirmation(false);
                       setAdminToDelete(null);
                     }}
-                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px]"
-                    style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    className="w-full py-3 rounded-xl text-ink/60 hover:text-ink/80 border transition-colors min-h-[44px] border-line">
                     Cancel
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>

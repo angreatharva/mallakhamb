@@ -83,3 +83,6 @@
 .ui-link:hover { color: var(--fg); text-decoration-thickness: 2px; }
 .ui-link--quiet { color: var(--fg-secondary); }
 @media (min-width: 1024px) and (pointer: fine) { .ui-link { min-height: 32px; } }
+
+/* A quiet line saying what a list shows ("Team rankings for: …"): the rule, no tint. */
+.info-line { margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-control); background: rgb(var(--surface-sunken)); box-shadow: inset var(--rule) 0 0 0 var(--line-strong); font-size: 14px; color: var(--fg-secondary); }

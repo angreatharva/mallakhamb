@@ -42,6 +42,9 @@ export const LOOK_BY_ROUTE = [
   { match: /^\/(player|coach|judge|admin)\/select-(level|competition)\/?$/, look: 'prime-time' },
   // W2, player and coach: every screen under their prefixes.
   { match: /^\/(player|coach)(\/|$)/, look: 'prime-time' },
+  // W3, admin and superadmin: the dashboards and their tabs, scoring, teams,
+  // add-player-payment.
+  { match: /^\/(admin|superadmin)(\/|$)/, look: 'prime-time' },
 ];
 
 const OVERRIDE_KEY = 'mk-look-override';

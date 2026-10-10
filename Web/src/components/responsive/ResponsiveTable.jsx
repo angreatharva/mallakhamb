@@ -273,7 +273,7 @@ export const ResponsiveScoringTable = ({
               {/* Time */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <label style={{ fontSize: 12, color: textSecondary }}>
-                  Time <span style={{ color: FG.danger }}>*</span>
+                  Time <span className="text-danger-fg">*</span>
                 </label>
                 <ScoreInputCell
                   value={scores[player.id]?.time}
@@ -411,7 +411,7 @@ export const ResponsiveScoringTable = ({
                 const isJudgeCol = i >= 2 && i < 2 + judges.length;
                 return (
                   <th key={i} scope="col" style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
-                    {h === 'Time' ? <>{h} <span style={{ color: FG.danger }}>*</span></> : h}
+                    {h === 'Time' ? <>{h} <span className="text-danger-fg">*</span></> : h}
                     {isJudgeCol && judgeObj?.name && (
                       <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: DATA_COLORS.purpleSoft, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
                     )}

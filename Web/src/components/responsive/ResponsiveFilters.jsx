@@ -31,7 +31,7 @@ const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;
-const textPrimary   = 'rgb(var(--ink) / 0.90)';
+const textPrimary   = 'var(--fg)';
 const textSecondary = 'var(--fg-muted)';
 const textMuted     = 'var(--fg-muted)';
 
@@ -55,7 +55,7 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
         paddingRight: value ? 36 : 14,
         background: elevated,
         border: `1px solid ${borderMid}`,
-        borderRadius: 10,
+        borderRadius: 'var(--radius-control)',
         color: textPrimary,
         outline: 'none',
         boxSizing: 'border-box',
@@ -97,7 +97,7 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
       padding: '9px 18px',
       background: 'rgb(var(--ink) / 0.06)',
       border: `1px solid ${borderMid}`,
-      borderRadius: 10,
+      borderRadius: 'var(--radius-control)',
       color: textSecondary,
       fontSize: 13,
       fontWeight: 600,
@@ -117,7 +117,7 @@ const ActiveBadge = ({ count }) => count > 0 ? (
     background: `${alpha(C.saffron, 0x22)}`,
     color: FG.brandSoft,
     border: `1px solid ${alpha(C.saffron, 0x44)}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-control)',
     padding: '1px 8px',
     fontSize: 11,
     fontWeight: 700,
@@ -153,7 +153,7 @@ export const ResponsiveFilters = ({
           )}
 
           {filters.length > 0 && (
-            <div style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 'var(--radius-panel)', overflow: 'hidden' }}>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 style={{

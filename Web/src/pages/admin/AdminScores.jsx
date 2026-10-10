@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Filter, Search, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -10,17 +9,16 @@ import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
+import { Button, Heading, Tabs, TextLink } from '@/components/ui';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
 import { DarkCard, FadeIn, EmptyState, LoadingState, DarkSearch } from '@/components/admin/AdminKit';
 
-const InfoBanner = ({ color, children }) => (
-  <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(color, 0x10)}`, borderColor: `${alpha(color, 0x30)}` }}>
-    {children}
-  </div>
+/** Which category the list below shows: a quiet ruled line, not a coloured box. */
+const InfoBanner = ({ children }) => (
+  <div className="info-line">{children}</div>
 );
 
 const SCORE_TYPES = [
@@ -44,28 +42,16 @@ const competitionLabel = (competition) => [
   competition.place ? ` — ${competition.place}` : '',
 ].join('');
 
-/** Which view of the scores is on screen. */
+/** Which view of the scores is on screen (the Tabs primitive: arrows move and select). */
 const ScoreTypeTabs = ({ value, onChange }) => (
-  <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Score view">
-    {SCORE_TYPES.map((type) => {
-      const active = type.value === value;
-      return (
-        <button
-          key={type.value}
-          role="tab"
-          aria-selected={active}
-          onClick={() => onChange(type.value)}
-          className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[38px] border"
-          style={{
-            background: active ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'rgb(var(--ink) / 0.03)',
-            borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x45)}` : ADMIN_COLORS.darkBorderSubtle,
-            color: active ? FG.brandSoft : 'var(--fg-muted)',
-          }}>
-          {type.label}
-        </button>
-      );
-    })}
-  </div>
+  <Tabs
+    label="Score view"
+    idBase="score-view"
+    className="mb-5"
+    tabs={SCORE_TYPES.map((t) => ({ id: t.value, label: t.label }))}
+    value={value}
+    onChange={onChange}
+  />
 );
 
 const Scores = () => {
@@ -325,8 +311,8 @@ const Scores = () => {
     <div className="space-y-6">
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Scoring System</p>
-          <h2 className="text-2xl font-black text-ink mb-6">Scores &amp; Rankings</h2>
+          <p className="type-tag mt-0 mb-2 text-accent-fg">Scoring System</p>
+          <Heading level={2} step="display-m" className="mb-6">Scores &amp; Rankings</Heading>
 
           <ScoreTypeTabs value={scoreType} onChange={setScoreType} />
 
@@ -360,10 +346,10 @@ const Scores = () => {
               <div>
                 {scoreType === 'add' && (
                   <div>
-                    <h3 className="text-lg font-bold text-ink mb-4">Add New Score</h3>
+                    <Heading level={3} step="display-s" className="mb-4">Add New Score</Heading>
                     {submittedTeams.length > 0 && (
                       <>
-                        <InfoBanner color={ADMIN_COLORS.green}>
+                        <InfoBanner>
                           <span className="text-ink/70">Showing teams for: </span>
                           <span className="font-bold text-ink">{categoryLabel}</span>
                           <span className="text-fg-muted ml-2">({submittedTeams.length} team{submittedTeams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
@@ -375,7 +361,7 @@ const Scores = () => {
                       {submittedTeams.length > 0 ? (
                         filteredTeams.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
+                            action={<TextLink as="button" type="button" onClick={() => setSearchTerm('')}>Clear search</TextLink>} />
                         ) : (
                           <ResponsiveTeamTable
                             teams={filteredTeams}
@@ -385,19 +371,16 @@ const Scores = () => {
                             }}
                             searchTerm={searchTerm}
                             renderMobileCard={(team) => (
-                              <div key={team._id} className="rounded-xl border p-4" style={{ background: ADMIN_COLORS.darkPanel, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                              <div key={team._id} className="rounded-xl border p-4 bg-surface-sunken border-line">
                                 <h4 className="font-bold text-ink">Team: {team.name}</h4>
                                 <p className="text-sm text-fg-muted mt-1">Coach: {team.coach?.name || 'Unknown'}</p>
                                 <p className="text-xs text-fg-muted mt-1">Submitted: {new Date(team.submittedAt).toLocaleDateString()}</p>
-                                <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
                                   <span className="text-sm text-fg-muted">Players: <span className="font-bold text-ink">{team.players?.length || 0}</span></span>
-                                  <motion.button
-                                    onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-snow tap-safe mouse:min-h-[36px]"
-                                    style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
-                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                                  <Button variant="line" size="sm"
+                                    onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}>
                                     View Details →
-                                  </motion.button>
+                                  </Button>
                                 </div>
                               </div>
                             )}
@@ -412,18 +395,18 @@ const Scores = () => {
 
                 {scoreType === 'individual' && (
                   <div>
-                    <h3 className="text-lg font-bold text-ink mb-4">Individual Rankings</h3>
+                    <Heading level={3} step="display-s" className="mb-4">Individual Rankings</Heading>
                     {scores.length > 0 ? (
                       <>
-                        <InfoBanner color={ADMIN_COLORS.blue}>
+                        <InfoBanner>
                           <span className="text-ink/70">Individual rankings for: </span>
                           <span className="font-bold text-ink">{categoryLabel}</span>
                         </InfoBanner>
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
 
                         <div className="flex items-center gap-2 px-1 mb-4">
-                          <Users className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.35)' }} aria-hidden="true" />
-                          <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
+                          <Users className="w-3.5 h-3.5 text-fg-muted" aria-hidden="true" />
+                          <span className="type-tag text-fg-muted">
                             {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
                             {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
                           </span>
@@ -431,7 +414,7 @@ const Scores = () => {
 
                         {filteredPlayers.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No players found" desc={`No players match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
+                            action={<TextLink as="button" type="button" onClick={() => setSearchTerm('')}>Clear search</TextLink>} />
                         ) : (
                           <PlayerRankingBoard players={filteredPlayers} />
                         )}
@@ -444,10 +427,10 @@ const Scores = () => {
 
                 {scoreType === 'rankings' && (
                   <div>
-                    <h3 className="text-lg font-bold text-ink mb-4">Team Rankings</h3>
+                    <Heading level={3} step="display-s" className="mb-4">Team Rankings</Heading>
                     {scores.length > 0 ? (
                       <>
-                        <InfoBanner color={ADMIN_COLORS.purple}>
+                        <InfoBanner>
                           <span className="text-ink/70">Team rankings for: </span>
                           <span className="font-bold text-ink">{categoryLabel}</span>
                           <span className="text-fg-muted ml-2">({scores.length} team{scores.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeamRankings.length} after search`})</span>
@@ -455,7 +438,7 @@ const Scores = () => {
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name…" /></div>
                         {filteredTeamRankings.length === 0 && searchTerm ? (
                           <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                            action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
+                            action={<TextLink as="button" type="button" onClick={() => setSearchTerm('')}>Clear search</TextLink>} />
                         ) : (
                           <ResponsiveTeamRankings teams={filteredTeamRankings} searchTerm={searchTerm} />
                         )}

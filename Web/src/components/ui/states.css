@@ -42,3 +42,6 @@
 .ui-state__tag { color: var(--fg-secondary); }
 .ui-state--error .ui-state__tag { color: rgb(var(--danger-fg)); }
 .ui-state__text { margin: 0; color: var(--fg); max-width: 40rem; }
+/* Centred (the admin screens' empty lists). */
+.ui-state--center { justify-items: center; text-align: center; padding-block: clamp(28px, 4vw, 48px); }
+.ui-state--center .ui-state__text { color: var(--fg-secondary); }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import Dropdown from '@/components/auth/Dropdown';
@@ -20,8 +20,8 @@ const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_che
 const DarkInput = ({ label, required, error, hint, id, ...props }) => (
   <div>
     {label && (
-      <label htmlFor={id} className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-        {label}{required && <span style={{ color: FG.danger }}> *</span>}
+      <label htmlFor={id} className="block type-tag mb-1.5 text-accent-fg">
+        {label}{required && <span className="text-danger-fg"> *</span>}
       </label>
     )}
     <input
@@ -32,7 +32,7 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
       onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
-    {hint && <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>{hint}</p>}
+    {hint && <p className="text-xs mt-1 text-fg-muted">{hint}</p>}
   </div>
 );
 
@@ -331,11 +331,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.firstName && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
                 <AlertCircle className="w-3 h-3" />
                 {errors.firstName.message}
-              </motion.p>
+              </p>
             )}
           </AnimatePresence>
         </div>
@@ -355,11 +354,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.lastName && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
                 <AlertCircle className="w-3 h-3" />
                 {errors.lastName.message}
-              </motion.p>
+              </p>
             )}
           </AnimatePresence>
         </div>
@@ -383,11 +381,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.email && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
                 <AlertCircle className="w-3 h-3" />
                 {errors.email.message}
-              </motion.p>
+              </p>
             )}
           </AnimatePresence>
         </div>
@@ -412,11 +409,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           />
           <AnimatePresence>
             {errors.dateOfBirth && (
-              <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
                 <AlertCircle className="w-3 h-3" />
                 {errors.dateOfBirth.message}
-              </motion.p>
+              </p>
             )}
           </AnimatePresence>
         </div>
@@ -445,17 +441,17 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedAgeGroup && errors.ageGroup}
           />
           {!selectedGender && (
-            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-1 text-fg-muted">
               Select gender first
             </p>
           )}
           {selectedGender && !dateOfBirth && (
-            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-1 text-fg-muted">
               Enter date of birth first
             </p>
           )}
           {selectedGender && dateOfBirth && playerAge !== null && (
-            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-1 text-fg-muted">
               Player age: {playerAge} years. Showing eligible categories.
             </p>
           )}
@@ -504,17 +500,17 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             error={!selectedTeam && errors.team}
           />
           {!selectedCompetition && (
-            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-1 text-fg-muted">
               Select a competition first
             </p>
           )}
           {selectedCompetition && loadingTeams && (
-            <p className="text-xs mt-1" style={{ color: FG.brand }}>
+            <p className="text-xs mt-1 text-accent-fg">
               Loading teams for selected competition...
             </p>
           )}
           {selectedCompetition && !loadingTeams && teamOptions.length === 0 && (
-            <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-1 text-fg-muted">
               No teams found for this competition
             </p>
           )}
@@ -523,15 +519,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       
       {/* Apparatus */}
       {selectedCompetition && Object.keys(availableApparatusesByType).length > 0 && (
-        <div className="pt-2 border-t mt-4" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <label className="block text-xs font-bold tracking-wide uppercase mb-3" style={{ color: FG.brandSoft }}>
-            Apparatus Selection <span style={{ color: FG.danger }}>*</span>
+        <div className="pt-2 border-t mt-4 border-line">
+          <label className="block type-tag mb-3 text-accent-fg">
+            Apparatus Selection <span className="text-danger-fg">*</span>
           </label>
           <div className="space-y-4">
             {Object.entries(availableApparatusesByType).map(([compType, apparatuses]) => {
               const typeLabel = compType === 'competition_1' ? 'Competition I' : compType === 'competition_2' ? 'Competition II' : 'Competition III';
               return (
-                <div key={compType} className="p-3 rounded-xl border" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                <div key={compType} className="p-3 rounded-xl border bg-surface-sunken border-line">
                   <p className="text-xs font-bold text-ink/60 mb-2">{typeLabel}</p>
                   <div className="flex flex-wrap gap-3">
                     {apparatuses.map((app) => {
@@ -567,7 +563,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             })}
           </div>
           {Object.values(selectedApparatus).flat().length === 0 && (
-            <p className="text-xs mt-2" style={{ color: FG.danger }}>
+            <p className="text-xs mt-2 text-danger-fg">
               At least one apparatus must be selected across all competitions
             </p>
           )}
@@ -576,8 +572,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       
       {/* Password */}
       <div>
-        <label htmlFor="password" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-          Password <span style={{ color: FG.danger }}>*</span>
+        <label htmlFor="password" className="block type-tag mb-1.5 text-accent-fg">
+          Password <span className="text-danger-fg">*</span>
         </label>
         <div className="relative">
           <input
@@ -622,11 +618,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         </div>
         <AnimatePresence>
           {errors.password && (
-            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
               <AlertCircle className="w-3 h-3" />
               {errors.password.message}
-            </motion.p>
+            </p>
           )}
         </AnimatePresence>
         <PasswordStrengthIndicator password={password} />
@@ -635,8 +630,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       
       {/* Confirm Password */}
       <div>
-        <label htmlFor="confirmPassword" className="block text-xs font-bold tracking-wide uppercase mb-1.5" style={{ color: FG.brandSoft }}>
-          Confirm Password <span style={{ color: FG.danger }}>*</span>
+        <label htmlFor="confirmPassword" className="block type-tag mb-1.5 text-accent-fg">
+          Confirm Password <span className="text-danger-fg">*</span>
         </label>
         <div className="relative">
           <input
@@ -681,18 +676,16 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
         </div>
         <AnimatePresence>
           {errors.confirmPassword && (
-            <motion.p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: FG.danger }}
-              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <p className="text-xs mt-1.5 flex items-center gap-1 text-danger-fg">
               <AlertCircle className="w-3 h-3" />
               {errors.confirmPassword.message}
-            </motion.p>
+            </p>
           )}
           {!errors.confirmPassword && confirmPassword && password === confirmPassword && (
-            <motion.div className="flex items-center gap-1.5 mt-1.5"
-              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <div className="flex items-center gap-1.5 mt-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-green-700 dark:text-green-500" />
               <p className="text-xs text-green-700 dark:text-green-500">Passwords match</p>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </div>

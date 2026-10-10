@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Shuffle, Filter, Users, ChevronDown, ChevronRight, Save, Trophy, Info } from 'lucide-react';
-import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
 import { adminLotsAPI, superAdminLotsAPI } from '@/services/ordering/lots.api';
@@ -230,7 +229,7 @@ const AdminLots = () => {
       />
 
       <DarkCard className="p-6">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>
+        <p className="type-tag mb-1 text-accent-fg">
           Lots &amp; Running Order
         </p>
         <h2 className="text-2xl font-black text-ink mb-6">Draw Lots</h2>
@@ -238,24 +237,24 @@ const AdminLots = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {isSuperAdmin && (
             <div className="lg:col-span-4">
-              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
-                Competition <span style={{ color: FG.danger }}>*</span>
+              <label className="block type-tag mb-2 text-accent-fg">
+                Competition <span className="text-danger-fg">*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder="Select a competition first" />
             </div>
           )}
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>Gender</label>
+            <label className="block type-tag mb-2 text-accent-fg">Gender</label>
             <Dropdown options={GENDER_OPTIONS} value={selectedGender} onChange={setSelectedGender} placeholder="Select gender" />
           </div>
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>Age Group</label>
+            <label className="block type-tag mb-2 text-accent-fg">Age Group</label>
             <Dropdown options={availableAgeGroups} value={selectedAgeGroup} onChange={setSelectedAgeGroup}
               placeholder="Select age group" disabled={!selectedGender} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>Competition</label>
+            <label className="block type-tag mb-2 text-accent-fg">Competition</label>
             <Dropdown options={COMPETITION_TYPE_OPTIONS} value={selectedCompetitionType} onChange={setSelectedCompetitionType}
               placeholder="Select competition type" />
           </div>
@@ -268,7 +267,7 @@ const AdminLots = () => {
               : 'Choose gender, age group and competition type to draw or edit its running order.'} />
         ) : loading ? (
           <div className="flex items-center justify-center py-12 gap-3">
-            <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin" style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+            <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin border-t-accent"/>
             <span className="text-fg-muted text-sm">Loading running order…</span>
           </div>
         ) : teams.length === 0 ? (
@@ -276,8 +275,7 @@ const AdminLots = () => {
             desc="No coach has submitted a team for this category yet, so there is nothing to draw." />
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border"
-              style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-surface-sunken border-line">
               <div className="text-sm">
                 <p className="text-ink font-bold">
                   {teams.length} team{teams.length !== 1 ? 's' : ''} in running order
@@ -291,15 +289,10 @@ const AdminLots = () => {
                     : ''}
                 </p>
               </div>
-              <motion.button
-                onClick={() => setShowDrawConfirm(true)}
-                disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.saffron}, #D97706)`, color: '#0A0A0A' }}
-                whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
+              <button onClick={() => setShowDrawConfirm(true)} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed bg-accent text-on-accent">
                 <Shuffle className="w-4 h-4" />
                 {hasLots ? 'Redraw Lots' : 'Draw Lots'}
-              </motion.button>
+              </button>
             </div>
 
             <div className="flex items-start gap-2 text-xs text-fg-muted px-1">
@@ -340,8 +333,8 @@ const AdminLots = () => {
                     </div>
 
                     {isExpanded && (
-                      <div className="mt-3 pl-1 border-l-2" style={{ borderColor: `${alpha(ADMIN_COLORS.saffron, 0x30)}` }}>
-                        <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: FG.brandSoft }}>
+                      <div className="mt-3 pl-1 border-l-2 border-line">
+                        <p className="type-tag mb-2 pl-3 text-accent-fg">
                           Athlete order
                         </p>
                         <div className="pl-3">
@@ -372,14 +365,9 @@ const AdminLots = () => {
 
             <div className="flex items-center justify-end gap-3 pt-2">
               {saving && <span className="text-xs text-fg-muted">Saving…</span>}
-              <motion.button
-                onClick={() => persistTeamOrder(teamsRef.current)}
-                disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50"
-                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`, color: '#0A0A0A' }}
-                whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
+              <button onClick={() => persistTeamOrder(teamsRef.current)} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 bg-accent text-on-accent">
                 <Save className="w-4 h-4" /> Save Order
-              </motion.button>
+              </button>
             </div>
           </div>
         )}

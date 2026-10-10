@@ -54,6 +54,11 @@
   .shell-header__extra { display: flex; }
   .shell-header__menu { display: none; }
 }
+/* A long row of tabs joins the bar only from xl; the menu covers lg too. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .shell-header--nav-xl .shell-header__nav { display: none; }
+  .shell-header--nav-xl .shell-header__menu { display: inline-flex; }
+}
 @media (min-width: 768px) and (max-width: 1023px) {
   .shell-header__menu { margin-left: 8px; }
 }

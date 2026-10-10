@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Filter, Users, X, Search } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, Filter, Users, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
@@ -10,34 +9,17 @@ import Dropdown from '@/components/auth/Dropdown';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { logger } from '@/infrastructure/logger';
 import { ResponsiveTeamFilters } from '../../components/responsive/ResponsiveFilters';
-import { ADMIN_COLORS, ADMIN_EASE_OUT, FG, alpha } from '../../styles/tokens';
-import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { Button, Dialog, Heading, StatusTag, TextLink } from '@/components/ui';
 import { DarkCard, FadeIn, EmptyState, LoadingState, DarkSearch } from '@/components/admin/AdminKit';
 
 const TeamModal = ({ team, onClose }) => (
-  <AnimatePresence>
+  <Dialog open={Boolean(team)} onClose={onClose} wide title="Team Details"
+    actions={<Button variant="line" onClick={onClose}>Close</Button>}>
     {team && (
-      <motion.div className="modal-overlay z-50"
-        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <BodyScrollLock />
-        <motion.div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border modal-panel"
-          style={{ background: ADMIN_COLORS.darkElevated, borderColor: ADMIN_COLORS.darkBorderSubtle }}
-          initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 20 }} transition={{ duration: 0.25, ease: ADMIN_EASE_OUT }}>
-          <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <div>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Team Details</p>
-              <h3 className="text-xl font-black text-ink mt-0.5">{team.team?.name || team.name}</h3>
-            </div>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-ink/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center" aria-label="Close">
-              <X className="w-5 h-5 text-ink/60" />
-            </button>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Team Information</p>
+          <div className="grid gap-6">
+            <Heading level={3} step="display-s" asIs>{team.team?.name || team.name}</Heading>
+            <div className="rounded-xl p-4 border bg-surface-sunken border-line">
+              <p className="type-tag mb-3 text-accent-fg">Team Information</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div><span className="text-fg-muted">Coach: </span><span className="text-ink">{team.coach?.name || `${team.coach?.firstName || ''} ${team.coach?.lastName || ''}`.trim() || 'No coach assigned'}</span></div>
                 {team.coach?.email && <div><span className="text-fg-muted">Email: </span><span className="text-ink">{team.coach.email}</span></div>}
@@ -50,11 +32,11 @@ const TeamModal = ({ team, onClose }) => (
               </div>
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Players ({team.players?.length || 0})</p>
+              <p className="type-tag mb-3 text-accent-fg">Players ({team.players?.length || 0})</p>
               {team.players?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {team.players.map((player, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                    <div key={i} className="rounded-xl p-4 border bg-surface-sunken border-line">
                       <p className="font-bold text-ink text-sm">{player.firstName} {player.lastName}</p>
                       <div className="mt-2 space-y-1 text-xs text-fg-muted">
                         <p>Gender: <span className="text-ink/70">{player.gender}</span></p>
@@ -67,32 +49,22 @@ const TeamModal = ({ team, onClose }) => (
                           </span></p>
                         )}
                       </div>
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
+                      <StatusTag status={player.isActive ? 'success' : 'warning'} className="mt-2">
                         {player.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </StatusTag>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 rounded-xl border" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                <div className="text-center py-8 rounded-xl border border-line">
                   <Users className="w-10 h-10 mx-auto mb-2 text-ink/20" />
                   <p className="text-fg-muted text-sm">No players registered</p>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex justify-end p-6 border-t" style={{ borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <motion.button onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] transition-all text-ink/70 hover:text-ink"
-              style={{ background: ADMIN_COLORS.darkPanel, border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}
-              whileTap={{ scale: 0.97 }}>
-              Close
-            </motion.button>
-          </div>
-        </motion.div>
-      </motion.div>
     )}
-  </AnimatePresence>
+  </Dialog>
 );
 
 const Teams = () => {
@@ -201,17 +173,17 @@ const Teams = () => {
       <TeamModal team={selectedTeam} onClose={() => setSelectedTeam(null)} />
       <FadeIn>
         <DarkCard className="p-6">
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Teams Management</p>
-          <h2 className="text-2xl font-black text-ink mb-6">All Teams</h2>
+          <p className="type-tag mt-0 mb-2 text-accent-fg">Teams Management</p>
+          <Heading level={2} step="display-m" className="mb-6">All Teams</Heading>
 
           {isSuperAdmin && (
-            <div className="mb-6 p-4 rounded-xl border" style={{ background: `${alpha(ADMIN_COLORS.saffron, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.saffron, 0x25)}` }}>
-              <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
-                Competition <span style={{ color: FG.danger }}>*</span>
+            <div className="mb-6 p-4 rounded-xl border bg-surface-sunken border-line">
+              <label className="block type-tag mb-2 text-accent-fg">
+                Competition <span className="text-danger-fg">*</span>
               </label>
               <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading competitions…' : 'Select a competition first'} disabled={loadingCompetitions} />
-              {!selectedCompetition && <p className="text-xs mt-2" style={{ color: FG.brandSoft }}>Select a competition to enable filters.</p>}
+              {!selectedCompetition && <p className="text-xs mt-2 text-accent-fg">Select a competition to enable filters.</p>}
             </div>
           )}
 
@@ -230,7 +202,7 @@ const Teams = () => {
             <LoadingState label="Loading teams…" />
           ) : teams.length > 0 ? (
             <div>
-              <div className="mb-4 p-3 rounded-xl border text-sm" style={{ background: `${alpha(ADMIN_COLORS.green, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.green, 0x30)}` }}>
+              <div className="mb-4 p-3 rounded-xl border text-sm bg-surface-sunken border-line">
                 <span className="text-ink/70">Showing </span>
                 <span className="font-bold text-ink">{selectedGender.label} — {selectedAgeGroup.label}</span>
                 <span className="text-fg-muted ml-2">({teams.length} team{teams.length !== 1 ? 's' : ''}{searchTerm && `, ${filteredTeams.length} after search`})</span>
@@ -238,7 +210,7 @@ const Teams = () => {
               <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search teams by name or coach…" /></div>
               {filteredTeams.length === 0 && searchTerm ? (
                 <EmptyState icon={Search} title="No teams found" desc={`No teams match "${searchTerm}"`}
-                  action={<button onClick={() => setSearchTerm('')} className="text-sm font-semibold" style={{ color: FG.brandSoft }}>Clear search</button>} />
+                  action={<TextLink as="button" type="button" onClick={() => setSearchTerm('')}>Clear search</TextLink>} />
               ) : (
                 <ResponsiveTeamTable teams={filteredTeams} onTeamClick={fetchTeamDetails} searchTerm={searchTerm} />
               )}
