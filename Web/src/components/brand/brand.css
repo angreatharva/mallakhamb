@@ -22,3 +22,5 @@
   white-space: nowrap;
 }
 .brand-wordmark .brand-mark { width: 13px; height: 34px; }
+/* The mark alone is still a 44px target (it is the link home). */
+.brand-wordmark--compact { min-width: 44px; justify-content: center; }

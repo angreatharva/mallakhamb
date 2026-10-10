@@ -36,7 +36,7 @@ export const Wordmark = ({ to = '/', compact = false, className = '' }) => {
     </>
   );
   return to
-    ? <Link to={to} className={cx('brand-wordmark', className)}>{content}</Link>
-    : <span className={cx('brand-wordmark', className)}>{content}</span>;
+    ? <Link to={to} className={cx('brand-wordmark', compact && 'brand-wordmark--compact', className)}>{content}</Link>
+    : <span className={cx('brand-wordmark', compact && 'brand-wordmark--compact', className)}>{content}</span>;
 };
 Wordmark.propTypes = { to: PropTypes.string, compact: PropTypes.bool, className: PropTypes.string };
