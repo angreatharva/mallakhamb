@@ -51,6 +51,27 @@ components/superadmin/AddPlayerForm.jsx
 `protected-route.jsx` implementation detail); noted here only for
 completeness.
 
+## Rollout additions (design-language W1–W4 + Phase 6, 2026-10-10/11)
+
+- `ui/Notice` (inline status, 3px rule; caller passes the role),
+  `ui/RunningOrder` + `RunningOrderItem` (numbered choice rows; `titleAs="h3"`
+  where the e2e flows read the card's h3), `ui/TextLink`, `Grain local`,
+  `Heading asIs` (names keep their case), popover/picker CSS (`ui/popover.css`:
+  `.ui-picker`, `.ui-popover*`, used by `auth/Dropdown` and
+  `competition/CompetitionSelector`), `.ui-check` (checkbox chip),
+  `.info-line`.
+- `shell/AuthLayout` + `AuthHeader` + `AuthLinks`: every sign-in, register,
+  forgot and reset screen (black stage side, `data-appearance="dark"` island).
+  `AppHeader` gained `extra`, `fixed`, `navFrom="xl"`, `compactBrand`, and
+  keeps the Light/Dark switch in the bar at every width. `AccountControls`
+  says "Logout" (the e2e name).
+- `scores/board.css`: the results board (`.sb-*`), the squad (`.squad-*`),
+  the fee sheet (`.pay-sheet*`), `.perf-tab`. Imported through `ui.css`.
+- `admin/AdminKit` keeps its names (DarkCard, FadeIn, DarkBtn…) but is drawn
+  by the primitives; `auth/ConfirmDialog` (isOpen/message API) wraps the
+  `ui` ConfirmDialog.
+- `components/design-system/` is gone except `accessibility/LiveRegion`.
+
 ## `shell/` and `brand/` (design-language Phase 4, branch `look/phase-4-shells`)
 
 `@/components/shell`: `AppHeader` (wordmark, RoleIdent, competition

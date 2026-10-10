@@ -28,6 +28,16 @@ source, colours are CSS custom properties, and the app has Light and
 Dark. Full history: `docs/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
 `docs/RESPONSIVE_UIUX_REPORT.md` (summary).
 
+**Current state (2026-10-11, Phase 6, branch `look/phase-6-retire-classic`,
+unmerged):** prime-time is the ONLY look. `DEFAULT_LOOK = 'prime-time'`, the
+classic pack is deleted, `LOOK_BY_ROUTE` is empty (the mechanism stays: the
+next look rolls out through it — `docs/design-language/LOOKS.md`), the 404
+claims its look with `claimLook()`. The old `components/design-system/`
+(GlassCard, Themed*, ThemeProvider, GradientText, AmbientOrbs, FadeIn…) is
+deleted except `accessibility/LiveRegion`. `COLORS`/`ADMIN_COLORS` proxies
+still have users (their values are token strings). The history below is
+how it got here; where it says "classic routes", read "before the wave".
+
 **Look packs (Phase 1 of `docs/design-language/PLAN.md`, branch
 `look/phase-1-tokens`, 2026-10-07).** Token VALUES no longer live in
 `index.css`: they are in look packs, `src/styles/looks/{classic,prime-time}.js`,
@@ -119,8 +129,7 @@ axis is "Look", for the same reason.
 
 ## Where colour values live
 
-- **The look packs** hold every value (`classic` is what every route uses
-  today): role palettes, then dark and light blocks of **RGB triplets** (`--bg`, `--surface*`, `--ink`, `--fg*`,
+- **The look pack** (`prime-time.js`) holds every value: role palettes, then dark and light blocks of **RGB triplets** (`--bg`, `--surface*`, `--ink`, `--fg*`,
   `--line*`, status, data palette `--cat-*`, `--medal-*`), then derived
   tokens re-declared per appearance — generated into `looks.css`.
 - **`tailwind.config.js`** colours are channels: `ink: rgb(var(--ink) / <alpha>)`
@@ -217,7 +226,7 @@ differ visually). Before editing one, grep the call site's import path.
 ## Change guidance
 
 - New colour token: add it to `src/styles/looks/contract.js` and to both
-  appearances of **every** pack, run `npm run looks`, expose it in Tailwind as
+  appearances of **every** pack (today only `prime-time`), run `npm run looks`, expose it in Tailwind as
   a channel and through `FG`/`DATA_COLORS` for JS. `npx vitest run src/styles`,
   then the browser contrast audit in both appearances.
 - Opacity on a token: `alpha()`, or Tailwind's `/NN` on a channel colour.
@@ -225,5 +234,5 @@ differ visually). Before editing one, grep the call site's import path.
 - Breakpoints / z-index: `breakpoints.js` only, then restart the dev server.
 - Text that must stay white on a photo: `snow`. Text that should follow
   the appearance: `ink` / `FG`.
-- A restyle beyond a value tweak: read `docs/design-language/PLAN.md` first —
-  pages are meant to stop holding visual decisions.
+- A restyle beyond a value tweak: `docs/design-language/LOOKS.md` (the
+  playbook) — pages hold no visual decisions; a restyle is a pack edit.

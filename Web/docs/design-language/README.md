@@ -1,6 +1,6 @@
 # The design language: how to build a screen
 
-The plan and its progress log: [PLAN.md](PLAN.md). This file is the working guide. Read it before restyling or building any screen.
+The plan and its progress log: [PLAN.md](PLAN.md). How to change the look itself: [LOOKS.md](LOOKS.md). The rollout's final report: [REPORT.md](REPORT.md). This file is the working guide. Read it before building or restyling any screen.
 
 ## The one rule
 
@@ -24,7 +24,7 @@ Import them from `@/components/ui`:
 | An icon-only action | `IconButton label="…"`: the label is required, it is the accessible name |
 | A form control | `Field` around `Input`, `Select`, `Textarea` or `PasswordInput`. Field wires the label, the help text and the error. Mark fields: `<Input numeric inputMode="decimal" />`, never `type="number"` |
 | A surface | `Panel` (`plain` · `band` · `feature`; `rule="danger"`) |
-| A heading | `Heading level={…} step="display-l"`. The level is the outline; the step is the look |
+| A heading | `Heading level={…} step="display-l"`. The level is the outline; the step is the look. `asIs` keeps a name's own case |
 | A label or role | `Tag` (`neutral` · `accent` · `ident`, `solid`) |
 | A status | `StatusTag status="success\|warning\|danger\|info"`. Always text, never a coloured dot alone |
 | A key number | `Stat` (label, value, unit) · `SpecList` (label/value rows) |
@@ -37,13 +37,13 @@ Import them from `@/components/ui`:
 | A choice read as a list (levels, competitions) | `RunningOrder` + `RunningOrderItem` (`index`, `title`, `meta`, `aside`, `selected`, `muted`). The number is decoration; titles keep their case |
 | A link in running text | `TextLink` (`as={Link}`; `ui-link--quiet` for the secondary one) |
 | Stage screens only | `Grain`, `Heading sting` |
-| Toasts | `toastOptions` (App's `<Toaster>` uses them on prime-time routes) |
+| Toasts | `toastOptions` (App's `<Toaster>` uses them) |
 
 The shell, from `@/components/shell`:
 
 | Need | Use |
 |---|---|
-| A signed-in screen's masthead | `AppHeader role segment nav onLogout profileTo`. The wordmark, the role ident, the competition as the "segment", tabs and the account cluster. On phones, one menu button opens a drawer holding the tabs and the account cluster, so the Light/Dark switch is always reachable |
+| A signed-in screen's masthead | `AppHeader role segment nav onLogout profileTo` (+ `extra` for a picker, `fixed`, `navFrom="xl"` for a long tab row, `compactBrand`). The wordmark, the role ident, the competition as the "segment", tabs and the account cluster. On phones, one menu button opens a drawer holding the tabs and the account cluster, so the Light/Dark switch is always reachable |
 | The page's title row | `PageHeader eyebrow title lede actions`: the page's `h1` |
 | The role | `RoleIdent role`: text and colour, never colour alone |
 | Light/Dark, Profile, Log out | `AccountControls` |
@@ -73,7 +73,7 @@ The type steps are Tailwind utilities: `type-display-xl/l/m/s`, `type-num-l/m`, 
 
 Never import a primitive's CSS from its component. A lazy chunk would load after the utilities and override a page's layout.
 
-The `@font-face` rules are the exception, and the opposite way round. They live in `src/styles/look-fonts.js` and load only with what is drawn in them (Home, prime-time routes, the primitives). Declaring them in the entry moved pixels on a classic screen.
+The `@font-face` rules are the exception, and the opposite way round. They live in `src/styles/look-fonts.js` and load with what is drawn in them (`loadLookFonts` in App, Home, the primitives), never in the entry chunk: declaring them there once moved pixels on a screen that did not draw the fonts.
 
 ## Seeing it
 
@@ -89,7 +89,7 @@ To photograph it and audit contrast, layout and targets:
 E2E_BASE_URL=http://localhost:4175 npx playwright test e2e/look-specimen.spec.js --project=chromium
 ```
 
-To preview any route in a look, add `?look=prime-time` in dev or an override build. It applies to that browser tab only; `?look=off` clears it.
+To preview a route in another look (when there is one), add `?look=<id>` in dev or an override build. It applies to that browser tab only; `?look=off` clears it.
 
 | Dark, 1366 | Light, 1366 |
 |---|---|

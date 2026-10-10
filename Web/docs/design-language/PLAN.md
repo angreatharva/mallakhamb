@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** Phases 0–4 done (2026-10-10) on branch `look/phase-4-shells` (stacked on Phases 1–3), not merged. Next: Phase 5, wave W1 (public and auth). See the progress log (§14).
+**Status:** Phases 0–7 done (2026-10-11) on stacked branches ending at `look/phase-6-retire-classic`; **not merged, not deployed** (merging and the Render deploy wait for the owner). Prime-time is the only look. See the progress log (§14), [REPORT.md](REPORT.md) and [LOOKS.md](LOOKS.md).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -832,3 +832,41 @@ The judge dashboard already shifts on master, so its gate is "no worse", not 0. 
 - **Specimen:** 0 failures (contrast, overflow, 44 px targets, masthead overlap), all roles, both appearances.
 - **Speed:** within master's spread on every route; classic routes still 0 font bytes; CSS +6 KB.
 - vitest **476/476**; lint ratchet holds; `looks:check` clean.
+
+### 2026-10-10: W1, public and auth (branch `look/w1-public-auth`, commit `e1a8741`)
+
+- `AuthLayout` (shell): the split sign-in layout — the black stage side (`data-appearance="dark"` island: role ident, the role name in Teko with the stinger, pole mark, grain, the portal row on sign-in pages) and the form side (one saffron submit, underlined `TextLink`s, `Notice` errors). Login, register, admin register, forgot and reset use it.
+- The choosers are running orders (`RunningOrder`); "Opening ‹name›…" and "Counting…" are unchanged.
+- `/scores` is a results graphic: medal colours on the rank and the podium's 3px rule, totals in the display face, the panel-rule average as ruled values. The board is shared with the admin scores page.
+- The 404 claims its look (`claimLook`): no path can name it.
+- Every id, heading and accessible name the e2e and seed flows read was kept (checked against `e2e/support`).
+- **Gate:** pixel gate vs v4 — every difference is on a W1 route or on the admin/superadmin scores tabs (the shared board and filters, expected); one 7 px antialiasing change on the judge-profile avatar glyph (re-run alone: the same 7 px, a screen W4 rewrites). Specimen and unit tests green.
+
+### 2026-10-10: W2, player and coach (branch `look/w2-player-coach`, commit `65ede8f`)
+
+- The Navbar is the shared `AppHeader` (`fixed`, the picker in `extra`); the Light/Dark switch stays in the bar at every width.
+- Player dashboard, team selection, coach dashboard (squad, summary, add-player and submit dialogs), create team and payment rebuilt on the primitives. Razorpay's theme reads `looks.meta.json`.
+- Shared widgets restyled once: `Dropdown`, `CompetitionSelector`, `CompetitionDisplay`, the lock banner, `PerformancePanel`.
+
+### 2026-10-10: W3, admin and superadmin (branch `look/w3-admin`, commit `87140ac`)
+
+- `UnifiedDashboard`'s masthead is `AppHeader` with the tabs as links (from `xl`), `AdminKit` is drawn by the primitives, the old `ConfirmDialog` API wraps the primitive.
+- Inline tints, pills, scrims and gradient fills became token classes, and decorative framer was removed, by three reviewed codemods (`.mk-look-builds/scratch/w1/codemod_*.py`).
+
+### 2026-10-10: W4, judge (branch `look/w4-judge`, commit `b11c725`)
+
+- The judge colour set `J` and every fill read tokens; ambient orbs gone; `LiveDot` a status tag; decorative framer removed. `StopwatchFace` untouched. All 176 judge unit tests pass unchanged.
+- **Not done in this wave, deliberately:** the judge headers and the slip's row anatomy keep their structure (token colours only). See REPORT.md.
+
+### 2026-10-11: Phase 6, retire classic (branch `look/phase-6-retire-classic`, commit `5425d98` + `59a0266`)
+
+- `DEFAULT_LOOK = 'prime-time'`; the classic pack deleted; `LOOK_BY_ROUTE` empty (mechanism kept); theme-color and `appearance-init.js` paint prime-time.
+- `components/design-system/` deleted except `LiveRegion`; the judge profile rebuilt on the primitives; the global hover lift and Tailwind's legacy palettes deleted.
+- `no-hardcoded-colors` is an error in every folder at zero.
+- **Audits on the W4 build** (before Phase 6): specimen 2/2, contrast-audit 6/6, appearance-everywhere 1/1, focus-visible 6/6, responsive-audit 6/6 (only Home's two footer links, untouched), score sheet 2/2, judge walk 1/1, judge deep screens 1/1. deep-screens failed once: the mark-only wordmark was a 13 px-wide link at 768 on admin tabs — fixed (`59a0266`).
+
+### 2026-10-11: Phase 7, hand-over
+
+- [LOOKS.md](LOOKS.md): the playbook (§11) as a working guide, the gates, the wave checklist, the traps.
+- [REPORT.md](REPORT.md): what changed, the verification, what is left.
+- README updated for the new primitives; Web/MEMORY (05, 07, GOTCHAS) and project memory updated.
