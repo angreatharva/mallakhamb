@@ -14,8 +14,8 @@ vi.mock('./look-fonts.js', () => { faces.loaded += 1; return {}; });
 const preloads = () => [...document.head.querySelectorAll('link[rel="preload"][as="font"]')].map((l) => l.getAttribute('href'));
 
 describe('loadLookFonts', () => {
-  it('does nothing for classic: no preload, no @font-face chunk', () => {
-    expect(loadLookFonts('classic')).toBeNull();
+  it('does nothing for a look without web fonts: no preload, no @font-face chunk', () => {
+    expect(loadLookFonts('no-such-look')).toBeNull();
     expect(preloads()).toEqual([]);
     expect(faces.loaded).toBe(0);
   });

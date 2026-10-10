@@ -7,14 +7,12 @@
  * Only the generator, the tests and the specimen page import this; components
  * read the CSS custom properties (plan §4.6).
  */
-import classic from './classic.js';
 import primeTime from './prime-time.js';
 import { resolveLook } from './define.js';
 
-export const DEFAULT_LOOK_ID = 'classic';
+export const DEFAULT_LOOK_ID = 'prime-time';
 
 export const LOOK_PACKS = {
-  [classic.id]: classic,
   [primeTime.id]: primeTime,
 };
 

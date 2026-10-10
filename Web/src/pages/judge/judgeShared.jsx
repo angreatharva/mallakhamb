@@ -742,16 +742,6 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
 
 
 
-/**
- * The purple wash every judge screen sits on.
- *
- * Was a local `Orb` that each of the five judge pages placed three copies of,
- * unclipped, directly in the page root — the x=95 orb hung past the right edge
- * and dragged the document with it, so every judge screen scrolled sideways at
- * 375px AND at 1440px. `AmbientOrbs` owns the clip and the per-viewport
- * scaling; the three positions below are the ones those pages already used, so
- * the desktop look is unchanged.
- */
 /** Working screens carry no ambient decoration (plan §5.7): kept as a no-op so callers need not change. */
 export const JudgeAmbience = () => null;
 

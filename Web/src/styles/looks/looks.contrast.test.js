@@ -5,8 +5,7 @@
  * it is measured on.
  *
  * A look may list pairs it knowingly fails in `contrastExceptions`, each with
- * a reason. `classic` uses that for today's design, which must not move;
- * `prime-time` must pass with none.
+ * a reason. `prime-time` passes with none; a new look should too.
  */
 import { describe, expect, it } from 'vitest';
 import { APPEARANCES, CONTRAST_PAIRS, ROLES, SURFACES } from './contract.js';

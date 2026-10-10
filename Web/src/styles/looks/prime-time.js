@@ -244,7 +244,6 @@ export default defineLook({
     'control-h-mouse': '36px',
     pad: 'clamp(16px, 4vw, 56px)',
     'grain-opacity': '0.075',
-    'hover-lift': '0px',
   },
 
   // One switch for everything: every duration is 0 under reduced motion.

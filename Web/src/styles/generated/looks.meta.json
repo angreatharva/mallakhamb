@@ -1,25 +1,7 @@
 {
   "generatedBy": "scripts/build-looks.mjs",
-  "default": "classic",
+  "default": "prime-time",
   "looks": {
-    "classic": {
-      "dark": {
-        "bg": "#0a0a0a",
-        "surface": "#111111",
-        "surface-raised": "#161616",
-        "surface-sunken": "#0a0a0a",
-        "surface-overlay": "#1a1a1a",
-        "accent": "#3b82f6"
-      },
-      "light": {
-        "bg": "#f6f7f9",
-        "surface": "#ffffff",
-        "surface-raised": "#ffffff",
-        "surface-sunken": "#eef0f3",
-        "surface-overlay": "#ffffff",
-        "accent": "#1d4ed8"
-      }
-    },
     "prime-time": {
       "dark": {
         "bg": "#000000",

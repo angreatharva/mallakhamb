@@ -24,11 +24,6 @@ vi.mock('react-router-dom', () => ({ useNavigate: () => h.navigate }));
 vi.mock('@/contexts/CompetitionContext', () => ({ useCompetition: () => h.ctx }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: h.user, login: vi.fn() }) }));
 vi.mock('@/hooks/useResponsive', () => ({ useReducedMotion: () => true }));
-vi.mock('@/components/design-system', () => ({
-  GradientText: ({ children }) => <span>{children}</span>,
-  FadeIn: ({ children, className }) => <div className={className}>{children}</div>,
-}));
-vi.mock('@/components/design-system/backgrounds', () => ({ AmbientOrbs: () => null, ORB_INTENSITY: {} }));
 vi.mock('@/utils/auth/secureStorage', () => ({
   secureStorage: { getItem: () => 'token', setItem: vi.fn(), removeItem: vi.fn() },
 }));

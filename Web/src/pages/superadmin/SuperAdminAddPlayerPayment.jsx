@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { COLORS, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { FadeIn } from '@/components/design-system';
+import looksMeta from '@/styles/generated/looks.meta.json';
+import { FadeIn } from '@/components/admin/AdminKit';
 import { logger } from '@/infrastructure/logger';
 import { calculatePlayerFee, resolveFeeWindow, formatFeeWindowDate } from '@/utils/scoring/competitionFee';
+
+/** Razorpay takes a hex for its theme: the brand saffron from the pack metadata. */
+const RAZORPAY_THEME = looksMeta.looks['prime-time'].dark.accent;
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -79,7 +81,6 @@ const SuperAdminAddPlayerPayment = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
-  const reduced = useReducedMotion();
 
   useEffect(() => {
     try {
@@ -194,7 +195,7 @@ const SuperAdminAddPlayerPayment = () => {
           email: playerData.email || undefined,
         },
         theme: {
-          color: COLORS.saffron,
+          color: RAZORPAY_THEME,
         },
         method: {
           upi: true,
@@ -237,8 +238,8 @@ const SuperAdminAddPlayerPayment = () => {
       <div className="min-h-screen flex items-center justify-center bg-bg">
         <div className="text-center">
           <div
-            className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
+            className="ui-spinner text-accent-fg mx-auto mb-4"
+            aria-hidden="true"
           />
           <p className="text-fg-muted text-sm">Loading checkout…</p>
         </div>
@@ -309,14 +310,6 @@ const SuperAdminAddPlayerPayment = () => {
 
   return (
     <div className="min-h-screen bg-bg text-fg">
-      {!reduced && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full"
-            style={{ background: `${alpha(COLORS.saffron, 0x06)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }}
-          />
-        </div>
-      )}
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
         <FadeIn>
@@ -394,7 +387,7 @@ const SuperAdminAddPlayerPayment = () => {
 
               <div
                 className="space-y-2 mb-6 p-4 rounded-2xl"
-                style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                style={{ background: 'rgb(var(--surface-sunken))', border: '1px solid var(--line)' }}
               >
                 <div className="flex justify-between text-sm items-center">
                   <div>

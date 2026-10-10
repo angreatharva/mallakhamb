@@ -1,5 +1,4 @@
 import UnifiedDashboard from '../unified/UnifiedDashboard';
-import { ThemeProvider } from '../../components/design-system/theme';
 
 /**
  * AdminDashboard - Redirect wrapper for backward compatibility
@@ -9,9 +8,7 @@ import { ThemeProvider } from '../../components/design-system/theme';
  */
 const AdminDashboard = ({ routePrefix: routePrefixProp }) => {
   return (
-    <ThemeProvider role="admin">
-      <UnifiedDashboard routePrefix={routePrefixProp} />
-    </ThemeProvider>
+    <UnifiedDashboard routePrefix={routePrefixProp} />
   );
 };
 

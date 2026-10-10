@@ -77,6 +77,25 @@ export default defineConfig([
     },
   },
   {
+    // Folders the design-language rollout has finished: a hard-coded colour is
+    // an error here, so the token rule cannot slide back (PLAN Phase 6). Add a
+    // folder once its count reaches zero; `npm run lint:ratchet` holds the rest.
+    files: [
+      'src/components/ui/**/*.{js,jsx}',
+      'src/components/shell/**/*.{js,jsx}',
+      'src/components/brand/**/*.{js,jsx}',
+      'src/components/competition/**/*.{js,jsx}',
+      'src/components/layout/**/*.{js,jsx}',
+      'src/pages/player/**/*.{js,jsx}',
+      'src/pages/unified/**/*.{js,jsx}',
+      'src/pages/shared/**/*.{js,jsx}',
+      'src/pages/public/*.{js,jsx}',
+    ],
+    rules: {
+      'design-system/no-hardcoded-colors': 'error',
+    },
+  },
+  {
     // The look packs ARE the token source (docs/design-language/PLAN.md §4.3):
     // the one place a raw colour or length is supposed to be written. The
     // rules already exempt styles/tokens.js for the same reason.

@@ -141,20 +141,6 @@ button {
   transition-timing-function: ease-in-out;
 }
 
-/*
- * Lift on hover only where hovering is a thing.
- *
- * A touch browser fires :hover on tap and LEAVES IT SET until you tap
- * something else, so every button a judge pressed stayed nudged up by a pixel
- * for the rest of the session — and on the scoring keypad, where taps come in
- * fast runs, the whole grid ended up unevenly offset. Gating on a fine pointer
- * keeps the desktop affordance and drops it on phones and tablets.
- */
-@media (hover: hover) and (pointer: fine) {
-  button:hover {
-    transform: translateY(var(--hover-lift)); /* -1px in classic; prime-time keeps buttons still */
-  }
-}
 
 button:active {
   transform: translateY(0);

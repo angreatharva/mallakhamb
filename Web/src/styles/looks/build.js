@@ -6,13 +6,13 @@
  *
  * Selector scheme — why each block is written the way it is:
  *
- *   DEFAULT look (today `classic`) keeps the exact selectors index.css used,
+ *   DEFAULT look (prime-time since Phase 6) keeps the exact selectors index.css used,
  *   so a page with no `data-look` at all (unit tests, a stray document) still
  *   gets every token:
  *       :root, [data-appearance="dark"]        :root has the dark values
  *       [data-appearance="light"]
  *       [data-role="player"]                   role palettes, on <html>
- *   plus a `[data-look="classic"]`-qualified twin of each, so a classic island
+ *   plus a `[data-look="<default>"]`-qualified twin of each, so a default-look island
  *   inside another look's page wins over that page (0,2,0 beats 0,1,0).
  *
  *   OTHER looks are qualified, and come later in the file:

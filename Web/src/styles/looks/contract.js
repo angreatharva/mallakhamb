@@ -179,7 +179,6 @@ export const LOOK_TOKENS = {
   'control-h-mouse': { type: 'length', purpose: 'control height with a mouse on a desktop-width screen' },
   pad: { type: 'raw', purpose: 'page gutter' },
   'grain-opacity': { type: 'raw', purpose: 'film grain on stage screens (0 = none)' },
-  'hover-lift': { type: 'length', purpose: 'how far a button rises on mouse hover (index.css)' },
 };
 
 /**

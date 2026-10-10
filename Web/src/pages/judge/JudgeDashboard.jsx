@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
-import { FadeIn } from '@/components/design-system';
+import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';

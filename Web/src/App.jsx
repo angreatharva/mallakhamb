@@ -13,41 +13,13 @@ import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
-import { applyLook, currentLook, onLookClaim } from '@/utils/ui/look';
+import { applyLook, onLookClaim } from '@/utils/ui/look';
 import { toastOptions as lookToastOptions } from '@/components/ui/toast';
 import { loadLookFonts } from '@/styles/fonts';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
 
-/*
- * Toasts in the route's look. Classic keeps the options it always had until its
- * last route switches (design-language PLAN Phase 6 deletes this branch); a
- * prime-time route gets the token-driven ones (components/ui/toast.js).
- */
-const CLASSIC_TOAST_OPTIONS = {
-  duration: 4000,
-  style: {
-    background: '#363636',
-    color: '#fff',
-    // Long validation messages otherwise widen the toast past the
-    // viewport and take the page's horizontal scroll with them.
-    maxWidth: 'min(92vw, 24rem)',
-  },
-  success: {
-    duration: 3000,
-    iconTheme: {
-      primary: '#4ade80',
-      secondary: '#fff',
-    },
-  },
-  error: {
-    duration: 4000,
-    iconTheme: {
-      primary: '#ef4444',
-      secondary: '#fff',
-    },
-  },
-};
-const PRIME_TOAST_OPTIONS = {
+/* Toasts in the look (components/ui/toast.js), with the durations they always had. */
+const TOAST_OPTIONS = {
   ...lookToastOptions,
   duration: 4000,
   success: { ...lookToastOptions.success, duration: 3000 },
@@ -75,15 +47,12 @@ function AppContent() {
   // Role accent and look for the CSS tokens, from the URL like everything else
   // here. A layout effect, so a route change never paints one frame in the old
   // role or look. Both only flip an attribute on <html>; nothing remounts.
-  const [look, setLook] = useState(currentLook);
   // A screen no route names (the 404) claims its look; re-apply when it does.
   const [claims, setClaims] = useState(0);
   useEffect(() => onLookClaim(() => setClaims((n) => n + 1)), []);
   useLayoutEffect(() => {
     applyRoleAccent(getRoleFromPath(location.pathname));
-    const next = applyLook(location.pathname, location.search);
-    loadLookFonts(next);
-    setLook(next);
+    loadLookFonts(applyLook(location.pathname, location.search));
   }, [location.pathname, location.search, claims]);
 
   if (loading) {
@@ -152,7 +121,7 @@ function AppContent() {
         <Toaster
           position={isPhone ? 'top-center' : 'top-right'}
           containerStyle={isPhone ? { top: 76, left: 12, right: 12 } : { top: 76 }}
-          toastOptions={look === 'classic' ? CLASSIC_TOAST_OPTIONS : PRIME_TOAST_OPTIONS}
+          toastOptions={TOAST_OPTIONS}
         />
       </div>
     </CompetitionProvider>

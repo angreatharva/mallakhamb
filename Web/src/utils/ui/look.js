@@ -2,7 +2,7 @@
  * Look — which design language a page is drawn in (docs/design-language/PLAN.md §4.4).
  *
  * The third styling axis, beside Appearance (dark | light) and Role (the accent):
- *   <html data-look="classic" data-appearance="dark" data-role="judge">
+ *   <html data-look="prime-time" data-appearance="dark" data-role="judge">
  * "Look", never "theme": ThemeProvider already means the role accent.
  *
  * A look is chosen per ROUTE GROUP, from LOOK_BY_ROUTE. A group moves to a new
@@ -19,10 +19,10 @@
 
 import { readAppearancePreference, syncThemeColor } from './appearance';
 
-export const DEFAULT_LOOK = 'classic';
+export const DEFAULT_LOOK = 'prime-time';
 
 /** Every look the generated CSS defines (src/styles/looks/index.js). */
-export const KNOWN_LOOKS = ['classic', 'prime-time'];
+export const KNOWN_LOOKS = ['prime-time'];
 
 /**
  * First match wins. Each rollout wave adds its route group here, in the same
@@ -30,25 +30,9 @@ export const KNOWN_LOOKS = ['classic', 'prime-time'];
  * @type {{ match: RegExp, look: string }[]}
  */
 export const LOOK_BY_ROUTE = [
-  // The landing page: the reference implementation of prime-time (Phase 3.2).
-  { match: /^\/$/, look: 'prime-time' },
-  // W1, public and auth: the results page, every sign-in, registration and
-  // password-reset screen, and the level and competition choosers. (The 404
-  // claims its look itself: see claimLook.)
-  { match: /^\/scores\/?$/, look: 'prime-time' },
-  { match: /^\/(player|coach|judge|admin|superadmin)\/login\/?$/, look: 'prime-time' },
-  { match: /^\/(player|coach|judge|admin)\/register\/?$/, look: 'prime-time' },
-  { match: /^\/(forgot|reset)-password\/?$/, look: 'prime-time' },
-  { match: /^\/(player|coach|judge|admin)\/select-(level|competition)\/?$/, look: 'prime-time' },
-  // W2, player and coach: every screen under their prefixes.
-  { match: /^\/(player|coach)(\/|$)/, look: 'prime-time' },
-  // W3, admin and superadmin: the dashboards and their tabs, scoring, teams,
-  // add-player-payment.
-  { match: /^\/(admin|superadmin)(\/|$)/, look: 'prime-time' },
-  // W4, judge: every /judge screen. The kill switch on a competition day is
-  // deleting this line (one deploy; nothing reloads a judge mid-slip — the
-  // look only flips an attribute on the next navigation).
-  { match: /^\/judge(\/|$)/, look: 'prime-time' },
+  // Empty: prime-time is the default since Phase 6 retired classic. The next
+  // look rolls out the same way — its route groups land here, wave by wave
+  // (docs/design-language/LOOKS.md).
 ];
 
 const OVERRIDE_KEY = 'mk-look-override';

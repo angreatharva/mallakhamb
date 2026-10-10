@@ -19,7 +19,7 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { DATA_COLORS, FG } from '@/styles/tokens';
-import { FadeIn } from '@/components/design-system';
+import { FadeIn } from '@/components/admin/AdminKit';
 import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 

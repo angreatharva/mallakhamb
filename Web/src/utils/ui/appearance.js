@@ -32,7 +32,7 @@ export const THEME_COLOR_BY_LOOK = Object.fromEntries(Object.entries(looksMeta.l
 ]));
 
 /** The default look's colours — what public/appearance-init.js paints first. */
-export const THEME_COLOR = THEME_COLOR_BY_LOOK.classic;
+export const THEME_COLOR = THEME_COLOR_BY_LOOK['prime-time'];
 
 /**
  * Point the theme-color tags at the current look and appearance. `system`

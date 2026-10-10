@@ -84,8 +84,8 @@ export default defineConfig({
         'src/**/*.test.{js,jsx}',
         'src/setupTests.js',
         'src/main.jsx',
-        // Presentational design-system pieces: markup and tokens, no logic
-        // worth asserting, and including them buries the code that matters.
+        // LiveRegion, the one presentational piece kept from the old design
+        // system: markup, no logic worth asserting.
         'src/components/design-system/**',
         'src/styles/**',
         'src/assets/**',

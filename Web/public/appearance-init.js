@@ -30,7 +30,7 @@
   root.setAttribute('data-appearance', resolved);
   // The default look (src/utils/ui/look.js DEFAULT_LOOK); the app then sets the
   // route's own look before its first paint (docs/design-language/PLAN.md §4.4).
-  root.setAttribute('data-look', 'classic');
+  root.setAttribute('data-look', 'prime-time');
   root.style.colorScheme = resolved;
 
   // `system` leaves the two media-scoped theme-color tags to the browser; an
@@ -38,7 +38,7 @@
   if (pref !== 'system') {
     var metas = document.querySelectorAll('meta[name="theme-color"]');
     for (var i = 0; i < metas.length; i += 1) {
-      metas[i].setAttribute('content', resolved === 'light' ? '#f6f7f9' : '#0a0a0a');
+      metas[i].setAttribute('content', resolved === 'light' ? '#f3eee6' : '#000000');
     }
   }
 })();

@@ -44,7 +44,7 @@ export const preloadFirstPaintFonts = () => {
 let fontFaces = null;
 
 /**
- * Everything a look needs to draw its type: a no-op for `classic`.
+ * Everything a look needs to draw its type: a no-op for a look without web fonts.
  * @param {string} look
  * @returns {Promise<unknown>|null} the @font-face chunk loading, or null
  */
