@@ -67,6 +67,14 @@ compiled by `npm run looks` (also `predev`/`prebuild`) into the committed
   radius-panel, rule, ring, focus-width/offset (index.css `:focus-visible`),
   control-h(-mouse), pad, grain-opacity, hover-lift (index.css button lift).
   Tailwind gained `ident` / `ident-fg` / `on-ident` colours.
+- **Phase 4.** Brand sweep done: "Mallakhamb India" + `PoleMark`
+  everywhere ("Bhausaheb Ranade" and `BHA.png` gone; favicon.svg,
+  favicon-32.png, apple-touch-icon.png replace vite.svg). The browser
+  chrome follows the look: `THEME_COLOR_BY_LOOK` (built from
+  looks.meta.json) and `syncThemeColor()` in `utils/ui/appearance.js`,
+  called on appearance AND look changes. App's `<Toaster>` uses the
+  token-driven `toastOptions` on prime-time routes and the old literal
+  options on classic ones (deleted in Phase 6).
 - **Type steps:** `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`,
   `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input` —
   Tailwind utilities (safelisted, so they exist before any page uses them)

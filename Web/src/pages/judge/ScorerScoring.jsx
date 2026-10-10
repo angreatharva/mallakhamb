@@ -23,7 +23,7 @@ import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
@@ -730,7 +730,7 @@ const ScorerScoring = () => {
             </motion.button>
             <div className="w-px h-5 bg-ink/10" />
             <div className="flex items-center gap-2">
-              <img src={BHALogo} alt="BHA" className="h-7 w-auto object-contain opacity-70" />
+              <PoleMark className="h-7 w-auto opacity-70" />
               <Trophy className="w-4 h-4" style={{ color: FG.brand }} />
               <span className="text-ink font-bold text-sm hidden sm:inline">Scorer Scoring</span>
               {isLocked && <Lock className="w-4 h-4" style={{ color: FG.danger }} />}

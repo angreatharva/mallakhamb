@@ -51,6 +51,20 @@ components/superadmin/AddPlayerForm.jsx
 `protected-route.jsx` implementation detail); noted here only for
 completeness.
 
+## `shell/` and `brand/` (design-language Phase 4, branch `look/phase-4-shells`)
+
+`@/components/shell`: `AppHeader` (wordmark, RoleIdent, competition
+"segment", TabNav from `lg`, AccountControls from `md`, a menu button
+opening a `Dialog sheet` drawer below those; below 480px the wordmark
+collapses to the mark, name kept for screen readers), `PageHeader`
+(the page h1), `RoleIdent`, `AccountControls`, `TabNav` (NavLink,
+`aria-current="page"`). `@/components/brand/Brand`: `BRAND_NAME`,
+`Wordmark`, `PoleMark` (saffron via `--brand-fg`). Built in Phase 4,
+adopted per rollout wave. Trap: a Tailwind layout utility on a
+component's ROOT beats the component's own breakpoint CSS (utilities
+win ties) — `AccountControls` once showed on phones because of a `flex`
+class. `look-specimen.spec.js` now fails on masthead overlap/overflow.
+
 ## `ui/` — the look primitives (design-language Phase 3, branch `look/phase-3-primitives`)
 
 `@/components/ui`: Button, IconButton, Field + Input/Select/Textarea/

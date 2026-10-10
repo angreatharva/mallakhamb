@@ -9,7 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 
@@ -519,7 +519,7 @@ const UnifiedRegisterInner = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, ease: EASE }}
           >
-            <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain opacity-80" />
+            <PoleMark className="h-12 w-auto opacity-80" />
           </motion.div>
 
           <div className="mb-10">
@@ -535,7 +535,7 @@ const UnifiedRegisterInner = () => {
               className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
               style={{ color: FG.accent }}
             >
-              Bhausaheb Ranade Mallakhamb
+              Mallakhamb India
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
               <GradientText
@@ -610,14 +610,14 @@ const UnifiedRegisterInner = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, ease: EASE }}
         >
-          <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
+          <PoleMark className="h-10 w-auto opacity-75" />
           <div className="w-px h-8 bg-ink/10" />
           <div>
             <p
               className="text-[10px] font-bold tracking-widest uppercase"
               style={{ color: FG.accent }}
             >
-              Mallakhamb
+              Mallakhamb India
             </p>
             <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
           </div>

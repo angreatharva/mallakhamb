@@ -10,7 +10,7 @@ import { APPEARANCES, APPEARANCE_TOKENS, LOOK_TOKENS, ROLES, ROLE_TOKENS } from 
 import { DEFAULT_LOOK_ID, LOOK_IDS, resolvedLooks } from './index.js';
 import { appearanceTokens, lookTokens, resolveTokens, roleVars, tokenHex } from './build.js';
 import { parseColor } from './color.js';
-import { THEME_COLOR } from '@/utils/ui/appearance';
+import { THEME_COLOR, THEME_COLOR_BY_LOOK } from '@/utils/ui/appearance';
 import { DEFAULT_LOOK, KNOWN_LOOKS } from '@/utils/ui/look';
 
 const looks = resolvedLooks();
@@ -74,6 +74,15 @@ describe('the look registry and the places that restate it', () => {
   it('sets the default look before first paint (public/appearance-init.js)', () => {
     const init = readFileSync(resolve(__dirname, '../../../public/appearance-init.js'), 'utf8');
     expect(init).toContain(`root.setAttribute('data-look', '${DEFAULT_LOOK_ID}')`);
+  });
+
+  it("gives every look a browser-chrome colour equal to its page colour", () => {
+    expect(Object.keys(THEME_COLOR_BY_LOOK).sort()).toEqual([...LOOK_IDS].sort());
+    for (const look of looks) {
+      for (const appearance of APPEARANCES) {
+        expect(THEME_COLOR_BY_LOOK[look.id][appearance], `${look.id} ${appearance}`).toBe(tokenHex(look, appearance, 'bg'));
+      }
+    }
   });
 
   it("paints the browser chrome in the default look's page colour", () => {

@@ -27,4 +27,17 @@
   .ui-dialog__actions { flex-direction: column-reverse; align-items: stretch; }
 }
 @keyframes ui-dialog-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* Sheet: the phone navigation drawer — full height, against the right edge. */
+.ui-dialog-overlay--sheet { justify-content: flex-end; padding: 0; }
+.ui-dialog--sheet {
+  max-width: min(22rem, 88vw);
+  min-height: 100%;
+  margin: 0;
+  border-radius: 0;
+  padding-top: max(20px, env(safe-area-inset-top));
+  box-shadow: inset 1px 0 0 0 var(--line);
+  animation: ui-sheet-in var(--dur-3) var(--ease-out) both;
+}
+@keyframes ui-sheet-in { from { transform: translateX(24px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ui-dialog { animation: none; } }

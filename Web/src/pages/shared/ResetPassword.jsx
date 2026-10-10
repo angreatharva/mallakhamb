@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import { validatePasswordStrength } from '@/validators/form.validator';
 import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 import { COLORS, FG, alpha } from '@/styles/tokens';
 import { GradientText } from '@/components/design-system';
@@ -157,11 +157,10 @@ const ResetPassword = () => {
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: EASE_OUT }}>
         <Link to="/" aria-label="Back to home">
-          <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
+          <PoleMark className="h-12 w-auto" />
         </Link>
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
-          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Mallakhamb India</p>
         </div>
       </motion.div>
 

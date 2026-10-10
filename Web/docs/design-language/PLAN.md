@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** Phases 0–3 done (2026-10-08) on branch `look/phase-3-primitives` (stacked on Phases 1–2), not merged. Phase 3's owner checkpoint material is in [README.md](README.md). Next: Phase 4 (shells and the brand sweep). See the progress log (§14).
+**Status:** Phases 0–4 done (2026-10-10) on branch `look/phase-4-shells` (stacked on Phases 1–3), not merged. Next: Phase 5, wave W1 (public and auth). See the progress log (§14).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -803,3 +803,32 @@ The judge dashboard already shifts on master, so its gate is "no worse", not 0. 
 - vitest 467/467; lint ratchet holds; `looks:check` clean.
 
 **3.5 Owner checkpoint.** The specimen screenshots are in [README.md](README.md), and every combination is at `/__look`. The owner asked to continue through the phases, so Phase 4 goes ahead. Any change asked for at this checkpoint is a pack or primitive edit, which the waves inherit.
+
+### 2026-10-10: Phase 4 (branch `look/phase-4-shells`, stacked on Phase 3)
+
+**4.1 Shells** (`src/components/shell/`):
+- `AppHeader`: wordmark, `RoleIdent`, the competition as the "segment", `TabNav` from `lg`, `AccountControls` from `md`. Below those, one menu button opens a `Dialog sheet` drawer with the tabs and the account cluster, so the Light/Dark switch is reachable everywhere. Below 480 px the wordmark collapses to the mark, keeping its name for screen readers.
+- `PageHeader`: the page's h1.
+- Built and audited now; each rollout wave adopts them.
+- `shell.test.jsx`: 8 tests.
+
+**Defect found and fixed.** On phones, the account cluster sat on top of the wordmark and ident. The component had Tailwind's `flex` on its own root, and utilities beat the shell's breakpoint rules (which is the design). Rule: a component never puts a layout utility on its own root. `look-specimen.spec.js` now fails on masthead overlap or overflow; a positive control on the broken build confirmed it catches this.
+
+**4.2 Brand sweep.**
+- "Mallakhamb India" and `PoleMark` replace "Bhausaheb Ranade" (6 screens) and `BHA.png` (9 screens); the 3.9 MB `BHA.png` is deleted.
+- The password pages' two-line "Bhausaheb Ranade / Mallakhamb Competition" lockup becomes "Mallakhamb India".
+- `favicon.svg`, `favicon-32.png` and `apple-touch-icon.png` (the saffron mark on stage black) replace `vite.svg`.
+- `theme-color` follows the look: `THEME_COLOR_BY_LOOK` is built from `looks.meta.json`, and `syncThemeColor()` runs on appearance and look changes.
+
+**4.3 Toasts.** App's `<Toaster>` uses the token-driven `toastOptions` on prime-time routes. Classic routes keep the old literal options (deleted in Phase 6).
+
+**Phase 4 exit gate:**
+- **Pixel gate (threshold 0, v3 baselines).** Judge identical; coach identical apart from the known baseline capture. Every other difference was reviewed by measuring the bounding box of the changed pixels in each screenshot (`.mk-look-builds/diff-boxes.cjs`):
+  - logins, registers, forgot/reset and team selection: only the brand lockup (2.2–4.2k px), no height change;
+  - admin and superadmin dashboard tabs and scoring: only the header row (y14–49). The narrower pole mark shifts the title and tabs left;
+  - one `superadmin-scoring` capture also caught "Loading competitions…", a timing state unrelated to Phase 4.
+  - A public-area run voided by one database error was re-run clean.
+- **New baselines** were recorded from the Phase 4 build as the reference for Phase 5: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look-v4`.
+- **Specimen:** 0 failures (contrast, overflow, 44 px targets, masthead overlap), all roles, both appearances.
+- **Speed:** within master's spread on every route; classic routes still 0 font bytes; CSS +6 KB.
+- vitest **476/476**; lint ratchet holds; `looks:check` clean.

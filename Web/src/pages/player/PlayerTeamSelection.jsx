@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 import { FG, alpha } from '@/styles/tokens';
 
 const COLORS = {
@@ -124,11 +124,11 @@ const PlayerTeamSelection = () => {
       <div className="border-b" style={{ borderColor: COLORS.darkBorder }}>
         <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
           <div className="flex items-center gap-3 mb-4">
-            <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-80" />
+            <PoleMark className="h-10 w-auto opacity-80" />
             <div className="w-px h-8 bg-ink/10" />
             <div>
               <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted">
-                Bhausaheb Ranade Mallakhamb
+                Mallakhamb India
               </p>
               <p className="text-ink/60 text-xs">Player Portal</p>
             </div>

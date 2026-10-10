@@ -6,6 +6,8 @@ import {
   DataTable, Tabs, TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton, EmptyState, ErrorState, Grain,
 } from '@/components/ui';
 import { useOptionalAppearance } from '@/contexts/AppearanceProvider';
+import { AppHeader, PageHeader } from '@/components/shell';
+import { PoleMark, Wordmark } from '@/components/brand/Brand';
 import { KNOWN_LOOKS, currentLook } from '@/utils/ui/look';
 
 /**
@@ -86,6 +88,23 @@ const LookSpecimen = () => {
             <Button variant="ghost" size="sm" aria-pressed={grain} onClick={() => setGrain((g) => !g)}>Stage signatures {grain ? 'on' : 'off'}</Button>
           </div>
         </header>
+
+        <Section id="sp-shell" title="Shell and brand">
+          <div className="overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+            <AppHeader role={role === 'public' ? null : role} segment="SGAM-TRIALS-1 (2026)" homeTo="/__look"
+              navLabel="Specimen sections" onLogout={() => {}} profileTo="/__look"
+              nav={[{ to: '/__look', label: 'Overview', end: true }, { to: '/__look/teams', label: 'Teams' }, { to: '/__look/scores', label: 'Scores' }]} />
+            <div style={{ padding: '0 var(--pad)' }}>
+              <PageHeader eyebrow="Pole · Under 14 Boys" title="Running order" lede="Drag to set who performs when; the lots decide the first order."
+                actions={<><Button variant="line" icon={Download}>Export</Button><Button icon={Plus}>Draw lots</Button></>} />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-6">
+            <Wordmark to={null} />
+            <PoleMark className="h-12 w-auto" />
+            <PoleMark title="Mallakhamb India" className="h-8 w-auto" />
+          </div>
+        </Section>
 
         <Section id="sp-colour" title="Surfaces and text">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">

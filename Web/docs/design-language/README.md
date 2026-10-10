@@ -34,7 +34,21 @@ Import them from `@/components/ui`:
 | A list of actions | `Menu` |
 | Nothing, loading, failure | `EmptyState` · `Skeleton` · `Spinner` · `ErrorState` |
 | Stage screens only | `Grain`, `Heading sting` |
-| Toasts | `toastOptions` (applied by the `<Toaster>`) |
+| Toasts | `toastOptions` (App's `<Toaster>` uses them on prime-time routes) |
+
+The shell, from `@/components/shell`:
+
+| Need | Use |
+|---|---|
+| A signed-in screen's masthead | `AppHeader role segment nav onLogout profileTo`. The wordmark, the role ident, the competition as the "segment", tabs and the account cluster. On phones, one menu button opens a drawer holding the tabs and the account cluster, so the Light/Dark switch is always reachable |
+| The page's title row | `PageHeader eyebrow title lede actions`: the page's `h1` |
+| The role | `RoleIdent role`: text and colour, never colour alone |
+| Light/Dark, Profile, Log out | `AccountControls` |
+| Route tabs | `TabNav items label` (NavLink; the current page carries the bar) |
+
+The brand, from `@/components/brand/Brand`: `Wordmark` (the mark and "Mallakhamb India") and `PoleMark` (decorative, or `title` when it stands alone). Never the old name or `BHA.png`.
+
+**A component never puts a Tailwind layout utility on its own root** (`flex`, `grid`, `hidden`…). Utilities win ties by design, so a utility on the root overrides the component's own breakpoint rules. This is how the masthead once showed its desktop account cluster on phones.
 
 The type steps are Tailwind utilities: `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`, `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input`.
 

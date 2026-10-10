@@ -8,7 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 
@@ -141,7 +141,7 @@ const AdminRegisterInner = () => {
           <motion.div className="flex items-center justify-center gap-3 mb-12"
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, ease: EASE }}>
-            <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain opacity-80" />
+            <PoleMark className="h-12 w-auto opacity-80" />
           </motion.div>
           
           <div className="mb-10">
@@ -152,7 +152,7 @@ const AdminRegisterInner = () => {
             transition={{ delay: 0.5, ease: EASE }}>
             <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
               style={{ color: FG.accent }}>
-              Bhausaheb Ranade Mallakhamb
+              Mallakhamb India
             </p>
             <h1 className="text-4xl font-black leading-tight mb-3">
               <GradientText colors={[theme.colors.primary, theme.colors.primaryLight, theme.colors.primaryDark]}>
@@ -197,11 +197,11 @@ const AdminRegisterInner = () => {
         <motion.div className="lg:hidden flex items-center gap-3 mb-8"
           initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, ease: EASE }}>
-          <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
+          <PoleMark className="h-10 w-auto opacity-75" />
           <div className="w-px h-8 bg-ink/10" />
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase" 
-              style={{ color: FG.accent }}>Mallakhamb</p>
+              style={{ color: FG.accent }}>Mallakhamb India</p>
             <p className="text-fg-muted text-[10px]">Admin Portal</p>
           </div>
         </motion.div>

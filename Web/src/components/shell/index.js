@@ -1,0 +1,2 @@
+/** The working-screen shell (design-language PLAN §7). See docs/design-language/README.md. */
+export { AppHeader, AccountControls, RoleIdent, PageHeader, TabNav } from './Shell';

@@ -28,7 +28,7 @@ const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManageme
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
-import BHALogo from '../../assets/BHA.png';
+import { PoleMark } from '@/components/brand/Brand';
 
 // Design system imports
 import { useTheme } from '../../components/design-system/theme/useTheme';
@@ -725,7 +725,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3">
-            <img src={BHALogo} alt="BHA" className="h-8 w-auto object-contain" />
+            <PoleMark className="h-8 w-auto" />
             <div className="hidden sm:block">
               <p className="text-xs font-bold tracking-widest uppercase leading-none"
                 style={{ color: FG.accent }}>

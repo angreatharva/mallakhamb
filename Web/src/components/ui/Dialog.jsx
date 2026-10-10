@@ -20,7 +20,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  *     Ravi Gaikwad leaves the team. Scores already given are kept.
  *   </Dialog>
  */
-const Dialog = ({ open, onClose, title, tone = 'default', wide = false, dismissible = true, initialFocus = null, actions = null, children }) => {
+const Dialog = ({ open, onClose, title, tone = 'default', wide = false, sheet = false, dismissible = true, initialFocus = null, actions = null, children }) => {
   const titleId = useId();
   const panelRef = useRef(null);
   const returnTo = useRef(null);
@@ -56,14 +56,14 @@ const Dialog = ({ open, onClose, title, tone = 'default', wide = false, dismissi
   };
 
   return createPortal(
-    <div className="modal-overlay ui-dialog-overlay" onMouseDown={(e) => { if (dismissible && e.target === e.currentTarget) onClose(); }}>
+    <div className={cx('modal-overlay ui-dialog-overlay', sheet && 'ui-dialog-overlay--sheet')} onMouseDown={(e) => { if (dismissible && e.target === e.currentTarget) onClose(); }}>
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={cx('modal-panel ui-dialog', tone === 'danger' && 'ui-dialog--danger', wide && 'ui-dialog--wide')}
+        className={cx('modal-panel ui-dialog', tone === 'danger' && 'ui-dialog--danger', wide && 'ui-dialog--wide', sheet && 'ui-dialog--sheet')}
         onKeyDown={onKeyDown}
       >
         <div className="ui-dialog__head">
@@ -84,6 +84,8 @@ Dialog.propTypes = {
   title: PropTypes.node.isRequired,
   tone: PropTypes.oneOf(['default', 'danger']),
   wide: PropTypes.bool,
+  /** A side sheet (the phone navigation drawer): full height, from the right. */
+  sheet: PropTypes.bool,
   dismissible: PropTypes.bool,
   initialFocus: PropTypes.shape({ current: PropTypes.any }),
   actions: PropTypes.node,

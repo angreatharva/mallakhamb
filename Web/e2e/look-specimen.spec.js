@@ -75,6 +75,27 @@ const record = async (page, file, failures, label, width) => {
   const layout = await measurePage(page, { checkTouchTargets: width < 1024 });
   if (layout.horizontalScroll) failures.push(`${label}: page scrolls sideways (${layout.scrollWidth} > ${layout.clientWidth}) ${JSON.stringify(layout.overflowing.slice(0, 3))}`);
   for (const t of layout.tinyTargets) failures.push(`${label}: target under 44px ${JSON.stringify(t)}`);
+  // The masthead's pieces never sit on top of each other (a header that only
+  // looked broken on phones once hid the role ident under the account cluster).
+  const overlaps = await page.evaluate(() => {
+    const out = [];
+    for (const bar of document.querySelectorAll('.shell-header__bar')) {
+      const boxes = [...bar.querySelectorAll(':scope > *, :scope > .shell-header__brand > *')]
+        .filter((el) => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0 && !el.classList.contains('shell-header__brand'))
+        .map((el) => ({ el, r: el.getBoundingClientRect() }));
+      for (let i = 0; i < boxes.length; i += 1) {
+        for (let j = i + 1; j < boxes.length; j += 1) {
+          const a = boxes[i].r; const b = boxes[j].r;
+          if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) {
+            out.push(`${boxes[i].el.className} overlaps ${boxes[j].el.className}`);
+          }
+        }
+      }
+      if (bar.scrollWidth > bar.clientWidth + 1) out.push(`masthead overflows (${bar.scrollWidth} > ${bar.clientWidth})`);
+    }
+    return out;
+  });
+  for (const o of overlaps) failures.push(`${label}: ${o}`);
   return checked;
 };
 

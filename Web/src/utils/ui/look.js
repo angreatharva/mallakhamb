@@ -17,6 +17,8 @@
  * properties; looks.routing.test.js keeps KNOWN_LOOKS in step with the registry.
  */
 
+import { readAppearancePreference, syncThemeColor } from './appearance';
+
 export const DEFAULT_LOOK = 'classic';
 
 /** Every look the generated CSS defines (src/styles/looks/index.js). */
@@ -72,7 +74,13 @@ export const lookForPath = (pathname = '/', routes = LOOK_BY_ROUTE) =>
  */
 export const applyLook = (pathname, search = '') => {
   const look = readOverride(search) || lookForPath(pathname);
-  if (typeof document !== 'undefined') document.documentElement.setAttribute('data-look', look);
+  if (typeof document === 'undefined') return look;
+  const root = document.documentElement;
+  if (root.getAttribute('data-look') !== look) {
+    root.setAttribute('data-look', look);
+    // The browser chrome follows the look's page colour (appearance.js).
+    syncThemeColor(root.getAttribute('data-appearance') || 'dark', readAppearancePreference());
+  }
   return look;
 };
 

@@ -11,6 +11,8 @@
  * key, the default and the two theme-colour values; keep them in step.
  */
 
+import looksMeta from '@/styles/generated/looks.meta.json';
+
 export const APPEARANCE_STORAGE_KEY = 'mk-appearance';
 
 /** What a person can choose. `system` follows the device. */
@@ -19,8 +21,34 @@ export const APPEARANCE_PREFERENCES = ['dark', 'light', 'system'];
 /** Existing users see nothing change until they choose (plan D5). */
 export const DEFAULT_APPEARANCE_PREFERENCE = 'dark';
 
-/** Browser-chrome colour per resolved appearance; equals `--bg`. */
-export const THEME_COLOR = { dark: '#0a0a0a', light: '#f6f7f9' };
+/**
+ * Browser-chrome colour per look and resolved appearance: each look's `--bg`,
+ * read from the generated looks.meta.json (`npm run looks`), so a pack edit
+ * reaches the browser chrome too.
+ */
+export const THEME_COLOR_BY_LOOK = Object.fromEntries(Object.entries(looksMeta.looks).map(([look, byAppearance]) => [
+  look,
+  { dark: byAppearance.dark.bg, light: byAppearance.light.bg },
+]));
+
+/** The default look's colours — what public/appearance-init.js paints first. */
+export const THEME_COLOR = THEME_COLOR_BY_LOOK.classic;
+
+/**
+ * Point the theme-color tags at the current look and appearance. `system`
+ * hands the two media-scoped tags back to the browser (each its own colour).
+ * Called when the appearance changes and when a route changes the look.
+ */
+export const syncThemeColor = (resolved, preference) => {
+  if (typeof document === 'undefined') return;
+  const look = document.documentElement.getAttribute('data-look');
+  const colours = THEME_COLOR_BY_LOOK[look] || THEME_COLOR;
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+    const media = meta.getAttribute('media') || '';
+    const own = media.includes('light') ? colours.light : colours.dark;
+    meta.setAttribute('content', preference === 'system' ? own : colours[resolved]);
+  });
+};
 
 const LIGHT_QUERY = '(prefers-color-scheme: light)';
 
@@ -108,12 +136,7 @@ export const applyAppearance = (resolved, preference, { suppressTransitions = fa
   root.setAttribute('data-appearance', resolved);
   root.style.colorScheme = resolved;
 
-  // `system` hands the two media-scoped tags back to the browser.
-  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-    const media = meta.getAttribute('media') || '';
-    const own = media.includes('light') ? THEME_COLOR.light : THEME_COLOR.dark;
-    meta.setAttribute('content', preference === 'system' ? own : THEME_COLOR[resolved]);
-  });
+  syncThemeColor(resolved, preference);
 
   if (suppressTransitions) {
     const release = () => root.classList.remove('appearance-switching');
