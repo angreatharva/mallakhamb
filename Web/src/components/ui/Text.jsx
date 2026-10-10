@@ -91,3 +91,12 @@ SpecList.propTypes = {
   items: PropTypes.arrayOf(PropTypes.shape({ label: PropTypes.node, value: PropTypes.node, unit: PropTypes.node })).isRequired,
   className: PropTypes.string,
 };
+
+/**
+ * TextLink: a link in running text — underlined, in the accent, a 44px target
+ * on touch. `as={Link}` for a route.
+ */
+export const TextLink = ({ as: Component = 'a', className = '', children, ...rest }) => (
+  <Component className={cx('ui-link', className)} {...rest}>{children}</Component>
+);
+TextLink.propTypes = { as: PropTypes.elementType, className: PropTypes.string, children: PropTypes.node };

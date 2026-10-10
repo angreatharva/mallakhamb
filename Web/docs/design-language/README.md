@@ -33,6 +33,9 @@ Import them from `@/components/ui`:
 | A modal | `Dialog` · `ConfirmDialog`. Focus moves in, stays in, and comes back |
 | A list of actions | `Menu` |
 | Nothing, loading, failure | `EmptyState` · `Skeleton` · `Spinner` · `ErrorState` |
+| A message about the form or screen it sits in | `Notice` (`info` · `success` · `warning` · `danger`; `title`). Pass `role="alert"` or `role="status"` yourself |
+| A choice read as a list (levels, competitions) | `RunningOrder` + `RunningOrderItem` (`index`, `title`, `meta`, `aside`, `selected`, `muted`). The number is decoration; titles keep their case |
+| A link in running text | `TextLink` (`as={Link}`; `ui-link--quiet` for the secondary one) |
 | Stage screens only | `Grain`, `Heading sting` |
 | Toasts | `toastOptions` (App's `<Toaster>` uses them on prime-time routes) |
 
@@ -45,6 +48,7 @@ The shell, from `@/components/shell`:
 | The role | `RoleIdent role`: text and colour, never colour alone |
 | Light/Dark, Profile, Log out | `AccountControls` |
 | Route tabs | `TabNav items label` (NavLink; the current page carries the bar) |
+| A sign-in, registration or password screen | `AuthLayout role title lede switcher` with `AuthHeader` and `AuthLinks`: the black stage side (role name, pole mark, grain) and the form side |
 
 The brand, from `@/components/brand/Brand`: `Wordmark` (the mark and "Mallakhamb India") and `PoleMark` (decorative, or `title` when it stands alone). Never the old name or `BHA.png`.
 

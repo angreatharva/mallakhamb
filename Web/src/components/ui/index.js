@@ -9,7 +9,9 @@
  */
 export { default as Button, IconButton } from './Button';
 export { Field, Input, Textarea, Select, PasswordInput } from './Field';
-export { Panel, Heading, Tag, StatusTag, Stat, SpecList } from './Text';
+export { Panel, Heading, Tag, StatusTag, Stat, SpecList, TextLink } from './Text';
+export { Notice } from './Notice';
+export { RunningOrder, RunningOrderItem } from './RunningOrder';
 export { default as DataTable } from './DataTable';
 export { Tabs, TabPanel, Segmented } from './Tabs';
 export { default as Dialog, ConfirmDialog } from './Dialog';

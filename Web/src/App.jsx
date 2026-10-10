@@ -13,7 +13,7 @@ import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
-import { applyLook, currentLook } from '@/utils/ui/look';
+import { applyLook, currentLook, onLookClaim } from '@/utils/ui/look';
 import { toastOptions as lookToastOptions } from '@/components/ui/toast';
 import { loadLookFonts } from '@/styles/fonts';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
@@ -76,12 +76,15 @@ function AppContent() {
   // here. A layout effect, so a route change never paints one frame in the old
   // role or look. Both only flip an attribute on <html>; nothing remounts.
   const [look, setLook] = useState(currentLook);
+  // A screen no route names (the 404) claims its look; re-apply when it does.
+  const [claims, setClaims] = useState(0);
+  useEffect(() => onLookClaim(() => setClaims((n) => n + 1)), []);
   useLayoutEffect(() => {
     applyRoleAccent(getRoleFromPath(location.pathname));
     const next = applyLook(location.pathname, location.search);
     loadLookFonts(next);
     setLook(next);
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, claims]);
 
   if (loading) {
     return <PageLoader />;

@@ -1,5 +1,9 @@
+import { useLayoutEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getLoginPathFromPath } from '@/utils/auth/roleFromPath';
+import { claimLook, releaseLook } from '@/utils/ui/look';
+import { Button, Heading, Tag } from '@/components/ui';
+import { Grain } from '@/components/ui/Stage';
 
 /**
  * 404 view.
@@ -14,54 +18,37 @@ import { getLoginPathFromPath } from '@/utils/auth/roleFromPath';
  * The role prefix is still honoured where there is one: a bad `/judge/*` URL
  * offers the judge sign-in rather than the public home page, so a judge who
  * follows a dead link at a venue lands somewhere useful.
+ *
+ * A stage screen (design-language PLAN §5.7). It answers ANY unmatched path,
+ * so the route map cannot name it: it claims its look while it is mounted.
  */
 export default function NotFound() {
   const location = useLocation();
   const loginPath = getLoginPathFromPath(location.pathname);
   const hasRoleContext = loginPath !== '/';
 
+  useLayoutEffect(() => {
+    const path = location.pathname;
+    claimLook(path, 'prime-time');
+    return () => releaseLook(path);
+  }, [location.pathname]);
+
   return (
     // <main>: the page's one landmark (the audit found content outside any).
-    // Colours from the appearance tokens — identical in dark, legible in light.
-    <main
-      className="min-h-dvh flex items-center justify-center px-4"
-      style={{ background: 'rgb(var(--bg))' }}
-    >
-      <div className="text-center max-w-md">
-        {/* A watermark at 12% ink, so decoration (WCAG 1.4.3 exempts it); the heading says it in words. */}
-        <p
-          className="text-7xl font-black tracking-tight mb-2"
-          style={{ color: 'rgb(var(--ink) / 0.12)' }}
-          aria-hidden="true"
-        >
-          404
-        </p>
-        <h1 className="text-xl font-bold text-ink mb-2">Page not found</h1>
-        <p className="text-sm text-fg-muted mb-8">
-          We couldn&apos;t find <span className="text-ink/70">{location.pathname}</span>.
+    <main className="relative isolate min-h-dvh flex items-center px-[var(--pad)] py-16 bg-bg text-fg overflow-hidden">
+      <Grain local />
+      <div className="relative z-10 w-full max-w-3xl mx-auto grid justify-items-start gap-5">
+        <Tag tone="accent">Error 404</Tag>
+        <Heading level={1} step="display-xl" sting>Page not found</Heading>
+        <p className="type-body text-fg-muted max-w-xl m-0">
+          We couldn&apos;t find <span className="text-fg break-all">{location.pathname}</span>.
           The link may be out of date, or the page may have moved.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            to="/"
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-ink min-h-[44px] flex items-center justify-center transition-colors"
-            style={{
-              background: 'rgb(var(--ink) / 0.08)',
-              border: '1px solid rgb(var(--ink) / 0.14)',
-            }}
-          >
-            Go to home
-          </Link>
-
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <Button as={Link} to="/" size="lg">Go to home</Button>
           {hasRoleContext && (
-            <Link
-              to={loginPath}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold min-h-[44px] flex items-center justify-center text-ink/70 hover:text-ink transition-colors"
-              style={{ border: '1px solid rgb(var(--ink) / 0.10)' }}
-            >
-              Sign in
-            </Link>
+            <Button as={Link} to={loginPath} variant="line" size="lg">Sign in</Button>
           )}
         </div>
       </div>

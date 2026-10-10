@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Button, IconButton, Field, Input, PasswordInput, Tabs, TabPanel, Segmented, Dialog, ConfirmDialog,
   Menu, DataTable, StatusTag, Stat, SpecList, Heading, Tag, EmptyState, ErrorState,
+  Notice, RunningOrder, RunningOrderItem, TextLink,
 } from './index';
 import { readEase } from '@/utils/ui/look';
 
@@ -227,5 +228,44 @@ describe('readEase', () => {
     document.documentElement.style.setProperty('--ease-cut', 'cubic-bezier(.62,0,.12,1)');
     expect(readEase('ease-cut')).toEqual([0.62, 0, 0.12, 1]);
     expect(readEase('no-such-token', [0, 0, 1, 1])).toEqual([0, 0, 1, 1]);
+  });
+});
+
+describe('Notice', () => {
+  it('says its title and text, and takes the role the caller gives it', () => {
+    render(<Notice tone="danger" title="Login Failed" role="alert">Incorrect credentials.</Notice>);
+    expect(screen.getByRole('alert')).toHaveTextContent('Login Failed');
+    expect(screen.getByRole('alert')).toHaveTextContent('Incorrect credentials.');
+  });
+
+  it('has no role of its own', () => {
+    render(<Notice>Server is starting.</Notice>);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('RunningOrder', () => {
+  it('rows are pressed buttons named by their title first (the number is decoration)', async () => {
+    const onClick = vi.fn();
+    render(
+      <RunningOrder label="Levels">
+        <RunningOrderItem index={1} title="District" meta="Meets held at district level." selected onClick={() => {}} />
+        <RunningOrderItem index={2} title="State" titleAs="h3" onClick={onClick} />
+      </RunningOrder>,
+    );
+    expect(screen.getByRole('list', { name: 'Levels' })).toBeInTheDocument();
+    const district = screen.getByRole('button', { name: /^District\b/ });
+    expect(district).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { level: 3, name: 'State' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^State/ }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TextLink', () => {
+  it('renders the element it is given', () => {
+    render(<TextLink href="/forgot-password">Forgot password?</TextLink>);
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveClass('ui-link');
   });
 });

@@ -1,8 +1,6 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { ChevronDown, Users } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
 import { RankBadge } from './PlayerRankingBoard';
 
 /**
@@ -19,93 +17,72 @@ const fmt = (value) => (Number.isFinite(Number(value)) ? Number(value).toFixed(3
 const shortApparatus = (name) => String(name || '').replace(' Mallakhamb', '');
 
 const ScoreLine = ({ performance, dropped = false }) => (
-  <li className="flex items-center justify-between gap-3 text-xs py-1"
-    style={{ color: dropped ? 'rgb(var(--ink) / 0.3)' : 'rgb(var(--ink) / 0.75)' }}>
-    <span className={`min-w-0 truncate ${dropped ? 'line-through' : ''}`}>{performance.playerName || 'Unknown athlete'}</span>
-    <span className={`font-mono flex-shrink-0 ${dropped ? 'line-through' : ''}`}>{fmt(performance.finalScore)}</span>
+  <li className={`sb-line ${dropped ? 'sb-line--dropped' : ''}`}>
+    <span className="min-w-0 truncate">{performance.playerName || 'Unknown athlete'}</span>
+    <span className="sb-line__score">{fmt(performance.finalScore)}</span>
   </li>
 );
+ScoreLine.propTypes = { performance: PropTypes.object.isRequired, dropped: PropTypes.bool };
 
 const TeamCard = ({ team }) => {
   const [open, setOpen] = useState(team.rank <= 3);
-  const reduced = useReducedMotion();
-  const rankAccent = team.rank === 1 ? DATA_COLORS.gold : team.rank === 2 ? DATA_COLORS.silver : team.rank === 3 ? DATA_COLORS.bronze : null;
   const panelId = `team-breakdown-${team.teamId}`;
 
   return (
-    <div className="rounded-2xl border overflow-hidden"
-      style={{
-        background: rankAccent ? `${alpha(rankAccent, 0x0A)}` : 'rgb(var(--ink) / 0.02)',
-        borderColor: rankAccent ? `${alpha(rankAccent, 0x40)}` : 'rgb(var(--ink) / 0.07)',
-      }}>
+    <article className="sb-card" data-place={team.rank >= 1 && team.rank <= 3 ? team.rank : undefined}>
       <button type="button" onClick={() => setOpen((v) => !v)}
         aria-expanded={open} aria-controls={panelId}
-        className="w-full flex items-center gap-4 p-4 text-left min-h-[44px] hover:bg-ink/[0.02] transition-colors">
-        <RankBadge rank={team.rank} />
-        <div className="flex-1 min-w-0">
-          <p className="text-ink font-bold break-words">{team.teamName || 'Unknown Team'}</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
+        className="sb-team__toggle">
+        <RankBadge rank={team.rank} compact />
+        <div className="flex-1 min-w-0 grid gap-1">
+          <p className="sb-card__name">{team.teamName || 'Unknown Team'}</p>
+          <p className="sb-card__meta">
             {team.teamSize}-player team · best {team.countedPerApparatus} per apparatus
           </p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-lg font-black" style={{ color: rankAccent || FG.brand }}>{fmt(team.totalScore)}</p>
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--fg-muted)' }}>Team total</p>
+        <div className="sb-card__total">
+          <p className="sb-card__score type-num-m">{fmt(team.totalScore)}</p>
+          <p className="sb-card__score-label type-tag">Team total</p>
         </div>
-        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-          style={{ color: 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
+        <ChevronDown className="sb-team__chevron" aria-hidden="true" />
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div id={panelId}
-            initial={reduced ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{ duration: reduced ? 0 : 0.2 }}
-            className="overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 px-4 pb-4">
-              {(team.apparatus || []).map((app) => (
-                <div key={app.apparatus} className="rounded-xl border p-3"
-                  style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: FG.brandSoft }}>
-                      {shortApparatus(app.apparatus)}
-                    </span>
-                    <span className="text-xs font-bold font-mono text-ink">{fmt(app.subtotal)}</span>
-                  </div>
-                  <ul>
-                    {app.counted.map((p, i) => <ScoreLine key={`c-${p.playerId || i}`} performance={p} />)}
-                    {app.dropped.map((p, i) => <ScoreLine key={`d-${p.playerId || i}`} performance={p} dropped />)}
-                  </ul>
-                  {app.dropped.length > 0 && (
-                    <p className="text-[10px] mt-1" style={{ color: 'var(--fg-muted)' }}>
-                      Struck-through scores do not count
-                    </p>
-                  )}
-                </div>
-              ))}
+      {open && (
+        <div id={panelId} className="sb-team__body ui-fade-in">
+          {(team.apparatus || []).map((app) => (
+            <div key={app.apparatus} className="sb-app">
+              <div className="sb-app__head">
+                <span className="sb-app__name">{shortApparatus(app.apparatus)}</span>
+                <span className="sb-app__sub">{fmt(app.subtotal)}</span>
+              </div>
+              <ul className="sb-app__list">
+                {app.counted.map((p, i) => <ScoreLine key={`c-${p.playerId || i}`} performance={p} />)}
+                {app.dropped.map((p, i) => <ScoreLine key={`d-${p.playerId || i}`} performance={p} dropped />)}
+              </ul>
+              {app.dropped.length > 0 && (
+                <p className="sb-app__note">Struck-through scores do not count</p>
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          ))}
+        </div>
+      )}
+    </article>
   );
 };
+TeamCard.propTypes = { team: PropTypes.object.isRequired };
 
 const TeamChampionshipBoard = ({ teams = [] }) => {
   if (!teams.length) return null;
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 px-1">
-        <Users className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.35)' }} aria-hidden="true" />
-        <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
-          {teams.length} {teams.length === 1 ? 'team' : 'teams'} ranked
-        </span>
-      </div>
+      <p className="flex items-center gap-2 px-1 m-0 type-tag text-fg-muted">
+        <Users className="w-3.5 h-3.5" aria-hidden="true" />
+        {teams.length} {teams.length === 1 ? 'team' : 'teams'} ranked
+      </p>
       {teams.map((team) => <TeamCard key={team.teamId} team={team} />)}
     </div>
   );
 };
+TeamChampionshipBoard.propTypes = { teams: PropTypes.array };
 
 export default TeamChampionshipBoard;

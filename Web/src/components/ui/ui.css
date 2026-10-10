@@ -24,7 +24,11 @@
 @import './states.css';
 @import './stage.css';
 @import './toast.css';
+@import './notice.css';
+@import './order.css';
 
 /* Brand and the working-screen shell (Phase 4) — same cascade position. */
 @import '../brand/brand.css';
 @import '../shell/shell.css';
+@import '../shell/auth.css';
+@import '../scores/board.css';

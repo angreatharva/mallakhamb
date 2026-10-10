@@ -4,7 +4,10 @@ import { Plus, Pencil, Trash2, Search, Download, X } from 'lucide-react';
 import {
   Button, IconButton, Field, Input, Textarea, Select, PasswordInput, Panel, Heading, Tag, StatusTag, Stat, SpecList,
   DataTable, Tabs, TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton, EmptyState, ErrorState, Grain,
+  Notice, RunningOrder, RunningOrderItem, TextLink,
 } from '@/components/ui';
+import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
+import TeamChampionshipBoard from '@/components/scores/TeamChampionshipBoard';
 import { useOptionalAppearance } from '@/contexts/AppearanceProvider';
 import { AppHeader, PageHeader } from '@/components/shell';
 import { PoleMark, Wordmark } from '@/components/brand/Brand';
@@ -28,6 +31,21 @@ const ROWS = [
   { id: 1, lot: 1, name: 'Aarav Patil', team: 'SGAM-TRIALS-TEAM-A', d: '3.80', e: '4.25', total: '9.65' },
   { id: 2, lot: 2, name: 'Ravi Gaikwad', team: 'SGAM-TRIALS-TEAM-B', d: '3.60', e: '4.10', total: '9.30' },
   { id: 3, lot: 3, name: 'Kiran More', team: 'SGAM-TRIALS-TEAM-A', d: '3.80', e: '4.40', total: '9.85' },
+];
+
+const slip = (judgeRole, d, c, e) => ({ judgeRole, difficultyScore: d, combinationScore: c, executionScore: e, bonusScore: 0, total: d + c + e });
+const SLIPS = [slip('SR_JUDGE', 3.8, 1.6, 4.2), slip('J1', 3.8, 1.6, 4.25), slip('J2', 3.6, 1.4, 4.1)];
+const BOARD = [
+  { uid: 'b1', playerName: 'Kiran More', teamName: 'SGAM-TRIALS-TEAM-A', coach: 'Preetesh Gamre', rank: 1, finalScore: 9.85, time: '1:24', panelSize: 3, judgeSlips: SLIPS },
+  { uid: 'b2', playerName: 'Aarav Patil', teamName: 'SGAM-TRIALS-TEAM-A', rank: 2, finalScore: 9.65, panelSize: 3, judgeSlips: SLIPS, tieBreakInfo: { method: 'faster_time' } },
+  { uid: 'b3', playerName: 'Ravi Gaikwad', teamName: 'SGAM-TRIALS-TEAM-B', rank: 3, finalScore: 9.3, panelSize: 3, judgeSlips: SLIPS, deduction: 0.1 },
+  { uid: 'b4', playerName: 'Om Shinde', teamName: 'SGAM-TRIALS-TEAM-B', rank: 4, finalScore: 8.9, panelSize: 3, judgeSlips: SLIPS, tieBreakInfo: { method: 'identical_time', unresolved: true } },
+];
+const TEAMS = [
+  { teamId: 't1', teamName: 'SGAM-TRIALS-TEAM-A', rank: 1, totalScore: 56.4, teamSize: 4, countedPerApparatus: 3, apparatus: [
+    { apparatus: 'Pole Mallakhamb', subtotal: 28.8, counted: [{ playerName: 'Kiran More', finalScore: 9.85 }, { playerName: 'Aarav Patil', finalScore: 9.65 }, { playerName: 'Om Shinde', finalScore: 9.3 }], dropped: [{ playerName: 'Ravi Gaikwad', finalScore: 8.9 }] },
+  ] },
+  { teamId: 't2', teamName: 'SGAM-TRIALS-TEAM-B', rank: 4, totalScore: 51.2, teamSize: 6, countedPerApparatus: 5, apparatus: [] },
 ];
 
 const Section = ({ id, title, children }) => (
@@ -236,6 +254,32 @@ const LookSpecimen = () => {
           </Dialog>
           <ConfirmDialog open={dialog === 'confirm'} onClose={() => setDialog(null)} onConfirm={() => {}} tone="danger"
             title="Remove athlete" confirmText="Remove">Ravi Gaikwad leaves the team. Scores already given are kept.</ConfirmDialog>
+        </Section>
+
+        <Section id="sp-notices" title="Notices and links">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Notice tone="danger" title="Login Failed" role="alert">Incorrect credentials. Please try again with correct credentials.</Notice>
+            <Notice tone="warning" title="Account Temporarily Locked">Too many failed login attempts. Please try again in <span className="tabular-nums">14:52</span>.</Notice>
+            <Notice tone="success" title="Code sent">If that email has an account, a 6-digit code is on its way.</Notice>
+            <Notice tone="info">This may take a moment if the server is starting up.</Notice>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6">
+            <TextLink href="#sp-notices">Forgot password?</TextLink>
+            <TextLink href="#sp-notices" className="ui-link--quiet">← Home</TextLink>
+          </div>
+        </Section>
+
+        <Section id="sp-order" title="Running order">
+          <RunningOrder label="Competition levels">
+            <RunningOrderItem index={1} title="District" meta="Meets held at district level." aside={<Tag tone="accent">2 competitions</Tag>} selected onClick={() => {}} />
+            <RunningOrderItem index={2} title="SGAM-TRIALS-1 2026" meta="Mumbai · 10/10/2026 – 12/10/2026" aside={<><Tag>District</Tag><StatusTag status="success">Live</StatusTag></>} onClick={() => {}} />
+            <RunningOrderItem index={3} title="University" meta="University and inter-university meets." aside={<Tag>0 competitions</Tag>} muted onClick={() => {}} />
+          </RunningOrder>
+        </Section>
+
+        <Section id="sp-board" title="Results board">
+          <PlayerRankingBoard players={BOARD} />
+          <TeamChampionshipBoard teams={TEAMS} />
         </Section>
 
         <Section id="sp-states" title="Empty, loading and error">

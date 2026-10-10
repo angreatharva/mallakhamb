@@ -1,0 +1,21 @@
+/*
+ * Notice (design-language PLAN §7 "errors inline"): a raised surface, the 3px
+ * status rule on the left, a tag-style title in the status colour, body text
+ * in --fg. The same anatomy as a toast, kept in the page.
+ */
+.ui-notice {
+  --notice-fg: var(--info-fg);
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px 12px 18px;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-raised));
+  box-shadow: inset var(--rule) 0 0 0 rgb(var(--notice-fg)), inset 0 0 0 1px var(--line);
+  color: var(--fg);
+}
+.ui-notice--success { --notice-fg: var(--success-fg); }
+.ui-notice--warning { --notice-fg: var(--warning-fg); }
+.ui-notice--danger { --notice-fg: var(--danger-fg); }
+.ui-notice__title { margin: 0; color: rgb(var(--notice-fg)); }
+.ui-notice__text { margin: 0; color: var(--fg); }
+.ui-notice__text > p { margin: 0; }

@@ -65,3 +65,19 @@
 }
 .ui-spec__label { color: var(--fg-secondary); }
 .ui-spec__value { margin: 0; color: var(--fg); text-align: right; }
+
+/* TextLink: underlined accent text; the target grows to 44px on touch. */
+.ui-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: rgb(var(--accent-fg));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color var(--dur-2) var(--ease);
+}
+.ui-link:hover { color: var(--fg); text-decoration-thickness: 2px; }
+.ui-link--quiet { color: var(--fg-secondary); }
+@media (min-width: 1024px) and (pointer: fine) { .ui-link { min-height: 32px; } }

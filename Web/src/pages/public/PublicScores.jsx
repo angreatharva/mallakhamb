@@ -1,44 +1,41 @@
 import { useState, useEffect } from 'react';
-import { Filter, Search, X, ArrowLeft, Trophy, Medal, Users } from 'lucide-react';
+import { Search, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, FG, alpha } from '@/styles/tokens';
-import { GradientText, FadeIn } from '@/components/design-system';
 import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows';
 import TeamChampionshipBoard from '@/components/scores/TeamChampionshipBoard';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
-import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import { Wordmark } from '@/components/brand/Brand';
+import { Button, EmptyState, Heading, IconButton, Input, Panel, Tabs, Tag, TextLink } from '@/components/ui';
+import { Grain } from '@/components/ui/Stage';
 
-// ─── Ambient orb ─────────────────────────────────────────────────────────────
 const COMPETITION_TYPE_LABELS = {
   competition_1: 'Competition I - Team Championship & Qualifier',
   competition_2: 'Competition II - All Round Individual Final',
   competition_3: 'Competition III - Apparatus Championship',
 };
 
-// ─── Team Championship view ──────────────────────────────────────────────────
-const EmptyState = ({ icon: Icon, title, children }) => (
-  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
-    <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-      style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
-      <Icon className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
-    </div>
-    <p className="text-ink font-bold text-lg mb-2">{title}</p>
-    <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>{children}</p>
-  </motion.div>
+const VIEWS = [
+  { id: 'players', label: 'Player Scores' },
+  { id: 'team', label: 'Team Championship' },
+];
+
+/** The category a board is showing, as a caption tag above it. */
+const Caption = ({ children }) => (
+  <Tag tone="accent" className="sb-caption">{children}</Tag>
 );
 
+// ─── Team Championship view ──────────────────────────────────────────────────
 const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, standings, caption }) => {
   if (!filtersSet) {
     return (
-      <EmptyState icon={Filter} title="Select Filters to View Team Championship">
+      <EmptyState tag="Select Filters to View Team Championship" className="ui-fade-in">
         Pick a competition, gender and age group. Per apparatus, a 4-player team counts its
         best 3 scores and a 6-player team its best 5.
       </EmptyState>
@@ -46,7 +43,7 @@ const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, st
   }
   if (!runsTeamChampionship) {
     return (
-      <EmptyState icon={Trophy} title="No Team Championship">
+      <EmptyState tag="No Team Championship" className="ui-fade-in">
         This competition does not run Competition I — Team Championship.
       </EmptyState>
     );
@@ -56,18 +53,14 @@ const TeamChampionshipSection = ({ filtersSet, runsTeamChampionship, loading, st
   }
   if (!standings.length) {
     return (
-      <EmptyState icon={Medal} title="No Team Scores Yet">
+      <EmptyState tag="No Team Scores Yet" className="ui-fade-in">
         Team totals appear once Competition I scores are published.
       </EmptyState>
     );
   }
   return (
     <div className="space-y-4">
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-        style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: FG.brandSoft }}>
-        <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
-        {caption} · {COMPETITION_TYPE_LABELS.competition_1}
-      </div>
+      <Caption>{caption} · {COMPETITION_TYPE_LABELS.competition_1}</Caption>
       <TeamChampionshipBoard teams={standings} />
     </div>
   );
@@ -254,235 +247,137 @@ const PublicScores = () => {
   const teamCount = new Set(filteredPlayers.map((p) => p.teamName).filter(Boolean)).size;
 
   return (
-    <div className="min-h-dvh relative" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Ambient orbs */}
-      <AmbientOrbs
-        intensity={ORB_INTENSITY.faint}
-        orbs={[
-          { x: 10, y: 15, size: 500, color: COLORS.saffron, delay: 0, duration: 9, blur: 120 },
-          { x: 90, y: 50, size: 350, delay: 2, duration: 11, blur: 100, color: '#A855F7' },
-          { x: 50, y: 90, size: 300, color: COLORS.saffronDark, delay: 1, duration: 8, blur: 90 },
-        ]}
-      />
+    <div className="min-h-dvh relative bg-bg text-fg">
+      {/* A stage screen: grain, the black stage, the display face (PLAN §5.7). */}
+      <Grain />
 
-      {/* Sticky header */}
-      <header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: COLORS.darkBorder }}>
-        <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-2 min-[360px]:gap-4">
-          <div className="flex items-center gap-2 min-[360px]:gap-4">
-            <Link to="/"
-              className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 min-h-[44px] tap-safe justify-center px-2 rounded-xl hover:bg-ink/5"
-              style={{ color: 'rgb(var(--ink) / 0.6)' }}
-              aria-label="Back to Home">
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-            <div className="w-px h-5" style={{ background: 'rgb(var(--ink) / 0.1)' }} />
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />
-              <h1 className="text-ink font-black text-sm sm:text-base">Competition Scores</h1>
-            </div>
+      {/* Masthead */}
+      <header className="shell-header">
+        <div className="shell-header__bar max-w-5xl">
+          <div className="shell-header__brand">
+            <IconButton as={Link} to="/" label="Back to Home" icon={ArrowLeft} variant="ghost" />
+            <Wordmark />
           </div>
-          <div className="flex items-center gap-2">
-          {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
-            <button onClick={handleClearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-ink/5"
-              style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}>
-              <X className="w-3.5 h-3.5" aria-hidden="true" />
-              Clear
-            </button>
-          )}
-          <AppearanceMenu />
+          <div className="flex items-center gap-2 ml-auto">
+            {(view === 'team' ? teamFiltersSet : allFiltersSet) && (
+              <Button variant="line" size="sm" icon={X} onClick={handleClearFilters}>Clear</Button>
+            )}
+            <AppearanceMenu />
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-8 space-y-6" id="main-content">
+      <main className="relative z-10 max-w-5xl mx-auto px-[var(--pad)] py-8 space-y-6" id="main-content">
         {/* Page title */}
-        <FadeIn>
-          <div className="text-center py-4">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>Live Results</p>
-            <h2 className="text-3xl md:text-4xl font-black text-ink">
-              View <GradientText>Scores</GradientText>
-            </h2>
-            <p className="text-sm mt-2" style={{ color: 'var(--fg-muted)' }}>
-              {view === 'team'
-                ? 'Teams ranked on their best scores per apparatus'
-                : 'Select a category to see players from all teams ranked together'}
-            </p>
-          </div>
-        </FadeIn>
-
-        {/* Player Scores | Team Championship */}
-        <div role="tablist" aria-label="Results view"
-          className="flex p-1 rounded-2xl border max-w-md mx-auto"
-          style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: COLORS.darkBorder }}>
-          {[
-            { id: 'players', label: 'Player Scores', icon: Medal },
-            { id: 'team', label: 'Team Championship', icon: Users },
-          ].map(({ id, label, icon: Icon }) => {
-            const active = view === id;
-            return (
-              <button key={id} type="button" role="tab" aria-selected={active}
-                onClick={() => setView(id)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-colors min-h-[44px]"
-                style={{
-                  background: active ? `${alpha(COLORS.saffron, 0x20)}` : 'transparent',
-                  color: active ? FG.brandSoft : 'var(--fg-muted)',
-                  border: `1px solid ${active ? `${alpha(COLORS.saffron, 0x40)}` : 'transparent'}`,
-                }}>
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                {label}
-              </button>
-            );
-          })}
+        <div className="grid justify-items-start gap-3 py-2">
+          <Tag tone="accent">Live Results</Tag>
+          <Heading level={1} step="display-xl" sting>Competition Scores</Heading>
+          <p className="type-body text-fg-muted m-0 max-w-xl">
+            {view === 'team'
+              ? 'Teams ranked on their best scores per apparatus'
+              : 'Select a category to see players from all teams ranked together'}
+          </p>
         </div>
 
-        {/* Filters card */}
-        <FadeIn delay={0.1}>
-          <div className="rounded-2xl border p-5 md:p-6"
-            style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: COLORS.darkBorder }}>
-            <ScoreCategoryFilters
-              competitionOptions={competitions}
-              selectedCompetition={selectedCompetition}
-              onCompetitionChange={setSelectedCompetition}
-              loadingCompetitions={loadingCompetitions}
-              selectedGender={selectedGender}
-              onGenderChange={setSelectedGender}
-              ageGroupOptions={getAvailableAgeGroups()}
-              selectedAgeGroup={selectedAgeGroup}
-              onAgeGroupChange={setSelectedAgeGroup}
-              competitionTypeOptions={getAvailableCompetitionTypes()}
-              selectedCompetitionType={selectedCompetitionType}
-              onCompetitionTypeChange={setSelectedCompetitionType}
-              apparatusOptions={getAvailableApparatus()}
-              selectedApparatus={selectedApparatus}
-              onApparatusChange={setSelectedApparatus}
-              onClearFilters={handleClearFilters}
-              categoryOnly={view === 'team'}
-            />
-          </div>
-        </FadeIn>
+        {/* Player Scores | Team Championship */}
+        <Tabs label="Results view" tabs={VIEWS} value={view} onChange={setView} idBase="results" />
+
+        {/* Filters */}
+        <Panel>
+          <ScoreCategoryFilters
+            competitionOptions={competitions}
+            selectedCompetition={selectedCompetition}
+            onCompetitionChange={setSelectedCompetition}
+            loadingCompetitions={loadingCompetitions}
+            selectedGender={selectedGender}
+            onGenderChange={setSelectedGender}
+            ageGroupOptions={getAvailableAgeGroups()}
+            selectedAgeGroup={selectedAgeGroup}
+            onAgeGroupChange={setSelectedAgeGroup}
+            competitionTypeOptions={getAvailableCompetitionTypes()}
+            selectedCompetitionType={selectedCompetitionType}
+            onCompetitionTypeChange={setSelectedCompetitionType}
+            apparatusOptions={getAvailableApparatus()}
+            selectedApparatus={selectedApparatus}
+            onApparatusChange={setSelectedApparatus}
+            onClearFilters={handleClearFilters}
+            categoryOnly={view === 'team'}
+          />
+        </Panel>
 
         {/* Content area */}
-        {view === 'team' ? (
-          <TeamChampionshipSection
-            filtersSet={teamFiltersSet}
-            runsTeamChampionship={runsTeamChampionship}
-            loading={teamLoading}
-            standings={teamStandings}
-            caption={teamFiltersSet ? `${selectedCompetition.label} · ${selectedGender.label} · ${selectedAgeGroup.label}` : ''}
-          />
-        ) : (
-        <AnimatePresence mode="wait">
-          {!allFiltersSet ? (
-            <motion.div key="empty-state"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-center py-20">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-                style={{ background: `${alpha(COLORS.saffron, 0x10)}`, border: `1px solid ${alpha(COLORS.saffron, 0x20)}` }}>
-                <Filter className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
-              </div>
-              <p className="text-ink font-bold text-lg mb-2">Select Filters to View Scores</p>
-              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
-                Pick a competition, gender, age group, competition type and apparatus —
-                players from all teams are ranked together
-              </p>
-            </motion.div>
+        <div id={`results-panel-${view}`}>
+          {view === 'team' ? (
+            <TeamChampionshipSection
+              filtersSet={teamFiltersSet}
+              runsTeamChampionship={runsTeamChampionship}
+              loading={teamLoading}
+              standings={teamStandings}
+              caption={teamFiltersSet ? `${selectedCompetition.label} · ${selectedGender.label} · ${selectedAgeGroup.label}` : ''}
+            />
+          ) : !allFiltersSet ? (
+            <EmptyState tag="Select Filters to View Scores" className="ui-fade-in">
+              Pick a competition, gender, age group, competition type and apparatus —
+              players from all teams are ranked together
+            </EmptyState>
           ) : loading ? (
-            <motion.div key="loading"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="space-y-3">
+            <div className="space-y-3">
               {[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}
-            </motion.div>
+            </div>
           ) : scores.length > 0 ? (
-            <motion.div key="results"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="space-y-4">
-              {/* Active filter badge */}
+            <div className="space-y-4">
+              {/* The category, and the search */}
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold"
-                  style={{ background: `${alpha(COLORS.saffron, 0x10)}`, borderColor: `${alpha(COLORS.saffron, 0x30)}`, color: FG.brandSoft }}>
-                  <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
+                <Caption>
                   {selectedCompetition.label} · {selectedGender.label} · {selectedAgeGroup.label} · {selectedCompetitionType.label} · {selectedApparatus.label}
-                </div>
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
-                  <input
+                </Caption>
+                <div className="relative w-full sm:w-[240px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-fg-muted z-10" aria-hidden="true" />
+                  <Input
                     type="text"
                     placeholder="Search players, team, coach..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-8 py-2 rounded-xl border text-base mouse:text-sm transition-all duration-200 min-h-[44px] mouse:min-h-[40px] w-full sm:w-[220px]"
-                    style={{
-                      background: 'rgb(var(--ink) / 0.04)',
-                      borderColor: searchTerm ? `${alpha(COLORS.saffron, 0x50)}` : 'rgb(var(--ink) / 0.08)',
-                      color: FG.ink,
-                      /*
-                       * Width moved to classes: the flat 220px could not shrink,
-                       * so on a 320px screen the search box plus its gutters
-                       * pushed the filter row wider than the page. It keeps the
-                       * authored 220px from `sm` up, and fills the row below it.
-                       */
-                    }}
+                    className="pl-9 pr-11"
                     aria-label="Search players by name, team, or coach"
                   />
                   {searchTerm && (
-                    <button onClick={() => setSearchTerm('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-ink/10 transition-colors"
-                      aria-label="Clear search">
-                      <X className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
-                    </button>
+                    <IconButton
+                      label="Clear search"
+                      icon={X}
+                      variant="ghost"
+                      className="absolute right-0 top-1/2 -translate-y-1/2"
+                      onClick={() => setSearchTerm('')}
+                    />
                   )}
                 </div>
               </div>
 
-              {/* Player + team count badge */}
-              <div className="flex items-center gap-2 px-1">
-                <Users className="w-3.5 h-3.5" style={{ color: 'rgb(var(--ink) / 0.35)' }} aria-hidden="true" />
-                <span className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>
-                  {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
-                  {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
-                </span>
-              </div>
+              {/* Player + team count */}
+              <p className="type-tag text-fg-muted m-0 px-1">
+                {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} ranked
+                {teamCount > 0 && ` across ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
+              </p>
 
               {/* Individual ranking board — one global list across all teams */}
               {filteredPlayers.length > 0 ? (
                 <PlayerRankingBoard players={filteredPlayers} />
               ) : searchTerm ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-                  <Search className="w-10 h-10 mx-auto mb-4" style={{ color: 'rgb(var(--ink) / 0.2)' }} aria-hidden="true" />
-                  <p className="text-ink font-bold mb-1">No players found</p>
-                  <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
-                    No results for &quot;{searchTerm}&quot;
-                  </p>
-                  <button onClick={() => setSearchTerm('')}
-                    className="mt-4 text-sm font-bold transition-colors duration-200"
-                    style={{ color: FG.brand }}>
-                    Clear search
-                  </button>
-                </motion.div>
+                <EmptyState
+                  tag="No players found"
+                  className="ui-fade-in"
+                  action={<TextLink as="button" type="button" onClick={() => setSearchTerm('')}>Clear search</TextLink>}
+                >
+                  No results for &quot;{searchTerm}&quot;
+                </EmptyState>
               ) : null}
-            </motion.div>
+            </div>
           ) : (
-            <motion.div key="no-scores"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="text-center py-20">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-                style={{ background: 'rgb(var(--ink) / 0.04)', border: '1px solid rgb(var(--ink) / 0.08)' }}>
-                <Medal className="w-8 h-8" style={{ color: 'rgb(var(--ink) / 0.2)' }} aria-hidden="true" />
-              </div>
-              <p className="text-ink font-bold text-lg mb-2">No Scores Available</p>
-              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>
-                Scores will appear here after judges complete their scoring.
-              </p>
-            </motion.div>
+            <EmptyState tag="No Scores Available" className="ui-fade-in">
+              Scores will appear here after judges complete their scoring.
+            </EmptyState>
           )}
-        </AnimatePresence>
-        )}
+        </div>
       </main>
     </div>
   );

@@ -1,0 +1,92 @@
+/*
+ * The results board (design-language PLAN §7 "Stage: /scores"): a results
+ * graphic. Ranks and totals in the display face, medals in the data colours,
+ * the podium as lower thirds (the 3px rule on top, in the medal colour), the
+ * published panel-rule average as a row of ruled values — never per-judge pills.
+ *
+ * Imported through ui.css (cascade order), never from the component.
+ */
+.sb-card {
+  --place: var(--line-strong);
+  display: block;
+  border-radius: var(--radius-panel);
+  background: rgb(var(--surface));
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--fg);
+  overflow: hidden;
+}
+.sb-card[data-place='1'] { --place: rgb(var(--medal-gold)); }
+.sb-card[data-place='2'] { --place: rgb(var(--medal-silver)); }
+.sb-card[data-place='3'] { --place: rgb(var(--medal-bronze)); }
+.sb-card[data-place] { box-shadow: inset 0 var(--rule) 0 0 var(--place), inset 0 0 0 1px var(--line); }
+.sb-card[data-podium] { background: rgb(var(--surface-raised)); }
+
+.sb-card__head { display: flex; align-items: center; gap: 16px; padding: 16px; }
+.sb-card__who { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.sb-card__name { margin: 0; color: var(--fg); font-weight: 700; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.sb-card__meta { margin: 0; color: var(--fg-secondary); font-size: 13px; }
+.sb-card__tie { margin: 0; color: rgb(var(--medal-gold)); font-size: 13px; }
+.sb-card__team { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--fg); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.sb-card__total { flex: none; text-align: right; display: grid; justify-items: end; gap: 4px; }
+.sb-card__score { margin: 0; color: rgb(var(--accent-fg)); }
+.sb-card__score-label { margin: 0; color: var(--fg-secondary); }
+
+.sb-rank { flex: none; min-width: 1.4ch; text-align: center; color: var(--fg-secondary); }
+.sb-rank[data-place='1'] { color: rgb(var(--medal-gold)); }
+.sb-rank[data-place='2'] { color: rgb(var(--medal-silver)); }
+.sb-rank[data-place='3'] { color: rgb(var(--medal-bronze)); }
+
+.sb-card__breakdown { padding: 12px 16px 16px; box-shadow: inset 0 1px 0 0 var(--line); }
+.sb-card__breakdown-title { margin: 0 0 10px; color: var(--fg-secondary); }
+.sb-parts { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.sb-part {
+  --tone: var(--line-strong);
+  display: grid;
+  gap: 2px;
+  padding-left: 10px;
+  box-shadow: inset var(--rule) 0 0 0 var(--tone);
+}
+.sb-part[data-tone='blue'] { --tone: rgb(var(--cat-blue)); }
+.sb-part[data-tone='purple'] { --tone: rgb(var(--cat-purple)); }
+.sb-part[data-tone='accent'] { --tone: rgb(var(--accent)); }
+.sb-part[data-tone='green'] { --tone: rgb(var(--cat-green)); }
+.sb-part[data-tone='red'] { --tone: rgb(var(--cat-red)); }
+/* Cell numbers: the text face with tabular figures (Teko is for the big ones). */
+.sb-part__value { color: var(--fg); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.sb-part[data-tone='red'] .sb-part__value { color: rgb(var(--danger-fg)); }
+.sb-part__label { color: var(--fg-secondary); }
+.sb-card__note { margin: 10px 0 0; color: var(--fg-secondary); font-size: 12.5px; }
+
+/* The Team Championship standing. */
+.sb-team__toggle {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 44px;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease);
+}
+.sb-team__toggle:hover { transform: none; background: rgb(var(--surface-raised)); }
+.sb-team__toggle:focus-visible { outline-offset: calc(-1 * var(--focus-width)); }
+.sb-team__chevron { width: 16px; height: 16px; flex: none; color: var(--fg-secondary); transition: transform var(--dur-2) var(--ease); }
+.sb-team__toggle[aria-expanded='true'] .sb-team__chevron { transform: rotate(180deg); }
+.sb-team__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 16px 16px; }
+@media (min-width: 640px) { .sb-team__body { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .sb-team__body { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.sb-app { padding: 12px; border-radius: var(--radius-control); background: rgb(var(--surface-sunken)); box-shadow: inset 0 0 0 1px var(--line); }
+.sb-app__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.sb-app__name { color: rgb(var(--accent-fg)); font-size: 13px; font-weight: 700; }
+.sb-app__sub { color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+.sb-app__list { margin: 0; padding: 0; list-style: none; }
+.sb-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; color: var(--fg); }
+.sb-line__score { flex: none; font-variant-numeric: tabular-nums; }
+.sb-line--dropped { color: var(--fg-muted); }
+.sb-line--dropped > span { text-decoration: line-through; }
+.sb-app__note { margin: 6px 0 0; color: var(--fg-secondary); font-size: 12px; }
+.sb-caption { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }

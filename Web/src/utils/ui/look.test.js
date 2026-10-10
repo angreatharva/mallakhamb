@@ -2,7 +2,9 @@
  * Which look a route is drawn in, and the developer preview override.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_LOOK, KNOWN_LOOKS, LOOK_BY_ROUTE, applyLook, currentLook, lookForPath } from './look';
+import {
+  DEFAULT_LOOK, KNOWN_LOOKS, LOOK_BY_ROUTE, applyLook, claimLook, currentLook, lookForPath, onLookClaim, releaseLook,
+} from './look';
 
 afterEach(() => {
   window.sessionStorage.clear();
@@ -47,5 +49,38 @@ describe('applyLook', () => {
 
   it('ignores a look nobody defined', () => {
     expect(applyLook('/', '?look=comic-sans')).toBe(lookForPath('/'));
+  });
+});
+
+describe('route groups (rollout waves)', () => {
+  it('W1: public and auth screens are prime-time', () => {
+    for (const path of [
+      '/', '/scores', '/player/login', '/coach/login', '/judge/login', '/admin/login', '/superadmin/login',
+      '/player/register', '/coach/register', '/judge/register', '/admin/register',
+      '/forgot-password', '/reset-password',
+      '/player/select-level', '/coach/select-competition', '/judge/select-level', '/admin/select-competition',
+    ]) expect(lookForPath(path), path).toBe('prime-time');
+  });
+
+  it('does not reach past a group: look-alike paths keep the default', () => {
+    for (const path of ['/scoresheet', '/player/login-help', '/superadmin/register', '/judge/select-team']) {
+      expect(lookForPath(path), path).toBe(DEFAULT_LOOK);
+    }
+  });
+});
+
+describe('claimLook (a screen no path names: the 404)', () => {
+  it('holds only on the path it was made on, and lapses when released', () => {
+    const heard = [];
+    const stop = onLookClaim(() => heard.push('change'));
+    claimLook('/no-such-page', 'prime-time');
+    expect(applyLook('/no-such-page')).toBe('prime-time');
+    expect(applyLook('/judge/dashboard')).toBe(lookForPath('/judge/dashboard'));
+    releaseLook('/somewhere-else'); // not its path: the claim stands
+    expect(applyLook('/no-such-page')).toBe('prime-time');
+    releaseLook('/no-such-page');
+    expect(applyLook('/no-such-page')).toBe(DEFAULT_LOOK);
+    expect(heard).toEqual(['change', 'change']);
+    stop();
   });
 });

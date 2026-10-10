@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { alpha } from '@/styles/tokens';
+import PropTypes from 'prop-types';
+import { Notice } from '@/components/ui/Notice';
 
 /**
  * AccountLockoutMessage - Display account lockout countdown timer
  * @param {Object} props
  * @param {Date} props.lockoutEndTime - The time when the lockout expires
- * @param {string} props.primaryColor - Primary color for styling
  */
-const AccountLockoutMessage = ({ lockoutEndTime, primaryColor = '#FF6B6B' }) => {
+const AccountLockoutMessage = ({ lockoutEndTime }) => {
   const [timeRemaining, setTimeRemaining] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
 
@@ -46,44 +44,25 @@ const AccountLockoutMessage = ({ lockoutEndTime, primaryColor = '#FF6B6B' }) => 
   }, [lockoutEndTime]);
 
   return (
-    <motion.div
-      className="lockout-message rounded-lg p-4 mb-4"
-      style={{
-        background: `${alpha(primaryColor, 0x15)}`,
-        border: `1px solid ${alpha(primaryColor, 0x40)}`,
-      }}
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+    <Notice
+      tone={isUnlocked ? 'success' : 'warning'}
+      title={isUnlocked ? 'Account Unlocked' : 'Account Temporarily Locked'}
+      className="lockout-message ui-fade-in"
     >
-      <div className="flex items-start gap-3">
-        <AlertCircle
-          className="icon flex-shrink-0 mt-0.5"
-          style={{ color: primaryColor }}
-          size={20}
-          aria-hidden="true"
-        />
-        <div className="flex-1">
-          <p className="title font-bold text-sm mb-1" style={{ color: primaryColor }}>
-            {isUnlocked ? 'Account Unlocked' : 'Account Temporarily Locked'}
-          </p>
-          <p className="description text-xs text-ink/60">
-            {isUnlocked ? (
-              'You can now try logging in again.'
-            ) : (
-              <>
-                Too many failed login attempts. Please try again in{' '}
-                <span className="font-mono font-semibold" style={{ color: primaryColor }}>
-                  {timeRemaining}
-                </span>
-                .
-              </>
-            )}
-          </p>
-        </div>
-      </div>
-    </motion.div>
+      {isUnlocked ? (
+        'You can now try logging in again.'
+      ) : (
+        <>
+          Too many failed login attempts. Please try again in{' '}
+          <span className="font-semibold tabular-nums">{timeRemaining}</span>.
+        </>
+      )}
+    </Notice>
   );
+};
+
+AccountLockoutMessage.propTypes = {
+  lockoutEndTime: PropTypes.instanceOf(Date).isRequired,
 };
 
 export default AccountLockoutMessage;

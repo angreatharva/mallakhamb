@@ -32,6 +32,14 @@ export const KNOWN_LOOKS = ['classic', 'prime-time'];
 export const LOOK_BY_ROUTE = [
   // The landing page: the reference implementation of prime-time (Phase 3.2).
   { match: /^\/$/, look: 'prime-time' },
+  // W1, public and auth: the results page, every sign-in, registration and
+  // password-reset screen, and the level and competition choosers. (The 404
+  // claims its look itself: see claimLook.)
+  { match: /^\/scores\/?$/, look: 'prime-time' },
+  { match: /^\/(player|coach|judge|admin|superadmin)\/login\/?$/, look: 'prime-time' },
+  { match: /^\/(player|coach|judge|admin)\/register\/?$/, look: 'prime-time' },
+  { match: /^\/(forgot|reset)-password\/?$/, look: 'prime-time' },
+  { match: /^\/(player|coach|judge|admin)\/select-(level|competition)\/?$/, look: 'prime-time' },
 ];
 
 const OVERRIDE_KEY = 'mk-look-override';
@@ -67,13 +75,42 @@ const readOverride = (search) => {
 export const lookForPath = (pathname = '/', routes = LOOK_BY_ROUTE) =>
   routes.find(({ match }) => match.test(pathname))?.look || DEFAULT_LOOK;
 
+/*
+ * A screen no path names can claim its look: the 404 page answers ANY
+ * unmatched URL, so LOOK_BY_ROUTE cannot list it. The claim holds only for the
+ * path it was made on, so it lapses the moment the user navigates away.
+ */
+let claim = null;
+const claimListeners = new Set();
+const notifyClaim = () => claimListeners.forEach((listener) => listener());
+
+/** Draw `pathname` in `look` while the claiming screen is mounted (NotFound). */
+export const claimLook = (pathname, look) => {
+  claim = { pathname, look };
+  notifyClaim();
+};
+
+/** Drop a claim made on `pathname`; a newer claim elsewhere is left alone. */
+export const releaseLook = (pathname) => {
+  if (claim?.pathname !== pathname) return;
+  claim = null;
+  notifyClaim();
+};
+
+/** App.jsx re-applies the look when a claim changes. @returns unsubscribe */
+export const onLookClaim = (listener) => {
+  claimListeners.add(listener);
+  return () => claimListeners.delete(listener);
+};
+
 /**
  * Put the route's look on <html>. Called beside applyRoleAccent in App.jsx's
  * layout effect, so it lands before paint on every navigation.
  * @returns {string} the look applied
  */
 export const applyLook = (pathname, search = '') => {
-  const look = readOverride(search) || lookForPath(pathname);
+  const claimed = claim?.pathname === pathname ? claim.look : null;
+  const look = readOverride(search) || claimed || lookForPath(pathname);
   if (typeof document === 'undefined') return look;
   const root = document.documentElement;
   if (root.getAttribute('data-look') !== look) {

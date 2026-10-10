@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { AppHeader, AccountControls, PageHeader, RoleIdent, TabNav } from './index';
+import { AppHeader, AccountControls, PageHeader, RoleIdent, TabNav, AuthLayout, AuthHeader } from './index';
 import { PoleMark, Wordmark, BRAND_NAME } from '@/components/brand/Brand';
 
 const NAV = [
@@ -77,5 +77,32 @@ describe('shell', () => {
     render(<PageHeader eyebrow="Pole · Under 14 Boys" title="Running order" actions={<button type="button">Draw lots</button>} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Running order' })).toHaveClass('type-display-l');
     expect(screen.getByRole('button', { name: 'Draw lots' })).toBeInTheDocument();
+  });
+});
+
+describe('AuthLayout', () => {
+  it('the role name is the h1, the form title an h2, and the stage is always the dark stage', () => {
+    at('/coach/login', (
+      <AuthLayout role="coach" title="Coach" lede="Manage your team." switcher>
+        <AuthHeader tag="Coach Access" title="Sign In" />
+      </AuthLayout>
+    ));
+    expect(screen.getByRole('heading', { level: 1, name: 'Coach' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Sign In' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Coach' })).toHaveAttribute('data-appearance', 'dark');
+  });
+
+  it('the portal row marks the current portal and offers the others', () => {
+    at('/coach/login', <AuthLayout role="coach" title="Coach" switcher><p>form</p></AuthLayout>);
+    const nav = screen.getByRole('navigation', { name: 'Sign in as' });
+    expect(nav).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Coach' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Judge' })).toHaveAttribute('href', '/judge/login');
+  });
+
+  it('no portal row unless asked (registration, reset)', () => {
+    at('/coach/register', <AuthLayout role="coach" title="Coach"><p>form</p></AuthLayout>);
+    expect(screen.queryByRole('navigation', { name: 'Sign in as' })).toBeNull();
   });
 });
