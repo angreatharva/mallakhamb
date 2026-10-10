@@ -10,7 +10,7 @@ import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { DATA_COLORS, FG } from '@/styles/tokens';
+import { FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -45,7 +45,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
           {/* Modal header */}
           <div
             className="flex items-center justify-between px-4 sm:px-6 py-3 flex-shrink-0 border-b"
-            style={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.25)' }}
+            style={{ background: 'rgb(var(--accent) / 0.12)', borderColor: 'rgb(var(--accent) / 0.25)' }}
           >
             <div className="flex items-center gap-3">
               <div
@@ -156,8 +156,8 @@ const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
   return (
     <label className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px] ${className}`}
       style={{
-        background: all ? 'rgba(34,197,94,0.08)' : 'rgba(168,85,247,0.08)',
-        borderColor: all ? 'rgba(34,197,94,0.3)' : 'rgba(168,85,247,0.3)',
+        background: all ? 'rgba(34,197,94,0.08)' : 'rgb(var(--accent) / 0.08)',
+        borderColor: all ? 'rgba(34,197,94,0.3)' : 'rgb(var(--accent) / 0.3)',
       }}>
       <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
         style={{ borderColor: all || some ? J.green : 'rgb(var(--ink) / 0.2)', background: all ? J.green : 'transparent' }}>
@@ -734,7 +734,7 @@ const JudgeSlip = () => {
                   {/* 1. Fixed Top Score Header */}
                   <div className="sticky z-30 pt-2 pb-3 -mx-3 px-3 backdrop-blur-xl border-b"
                     data-testid="mobile-score-bar"
-                    style={{ top: headerHeight, background: 'rgb(var(--bg) / 0.95)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                    style={{ top: headerHeight, background: 'rgb(var(--bg) / 0.95)', borderColor: 'rgb(var(--accent) / 0.2)' }}>
                     <div className="rounded-2xl p-3 flex items-center justify-between relative overflow-hidden"
                       style={{ background: 'rgb(var(--surface-raised))', border: '1px solid var(--line)' }}>
                       <div className="min-w-0 pr-2">
@@ -754,7 +754,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('difficulty')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'difficulty' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'difficulty' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Difficulty
@@ -763,7 +763,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('combination')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'combination' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'combination' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Combination
@@ -772,7 +772,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('exec_orig')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'exec_orig' ? 'bg-purple-600/30 text-ink border border-purple-500/40 shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'exec_orig' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Exec & Orig
@@ -811,7 +811,7 @@ const JudgeSlip = () => {
                             </span>
                           </div>
 
-                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2" style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}>
+                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2" style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.06)' }}>
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
                           </button>
                         </div>
@@ -843,7 +843,7 @@ const JudgeSlip = () => {
                             </span>
                           </div>
 
-                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2" style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}>
+                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200 mt-2" style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.06)' }}>
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
                           </button>
                         </div>
@@ -875,7 +875,7 @@ const JudgeSlip = () => {
                                     onClick={() => setScores({ ...scores, bonus: val })}
                                     className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[46px]"
                                     style={{
-                                      background: active ? 'rgba(168,85,247,0.15)' : 'rgb(var(--ink) / 0.03)',
+                                      background: active ? 'rgb(var(--accent) / 0.15)' : 'rgb(var(--ink) / 0.03)',
                                       borderColor: active ? J.purple : 'rgb(var(--ink) / 0.08)',
                                       color: active ? FG.ink : 'rgb(var(--ink) / 0.5)',
                                     }}>
@@ -895,7 +895,7 @@ const JudgeSlip = () => {
                             <ScoreRow label="4. Originality" value={parseFloat(scores.bonus || 0)} max="0.20" />
                           </div>
 
-                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200" style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}>
+                          <button onClick={() => setShowCopModal(true)} className="w-full flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl border text-xs font-bold transition-all duration-200" style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.06)' }}>
                             <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> View COP Rules Reference
                           </button>
                         </div>
@@ -910,7 +910,7 @@ const JudgeSlip = () => {
                     {/* Score hero */}
                     <div className="rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'rgb(var(--surface-raised))', border: '1px solid var(--line)' }}>
                       <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.15), transparent 60%)' }} />
+                        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgb(var(--accent) / 0.15), transparent 60%)' }} />
                       <p className="type-tag mb-2 relative z-10 text-fg-secondary">Final Score</p>
                       <p className="text-7xl font-black relative z-10 text-fg" key={calcFinal()}>
                         {calcFinal()}
@@ -941,7 +941,7 @@ const JudgeSlip = () => {
                                 onClick={() => setScores({ ...scores, bonus: val })}
                                 className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[44px]"
                                 style={{
-                                  background: active ? 'rgba(168,85,247,0.15)' : 'rgb(var(--ink) / 0.03)',
+                                  background: active ? 'rgb(var(--accent) / 0.15)' : 'rgb(var(--ink) / 0.03)',
                                   borderColor: active ? J.purple : 'rgb(var(--ink) / 0.08)',
                                   color: active ? FG.ink : 'rgb(var(--ink) / 0.5)',
                                 }}>
@@ -1034,7 +1034,7 @@ const JudgeSlip = () => {
                           Not connected to server. Scores cannot be submitted.
                         </p>
                       )}
-                      <button onClick={() => setShowCopModal(true)} className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200" style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.06)' }}>
+                      <button onClick={() => setShowCopModal(true)} className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200" style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.06)' }}>
                         <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> COP Rules
                       </button>
                     </div>
@@ -1046,7 +1046,7 @@ const JudgeSlip = () => {
                 style={{
                   background: 'rgb(var(--bg) / 0.96)',
                   backdropFilter: 'blur(16px)',
-                  borderColor: 'rgba(168,85,247,0.2)',
+                  borderColor: 'rgb(var(--accent) / 0.2)',
                   paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
                 }}>
                 <div className="max-w-[1400px] mx-auto flex items-center gap-3">

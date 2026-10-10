@@ -21,7 +21,7 @@ import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
 import { PoleMark } from '@/components/brand/Brand';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -742,7 +742,7 @@ const ScorerScoring = () => {
               */}
             <button onClick={() => navigate('/judge/sequence')} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold tap-safe mouse:min-h-[36px] transition-colors" style={{
                 borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
-                color: DATA_COLORS.purpleSoft,
+                color: 'rgb(var(--accent-fg))',
                 background: `${alpha(ADMIN_COLORS.purple, 0x12)}`,
               }}>
               <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />

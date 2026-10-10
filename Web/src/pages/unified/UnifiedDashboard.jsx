@@ -404,7 +404,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
 
       {/* Stats Grid */}
       <div className="grid gap-4">
-        <Tag tone="accent">Overview</Tag>
+        <Tag tone="accent" className="justify-self-start">Overview</Tag>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <StatPanel label="Total Teams" value={stats?.totalTeams} />
           <StatPanel label="Total Participants" value={stats?.totalParticipants} />
@@ -487,7 +487,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     <div className="space-y-8">
       {/* System Overview */}
       <div className="grid gap-4">
-        <Tag tone="accent">System Overview — All Competitions</Tag>
+        <Tag tone="accent" className="justify-self-start">System Overview — All Competitions</Tag>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatPanel label="Total Admins" value={systemStats?.admins} />
           <StatPanel label="Total Coaches" value={systemStats?.coaches} />
@@ -500,7 +500,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       <Panel variant="feature" className="ui-fade-in">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div className="grid gap-2">
-            <Tag tone="accent">Competition Stats</Tag>
+            <Tag tone="accent" className="justify-self-start">Competition Stats</Tag>
             <Heading level={2} step="display-s">Participation Breakdown</Heading>
           </div>
           <div className="md:w-64">

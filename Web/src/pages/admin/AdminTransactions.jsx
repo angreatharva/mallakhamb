@@ -135,7 +135,7 @@ const AdminTransactions = () => {
               </div>
               <div>
                 <p className="type-tag text-accent-fg">Transactions</p>
-                <h2 className="text-xl font-black text-ink">Payment History</h2>
+                <h2 className="type-display-s text-fg">Payment History</h2>
               </div>
             </div>
 
@@ -328,7 +328,7 @@ const AdminTransactions = () => {
                       <Users className="w-5 h-5 text-fg-secondary" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-ink">Team Players</h3>
+                      <h3 className="type-display-s text-fg">Team Players</h3>
                       <p className="text-xs text-fg-muted">{selectedPlayers.length} player{selectedPlayers.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>

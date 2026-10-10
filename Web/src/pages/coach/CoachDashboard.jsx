@@ -562,7 +562,7 @@ const CoachDashboard = () => {
         <Panel className="grid gap-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="grid gap-2 min-w-0">
-              <Tag tone="ident">Team Dashboard</Tag>
+              <Tag tone="ident" className="justify-self-start">Team Dashboard</Tag>
               <Heading level={1} step="display-l" asIs className="ui-wipe-in">{team.name}</Heading>
               {team.maxTeamSize && (
                 <p className="type-body-s text-fg-muted m-0">

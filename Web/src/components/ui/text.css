@@ -35,6 +35,8 @@
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--fg-secondary);
   white-space: nowrap;
+  /* A tag is as wide as its text, even as a grid item (grids stretch by default). */
+  justify-self: start;
 }
 .ui-tag--accent { color: rgb(var(--accent-fg)); box-shadow: inset 0 0 0 1px rgb(var(--accent-fg) / 0.5); }
 .ui-tag--ident { color: rgb(var(--ident-fg)); box-shadow: inset 0 0 0 1px rgb(var(--ident-fg) / 0.5); }

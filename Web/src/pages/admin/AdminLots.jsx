@@ -232,7 +232,7 @@ const AdminLots = () => {
         <p className="type-tag mb-1 text-accent-fg">
           Lots &amp; Running Order
         </p>
-        <h2 className="text-2xl font-black text-ink mb-6">Draw Lots</h2>
+        <h2 className="type-display-m text-fg mb-6">Draw Lots</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {isSuperAdmin && (

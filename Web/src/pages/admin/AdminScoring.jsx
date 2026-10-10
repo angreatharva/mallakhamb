@@ -695,7 +695,7 @@ const AdminScoring = () => {
                                         <div key={judge._id} className="rounded-xl border p-3 text-center"
                                             style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x12)}` : `${alpha(ADMIN_COLORS.blue, 0x10)}`, borderColor: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x30)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
                                             <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold mb-2"
-                                                style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x25)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}`, color: isSenior ? DATA_COLORS.purpleSoft : DATA_COLORS.blueSoft }}>
+                                                style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x25)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}`, color: isSenior ? 'rgb(var(--accent-fg))' : DATA_COLORS.blueSoft }}>
                                                 {judge.judgeType}
                                             </span>
                                             <p className="font-bold text-ink text-sm">{judge.name}</p>

@@ -703,7 +703,7 @@ const Judges = () => {
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
   const judgeTypeBadge = (jt) => {
-    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: DATA_COLORS.purpleSoft };
+    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: 'rgb(var(--accent-fg))' };
     if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold };
     return { bg: `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: DATA_COLORS.blueSoft };
   };
@@ -734,7 +734,7 @@ const Judges = () => {
       <FadeIn>
         <DarkCard className="p-6">
           <p className="type-tag mb-1 text-accent-fg">Judge Management</p>
-          <h2 className="text-2xl font-black text-ink mb-2">Manage Judges</h2>
+          <h2 className="type-display-m text-fg mb-2">Manage Judges</h2>
           <p className="text-fg-muted text-sm mb-6">
             Judges create their own accounts at{' '}
             <span className="text-ink/60">{REGISTER_PATH}</span> — here you choose which of them
@@ -835,14 +835,14 @@ const Judges = () => {
               {/* Add Judge Form */}
               {judgeType === 'add' && (
                 <div>
-                  <h3 className="text-lg font-bold text-ink mb-4">Staff the Panel</h3>
+                  <h3 className="type-display-s text-fg mb-4">Staff the Panel</h3>
                   {!ladderComplete ? (
                     <EmptyState icon={UserPlus} title="Complete all filters first" desc="Select judge action, gender, age group, competition type, and apparatus to staff a panel." />
                   ) : judgesExistForSelection ? (
                     <div className="text-center py-8">
                       <div className="p-6 rounded-2xl border bg-surface-sunken border-line">
                         <Users className="w-10 h-10 mx-auto mb-3 text-accent-fg"/>
-                        <h3 className="text-lg font-bold text-ink mb-2">Judges Already Exist</h3>
+                        <h3 className="type-display-s text-fg mb-2">Judges Already Exist</h3>
                         <p className="text-fg-muted text-sm mb-4">A judge panel already exists for <strong className="text-ink">{selectedGender.label} — {selectedAgeGroup.label} · {selectedApparatus.label}</strong>. Use &quot;Judge List&quot; to view or edit.</p>
                         <DarkBtn variant="primary" onClick={() => setJudgeType('list')}>Switch to Judge List</DarkBtn>
                       </div>
@@ -916,7 +916,7 @@ const Judges = () => {
               {judgeType === 'list' && (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-ink">Judge List</h3>
+                    <h3 className="type-display-s text-fg">Judge List</h3>
                     {(judgeType || selectedGender || selectedAgeGroup || selectedCompetitionType || selectedApparatus) && (
                       <DarkBtn size="sm" variant="ghost" onClick={() => {
                         setJudgeType(null);

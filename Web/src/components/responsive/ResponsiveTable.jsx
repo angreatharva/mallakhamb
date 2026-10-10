@@ -293,7 +293,7 @@ export const ResponsiveScoringTable = ({
                   <div key={judge._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
                       <label style={{ fontSize: 12, color: textSecondary, display: 'block' }}>{judge.judgeType}</label>
-                      {judge.name && <span style={{ fontSize: 10, color: DATA_COLORS.purpleSoft, opacity: 0.85 }}>{judge.name}</span>}
+                      {judge.name && <span style={{ fontSize: 10, color: 'rgb(var(--accent-fg))', opacity: 0.85 }}>{judge.name}</span>}
                       {judge.isChiefCopy && (
                         <span style={{ fontSize: 10, color: textMuted, display: 'block' }}>Senior Judge&rsquo;s mark</span>
                       )}
@@ -413,7 +413,7 @@ export const ResponsiveScoringTable = ({
                   <th key={i} scope="col" style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
                     {h === 'Time' ? <>{h} <span className="text-danger-fg">*</span></> : h}
                     {isJudgeCol && judgeObj?.name && (
-                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: DATA_COLORS.purpleSoft, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
+                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'rgb(var(--accent-fg))', marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
                     )}
                     {isJudgeCol && judgeObj?.isChiefCopy && (
                       <div style={{ fontSize: 9, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: textMuted, marginTop: 1 }}>Senior Judge&rsquo;s mark</div>
@@ -555,10 +555,10 @@ export const ResponsiveTeamTable = ({
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
           <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 'var(--radius-control)', padding: '8px 14px', marginBottom: 6 }}>
-            <p style={{ fontSize: 11, color: DATA_COLORS.purpleSoft, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
+            <p style={{ fontSize: 11, color: 'rgb(var(--accent-fg))', fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
             <p style={{ fontSize: 22, fontWeight: 800, color: DATA_COLORS.violet }}>{team.players?.length || 0}</p>
           </div>
-          <span style={{ fontSize: 12, color: DATA_COLORS.purpleSoft, fontWeight: 500 }}>View Details →</span>
+          <span style={{ fontSize: 12, color: 'rgb(var(--accent-fg))', fontWeight: 500 }}>View Details →</span>
         </div>
       </div>
     </div>

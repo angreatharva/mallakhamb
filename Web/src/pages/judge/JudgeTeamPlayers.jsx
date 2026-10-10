@@ -18,7 +18,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { DATA_COLORS, FG } from '@/styles/tokens';
+import { FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/admin/AdminKit';
 import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
@@ -412,7 +412,7 @@ const JudgeTeamPlayers = () => {
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <FadeIn delay={0}>
           <div className="rounded-2xl border p-5 mb-6"
-            style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
+            style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
             <p className="type-tag mb-2 text-fg-secondary">
               Team
             </p>
@@ -455,8 +455,8 @@ const JudgeTeamPlayers = () => {
                       isLocked
                         ? 'bg-green-500/10 border-green-500/30 cursor-default'
                         : isSubmitted
-                        ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 cursor-pointer'
-                        : 'hover:bg-purple-500/15 border-ink/10 hover:border-purple-500/30 bg-ink/[0.02] cursor-pointer'
+                        ? 'bg-surface-raised border-line-strong hover:bg-surface-raised cursor-pointer'
+                        : 'hover:bg-surface-raised border-ink/10 hover:border-line-strong bg-ink/[0.02] cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -477,15 +477,15 @@ const JudgeTeamPlayers = () => {
                         isLocked
                           ? 'bg-green-500/20 border-green-500/40'
                           : isSubmitted
-                          ? 'bg-purple-500/20 border-purple-500/40 group-hover:bg-purple-500/30'
-                          : 'bg-ink/5 border-ink/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
+                          ? 'bg-surface-raised border-line-strong group-hover:bg-surface-raised'
+                          : 'bg-ink/5 border-ink/10 group-hover:border-line-strong group-hover:bg-surface-raised'
                       }`}>
                         {isLocked ? (
                           <Lock className="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                         ) : isSubmitted ? (
                           <CheckCircle className="w-5 h-5 text-fg-secondary" aria-hidden="true" />
                         ) : (
-                          <User className="w-5 h-5 text-ink/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
+                          <User className="w-5 h-5 text-ink/60 group-hover:text-accent-fg dark:group-hover:text-accent-fg" aria-hidden="true" />
                         )}
                       </div>
                       <div className="text-left min-w-0">
@@ -498,7 +498,7 @@ const JudgeTeamPlayers = () => {
                             </span>
                           ) : isSubmitted ? (
                             <span className="type-tag px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(168,85,247,0.2)', color: DATA_COLORS.purpleSoft }}>
+                              style={{ background: 'rgb(var(--accent) / 0.2)', color: 'rgb(var(--accent-fg))' }}>
                               Partial Score Submitted
                             </span>
                           ) : null}
@@ -530,8 +530,8 @@ const JudgeTeamPlayers = () => {
                           <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 group-hover:bg-purple-500/20 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-ink/5 group-hover:bg-surface-raised transition-colors">
+                          <ChevronRight className="w-4 h-4 text-fg-muted group-hover:text-accent-fg dark:group-hover:text-accent-fg" aria-hidden="true" />
                         </div>
                       )}
                     </div>

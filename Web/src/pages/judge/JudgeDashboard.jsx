@@ -14,7 +14,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -773,8 +773,8 @@ const JudgeDashboard = () => {
           <div className="flex items-center gap-2 flex-shrink-0">
             <AppearanceMenu />
             <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
-              style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-surface-raised"
+              style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))' }}
               aria-label="Your profile">
               <UserCircle className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
@@ -807,7 +807,7 @@ const JudgeDashboard = () => {
                 {canSequence && (
                   <button
                     onClick={() => navigate('/judge/sequence')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-800 dark:text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg dark:text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                     <ListOrdered className="w-4 h-4" />
                     Set Sequence
                   </button>
@@ -815,14 +815,14 @@ const JudgeDashboard = () => {
                 {needsRoleChoice && (
                   <button
                     onClick={() => setShowRoleModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                     {chosenRole === 'Time Keeper' ? <Timer className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                     Change Role
                   </button>
                 )}
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                   <Filter className="w-4 h-4" />
                   Change Category
                 </button>
@@ -832,7 +832,7 @@ const JudgeDashboard = () => {
 
           {!showModal && selectedCompetitionType && (
             <div className="rounded-2xl border p-4 flex flex-col sm:flex-row gap-4 mb-6"
-              style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
+              style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 flex-shrink-0 text-fg-secondary" aria-hidden="true" />
                 <span className="type-tag text-fg-secondary">Current Assignment</span>
@@ -879,7 +879,7 @@ const JudgeDashboard = () => {
               </p>
               <button
                 onClick={() => navigate('/judge/profile')}
-                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
+                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                 <UserCircle className="w-4 h-4" />
                 View your profile
               </button>
@@ -897,7 +897,7 @@ const JudgeDashboard = () => {
                 placeholder="Search teams by name..." aria-label="Search teams" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-purple-500/50 transition-colors shadow-lg"
+                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-line-strong transition-colors shadow-lg"
               />
             </div>
 
@@ -932,7 +932,7 @@ const JudgeDashboard = () => {
                               other. */}
                           <span className="flex flex-col items-center justify-center w-10 flex-shrink-0">
                             <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
-                              style={{ background: 'rgba(168,85,247,0.18)', color: DATA_COLORS.purpleSoft }}>
+                              style={{ background: 'rgb(var(--accent) / 0.18)', color: 'rgb(var(--accent-fg))' }}>
                               {orderIdx + 1}
                             </span>
                             {team.lotNo != null && (
@@ -987,7 +987,7 @@ const JudgeDashboard = () => {
           <div className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto">
               <BodyScrollLock />
             
-            <div className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel">
+            <div className="bg-surface border border-line-strong rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel">
               
               {/* If we already made a selection once, we can cancel changing it */}
               {selectedCompetitionType && isSelectionComplete && (
@@ -1000,10 +1000,10 @@ const JudgeDashboard = () => {
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <Filter className="w-6 h-6 text-purple-700 dark:text-purple-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center mx-auto mb-4 border border-line-strong">
+                    <Filter className="w-6 h-6 text-accent-fg" />
                   </div>
-                  <h2 className="text-2xl font-black text-ink">Select Judging Category</h2>
+                  <h2 className="type-display-m text-fg">Select Judging Category</h2>
                   <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
@@ -1011,7 +1011,7 @@ const JudgeDashboard = () => {
                     when this judge is seated at more than one. */}
                 {availableCompetitions.length > 1 && (
                   <div>
-                    <p className="type-tag text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition</p>
+                    <p className="type-tag text-accent-fg mb-3 ml-1">Competition</p>
                     <div className="grid grid-cols-1 gap-3">
                       {availableCompetitions.map(comp => (
                         <SelectBtn
@@ -1046,7 +1046,7 @@ const JudgeDashboard = () => {
                   {/* Gender Selection or Display */}
                   {availableGenders.length > 1 ? (
                     <div>
-                      <p className="type-tag text-purple-700 dark:text-purple-400 mb-3 ml-1">Gender</p>
+                      <p className="type-tag text-accent-fg mb-3 ml-1">Gender</p>
                       <div className="grid grid-cols-2 gap-3">
                         {availableGenders.map(g => (
                           <SelectBtn key={g} selected={selectedGender === g} onClick={() => setSelectedGender(g)}>
@@ -1068,7 +1068,7 @@ const JudgeDashboard = () => {
                       category and Above 18 to a Female one. */}
                   {availableAgeGroups.length > 1 ? (
                     <div>
-                      <p className="type-tag text-purple-700 dark:text-purple-400 mb-3 ml-1">
+                      <p className="type-tag text-accent-fg mb-3 ml-1">
                         Age Group{selectedGender ? ` · ${selectedGender}` : ''}
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1093,7 +1093,7 @@ const JudgeDashboard = () => {
 
                 {/* Competition Type */}
                 <div>
-                  <p className="type-tag text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition Type</p>
+                  <p className="type-tag text-accent-fg mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
                       .filter(ct => availableCompetitionTypes.includes(ct.value))
@@ -1117,7 +1117,7 @@ const JudgeDashboard = () => {
                   {needsApparatus && (
                     <div className="overflow-hidden">
                       <div className="pt-2">
-                        <p className="type-tag text-purple-700 dark:text-purple-400 mb-3 ml-1">Apparatus</p>
+                        <p className="type-tag text-accent-fg mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {availableApparatus.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
@@ -1162,7 +1162,7 @@ const JudgeDashboard = () => {
         {showRoleModal && !showModal && needsRoleChoice && (
           <div className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto">
               <BodyScrollLock />
-            <div className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+            <div className="bg-surface border border-line-strong rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
 
               {/* Closable only once a role is on record */}
               {roleChosen && (
@@ -1176,8 +1176,8 @@ const JudgeDashboard = () => {
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <ClipboardList className="w-6 h-6 text-purple-700 dark:text-purple-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center mx-auto mb-4 border border-line-strong">
+                    <ClipboardList className="w-6 h-6 text-accent-fg" />
                   </div>
                   <h2 id="role-modal-title" className="text-2xl font-black text-ink">Select Your Role</h2>
                   <p className="text-fg-muted text-sm mt-2">
@@ -1192,7 +1192,7 @@ const JudgeDashboard = () => {
                   ].map(({ role, Icon, desc }) => (
                     <SelectBtn key={role} selected={chosenRole === role} onClick={() => chooseRole(role)}>
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-300" aria-hidden="true" />
+                        <Icon className="w-5 h-5 flex-shrink-0 text-accent-fg" aria-hidden="true" />
                         <div>
                           <p className="font-bold text-ink">{role}</p>
                           <p className="text-xs text-fg-muted mt-0.5">{desc}</p>

@@ -325,7 +325,7 @@ const SuperAdminAddPlayerPayment = () => {
             <p className="type-tag mb-2 text-accent-fg">
               Add player
             </p>
-            <h1 className="text-3xl font-black text-ink">Player registration payment</h1>
+            <h1 className="type-display-l text-fg">Player registration payment</h1>
             <p className="text-fg-muted text-sm mt-1">Same secure Razorpay checkout as coach team registration</p>
           </div>
         </FadeIn>

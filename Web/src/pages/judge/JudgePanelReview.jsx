@@ -17,7 +17,7 @@ import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { DATA_COLORS, FG } from '@/styles/tokens';
+import { FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
@@ -437,7 +437,7 @@ const JudgePanelReview = () => {
         <div className="space-y-5 pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-ink">Panel Review</h2>
+              <h2 className="type-display-s text-fg">Panel Review</h2>
               <p className="text-xs mt-1 text-fg-muted">
                 {panelScoresCount}
                 {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
@@ -450,7 +450,7 @@ const JudgePanelReview = () => {
                   type="button"
                   onClick={goBackToScoring}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
-                  style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft }}
+                  style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
                 >
                   <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                   Edit My Score
@@ -503,7 +503,7 @@ const JudgePanelReview = () => {
             </div>
           )}
           {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 1 && (
-            <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.15)' }}>
+            <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgb(var(--accent) / 0.05)', borderColor: 'rgb(var(--accent) / 0.15)' }}>
               <Lock className="w-3.5 h-3.5 flex-shrink-0 text-fg-muted" />
               <p className="text-xs text-fg-muted">
                 {panelScoresCount - 1} other judge{panelScoresCount - 1 > 1 ? 's have' : ' has'} submitted. Scores are visible to the Senior Judge only.
@@ -525,7 +525,7 @@ const JudgePanelReview = () => {
               return (
                 <div key={judge} className="rounded-2xl border p-4 space-y-3"
                   style={{
-                    background: isYou ? 'rgba(168,85,247,0.12)' : 'rgb(var(--ink) / 0.03)',
+                    background: isYou ? 'rgb(var(--accent) / 0.12)' : 'rgb(var(--ink) / 0.03)',
                     borderColor: isYou ? J.purple : 'rgb(var(--ink) / 0.1)',
                   }}>
                   <div className="flex items-center justify-between gap-2">
@@ -533,7 +533,7 @@ const JudgePanelReview = () => {
                       <div className="text-sm font-bold text-ink flex items-center gap-2">
                         {judge}
                         {isYou && (
-                          <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-700 dark:text-purple-300">You</span>
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-surface-raised text-accent-fg">You</span>
                         )}
                       </div>
                       {judgeName && (
@@ -541,11 +541,11 @@ const JudgePanelReview = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-2xl font-black" style={{ color: isYou ? DATA_COLORS.purpleSoft : FG.ink }}>
+                      <div className="text-2xl font-black" style={{ color: isYou ? 'rgb(var(--accent-fg))' : FG.ink }}>
                         {Number(data.score).toFixed(2)}
                       </div>
                       {isSeniorJudge && !isYou && !finalized && (
-                        <button type="button" onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }} className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0" style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.08)' }} title={`Edit ${judge} score`} aria-label={`Edit ${judge} score`}>
+                        <button type="button" onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }} className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0" style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.08)' }} title={`Edit ${judge} score`} aria-label={`Edit ${judge} score`}>
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                       )}

@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { AlertTriangle, CheckCircle, LogOut, Save, X } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
-import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 import {
   panelScoresShape,
   editTargetShape,
@@ -158,7 +158,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
             onClick={() => onChange(Math.max(0, n - 1))}
             className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[16px]"
-            style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : DATA_COLORS.purpleSoft, borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
+            style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : 'rgb(var(--accent-fg))', borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             −
           </button>
           <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-ink select-none">
@@ -167,7 +167,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           <button type="button" aria-label={`Increase ${name}`}
             onClick={() => onChange(n + 1)}
             className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[16px]"
-            style={{ color: DATA_COLORS.purpleSoft, borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
+            style={{ color: 'rgb(var(--accent-fg))', borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
             +
           </button>
         </div>
@@ -620,11 +620,11 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
       {isOpen && (
         <div className="modal-overlay z-[9997]" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
             <BodyScrollLock />
-          <div className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel" style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel" style={{ background: 'rgb(var(--surface))', borderColor: 'rgb(var(--accent) / 0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-              style={{ background: 'rgba(168,85,247,0.10)', borderColor: 'rgba(168,85,247,0.2)' }}
+              style={{ background: 'rgb(var(--accent) / 0.10)', borderColor: 'rgb(var(--accent) / 0.2)' }}
             >
               <div>
                 <p className="text-ink font-black text-base">Edit Score — {editTarget.judgeType}</p>
@@ -715,7 +715,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                         onClick={() => setEditScores({ ...editScores, bonus: val })}
                         aria-pressed={active}
                         className="py-3 rounded-xl border font-bold text-sm transition-all duration-200"
-                        style={{ background: active ? 'rgba(168,85,247,0.15)' : 'rgb(var(--ink) / 0.03)', borderColor: active ? '#A855F7' : 'rgb(var(--ink) / 0.08)', color: active ? FG.ink : 'rgb(var(--ink) / 0.5)' }}
+                        style={{ background: active ? 'rgb(var(--accent) / 0.15)' : 'rgb(var(--ink) / 0.03)', borderColor: active ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.08)', color: active ? FG.ink : 'rgb(var(--ink) / 0.5)' }}
                       >{label}</button>
                     );
                   })}

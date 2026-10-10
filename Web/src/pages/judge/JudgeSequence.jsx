@@ -9,7 +9,7 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
-import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 import { J } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
@@ -242,7 +242,7 @@ const JudgeSequence = () => {
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <div className="rounded-2xl border p-5 mb-6"
-          style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
+          style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
           <p className="type-tag mb-2 text-fg-secondary">Category</p>
           <h1 className="text-xl font-black text-ink">
             {categoryParams?.gender} — {categoryParams?.ageGroup}
@@ -293,7 +293,7 @@ const JudgeSequence = () => {
                 return (
                   <div>
                     <div className="flex items-center gap-3">
-                      <OrderBadge lotNo={team.lotNo} position={index} accent={DATA_COLORS.purpleSoft} />
+                      <OrderBadge lotNo={team.lotNo} position={index} accent={'rgb(var(--accent-fg))'} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">

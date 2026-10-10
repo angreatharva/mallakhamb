@@ -801,7 +801,7 @@ const SuperAdminManagement = () => {
     national: FG.brand,
     international: FG.brandGold,
     dso: FG.success,
-    university: DATA_COLORS.purpleSoft,
+    university: 'rgb(var(--accent-fg))',
   }[l] || FG.brand);
   const statusColor = (s) => ({ ongoing: FG.success, upcoming: FG.brandGold, completed: 'var(--fg-muted)' }[s] || 'var(--fg-muted)');
 
@@ -835,7 +835,7 @@ const SuperAdminManagement = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="type-tag mb-0.5 text-accent-fg">Management</p>
-                <h2 className="text-2xl font-black text-ink">Competitions</h2>
+                <h2 className="type-display-m text-fg">Competitions</h2>
               </div>
               <DarkBtn onClick={() => openCompetitionModal()}>
                 <Plus className="w-4 h-4" /> Create
@@ -852,7 +852,7 @@ const SuperAdminManagement = () => {
                       <div className="flex flex-wrap gap-1">
                         {(comp.competitionTypes || []).map(t => (
                           <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold"
-                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: DATA_COLORS.purpleSoft }}>
+                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: 'rgb(var(--accent-fg))' }}>
                             {compTypeLabel(t)}
                           </span>
                         ))}
@@ -949,7 +949,7 @@ const SuperAdminManagement = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="type-tag mb-0.5 text-accent-fg">Management</p>
-                <h2 className="text-2xl font-black text-ink">Admins</h2>
+                <h2 className="type-display-m text-fg">Admins</h2>
               </div>
               <DarkBtn onClick={() => setShowAddAdminModal(true)}>
                 <UserPlus className="w-4 h-4" /> Add Admin
@@ -994,7 +994,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="mb-6">
               <p className="type-tag mb-0.5 text-accent-fg">Management</p>
-              <h2 className="text-2xl font-black text-ink">Coaches</h2>
+              <h2 className="type-display-m text-fg">Coaches</h2>
             </div>
             {loading ? <LoadingState /> : coaches.length === 0 ? (
               <EmptyState icon={UserCheck} title="No coaches yet" desc="Coaches will appear here once registered." />
@@ -1027,7 +1027,7 @@ const SuperAdminManagement = () => {
           <DarkCard className="p-6">
             <div className="mb-6">
               <p className="type-tag mb-0.5 text-accent-fg">Management</p>
-              <h2 className="text-2xl font-black text-ink">Add Player to Team</h2>
+              <h2 className="type-display-m text-fg">Add Player to Team</h2>
             </div>
             <AddPlayerForm 
               key={addPlayerFormKey}
