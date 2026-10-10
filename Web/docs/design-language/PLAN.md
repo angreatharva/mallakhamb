@@ -865,6 +865,13 @@ The judge dashboard already shifts on master, so its gate is "no worse", not 0. 
 - `no-hardcoded-colors` is an error in every folder at zero.
 - **Audits on the W4 build** (before Phase 6): specimen 2/2, contrast-audit 6/6, appearance-everywhere 1/1, focus-visible 6/6, responsive-audit 6/6 (only Home's two footer links, untouched), score sheet 2/2, judge walk 1/1, judge deep screens 1/1. deep-screens failed once: the mark-only wordmark was a 13 px-wide link at 768 on admin tabs — fixed (`59a0266`).
 
+### 2026-10-11: final verification (twice)
+
+- **Pass 1** (Phase 6 build `59a0266`): all 12 browser audits green, Home 41/41, the pixel reference recorded (`.mallakhamb-visual-baseline-look-v5`).
+- **Review by eye** of the recorded screens found three things the audits do not check: the old judge purple in labels and borders, old-sans section headings, and stretched tags. Fixed in `a79c8cb`.
+- **Pass 2** (final build `a79c8cb`): all 12 audits green, Home 41/41, the reference re-recorded. A third, compare-only run reproduced it with 0 differences.
+- **Speed:** login 1632 ms, `/scores` 1620 ms, judge dashboard 1472 ms LCP; fonts 96.7 KB; CLS ≤ 0.032. See REPORT.md.
+
 ### 2026-10-11: Phase 7, hand-over
 
 - [LOOKS.md](LOOKS.md): the playbook (§11) as a working guide, the gates, the wave checklist, the traps.

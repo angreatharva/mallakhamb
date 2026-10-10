@@ -33,19 +33,34 @@ Each wave ran the plan's §10 gates before its route group switched.
   - After Phase 6, the whole site was recorded as the new reference (`.mallakhamb-visual-baseline-look-v5`), and a second, independent run compared against it.
 - **Browser audits, on the full prime-time build, one at a time:**
 
-| Audit | W4 build | Phase 6 build (pass 1) | Phase 6 build (pass 2) |
+| Audit | W4 build | Phase 6 build (pass 1, `59a0266`) | Final build (pass 2, `a79c8cb`) |
 |---|---|---|---|
-| look-specimen (contrast, overflow, 44 px targets, masthead) | 2/2 | 2/2 | see below |
-| contrast-audit (real backgrounds, both appearances) | 6/6 | 6/6 | |
-| appearance-everywhere / -persistence | 1/1 | 1/1 · 1/1 | |
-| focus-visible | 6/6 | 6/6 | |
-| responsive-audit | 6/6 | | |
-| responsive-tablet, responsive-modals | — | | |
-| deep-screens | 1 failure, fixed | | |
-| responsive-score-sheet | 2/2 | | |
-| responsive-judge-walk | 1/1 | | |
-| judge-deep-screens | 1/1 | | |
-| Home 41-device audit | — | | |
+| look-specimen (contrast, overflow, 44 px targets, masthead) | 2/2 | 2/2 | 2/2 |
+| contrast-audit (real backgrounds, both appearances) | 6/6 | 6/6 | 6/6 |
+| appearance-everywhere / appearance-persistence | 1/1 · — | 1/1 · 1/1 | 1/1 · 1/1 |
+| focus-visible | 6/6 | 6/6 | 6/6 |
+| responsive-audit | 6/6 | 6/6 | 6/6 |
+| responsive-tablet · responsive-modals | — | 6/6 · 1/1 | 6/6 · 1/1 |
+| deep-screens | 1 failure, fixed | 2/2 | 2/2 |
+| responsive-score-sheet | 2/2 | 2/2 | 2/2 |
+| responsive-judge-walk | 1/1 | 1/1 | 1/1 |
+| judge-deep-screens | 1/1 | 1/1 | 1/1 |
+| Home 41-device audit | — | 41/41 | 41/41 |
+| Pixel reference recorded (every area, both appearances, 5 widths) | — | VALID | VALID |
+
+- **Pixel determinism:** a third run compared the final build against the reference it had just recorded: 0 differing screenshots in every area (VALID).
+- **Speed (phone profile: 390×844, 4× CPU, fast 4G, cold cache; median of 3, final build):**
+
+| Route | LCP | CLS | Fonts | JS | CSS |
+|---|---|---|---|---|---|
+| `/` (Home) | 2160 ms | 0 | 137.2 KB | 281.6 KB | 28.3 KB |
+| `/player/login` | 1632 ms | 0.0003 | 96.7 KB | 231.7 KB | 17.5 KB |
+| `/scores` | 1620 ms | 0.0013 | 96.7 KB | 213 KB | 17.5 KB |
+| `/judge/dashboard` | 1472 ms | 0.032 | 96.7 KB | 238.8 KB | 17.5 KB |
+
+Every app route meets the plan's budget: LCP ≤ 2.5 s and fonts ≤ 100 KB. Home is unchanged; its fonts include Devanagari. The judge dashboard's CLS was 0.077–0.091 on master.
+
+Between the two passes, the recorded screens were reviewed by eye. That found three more things to fix (`a79c8cb`): the old judge purple still showed in labels, borders and tints; some admin and judge section headings were still in the old heavy sans; and two tags stretched across their panels.
 
 The responsive audit's only findings were two links in Home's footer (a phone number and "Super Admin", under 44 px), unchanged from before the rollout. The one deep-screens failure was real: the admin masthead's mark-only wordmark was a 13 px-wide link at 768 px. It now keeps a 44 px target.
 
@@ -56,7 +71,7 @@ None of these block a merge, but each is real:
 1. **Judge screens, anatomy.** W4 moved every judge colour, fill and motion onto the look, but kept the screens' structure: the judge headers are still hand-built (not `AppHeader`), and the slip rows do not yet read like Home's slip (`display-s` section titles, the 3px active rule, the total in `num-l`). Plan §7 describes the target. Do it on a day with no competition, and re-run judge-walk, score-sheet and judge-deep-screens.
 2. **Inline styles that remain.** About 470 colour and 300 spacing warnings remain, mostly in the judge screens (246 colour warnings), the responsive tables, `SuperAdminManagement` and `AddPlayerForm`. Their values are token strings (via `ADMIN_COLORS` and `alpha()`), so they follow the look, but they are page-level visual decisions. The ratchet stops them growing; convert them file by file, then delete the `COLORS`/`ADMIN_COLORS` proxies.
 3. **Home's footer targets.** The phone link (118×16) and "Super Admin" (78×28) are under 44 px on phones.
-4. **Font budget.** 104.4 KB with every type step on screen, over the 100 KB target. The lever is a weight-only Archivo (−54 KB), at the cost of the width axis.
+4. **Font budget.** App routes load 96.7 KB; the specimen, with every type step on screen, loads 104.4 KB. If more faces are ever added, the lever is a weight-only Archivo (−54 KB), at the cost of the width axis.
 5. **The API's socket CORS** refuses the `vite preview` origins (:4174/:4175) in local runs. This is harmless to the audits, but the console is noisy.
 
 ## Rolling it out
