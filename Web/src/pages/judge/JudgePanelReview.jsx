@@ -12,13 +12,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Scale, User, ArrowLeft, AlertTriangle, Pencil, Lock } from 'lucide-react';
-import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
+import { DATA_COLORS, FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import {
@@ -32,7 +31,7 @@ import {
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
 import {
-  J, EASE_OUT, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
+  J, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
   SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey,
   JudgeLogoutButton,
 } from './judgeShared';
@@ -387,12 +386,11 @@ const JudgePanelReview = () => {
   if (!judgeInfo || !selectedPlayer) return null;
 
   return (
-    <div className="min-h-dvh relative pb-24 lg:pb-0" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-dvh relative pb-24 lg:pb-0 bg-bg text-fg">
       <JudgeAmbience />
 
       {/*  Header  */}
-      <header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+      <header className="sticky top-0 z-40 border-b bg-bg border-line">
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -402,12 +400,12 @@ const JudgePanelReview = () => {
                 <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
               </button>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-                <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
+                style={{ background: 'rgb(var(--accent))' }}>
+                <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <p className="text-ink font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
+                <p className="text-xs truncate text-fg-secondary">{myJudgeType}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
@@ -420,10 +418,10 @@ const JudgePanelReview = () => {
           {/* Reviewing-for banner */}
           <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-xl border min-w-0 w-full sm:w-auto sm:max-w-xs"
             style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
-            <User className="w-4 h-4 flex-shrink-0" style={{ color: FG.success }} aria-hidden="true" />
+            <User className="w-4 h-4 flex-shrink-0 text-success-fg" aria-hidden="true" />
             <div className="min-w-0">
               <p className="text-ink font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
-              <p className="text-xs truncate" style={{ color: 'var(--fg-muted)' }}>{selectedTeam?.name}</p>
+              <p className="text-xs truncate text-fg-muted">{selectedTeam?.name}</p>
             </div>
           </div>
 
@@ -436,16 +434,11 @@ const JudgePanelReview = () => {
       </header>
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE_OUT }}
-          className="space-y-5 pb-6"
-        >
+        <div className="space-y-5 pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black text-ink">Panel Review</h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--fg-muted)' }}>
+              <p className="text-xs mt-1 text-fg-muted">
                 {panelScoresCount}
                 {effectivePanelSize ? ` / ${effectivePanelSize}` : ''} judges submitted
                 {effectivePanelSize ? ` · ${effectivePanelSize}-judge panel` : ''}
@@ -464,8 +457,7 @@ const JudgePanelReview = () => {
                 </button>
               )}
               {finalized && (
-                <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
-                  style={{ background: 'rgba(34,197,94,0.15)', color: FG.success }}>
+                <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-success-tint text-success-fg">
                   <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Finalized
                 </span>
               )}
@@ -476,16 +468,9 @@ const JudgePanelReview = () => {
               Shown to the same people as the modal: the Senior Judge and the judges
               whose slips differ from theirs. */}
           {shouldSeeMismatch && (
-            <motion.button
-              type="button"
-              onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }}
-              className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
-              style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }}
-              whileHover={{ background: 'rgba(239,68,68,0.13)' }}
-              whileTap={{ scale: 0.99 }}
-            >
+            <button type="button" onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }}>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.danger }} />
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-danger-fg"/>
                 <span className="text-sm font-bold text-ink">
                   {[
                     (isSeniorJudge ? panelMismatch.difficultyMismatch : panelMismatch.judgeMismatchDetails?.[myJudgeType]?.difficulty) && 'Difficulty',
@@ -494,40 +479,33 @@ const JudgePanelReview = () => {
                 </span>
               </div>
               <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: FG.danger }}>View Details</span>
-            </motion.button>
+            </button>
           )}
 
           {/* Tolerance — its own strip, in its own colour, because it is a
               separate block on Final Submit and resolved a different way. */}
           {shouldSeeTolerance && (
-            <motion.button
-              type="button"
-              onClick={() => { setToleranceDismissed(false); setShowToleranceModal(true); }}
-              className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
-              style={{ background: 'rgba(245,158,11,0.09)', borderColor: 'rgba(245,158,11,0.35)' }}
-              whileHover={{ background: 'rgba(245,158,11,0.14)' }}
-              whileTap={{ scale: 0.99 }}
-            >
+            <button type="button" onClick={() => { setToleranceDismissed(false); setShowToleranceModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgba(245,158,11,0.09)', borderColor: 'rgba(245,158,11,0.35)' }}>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: FG.warning }} />
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning-fg"/>
                 <span className="text-sm font-bold text-ink">
                   Tolerance exceeded — gap {Number(panelMismatch.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(panelMismatch.toleranceInfo?.tolerance ?? 0).toFixed(2)}
                 </span>
               </div>
               <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)', color: FG.warning }}>View Details</span>
-            </motion.button>
+            </button>
           )}
 
           {/* Detailed per-judge slips — SR judge sees all cards, others only their own */}
           {!isSeniorJudge && !orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 0 && (
-            <div className="rounded-xl border p-4 text-center" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
-              <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
+            <div className="rounded-xl border p-4 text-center bg-surface-sunken border-line">
+              <p className="text-sm text-fg-muted">You haven&apos;t submitted yet — other judges&apos; scores are visible only to the Senior Judge.</p>
             </div>
           )}
           {!isSeniorJudge && orderedPanelEntries.some(([jt]) => jt === myJudgeType) && panelScoresCount > 1 && (
             <div className="rounded-xl border p-3 flex items-center gap-2" style={{ background: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.15)' }}>
-              <Lock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(192,132,252,0.6)' }} />
-              <p className="text-xs" style={{ color: 'rgba(192,132,252,0.6)' }}>
+              <Lock className="w-3.5 h-3.5 flex-shrink-0 text-fg-muted" />
+              <p className="text-xs text-fg-muted">
                 {panelScoresCount - 1} other judge{panelScoresCount - 1 > 1 ? 's have' : ' has'} submitted. Scores are visible to the Senior Judge only.
               </p>
             </div>
@@ -559,7 +537,7 @@ const JudgePanelReview = () => {
                         )}
                       </div>
                       {judgeName && (
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>{judgeName}</p>
+                        <p className="text-xs mt-0.5 text-fg-muted">{judgeName}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -567,25 +545,16 @@ const JudgePanelReview = () => {
                         {Number(data.score).toFixed(2)}
                       </div>
                       {isSeniorJudge && !isYou && !finalized && (
-                        <motion.button
-                          type="button"
-                          onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }}
-                          className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0"
-                          style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.08)' }}
-                          whileHover={{ background: 'rgba(168,85,247,0.2)' }}
-                          whileTap={{ scale: 0.9 }}
-                          title={`Edit ${judge} score`}
-                          aria-label={`Edit ${judge} score`}
-                        >
+                        <button type="button" onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }} className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0" style={{ borderColor: 'rgba(168,85,247,0.4)', color: DATA_COLORS.purpleSoft, background: 'rgba(168,85,247,0.08)' }} title={`Edit ${judge} score`} aria-label={`Edit ${judge} score`}>
                           <Pencil className="w-3.5 h-3.5" />
-                        </motion.button>
+                        </button>
                       )}
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Difficulty</p>
-                    <div className="flex flex-wrap gap-2 text-xs" style={{ color: 'rgb(var(--ink) / 0.7)' }}>
+                    <p className="type-tag text-fg-secondary">Difficulty</p>
+                    <div className="flex flex-wrap gap-2 text-xs text-fg">
                       {b.detailed && (
                         <>
                           <span>A: {b.difficulty.aClass ?? 0}</span>
@@ -598,15 +567,15 @@ const JudgePanelReview = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>
+                    <p className="type-tag text-fg-secondary">
                       Combination · {(b.combination.total ?? 0).toFixed(2)} / 1.60
                     </p>
                     {failedItems === null ? null : failedItems.length === 0 ? (
-                      <p className="text-xs" style={{ color: FG.success }}>All requirements met</p>
+                      <p className="text-xs text-success-fg">All requirements met</p>
                     ) : (
                       <ul className="space-y-0.5">
                         {failedItems.map((item) => (
-                          <li key={item.id} className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+                          <li key={item.id} className="text-xs text-fg-muted">
                             −{item.penalty.toFixed(2)} {item.rule}
                           </li>
                         ))}
@@ -614,7 +583,7 @@ const JudgePanelReview = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-4 text-xs" style={{ color: 'rgb(var(--ink) / 0.7)' }}>
+                  <div className="flex gap-4 text-xs text-fg">
                     <span>Execution: <strong className="text-ink">{(b.execution || 0).toFixed(2)}</strong></span>
                     <span>Originality: <strong className="text-ink">{(b.bonus || 0).toFixed(2)}</strong></span>
                   </div>
@@ -624,7 +593,7 @@ const JudgePanelReview = () => {
           </div>
 
           {panelScoresCount === 0 && (
-            <p className="text-center text-sm py-8" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-center text-sm py-8 text-fg-muted">
               Waiting for judges to submit…
             </p>
           )}
@@ -634,30 +603,22 @@ const JudgePanelReview = () => {
 
           <div className="flex flex-col sm:flex-row gap-3">
             {canFinalSubmit && (
-              <motion.button
-                type="button"
+              <button type="button"
                 // Only a slip mismatch locks this button. On a tolerance breach
                 // it becomes "Final Submit with Base Score" (COP §3.4).
-                onClick={() => finalizePanelScore()}
-                disabled={finalizing || panelMismatch.hasBlockingMismatch}
-                className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-ink font-bold min-h-[52px]"
-                style={{
+                onClick={() => finalizePanelScore()} disabled={finalizing || panelMismatch.hasBlockingMismatch} className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl text-ink font-bold min-h-[52px]" style={{
                   background: panelMismatch.hasBlockingMismatch
                     ? 'rgb(var(--ink) / 0.1)'
                     : panelMismatch.hasToleranceBreach
-                      ? 'linear-gradient(135deg, #F59E0B, #D97706)'
-                      : `linear-gradient(135deg, ${J.green}, ${J.greenDark})`,
+                      ? 'rgb(var(--warning-fill))'
+                      : 'rgb(var(--success-fill))',
                   // Near-black on the bright amber and green fills (D6); ink on the locked tint.
-                  color: panelMismatch.hasBlockingMismatch ? undefined : '#0A0A0A',
+                  color: panelMismatch.hasBlockingMismatch ? undefined : 'rgb(var(--warning-on))',
                   opacity: finalizing || panelMismatch.hasBlockingMismatch ? 0.6 : 1,
-                }}
-                whileHover={reduced || finalizing ? {} : { scale: 1.01 }}
-                whileTap={reduced || finalizing ? {} : { scale: 0.98 }}
-              >
+                }}>
                 {finalizing ? (
                   <>
-                    <motion.div className="w-5 h-5 rounded-full border-2 border-ink/30 border-t-ink"
-                      animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                    <div className="animate-spin w-5 h-5 rounded-full border-2 border-ink/30 border-t-ink"/>
                     Finalizing…
                   </>
                 ) : (
@@ -668,10 +629,10 @@ const JudgePanelReview = () => {
                       : 'Final Submit'}
                   </>
                 )}
-              </motion.button>
+              </button>
             )}
             {isSeniorJudge && !allPanelSubmitted && !finalized && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: 'var(--fg-muted)' }}>
+              <p className="flex-1 text-center text-xs self-center text-fg-muted">
                 Final Submit unlocks when all {effectivePanelSize || 'panel'} judges have submitted
                 {panelMismatch.hasBlockingMismatch ? ' and the mismatch above is resolved' : ''}
               </p>
@@ -679,17 +640,17 @@ const JudgePanelReview = () => {
             {/* Why the button next to this is greyed out. Without it a Senior
                 Judge with a full panel sees a dead button and no reason. */}
             {canFinalSubmit && panelMismatch.hasBlockingMismatch && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: FG.warning }}>
+              <p className="flex-1 text-center text-xs self-center text-warning-fg">
                 Final Submit is locked — resolve the Difficulty / Combination mismatch
               </p>
             )}
             {canFinalSubmit && !panelMismatch.hasBlockingMismatch && panelMismatch.hasToleranceBreach && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: FG.warning }}>
+              <p className="flex-1 text-center text-xs self-center text-warning-fg">
                 Outside tolerance — resolve the gap, or final submit on the COP §3.4 base score
               </p>
             )}
             {!isSeniorJudge && !finalized && (
-              <p className="flex-1 text-center text-xs self-center" style={{ color: 'var(--fg-muted)' }}>
+              <p className="flex-1 text-center text-xs self-center text-fg-muted">
                 Waiting for Senior Judge to Final Submit and lock scores
               </p>
             )}
@@ -702,7 +663,7 @@ const JudgePanelReview = () => {
               Return to Team
             </button>
           </div>
-        </motion.div>
+        </div>
       </main>
 
       {/* Modals */}

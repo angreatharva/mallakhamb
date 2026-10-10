@@ -1,8 +1,8 @@
 {
   "note": "Warnings per ESLint rule. May only go down: npm run lint:ratchet -- --update after a reduction.",
   "warnings": {
-    "design-system/no-hardcoded-colors": 855,
-    "design-system/no-hardcoded-spacing": 490,
+    "design-system/no-hardcoded-colors": 474,
+    "design-system/no-hardcoded-spacing": 298,
     "react-hooks/exhaustive-deps": 35,
     "unused-imports/no-unused-vars": 49
   }

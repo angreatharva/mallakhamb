@@ -163,9 +163,8 @@ const TimeKeeperScoring = () => {
   const nextMark = BEEP_MARKS.find((m) => watch.seconds < m.at);
 
   return (
-    <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgb(var(--bg) / 0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+    <div className="min-h-dvh bg-bg text-fg">
+      <header className="sticky top-0 z-40 border-b bg-bg border-line">
         <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => navigate('/judge/dashboard')} disabled={busy}
@@ -176,7 +175,7 @@ const TimeKeeperScoring = () => {
             </button>
             <div className="w-px h-5 bg-ink/10" />
             <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
+              <Timer className="w-4 h-4 text-accent-fg" aria-hidden="true" />
               <span className="text-ink font-bold text-sm">Time Keeper</span>
             </div>
           </div>
@@ -195,8 +194,8 @@ const TimeKeeperScoring = () => {
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-5">
         <CompetitionLockBanner />
 
-        <div className="rounded-2xl border p-5" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: FG.brand }}>Timing Session</p>
+        <div className="rounded-2xl border p-5 bg-surface border-line">
+          <p className="type-tag mb-1 text-accent-fg">Timing Session</p>
           <h1 className="text-xl sm:text-2xl font-black text-ink">{gender} — {ageGroup}</h1>
           <p className="mt-1 text-sm text-fg-muted">
             {selectedTeam.name}
@@ -236,8 +235,8 @@ const TimeKeeperScoring = () => {
             />
           </div>
           {/* Athletes — below the clock (beside it on a wide screen) */}
-          <div className="lg:col-span-2 rounded-2xl border p-4" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: FG.brand }}>Athletes</p>
+          <div className="lg:col-span-2 rounded-2xl border p-4 bg-surface border-line">
+            <p className="type-tag mb-3 text-accent-fg">Athletes</p>
             {rows.length === 0 ? (
               <p className="text-fg-muted text-sm py-6 text-center">No athletes for this category.</p>
             ) : (

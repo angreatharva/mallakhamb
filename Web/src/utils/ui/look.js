@@ -45,6 +45,10 @@ export const LOOK_BY_ROUTE = [
   // W3, admin and superadmin: the dashboards and their tabs, scoring, teams,
   // add-player-payment.
   { match: /^\/(admin|superadmin)(\/|$)/, look: 'prime-time' },
+  // W4, judge: every /judge screen. The kill switch on a competition day is
+  // deleting this line (one deploy; nothing reloads a judge mid-slip — the
+  // look only flips an attribute on the next navigation).
+  { match: /^\/judge(\/|$)/, look: 'prime-time' },
 ];
 
 const OVERRIDE_KEY = 'mk-look-override';

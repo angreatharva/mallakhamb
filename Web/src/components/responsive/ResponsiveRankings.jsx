@@ -4,7 +4,6 @@ import { ResponsiveContainer } from './ResponsiveContainer';
 import { ADMIN_COLORS, DATA_COLORS, alpha } from '../../styles/tokens';
 
 const C = ADMIN_COLORS;
-const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;

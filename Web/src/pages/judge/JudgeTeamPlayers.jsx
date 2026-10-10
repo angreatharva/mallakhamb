@@ -18,7 +18,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS, DATA_COLORS, FG } from '@/styles/tokens';
+import { DATA_COLORS, FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/design-system';
 import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
@@ -373,11 +373,10 @@ const JudgeTeamPlayers = () => {
   const scoredCount = players.filter((p) => p.hasScore || p.isFinalized).length;
 
   return (
-    <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
 
-      <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
+      <header className="sticky top-0 z-40 border-b flex-shrink-0 bg-bg border-line">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -389,12 +388,12 @@ const JudgeTeamPlayers = () => {
               <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
             </button>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-              <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
+              style={{ background: 'rgb(var(--accent))' }}>
+              <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>
+              <p className="text-xs truncate text-fg-secondary">
                 {resolveJudgeSeat(judgeInfo, {
                   gender: selectedGender,
                   ageGroup: selectedAgeGroup,
@@ -414,15 +413,15 @@ const JudgeTeamPlayers = () => {
         <FadeIn delay={0}>
           <div className="rounded-2xl border p-5 mb-6"
             style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>
+            <p className="type-tag mb-2 text-fg-secondary">
               Team
             </p>
             <h1 className="text-2xl font-black text-ink">{team?.name || 'Loading…'}</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-sm mt-1 text-fg-muted">
               Coach: {team?.coach?.name || 'N/A'}
             </p>
             {!loading && team && (
-              <p className="text-xs mt-3" style={{ color: 'var(--fg-muted)' }}>
+              <p className="text-xs mt-3 text-fg-muted">
                 {players.length} {players.length === 1 ? 'player' : 'players'}
                 {finalizedCount > 0 ? ` · ${finalizedCount} finalized` : scoredCount > 0 ? ` · ${scoredCount} submitted` : ''}
               </p>
@@ -431,7 +430,7 @@ const JudgeTeamPlayers = () => {
         </FadeIn>
 
         <FadeIn delay={0.05} className="flex-1 flex flex-col">
-          <h2 className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: DATA_COLORS.purpleSoft }}>
+          <h2 className="text-sm font-bold tracking-widest uppercase mb-4 text-fg-secondary">
             Players
           </h2>
 
@@ -465,11 +464,11 @@ const JudgeTeamPlayers = () => {
                           one was drawn, sits underneath — the two diverge as
                           soon as the panel re-sequences. */}
                       <span className="flex flex-col items-center justify-center w-8 flex-shrink-0">
-                        <span className="text-sm font-black" style={{ color: DATA_COLORS.purpleSoft }}>
+                        <span className="text-sm font-black text-fg-secondary">
                           {orderIdx + 1}
                         </span>
                         {player.lotNo != null && (
-                          <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: 'var(--fg-muted)' }}>
+                          <span className="text-[9px] font-bold tracking-wider uppercase text-fg-muted">
                             Lot {player.lotNo}
                           </span>
                         )}
@@ -484,7 +483,7 @@ const JudgeTeamPlayers = () => {
                         {isLocked ? (
                           <Lock className="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                         ) : isSubmitted ? (
-                          <CheckCircle className="w-5 h-5" style={{ color: DATA_COLORS.purpleSoft }} aria-hidden="true" />
+                          <CheckCircle className="w-5 h-5 text-fg-secondary" aria-hidden="true" />
                         ) : (
                           <User className="w-5 h-5 text-ink/60 group-hover:text-purple-700 dark:group-hover:text-purple-400" aria-hidden="true" />
                         )}
@@ -493,12 +492,12 @@ const JudgeTeamPlayers = () => {
                         <p className="font-bold text-base text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
                           {player.name}
                           {isLocked ? (
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
+                            <span className="type-tag px-2 py-0.5 rounded-md"
                               style={{ background: 'rgba(34,197,94,0.2)', color: FG.success }}>
                               Finalized
                             </span>
                           ) : isSubmitted ? (
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
+                            <span className="type-tag px-2 py-0.5 rounded-md"
                               style={{ background: 'rgba(168,85,247,0.2)', color: DATA_COLORS.purpleSoft }}>
                               Partial Score Submitted
                             </span>
@@ -513,7 +512,7 @@ const JudgeTeamPlayers = () => {
                         {/* Below sm the apparatus sits under the name: beside it, a three-apparatus list
                             squeezed the name and age group into a one-letter column on a phone. */}
                         {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                          <span className="sm:hidden mt-1.5 inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
+                          <span className="sm:hidden mt-1.5 inline-block type-tag px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5">
                             {player.apparatus[selectedCompetitionType].join(', ')}
                           </span>
                         )}
@@ -521,7 +520,7 @@ const JudgeTeamPlayers = () => {
                     </div>
                     <div className="flex items-center gap-3 min-w-0">
                       {player.apparatus?.[selectedCompetitionType]?.length > 0 && (
-                        <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5 text-right">
+                        <span className="hidden sm:inline-block type-tag px-2 py-1 rounded-md bg-ink/10 text-ink/80 border border-ink/5 text-right">
                           {player.apparatus[selectedCompetitionType].join(', ')}
                         </span>
                       )}

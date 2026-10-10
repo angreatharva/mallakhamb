@@ -13,7 +13,7 @@ import { logger } from '@/infrastructure/logger';
 import { ThemeProvider, useTheme } from '../../components/design-system/theme';
 import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
 import { GlassCard } from '../../components/design-system/cards';
-import { FG, alpha } from '@/styles/tokens';
+import { alpha } from '@/styles/tokens';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const CERTIFICATION_LEVELS = [
@@ -75,13 +75,12 @@ const Field = ({ id, label, icon, error, children }) => {
     <div>
       <label
         htmlFor={id}
-        className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: FG.accent }}
+        className="block type-tag mb-2 text-accent-fg"
       >
         {label}
       </label>
       {children}
-      {error && <p className="text-xs mt-1.5" style={{ color: FG.danger }} role="alert">{error}</p>}
+      {error && <p className="text-xs mt-1.5 text-danger-fg" role="alert">{error}</p>}
     </div>
   );
 };
@@ -241,7 +240,7 @@ const JudgeProfileInner = () => {
               >
                 {photo
                   ? <img src={photo} alt="" className="w-full h-full object-cover" />
-                  : <Scale className="w-9 h-9" style={{ color: FG.accent }} aria-hidden="true" />}
+                  : <Scale className="w-9 h-9 text-accent-fg" aria-hidden="true" />}
               </div>
               <button
                 type="button"
@@ -250,7 +249,7 @@ const JudgeProfileInner = () => {
                 style={{ background: theme.colors.primary }}
                 aria-label="Change photo"
               >
-                <Camera className="w-4 h-4 text-snow" aria-hidden="true" />
+                <Camera className="w-4 h-4 text-on-accent" aria-hidden="true" />
               </button>
               <input
                 ref={photoInputRef}
@@ -262,7 +261,7 @@ const JudgeProfileInner = () => {
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>
+              <p className="type-tag text-accent-fg">
                 Judge
               </p>
               <h1 className="text-2xl font-black text-ink mt-0.5 truncate">{profile?.name}</h1>

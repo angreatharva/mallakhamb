@@ -5,12 +5,12 @@ import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
 const C = ADMIN_COLORS;
-const surface  = C.darkCard;       // #111
+const surface  = C.darkCard;
 const elevated = C.darkElevated;   // #161616
 const border   = C.darkBorderSubtle;
 const borderMid = C.darkBorderMid;
-const textPrimary   = 'rgb(var(--ink) / 0.90)';
-const textSecondary = 'var(--fg-muted)';
+const textPrimary   = 'var(--fg)';
+const textSecondary = 'var(--fg-secondary)';
 const textMuted     = 'var(--fg-muted)';
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const CARD_FIELD_CLASS = 'text-base mouse:text-[13px]';
 const inputStyle = (locked, fluid = false) => ({
   background: locked ? 'rgb(var(--ink) / 0.04)' : 'rgb(var(--ink) / 0.06)',
   border: `1px solid ${locked ? border : borderMid}`,
-  borderRadius: 8,
+  borderRadius: 'var(--radius-control)',
   color: locked ? textSecondary : textPrimary,
   padding: fluid ? '6px 8px' : '6px 10px',
   fontSize: fluid ? 13 : undefined,
@@ -51,7 +51,7 @@ const Pill = ({ children, color }) => (
     background: `${alpha(color, 0x22)}`,
     color,
     border: `1px solid ${alpha(color, 0x44)}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-control)',
     padding: '2px 10px',
     fontSize: 11,
     fontWeight: 600,
@@ -88,7 +88,7 @@ export const ResponsiveTable = ({
       style={{
         background: elevated,
         border: `1px solid ${border}`,
-        borderRadius: 12,
+        borderRadius: 'var(--radius-panel)',
         padding: '14px 16px',
         cursor: onRowClick ? 'pointer' : 'default',
         transition: 'border-color 0.15s, box-shadow 0.15s',
@@ -122,7 +122,7 @@ export const ResponsiveTable = ({
 
   return (
     <ResponsiveContainer className={className} {...props}>
-      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+      <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-panel)', border: `1px solid ${border}` }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: elevated }}>
@@ -263,7 +263,7 @@ export const ResponsiveScoringTable = ({
         {/* One card per athlete on a phone; two side by side on a tablet. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {players.map(player => (
-            <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 14, padding: 16 }}>
+            <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 'var(--radius-panel)', padding: 16 }}>
               {/* Header */}
               <div style={{ borderBottom: `1px solid ${border}`, paddingBottom: 12, marginBottom: 14 }}>
                 <p style={{ fontWeight: 700, color: textPrimary, fontSize: 15 }}>{player.name}</p>
@@ -367,7 +367,7 @@ export const ResponsiveScoringTable = ({
 
   return (
     <ResponsiveContainer className={className} {...props}>
-      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+      <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-panel)', border: `1px solid ${border}` }}>
         {/*
           * THE SHEET FITS THE SCREEN; IT DOES NOT SCROLL SIDEWAYS.
           *
@@ -460,7 +460,7 @@ export const ResponsiveScoringTable = ({
                 })}
                 <td style={{ padding: '12px 8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: FG.info, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: FG.info, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
                       {(() => {
                         const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                         return result.average.toFixed(2);
@@ -504,7 +504,7 @@ export const ResponsiveScoringTable = ({
                   />
                 </td>
                 <td style={{ padding: '12px 8px' }}>
-                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: FG.success, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
+                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: FG.success, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
                     {calculateFinalScore(scores[player.id] || {}, panelSize)}
                   </span>
                 </td>
@@ -533,7 +533,7 @@ export const ResponsiveTeamTable = ({
       style={{
         background: elevated,
         border: `1px solid ${border}`,
-        borderRadius: 14,
+        borderRadius: 'var(--radius-panel)',
         padding: compact ? '14px 16px' : '18px 20px',
         cursor: 'pointer',
         transition: 'border-color 0.15s, box-shadow 0.15s',
@@ -554,7 +554,7 @@ export const ResponsiveTeamTable = ({
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
-          <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
+          <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 'var(--radius-control)', padding: '8px 14px', marginBottom: 6 }}>
             <p style={{ fontSize: 11, color: DATA_COLORS.purpleSoft, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
             <p style={{ fontSize: 22, fontWeight: 800, color: DATA_COLORS.violet }}>{team.players?.length || 0}</p>
           </div>

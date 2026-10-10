@@ -35,8 +35,9 @@ const compLabel = (ct) => ({
 }[ct] || ct);
 
 // ─── Judges Summary Card ──────────────────────────────────────────────────────
-// Used by the judges-assignment block, parked (commented out) in the admin tab.
-const JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary }) => (
+// Used by the judges-assignment block, parked (commented out) in the admin tab;
+// underscored while it is parked, so the lint knows it is kept on purpose.
+const _JudgeGroupCard = ({ item, startingCompTypes, onStart, loadingJudgesSummary }) => (
   <Panel className="p-4">
     <p className="font-bold text-fg type-body-s mt-0 mb-3">{ageLabel(item.ageGroup)}</p>
     <div className="space-y-2">
@@ -369,7 +370,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     }
   };
 
-  const handleStartCompetitionType = async (gender, ageGroup, competitionType) => {
+  // Parked with the judges-assignment block (see _JudgeGroupCard).
+  const _handleStartCompetitionType = async (gender, ageGroup, competitionType) => {
     setConfirmDialog({
       isOpen: true,
       title: 'Start Competition Type',
@@ -447,9 +449,9 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                     {judgesSummary
                       .filter(item => item.gender === 'Male' && maleAgeGroupValues.includes(item.ageGroup))
                       .map(item => (
-                        <JudgeGroupCard key={`male-${item.ageGroup}`} item={item}
+                        <_JudgeGroupCard key={`male-${item.ageGroup}`} item={item}
                           genderColor={DATA_COLORS.blue} startingCompTypes={startingCompTypes}
-                          onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
+                          onStart={_handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
                           theme={theme} />
                       ))}
                   </div>
@@ -464,9 +466,9 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
                     {judgesSummary
                       .filter(item => item.gender === 'Female' && femaleAgeGroupValues.includes(item.ageGroup))
                       .map(item => (
-                        <JudgeGroupCard key={`female-${item.ageGroup}`} item={item}
+                        <_JudgeGroupCard key={`female-${item.ageGroup}`} item={item}
                           genderColor={DATA_COLORS.pink} startingCompTypes={startingCompTypes}
-                          onStart={handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
+                          onStart={_handleStartCompetitionType} loadingJudgesSummary={loadingJudgesSummary}
                           theme={theme} />
                       ))}
                   </div>

@@ -75,8 +75,14 @@ describe('route groups (rollout waves)', () => {
     ]) expect(lookForPath(path), path).toBe('prime-time');
   });
 
+  it('W4: every judge screen is prime-time', () => {
+    for (const path of ['/judge/dashboard', '/judge/scoring', '/judge/scoring/panel-review', '/judge/profile', '/judge/sequence']) {
+      expect(lookForPath(path), path).toBe('prime-time');
+    }
+  });
+
   it('does not reach past a group: look-alike paths keep the default', () => {
-    for (const path of ['/scoresheet', '/players', '/coaching', '/administrator', '/judge/select-team', '/judge/dashboard']) {
+    for (const path of ['/scoresheet', '/players', '/coaching', '/administrator', '/judges', '/no-such-page']) {
       expect(lookForPath(path), path).toBe(DEFAULT_LOOK);
     }
   });

@@ -86,3 +86,6 @@
 
 /* A quiet line saying what a list shows ("Team rankings for: …"): the rule, no tint. */
 .info-line { margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-control); background: rgb(var(--surface-sunken)); box-shadow: inset var(--rule) 0 0 0 var(--line-strong); font-size: 14px; color: var(--fg-secondary); }
+/* The judge's live connection: the status square pulses while connected (off for reduced motion). */
+.live-dot--on::before { animation: ui-pulse 1.6s var(--ease-in-out) infinite; }
+@media (prefers-reduced-motion: reduce) { .live-dot--on::before { animation: none; } }

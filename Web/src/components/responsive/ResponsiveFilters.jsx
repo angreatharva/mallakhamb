@@ -27,7 +27,6 @@ const ageGroupsForGender = (selectedGender, supplied) => {
 };
 
 const C = ADMIN_COLORS;
-const surface    = C.darkCard;
 const elevated   = C.darkElevated;
 const border     = C.darkBorderSubtle;
 const borderMid  = C.darkBorderMid;

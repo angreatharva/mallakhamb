@@ -8,9 +8,8 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { AlertTriangle, CheckCircle, LogOut, Save, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
-import { AmbientOrbs } from '@/components/design-system/backgrounds';
+import { AnimatePresence } from 'framer-motion';
+import { DATA_COLORS, FG, alpha } from '@/styles/tokens';
 import {
   panelScoresShape,
   editTargetShape,
@@ -78,13 +77,19 @@ export const normalizeBreakdown = (breakdown, fallbackScore) => {
   return { difficulty, combination, execution, bonus, detailed, _score: fallbackScore };
 };
 
+/*
+ * The judge screens' colours, as tokens (design-language PLAN W4): the names
+ * stay so the screens read the same, the values follow the look pack. The
+ * "purple" was the judge role accent; it is the accent now, whatever the role
+ * colour of the look.
+ */
 export const J = {
-  purple: '#A855F7',
-  purpleLight: '#C084FC',
-  purpleDark: '#7C3AED',
-  green: '#22C55E',
-  greenDark: '#16A34A',
-  amber: '#F59E0B',
+  purple: 'rgb(var(--accent))',
+  purpleLight: 'rgb(var(--accent-fg))',
+  purpleDark: 'rgb(var(--accent))',
+  green: 'rgb(var(--success-fg))',
+  greenDark: 'rgb(var(--success-fg))',
+  amber: 'rgb(var(--warning-fg))',
 };
 
 export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
@@ -114,10 +119,10 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
   return (
     <div>
       <div className="flex items-baseline justify-between mb-2">
-        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>
+        <span className="type-tag text-fg-secondary">
           {cls} - {value.toFixed(2)}
         </span>
-        <span className="text-xs tabular-nums" style={{ color: 'var(--fg-muted)' }}>
+        <span className="text-xs tabular-nums text-fg-muted">
           {n} × {value.toFixed(2)} = {(n * value).toFixed(2)}
         </span>
       </div>
@@ -134,9 +139,9 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
                 onClick={() => { if (!selected) onChange(num); }}
                 className={`${cell} rounded-xl border font-black tabular-nums select-none transition-[background-color,border-color,color,transform] duration-150 active:scale-95`}
                 style={{
-                  background: selected ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.03)',
+                  background: selected ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.03)',
                   borderColor: selected ? J.purple : 'rgb(var(--ink) / 0.12)',
-                  color: selected ? '#fff' : 'rgb(var(--ink) / 0.75)',
+                  color: selected ? 'rgb(var(--on-accent))' : 'var(--fg)',
                   boxShadow: selected ? `0 0 0 3px ${alpha(J.purple, 0x25)}` : 'none',
                   touchAction: 'manipulation',
                 }}
@@ -269,8 +274,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
   // their own — never the rest of the panel, which stays Senior-only.
   const ReferenceRow = ({ label, seniorValue, myValue }) => (
     <div className="mt-2 flex flex-wrap gap-2">
-      <span className="text-xs px-2 py-1 rounded-lg"
-        style={{ background: 'rgba(34,197,94,0.15)', color: FG.success }}>
+      <span className="text-xs px-2 py-1 rounded-lg bg-success-tint text-success-fg">
         SR (reference) {label}: {seniorValue}
       </span>
       <span className="text-xs px-2 py-1 rounded-lg"
@@ -282,24 +286,9 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="modal-overlay z-[9998]"
-          style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
+        <div className="modal-overlay z-[9998]" style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
             <BodyScrollLock />
-          <motion.div
-            className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
-            style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(239,68,68,0.4)' }}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel" style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(239,68,68,0.4)' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4 border-b"
@@ -310,11 +299,11 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
                 >
-                  <AlertTriangle className="w-5 h-5" style={{ color: FG.danger }} />
+                  <AlertTriangle className="w-5 h-5 text-danger-fg"/>
                 </div>
                 <div>
                   <p className="text-ink font-black text-base">Score Mismatch Detected</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="text-xs mt-0.5 text-fg-muted">
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your score may need correction'}
                   </p>
                 </div>
@@ -322,8 +311,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
-                style={{ color: 'var(--fg-muted)' }}
+                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors text-fg-muted"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -337,7 +325,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
                   <p className="text-sm font-bold text-ink mb-1">⛔ Combination Mismatch</p>
-                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="text-xs text-fg-muted">
                     {panelMismatch.combinationSelectionMismatch
                       ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
                       : `Totals: ${panelMismatch.combinationValues.map(v => Number(v).toFixed(2)).join(', ')}`}
@@ -374,7 +362,7 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
                 >
                   <p className="text-sm font-bold text-ink mb-1">⛔ Difficulty Mismatch</p>
-                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="text-xs text-fg-muted">
                     {`Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
                   {!isSeniorJudge && seniorEntry && myEntry && (
@@ -417,21 +405,15 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
-              <motion.button
-                onClick={onClose}
-                className="w-full py-3 rounded-xl font-bold text-sm text-ink"
-                style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}
-                whileHover={{ filter: 'brightness(1.1)' }}
-                whileTap={{ scale: 0.97 }}
-              >
+            <div className="px-5 py-4 border-t border-line">
+              <button onClick={onClose} className="w-full py-3 rounded-xl font-bold text-sm text-ink" style={{ background: 'rgb(var(--accent))' }}>
                 {/* The Senior Judge resolves a mismatch by calling the off judges
                     over; everyone else just acknowledges it. */}
                 {isSeniorJudge ? 'Understood — Call Judges' : 'Understood — Dismiss'}
-              </motion.button>
+              </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -466,24 +448,9 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="modal-overlay z-[9998]"
-          style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
+        <div className="modal-overlay z-[9998]" style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
             <BodyScrollLock />
-          <motion.div
-            className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel"
-            style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(245,158,11,0.45)' }}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="w-full max-w-lg rounded-2xl border overflow-hidden modal-panel" style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(245,158,11,0.45)' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4 border-b"
@@ -494,11 +461,11 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)' }}
                 >
-                  <AlertTriangle className="w-5 h-5" style={{ color: FG.warning }} />
+                  <AlertTriangle className="w-5 h-5 text-warning-fg"/>
                 </div>
                 <div>
                   <p className="text-ink font-black text-base">Tolerance Limit Exceeded</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="text-xs mt-0.5 text-fg-muted">
                     {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
                   </p>
                 </div>
@@ -506,8 +473,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors"
-                style={{ color: 'var(--fg-muted)' }}
+                className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors text-fg-muted"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -519,14 +485,13 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 className="rounded-xl border p-4"
                 style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.3)' }}
               >
-                <p className="text-sm font-bold mb-1" style={{ color: FG.warning }}>⚠️ Execution average is outside tolerance</p>
-                <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+                <p className="text-sm font-bold mb-1 text-warning-fg">⚠️ Execution average is outside tolerance</p>
+                <p className="text-xs text-fg-muted">
                   |Exec avg {num(info.executionAvg)} − Senior {num(info.seniorScore)}| = {num(info.difference)},
                   {' '}which exceeds the ±{num(info.tolerance)} allowed at this score (COP §3.4).
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="text-xs px-2 py-1 rounded-lg"
-                    style={{ background: 'rgba(34,197,94,0.15)', color: FG.success }}>
+                  <span className="text-xs px-2 py-1 rounded-lg bg-success-tint text-success-fg">
                     SR (reference): {num(info.seniorScore)}
                   </span>
                   <span className="text-xs px-2 py-1 rounded-lg"
@@ -547,7 +512,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   className="rounded-xl border p-4"
                   style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.08)' }}
                 >
-                  <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="type-tag mb-2 text-fg-muted">
                     Panel totals
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -572,7 +537,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                   className="rounded-xl border p-4"
                   style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }}
                 >
-                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+                  <p className="text-xs text-fg-muted">
                     Your total ({Number(myScore).toFixed(2)}) may be contributing to this gap.
                     Re-check your execution mark against the routine you saw.
                   </p>
@@ -590,20 +555,13 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
-              <motion.button
-                type="button"
-                onClick={onClose}
-                className="w-full py-3 rounded-xl font-bold text-sm text-ink"
-                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}
-                whileHover={{ filter: 'brightness(1.1)' }}
-                whileTap={{ scale: 0.97 }}
-              >
+            <div className="px-5 py-4 border-t border-line">
+              <button type="button" onClick={onClose} className="w-full py-3 rounded-xl font-bold text-sm text-ink" style={{ background: 'rgb(var(--warning-fill))' }}>
                 Understood — Dismiss
-              </motion.button>
+              </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -660,24 +618,9 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="modal-overlay z-[9997]"
-          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
+        <div className="modal-overlay z-[9997]" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} onClick={onClose}>
             <BodyScrollLock />
-          <motion.div
-            className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel"
-            style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="w-full max-w-xl rounded-2xl border overflow-hidden modal-panel" style={{ background: 'rgb(var(--surface))', borderColor: 'rgba(168,85,247,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
@@ -689,14 +632,13 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-xs" style={{ color: 'var(--fg-muted)' }}>Total</p>
-                  <p className="text-2xl font-black" style={{ color: DATA_COLORS.purple }}>{calcTotal()}</p>
+                  <p className="text-xs text-fg-muted">Total</p>
+                  <p className="text-2xl font-black text-fg-secondary">{calcTotal()}</p>
                 </div>
                 <button
                   onClick={onClose}
                   aria-label="Close"
-                  className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5"
-                  style={{ color: 'var(--fg-muted)' }}
+                  className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center hover:bg-ink/5 text-fg-muted"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -706,10 +648,10 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
             {/* Scrollable body */}
             <div className="overflow-y-auto flex-1 p-3 sm:p-5 space-y-4">
               {/* Difficulty */}
-              <div className="rounded-xl border p-3 sm:p-4 space-y-3" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+              <div className="rounded-xl border p-3 sm:p-4 space-y-3 bg-surface-sunken border-line">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-ink text-sm">Difficulty</h4>
-                  <span className="text-lg font-black" style={{ color: FG.warning }}>{editScores.difficulty.total.toFixed(2)} / 3.80</span>
+                  <span className="text-lg font-black text-warning-fg">{editScores.difficulty.total.toFixed(2)} / 3.80</span>
                 </div>
                 {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
                   <DifficultyPicker key={key} cls={cls} value={value} count={editScores.difficulty[key]}
@@ -718,10 +660,10 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               </div>
 
               {/* Combination */}
-              <div className="rounded-xl border p-4 space-y-2" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+              <div className="rounded-xl border p-4 space-y-2 bg-surface-sunken border-line">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-ink text-sm">Combination</h4>
-                  <span className="text-lg font-black" style={{ color: DATA_COLORS.purple }}>{editScores.combination.total.toFixed(2)} / 1.60</span>
+                  <span className="text-lg font-black text-fg-secondary">{editScores.combination.total.toFixed(2)} / 1.60</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {combinationChecklist.map(item => {
@@ -737,7 +679,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                         </div>
                         <input type="checkbox" checked={checked} onChange={() => handleComb(item.id)} className="sr-only" />
                         <span className="text-xs" style={{ color: checked ? FG.ink : 'rgb(var(--ink) / 0.5)' }}>{item.rule}</span>
-                        {!checked && <span className="ml-auto text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{item.penalty.toFixed(2)}</span>}
+                        {!checked && <span className="ml-auto text-xs font-bold text-fg-muted">{item.penalty.toFixed(2)}</span>}
                       </label>
                     );
                   })}
@@ -745,10 +687,10 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               </div>
 
               {/* Execution */}
-              <div className="rounded-xl border p-4" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+              <div className="rounded-xl border p-4 bg-surface-sunken border-line">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-ink text-sm">Execution</h4>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>Max 4.40</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">Max 4.40</span>
                 </div>
                 <DecimalInput
                   value={editScores.execution}
@@ -760,10 +702,10 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
               </div>
 
               {/* Originality */}
-              <div className="rounded-xl border p-4" style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
+              <div className="rounded-xl border p-4 bg-surface-sunken border-line">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-ink text-sm">Originality</h4>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.15)', color: DATA_COLORS.purpleSoft }}>0.20</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">0.20</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[['None', 0], ['+0.20', 0.20]].map(([label, val]) => {
@@ -782,23 +724,17 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
+            <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0 border-line">
               <button onClick={onClose}
                 className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-ink/5"
                 style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}
               >Cancel</button>
-              <motion.button
-                onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())}
-                className="flex-1 py-3 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}
-                whileHover={{ filter: 'brightness(1.1)' }}
-                whileTap={{ scale: 0.97 }}
-              >
+              <button onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())} className="flex-1 py-3 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2" style={{ background: 'rgb(var(--success-fill))' }}>
                 <Save className="w-4 h-4" /> Save Override
-              </motion.button>
+              </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -816,29 +752,15 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
  * scaling; the three positions below are the ones those pages already used, so
  * the desktop look is unchanged.
  */
-export const JudgeAmbience = () => (
-  <AmbientOrbs
-    orbs={[
-      { x: 5, y: 10, size: 400, color: J.purple, delay: 0, duration: 8, blur: 120 },
-      { x: 95, y: 60, size: 300, color: COLORS.saffron, delay: 3, duration: 10, blur: 100 },
-      { x: 50, y: 95, size: 250, color: J.purpleDark, delay: 1.5, duration: 7, blur: 90 },
-    ]}
-  />
-);
+/** Working screens carry no ambient decoration (plan §5.7): kept as a no-op so callers need not change. */
+export const JudgeAmbience = () => null;
 
+/** The live connection, as text with a status colour (never colour alone). */
 export const LiveDot = ({ connected, compact = false }) => (
-  <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full border text-xs font-bold ${connected ? 'border-green-500/30' : 'border-red-500/30'
-    }`} style={{ background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)' }}>
-    <motion.div
-      className="w-2 h-2 rounded-full flex-shrink-0"
-      style={{ background: connected ? J.green : '#EF4444' }}
-      animate={connected ? { scale: [1, 1.4, 1], opacity: [1, 0.5, 1] } : {}}
-      transition={{ duration: 1.5, repeat: Infinity }}
-    />
-    {!compact && (
-      <span style={{ color: connected ? FG.success : FG.danger }}>{connected ? 'Live' : 'Offline'}</span>
-    )}
-  </div>
+  <span className={`ui-tag ui-status type-tag ${connected ? 'ui-status--success' : 'ui-status--danger'} ${connected ? 'live-dot--on' : ''}`}
+    aria-label={compact ? (connected ? 'Live' : 'Offline') : undefined}>
+    {!compact && (connected ? 'Live' : 'Offline')}
+  </span>
 );
 
 /* -------------------------------------------------------------------------- */
@@ -896,21 +818,15 @@ LiveDot.propTypes = {
  * elsewhere. Six hand copies before this; the labelled one in the slip and panel review was 36px on a touch
  * screen from 640 to 1023 — tap-safe now, like the rest.
  */
-export const JudgeLogoutButton = ({ onLogout, compact = false }) => (compact ? (
-  <button onClick={onLogout}
-    className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border hover:bg-red-500/10"
-    style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
+export const JudgeLogoutButton = ({ onLogout, compact = false }) => (
+  <button onClick={onLogout} type="button"
+    className={compact ? 'ui-btn ui-btn--line ui-icon-btn' : 'ui-btn ui-btn--line ui-btn--sm'}
     aria-label="Logout">
-    <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+    <span className="ui-btn__label" style={{ display: 'contents' }}>
+      <LogOut aria-hidden="true" />
+      {!compact && <span className="hidden sm:inline">Logout</span>}
+    </span>
   </button>
-) : (
-  <button onClick={onLogout}
-    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-red-500/10"
-    style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }}
-    aria-label="Logout">
-    <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-    <span className="hidden sm:inline">Logout</span>
-  </button>
-));
+);
 
 JudgeLogoutButton.propTypes = { onLogout: PropTypes.func.isRequired, compact: PropTypes.bool };
