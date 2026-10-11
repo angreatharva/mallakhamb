@@ -5,10 +5,13 @@ import '@/styles/look-fonts';
 // The module, not the barrel: Home needs only the grain, not every primitive.
 import { Grain } from '@/components/ui/Stage';
 import './home/home.css';
-import sectionsHtml from './home/sections.html?raw';
+import sectionsRaw from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';
 import { HERO_IMAGE } from './home/preload';
+import { fillImages } from './home/images';
 import { useDesktopViewport } from './home/desktopViewport';
+
+const sectionsHtml = fillImages(sectionsRaw);
 
 /*
  * Mallakhamb India: the landing page.
@@ -108,13 +111,11 @@ const Home = () => {
           <img
             className="hero__img"
             src={HERO_IMAGE.src}
-            srcSet={HERO_IMAGE.srcSet}
-            sizes="100vw"
-            width="1920"
-            height="1440"
+            width={HERO_IMAGE.width}
+            height={HERO_IMAGE.height}
             fetchPriority="high"
             decoding="async"
-            alt="An athlete holds his body straight out from the top of a pole on a stage, lighting truss and spotlights behind."
+            alt="Performers balance on the tops of several poles on a dark stage under spotlight beams, a large moon projected behind them."
           />
           <div className="hero__scrim" aria-hidden="true" />
           <div className="hero__copy">

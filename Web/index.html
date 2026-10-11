@@ -18,24 +18,14 @@
     <meta name="theme-color" content="#f3eee6" media="(prefers-color-scheme: light)" />
     <script src="/appearance-init.js"></script>
     <!--
-      The landing page's largest paint is its hero photograph. Start it with the
-      HTML, on "/" only, instead of after the app and the Home chunk have loaded.
-      Keep these URLs identical to HERO_IMAGE in src/pages/public/home/preload.js.
+      The landing page's hero photograph is a bundled local file with a hashed
+      URL, so it is preloaded from src/pages/public/home/preload.js, not here.
     -->
     <script>
       if (location.pathname === '/') {
         // Home is the laptop layout on every device (see src/pages/public/home/desktopViewport.js;
         // keep this string identical to DESKTOP_VIEWPORT there).
         document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1280');
-        var hero = document.createElement('link');
-        var base = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/KALPESH.jpg/';
-        hero.rel = 'preload';
-        hero.as = 'image';
-        hero.href = base + '1920px-KALPESH.jpg';
-        hero.setAttribute('imagesrcset', base + '960px-KALPESH.jpg 960w, ' + base + '1280px-KALPESH.jpg 1280w, ' + base + '1920px-KALPESH.jpg 1920w');
-        hero.setAttribute('imagesizes', '100vw');
-        hero.setAttribute('fetchpriority', 'high');
-        document.head.appendChild(hero);
       }
     </script>
     <!-- CSP: unsafe-inline/unsafe-eval required for React/Vite in development -->

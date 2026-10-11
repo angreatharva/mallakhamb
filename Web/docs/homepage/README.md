@@ -12,10 +12,9 @@ src/pages/public/home/home.css       every rule scoped to .mk-home (Vite keeps a
 src/pages/public/home/runtime/       the motion runtime (GSAP), loaded after the first paint:
     index.js                         boots the sections in page order, stinger/ticker/badge, full teardown
     name.js · apparatus.js · code.js the sections; apparatus loads three.js only when it comes near
-src/pages/public/home/preload.js     on "/": the Home chunk + first-screen fonts start with the app's boot
-index.html (inline script)           on "/": the hero photo starts with the HTML
+src/pages/public/home/preload.js     on "/": the Home chunk, hero photo + first-screen fonts start with the app's boot
+src/pages/public/home/images.js      the photos: local files in Web/assets/images, filled into the markup
 e2e/home-device-audit.mjs            41 devices (laptops 13-16", iPads/Galaxy Tabs, iPhones/Androids)
-images.json (here)                   the verified photo URLs and the credit each one needs
 ```
 
 React renders the static markup once and never re-renders it; the runtime animates it and, on leaving
@@ -140,6 +139,7 @@ GSAP-driven motion that stays in sync with the scroll: pinned scenes are scrubbe
 
 ## 4. Images
 
-Only URLs from `images.json` (all verified). Use the 1280/1920 sizes, never the multi-megabyte
-originals, and credit every photo used (author, licence, source link) in the footer, in `home/footer.html`. Do NOT use `src/assets/main-home.jpg`: the banner behind the group shows the
+Only local files from `Web/assets/images`, imported in `src/pages/public/home/images.js` and named in
+the markup as `src="%img:<key>%"`; nothing loads from another site. Credit every photo used (author,
+licence, source link) in the footer, in `home/footer.html`. Do NOT use `src/assets/main-home.jpg`: the banner behind the group shows the
 old competition name in the pixels.
