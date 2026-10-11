@@ -8,6 +8,7 @@ import './home/home.css';
 import sectionsHtml from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';
 import { HERO_IMAGE } from './home/preload';
+import { useDesktopViewport } from './home/desktopViewport';
 
 /*
  * Mallakhamb India: the landing page.
@@ -42,6 +43,7 @@ const Home = () => {
   const sectionsRef = useRef(null);
   const footerRef = useRef(null);
   const navigate = useNavigate();
+  useDesktopViewport();
 
   // The motion runtime: fetched once the browser is idle after the first paint.
   useEffect(() => {

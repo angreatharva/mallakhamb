@@ -24,6 +24,9 @@
     -->
     <script>
       if (location.pathname === '/') {
+        // Home is the laptop layout on every device (see src/pages/public/home/desktopViewport.js;
+        // keep this string identical to DESKTOP_VIEWPORT there).
+        document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1280');
         var hero = document.createElement('link');
         var base = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/KALPESH.jpg/';
         hero.rel = 'preload';
