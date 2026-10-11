@@ -2,7 +2,7 @@
 
 The design-language plan ([PLAN.md](PLAN.md)) set out to draw the whole site in the landing page's "Prime Time" look, without rewriting any behaviour, and to leave an architecture where the next restyle is a token edit. This is what was done, how it was checked, and what is left.
 
-**Status (2026-10-11):** every phase is complete on stacked branches ending at `look/phase-6-retire-classic`. **Nothing is merged or deployed.** Merging to `master` (which deploys to Render) is the owner's decision; the judge screens should not go live on a competition day.
+**Status (2026-10-11):** every phase and every leftover is complete, and the work is merged into `master` locally (branch `look/finish`). It is **not pushed**: pushing `master` is what deploys to Render, and the judge screens should not go live on a competition day.
 
 ## What changed
 
@@ -64,19 +64,36 @@ Between the two passes, the recorded screens were reviewed by eye. That found th
 
 The responsive audit's only findings were two links in Home's footer (a phone number and "Super Admin", under 44 px), unchanged from before the rollout. The one deep-screens failure was real: the admin masthead's mark-only wordmark was a 13 px-wide link at 768 px. It now keeps a 44 px target.
 
-## Left to do
+## Left to do — resolved (2026-10-11, `c32815c`)
 
-None of these block a merge, but each is real:
+| Was left | Done |
+|---|---|
+| Judge screens, anatomy | One `JudgeHeader` (the shell's masthead) on all seven judge screens, with every control's accessible name kept and the slip still measuring the header for its pinned score bar. The slip: `display-s` section titles; totals in `num-l`/`num-m`, saffron at full marks; tabular summary rows; the 3px rule on the current phone tab. |
+| Inline colours | **0** colour literals in `src` (855 when the plan started). The lint rule had flagged token references (`rgb(var(--x) / a)`) as literals; it no longer does (tested), and it is now an **error** everywhere. Exempt by name: the stopwatch island, Home's WebGL runtime, and the files that define colours. |
+| The `COLORS`/`ADMIN_COLORS` proxies | Deleted, with `SAFFRON_CTA`, `COMMON_STYLES` and the unused token helpers; their last ~110 uses read tokens. |
+| Home's footer targets | 44 px on touch and narrow windows. |
 
-1. **Judge screens, anatomy.** W4 moved every judge colour, fill and motion onto the look, but kept the screens' structure: the judge headers are still hand-built (not `AppHeader`), and the slip rows do not yet read like Home's slip (`display-s` section titles, the 3px active rule, the total in `num-l`). Plan §7 describes the target. Do it on a day with no competition, and re-run judge-walk, score-sheet and judge-deep-screens.
-2. **Inline styles that remain.** About 470 colour and 300 spacing warnings remain, mostly in the judge screens (246 colour warnings), the responsive tables, `SuperAdminManagement` and `AddPlayerForm`. Their values are token strings (via `ADMIN_COLORS` and `alpha()`), so they follow the look, but they are page-level visual decisions. The ratchet stops them growing; convert them file by file, then delete the `COLORS`/`ADMIN_COLORS` proxies.
-3. **Home's footer targets.** The phone link (118×16) and "Super Admin" (78×28) are under 44 px on phones.
-4. **Font budget.** App routes load 96.7 KB; the specimen, with every type step on screen, loads 104.4 KB. If more faces are ever added, the lever is a weight-only Archivo (−54 KB), at the cost of the width axis.
-5. **The API's socket CORS** refuses the `vite preview` origins (:4174/:4175) in local runs. This is harmless to the audits, but the console is noisy.
+**Verified twice after the leftovers** (final build `81207da`; 480/480 unit tests, no lint errors):
+
+| Check | Pass 1 (`529e52f`) | Pass 2 (`81207da`) |
+|---|---|---|
+| All 12 browser audits | all green | all green |
+| responsive-audit findings | one 40 px credit link ("AshLin"), fixed for pass 2 | **none, on any screen at any width** |
+| Pixel gate | reference recorded (VALID) | **0 differences** vs pass 1 (VALID) |
+| Home 41 devices | see below | see below |
+
+Between passes, a pass on the earlier build had found two more real defects: the superadmin overview scrolled sideways at 320–360 px, and the Home footer links were small at tablet widths. Both were fixed. During the day's Atlas outage (11:43–11:47, then brief drops) the runs were stopped or marked VOID by a new database guard, and re-run.
+
+**Home on phones:** after `327054f` ("mobile set to desktop mode on home screen"), the 41-device audit reports two things on 360–480 px phones and Pixel 7 landscape: a 3D label overlapping the text at the pole stop, and the stopwatch taller than the screen. **Master's own build reports exactly the same**, so they come from that commit's laptop layout on phones, not from this rollout. They are left to that Home work. The iPad landscape WebGL errors seen in full-matrix runs do not reproduce when each device runs alone (all four pass, 3D on).
+
+Still open, by choice:
+- **Spacing warnings (256).** These are mostly Tailwind layout values (`min-h-[44px]` touch floors, `px-[var(--pad)]`) and the responsive utility module. Pages own layout by the design rules, so the ratchet holds the count; it is not a look issue.
+- **Font budget.** App routes load 96.7 KB. The specimen, with every type step on screen, loads 104.4 KB.
+- **The API's socket CORS** refuses the `vite preview` origins in local runs. This is harmless, only noisy.
 
 ## Rolling it out
 
-1. Merge `look/phase-6-retire-classic` into `master`; it carries every phase.
-2. Let Render deploy on a day with no competition.
+1. `master` already carries everything (merged locally from `look/finish`).
+2. Push `master` to let Render deploy, on a day with no competition.
 3. Check live in Chromium and WebKit: a sign-in, `/scores`, a coach dashboard, an admin tab, and a judge slip on a phone.
 4. If the judge screens misbehave on the day, the quickest rollback is reverting the merge. The route-level kill switch went with classic, because there is no other look left to switch to.

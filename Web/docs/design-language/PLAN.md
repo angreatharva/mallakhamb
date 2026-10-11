@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** Phases 0–7 done (2026-10-11) on stacked branches ending at `look/phase-6-retire-classic`; **not merged, not deployed** (merging and the Render deploy wait for the owner). Prime-time is the only look. See the progress log (§14), [REPORT.md](REPORT.md) and [LOOKS.md](LOOKS.md).
+**Status:** Phases 0–7 and the leftovers done (2026-10-11), merged into `master` locally from `look/finish`; **not pushed or deployed** (the push deploys to Render; avoid a competition day). Prime-time is the only look. See the progress log (§14), [REPORT.md](REPORT.md) and [LOOKS.md](LOOKS.md).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -877,3 +877,12 @@ The judge dashboard already shifts on master, so its gate is "no worse", not 0. 
 - [LOOKS.md](LOOKS.md): the playbook (§11) as a working guide, the gates, the wave checklist, the traps.
 - [REPORT.md](REPORT.md): what changed, the verification, what is left.
 - README updated for the new primitives; Web/MEMORY (05, 07, GOTCHAS) and project memory updated.
+
+### 2026-10-11: the leftovers (branch `look/finish`, `c32815c`)
+
+- Merged `master` (`327054f`, Home in desktop mode on phones) into the branch first; it merged cleanly.
+- `JudgeHeader` on all seven judge screens; slip anatomy (display-s titles, num-l totals saffron at full marks, the 3px phone-tab rule).
+- Colour literals 0; the colour rule fixed for token references and made an error; the proxies and dead token helpers deleted.
+- Home's footer links are 44 px targets.
+- Fixes found by verification: the superadmin overview at 320–360 px; Home footer and credit links as 44 px targets through tablet widths.
+- **Verified twice** on the final build `81207da`: all 12 audits green in both passes, responsive findings none, pixel gate 0 differences against the reference recorded in pass 1, 480/480 unit tests. The Home phone findings also appear on master's own build (from `327054f`); see REPORT.md.
